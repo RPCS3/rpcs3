@@ -183,11 +183,24 @@ infinity_figure& infinity_base::get_figure_by_order(u8 order_added)
 
 u8 infinity_base::derive_figure_position(u8 position)
 {
-	while (position > 2)
-		position -= 2;
+	switch (position)
+	{
+	case 0:
+	case 1:
+	case 2:
+		return 1;
+	case 3:
+	case 4:
+	case 5:
+		return 2;
+	case 6:
+	case 7:
+	case 8:
+		return 3;
 
-	position++;
-	return position;
+	default:
+		return 0;
+	}
 }
 
 void infinity_base::query_block(u8 fig_num, u8 block, std::array<u8, 32>& reply_buf, u8 sequence)
@@ -263,22 +276,26 @@ bool infinity_base::remove_figure(u8 position)
 	std::lock_guard lock(infinity_mutex);
 	infinity_figure& figure = figures[position];
 
-	if (figure.present)
+	if (!figure.present)
 	{
-		figure.present = false;
-
-		position = derive_figure_position(position);
-
-		std::array<u8, 32> figure_change_response = {0xab, 0x04, position, 0x09, figure.order_added,
-			0x01};
-		figure_change_response[6] = generate_checksum(figure_change_response, 6);
-		m_figure_added_removed_responses.push(figure_change_response);
-
-		figure.save();
-		figure.inf_file.close();
-		return true;
+		return false;
 	}
-	return false;
+
+	position = derive_figure_position(position);
+	if (position == 0)
+	{
+		return false;
+	}
+
+	figure.present = false;
+
+	std::array<u8, 32> figure_change_response = {0xab, 0x04, position, 0x09, figure.order_added, 0x01};
+	figure_change_response[6] = generate_checksum(figure_change_response, 6);
+	m_figure_added_removed_responses.push(figure_change_response);
+
+	figure.save();
+	figure.inf_file.close();
+	return true;
 }
 
 u32 infinity_base::load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_file, u8 position)
@@ -329,6 +346,10 @@ u32 infinity_base::load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file 
 	order_added = figure.order_added;
 
 	position = derive_figure_position(position);
+	if (position == 0)
+	{
+		return 0;
+	}
 
 	std::array<u8, 32> figure_change_response = {0xab, 0x04, position, 0x09, order_added, 0x00};
 	figure_change_response[6] = generate_checksum(figure_change_response, 6);

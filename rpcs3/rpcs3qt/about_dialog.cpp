@@ -19,7 +19,7 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 		R"(
 			<p style="white-space: nowrap;">
 				RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.<br>
-				It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with <a %0 href="https://www.patreon.com/Nekotekina">Patreon</a>.<br>
+				It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with <a %0 href="https://rpcs3.net/patreon">Patreon</a>.<br>
 				Our developers and contributors are always working hard to ensure this project is the best that it can be.<br>
 				There are still plenty of implementations to make and optimizations to do.
 			</p>
@@ -28,9 +28,9 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 
 	// Events
 	connect(ui->gitHub, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });
-	connect(ui->website, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.rpcs3.net")); });
+	connect(ui->website, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://rpcs3.net")); });
 	connect(ui->forum, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://forums.rpcs3.net")); });
-	connect(ui->patreon, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina")); });
+	connect(ui->patreon, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon")); });
 	connect(ui->discord, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://discord.me/RPCS3")); });
 	connect(ui->wiki, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://wiki.rpcs3.net/index.php?title=Main_Page")); });
 	connect(ui->close, &QPushButton::clicked, this, &QWidget::close);

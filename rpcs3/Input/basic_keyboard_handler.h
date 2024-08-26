@@ -11,14 +11,16 @@ class basic_keyboard_handler final : public KeyboardHandlerBase, public QObject
 	using KeyboardHandlerBase::KeyboardHandlerBase;
 
 public:
-	void Init(const u32 max_connect) override;
+	void Init(keyboard_consumer& consumer, const u32 max_connect) override;
 
 	void SetTargetWindow(QWindow* target);
 	bool eventFilter(QObject* watched, QEvent* event) override;
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
 	static s32 getUnmodifiedKey(QKeyEvent* event);
-	void LoadSettings();
+
 private:
+	void LoadSettings(Keyboard& keyboard);
+
 	QWindow* m_target = nullptr;
 };

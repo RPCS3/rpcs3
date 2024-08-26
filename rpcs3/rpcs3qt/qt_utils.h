@@ -37,6 +37,7 @@ namespace gui
 				painter.setPen(Qt::NoPen);
 				painter.setBrush(color);
 				painter.drawEllipse(0, 0, width(), height());
+				painter.end();
 			}
 		};
 

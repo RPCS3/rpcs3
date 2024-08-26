@@ -166,7 +166,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 			}
 		}
 	});
-	m_timer_input.start(1);
+	m_timer_input.start(10);
 
 	// Use thread to get button input
 	m_input_thread = std::make_unique<named_thread<std::function<void()>>>("UI Pad Motion Thread", [this]()

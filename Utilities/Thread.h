@@ -21,10 +21,10 @@ enum class native_core_arrangement : u32
 
 enum class thread_class : u32
 {
-	general,
-	rsx,
-	spu,
-	ppu
+	general = 0,
+	ppu = 1,
+	spu = 2,
+	rsx = 0x55,
 };
 
 enum class thread_state : u32
@@ -275,6 +275,9 @@ public:
 
 	// Wait once with timeout. Infinite value is -1.
 	static void wait_for(u64 usec, bool alert = true);
+
+	// Wait once with time point, add_time is added to the time point.
+	static void wait_until(u64* wait_time, u64 add_time = 0, u64 min_wait = 0, bool update_to_current_time = true);
 
 	// Waiting with accurate timeout
 	static void wait_for_accurate(u64 usec);
@@ -868,10 +871,10 @@ public:
 
 	~named_thread_group() noexcept
 	{
-		// Destroy all threads (it should join them)
-		for (u32 i = m_count - 1; i < m_count; i--)
+		// Destroy all threads in reverse order (it should join them)
+		for (u32 i = 0; i < m_count; i++)
 		{
-			std::launder(m_threads + i)->~Thread();
+			std::launder(m_threads + (m_count - i - 1))->~Thread();
 		}
 
 		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});

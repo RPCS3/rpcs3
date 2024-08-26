@@ -8,6 +8,20 @@
 class SDLDevice : public PadDevice
 {
 public:
+
+	struct touch_point
+	{
+		int index = 0;
+		int x = 0;
+		int y = 0;
+	};
+
+	struct touchpad
+	{
+		int index = 0;
+		std::vector<touch_point> fingers;
+	};
+
 	struct sdl_info
 	{
 		SDL_GameController* game_controller = nullptr;
@@ -37,6 +51,8 @@ public:
 
 		std::set<SDL_GameControllerButton> button_ids;
 		std::set<SDL_GameControllerAxis> axis_ids;
+
+		std::vector<touchpad> touchpads;
 	};
 
 	sdl_info sdl{};
@@ -48,9 +64,6 @@ public:
 	bool led_is_on = true;
 	bool led_is_blinking = false;
 	steady_clock::time_point led_timestamp{};
-
-	bool has_new_rumble_data = true;
-	steady_clock::time_point last_vibration{};
 };
 
 class sdl_pad_handler : public PadHandlerBase
@@ -81,6 +94,11 @@ class sdl_pad_handler : public PadHandlerBase
 		Paddle4,
 		Touchpad,
 
+		Touch_L,
+		Touch_R,
+		Touch_U,
+		Touch_D,
+
 		LT,
 		RT,
 
@@ -95,7 +113,7 @@ class sdl_pad_handler : public PadHandlerBase
 	};
 
 public:
-	sdl_pad_handler(bool emulation);
+	sdl_pad_handler();
 	~sdl_pad_handler();
 
 	SDLDevice::sdl_info get_sdl_info(int i);
@@ -107,7 +125,7 @@ public:
 	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors) override;
-	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons) override;
 
 private:
 	// pseudo 'controller id' to keep track of unique controllers
@@ -124,6 +142,7 @@ private:
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 

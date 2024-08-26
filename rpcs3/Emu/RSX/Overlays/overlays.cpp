@@ -155,13 +155,17 @@ namespace rsx
 				// Ignored if a keyboard pad handler is active in order to prevent double input.
 				if (m_keyboard_input_enabled && !m_keyboard_pad_handler_active && input::g_keyboards_intercepted)
 				{
-					auto& handler = g_fxo->get<KeyboardHandlerBase>();
-					std::lock_guard<std::mutex> lock(handler.m_mutex);
+					auto& kb_handler = g_fxo->get<KeyboardHandlerBase>();
+					std::lock_guard<std::mutex> lock(kb_handler.m_mutex);
 
-					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
+					// Add and get consumer
+					keyboard_consumer& kb_consumer = kb_handler.AddConsumer(keyboard_consumer::identifier::overlays, 1);
+					std::vector<Keyboard>& keyboards = kb_consumer.GetKeyboards();
+
+					if (!keyboards.empty() && kb_consumer.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
-						KbData& current_data = handler.GetData(0);
-						KbExtraData& extra_data = handler.GetExtraData(0);
+						KbData& current_data = kb_consumer.GetData(0);
+						KbExtraData& extra_data = kb_consumer.GetExtraData(0);
 
 						if (current_data.len > 0 || !extra_data.pressed_keys.empty())
 						{
@@ -185,16 +189,6 @@ namespace rsx
 							continue;
 						}
 					}
-					else if (g_cfg.io.keyboard != keyboard_handler::null)
-					{
-						// Workaround if cellKb did not init the keyboard handler.
-						handler.Init(1);
-
-						// Enable key repeat
-						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
-						ensure(!keyboards.empty());
-						::at32(keyboards, 0).m_key_repeat = true;
-					}
 				}
 
 				// Get gamepad input
@@ -202,14 +196,12 @@ namespace rsx
 				const auto handler = pad::get_current_handler();
 				const PadInfo& rinfo = handler->GetInfo();
 
-				if (!rinfo.now_connect || !input::g_pads_intercepted)
-				{
-					m_keyboard_pad_handler_active = false;
-					refresh();
-					continue;
-				}
+				const bool ignore_gamepad_input = (!rinfo.now_connect || !input::g_pads_intercepted);
 
-				bool keyboard_pad_handler_active = false;
+				const pad_button cross_button  = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::circle : pad_button::cross;
+				const pad_button circle_button = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::cross : pad_button::circle;
+
+				m_keyboard_pad_handler_active = false;
 
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
@@ -242,6 +234,85 @@ namespace rsx
 					if (pad->m_pad_handler == pad_handler::keyboard)
 					{
 						m_keyboard_pad_handler_active = true;
+					}
+
+					if (ignore_gamepad_input)
+					{
+						if (m_keyboard_pad_handler_active)
+						{
+							break;
+						}
+
+						continue;
+					}
+
+					if (pad->ldd)
+					{
+						// LDD pads get passed input data from the game itself.
+
+						// NOTE: Rock Band 3 doesn't seem to care about the len. It's always 0.
+						//if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL1)
+						{
+							const u16 digital1 = pad->ldd_data.button[CELL_PAD_BTN_OFFSET_DIGITAL1];
+
+							handle_button_press(pad_button::dpad_left,  !!(digital1 & CELL_PAD_CTRL_LEFT),     pad_index);
+							handle_button_press(pad_button::dpad_right, !!(digital1 & CELL_PAD_CTRL_RIGHT),    pad_index);
+							handle_button_press(pad_button::dpad_down,  !!(digital1 & CELL_PAD_CTRL_DOWN),     pad_index);
+							handle_button_press(pad_button::dpad_up,    !!(digital1 & CELL_PAD_CTRL_UP),       pad_index);
+							handle_button_press(pad_button::L3,         !!(digital1 & CELL_PAD_CTRL_L3),       pad_index);
+							handle_button_press(pad_button::R3,         !!(digital1 & CELL_PAD_CTRL_R3),       pad_index);
+							handle_button_press(pad_button::select,     !!(digital1 & CELL_PAD_CTRL_SELECT),   pad_index);
+							handle_button_press(pad_button::start,      !!(digital1 & CELL_PAD_CTRL_START),    pad_index);
+						}
+
+						//if (pad->ldd_data.len > CELL_PAD_BTN_OFFSET_DIGITAL2)
+						{
+							const u16 digital2 = pad->ldd_data.button[CELL_PAD_BTN_OFFSET_DIGITAL2];
+
+							handle_button_press(pad_button::triangle,   !!(digital2 & CELL_PAD_CTRL_TRIANGLE), pad_index);
+							handle_button_press(circle_button,          !!(digital2 & CELL_PAD_CTRL_CIRCLE),   pad_index);
+							handle_button_press(pad_button::square,     !!(digital2 & CELL_PAD_CTRL_SQUARE),   pad_index);
+							handle_button_press(cross_button,           !!(digital2 & CELL_PAD_CTRL_CROSS),    pad_index);
+							handle_button_press(pad_button::L1,         !!(digital2 & CELL_PAD_CTRL_L1),       pad_index);
+							handle_button_press(pad_button::R1,         !!(digital2 & CELL_PAD_CTRL_R1),       pad_index);
+							handle_button_press(pad_button::L2,         !!(digital2 & CELL_PAD_CTRL_L2),       pad_index);
+							handle_button_press(pad_button::R2,         !!(digital2 & CELL_PAD_CTRL_R2),       pad_index);
+							handle_button_press(pad_button::ps,         !!(digital2 & CELL_PAD_CTRL_PS),       pad_index);
+						}
+
+						const auto handle_ldd_stick_input = [&](s32 offset, pad_button id_small, pad_button id_large)
+						{
+							//if (pad->ldd_data.len <= offset) return;
+
+							constexpr u16 threshold = 20; // Let's be careful and use some threshold here
+							const u16 value = pad->ldd_data.button[offset];
+
+							if (value <= (128 - threshold))
+							{
+								// Release other direction on the same axis first
+								handle_button_press(id_large, false, pad_index);
+								handle_button_press(id_small, true, pad_index);
+							}
+							else if (value > (128 + threshold))
+							{
+								// Release other direction on the same axis first
+								handle_button_press(id_small, false, pad_index);
+								handle_button_press(id_large, true, pad_index);
+							}
+							else
+							{
+								// Release both directions on the same axis
+								handle_button_press(id_small, false, pad_index);
+								handle_button_press(id_large, false, pad_index);
+							}
+						};
+
+						handle_ldd_stick_input(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, pad_button::rs_left, pad_button::rs_right);
+						handle_ldd_stick_input(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, pad_button::rs_down, pad_button::rs_up);
+						handle_ldd_stick_input(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, pad_button::ls_left, pad_button::ls_right);
+						handle_ldd_stick_input(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, pad_button::ls_down, pad_button::ls_up);
+
+						continue;
 					}
 
 					for (const Button& button : pad->m_buttons)
@@ -287,13 +358,13 @@ namespace rsx
 								button_id = pad_button::triangle;
 								break;
 							case CELL_PAD_CTRL_CIRCLE:
-								button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::cross : pad_button::circle;
+								button_id = circle_button;
 								break;
 							case CELL_PAD_CTRL_SQUARE:
 								button_id = pad_button::square;
 								break;
 							case CELL_PAD_CTRL_CROSS:
-								button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::circle : pad_button::cross;
+								button_id = cross_button;
 								break;
 							case CELL_PAD_CTRL_L1:
 								button_id = pad_button::L1;
@@ -362,9 +433,14 @@ namespace rsx
 					}
 				}
 
-				m_keyboard_pad_handler_active = keyboard_pad_handler_active;
-
 				refresh();
+			}
+
+			// Remove keyboard consumer. We don't need it anymore.
+			{
+				auto& kb_handler = g_fxo->get<KeyboardHandlerBase>();
+				std::lock_guard<std::mutex> lock(kb_handler.m_mutex);
+				kb_handler.RemoveConsumer(keyboard_consumer::identifier::overlays);
 			}
 
 			// Disable pad interception since this user interface has to be interactive.

@@ -8,7 +8,7 @@
 
 namespace rsx
 {
-	void invalid_method(thread*, u32, u32);
+	void invalid_method(context*, u32, u32);
 }
 
 u32 RSXDisAsm::disasm(u32 pc)

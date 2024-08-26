@@ -129,7 +129,9 @@ struct ppu_exec_select
 		}; \
 	}
 
+#ifdef ARCH_X64
 static constexpr ppu_opcode_t s_op{};
+#endif
 
 namespace asmjit
 {
@@ -293,7 +295,7 @@ struct ppu_abstract_t
 			}
 
 			template <typename T>
-			void operator=(T&& _val) const
+			void operator=([[maybe_unused]] T&& _val) const
 			{
 				FOR_X64(store_op, kIdMovaps, kIdVmovaps, static_cast<asmjit::ppu_builder*>(g_vc)->ppu_vr(bf_t<u32, I, N>{}, true), std::forward<T>(_val));
 			}
@@ -316,11 +318,9 @@ struct ppu_abstract_t
 		}
 
 		template <typename T>
-		void operator=(T&& _val) const
+		void operator=([[maybe_unused]] T&& _val) const
 		{
-		#if defined(ARCH_X64)
 			FOR_X64(store_op, kIdMovaps, kIdVmovaps, *this, std::forward<T>(_val));
-		#endif
 		}
 	} sat{};
 };
@@ -4230,7 +4230,7 @@ auto NEG()
 	const u64 RA = ppu.gpr[op.ra];
 	ppu.gpr[op.rd] = 0 - RA;
 	if constexpr (((Flags == has_oe) || ...))
-		ppu_ov_set(ppu, (~RA >> 63 == 0) && (~RA >> 63 != ppu.gpr[op.rd] >> 63));
+		ppu_ov_set(ppu, RA == (1ull << 63));
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.rd], 0);
 	};
@@ -6747,7 +6747,7 @@ auto FCFID()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
 	{
-		f64 r = std::bit_cast<s64>(b);
+		f64 r = static_cast<f64>(std::bit_cast<s64>(b));
 		d = r;
 		ppu_set_fpcc<Flags...>(ppu, r, 0.);
 	};

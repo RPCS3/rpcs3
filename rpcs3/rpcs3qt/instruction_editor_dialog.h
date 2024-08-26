@@ -20,6 +20,7 @@ private:
 	std::shared_ptr<CPUDisAsm> m_disasm; // shared in order to allow an incomplete type
 	QLineEdit* m_instr;
 	QLabel* m_preview;
+	QLabel* m_func_info = nullptr;
 	QCheckBox* m_apply_for_spu_group = nullptr;
 
 	const std::function<cpu_thread*()> m_get_cpu;

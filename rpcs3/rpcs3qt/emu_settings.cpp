@@ -275,7 +275,7 @@ void emu_settings::RestoreDefaults()
 	Q_EMIT RestoreDefaultsSignal();
 }
 
-void emu_settings::SaveSettings()
+void emu_settings::SaveSettings() const
 {
 	YAML::Emitter out;
 	emit_data(out, m_current_settings);
@@ -938,6 +938,22 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case shader_mode::interpreter_only: return tr("Shader Interpreter only", "Shader Mode");
 		}
 		break;
+	case emu_settings_type::Resolution:
+		switch (static_cast<video_resolution>(index))
+		{
+		case video_resolution::_1080p: return tr("1080p", "Resolution");
+		case video_resolution::_1080i: return tr("1080i", "Resolution");
+		case video_resolution::_720p: return tr("720p", "Resolution");
+		case video_resolution::_480p: return tr("480p", "Resolution");
+		case video_resolution::_480i: return tr("480i", "Resolution");
+		case video_resolution::_576p: return tr("576p", "Resolution");
+		case video_resolution::_576i: return tr("576i", "Resolution");
+		case video_resolution::_1600x1080p: return tr("1600x1080p", "Resolution");
+		case video_resolution::_1440x1080p: return tr("1440x1080p", "Resolution");
+		case video_resolution::_1280x1080p: return tr("1280x1080p", "Resolution");
+		case video_resolution::_960x1080p: return tr("960x1080p", "Resolution");
+		}
+		break;
 	case emu_settings_type::FrameLimit:
 		switch (static_cast<frame_limit_type>(index))
 		{
@@ -1329,6 +1345,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case xfloat_accuracy::relaxed: return tr("Relaxed XFloat");
 		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
 		}
+		break;
 	default:
 		break;
 	}

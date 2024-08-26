@@ -17,10 +17,12 @@
 #include "sys_memory.h"
 #include <span>
 
+extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id);
+
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
-extern void ppu_finalize(const ppu_module&);
+extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
 extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
 
 LOG_CHANNEL(sys_prx);
@@ -100,7 +102,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libpngdec.sprx", 0 },
 	{ "libpngenc.sprx", 0 },
 	{ "libresc.sprx", 0 },
-	{ "librtc.sprx", 0 },
+	{ "librtc.sprx", 1 },
 	{ "librudp.sprx", 0 },
 	{ "libsail.sprx", 0 },
 	{ "libsail_avi.sprx", 0 },
@@ -193,8 +195,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	std::string vpath0;
-	const std::string path = vfs::get(vpath, nullptr, &vpath0);
-	const std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
+	std::string path = vfs::get(vpath, nullptr, &vpath0);
+	std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
 
 	bool ignore = false;
 
@@ -270,6 +272,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return {CELL_PRX_ERROR_UNSUPPORTED_PRX_TYPE, +"Failed to decrypt file"};
 	}
 
+	const auto src_data = g_cfg.core.ppu_debug ? src.to_vector<u8>() : std::vector<u8>{};
+
 	ppu_prx_object obj = std::move(src);
 	src.close();
 
@@ -279,6 +283,11 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	const auto prx = ppu_load_prx(obj, false, path, file_offset);
+
+	if (g_cfg.core.ppu_debug)
+	{
+		dump_executable({src_data.data(), src_data.size()}, prx.get(), Emu.GetTitleID());
+	}
 
 	obj.clear();
 

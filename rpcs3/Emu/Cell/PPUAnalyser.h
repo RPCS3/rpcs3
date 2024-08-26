@@ -109,7 +109,7 @@ struct ppu_module
 		addr_to_seg_index = info.addr_to_seg_index;
 	}
 
-	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted = {});
+	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied, const std::vector<u32>& exported_funcs = std::vector<u32>{}, std::function<bool()> check_aborted = {});
 	void validate(u32 reloc);
 
 	template <typename T>
@@ -151,11 +151,7 @@ struct ppu_module
 	}
 
 	template <typename T>
-	to_be_t<T>& get_ref(u32 addr,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION()) const
+	to_be_t<T>& get_ref(u32 addr, std::source_location src_loc = std::source_location::current()) const
 	{
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
 		if (auto ptr = get_ptr<T>(addr, u32{size_element}))
@@ -163,16 +159,12 @@ struct ppu_module
 			return *ptr;
 		}
 
-		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr, src_loc{line, col, file, func});
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", addr, src_loc);
 		return *std::add_pointer_t<to_be_t<T>>{};
 	}
 
 	template <typename T, typename U> requires requires (const U& obj) { obj.get_ptr(); }
-	to_be_t<T>& get_ref(U&& addr, u32 index = 0,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION()) const
+	to_be_t<T>& get_ref(U&& addr, u32 index = 0, std::source_location src_loc = std::source_location::current()) const
 	{
 		constexpr usz size_element = std::is_void_v<T> ? 0 : sizeof(std::conditional_t<std::is_void_v<T>, char, T>);
 		if (auto ptr = get_ptr<T>((addr + index).addr(), u32{size_element}))
@@ -180,7 +172,7 @@ struct ppu_module
 			return *ptr;
 		}
 
-		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", (addr + index).addr(), src_loc{line, col, file, func});
+		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", (addr + index).addr(), src_loc);
 		return *std::add_pointer_t<to_be_t<T>>{};
 	}
 };

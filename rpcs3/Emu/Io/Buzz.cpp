@@ -32,11 +32,53 @@ usb_device_buzz::usb_device_buzz(u32 first_controller, u32 last_controller, cons
 	, m_first_controller(first_controller)
 	, m_last_controller(last_controller)
 {
-	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x08, 0x054c, 0x0002, 0x05a1, 0x03, 0x01, 0x00, 0x01});
-	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0022, 0x01, 0x01, 0x00, 0x80, 0x32}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x33, 0x01, 0x22, 0x004e}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0008, 0x0A}));
+	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
+		UsbDeviceDescriptor{
+			.bcdUSB             = 0x0200,
+			.bDeviceClass       = 0x00,
+			.bDeviceSubClass    = 0x00,
+			.bDeviceProtocol    = 0x00,
+			.bMaxPacketSize0    = 0x08,
+			.idVendor           = 0x054c,
+			.idProduct          = 0x0002,
+			.bcdDevice          = 0x05a1,
+			.iManufacturer      = 0x02,
+			.iProduct           = 0x01,
+			.iSerialNumber      = 0x00,
+			.bNumConfigurations = 0x01});
+	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG,
+		UsbDeviceConfiguration{
+			.wTotalLength        = 0x0022,
+			.bNumInterfaces      = 0x01,
+			.bConfigurationValue = 0x01,
+			.iConfiguration      = 0x00,
+			.bmAttributes        = 0x80,
+			.bMaxPower           = 0x32}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE,
+		UsbDeviceInterface{
+			.bInterfaceNumber   = 0x00,
+			.bAlternateSetting  = 0x00,
+			.bNumEndpoints      = 0x01,
+			.bInterfaceClass    = 0x03,
+			.bInterfaceSubClass = 0x00,
+			.bInterfaceProtocol = 0x00,
+			.iInterface         = 0x00}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID,
+		UsbDeviceHID{
+			.bcdHID            = 0x0111,
+			.bCountryCode      = 0x33,
+			.bNumDescriptors   = 0x01,
+			.bDescriptorType   = 0x22,
+			.wDescriptorLength = 0x004e}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT,
+		UsbDeviceEndpoint{
+			.bEndpointAddress = 0x81,
+			.bmAttributes     = 0x03,
+			.wMaxPacketSize   = 0x0008,
+			.bInterval        = 0x0A}));
+
+	add_string("Logitech Buzz(tm) Controller V1");
+	add_string("Logitech");
 }
 
 usb_device_buzz::~usb_device_buzz()
@@ -45,15 +87,30 @@ usb_device_buzz::~usb_device_buzz()
 
 void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake = true;
-
+	transfer->fake            = true;
+	transfer->expected_count  = buf_size;
+	transfer->expected_result = HC_CC_NOERR;
 	// Control transfers are nearly instant
+	transfer->expected_time   = get_timestamp() + 100;
+
 	switch (bmRequestType)
 	{
-	case 0x01:
-	case 0x21:
-	case 0x80:
-		buzz_log.error("Unhandled Query: buf_size=0x%02X, Type=0x%02X, bmRequestType=0x%02X", buf_size, (buf_size > 0) ? buf[0] : -1, bmRequestType);
+	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE: // 0x21
+		switch (bRequest)
+		{
+		case 0x09: // SET_REPORT
+			ensure(buf_size > 4);
+			buzz_log.trace("Leds: %s/%s/%s/%s",
+				buf[1] == 0xff ? "ON" : "OFF",
+				buf[2] == 0xff ? "ON" : "OFF",
+				buf[3] == 0xff ? "ON" : "OFF",
+				buf[4] == 0xff ? "ON" : "OFF"
+			);
+			break;
+		default:
+			buzz_log.error("Unhandled Request: 0x%02X/0x%02X", bmRequestType, bRequest);
+			break;
+		}
 		break;
 	default:
 		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);

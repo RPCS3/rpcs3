@@ -98,6 +98,7 @@ void fmt_class_string<sys_ss_rng_error>::format(std::string& out, u64 arg)
 		STR_CASE(SYS_SS_RNG_ERROR_ENOMEM);
 		STR_CASE(SYS_SS_RNG_ERROR_EAGAIN);
 		STR_CASE(SYS_SS_RNG_ERROR_EFAULT);
+		STR_CASE(SYS_SS_RTC_ERROR_UNK);
 		}
 
 		return unknown;

@@ -9,9 +9,6 @@ using namespace std::chrono_literals;
 
 LOG_CHANNEL(rb3_midi_drums_log);
 
-namespace
-{
-
 namespace controller
 {
 
@@ -158,67 +155,6 @@ u8 min_velocity()
 	return g_cfg_rb3drums.minimum_velocity;
 }
 
-enum class Id : u8
-{
-	// Each 'Note' can be triggered by multiple different numbers.
-	// Keeping them flattened in an enum for simplicity / switch statement usage.
-
-	// These follow the rockband 3 midi pro adapter support.
-	Snare0 = 38,
-	Snare1 = 31,
-	Snare2 = 34,
-	Snare3 = 37,
-	Snare4 = 39,
-	HiTom0 = 48,
-	HiTom1 = 50,
-	LowTom0 = 45,
-	LowTom1 = 47,
-	FloorTom0 = 41,
-	FloorTom1 = 43,
-	Hihat0 = 22,
-	Hihat1 = 26,
-	Hihat2 = 42,
-	Hihat3 = 54,
-	Ride0 = 51,
-	Ride1 = 53,
-	Ride2 = 56,
-	Ride3 = 59,
-	Crash0 = 49,
-	Crash1 = 52,
-	Crash2 = 55,
-	Crash3 = 57,
-	Kick0 = 33,
-	Kick1 = 35,
-	Kick2 = 36,
-	HihatPedal = 44,
-
-	// These are from alesis nitro mesh max. ymmv.
-	SnareRim = 40, // midi pro adapter counts this as snare.
-	HihatWithPedalUp = 46, // The midi pro adapter considers this a normal hihat hit.
-	HihatPedalPartial = 23, // If pedal is not 100% down, this will be sent instead of a normal hihat hit.
-
-	// Internal value used for converting midi CC.
-	// Values past 127 are not used in midi notes.
-	MidiCC = 255,
-};
-
-// Intermediate mapping regardless of which midi ids triggered it.
-enum class Note : u8
-{
-	Invalid,
-	Kick,
-	HihatPedal,
-	Snare,
-	SnareRim,
-	HiTom,
-	LowTom,
-	FloorTom,
-	HihatWithPedalUp,
-	Hihat,
-	Ride,
-	Crash,
-};
-
 Note str_to_note(const std::string_view name)
 {
 	static const std::unordered_map<std::string_view, Note> mapping{
@@ -298,25 +234,19 @@ std::unordered_map<Id, Note> create_id_to_note_mapping()
 		{Id::Crash2,            Note::Crash},
 		{Id::Crash3,            Note::Crash},
 	};
+
 	// Apply configured overrides.
-	auto split = fmt::split(g_cfg_rb3drums.midi_overrides.to_string(), {","});
-	for (const auto& segment : split)
+	const std::vector<std::string> segments = fmt::split(g_cfg_rb3drums.midi_overrides.to_string(), {","});
+	for (const std::string& segment : segments)
 	{
-		if (auto midi_override = parse_midi_override(segment))
+		if (const auto midi_override = parse_midi_override(segment))
 		{
-			auto id = midi_override->first;
-			auto note = midi_override->second;
+			const auto id = midi_override->first;
+			const auto note = midi_override->second;
 			mapping[id] = note;
 		}
 	}
 	return mapping;
-}
-
-Note id_to_note(Id id)
-{
-	static auto mapping = create_id_to_note_mapping();
-	auto it = mapping.find(id);
-	return it != std::end(mapping) ? it->second : Note::Invalid;
 }
 
 namespace combo
@@ -345,38 +275,17 @@ std::vector<u8> parse_combo(const std::string_view name, const std::string_view 
 	return notes;
 }
 
-struct Definition
-{
-	std::string name;
-	std::vector<u8> notes;
-	std::function<rb3drums::KitState()> create_state;
-
-	Definition(std::string name, const std::string_view csv, const std::function<rb3drums::KitState()> create_state)
-		: name{std::move(name)}
-		, notes{parse_combo(this->name, csv)}
-		, create_state{create_state}
-	{}
-};
-
 std::chrono::milliseconds window()
 {
 	return std::chrono::milliseconds{g_cfg_rb3drums.combo_window_ms};
 }
 
-const std::vector<Definition>& definitions()
-{
-	// Only parse once and cache.
-	static const std::vector<Definition> defs{
-		{"start",     g_cfg_rb3drums.combo_start.to_string(),            []{ return drum::start_state(); }},
-		{"select",    g_cfg_rb3drums.combo_select.to_string(),           []{ return drum::select_state(); }},
-		{"hold kick", g_cfg_rb3drums.combo_toggle_hold_kick.to_string(), []{ return drum::toggle_hold_kick_state(); }}
-	};
-	return defs;
-}
-
 }
 
 } // namespace midi
+
+namespace
+{
 
 void set_flag(u8* buf, [[maybe_unused]] std::string_view name, const controller::FlagByIndex& fbi)
 {
@@ -397,9 +306,18 @@ void set_flag_if_any(u8* buf, std::string_view name, const controller::FlagByInd
 
 }
 
+usb_device_rb3_midi_drums::Definition::Definition(std::string name, const std::string_view csv, const std::function<rb3drums::KitState()> create_state)
+	: name{std::move(name)}
+	, notes{midi::combo::parse_combo(this->name, csv)}
+	, create_state{create_state}
+{}
+
 usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
 	: usb_device_emulated(location)
 {
+	m_id_to_note_mapping = midi::create_id_to_note_mapping();
+	combo.reload_definitions();
+
 	UsbDeviceDescriptor descriptor{};
 	descriptor.bcdDevice = 0x0200;
 	descriptor.bDeviceClass = 0x00;
@@ -603,6 +521,12 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 	}
 	memcpy(buf, bytes.data(), bytes.size());
 
+	if (g_cfg_rb3drums.reload_requested)
+	{
+		m_id_to_note_mapping = midi::create_id_to_note_mapping();
+		combo.reload_definitions();
+	}
+
 	while (true)
 	{
 		u8 midi_msg[32];
@@ -712,6 +636,12 @@ rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_message(u8* msg, usz si
 	return rb3drums::KitState{};
 }
 
+midi::Note usb_device_rb3_midi_drums::id_to_note(midi::Id id)
+{
+	const auto it = m_id_to_note_mapping.find(id);
+	return it != m_id_to_note_mapping.cend() ? it->second : midi::Note::Invalid;
+}
+
 rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_note(const u8 id, const u8 velocity)
 {
 	if (velocity < midi::min_velocity())
@@ -722,7 +652,7 @@ rb3drums::KitState usb_device_rb3_midi_drums::parse_midi_note(const u8 id, const
 
 	rb3drums::KitState kit_state{};
 	kit_state.expiry = std::chrono::steady_clock::now() + drum::hit_duration();
-	auto note = midi::id_to_note(static_cast<midi::Id>(id));
+	const midi::Note note = id_to_note(static_cast<midi::Id>(id));
 	switch (note)
 	{
 		case midi::Note::Kick:              kit_state.kick_pedal    = velocity; break;
@@ -751,7 +681,8 @@ bool usb_device_rb3_midi_drums::is_midi_cc(const u8 id, const u8 value)
 	{
 		return false;
 	}
-	auto is_past_threshold = [](u8 value)
+
+	const auto is_past_threshold = [](u8 value)
 	{
 		const u8 threshold = g_cfg_rb3drums.midi_cc_threshold;
 		return g_cfg_rb3drums.midi_cc_invert_threshold
@@ -834,6 +765,15 @@ bool rb3drums::KitState::is_drum() const
 	return std::max({snare, hi_tom, low_tom, floor_tom}) >= midi::min_velocity();
 }
 
+void usb_device_rb3_midi_drums::ComboTracker::reload_definitions()
+{
+	m_definitions = {
+		{"start",     g_cfg_rb3drums.combo_start.to_string(),            []{ return drum::start_state(); }},
+		{"select",    g_cfg_rb3drums.combo_select.to_string(),           []{ return drum::select_state(); }},
+		{"hold kick", g_cfg_rb3drums.combo_toggle_hold_kick.to_string(), []{ return drum::toggle_hold_kick_state(); }}
+	};
+}
+
 void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
 {
 	if (!midi_notes.empty() && std::chrono::steady_clock::now() >= expiry)
@@ -843,9 +783,8 @@ void usb_device_rb3_midi_drums::ComboTracker::add(u8 note)
 	}
 
 	const usz i = midi_notes.size();
-	const auto& defs = midi::combo::definitions();
 	bool is_in_combo = false;
-	for (const auto& def : defs)
+	for (const auto& def : m_definitions)
 	{
 		if (i < def.notes.size() && note == def.notes[i])
 		{
@@ -879,7 +818,7 @@ std::optional<rb3drums::KitState> usb_device_rb3_midi_drums::ComboTracker::take_
 	{
 		return {};
 	}
-	for (const auto& combo : midi::combo::definitions())
+	for (const auto& combo : m_definitions)
 	{
 		if (midi_notes == combo.notes)
 		{

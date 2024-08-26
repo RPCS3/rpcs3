@@ -530,7 +530,7 @@ namespace ppu_patterns
 	};
 }
 
-bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted)
+bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
 {
 	if (segs.empty())
 	{
@@ -696,7 +696,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		const vm::cptr<void> seg_end = vm::cast(seg.addr + seg.size - 4);
 		auto ptr = get_ptr<u32>(_ptr);
 
-		for (vm::cptr<u32> _ptr = vm::cast(seg.addr); _ptr <= seg_end; advance(_ptr, ptr, 1))
+		for (; _ptr <= seg_end; advance(_ptr, ptr, 1))
 		{
 			const u32 value = *ptr;
 
@@ -925,6 +925,67 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
 				//known_functions.emplace(func);
+			}
+		}
+	}
+
+	bool used_fallback = false;
+
+	if (func_queue.empty())
+	{
+		for (u32 addr : exported_funcs)
+		{
+			const u32 faddr = get_ref<u32>(addr);
+
+			if (addr < start || addr >= start + segs[0].size)
+			{
+				// TODO: Reverse engineer how it works (maybe some flag in exports)
+
+				if (faddr < start || faddr >= start + segs[0].size)
+				{
+					ppu_log.notice("Export not usable at 0x%x / 0x%x (0x%x...0x%x)", addr, faddr, start, start + segs[0].size);
+					continue;
+				}
+
+				addr = faddr;
+			}
+
+			ppu_log.trace("Enqueued exported PPU function 0x%x for analysis", addr);
+
+			add_func(addr, 0, 0);
+			used_fallback = true;
+		}
+	}
+
+	if (func_queue.empty() && segs[0].size >= 4u)
+	{
+		// Fallback, identify functions using callers (no jumptable detection, tail calls etc)
+		ppu_log.warning("Looking for PPU functions using callers. ('%s')", name);
+
+		vm::cptr<u32> _ptr = vm::cast(start);
+		const vm::cptr<void> seg_end = vm::cast(end - 4);
+
+		for (auto ptr = get_ptr<u32>(_ptr); _ptr <= seg_end; advance(_ptr, ptr, 1))
+		{
+			const u32 iaddr = _ptr.addr();
+
+			const ppu_opcode_t op{*ptr};
+			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+
+			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_func(iaddr)))
+			{
+				const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
+
+				if (target >= start && target < end && target != iaddr && target != iaddr + 4)
+				{
+					// TODO: Check full executability
+					if (s_ppu_itype.decode(get_ref<u32>(target)) != ppu_itype::UNK)
+					{
+						ppu_log.trace("Enqueued PPU function 0x%x using a caller at 0x%x", target, iaddr);
+						add_func(target, 0, 0);
+						used_fallback = true;
+					}
+				}
 			}
 		}
 	}
@@ -1317,7 +1378,12 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 						continue;
 					}
 
-					const bool is_call = op.lk && target != iaddr;
+					if (!op.aa && target == _ptr.addr() && _ptr.addr() < func_end)
+					{
+						ppu_log.notice("[0x%x] Branch to next at 0x%x -> 0x%x", func.addr, iaddr, target);
+					}
+
+					const bool is_call = op.lk && target != iaddr && target != _ptr.addr() && _ptr.addr() < func_end;
 					const auto pfunc = is_call ? &add_func(target, 0, 0) : nullptr;
 
 					if (pfunc && pfunc->blocks.empty())
@@ -1631,7 +1697,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 		}
 	}
 
-	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
+	(fmap.empty() ? ppu_log.error : ppu_log.notice)("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
 
 	// Decompose functions to basic blocks
 	if (!entry && !sec_end)
@@ -2019,7 +2085,7 @@ bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Convert map to vector (destructive)
 	for (auto&& [_, block] : as_rvalue(std::move(fmap)))
 	{
-		if (block.attr & ppu_attr::no_size && block.size > 4)
+		if (block.attr & ppu_attr::no_size && block.size > 4 && !used_fallback)
 		{
 			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
 

@@ -320,10 +320,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 class ObjectCache final : public llvm::ObjectCache
 {
 	const std::string& m_path;
+	const std::add_pointer_t<jit_compiler> m_compiler = nullptr;
 
 public:
-	ObjectCache(const std::string& path)
+	ObjectCache(const std::string& path, jit_compiler* compiler = nullptr)
 		: m_path(path)
+		, m_compiler(compiler)
 	{
 	}
 
@@ -332,15 +334,33 @@ public:
 	void notifyObjectCompiled(const llvm::Module* _module, llvm::MemoryBufferRef obj) override
 	{
 		std::string name = m_path;
+
 		name.append(_module->getName().data());
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
+
+		if (!obj.getBufferSize())
+		{
+			jit_log.error("LLVM: Nothing to write: %s", name);
+			return;
+		}
+
+		ensure(m_compiler);
 
 		fs::file module_file(name, fs::rewrite);
 
 		if (!module_file)
 		{
 			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+			return;
+		}
+
+		// Bold assumption about upper limit of space consumption
+		const usz max_size = obj.getBufferSize() * 4;
+
+		if (!m_compiler->add_sub_disk_space(0 - max_size))
+		{
+			jit_log.error("LLVM: Failed to create module file: %s (not enough disk space left)", name);
 			return;
 		}
 
@@ -352,7 +372,10 @@ public:
 			return;
 		}
 
-		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
+		jit_log.trace("LLVM: Created module: %s", _module->getName().data());
+
+		// Restore space that was overestimated
+		ensure(m_compiler->add_sub_disk_space(max_size - module_file.size()));
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
@@ -416,6 +439,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	if (m_cpu.empty())
 	{
 		m_cpu = llvm::sys::getHostCPUName().str();
+
+		if (m_cpu == "generic")
+		{
+			// Try to detect a best match based on other criteria
+			m_cpu = fallback_cpu_detection();
+		}
 
 		if (m_cpu == "sandybridge" ||
 			m_cpu == "ivybridge" ||
@@ -488,7 +517,7 @@ std::string jit_compiler::triple1()
 #elif defined(__APPLE__) && defined(ARCH_X64)
 	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
 #elif defined(__APPLE__) && defined(ARCH_ARM64)
-	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
+	return llvm::Triple::normalize("aarch64-unknown-linux-android"); // Set environment to android to reserve x18
 #else
 	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
 #endif
@@ -503,10 +532,30 @@ std::string jit_compiler::triple2()
 #elif defined(__APPLE__) && defined(ARCH_X64)
 	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
 #elif defined(__APPLE__) && defined(ARCH_ARM64)
-	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
+	return llvm::Triple::normalize("aarch64-unknown-linux-android"); // Set environment to android to reserve x18
 #else
 	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
 #endif
+}
+
+bool jit_compiler::add_sub_disk_space(ssz space)
+{
+	if (space >= 0)
+	{
+		ensure(m_disk_space.fetch_add(space) < ~static_cast<usz>(space));
+		return true;
+	}
+
+	return m_disk_space.fetch_op([sub_size = static_cast<usz>(0 - space)](usz& val)
+	{
+		if (val >= sub_size)
+		{
+			val -= sub_size;
+			return true;
+		}
+
+		return false;
+	}).second;
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
@@ -575,6 +624,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	{
 		fmt::throw_exception("LLVM: Failed to create ExecutionEngine: %s", result);
 	}
+
+	fs::device_stat stats{};
+
+	if (fs::statfs(fs::get_cache_dir(), stats))
+	{
+		m_disk_space = stats.avail_free / 4;
+	}
 }
 
 jit_compiler::~jit_compiler()
@@ -583,7 +639,7 @@ jit_compiler::~jit_compiler()
 
 void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string& path)
 {
-	ObjectCache cache{path};
+	ObjectCache cache{path, this};
 	m_engine->setObjectCache(&cache);
 
 	const auto ptr = _module.get();
@@ -611,17 +667,26 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 	}
 }
 
-void jit_compiler::add(const std::string& path)
+bool jit_compiler::add(const std::string& path)
 {
 	auto cache = ObjectCache::load(path);
+
+	if (!cache)
+	{
+		jit_log.error("ObjectCache: Failed to read file. (path='%s', error=%s)", path, fs::g_tls_error);
+		return false;		
+	}
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
 	{
 		m_engine->addObjectFile(llvm::object::OwningBinary<llvm::object::ObjectFile>(std::move(*object_file), std::move(cache)));
+		jit_log.trace("ObjectCache: Successfully added %s", path);
+		return true;
 	}
 	else
 	{
 		jit_log.error("ObjectCache: Adding failed: %s", path);
+		return false;
 	}
 }
 
@@ -656,6 +721,79 @@ void jit_compiler::fin()
 u64 jit_compiler::get(const std::string& name)
 {
 	return m_engine->getGlobalValueAddress(name);
+}
+
+llvm::StringRef fallback_cpu_detection()
+{
+#if defined (ARCH_X64)
+	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.
+	const std::string brand = utils::get_cpu_brand();
+	const auto family = utils::get_cpu_family();
+	const auto model = utils::get_cpu_model();
+
+	if (brand.starts_with("AMD"))
+	{
+		switch (family)
+		{
+		case 0x10:
+			return "amdfam10";
+		case 0x15:
+			// Bulldozer class, includes piledriver, excavator, steamroller, etc
+			return utils::has_avx2() ? "bdver4" : "bdver1";
+		case 0x17:
+		case 0x18:
+			// No major differences between znver1 and znver2, return the lesser
+			return "znver1";
+		case 0x19:
+			// Models 0-Fh are zen3 as are 20h-60h. The rest we can assume are zen4
+			return ((model >= 0x20 && model <= 0x60) || model < 0x10)
+				? "znver3"
+				: "znver4";
+		case 0x1a:
+			// Only one generation in family 1a so far, zen5, which we do not support yet.
+			// Return zen4 as a workaround until the next LLVM upgrade.
+			return "znver4";
+		default:
+			return utils::has_avx512()
+				? "znver4"
+				: "znver3";
+		}
+	}
+	else if (brand.find("Intel") != std::string::npos)
+	{
+		if (!utils::has_avx())
+		{
+			return "nehalem";
+		}
+		if (!utils::has_avx2())
+		{
+			return "ivybridge";
+		}
+		if (!utils::has_avx512())
+		{
+			return "skylake";
+		}
+		if (utils::has_avx512_icl())
+		{
+			return "cannonlake";
+		}
+		return "icelake-client";
+	}
+	else if (brand.starts_with("VirtualApple"))
+	{
+		// No AVX. This will change in MacOS 15+, at which point we may revise this.
+		return utils::has_avx() ? "haswell" : "nehalem";
+	}
+
+#elif defined(ARCH_ARM64)
+	// TODO: Read the data from /proc/cpuinfo. ARM CPU registers are not accessible from usermode.
+	// This will be a pain when supporting snapdragon on windows but we'll cross that bridge when we get there.
+	// Require at least armv8-2a. Older chips are going to be useless anyway.
+	return "cortex-a78";
+#endif
+
+	// Failed to guess, use generic fallback
+	return "generic";
 }
 
 #endif // LLVM_AVAILABLE

@@ -479,40 +479,71 @@ void patch_creator_dialog::export_patch()
 
 void patch_creator_dialog::generate_yml(const QString& /*text*/)
 {
-	QString patch;
-	patch.append(QString("%0: %1\n").arg(qstr(patch_key::version)).arg(qstr(patch_engine_version)));
-	patch.append("\n");
-	patch.append(QString("%0:\n").arg(ui->hashEdit->text()));
-	patch.append(QString("  \"%0\":\n").arg(ui->patchNameEdit->text()));
-	patch.append(QString("    %0:\n").arg(qstr(patch_key::games)));
-	patch.append(QString("      \"%0\":\n").arg(ui->gameEdit->text()));
-	patch.append(QString("        %0: [ %1 ]\n").arg(ui->serialEdit->text()).arg(ui->gameVersionEdit->text()));
-	patch.append(QString("    %0: \"%1\"\n").arg(qstr(patch_key::author)).arg(ui->authorEdit->text()));
-	patch.append(QString("    %0: %1.%2\n").arg(qstr(patch_key::patch_version)).arg(ui->versionMajorSpinBox->text()).arg(ui->versionMinorSpinBox->text()));
-	patch.append(QString("    %0: \"%1\"\n").arg(qstr(patch_key::group)).arg(ui->groupEdit->text()));
-	patch.append(QString("    %0: \"%1\"\n").arg(qstr(patch_key::notes)).arg(ui->notesEdit->text()));
-	patch.append(QString("    %0:\n").arg(qstr(patch_key::patch)));
-
-	for (int i = 0; i < ui->instructionTable->rowCount(); i++)
+	YAML::Emitter out;
+	out << YAML::BeginMap;
+	out << patch_key::version << patch_engine_version;
+	out << YAML::Newline;
+	out << ui->hashEdit->text().toStdString();
 	{
-		const QComboBox* type_item           = qobject_cast<QComboBox*>(ui->instructionTable->cellWidget(i, patch_column::type));
-		const QTableWidgetItem* offset_item  = ui->instructionTable->item(i, patch_column::offset);
-		const QTableWidgetItem* value_item   = ui->instructionTable->item(i, patch_column::value);
-		const QTableWidgetItem* comment_item = ui->instructionTable->item(i, patch_column::comment);
-
-		const QString type    = type_item ? type_item->currentText() : "";
-		const QString offset  = offset_item ? offset_item->text() : "";
-		const QString value   = value_item ? value_item->text() : "";
-		const QString comment = comment_item ? comment_item->text() : "";
-
-		if (patch_engine::get_patch_type(type.toStdString()) == patch_type::invalid)
+		out << YAML::BeginMap;
+		out << YAML::DoubleQuoted << ui->patchNameEdit->text().toStdString();
 		{
-			ui->patchEdit->setText(tr("Instruction %0: Type '%1' is invalid!").arg(i + 1).arg(type));
-			return;
-		}
+			out << YAML::BeginMap;
+			out << patch_key::games;
+			{
+				out << YAML::BeginMap;
+				out << YAML::DoubleQuoted << ui->gameEdit->text().toStdString();
+				{
+					out << YAML::BeginMap;
+					out << ui->serialEdit->text().simplified().toStdString();
+					{
+						out << YAML::Flow << fmt::split(ui->gameVersionEdit->text().toStdString(), { ",", " " });
+					}
+					out << YAML::EndMap;
+				}
+				out << YAML::EndMap;
+			}
+			out << patch_key::author << YAML::DoubleQuoted << ui->authorEdit->text().toStdString();
+			out << patch_key::patch_version << fmt::format("%s.%s", ui->versionMajorSpinBox->text(), ui->versionMinorSpinBox->text());
+			out << patch_key::group << YAML::DoubleQuoted << ui->groupEdit->text().toStdString();
+			out << patch_key::notes << YAML::DoubleQuoted << ui->notesEdit->text().toStdString();
+			out << patch_key::patch;
+			{
+				out << YAML::BeginSeq;
+				for (int i = 0; i < ui->instructionTable->rowCount(); i++)
+				{
+					const QComboBox* type_item           = qobject_cast<QComboBox*>(ui->instructionTable->cellWidget(i, patch_column::type));
+					const QTableWidgetItem* offset_item  = ui->instructionTable->item(i, patch_column::offset);
+					const QTableWidgetItem* value_item   = ui->instructionTable->item(i, patch_column::value);
+					const QTableWidgetItem* comment_item = ui->instructionTable->item(i, patch_column::comment);
 
-		patch.append(QString("      - [ %0, %1, %2 ]%3\n").arg(type).arg(offset).arg(value).arg(comment.isEmpty() ? QStringLiteral("") : QString(" # %0").arg(comment)));
+					const std::string type    = type_item ? type_item->currentText().toStdString() : "";
+					const std::string offset  = offset_item ? offset_item->text().toStdString() : "";
+					const std::string value   = value_item ? value_item->text().toStdString() : "";
+					const std::string comment = comment_item ? comment_item->text().toStdString() : "";
+
+					if (patch_engine::get_patch_type(type) == patch_type::invalid)
+					{
+						ui->patchEdit->setText(tr("Instruction %0: Type '%1' is invalid!").arg(i + 1).arg(type_item ? type_item->currentText() : ""));
+						return;
+					}
+
+					out << YAML::Flow << YAML::BeginSeq << type << offset << value << YAML::EndSeq;
+
+					if (!comment.empty())
+					{
+						out << YAML::Comment(comment);
+					}
+				}
+				out << YAML::EndSeq;
+			}
+			out << YAML::EndMap;
+		}
+		out << YAML::EndMap;
 	}
+	out << YAML::EndMap;
+
+	const QString patch = QString::fromUtf8(out.c_str(), out.size());
 
 	validate(patch);
 }

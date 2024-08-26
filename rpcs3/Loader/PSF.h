@@ -23,12 +23,12 @@ namespace psf
 
 	enum resolution_flag : s32
 	{
-		_480p      = 1 << 0,
-		_576p      = 1 << 1,
-		_720p      = 1 << 2,
-		_1080p     = 1 << 3,
-		_480p_16_9 = 1 << 4,
-		_576p_16_9 = 1 << 5,
+		_480      = 1 << 0,
+		_576      = 1 << 1,
+		_720      = 1 << 2,
+		_1080     = 1 << 3,
+		_480_16_9 = 1 << 4,
+		_576_16_9 = 1 << 5,
 	};
 
 	enum class format : u16
@@ -103,11 +103,7 @@ namespace psf
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, std::string_view key, u32 def = 0);
 
-	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate = {},
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION());
+	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate = {}, std::source_location src_loc = std::source_location::current());
 
 	// Assign new entry
 	inline void assign(registry& psf, std::string_view key, entry&& _entry)

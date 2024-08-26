@@ -20,10 +20,10 @@ namespace vm
 	{
 		AT m_addr;
 
-		static_assert(!std::is_pointer<T>::value, "vm::_ref_base<> error: invalid type (pointer)");
-		static_assert(!std::is_reference<T>::value, "vm::_ref_base<> error: invalid type (reference)");
-		static_assert(!std::is_function<T>::value, "vm::_ref_base<> error: invalid type (function)");
-		static_assert(!std::is_void<T>::value, "vm::_ref_base<> error: invalid type (void)");
+		static_assert(!std::is_pointer_v<T>, "vm::_ref_base<> error: invalid type (pointer)");
+		static_assert(!std::is_reference_v<T>, "vm::_ref_base<> error: invalid type (reference)");
+		static_assert(!std::is_function_v<T>, "vm::_ref_base<> error: invalid type (function)");
+		static_assert(!std::is_void_v<T>, "vm::_ref_base<> error: invalid type (void)");
 
 	public:
 		using type = T;

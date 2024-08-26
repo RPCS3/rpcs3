@@ -4,6 +4,10 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
 
+#if defined(ARCH_ARM64)
+#include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#endif
+
 #ifdef _WIN32
 #include "windows.h"
 #include "sysinfoapi.h"
@@ -387,9 +391,8 @@ u32 utils::get_rep_movsb_threshold()
 
 std::string utils::get_cpu_brand()
 {
-	std::string brand;
-
 #if defined(ARCH_X64)
+	std::string brand;
 	if (get_cpuid(0x80000000, 0)[0] >= 0x80000004)
 	{
 		for (u32 i = 0; i < 3; i++)
@@ -401,9 +404,6 @@ std::string utils::get_cpu_brand()
 	{
 		brand = "Unknown CPU";
 	}
-#else
-	brand = "Unidentified CPU";
-#endif
 
 	brand.erase(brand.find_last_not_of('\0') + 1);
 	brand.erase(brand.find_last_not_of(' ') + 1);
@@ -415,6 +415,12 @@ std::string utils::get_cpu_brand()
 	}
 
 	return brand;
+#elif defined(ARCH_ARM64)
+	static const auto g_cpu_brand = aarch64::get_cpu_brand();
+	return g_cpu_brand;
+#else
+	return "Unidentified CPU";
+#endif
 }
 
 std::string utils::get_system_info()

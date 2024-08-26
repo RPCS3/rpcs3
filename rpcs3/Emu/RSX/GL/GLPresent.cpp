@@ -42,6 +42,8 @@ namespace gl
 			return GL_BGRA8;
 		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
 			return GL_RGBA8;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+			return GL_RGBA16F;
 		}
 	}
 }
@@ -269,8 +271,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
-		// Clear the window background to black
-		gl_state.clear_color(0, 0, 0, 0);
+		// Clear the window background to opaque black
+		gl_state.clear_color(0, 0, 0, 255);
 		gl::screen.clear(gl::buffers::color);
 	}
 
@@ -300,6 +302,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
+		const bool backbuffer_has_alpha = m_frame->has_alpha();
 
 		if (!m_upscaler || m_output_scaling != g_cfg.video.output_scaling)
 		{
@@ -320,7 +323,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 		}
 
-		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
+		if (!backbuffer_has_alpha && use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
 			m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);

@@ -25,7 +25,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PRIVATE
-        3rdparty::zlib 3rdparty::yaml-cpp
+        3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
     PUBLIC
         3rdparty::libevdev 3rdparty::flatbuffers)
 
@@ -42,6 +42,7 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
+    ../util/console.cpp
     ../util/media_utils.cpp
     ../util/video_provider.cpp
     ../util/logs.cpp
@@ -131,7 +132,7 @@ target_sources(rpcs3_emu PRIVATE
 
 if(USE_FAUDIO)
     find_package(SDL2)
-    if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
+    if(SDL2_FOUND AND SDL2_VERSION VERSION_GREATER_EQUAL 2.0.9)
         target_sources(rpcs3_emu PRIVATE
             Audio/FAudio/FAudioBackend.cpp
             Audio/FAudio/faudio_enumerator.cpp
@@ -388,32 +389,48 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+    target_sources(rpcs3_emu PRIVATE
+        CPU/Backends/AArch64/AArch64ASM.cpp
+        CPU/Backends/AArch64/AArch64Common.cpp
+        CPU/Backends/AArch64/AArch64JIT.cpp
+        CPU/Backends/AArch64/AArch64Signal.cpp
+    )
+endif()
+
 target_link_libraries(rpcs3_emu
     PUBLIC 3rdparty::llvm 3rdparty::asmjit)
 
 
 # Io
 target_sources(rpcs3_emu PRIVATE
+    Io/Buzz.cpp
     Io/camera_config.cpp
-    Io/recording_config.cpp
+    Io/Dimensions.cpp
+    Io/GameTablet.cpp
+    Io/GHLtar.cpp
+    Io/GunCon3.cpp
+    Io/Infinity.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
+    Io/midi_config_types.cpp
+    Io/mouse_config.cpp
+    Io/MouseHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
-    Io/PadHandler.cpp
     Io/pad_types.cpp
+    Io/PadHandler.cpp
+    Io/rb3drums_config.cpp
+    Io/RB3MidiDrums.cpp
+    Io/RB3MidiGuitar.cpp
+    Io/RB3MidiKeyboard.cpp
+    Io/recording_config.cpp
+    Io/Skylander.cpp
+    Io/TopShotElite.cpp
+    Io/TopShotFearmaster.cpp
+    Io/Turntable.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp
-    Io/Infinity.cpp
-    Io/Skylander.cpp
-    Io/GHLtar.cpp
-    Io/midi_config_types.cpp
-    Io/RB3MidiKeyboard.cpp
-    Io/RB3MidiGuitar.cpp
-    Io/RB3MidiDrums.cpp
-    Io/rb3drums_config.cpp
-    Io/Buzz.cpp
-    Io/Turntable.cpp
     Io/usio.cpp
 )
 
@@ -435,6 +452,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
+    NP/rpcn_countries.cpp
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
 )
@@ -446,24 +464,51 @@ target_sources(rpcs3_emu PRIVATE
 
 # RSX
 target_sources(rpcs3_emu PRIVATE
-    RSX/gcm_enums.cpp
-    RSX/gcm_printing.cpp
-    RSX/GSRender.cpp
-    RSX/RSXFIFO.cpp
-    RSX/rsx_methods.cpp
-    RSX/rsx_vertex_data.cpp
-    RSX/RSXOffload.cpp
-    RSX/RSXTexture.cpp
-    RSX/RSXThread.cpp
-    RSX/RSXZCULL.cpp
-    RSX/rsx_utils.cpp
-    RSX/RSXDisAsm.cpp
+    RSX/Capture/rsx_capture.cpp
+    RSX/Capture/rsx_replay.cpp
     RSX/Common/BufferUtils.cpp
     RSX/Common/surface_store.cpp
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Core/RSXContext.cpp
+    RSX/gcm_enums.cpp
+    RSX/gcm_printing.cpp
+    RSX/GL/GLCommonDecompiler.cpp
+    RSX/GL/GLCompute.cpp
+    RSX/GL/GLDraw.cpp
+    RSX/GL/GLFragmentProgram.cpp
+    RSX/GL/GLGSRender.cpp
+    RSX/GL/GLHelpers.cpp
+    RSX/GL/GLOverlays.cpp
+    RSX/GL/GLPipelineCompiler.cpp
+    RSX/GL/GLPresent.cpp
+    RSX/GL/GLRenderTargets.cpp
+    RSX/GL/GLShaderInterpreter.cpp
+    RSX/GL/GLTexture.cpp
+    RSX/GL/GLTextureCache.cpp
+    RSX/GL/glutils/blitter.cpp
+    RSX/GL/glutils/buffer_object.cpp
+    RSX/GL/glutils/capabilities.cpp
+    RSX/GL/glutils/common.cpp
+    RSX/GL/glutils/fbo.cpp
+    RSX/GL/glutils/image.cpp
+    RSX/GL/glutils/program.cpp
+    RSX/GL/glutils/ring_buffer.cpp
+    RSX/GL/glutils/sampler.cpp
+    RSX/GL/GLVertexBuffers.cpp
+    RSX/GL/GLVertexProgram.cpp
+    RSX/GL/OpenGL.cpp
+    RSX/GL/upscalers/fsr1/fsr_pass.cpp
+    RSX/GSRender.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/draw_call.cpp
+    RSX/NV47/FW/reg_context.cpp
+    RSX/NV47/HW/common.cpp
+    RSX/NV47/HW/nv0039.cpp
+    RSX/NV47/HW/nv3089.cpp
+    RSX/NV47/HW/nv308a.cpp
+    RSX/NV47/HW/nv406e.cpp
+    RSX/NV47/HW/nv4097.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp
@@ -472,8 +517,10 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/HomeMenu/overlay_home_menu_settings.cpp
     RSX/Overlays/Network/overlay_recvmessage_dialog.cpp
     RSX/Overlays/Network/overlay_sendmessage_dialog.cpp
+    RSX/Overlays/overlays.cpp
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
+    RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
     RSX/Overlays/overlay_debug_overlay.cpp
@@ -489,49 +536,28 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
-    RSX/Overlays/overlay_compile_notification.cpp
+    RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
-    RSX/Overlays/overlays.cpp
-    RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
     RSX/Program/FragmentProgramDecompiler.cpp
     RSX/Program/GLSLCommon.cpp
-    RSX/Program/program_util.cpp
     RSX/Program/ProgramStateCache.cpp
+    RSX/Program/program_util.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
-    RSX/Capture/rsx_capture.cpp
-    RSX/Capture/rsx_replay.cpp
-    RSX/GL/glutils/blitter.cpp
-    RSX/GL/glutils/buffer_object.cpp
-    RSX/GL/glutils/capabilities.cpp
-    RSX/GL/glutils/common.cpp
-    RSX/GL/glutils/fbo.cpp
-    RSX/GL/glutils/image.cpp
-    RSX/GL/glutils/program.cpp
-    RSX/GL/glutils/ring_buffer.cpp
-    RSX/GL/glutils/sampler.cpp
-    RSX/GL/upscalers/fsr1/fsr_pass.cpp
-    RSX/GL/GLCommonDecompiler.cpp
-    RSX/GL/GLCompute.cpp
-    RSX/GL/GLDraw.cpp
-    RSX/GL/GLFragmentProgram.cpp
-    RSX/GL/GLGSRender.cpp
-    RSX/GL/GLHelpers.cpp
-    RSX/GL/GLOverlays.cpp
-    RSX/GL/GLPipelineCompiler.cpp
-    RSX/GL/GLPresent.cpp
-    RSX/GL/GLRenderTargets.cpp
-    RSX/GL/GLShaderInterpreter.cpp
-    RSX/GL/GLTexture.cpp
-    RSX/GL/GLVertexBuffers.cpp
-    RSX/GL/GLVertexProgram.cpp
-    RSX/GL/GLTextureCache.cpp
-    RSX/GL/OpenGL.cpp
+    RSX/RSXDisAsm.cpp
+    RSX/RSXFIFO.cpp
+    RSX/RSXOffload.cpp
+    RSX/RSXTexture.cpp
+    RSX/RSXThread.cpp
+    RSX/RSXZCULL.cpp
+    RSX/rsx_methods.cpp
+    RSX/rsx_utils.cpp
+    RSX/rsx_vertex_data.cpp
 )
 
 if(TARGET 3rdparty_vulkan)
@@ -600,4 +626,8 @@ endif()
 
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/rpcs3/stdafx.h")
+endif()
+
+if(WAYLAND_FOUND)
+    target_link_libraries(rpcs3_emu PRIVATE OpenGL::EGL)
 endif()

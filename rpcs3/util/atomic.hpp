@@ -257,7 +257,6 @@ public:
 	static void notify_all(const void* data);
 
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
-	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 	static void set_one_time_use_wait_callback(bool (*cb)(u64 progress));
 };
 
@@ -1167,7 +1166,7 @@ template <typename T, usz Align = sizeof(T)>
 class atomic_t
 {
 protected:
-	using type = typename std::remove_cv<T>::type;
+	using type = std::remove_cv_t<T>;
 
 	using ptr_rt = std::conditional_t<std::is_pointer_v<type>, ullong, type>;
 
@@ -1338,7 +1337,7 @@ public:
 
 	auto fetch_add(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_add(m_data, rhs);
 		}
@@ -1351,7 +1350,7 @@ public:
 
 	auto add_fetch(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::add_fetch(m_data, rhs);
 		}
@@ -1365,7 +1364,7 @@ public:
 
 	auto operator +=(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::add_fetch(m_data, rhs);
 		}
@@ -1378,7 +1377,7 @@ public:
 
 	auto fetch_sub(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_sub(m_data, rhs);
 		}
@@ -1391,7 +1390,7 @@ public:
 
 	auto sub_fetch(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::sub_fetch(m_data, rhs);
 		}
@@ -1405,7 +1404,7 @@ public:
 
 	auto operator -=(const ptr_rt& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::sub_fetch(m_data, rhs);
 		}
@@ -1418,7 +1417,7 @@ public:
 
 	auto fetch_and(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_and(m_data, rhs);
 		}
@@ -1431,7 +1430,7 @@ public:
 
 	auto and_fetch(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::and_fetch(m_data, rhs);
 		}
@@ -1445,7 +1444,7 @@ public:
 
 	auto operator &=(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::and_fetch(m_data, rhs);
 		}
@@ -1458,7 +1457,7 @@ public:
 
 	auto fetch_or(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_or(m_data, rhs);
 		}
@@ -1471,7 +1470,7 @@ public:
 
 	auto or_fetch(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::or_fetch(m_data, rhs);
 		}
@@ -1485,7 +1484,7 @@ public:
 
 	auto operator |=(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::or_fetch(m_data, rhs);
 		}
@@ -1498,7 +1497,7 @@ public:
 
 	auto fetch_xor(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_xor(m_data, rhs);
 		}
@@ -1511,7 +1510,7 @@ public:
 
 	auto xor_fetch(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::xor_fetch(m_data, rhs);
 		}
@@ -1525,7 +1524,7 @@ public:
 
 	auto operator ^=(const type& rhs)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::xor_fetch(m_data, rhs);
 		}
@@ -1538,7 +1537,7 @@ public:
 
 	auto operator ++()
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::inc_fetch(m_data);
 		}
@@ -1551,7 +1550,7 @@ public:
 
 	auto operator --()
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::dec_fetch(m_data);
 		}
@@ -1564,7 +1563,7 @@ public:
 
 	auto operator ++(int)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_inc(m_data);
 		}
@@ -1577,7 +1576,7 @@ public:
 
 	auto operator --(int)
 	{
-		if constexpr(std::is_integral<type>::value)
+		if constexpr(std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::fetch_dec(m_data);
 		}
@@ -1636,7 +1635,7 @@ public:
 
 	bool bit_test_set(uint bit)
 	{
-		if constexpr (std::is_integral<type>::value)
+		if constexpr (std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::bts(m_data, bit & (sizeof(T) * 8 - 1));
 		}
@@ -1652,7 +1651,7 @@ public:
 
 	bool bit_test_reset(uint bit)
 	{
-		if constexpr (std::is_integral<type>::value)
+		if constexpr (std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::btr(m_data, bit & (sizeof(T) * 8 - 1));
 		}
@@ -1668,7 +1667,7 @@ public:
 
 	bool bit_test_invert(uint bit)
 	{
-		if constexpr (std::is_integral<type>::value)
+		if constexpr (std::is_integral_v<type>)
 		{
 			return atomic_storage<type>::btc(m_data, bit & (sizeof(T) * 8 - 1));
 		}

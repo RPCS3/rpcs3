@@ -3125,6 +3125,7 @@ error_code sys_fs_lsn_lock(ppu_thread&, u32 fd)
 		return CELL_OK;
 	}
 
+	std::lock_guard lock(file->mp->mutex);
 	file->lock.compare_and_swap(0, 1);
 	return CELL_OK;
 }
@@ -3140,7 +3141,14 @@ error_code sys_fs_lsn_unlock(ppu_thread&, u32 fd)
 		return CELL_EBADF;
 	}
 
+	// See sys_fs_lsn_lock
+	if (file->mp == &g_mp_sys_dev_hdd0 || file->mp->flags & lv2_mp_flag::strict_get_block_size)
+	{
+		return CELL_OK;
+	}
+
 	// Unlock unconditionally
+	std::lock_guard lock(file->mp->mutex);
 	file->lock.compare_and_swap(1, 0);
 	return CELL_OK;
 }
@@ -3256,11 +3264,11 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	return CELL_OK;
 }
 
-error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len)
+error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk2, vm::cptr<char> str1, u32 str_len)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=%d, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk2, str1, str_len);
 
 	const auto [dev_error, device_name] = translate_to_str(dev_name, false);
 

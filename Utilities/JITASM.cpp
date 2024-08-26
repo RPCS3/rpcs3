@@ -19,6 +19,7 @@ LOG_CHANNEL(jit_log, "JIT");
 void jit_announce(uptr func, usz size, std::string_view name)
 {
 #ifdef __linux__
+#if 0
 	static const struct tmp_perf_map
 	{
 		std::string name{fmt::format("/tmp/perf-%d.map", getpid())};
@@ -44,6 +45,7 @@ void jit_announce(uptr func, usz size, std::string_view name)
 		fs::remove_file(s_map.name);
 		return;
 	}
+#endif
 #endif
 
 	if (!size)
@@ -183,8 +185,13 @@ static u8* add_jit_memory(usz size, usz align)
 	if (olda != newa) [[unlikely]]
 	{
 #ifndef CAN_OVERCOMMIT
-		// Commit more memory
-		utils::memory_commit(pointer + olda, newa - olda, Prot);
+		// Commit more memory.
+		// NOTE: Calling memory commit in parallel on the same addresses can throw a permission error.
+		{
+			static std::mutex mcommit_lock;
+			std::lock_guard lock(mcommit_lock);
+			utils::memory_commit(pointer + olda, newa - olda, Prot);
+		}
 #endif
 		// Acknowledge committed memory
 		Ctr.atomic_op([&](u64& ctr)

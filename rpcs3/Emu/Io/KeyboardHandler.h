@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <set>
+#include <unordered_map>
 
 #include "util/init_mutex.hpp"
 
@@ -19,6 +20,39 @@ enum QtKeys
 	Key_ScrollLock = 0x01000026,
 	Key_Super_L    = 0x01000053,
 	Key_Super_R    = 0x01000054
+};
+
+// See https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_code_values
+enum native_key : u32
+{
+#ifdef _WIN32
+	ctrl_l = 0x001D,
+	ctrl_r = 0xE01D,
+	shift_l = 0x002A,
+	shift_r = 0x0036,
+	alt_l = 0x0038,
+	alt_r = 0xE038,
+	meta_l = 0xE05B,
+	meta_r = 0xE05C,
+#elif defined (__APPLE__)
+	ctrl_l = 0x3B,  // kVK_Control
+	ctrl_r = 0x3E,  // kVK_RightControl
+	shift_l = 0x38, // kVK_Shift
+	shift_r = 0x3C, // kVK_RightShift
+	alt_l = 0x3A,   // kVK_Option
+	alt_r = 0x3D,   // kVK_RightOption
+	meta_l = 0x37,  // kVK_Command
+	meta_r = 0x36,  // kVK_RightCommand
+#else
+	ctrl_l = 0x0025,
+	ctrl_r = 0x0069,
+	shift_l = 0x0032,
+	shift_r = 0x003E,
+	alt_l = 0x0040,
+	alt_r = 0x006C,
+	meta_l = 0x0085,
+	meta_r = 0x0086,
+#endif
 };
 
 struct KbInfo
@@ -71,7 +105,42 @@ struct Keyboard
 	KbData m_data{};
 	KbExtraData m_extra_data{};
 	KbConfig m_config{};
-	std::vector<KbButton> m_buttons;
+	std::unordered_map<u32, KbButton> m_keys;
+};
+
+class keyboard_consumer
+{
+public:
+	enum class identifier
+	{
+		unknown,
+		overlays,
+		cellKb,
+	};
+
+	keyboard_consumer() {}
+	keyboard_consumer(identifier id) : m_id(id) {}
+
+	bool ConsumeKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key);
+	void SetIntercepted(bool intercepted);
+
+	static bool IsMetaKey(u32 code);
+
+	KbInfo& GetInfo() { return m_info; }
+	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
+	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
+	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
+	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+	identifier id() const { return m_id; }
+
+	void ReleaseAllKeys();
+
+protected:
+	u32 get_out_key_code(u32 qt_code, u32 native_code, u32 out_key_code);
+
+	identifier m_id = identifier::unknown;
+	KbInfo m_info{};
+	std::vector<Keyboard> m_keyboards;
 };
 
 class KeyboardHandlerBase
@@ -79,7 +148,7 @@ class KeyboardHandlerBase
 public:
 	std::mutex m_mutex;
 
-	virtual void Init(const u32 max_connect) = 0;
+	virtual void Init(keyboard_consumer& consumer, const u32 max_connect) = 0;
 
 	virtual ~KeyboardHandlerBase() = default;
 	KeyboardHandlerBase(utils::serial* ar);
@@ -88,23 +157,18 @@ public:
 
 	SAVESTATE_INIT_POS(19);
 
-	void Key(u32 code, bool pressed, const std::u32string& key);
+	keyboard_consumer& AddConsumer(keyboard_consumer::identifier id, u32 max_connect);
+	keyboard_consumer& GetConsumer(keyboard_consumer::identifier id);
+	void RemoveConsumer(keyboard_consumer::identifier id);
+
+	bool HandleKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
-
-	static bool IsMetaKey(u32 code);
-
-	KbInfo& GetInfo() { return m_info; }
-	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
-	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
-	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
-	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
-	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;
 
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info{};
-	std::vector<Keyboard> m_keyboards;
+	bool m_keys_released = false;
+	std::unordered_map<keyboard_consumer::identifier, keyboard_consumer> m_consumers;
 };

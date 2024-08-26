@@ -88,3 +88,19 @@
 	path = 3rdparty/rtmidi/rtmidi
 	url = ../../thestk/rtmidi
 	ignore = dirty
+[submodule "3rdparty/zstd/zstd"]
+	path = 3rdparty/zstd/zstd
+	url = ../../facebook/zstd
+	ignore = dirty
+[submodule "3rdparty/7zip/7zip"]
+	path = 3rdparty/7zip/7zip
+	url = ../../ip7z/7zip.git
+	ignore = dirty
+[submodule "3rdparty/OpenAL/openal-soft"]
+	path = 3rdparty/OpenAL/openal-soft
+	url = ../../kcat/openal-soft.git
+	ignore = dirty
+[submodule "3rdparty/stblib/stb"]
+	path = 3rdparty/stblib/stb
+	url = ../../nothings/stb.git
+	ignore = dirty

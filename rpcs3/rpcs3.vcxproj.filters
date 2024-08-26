@@ -101,6 +101,9 @@
     <Filter Include="Io\DS3">
       <UniqueIdentifier>{66e6027b-d3dd-4894-814c-cc4444a4c7df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\dimensions">
+      <UniqueIdentifier>{d138e7e2-861a-4078-badf-80ecb10b0d04}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\infinity">
       <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
     </Filter>
@@ -285,6 +288,18 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_raw_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_raw_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -343,6 +358,9 @@
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="Input\pad_thread.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\product_info.cpp">
       <Filter>Io</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\about_dialog.cpp">
@@ -561,6 +579,9 @@
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\dimensions_dialog.cpp">
+      <Filter>Gui\dimensions</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
@@ -664,6 +685,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_dimensions_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_dimensions_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_infinity_dialog.cpp">
@@ -828,13 +855,10 @@
     <ClCompile Include="rpcs3qt\qt_camera_video_sink.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
-      <Filter>Io\camera</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp">
@@ -852,13 +876,10 @@
     <ClCompile Include="rpcs3qt\qt_music_handler.cpp">
       <Filter>Io\music</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_music_error_handler.cpp">
-      <Filter>Io\music</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_handler.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_error_handler.cpp">
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\vfs_dialog_usb_tab.cpp">
@@ -949,6 +970,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_tool_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_tool_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\progress_indicator.cpp">
@@ -1064,6 +1091,24 @@
     </ClCompile>
     <ClCompile Include="Input\gui_pad_thread.cpp">
       <Filter>Io</Filter>
+    </ClCompile>
+    <ClCompile Include="util\console.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\basic_mouse_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\raw_mouse_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\raw_mouse_config.cpp">
+      <Filter>Io\raw</Filter>
+    </ClCompile>
+    <ClCompile Include="module_verifier.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_tool_dialog.cpp">
+      <Filter>Gui\vfs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1196,17 +1241,11 @@
     <ClInclude Include="rpcs3qt\qt_camera_video_sink.h">
       <Filter>Io\camera</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_camera_handler.h">
-      <Filter>Io\camera</Filter>
-    </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\shortcut_utils.h">
       <Filter>Gui\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_music_handler.h">
-      <Filter>Io\music</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\uuid.h">
       <Filter>Gui\utils</Filter>
@@ -1229,6 +1268,9 @@
     <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_vfs_tool_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
     <ClInclude Include="rpcs3qt\progress_indicator.h">
       <Filter>Gui\progress</Filter>
     </ClInclude>
@@ -1241,9 +1283,6 @@
     <ClInclude Include="rpcs3qt\movie_item_base.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\midi_creator.h">
-      <Filter>Gui\settings</Filter>
-    </ClInclude>
     <ClInclude Include="Input\skateboard_pad_handler.h">
       <Filter>Io\Skateboard</Filter>
     </ClInclude>
@@ -1252,6 +1291,12 @@
     </ClInclude>
     <ClInclude Include="Input\gui_pad_thread.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="util\console.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\raw_mouse_config.h">
+      <Filter>Io\raw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1423,6 +1468,9 @@
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\dimensions_dialog.h">
+      <Filter>Gui\dimensions</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>
     </CustomBuild>
@@ -1480,7 +1528,7 @@
     <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\qt_camera_error_handler.h">
+    <CustomBuild Include="rpcs3qt\qt_camera_handler.h">
       <Filter>Io\camera</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">
@@ -1489,7 +1537,7 @@
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\qt_music_error_handler.h">
+    <CustomBuild Include="rpcs3qt\qt_music_handler.h">
       <Filter>Io\music</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\vfs_dialog_usb_tab.h">
@@ -1525,6 +1573,9 @@
     <CustomBuild Include="rpcs3qt\shortcut_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_tool_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\system_cmd_dialog.h">
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
@@ -1554,6 +1605,18 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\emulated_pad_settings_dialog.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\midi_creator.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\basic_mouse_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\raw_mouse_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_tool_dialog.h">
+      <Filter>Gui\vfs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

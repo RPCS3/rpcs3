@@ -14,7 +14,7 @@ error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
-LOG_CHANNEL(sys_io);
+LOG_CHANNEL(cellPad);
 
 template<>
 void fmt_class_string<CellPadError>::format(std::string& out, u64 arg)
@@ -75,30 +75,45 @@ void pad_info::save(utils::serial& ar)
 
 extern void send_sys_io_connect_event(usz index, u32 state);
 
-void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
+bool cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked, bool is_blocking = true)
 {
 	auto info = g_fxo->try_get<pad_info>();
 
 	if (!info)
 	{
-		return;
+		return true;
 	}
 
 	std::unique_lock lock(pad::g_pad_mutex, std::defer_lock);
 
 	if (locked)
 	{
-		lock.lock();
+		if (is_blocking)
+		{
+			lock.lock();
+		}
+		else
+		{
+			if (!lock.try_lock())
+			{
+				return false;
+			}
+		}
 	}
 
 	if (index >= info->get_max_connect())
 	{
-		return;
+		return true;
 	}
 
 	const auto handler = pad::get_current_handler();
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[index];
+
+	if (pad->is_fake_pad)
+	{
+		return true;
+	}
 
 	pad_data_internal& reported_info = info->reported_info[index];
 	const u32 old_status = reported_info.port_status;
@@ -112,7 +127,7 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	if (~(old_status ^ new_status) & CELL_PAD_STATUS_CONNECTED)
 	{
 		// old and new have the same connection status
-		return;
+		return true;
 	}
 
 	reported_info.port_status = new_status | CELL_PAD_STATUS_ASSIGN_CHANGES;
@@ -124,35 +139,8 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 	if (pad->m_vendor_id == 0 || pad->m_product_id == 0)
 	{
 		// Fallback to defaults
-
-		input::product_info product;
-
-		switch (pad->m_class_type)
-		{
-		case CELL_PAD_PCLASS_TYPE_GUITAR:
-			product = input::get_product_info(input::product_type::red_octane_gh_guitar);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DRUM:
-			product = input::get_product_info(input::product_type::red_octane_gh_drum_kit);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DJ:
-			product = input::get_product_info(input::product_type::dj_hero_turntable);
-			break;
-		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
-			product = input::get_product_info(input::product_type::dance_dance_revolution_mat);
-			break;
-		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
-			product = input::get_product_info(input::product_type::ps_move_navigation);
-			break;
-		case CELL_PAD_PCLASS_TYPE_SKATEBOARD:
-			product = input::get_product_info(input::product_type::ride_skateboard);
-			break;
-		case CELL_PAD_PCLASS_TYPE_STANDARD:
-		default:
-			product = input::get_product_info(input::product_type::playstation_3_controller);
-			break;
-		}
-
+		const std::vector<input::product_info> input_products = input::get_products_by_class(pad->m_class_type);
+		const input::product_info& product = ::at32(input_products, 0);
 		reported_info.vendor_id = product.vendor_id;
 		reported_info.product_id = product.product_id;
 	}
@@ -161,6 +149,8 @@ void cellPad_NotifyStateChange(usz index, u64 /*state*/, bool locked)
 		reported_info.vendor_id = pad->m_vendor_id;
 		reported_info.product_id = pad->m_product_id;
 	}
+
+	return true;
 }
 
 extern void pad_state_notify_state_change(usz index, u32 state)
@@ -170,7 +160,7 @@ extern void pad_state_notify_state_change(usz index, u32 state)
 
 error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 {
-	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
+	cellPad.warning("cellPadInit(max_connect=%d)", max_connect);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -193,7 +183,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 	for (usz i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		if (!pads[i]->is_fake_pad && (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{
 			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
 		}
@@ -204,7 +194,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 error_code cellPadEnd(ppu_thread& ppu)
 {
-	sys_io.notice("cellPadEnd()");
+	cellPad.notice("cellPadEnd()");
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -240,7 +230,7 @@ void clear_pad_buffer(const std::shared_ptr<Pad>& pad)
 
 error_code cellPadClearBuf(u32 port_no)
 {
-	sys_io.trace("cellPadClearBuf(port_no=%d)", port_no);
+	cellPad.trace("cellPadClearBuf(port_no=%d)", port_no);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -259,7 +249,7 @@ error_code cellPadClearBuf(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
@@ -291,11 +281,11 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	}
 	else if (pad->ldd)
 	{
-		pad->ldd_data = *data;
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
 			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
+		std::memcpy(data->button, pad->ldd_data.button, data->len * sizeof(u16));
 		return;
 	}
 	else
@@ -601,7 +591,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
-	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
+	cellPad.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -620,7 +610,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
@@ -629,7 +619,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
-	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
+	cellPad.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -680,7 +670,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 {
-	sys_io.trace("cellPadPeriphGetData(port_no=%d, data=*0x%x)", port_no, data);
+	cellPad.trace("cellPadPeriphGetData(port_no=%d, data=*0x%x)", port_no, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -700,7 +690,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, &data->cellpad_data, true);
@@ -713,7 +703,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 {
-	sys_io.todo("cellPadGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	cellPad.todo("cellPadGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -732,7 +722,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
@@ -742,7 +732,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
 {
-	sys_io.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
+	cellPad.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 
 	// TODO: This is used just to get data from a BD/CEC remote,
 	// but if the port isnt a remote, device type is set to CELL_PAD_DEV_TYPE_STANDARD and just regular cellPadGetData is returned
@@ -766,7 +756,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 {
-	sys_io.trace("cellPadSetActDirect(port_no=%d, param=*0x%x)", port_no, param);
+	cellPad.trace("cellPadSetActDirect(port_no=%d, param=*0x%x)", port_no, param);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -796,7 +786,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
@@ -810,7 +800,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 {
-	sys_io.trace("cellPadGetInfo(info=*0x%x)", info);
+	cellPad.trace("cellPadGetInfo(info=*0x%x)", info);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -855,7 +845,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 {
-	sys_io.trace("cellPadGetInfo2(info=*0x%x)", info);
+	cellPad.trace("cellPadGetInfo2(info=*0x%x)", info);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -904,7 +894,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> info)
 {
-	sys_io.trace("cellPadGetCapabilityInfo(port_no=%d, data_addr:=0x%x)", port_no, info.addr());
+	cellPad.trace("cellPadGetCapabilityInfo(port_no=%d, data_addr:=0x%x)", port_no, info.addr());
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -923,7 +913,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
@@ -935,7 +925,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
-	sys_io.trace("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
+	cellPad.trace("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -960,7 +950,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 error_code cellPadInfoPressMode(u32 port_no)
 {
-	sys_io.trace("cellPadInfoPressMode(port_no=%d)", port_no);
+	cellPad.trace("cellPadInfoPressMode(port_no=%d)", port_no);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -979,7 +969,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
@@ -987,7 +977,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 error_code cellPadInfoSensorMode(u32 port_no)
 {
-	sys_io.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
+	cellPad.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1006,7 +996,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (!config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
@@ -1014,7 +1004,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 error_code cellPadSetPressMode(u32 port_no, u32 mode)
 {
-	sys_io.trace("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
+	cellPad.trace("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1048,7 +1038,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 
 error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 {
-	sys_io.trace("cellPadSetSensorMode(port_no=%d, mode=%d)", port_no, mode);
+	cellPad.trace("cellPadSetSensorMode(port_no=%d, mode=%d)", port_no, mode);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1082,7 +1072,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 error_code cellPadLddRegisterController()
 {
-	sys_io.warning("cellPadLddRegisterController()");
+	cellPad.warning("cellPadLddRegisterController()");
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1107,7 +1097,7 @@ error_code cellPadLddRegisterController()
 
 error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 {
-	sys_io.trace("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
+	cellPad.trace("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1132,7 +1122,7 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 
 error_code cellPadLddGetPortNo(s32 handle)
 {
-	sys_io.trace("cellPadLddGetPortNo(handle=%d)", handle);
+	cellPad.trace("cellPadLddGetPortNo(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1156,7 +1146,7 @@ error_code cellPadLddGetPortNo(s32 handle)
 
 error_code cellPadLddUnregisterController(s32 handle)
 {
-	sys_io.warning("cellPadLddUnregisterController(handle=%d)", handle);
+	cellPad.warning("cellPadLddUnregisterController(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1182,7 +1172,7 @@ error_code cellPadLddUnregisterController(s32 handle)
 
 error_code cellPadFilterIIRInit(vm::ptr<CellPadFilterIIRSos> pSos, s32 cutoff)
 {
-	sys_io.todo("cellPadFilterIIRInit(pSos=*0x%x, cutoff=%d)", pSos, cutoff);
+	cellPad.todo("cellPadFilterIIRInit(pSos=*0x%x, cutoff=%d)", pSos, cutoff);
 
 	if (!pSos) // TODO: does this check for cutoff > 2 ?
 	{
@@ -1194,7 +1184,7 @@ error_code cellPadFilterIIRInit(vm::ptr<CellPadFilterIIRSos> pSos, s32 cutoff)
 
 u32 cellPadFilterIIRFilter(vm::ptr<CellPadFilterIIRSos> pSos, u32 filterIn)
 {
-	sys_io.todo("cellPadFilterIIRFilter(pSos=*0x%x, filterIn=%d)", pSos, filterIn);
+	cellPad.todo("cellPadFilterIIRFilter(pSos=*0x%x, filterIn=%d)", pSos, filterIn);
 
 	// TODO: apply filter
 
@@ -1205,7 +1195,7 @@ s32 sys_io_3733EA3C(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> 
 {
 	// Used by the ps1 emulator built into the firmware
 	// Seems to call the same function that getdataextra does
-	sys_io.trace("sys_io_3733EA3C(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
+	cellPad.trace("sys_io_3733EA3C(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 	return cellPadGetDataExtra(port_no, device_type, data);
 }
 

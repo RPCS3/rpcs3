@@ -166,8 +166,8 @@ namespace fs
 		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
 	};
 
-	[[noreturn]] void xnull(const src_loc&);
-	[[noreturn]] void xfail(const src_loc&);
+	[[noreturn]] void xnull(std::source_location);
+	[[noreturn]] void xfail(std::source_location);
 	[[noreturn]] void xovfl();
 
 	constexpr struct pod_tag_t{} pod_tag;
@@ -281,35 +281,23 @@ namespace fs
 		}
 
 		// Change file size (possibly appending zero bytes)
-		bool trunc(u64 length,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		bool trunc(u64 length, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->trunc(length);
 		}
 
 		// Get file information
-		stat_t get_stat(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		stat_t get_stat(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->get_stat();
 		}
 
 		// Sync file buffers
-		void sync(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		void sync(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->sync();
 		}
 
@@ -317,117 +305,76 @@ namespace fs
 		bool strict_read_check(u64 offset, u64 size, u64 type_size) const;
 
 		// Read the data from the file and return the amount of data written in buffer
-		u64 read(void* buffer, u64 count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 read(void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->read(buffer, count);
 		}
 
 		// Read the data from the file at specified offset in thread-safe manner
-		u64 read_at(u64 offset, void* buffer, u64 count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 read_at(u64 offset, void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->read_at(offset, buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
-		u64 write(const void* buffer, u64 count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 write(const void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->write(buffer, count);
 		}
 
 		// Change current position, returns resulting position
-		u64 seek(s64 offset, seek_mode whence = seek_set,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 seek(s64 offset, seek_mode whence = seek_set, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->seek(offset, whence);
 		}
 
 		// Get file size
-		u64 size(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 size(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->size();
 		}
 
 		// Get current position
-		u64 pos(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 pos(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->seek(0, seek_cur);
 		}
 
 		// Write std::basic_string unconditionally
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		const file& write(const std::basic_string<T>& str,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		const file& write(const std::basic_string<T>& str, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(str.data(), str.size() * sizeof(T), line, col, file, func) != str.size() * sizeof(T)) xfail({line, col, file, func});
+			if (write(str.data(), str.size() * sizeof(T), src_loc) != str.size() * sizeof(T)) xfail(src_loc);
 			return *this;
 		}
 
 		// Write POD unconditionally
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		const file& write(const T& data,
-			pod_tag_t = pod_tag,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		const file& write(const T& data, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(std::addressof(data), sizeof(T), line, col, file, func) != sizeof(T)) xfail({line, col, file, func});
+			if (write(std::addressof(data), sizeof(T), src_loc) != sizeof(T)) xfail(src_loc);
 			return *this;
 		}
 
 		// Write POD std::vector unconditionally
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		const file& write(const std::vector<T>& vec,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		const file& write(const std::vector<T>& vec, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (write(vec.data(), vec.size() * sizeof(T), line, col, file, func) != vec.size() * sizeof(T)) xfail({line, col, file, func});
+			if (write(vec.data(), vec.size() * sizeof(T), src_loc) != vec.size() * sizeof(T)) xfail(src_loc);
 			return *this;
 		}
 
 		// Read std::basic_string
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::basic_string<T>& str, usz _size = umax,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		bool read(std::basic_string<T>& str, usz _size = umax, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 
 			if (_size != umax)
 			{
@@ -440,30 +387,22 @@ namespace fs
 				str.resize(_size);
 			}
 
-			return read(str.data(), sizeof(T) * str.size(), line, col, file, func) == sizeof(T) * str.size();
+			return read(str.data(), sizeof(T) * str.size(), src_loc) == sizeof(T) * str.size();
 		}
 
 		// Read POD, sizeof(T) is used
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
 		bool read(T& data,
-			pod_tag_t = pod_tag,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+			pod_tag_t = pod_tag, std::source_location src_loc = std::source_location::current()) const
 		{
-			return read(std::addressof(data), sizeof(T), line, col, file, func) == sizeof(T);
+			return read(std::addressof(data), sizeof(T), src_loc) == sizeof(T);
 		}
 
 		// Read POD std::vector
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::vector<T>& vec, usz _size = umax, bool use_offs = false, usz offset = umax,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
+		bool read(std::vector<T>& vec, usz _size = umax, bool use_offs = false, usz offset = umax, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 
 			if (_size != umax)
 			{
@@ -478,52 +417,39 @@ namespace fs
 
 			if (use_offs)
 			{
-				return read_at(offset, vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
+				return read_at(offset, vec.data(), sizeof(T) * vec.size(), src_loc) == sizeof(T) * vec.size();
 			}
 
-			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
+			return read(vec.data(), sizeof(T) * vec.size(), src_loc) == sizeof(T) * vec.size();
 		}
 
 		// Read POD (experimental)
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		T read(
-			pod_tag_t = pod_tag,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		T read(pod_tag_t = pod_tag, std::source_location src_loc = std::source_location::current()) const
 		{
 			T result;
-			if (!read(result, pod_tag, line, col, file, func)) xfail({line, col, file, func});
+			if (!read(result, pod_tag, src_loc)) xfail(src_loc);
 			return result;
 		}
 
 		// Read full file to std::basic_string
 		template <typename T = char>
-		std::basic_string<T> to_string(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::basic_string<T> to_string(std::source_location src_loc = std::source_location::current()) const
 		{
 			std::basic_string<T> result;
 			result.resize(size() / sizeof(T));
 			seek(0);
-			if (!read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
+			if (!read(result, result.size(), src_loc)) xfail(src_loc);
 			return result;
 		}
 
 		// Read full file to std::vector
 		template<typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		std::vector<T> to_vector(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		std::vector<T> to_vector(std::source_location src_loc = std::source_location::current()) const
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (!read(result, result.size(), true, 0, file, func, line, col)) xfail({line, col, file, func});
+			if (!read(result, result.size(), true, 0, src_loc)) xfail(src_loc);
 			return result;
 		}
 
@@ -534,13 +460,9 @@ namespace fs
 		file_id get_id() const;
 
 		// Gathered write
-		u64 write_gather(const iovec_clone* buffers, u64 buf_count,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_file) xnull({line, col, file, func});
+			if (!m_file) xnull(src_loc);
 			return m_file->write_gather(buffers, buf_count);
 		}
 	};
@@ -584,24 +506,16 @@ namespace fs
 		}
 
 		// Get next directory entry
-		bool read(dir_entry& out,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		bool read(dir_entry& out, std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_dir) xnull({line, col, file, func});
+			if (!m_dir) xnull(src_loc);
 			return m_dir->read(out);
 		}
 
 		// Reset to the beginning
-		void rewind(
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION()) const
+		void rewind(std::source_location src_loc = std::source_location::current()) const
 		{
-			if (!m_dir) xnull({line, col, file, func});
+			if (!m_dir) xnull(src_loc);
 			return m_dir->rewind();
 		}
 

@@ -1731,14 +1731,12 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.channels)));
 
 	f64 cb_frame_len = 0.0;
-	u32 backend_ch_cnt = 2;
 	audio_channel_layout backend_channel_layout = audio_channel_layout::stereo;
 
 	if (backend->Open(emu_cfg.audio_device, port_cfg.freq, sample_size, ch_cnt, emu_cfg.channel_layout))
 	{
 		cb_frame_len = backend->GetCallbackFrameLen();
 		backend_channel_layout = backend->get_channel_layout();
-		backend_ch_cnt = backend->get_channels();
 		sys_rsxaudio.notice("Opened audio backend (sampling_rate=%d, sample_size=%d, channels=%d, layout=%s)", backend->get_sampling_rate(), backend->get_sample_size(), backend->get_channels(), backend->get_channel_layout());
 	}
 	else

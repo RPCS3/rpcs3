@@ -27,4 +27,16 @@ vec3 compute2x2DownsampleWeights(const in float coord, const in float uv_step, c
 	return vec3(1.0 - (computed_weights.x + computed_weights.y), computed_weights.xy);
 }
 
+vec2 texture2DMSCoord(const in vec2 coords, const in uint flags)
+{
+	if (0u == (flags & (WRAP_S_MASK | WRAP_T_MASK)))
+	{
+		return coords;
+	}
+
+	const vec2 wrapped_coords = mod(coords, vec2(1.0));
+	const bvec2 wrap_control_mask = bvec2(uvec2(flags) & uvec2(WRAP_S_MASK, WRAP_T_MASK));
+	return _select(coords, wrapped_coords, wrap_control_mask);
+}
+
 )"

@@ -16,8 +16,11 @@ add_library(3rdparty_dummy_lib INTERFACE)
 # ZLib
 add_subdirectory(zlib EXCLUDE_FROM_ALL)
 
-# 7z sdk
-add_subdirectory(7z EXCLUDE_FROM_ALL)
+# ZSTD
+add_subdirectory(zstd EXCLUDE_FROM_ALL)
+
+# 7zip sdk
+add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
 add_library(3rdparty_flatbuffers INTERFACE)
 if (USE_SYSTEM_FLATBUFFERS)
@@ -105,7 +108,7 @@ endif()
 
 # OpenGL
 
-find_package(OpenGL REQUIRED)
+find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 add_library(3rdparty_opengl INTERFACE)
 target_include_directories(3rdparty_opengl INTERFACE GL)
@@ -124,9 +127,7 @@ endif()
 
 
 # stblib
-add_library(3rdparty_stblib INTERFACE)
-target_include_directories(3rdparty_stblib INTERFACE stblib/include)
-
+add_subdirectory(stblib)
 
 # DiscordRPC
 add_subdirectory(discord-rpc)
@@ -223,7 +224,7 @@ if(USE_FAUDIO)
 	if (USE_SYSTEM_FAUDIO)
 		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
 			message(WARNING
-				"RPCS3: FAudio requires SDL 2.0.9 or newer. Please note, this warning"
+				"RPCS3: System FAudio requires SDL 2.0.9 or newer. Please note, this warning"
 				"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
 				"CMake config files are not correctly installed. Since a valid SDL2"
 				">=2.0.9 version cannot be found, building with FAudio will be skipped.")
@@ -328,8 +329,7 @@ if(USE_SDL)
 			message(STATUS "Using system SDL2")
 			add_library(3rdparty_sdl2 INTERFACE)
 			target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
-			target_include_directories(3rdparty_sdl2 INTERFACE ${SDL2_INCLUDE_DIRS})
-			target_link_libraries(3rdparty_sdl2 INTERFACE ${SDL2_LIBRARIES})
+			target_link_libraries(3rdparty_sdl2 INTERFACE SDL2::SDL2)
 			set(SDL2_TARGET 3rdparty_sdl2)
 		else()
 			message(FATAL_ERROR "SDL2 is not available on this system")
@@ -356,7 +356,8 @@ else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
 endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
-add_library(3rdparty::7z ALIAS 3rdparty_7z)
+add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
+add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)

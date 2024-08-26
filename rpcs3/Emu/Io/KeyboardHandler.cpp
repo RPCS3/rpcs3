@@ -2,6 +2,8 @@
 #include "KeyboardHandler.h"
 #include "Utilities/StrUtil.h"
 
+LOG_CHANNEL(input_log, "Input");
+
 template <>
 void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 {
@@ -40,36 +42,106 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 	});
 }
 
-void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
+template <>
+void fmt_class_string<keyboard_consumer::identifier>::format(std::string& out, u64 arg)
 {
+	format_enum(out, arg, [](keyboard_consumer::identifier value)
+	{
+		switch (value)
+		{
+		STR_CASE(keyboard_consumer::identifier::unknown);
+		STR_CASE(keyboard_consumer::identifier::overlays);
+		STR_CASE(keyboard_consumer::identifier::cellKb);
+		}
+
+		return unknown;
+	});
+}
+
+keyboard_consumer& KeyboardHandlerBase::AddConsumer(keyboard_consumer::identifier id, u32 max_connect)
+{
+	auto it = m_consumers.find(id);
+	if (it == m_consumers.end())
+	{
+		input_log.notice("Adding keyboard consumer with id %s.", id);
+		keyboard_consumer& consumer = m_consumers[id];
+		consumer = keyboard_consumer(id);
+		Init(consumer, max_connect);
+		return consumer;
+	}
+
+	return it->second;
+}
+
+keyboard_consumer& KeyboardHandlerBase::GetConsumer(keyboard_consumer::identifier id)
+{
+	auto it = m_consumers.find(id);
+	if (it == m_consumers.end())
+	{
+		fmt::throw_exception("No keyboard consumer with id %s", id);
+	}
+
+	return it->second;
+}
+
+void KeyboardHandlerBase::RemoveConsumer(keyboard_consumer::identifier id)
+{
+	auto it = m_consumers.find(id);
+	if (it != m_consumers.end())
+	{
+		input_log.notice("Removing keyboard consumer with id %s.", id);
+		m_consumers.erase(id);
+	}
+}
+
+bool KeyboardHandlerBase::HandleKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key)
+{
+	bool consumed = false;
+
 	std::lock_guard<std::mutex> lock(m_mutex);
+
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumed |= consumer.ConsumeKey(qt_code, native_code, pressed, is_auto_repeat, key);
+	}
+
+	return consumed;
+}
+
+bool keyboard_consumer::ConsumeKey(u32 qt_code, u32 native_code, bool pressed, bool is_auto_repeat, const std::u32string& key)
+{
+	bool consumed = false;
 
 	for (Keyboard& keyboard : m_keyboards)
 	{
-		bool found_key = false;
+		if (is_auto_repeat && !keyboard.m_key_repeat)
+		{
+			continue;
+		}
+
+		consumed = true;
 
 		KbData& data = keyboard.m_data;
-		KbConfig& config = keyboard.m_config;
+		const KbConfig& config = keyboard.m_config;
 
-		for (const KbButton& button : keyboard.m_buttons)
+		if (auto it = keyboard.m_keys.find(qt_code); it != keyboard.m_keys.end())
 		{
-			if (button.m_keyCode != code)
-				continue;
+			KbButton& button = it->second;
 
-			found_key = true;
+			const u32 out_key_code = get_out_key_code(qt_code, native_code, button.m_outKeyCode);
 
 			u16 kcode = CELL_KEYC_NO_EVENT;
-			bool is_meta_key = IsMetaKey(code);
+			bool is_meta_key = IsMetaKey(qt_code);
 
 			if (!is_meta_key)
 			{
 				if (config.code_type == CELL_KB_CODETYPE_RAW)
 				{
-					kcode = button.m_outKeyCode;
+					kcode = out_key_code;
 				}
 				else // config.code_type == CELL_KB_CODETYPE_ASCII
 				{
-					kcode = cellKbCnvRawCode(config.arrange, data.mkey, data.led, button.m_outKeyCode);
+					kcode = cellKbCnvRawCode(config.arrange, data.mkey, data.led, out_key_code);
 				}
 			}
 
@@ -83,33 +155,33 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 				// Meta Keys
 				if (is_meta_key)
 				{
-					data.mkey |= button.m_outKeyCode;
+					data.mkey |= out_key_code;
 
 					if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 					{
-						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, true);
+						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, out_key_code, true);
 					}
 					else
 					{
-						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, true);
+						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(CELL_KEYC_NO_EVENT, out_key_code, true);
 					}
 				}
 				else
 				{
 					// Led Keys
-					if (code == Key_CapsLock)   data.led ^= CELL_KB_LED_CAPS_LOCK;
-					if (code == Key_NumLock)    data.led ^= CELL_KB_LED_NUM_LOCK;
-					if (code == Key_ScrollLock) data.led ^= CELL_KB_LED_SCROLL_LOCK;
-					// if (code == Key_Kana_Lock) data.led ^= CELL_KB_LED_KANA;
-					// if (code == ???) data.led ^= CELL_KB_LED_COMPOSE;
+					if (qt_code == Key_CapsLock)   data.led ^= CELL_KB_LED_CAPS_LOCK;
+					if (qt_code == Key_NumLock)    data.led ^= CELL_KB_LED_NUM_LOCK;
+					if (qt_code == Key_ScrollLock) data.led ^= CELL_KB_LED_SCROLL_LOCK;
+					// if (qt_code == Key_Kana_Lock) data.led ^= CELL_KB_LED_KANA;
+					// if (qt_code == ???) data.led ^= CELL_KB_LED_COMPOSE;
 
 					if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 					{
-						data.buttons[0] = KbButton(kcode, button.m_outKeyCode, true);
+						data.buttons[0] = KbButton(kcode, out_key_code, true);
 					}
 					else
 					{
-						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(kcode, button.m_outKeyCode, true);
+						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(kcode, out_key_code, true);
 					}
 				}
 
@@ -120,13 +192,13 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 				// Meta Keys
 				if (is_meta_key)
 				{
-					data.mkey &= ~button.m_outKeyCode;
+					data.mkey &= ~out_key_code;
 				}
 
 				// Needed to indicate key releases. Without this you have to tap another key before using the same key again
 				if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 				{
-					data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, false);
+					data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, out_key_code, false);
 					data.len = 1;
 				}
 				else
@@ -135,7 +207,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 
 					for (s32 i = 0; i < data.len; i++)
 					{
-						if (data.buttons[i].m_keyCode == kcode && (!is_meta_key || data.buttons[i].m_outKeyCode == button.m_outKeyCode))
+						if (data.buttons[i].m_keyCode == kcode && (!is_meta_key || data.buttons[i].m_outKeyCode == out_key_code))
 						{
 							index = i;
 							break;
@@ -149,15 +221,14 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 
 					if (data.len <= 1)
 					{
-						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, false);
+						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, out_key_code, false);
 					}
 
 					data.len = std::max(1, data.len - 1);
 				}
 			}
 		}
-
-		if (!found_key && !key.empty())
+		else if (!key.empty())
 		{
 			if (pressed)
 			{
@@ -169,21 +240,53 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 			}
 		}
 	}
+
+	return consumed;
 }
 
-bool KeyboardHandlerBase::IsMetaKey(u32 code)
+bool keyboard_consumer::IsMetaKey(u32 code)
 {
 	return code == Key_Control
 		|| code == Key_Shift
 		|| code == Key_Alt
+		|| code == Key_Meta
 		|| code == Key_Super_L
 		|| code == Key_Super_R;
+}
+
+u32 keyboard_consumer::get_out_key_code(u32 qt_code, u32 native_code, u32 out_key_code)
+{
+	// Parse native key codes to differentiate between left and right keys. (Qt sometimes really sucks)
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr first, so right Alt does not work at the moment
+	switch (qt_code)
+	{
+	case Key_Control:
+		return native_code == native_key::ctrl_l ? CELL_KB_MKEY_L_CTRL : CELL_KB_MKEY_R_CTRL;
+	case Key_Shift:
+		return native_code == native_key::shift_l ? CELL_KB_MKEY_L_SHIFT : CELL_KB_MKEY_R_SHIFT;
+	case Key_Alt:
+		return native_code == native_key::alt_l ? CELL_KB_MKEY_L_ALT : CELL_KB_MKEY_R_ALT;
+	case Key_Meta:
+		return native_code == native_key::meta_l ? CELL_KB_MKEY_L_WIN : CELL_KB_MKEY_R_WIN;
+	default:
+		break;
+	}
+
+	return out_key_code;
 }
 
 void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumer.SetIntercepted(intercepted);
+	}
+}
+
+void keyboard_consumer::SetIntercepted(bool intercepted)
+{
 	m_info.info = intercepted ? CELL_KB_INFO_INTERCEPTED : 0;
 
 	if (intercepted)
@@ -203,16 +306,49 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 
 void KeyboardHandlerBase::ReleaseAllKeys()
 {
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	for (auto& [id, consumer] : m_consumers)
+	{
+		consumer.ReleaseAllKeys();
+	}
+
+	m_keys_released = true;
+}
+
+void keyboard_consumer::ReleaseAllKeys()
+{
 	for (Keyboard& keyboard : m_keyboards)
 	{
-		for (const KbButton& button : keyboard.m_buttons)
+		for (const auto& [key_code, button] : keyboard.m_keys)
 		{
-			Key(button.m_keyCode, false, {});
+			switch (button.m_keyCode)
+			{
+			case Key_Control:
+				ConsumeKey(button.m_keyCode, native_key::ctrl_l, false, false, {});
+				ConsumeKey(button.m_keyCode, native_key::ctrl_r, false, false, {});
+				break;
+			case Key_Shift:
+				ConsumeKey(button.m_keyCode, native_key::shift_l, false, false, {});
+				ConsumeKey(button.m_keyCode, native_key::shift_r, false, false, {});
+				break;
+			case Key_Alt:
+				ConsumeKey(button.m_keyCode, native_key::alt_l, false, false, {});
+				ConsumeKey(button.m_keyCode, native_key::alt_r, false, false, {});
+				break;
+			case Key_Meta:
+				ConsumeKey(button.m_keyCode, native_key::meta_l, false, false, {});
+				ConsumeKey(button.m_keyCode, native_key::meta_r, false, false, {});
+				break;
+			default:
+				ConsumeKey(button.m_keyCode, 0, false, false, {});
+				break;
+			}
 		}
 
 		for (const std::u32string& key : keyboard.m_extra_data.pressed_keys)
 		{
-			Key(0, false, key);
+			ConsumeKey(CELL_KEYC_NO_EVENT, 0, false, false, key);
 		}
 
 		keyboard.m_extra_data.pressed_keys.clear();

@@ -41,7 +41,17 @@ enum class pad_button : u8
 	rs_x,
 	rs_y,
 
-	pad_button_max_enum
+	pad_button_max_enum,
+
+	// Special buttons for mouse input
+	mouse_button_1,
+	mouse_button_2,
+	mouse_button_3,
+	mouse_button_4,
+	mouse_button_5,
+	mouse_button_6,
+	mouse_button_7,
+	mouse_button_8,
 };
 
 u32 pad_button_offset(pad_button button);
@@ -134,6 +144,16 @@ enum
 	CELL_PAD_PCLASS_TYPE_DANCEMAT   = 0x04,
 	CELL_PAD_PCLASS_TYPE_NAVIGATION = 0x05,
 	CELL_PAD_PCLASS_TYPE_SKATEBOARD = 0x8001,
+
+	// these are used together with pad->is_fake_pad to capture input events for usbd/gem/move without conflicting with cellPad
+	CELL_PAD_FAKE_TYPE_FIRST               = 0xa000,
+	CELL_PAD_FAKE_TYPE_GUNCON3             = 0xa000,
+	CELL_PAD_FAKE_TYPE_TOP_SHOT_ELITE      = 0xa001,
+	CELL_PAD_FAKE_TYPE_TOP_SHOT_FEARMASTER = 0xa002,
+	CELL_PAD_FAKE_TYPE_GAMETABLET          = 0xa003,
+	CELL_PAD_FAKE_TYPE_LAST,
+
+	CELL_PAD_PCLASS_TYPE_MAX // last item
 };
 
 // Profile of a Standard Type Controller
@@ -343,7 +363,8 @@ constexpr u32 special_button_offset = 666; // Must not conflict with other CELL 
 
 enum special_button_value
 {
-	pressure_intensity
+	pressure_intensity,
+	analog_limiter
 };
 
 struct Button
@@ -435,6 +456,7 @@ struct VibrateMotor
 struct Pad
 {
 	const pad_handler m_pad_handler;
+	const u32 m_player_id;
 
 	bool m_buffer_cleared{true};
 	u32 m_port_status{0};
@@ -451,7 +473,13 @@ struct Pad
 	bool m_pressure_intensity_toggled{}; // Whether the sensitivity is toggled on or off.
 	u8 m_pressure_intensity{127}; // 0-255
 	bool m_adjust_pressure_last{}; // only used in keyboard_pad_handler
-	bool get_pressure_intensity_button_active(bool is_toggle_mode);
+	bool get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id);
+
+	s32 m_analog_limiter_button_index{-1}; // Special button index. -1 if not set.
+	bool m_analog_limiter_button_pressed{}; // Last sensitivity button press state, used for toggle.
+	bool m_analog_limiter_toggled{}; // Whether the sensitivity is toggled on or off.
+	bool m_analog_limiter_enabled_last{}; // only used in keyboard_pad_handler
+	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};
@@ -498,8 +526,11 @@ struct Pad
 	bool ldd{false};
 	CellPadData ldd_data{};
 
-	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
+	bool is_fake_pad = false;
+
+	explicit Pad(pad_handler handler, u32 player_id, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)
+		, m_player_id(player_id)
 		, m_port_status(port_status)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)

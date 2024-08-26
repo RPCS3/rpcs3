@@ -250,7 +250,7 @@ error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 
 	if (!music.current_selection_context)
 	{
-		return CELL_MUSIC2_ERROR_NO_ACTIVE_CONTENT;
+		return CELL_MUSIC_ERROR_NO_ACTIVE_CONTENT;
 	}
 
 	*context = music.current_selection_context.get();
@@ -325,7 +325,7 @@ error_code cellMusicGetContentsId(vm::ptr<CellSearchContentId> contents_id)
 
 	if (!music.current_selection_context)
 	{
-		return CELL_MUSIC2_ERROR_NO_ACTIVE_CONTENT;
+		return CELL_MUSIC_ERROR_NO_ACTIVE_CONTENT;
 	}
 
 	return music.current_selection_context.find_content_id(contents_id);
@@ -408,6 +408,12 @@ error_code cellMusicGetContentsId2(vm::ptr<CellSearchContentId> contents_id)
 	// HACKY
 	auto& music = g_fxo->get<music_state>();
 	std::lock_guard lock(music.mtx);
+
+	if (!music.current_selection_context)
+	{
+		return CELL_MUSIC2_ERROR_NO_ACTIVE_CONTENT;
+	}
+
 	return music.current_selection_context.find_content_id(contents_id);
 }
 

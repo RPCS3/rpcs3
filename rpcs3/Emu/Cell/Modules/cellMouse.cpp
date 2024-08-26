@@ -12,7 +12,7 @@ error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
-LOG_CHANNEL(sys_io);
+LOG_CHANNEL(cellMouse);
 
 template<>
 void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
@@ -35,35 +35,9 @@ void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
 	});
 }
 
-MouseHandlerBase::MouseHandlerBase(utils::serial* ar)
-{
-	if (!ar)
-	{
-		return;
-	}
-
-	(*ar)(m_info.max_connect);
-
-	if (m_info.max_connect)
-	{
-		Emu.PostponeInitCode([this]()
-		{
-			Init(m_info.max_connect);
-			auto lk = init.init();
-		});
-	}
-}
-
-void MouseHandlerBase::save(utils::serial& ar)
-{
-	const auto inited = init.access();
-
-	ar(inited ? m_info.max_connect : 0);
-}
-
 error_code cellMouseInit(ppu_thread& ppu, u32 max_connect)
 {
-	sys_io.notice("cellMouseInit(max_connect=%d)", max_connect);
+	cellMouse.notice("cellMouseInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -86,7 +60,7 @@ error_code cellMouseInit(ppu_thread& ppu, u32 max_connect)
 
 error_code cellMouseClearBuf(u32 port_no)
 {
-	sys_io.trace("cellMouseClearBuf(port_no=%d)", port_no);
+	cellMouse.trace("cellMouseClearBuf(port_no=%d)", port_no);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -123,7 +97,7 @@ error_code cellMouseClearBuf(u32 port_no)
 
 error_code cellMouseEnd(ppu_thread& ppu)
 {
-	sys_io.notice("cellMouseEnd()");
+	cellMouse.notice("cellMouseEnd()");
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -139,7 +113,7 @@ error_code cellMouseEnd(ppu_thread& ppu)
 
 error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
-	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
+	cellMouse.trace("cellMouseGetInfo(info=*0x%x)", info);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -172,7 +146,7 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 
 error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 {
-	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
+	cellMouse.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -209,7 +183,7 @@ error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> inf
 
 error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
-	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
+	cellMouse.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -259,7 +233,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.trace("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
+	cellMouse.trace("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -314,7 +288,7 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 
 error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 {
-	sys_io.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
+	cellMouse.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -350,7 +324,7 @@ error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 
 error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataList> data)
 {
-	sys_io.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
+	cellMouse.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -406,7 +380,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
-	sys_io.trace("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	cellMouse.trace("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 

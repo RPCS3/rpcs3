@@ -29,28 +29,24 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	int version = 420;
 	std::vector<const char*> required_extensions;
 
 	if (device_props.has_native_half_support)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
 
 	if (properties.multisampled_sampler_mask)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_ARB_shader_texture_image_samples");
 	}
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
 	{
-		version = std::max(version, 450);
 		required_extensions.emplace_back("GL_EXT_fragment_shader_barycentric");
 	}
 
-	OS << "#version " << version << "\n";
+	OS << "#version 450\n";
 	for (const auto ext : required_extensions)
 	{
 		OS << "#extension " << ext << ": require\n";
@@ -247,7 +243,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
-	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
+	m_shader_props.disable_early_discard = !vk::is_NVIDIA(vk::get_driver_vendor());
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 	m_shader_props.ROP_output_rounding = g_cfg.video.shader_precision != gpu_preset_level::low;
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
@@ -402,7 +398,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	}
 
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
-	decompiler.device_props.has_low_precision_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
@@ -426,7 +422,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 void VKFragmentProgram::Compile()
 {
 	if (g_cfg.video.log_programs)
-		fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+		fs::write_file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite, shader.get_source());
 	handle = shader.compile();
 }
 

@@ -11,6 +11,10 @@
 #include <thread>
 #include <cfenv>
 
+#ifdef ARCH_ARM64
+#include "Emu/CPU/Backends/AArch64/AArch64Signal.h"
+#endif
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
@@ -1260,6 +1264,36 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 	const auto cpu = get_current_cpu_thread();
 
+	struct spu_unsavable
+	{
+		spu_thread* _spu;
+
+		spu_unsavable(cpu_thread* cpu) noexcept
+			: _spu(cpu ? cpu->try_get<spu_thread>() : nullptr)
+		{
+			if (_spu)
+			{
+				if (_spu->unsavable)
+				{
+					_spu = nullptr;
+				}
+				else
+				{
+					// Must not be saved inside access violation handler because it is unpredictable
+					_spu->unsavable = true;
+				}
+			}
+		}
+
+		~spu_unsavable() noexcept
+		{
+			if (_spu)
+			{
+				_spu->unsavable = false;
+			}
+		}
+	} spu_protection{cpu};
+
 	if (addr < RAW_SPU_BASE_ADDR && vm::check_addr(addr) && rsx::g_access_violation_handler)
 	{
 		bool state_changed = false;
@@ -1490,7 +1524,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		return area->falloc(addr & -0x10000, 0x10000) || vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
-	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
+	if (cpu && (cpu->get_class() == thread_class::ppu || cpu->get_class() == thread_class::spu))
 	{
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
@@ -1557,7 +1591,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			auto& pf_events = g_fxo->get<page_fault_event_entries>();
 
 			// De-schedule
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				cpu->state -= cpu_flag::signal; // Cannot use check_state here and signal must be removed if exists
 				lv2_obj::sleep(*cpu);
@@ -1581,7 +1615,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
 				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
 
-			if (cpu->id_type() == 1)
+			if (cpu->get_class() == thread_class::ppu)
 			{
 				if (const auto func = static_cast<ppu_thread*>(cpu)->current_function)
 				{
@@ -1592,7 +1626,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			error_code sending_error = not_an_error(CELL_EBUSY);
 
 			// If we fail due to being busy, wait a bit and try again.
-			for (; static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_for(1000))
+			for (u64 sleep_until = get_system_time(); static_cast<u32>(sending_error) == CELL_EBUSY; thread_ctrl::wait_until(&sleep_until, 1000))
 			{
 				sending_error = send_event();
 
@@ -1631,12 +1665,12 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return true;
 		}
 
-		if (cpu->id_type() == 2)
+		if (cpu->get_class() == thread_class::spu)
 		{
 			if (!g_tls_access_violation_recovered)
 			{
 				vm_log.notice("\n%s", dump_useful_thread_info());
-				vm_log.error("[%s] Access violation %s location 0x%x (%s)", cpu->get_name(), is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+				vm_log.always()("[%s] Access violation %s location 0x%x (%s)", cpu->get_name(), is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
 			// TODO:
@@ -1678,7 +1712,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	// Do not log any further access violations in this case.
 	if (!g_tls_access_violation_recovered)
 	{
-		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->id_type() == 1 && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
+		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->get_class() == thread_class::ppu && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 	}
 
 	while (Emu.IsPaused())
@@ -1898,17 +1932,36 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	const bool is_writing = err & 0x2;
 #elif defined(ARCH_ARM64)
 	const bool is_executing = uptr(info->si_addr) == uptr(RIP(context));
+
+#if defined(__linux__) || defined(__APPLE__)
+	// Current CPU state decoder is reverse-engineered from the linux kernel and may not work on other platforms.
+	const auto decoded_reason = aarch64::decode_fault_reason(context);
+	const bool is_writing = (decoded_reason == aarch64::fault_reason::data_write);
+
+	if (decoded_reason != aarch64::fault_reason::data_write &&
+		decoded_reason != aarch64::fault_reason::data_read)
+	{
+		// We don't expect other classes of exceptions during normal executions
+		sig_log.warning("Unexpected fault. Reason: %d", static_cast<int>(decoded_reason));
+	}
+
+#else
 	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
-	const bool is_writing = (insn & 0xbfff0000) == 0x0c000000
-		|| (insn & 0xbfe00000) == 0x0c800000
-		|| (insn & 0xbfdf0000) == 0x0d000000
-		|| (insn & 0xbfc00000) == 0x0d800000
-		|| (insn & 0x3f400000) == 0x08000000
-		|| (insn & 0x3bc00000) == 0x39000000
-		|| (insn & 0x3fc00000) == 0x3d800000
-		|| (insn & 0x3bc00000) == 0x38000000
-		|| (insn & 0x3fe00000) == 0x3c800000
-		|| (insn & 0x3a400000) == 0x28000000;
+	const bool is_writing = 
+		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xbfdf0000) == 0x0d000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0xbfc00000) == 0x0d800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, <Xm>] (store pair of registers with register offset)
+		(insn & 0x3f400000) == 0x08000000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3bc00000) == 0x39000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
+		(insn & 0x3fc00000) == 0x3d800000 ||  // STR <Vd>, [<Xn>, <Xm>] (store SIMD/FP register with register offset)
+		(insn & 0x3bc00000) == 0x38000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
+		(insn & 0x3fe00000) == 0x3c800000 ||  // STUR <Vd>, [<Xn>, #<imm>] (store unprivileged register with immediate offset)
+		(insn & 0x3fe00000) == 0x3ca00000 ||  // STR <Vd>, [<Xn>, #<imm>] (store SIMD/FP register with immediate offset)
+		(insn & 0x3a400000) == 0x28000000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
+		(insn & 0xbf000000) == 0xad000000 ||  // STP <Vd1>, <Vd2>, [<Xn>, #<imm>] (store SIMD/FP 128-bit register pair with immediate offset)
+		(insn & 0xbf000000) == 0x6d000000;    // STP <Dd1>, <Dd2>, [<Xn>, #<imm>] (store SIMD/FP 64-bit register pair with immediate offset)
+#endif
 
 #else
 #error "signal_handler not implemented"
@@ -2280,6 +2333,10 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 		c.bind(_ret);
 		c.add(x86::rsp, 0x28);
 		c.ret();
+#else
+	UNUSED(c);
+	UNUSED(args);
+	UNUSED(entry);
 #endif
 	});
 }
@@ -2382,6 +2439,34 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	}
 
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+}
+
+
+void thread_ctrl::wait_until(u64* wait_time, u64 add_time, u64 min_wait, bool update_to_current_time)
+{
+	*wait_time = utils::add_saturate<u64>(*wait_time, add_time);
+
+	// TODO: Implement proper support for "waiting until" inside atomic wait engine
+	const u64 current_time = get_system_time();
+
+	if (current_time > *wait_time)
+	{
+		if (update_to_current_time)
+		{
+			*wait_time = current_time + (add_time - (current_time - *wait_time) % add_time);
+		}
+		else if (!min_wait)
+		{
+			return;
+		}
+	}
+
+	if (min_wait)
+	{
+		*wait_time = std::max<u64>(*wait_time, utils::add_saturate<u64>(current_time, min_wait));
+	}
+
+	wait_for(*wait_time - current_time);
 }
 
 void thread_ctrl::wait_for_accurate(u64 usec)
@@ -2664,7 +2749,30 @@ void thread_base::exec()
 
 	if (IsDebuggerPresent())
 	{
-		utils::trap();
+		// Prevent repeatedly halting the debugger in case multiple threads crashed at once
+		static atomic_t<u64> s_last_break = 0;
+		const u64 current_break = get_system_time() & -2;
+
+		if (s_last_break.fetch_op([current_break](u64& v)
+		{
+			if (current_break >= (v & -2) && current_break - (v & -2) >= 20'000'000)
+			{
+				v = current_break;
+				return true;
+			}
+
+			// Let's allow a single more thread to halt the debugger so the programmer sees the pattern
+			if (!(v & 1))
+			{
+				v |= 1;
+				return true;
+			}
+
+			return false;
+		}).second)
+		{
+			utils::trap();
+		}
 	}
 
 	if (const auto _this = g_tls_this_thread)
@@ -2859,7 +2967,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 							spu_mask = 0b0000101010101010;
 							rsx_mask = 0b1000000000000000;
 						}
-						else
+						else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 						{
 							ppu_mask = 0b1111111100000000;
 							spu_mask = ppu_mask;
@@ -2900,7 +3008,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b1111111100000000;
 						rsx_mask = 0b0000000000001111;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						// Verified by more than one windows user on 16-thread CPU
 						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
@@ -2914,7 +3022,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						spu_mask = 0b111111110000;
 						rsx_mask = 0b000000000011;
 					}
-					else
+					else // if (g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
 					{
 						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
 					}

@@ -27,7 +27,7 @@ namespace rsx
 
 		TIU_slot& operator[](u32 index) { return slots_[index]; }
 
-		void write_to(void* dst, u16 mask);
+		void write_to(void* dst, u16 mask) const;
 		void load_from(const void* src, u16 mask);
 
 		static void masked_transfer(void* dst, const void* src, u16 mask);
@@ -56,5 +56,17 @@ namespace rsx
 		void import(const vertex_program_texture_state& other, u16 mask);
 		void set_dimension(texture_dimension_extended type, u32 index);
 		bool operator == (const vertex_program_texture_state& other) const;
+	};
+
+	struct VertexProgramBase
+	{
+		u32 id = 0;
+		std::vector<u16> constant_ids;
+		bool has_indexed_constants = false;
+
+		// Translates an incoming range of constants against our mapping.
+		// If there is no linear mapping available, return -1, otherwise returns the translated index of the first slot
+		// TODO: Move this somewhere else during refactor
+		int TranslateConstantsRange(int first_index, int count) const;
 	};
 }

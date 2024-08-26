@@ -328,7 +328,7 @@ struct RSXFragmentProgram
 
 	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)
 	{
-		auto result = prog;
+		RSXFragmentProgram result = prog;
 		result.clone_data();
 		return result;
 	}

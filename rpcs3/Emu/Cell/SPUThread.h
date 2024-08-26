@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/Hypervisor.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
@@ -176,6 +177,14 @@ enum : u32
 	SPU_FAKE_BASE_ADDR  = 0xE8000000,
 };
 
+struct spu_channel_op_state
+{
+	u8 old_count;
+	u8 count;
+	bool notify;
+	bool op_done;
+};
+
 struct alignas(16) spu_channel
 {
 	// Low 32 bits contain value
@@ -186,8 +195,10 @@ struct alignas(16) spu_channel
 
 public:
 	static constexpr u32 off_wait  = 32;
+	static constexpr u32 off_occupy = 32;
 	static constexpr u32 off_count = 63;
 	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_occupy = 1ull << off_occupy;
 	static constexpr u64 bit_count = 1ull << off_count;
 
 	// Returns true on success
@@ -207,20 +218,21 @@ public:
 
 	// Push unconditionally, may require notification
 	// Performing bitwise OR with previous value if specified, otherwise overwiting it
-	bool push(u32 value, bool to_or = false)
+	// Returns old count and new count
+	spu_channel_op_state push(u32 value, bool to_or = false, bool postpone_notify = false)
 	{
 		while (true)
 		{
 			const auto [old, pushed_to_data] = data.fetch_op([&](u64& data)
 			{
-				if (data == bit_wait)
+				if (data & bit_occupy)
 				{
 					return false;
 				}
 
 				if (to_or)
 				{
-					data |= bit_count | value;
+					data = bit_count | (static_cast<u32>(data) | value);
 				}
 				else
 				{
@@ -233,26 +245,42 @@ public:
 			if (!pushed_to_data)
 			{
 				// Insert the pending value in special storage for waiting SPUs, leave no time in which the channel has data
-				if (!jostling_value.compare_and_swap_test(bit_wait, value))
+				if (!jostling_value.compare_and_swap_test(bit_occupy, value))
 				{
 					// Other thread has inserted a value through jostling_value, retry
 					continue;
 				}
+			}
 
+			if (old & bit_wait)
+			{
 				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
-				ensure(this->data.bit_test_reset(off_wait));
-				utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+				if (!this->data.bit_test_reset(off_wait))
+				{
+					// Could be fatal or at emulation stopping, to be checked by the caller
+					return { (old & bit_count) == 0, 0, false, false };
+				}
+
+				if (!postpone_notify)
+				{
+					utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+				}
 			}
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
-			return !pushed_to_data || (old & bit_count) == 0;
+			return { (old & bit_count) == 0, 1, (old & bit_wait) != 0, true };
 		}
+	}
+
+	void notify()
+	{
+		utils::bless<atomic_t<u32>>(&data)[1].notify_one();
 	}
 
 	// Returns true on success
 	bool try_pop(u32& out)
 	{
-		return data.fetch_op([&](u64& data)
+		return data.fetch_op([&out](u64& data)
 		{
 			if (data & bit_count) [[likely]]
 			{
@@ -284,7 +312,7 @@ public:
 	u32 pop()
 	{
 		// Value is not cleared and may be read again
-		constexpr u64 mask = bit_count | bit_wait;
+		constexpr u64 mask = bit_count | bit_occupy;
 
 		const u64 old = data.fetch_op([&](u64& data)
 		{
@@ -295,10 +323,10 @@ public:
 				return;
 			}
 
-			data &= ~mask;
+			data &= ~(mask | bit_wait);
 		});
 
-		if ((old & mask) == mask)
+		if (old & bit_wait)
 		{
 			utils::bless<atomic_t<u32>>(&data)[1].notify_one();
 		}
@@ -324,7 +352,7 @@ public:
 
 	u32 get_count() const
 	{
-		return static_cast<u32>(data >> off_count);
+		return (data & bit_count) ? 1 : 0;
 	}
 };
 
@@ -344,59 +372,26 @@ struct spu_channel_4_t
 	atomic_t<u64> jostling_value;
 	atomic_t<u32> value3;
 
-	static constexpr u32 off_wait  = 32;
+	static constexpr u32 off_wait  = 0;
+	static constexpr u32 off_occupy = 7;
 	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_occupy = 1ull << off_occupy;
+	static constexpr u64 jostling_flag = 1ull << 63;
 
 	void clear()
 	{
 		values.release({});
+		jostling_value.release(0);
+		value3.release(0);
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
-	void push(u32 value)
+	// returning if could be aborted (operation failed unexpectedly)
+	spu_channel_op_state push(u32 value, bool postpone_notify = false);
+
+	void notify()
 	{
-		while (true)
-		{
-			value3.release(value);
-			const auto [old, pushed_to_data] = values.fetch_op([&](sync_var_t& data)
-			{
-				if (data.waiting)
-				{
-					return false;
-				}
-
-				switch (data.count++)
-				{
-				case 0: data.value0 = value; break;
-				case 1: data.value1 = value; break;
-				case 2: data.value2 = value; break;
-				default:
-				{
-					data.count = 4;
-					data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
-					break;
-				}
-				}
-
-				return true;
-			});
-
-			if (!pushed_to_data)
-			{
-				// Insert the pending value in special storage for waiting SPUs, leave no time in which the channel has data
-				if (!jostling_value.compare_and_swap_test(bit_wait, value))
-				{
-					// Other thread has inserted a value through jostling_value, retry
-					continue;
-				}
-
-				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushing to jostling_value)
-				ensure(atomic_storage<u8>::exchange(values.raw().waiting, 0));
-				utils::bless<atomic_t<u32>>(&values)[0].notify_one();
-			}
-
-			return;
-		}
+		utils::bless<atomic_t<u32>>(&values)[0].notify_one();
 	}
 
 	// returns non-zero value on success: queue size before removal
@@ -422,7 +417,7 @@ struct spu_channel_4_t
 	}
 
 	// Returns [previous count, value] (if aborted 0 count is returned)
-	std::pair<u32, u32> pop_wait(cpu_thread& spu);
+	std::pair<u32, u32> pop_wait(cpu_thread& spu, bool pop_value = true);
 
 	// returns current queue size without modification
 	uint try_read(u32 (&out)[4]) const
@@ -443,7 +438,7 @@ struct spu_channel_4_t
 
 	u32 get_count() const
 	{
-		return std::as_const(values).raw().count;
+		return atomic_storage<u8>::load(std::as_const(values).raw().count);
 	}
 
 	void set_values(u32 count, u32 value0, u32 value1 = 0, u32 value2 = 0, u32 value3 = 0)
@@ -668,6 +663,8 @@ public:
 
 	// May be used by recompilers.
 	u8* memory_base_addr = vm::g_base_addr;
+	u8* memory_sudo_addr = vm::g_sudo_addr;
+	u8* reserv_base_addr = vm::g_reservations;
 
 	// General-Purpose Registers
 	std::array<v128, 128> gpr;
@@ -675,7 +672,6 @@ public:
 
 	// MFC command data
 	spu_mfc_cmd ch_mfc_cmd;
-	u32 mfc_cmd_id = 0;
 
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
@@ -783,7 +779,7 @@ public:
 	u64 block_recover = 0;
 	u64 block_failure = 0;
 
-	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+	rpcs3::hypervisor_context_t hv_ctx; // NOTE: The offset within the class must be within the first 1MiB
 
 	u64 ftx = 0; // Failed transactions
 	u64 stx = 0; // Succeeded transactions (pure counters)
@@ -795,9 +791,11 @@ public:
 	u64 last_succ = 0;
 	u64 last_gtsc = 0;
 	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
-	u32 last_getllar_id = umax;
+	u32 last_getllar_gpr1 = umax;
+	u32 last_getllar_addr = umax;
 	u32 getllar_spin_count = 0;
 	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
+	u64 getllar_evaluate_time = 0;
 
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
@@ -816,11 +814,13 @@ public:
 	atomic_t<spu_debugger_mode> debugger_mode{};
 
 	// PC-based breakpoint list
-	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
+	std::array<atomic_t<u8>, SPU_LS_SIZE / 4 / 8> local_breakpoints{};
 	atomic_t<bool> has_active_local_bps = false;
 	u32 current_bp_pc = umax;
 	bool stop_flag_removal_protection = false;
 
+	std::array<std::array<u8, 4>, SPU_LS_SIZE / 128> getllar_wait_time{};
+ 
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);

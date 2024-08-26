@@ -435,7 +435,7 @@ std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::spa
 	{
 		return untouched_impl::upload_untouched(src, dst);
 	}
-	else if constexpr (std::is_same<T, u16>::value)
+	else if constexpr (std::is_same_v<T, u16>)
 	{
 		if (primitive_restart_index > 0xffff)
 		{

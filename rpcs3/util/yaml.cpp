@@ -45,7 +45,7 @@ std::pair<YAML::Node, std::string> yaml_load(const std::string& from)
 }
 
 template <typename T>
-T get_yaml_node_value(YAML::Node node, std::string& error_message)
+T get_yaml_node_value(const YAML::Node& node, std::string& error_message)
 {
 	try
 	{
@@ -59,7 +59,7 @@ T get_yaml_node_value(YAML::Node node, std::string& error_message)
 	return {};
 }
 
-std::string get_yaml_node_location(YAML::Node node)
+std::string get_yaml_node_location(const YAML::Node& node)
 {
 	try
 	{
@@ -81,9 +81,15 @@ std::string get_yaml_node_location(const YAML::detail::iterator_value& it)
 	return get_yaml_node_location(it.first);
 }
 
-template u32 get_yaml_node_value<u32>(YAML::Node, std::string&);
-template u64 get_yaml_node_value<u64>(YAML::Node, std::string&);
-template s64 get_yaml_node_value<s64>(YAML::Node, std::string&);
-template f64 get_yaml_node_value<f64>(YAML::Node, std::string&);
-template std::string get_yaml_node_value<std::string>(YAML::Node, std::string&);
-template cheat_info get_yaml_node_value<cheat_info>(YAML::Node, std::string&);
+template u8 get_yaml_node_value<u8>(const YAML::Node&, std::string&);
+template s8 get_yaml_node_value<s8>(const YAML::Node&, std::string&);
+template u16 get_yaml_node_value<u16>(const YAML::Node&, std::string&);
+template s16 get_yaml_node_value<s16>(const YAML::Node&, std::string&);
+template u32 get_yaml_node_value<u32>(const YAML::Node&, std::string&);
+template s32 get_yaml_node_value<s32>(const YAML::Node&, std::string&);
+template u64 get_yaml_node_value<u64>(const YAML::Node&, std::string&);
+template s64 get_yaml_node_value<s64>(const YAML::Node&, std::string&);
+template f32 get_yaml_node_value<f32>(const YAML::Node&, std::string&);
+template f64 get_yaml_node_value<f64>(const YAML::Node&, std::string&);
+template std::string get_yaml_node_value<std::string>(const YAML::Node&, std::string&);
+template cheat_info get_yaml_node_value<cheat_info>(const YAML::Node&, std::string&);

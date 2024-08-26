@@ -867,7 +867,7 @@ namespace stx
 
 			if (exch.m_ptr)
 			{
-				exch.d().refs += c_ref_mask;
+				exch.d()->refs += c_ref_mask;
 			}
 
 			atomic_ptr old;
@@ -903,7 +903,7 @@ namespace stx
 			old_exch.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << c_ref_size;
 
 			// Set to reset old cmp_and_old value
-			old.m_val.raw() = (cmp_and_old.m_ptr << c_ref_size) | c_ref_mask;
+			old.m_val.raw() = (reinterpret_cast<uptr>(cmp_and_old.m_ptr) << c_ref_size) | c_ref_mask;
 
 			if (!_val)
 			{
@@ -953,7 +953,7 @@ namespace stx
 
 			if (exch.m_ptr)
 			{
-				exch.d().refs += c_ref_mask;
+				exch.d()->refs += c_ref_mask;
 			}
 
 			atomic_ptr old;

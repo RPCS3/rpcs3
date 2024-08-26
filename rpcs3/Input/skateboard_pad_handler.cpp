@@ -4,6 +4,8 @@
 
 LOG_CHANNEL(skateboard_log, "Skateboard");
 
+using namespace reports;
+
 namespace
 {
 	constexpr id_pair SKATEBOARD_ID_0 = {0x12BA, 0x0400}; // Tony Hawk RIDE Skateboard
@@ -37,8 +39,8 @@ namespace
 	static constexpr std::array<u8, sizeof(skateboard_input_report)> disconnected_state  = { 0x00, 0x00, 0x0F, 0x80, 0x80, 0x80, 0x80, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 }
 
-skateboard_pad_handler::skateboard_pad_handler(bool emulation)
-    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, emulation, {SKATEBOARD_ID_0})
+skateboard_pad_handler::skateboard_pad_handler()
+    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, {SKATEBOARD_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -79,6 +81,7 @@ skateboard_pad_handler::skateboard_pad_handler(bool emulation)
 	b_has_rgb = false;
 	b_has_player_led = false;
 	b_has_battery = false;
+	b_has_battery_led = false;
 	b_has_pressure_intensity_button = false;
 
 	m_name_string = "Skateboard #";
@@ -131,6 +134,8 @@ void skateboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->tilt_right.def = ::at32(button_list, skateboard_key_codes::tilt_right);
 
 	// Set default misc variables
+	cfg->lstick_anti_deadzone.def = 0;
+	cfg->rstick_anti_deadzone.def = 0;
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
@@ -200,18 +205,18 @@ skateboard_pad_handler::DataStatus skateboard_pad_handler::get_data(skateboard_d
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
-		skateboard_log.error("get_data ReadError", device->path);
+		skateboard_log.error("get_data ReadError: %s", hid_error(device->hidDevice));
 		return DataStatus::ReadError;
 	}
 
 	if (res != static_cast<int>(sizeof(skateboard_input_report)))
 		return DataStatus::NoNewData;
 
-	if (std::memcmp(device->padData.data(), buf.data(), sizeof(skateboard_input_report)) == 0)
+	if (std::memcmp(&device->report, buf.data(), sizeof(skateboard_input_report)) == 0)
 		return DataStatus::NoNewData;
 
 	// Get the new data
-	memcpy(device->padData.data(), buf.data(), sizeof(skateboard_input_report));
+	std::memcpy(&device->report, buf.data(), sizeof(skateboard_input_report));
 
 	// Check the skateboard's power state based on the input report
 	device->skateboard_is_on =
@@ -223,40 +228,38 @@ skateboard_pad_handler::DataStatus skateboard_pad_handler::get_data(skateboard_d
 
 PadHandlerBase::connection skateboard_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	skateboard_device* skateboard_dev = static_cast<skateboard_device*>(device.get());
-	if (!skateboard_dev || skateboard_dev->path.empty())
+	skateboard_device* dev = static_cast<skateboard_device*>(device.get());
+	if (!dev || dev->path.empty())
 		return connection::disconnected;
 
-	if (skateboard_dev->hidDevice == nullptr)
+	if (dev->hidDevice == nullptr)
 	{
 		// try to reconnect
-		hid_device* dev = hid_open_path(skateboard_dev->path.c_str());
-		if (dev)
+		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
 		{
-			if (hid_set_nonblocking(dev, 1) == -1)
+			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
-				skateboard_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", skateboard_dev->path, hid_error(dev));
+				skateboard_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(hid_dev));
 			}
-			skateboard_dev->hidDevice = dev;
+			dev->hidDevice = hid_dev;
 		}
 		else
 		{
 			// nope, not there
-			skateboard_log.error("Device %s: disconnected", skateboard_dev->path);
+			skateboard_log.error("Device %s: disconnected", dev->path);
 			return connection::disconnected;
 		}
 	}
 
-	if (get_data(skateboard_dev) == DataStatus::ReadError)
+	if (get_data(dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
-		hid_close(skateboard_dev->hidDevice);
-		skateboard_dev->hidDevice = nullptr;
+		dev->close();
 
 		return connection::no_data;
 	}
 
-	if (!skateboard_dev->skateboard_is_on)
+	if (!dev->skateboard_is_on)
 	{
 		// This means that the dongle is still connected, but the skateboard is turned off.
 		// There is no need to reconnect the hid device again, we just have to check the input report for proper data.
@@ -270,35 +273,34 @@ PadHandlerBase::connection skateboard_pad_handler::update_connection(const std::
 std::unordered_map<u64, u16> skateboard_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	std::unordered_map<u64, u16> key_buf;
-	skateboard_device* dualsense_dev = static_cast<skateboard_device*>(device.get());
-	if (!dualsense_dev)
+	skateboard_device* dev = static_cast<skateboard_device*>(device.get());
+	if (!dev)
 		return key_buf;
 
-	const std::array<u8, 64>& buf = dualsense_dev->padData;
-	const skateboard_input_report* input = reinterpret_cast<const skateboard_input_report*>(buf.data());
+	const skateboard_input_report& input = dev->report;
 
 	// D-Pad
-	key_buf[skateboard_key_codes::left]  = (input->d_pad == dpad_states::left || input->d_pad == dpad_states::up_left || input->d_pad == dpad_states::down_left) ? 255 : 0;
-	key_buf[skateboard_key_codes::right] = (input->d_pad == dpad_states::right || input->d_pad == dpad_states::up_right || input->d_pad == dpad_states::down_right) ? 255 : 0;
-	key_buf[skateboard_key_codes::up]    = (input->d_pad == dpad_states::up || input->d_pad == dpad_states::up_left || input->d_pad == dpad_states::up_right) ? 255 : 0;
-	key_buf[skateboard_key_codes::down]  = (input->d_pad == dpad_states::down || input->d_pad == dpad_states::down_left || input->d_pad == dpad_states::down_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::left]  = (input.d_pad == dpad_states::left || input.d_pad == dpad_states::up_left || input.d_pad == dpad_states::down_left) ? 255 : 0;
+	key_buf[skateboard_key_codes::right] = (input.d_pad == dpad_states::right || input.d_pad == dpad_states::up_right || input.d_pad == dpad_states::down_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::up]    = (input.d_pad == dpad_states::up || input.d_pad == dpad_states::up_left || input.d_pad == dpad_states::up_right) ? 255 : 0;
+	key_buf[skateboard_key_codes::down]  = (input.d_pad == dpad_states::down || input.d_pad == dpad_states::down_left || input.d_pad == dpad_states::down_right) ? 255 : 0;
 
 	// Face buttons
-	key_buf[skateboard_key_codes::cross]    = (input->buttons & button_flags::cross)    ? 255 : 0;
-	key_buf[skateboard_key_codes::square]   = (input->buttons & button_flags::square)   ? 255 : 0;
-	key_buf[skateboard_key_codes::circle]   = (input->buttons & button_flags::circle)   ? 255 : 0;
-	key_buf[skateboard_key_codes::triangle] = (input->buttons & button_flags::triangle) ? 255 : 0;
-	key_buf[skateboard_key_codes::start]    = (input->buttons & button_flags::start)    ? 255 : 0;
-	key_buf[skateboard_key_codes::select]   = (input->buttons & button_flags::select)   ? 255 : 0;
-	key_buf[skateboard_key_codes::ps]       = (input->buttons & button_flags::ps)       ? 255 : 0;
+	key_buf[skateboard_key_codes::cross]    = (input.buttons & button_flags::cross)    ? 255 : 0;
+	key_buf[skateboard_key_codes::square]   = (input.buttons & button_flags::square)   ? 255 : 0;
+	key_buf[skateboard_key_codes::circle]   = (input.buttons & button_flags::circle)   ? 255 : 0;
+	key_buf[skateboard_key_codes::triangle] = (input.buttons & button_flags::triangle) ? 255 : 0;
+	key_buf[skateboard_key_codes::start]    = (input.buttons & button_flags::start)    ? 255 : 0;
+	key_buf[skateboard_key_codes::select]   = (input.buttons & button_flags::select)   ? 255 : 0;
+	key_buf[skateboard_key_codes::ps]       = (input.buttons & button_flags::ps)       ? 255 : 0;
 
 	// Infrared
-	key_buf[skateboard_key_codes::ir_nose]    = input->pressure_triangle;
-	key_buf[skateboard_key_codes::ir_tail]    = input->pressure_circle;
-	key_buf[skateboard_key_codes::ir_left]    = input->pressure_cross;
-	key_buf[skateboard_key_codes::ir_right]   = input->pressure_square;
-	key_buf[skateboard_key_codes::tilt_left]  = input->pressure_l1;
-	key_buf[skateboard_key_codes::tilt_right] = input->pressure_r1;
+	key_buf[skateboard_key_codes::ir_nose]    = input.pressure_triangle;
+	key_buf[skateboard_key_codes::ir_tail]    = input.pressure_circle;
+	key_buf[skateboard_key_codes::ir_left]    = input.pressure_cross;
+	key_buf[skateboard_key_codes::ir_right]   = input.pressure_square;
+	key_buf[skateboard_key_codes::tilt_left]  = input.pressure_l1;
+	key_buf[skateboard_key_codes::tilt_right] = input.pressure_r1;
 
 	// NOTE: Axes X, Y, Z and RZ are always 128, which is the default anyway, so setting the values is omitted.
 
@@ -314,13 +316,12 @@ void skateboard_pad_handler::get_extended_info(const pad_ensemble& binding)
 	if (!dev || !pad)
 		return;
 
-	const std::array<u8, 64>& buf = dev->padData;
-	const skateboard_input_report* input = reinterpret_cast<const skateboard_input_report*>(buf.data());
+	const skateboard_input_report& input = dev->report;
 
-	pad->m_sensors[0].m_value = Clamp0To1023(input->large_axes[0]);
-	pad->m_sensors[1].m_value = Clamp0To1023(input->large_axes[1]);
-	pad->m_sensors[2].m_value = Clamp0To1023(input->large_axes[2]);
-	pad->m_sensors[3].m_value = Clamp0To1023(input->large_axes[3]);
+	pad->m_sensors[0].m_value = Clamp0To1023(input.large_axes[0]);
+	pad->m_sensors[1].m_value = Clamp0To1023(input.large_axes[1]);
+	pad->m_sensors[2].m_value = Clamp0To1023(input.large_axes[2]);
+	pad->m_sensors[3].m_value = Clamp0To1023(input.large_axes[3]);
 }
 
 pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& /*data*/)
@@ -354,13 +355,22 @@ void skateboard_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	dev->new_output_data = false;
 
-	if (dev->new_output_data)
-	{
-		if (send_output_report(dev) >= 0)
-		{
-			dev->new_output_data = false;
-		}
-	}
+	// Disabled until needed
+	//const auto now = steady_clock::now();
+	//const auto elapsed = now - dev->last_output;
+
+	//if (dev->new_output_data || elapsed > min_output_interval)
+	//{
+	//	if (const int res = send_output_report(dev); res >= 0)
+	//	{
+	//		dev->new_output_data = false;
+	//		dev->last_output = now;
+	//	}
+	//	else if (res == -1)
+	//	{
+	//		skateboard_log.error("apply_pad_data: send_output_report failed! error=%s", hid_error(dev->hidDevice));
+	//	}
+	//}
 }
 
 void skateboard_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
@@ -375,5 +385,8 @@ void skateboard_pad_handler::SetPadData(const std::string& padId, u8 player_id, 
 	ensure(device->config);
 
 	// Disabled until needed
-	//send_output_report(device.get());
+	//if (send_output_report(device.get()) == -1)
+	//{
+	//	skateboard_log.error("SetPadData: send_output_report failed! Reason: %s", hid_error(device->hidDevice));
+	//}
 }

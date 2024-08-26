@@ -81,6 +81,11 @@ namespace program_hash_util
 	};
 }
 
+namespace rsx
+{
+	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize = true);
+}
+
 
 /**
 * Cache for program help structure (blob, string...)
@@ -275,32 +280,6 @@ public:
 		}
 	};
 
-	struct
-	{
-		std::unordered_map<f32, program_buffer_patch_entry> db;
-
-		void add(program_buffer_patch_entry& e)
-		{
-			db[e.fp_key] = e;
-		}
-
-		void add(f32& key, f32& value)
-		{
-			db[key] = { key, value };
-		}
-
-		void clear()
-		{
-			db.clear();
-		}
-
-		bool is_empty() const
-		{
-			return db.empty();
-		}
-	}
-	patch_table;
-
 public:
 	program_state_cache() = default;
 	~program_state_cache()
@@ -404,7 +383,11 @@ public:
 		return { result, &vertex_program, &fragment_program };
 	}
 
-	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize = false) const;
+	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize = false) const
+	{
+		ensure((dst_buffer.size_bytes() >= ::narrow<int>(fragment_program.FragmentConstantOffsetCache.size()) * 16u));
+		rsx::write_fragment_constants_to_buffer(dst_buffer, rsx_prog, fragment_program.FragmentConstantOffsetCache, sanitize);
+	}
 
 	void clear()
 	{

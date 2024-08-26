@@ -32,7 +32,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 		R"(
 			<p style="white-space: nowrap;">
 				RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.<br>
-				It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with <a %0 href="https://www.patreon.com/Nekotekina">Patreon</a>.<br>
+				It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with <a %0 href="https://rpcs3.net/patreon">Patreon</a>.<br>
 				Our developers and contributors are always working hard to ensure this project is the best that it can be.<br>
 				There are still plenty of implementations to make and optimizations to do.
 			</p>

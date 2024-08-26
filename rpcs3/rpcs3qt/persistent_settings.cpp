@@ -11,16 +11,16 @@ persistent_settings::persistent_settings(QObject* parent) : settings(parent)
 	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::persistent::persistent_file_name + ".dat", QSettings::Format::IniFormat, parent));
 }
 
-void persistent_settings::SetPlaytime(const QString& serial, quint64 playtime)
+void persistent_settings::SetPlaytime(const QString& serial, quint64 playtime, bool sync)
 {
 	m_playtime[serial] = playtime;
-	SetValue(gui::persistent::playtime, serial, playtime);
+	SetValue(gui::persistent::playtime, serial, playtime, sync);
 }
 
-void persistent_settings::AddPlaytime(const QString& serial, quint64 elapsed)
+void persistent_settings::AddPlaytime(const QString& serial, quint64 elapsed, bool sync)
 {
 	const quint64 playtime = GetValue(gui::persistent::playtime, serial, 0).toULongLong();
-	SetPlaytime(serial, playtime + elapsed);
+	SetPlaytime(serial, playtime + elapsed, sync);
 }
 
 quint64 persistent_settings::GetPlaytime(const QString& serial)
@@ -28,10 +28,10 @@ quint64 persistent_settings::GetPlaytime(const QString& serial)
 	return m_playtime[serial];
 }
 
-void persistent_settings::SetLastPlayed(const QString& serial, const QString& date)
+void persistent_settings::SetLastPlayed(const QString& serial, const QString& date, bool sync)
 {
 	m_last_played[serial] = date;
-	SetValue(gui::persistent::last_played, serial, date);
+	SetValue(gui::persistent::last_played, serial, date, sync);
 }
 
 QString persistent_settings::GetLastPlayed(const QString& serial)

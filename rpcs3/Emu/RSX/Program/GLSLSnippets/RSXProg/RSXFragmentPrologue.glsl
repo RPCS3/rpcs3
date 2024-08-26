@@ -9,16 +9,19 @@ R"(
 #endif
 
 #if defined(_ENABLE_ROP_OUTPUT_ROUNDING) || defined(_ENABLE_PROGRAMMABLE_BLENDING)
+// Truncate float by discarding lower 12-bits of the mantissa
+#define _fx12_truncate(x) uintBitsToFloat(floatBitsToUint(x) & 0xfffff000u)
+
 // Default. Used when we're not utilizing native fp16
 vec4 round_to_8bit(const in vec4 v4)
 {
-	uvec4 raw = uvec4(floor(fma(v4, vec4(255.), vec4(0.5))));
+	uvec4 raw = uvec4(floor(fma(_fx12_truncate(v4), vec4(255.), vec4(0.5))));
 	return vec4(raw) / vec4(255.);
 }
 #ifndef _32_BIT_OUTPUT
 f16vec4 round_to_8bit(const in f16vec4 v4)
 {
-	uvec4 raw = uvec4(floor(fma(v4, f16vec4(255.), f16vec4(0.5))));
+	uvec4 raw = uvec4(floor(fma(_fx12_truncate(vec4(v4)), f16vec4(255.), f16vec4(0.5))));
 	return f16vec4(raw) / f16vec4(255.);
 }
 #endif

@@ -346,14 +346,14 @@ namespace rsx
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS:
 			default:
-				//Not implemented
+				// Not implemented
 				value = (write_enabled && stats_enabled) ? -1 : 0;
 				break;
 			}
 
 			rsx::reservation_lock<true> lock(sink, 16);
 			auto report = vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink);
-			report->store({ timestamp, value, 0 });
+			report->store({timestamp, value, 0});
 		}
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)

@@ -60,9 +60,9 @@ public:
 	static constexpr usz bitmax = sizeof(T) * 8;
 	static constexpr usz bitsize = static_cast<under>(T::__bitset_enum_max);
 
-	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");
+	static_assert(std::is_enum_v<T>, "bs_t<> error: invalid type (must be enum)");
 	static_assert(bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");
-	static_assert(bitsize != bitmax || std::is_unsigned<under>::value, "bs_t<> error: invalid __bitset_enum_max (sign bit)");
+	static_assert(bitsize != bitmax || std::is_unsigned_v<under>, "bs_t<> error: invalid __bitset_enum_max (sign bit)");
 
 	// Helper function
 	static constexpr under shift(T value)

@@ -690,7 +690,6 @@ namespace utils
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				ensure(m_context.current_track < m_context.playlist.size());
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
@@ -1182,7 +1181,6 @@ namespace utils
 			{
 				av.video.context->codec_id = av.format_context->oformat->video_codec;
 				av.video.context->codec_type = AVMEDIA_TYPE_VIDEO;
-				av.video.context->frame_number = 0;
 				av.video.context->bit_rate = m_video_bitrate_bps;
 				av.video.context->width = static_cast<int>(m_out_format.width);
 				av.video.context->height = static_cast<int>(m_out_format.height);

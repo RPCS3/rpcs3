@@ -210,6 +210,7 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	{
 		switch (error)
 		{
+			STR_CASE(disc_change_manager::eject_state::unknown);
 			STR_CASE(disc_change_manager::eject_state::inserted);
 			STR_CASE(disc_change_manager::eject_state::ejected);
 			STR_CASE(disc_change_manager::eject_state::busy);
@@ -219,6 +220,22 @@ void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out
 	});
 }
 
+static bool check_system_ver(vm::cptr<char> systemVersion)
+{
+	// Only allow something like "04.8300".
+	// The disassembly shows that "04.83" would also be considered valid, but the initial strlen check makes this void.
+	return (
+		systemVersion &&
+		std::strlen(systemVersion.get_ptr()) == 7 &&
+		std::isdigit(systemVersion[0]) &&
+		std::isdigit(systemVersion[1]) &&
+		systemVersion[2] == '.' &&
+		std::isdigit(systemVersion[3]) &&
+		std::isdigit(systemVersion[4]) &&
+		std::isdigit(systemVersion[5]) &&
+		std::isdigit(systemVersion[6])
+	);
+}
 
 disc_change_manager::disc_change_manager()
 {
@@ -239,8 +256,15 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 	eject_callback = func_eject;
 	insert_callback = func_insert;
 
-	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	const bool is_disc_mounted = fs::is_dir(vfs::get("/dev_bdvd/PS3_GAME"));
+
+	if (state == eject_state::unknown)
+	{
+		state = is_disc_mounted ? eject_state::inserted : eject_state::ejected;
+	}
+
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject && is_disc_mounted);
+	Emu.GetCallbacks().enable_disc_insert(!!func_insert && !is_disc_mounted);
 
 	return CELL_OK;
 }
@@ -300,7 +324,8 @@ void disc_change_manager::eject_disc()
 		ensure(vfs::unmount("/dev_ps2disc"));
 		dcm.state = eject_state::ejected;
 
-		Emu.GetCallbacks().enable_disc_insert(true);
+		// Re-enable disc insertion only if the callback is still registered
+		Emu.GetCallbacks().enable_disc_insert(!!dcm.insert_callback);
 
 		return CELL_OK;
 	});
@@ -381,7 +406,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -589,6 +614,11 @@ error_code cellHddGameGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 
 	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
 
+	if (!size)
+	{
+		return CELL_HDDGAME_ERROR_PARAM;
+	}
+
 	lv2_obj::sleep(ppu);
 
 	const u64 start_sleep = ppu.start_time;
@@ -623,7 +653,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellHddGameSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
@@ -682,7 +712,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 {
 	cellGame.todo("cellGameDataSetSystemVer(systemVersion=%s)", systemVersion);
 
-	if (!systemVersion)
+	if (!check_system_ver(systemVersion))
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -1008,7 +1038,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	//older sdk. it might not care about game type.
 
-	if (version != CELL_GAMEDATA_VERSION_CURRENT || errDialog > 1 || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+	if (version != CELL_GAMEDATA_VERSION_CURRENT || !funcStat || !dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
@@ -1162,7 +1192,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		break;
 	}
 
-	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS) // Maybe != CELL_GAMEDATA_ERRDIALOG_NONE
+	if (errDialog == CELL_GAMEDATA_ERRDIALOG_ALWAYS)
 	{
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);

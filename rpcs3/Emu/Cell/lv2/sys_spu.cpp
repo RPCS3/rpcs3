@@ -1399,7 +1399,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 				if (prev_resv && prev_resv != resv)
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier(prev_resv).notify_all();
+					vm::reservation_notifier_notify(prev_resv);
 				}
 
 				prev_resv = resv;
@@ -1409,7 +1409,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier(prev_resv).notify_all();
+		vm::reservation_notifier_notify(prev_resv);
 	}
 
 	group->exit_status = value;
@@ -1749,9 +1749,23 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard lock(group->mutex);
+	spu_channel_op_state state{};
+	{
+		std::lock_guard lock(group->mutex);
 
-	thread->ch_in_mbox.push(value);
+		state = thread->ch_in_mbox.push(value, true);
+	}
+
+	if (!state.op_done)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	if (state.notify)
+	{
+		thread->ch_in_mbox.notify();
+	}
 
 	return CELL_OK;
 }

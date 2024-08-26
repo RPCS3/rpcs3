@@ -21,7 +21,7 @@
 #include <QCompleter>
 
 infinity_dialog* infinity_dialog::inst = nullptr;
-std::array<std::optional<u32>, 7> infinity_dialog::figure_slots = {};
+std::array<std::optional<u32>, 9> infinity_dialog::figure_slots = {};
 static QString s_last_figure_path;
 
 LOG_CHANNEL(infinity_log, "infinity");
@@ -420,19 +420,21 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	QStringList filterlist;
 	u32 first_entry = 0;
 
-	for (const auto& entry : list_figures)
+	for (const auto& [figure, entry] : list_figures)
 	{
-		const auto figure = entry.first;
 		// Only display entry if it is a piece appropriate for the slot
 		if ((slot == 0 &&
 				((figure > 0x1E8480 && figure < 0x2DC6BF) || (figure > 0x3D0900 && figure < 0x4C4B3F))) ||
-			((slot == 1 || slot == 2) && figure < 0x1E847F) ||
-			((slot == 3 || slot == 4 || slot == 5 || slot == 6) &&
+			((slot == 1 || slot == 2) && (figure > 0x3D0900 && figure < 0x4C4B3F)) ||
+			((slot == 3 || slot == 6) && figure < 0x1E847F) ||
+			((slot == 4 || slot == 5 || slot == 7 || slot == 8) &&
 				(figure > 0x2DC6C0 && figure < 0x3D08FF)))
 		{
-			const u32 qnum = (figure << 8) | entry.second.first;
-			combo_figlist->addItem(QString::fromStdString(entry.second.second), QVariant(qnum));
-			filterlist << entry.second.second.c_str();
+			const auto& [num, figure_name] = entry;
+			const u32 qnum = (figure << 8) | num;
+			QString name = QString::fromStdString(figure_name);
+			combo_figlist->addItem(name, QVariant(qnum));
+			filterlist << std::move(name);
 			if (first_entry == 0)
 			{
 				first_entry = figure;
@@ -443,6 +445,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
 	combo_figlist->setEditable(true);
 	combo_figlist->setInsertPolicy(QComboBox::NoInsert);
+	combo_figlist->model()->sort(0, Qt::AscendingOrder);
 
 	QCompleter* co_compl = new QCompleter(filterlist, this);
 	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
@@ -459,7 +462,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 
 	QHBoxLayout* hbox_number = new QHBoxLayout();
 	QLabel* label_number = new QLabel(tr("Figure Number:"));
-	QLineEdit* edit_number = new QLineEdit(QString::fromStdString(std::to_string(first_entry)));
+	QLineEdit* edit_number = new QLineEdit(QString::number(first_entry));
 	QLabel* label_series = new QLabel(tr("Series:"));
 	QLineEdit* edit_series = new QLineEdit("1");
 	QRegularExpressionValidator* rxv = new QRegularExpressionValidator(QRegularExpression("\\d*"), this);
@@ -511,7 +514,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 				return;
 			}
 			const auto found_figure = list_figures.find(fig_num);
-			if (found_figure != list_figures.end())
+			if (found_figure != list_figures.cend())
 			{
 				s_last_figure_path += QString::fromStdString(found_figure->second.second + ".bin");
 			}
@@ -681,17 +684,21 @@ infinity_dialog::infinity_dialog(QWidget* parent)
 
 	add_figure_slot(vbox_group, QString(tr("Play Set/Power Disc")), 0);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player One")), 1);
+	add_figure_slot(vbox_group, QString(tr("Power Disc Two")), 1);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player One Ability One")), 3);
+	add_figure_slot(vbox_group, QString(tr("Power Disc Three")), 2);
+	add_line(vbox_group);
+	add_figure_slot(vbox_group, QString(tr("Player One")), 3);
+	add_line(vbox_group);
+	add_figure_slot(vbox_group, QString(tr("Player One Ability One")), 4);
 	add_line(vbox_group);
 	add_figure_slot(vbox_group, QString(tr("Player One Ability Two")), 5);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two")), 2);
+	add_figure_slot(vbox_group, QString(tr("Player Two")), 6);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two Ability One")), 4);
+	add_figure_slot(vbox_group, QString(tr("Player Two Ability One")), 7);
 	add_line(vbox_group);
-	add_figure_slot(vbox_group, QString(tr("Player Two Ability Two")), 6);
+	add_figure_slot(vbox_group, QString(tr("Player Two Ability Two")), 8);
 
 	group_figures->setLayout(vbox_group);
 	vbox_panel->addWidget(group_figures);
@@ -728,7 +735,7 @@ void infinity_dialog::add_figure_slot(QVBoxLayout* vbox_group, QString name, u8 
 	if (figure_slots[slot])
 	{
 		const auto found_figure = list_figures.find(figure_slots[slot].value());
-		if (found_figure != list_figures.end())
+		if (found_figure != list_figures.cend())
 		{
 			m_edit_figures[slot]->setText(QString::fromStdString(found_figure->second.second));
 		}
@@ -819,8 +826,8 @@ void infinity_dialog::load_figure_path(u8 slot, const QString& path)
 	clear_figure(slot);
 
 	const u32 fignum = g_infinitybase.load_figure(data, std::move(inf_file), slot);
-	auto name = list_figures.find(fignum);
-	if (name != list_figures.end())
+	const auto name = list_figures.find(fignum);
+	if (name != list_figures.cend())
 	{
 		m_edit_figures[slot]->setText(QString::fromStdString(name->second.second));
 	}

@@ -104,7 +104,7 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 	{
 		auto cpu = get_current_cpu_thread();
 
-		if (cpu && cpu->id_type() == 1)
+		if (cpu && cpu->get_class() == thread_class::ppu)
 		{
 			// Deschedule
 			lv2_obj::sleep(*cpu, 100);
@@ -113,7 +113,7 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
 
-		if (cpu && cpu->id_type() == 0x55)
+		if (cpu && cpu->get_class() == thread_class::rsx)
 			cpu->cpu_wait({});
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))

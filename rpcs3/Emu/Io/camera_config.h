@@ -16,7 +16,7 @@ struct cfg_camera final : cfg::node
 		double max_fps = 0;
 		int format = 0;
 
-		static const u32 member_count = 7;
+		static constexpr u32 member_count = 5;
 
 		std::string to_string() const;
 		void from_string(const std::string& text);
@@ -26,7 +26,7 @@ struct cfg_camera final : cfg::node
 
 	const std::string path;
 
-	cfg::map_entry cameras{ this, "Cameras" }; // <camera>: <width>,<height>,<min_fps>,<max_fps>,<format>,<pixel_aspect_width>,<pixel_aspect_height>
+	cfg::map_entry cameras{ this, "Cameras" }; // <camera>: <width>,<height>,<min_fps>,<max_fps>,<format>
 };
 
 extern cfg_camera g_cfg_camera;

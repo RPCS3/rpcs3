@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "gui_application.h"
 
 #include "qt_utils.h"
@@ -21,7 +22,7 @@
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
-#include "Input/raw_mouse_handler.h"
+#include "util/console.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -51,12 +52,19 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
+#ifdef _WIN32
+#include "Windows.h"
+#endif
+
 LOG_CHANNEL(gui_log, "GUI");
+
+std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
 
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
+	std::setlocale(LC_NUMERIC, "C"); // On linux Qt changes to system locale while initializing QCoreApplication
 }
 
 gui_application::~gui_application()
@@ -112,6 +120,15 @@ bool gui_application::Init()
 		return false;
 	}
 
+	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
+	{
+		utils::attach_console(utils::console_stream::std_err, true);
+	}
+	else
+	{
+		m_gui_settings->SetValue(gui::m_attachCommandLine, false);
+	}
+
 	// The user might be set by cli arg. If not, set another user.
 	if (m_active_user.empty())
 	{
@@ -149,8 +166,6 @@ bool gui_application::Init()
 		{
 			m_gui_settings->SetValue(gui::m_currentStylesheet, "Darker Style by TheMitoSan");
 		}
-
-		m_gui_settings->sync();
 	}
 
 	// Check maxfiles
@@ -588,11 +603,19 @@ void gui_application::InitializeCallbacks()
 		{
 			if (fs::is_file(path))
 			{
-				m_sound_effect.stop();
-				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
-				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
-				m_sound_effect.setLoopCount(1);
-				m_sound_effect.play();
+				// Allow to play 3 sound effects at the same time
+				while (m_sound_effects.size() >= 3)
+				{
+					m_sound_effects.pop_front();
+				}
+
+				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
+				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
+				sound_effect->setSource(QUrl::fromLocalFile(qstr(path)));
+				sound_effect->setVolume(g_cfg.audio.volume * 0.01f);
+				sound_effect->play();
+
+				m_sound_effects.push_back(std::move(sound_effect));
 			}
 		});
 	};
@@ -667,9 +690,9 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, std::shared_ptr<void> init_mtx)
+	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
 	{
-		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, init_mtx]
+		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
 		{
 			const auto half_seconds = std::make_shared<int>(1);
 
@@ -678,30 +701,86 @@ void gui_application::InitializeCallbacks()
 			pdlg->setAutoClose(true);
 			pdlg->show();
 
-			QString text_base = tr("Waiting for %0 second(s), %1 written");
+			QString text_base = tr("%0 written, %1 second(s) passed%2");
 
-			pdlg->setLabelText(text_base.arg(0).arg("0B"));
+			pdlg->setLabelText(text_base.arg("0B").arg(1).arg(""));
 			pdlg->setAttribute(Qt::WA_DeleteOnClose);
 
 			QTimer* update_timer = new QTimer(pdlg);
 
-			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully, init_mtx]()
+			connect(update_timer, &QTimer::timeout, [pdlg, ar_ptr, half_seconds, text_base, closed_successfully
+				, code_location, init_mtx, old_written = usz{0}, repeat_count = u32{0}]() mutable
 			{
-				auto init = static_cast<stx::init_mutex*>(init_mtx.get())->access();
+				std::string verbose_message;
+				usz bytes_written = 0;
 
-				if (!init)
+				while (true)
 				{
-					pdlg->reject();
-					return;
+					auto mtx = static_cast<stx::init_mutex*>(init_mtx.get());
+					auto init = mtx->access();
+
+					if (!init)
+					{
+						// Try to wait for the abort process to complete
+						auto fake_reset = mtx->reset();
+						if (!fake_reset)
+						{
+							// End of emulation termination
+							pdlg->reject();
+							return;
+						}
+
+						fake_reset.set_init();
+
+						// Now ar_ptr contains a null file descriptor
+						continue;
+					}
+
+					if (auto str_ptr = code_location->load())
+					{
+						verbose_message = "\n" + *str_ptr;
+					}
+
+					bytes_written = ar_ptr->is_writing() ? std::max<usz>(ar_ptr->get_size(), old_written) : old_written;
+					break;
 				}
 
 				*half_seconds += 1;
 
-				const usz bytes_written = ar_ptr->get_size();
-				pdlg->setLabelText(text_base.arg(*half_seconds / 2).arg(gui::utils::format_byte_size(bytes_written)));
+				if (old_written == bytes_written)
+				{
+					if (repeat_count == 60)
+					{
+						if (verbose_message.empty())
+						{
+							verbose_message += "\n";
+						}
+						else
+						{
+							verbose_message += ". ";
+						}
+
+						verbose_message += "If Stuck, Report To Developers";
+					}
+					else
+					{
+						repeat_count++;
+					}
+				}
+				else
+				{
+					repeat_count = 0;
+				}
+
+				old_written = bytes_written;
+
+				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(qstr(verbose_message)));
 
 				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
-				pdlg->setValue(std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100));
+				const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
+
+				// Add a third of the remaining progress when the keyword is found
+				pdlg->setValue(verbose_message.find("Finalizing") != umax ? 100 - ((100 - percent) * 2 / 3) : percent);
 
 				if (*closed_successfully)
 				{
@@ -738,7 +817,7 @@ void gui_application::StartPlaytime(bool start_playtime = true)
 		return;
 	}
 
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 	m_timer_playtime.start();
 	m_timer.start(10000); // Update every 10 seconds in case the emulation crashes
 }
@@ -759,8 +838,8 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart(), false);
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 }
 
 void gui_application::StopPlaytime()
@@ -777,8 +856,8 @@ void gui_application::StopPlaytime()
 		return;
 	}
 
-	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart(), false);
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 	m_timer_playtime.invalidate();
 }
 
@@ -1033,7 +1112,7 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
 {
 #ifdef _WIN32
-	if (!Emu.IsRunning())
+	if (!Emu.IsRunning() && !g_raw_mouse_handler)
 	{
 		return false;
 	}
@@ -1045,6 +1124,11 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
 				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
+			}
+
+			if (g_raw_mouse_handler)
+			{
+				g_raw_mouse_handler->handle_native_event(*msg);
 			}
 		}
 	}

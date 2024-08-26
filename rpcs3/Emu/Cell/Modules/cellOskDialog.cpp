@@ -425,14 +425,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			return;
 		}
 
-		bool is_kook_key = false;
+		bool is_hook_key = false;
 
 		switch (key_message.keycode)
 		{
 		case CELL_KEYC_NO_EVENT:
 		{
 			// Any shift/alt/ctrl key
-			is_kook_key = key_message.mkey > 0 && (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER);
+			is_hook_key = key_message.mkey > 0 && (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER);
 			break;
 		}
 		case CELL_KEYC_E_ROLLOVER:
@@ -473,18 +473,18 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		case CELL_KEYC_MUHENKAN:
 		{
 			// Any function key or other special key like Delete
-			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY);
+			is_hook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY);
 			break;
 		}
 		default:
 		{
 			// Any regular ascii key
-			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY);
+			is_hook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY);
 			break;
 		}
 		}
 
-		if (!is_kook_key)
+		if (!is_hook_key)
 		{
 			cellOskDialog.notice("on_osk_key_input_entered: not a hook key: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load());
 			return;

@@ -18,6 +18,7 @@ public:
 	localized_emu() = default;
 
 	static QString translated_pad_button(pad_button btn);
+	static QString translated_mouse_button(int btn);
 
 	template <typename... Args>
 	static std::string get_string(localized_string_id id, Args&&... args)
@@ -64,6 +65,12 @@ private:
 		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_DENY: return tr("Deny", "Deny Dialog List");
+		case localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_OFF: return tr("Pressure intensity mode of player %0 disabled", "Pressure intensity toggled off").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_ON: return tr("Pressure intensity mode of player %0 enabled", "Pressure intensity toggled on").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_OFF: return tr("Analog limiter of player %0 disabled", "Analog limiter toggled off").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_ON: return tr("Analog limiter of player %0 enabled", "Analog limiter toggled on").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED: return tr("Mouse and keyboard are now used as emulated devices.", "Mouse and keyboard emulated");
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD: return tr("Mouse and keyboard are now used as pad.", "Mouse and keyboard pad");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will be terminated.", "Game Error");
@@ -209,6 +216,10 @@ private:
 		case localized_string_id::EMULATION_PAUSED_RESUME_WITH_START: return tr("Press and hold the START button to resume");
 		case localized_string_id::EMULATION_RESUMING: return tr("Resuming...!");
 		case localized_string_id::EMULATION_FROZEN: return tr("The PS3 application has likely crashed, you can close it.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SAVEDATA: return tr("SaveState failed: Game saving is in progress, wait until finished.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-base video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING: return tr("SaveState failed: Failed to lock SPU state, enabling SPU-Compatible mode may fix it.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

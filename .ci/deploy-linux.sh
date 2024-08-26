@@ -12,7 +12,9 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     curl -fsSLo linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
     chmod +x ./linuxdeploy-plugin-checkrt.sh
 
-    EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
+    export EXTRA_PLATFORM_PLUGINS="libqwayland-egl.so;libqwayland-generic.so"
+    export EXTRA_QT_PLUGINS="svg;wayland-decoration-client;wayland-graphics-integration-client;wayland-shell-integration"
+    APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
 
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
     rm -f ./AppDir/usr/lib/libwayland-client.so*

@@ -16,6 +16,7 @@
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
 
 #include <QApplication>
@@ -35,7 +36,7 @@
 #elif defined(__APPLE__)
 //nothing
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
@@ -69,12 +70,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	, m_gui_settings(std::move(gui_settings))
 	, m_start_games_fullscreen(force_fullscreen)
 {
-	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
-	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
-	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
-	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
-	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
-	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
+	load_gui_settings();
 
 	m_window_title = Emu.GetFormattedTitle(0);
 
@@ -118,8 +114,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(qstr(m_window_title));
-	setVisibility(startup_visibility);
-	create();
+
+	if (g_cfg.video.renderer != video_renderer::opengl)
+	{
+		// Do not display the window before OpenGL is configured!
+		// This works fine in windows and X11 but wayland-egl will crash later.
+		setVisibility(startup_visibility);
+		create();
+	}
 
 	// TODO: enable in Qt6
 	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
@@ -128,14 +130,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
 	{
-		handle_cursor(visibility, true, true);
+		handle_cursor(visibility, true, false, true);
 	});
 
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
 		g_game_window_focused = isActive();
-		handle_cursor(visibility(), false, true);
+		handle_cursor(visibility(), false, true, true);
 	});
 
 	// Configure the mouse hide on idle timer
@@ -164,6 +166,16 @@ gs_frame::~gs_frame()
 	}
 
 	m_gui_settings->SetValue(gui::gs_screen, screen_index);
+}
+
+void gs_frame::load_gui_settings()
+{
+	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
+	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
+	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
+	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
+	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -284,7 +296,10 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	case Qt::Key_F11:
 	{
-		handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard, {});
+		else
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
 		break;
 	}
 	case Qt::Key_F12:
@@ -408,6 +423,11 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		g_disable_frame_limit = !g_disable_frame_limit;
 		gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard:
+	{
+		input::toggle_mouse_and_keyboard();
 		break;
 	}
 	default:
@@ -571,7 +591,7 @@ void gs_frame::toggle_mouselock()
 	m_mouse_hide_and_lock = !m_mouse_hide_and_lock;
 
 	// and update the cursor
-	handle_cursor(visibility(), false, true);
+	handle_cursor(visibility(), false, false, true);
 }
 
 void gs_frame::update_cursor()
@@ -608,7 +628,7 @@ void gs_frame::update_cursor()
 
 bool gs_frame::get_mouse_lock_state()
 {
-	handle_cursor(visibility(), false, true);
+	handle_cursor(visibility(), false, false, true);
 
 	return isActive() && m_mouse_hide_and_lock;
 }
@@ -617,9 +637,8 @@ void gs_frame::hide_on_close()
 {
 	// Make sure not to save the hidden state, which is useless to us.
 	const Visibility current_visibility = visibility();
-	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? Visibility::AutomaticVisibility : current_visibility);
-	m_gui_settings->SetValue(gui::gs_geometry, geometry());
-	m_gui_settings->sync();
+	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? Visibility::AutomaticVisibility : current_visibility, false);
+	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
 	if (!g_progr.load())
 	{
@@ -701,7 +720,7 @@ display_handle_t gs_frame::handle() const
 #elif defined(__APPLE__)
 	return reinterpret_cast<void*>(this->winId()); //NSView
 #else
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
 	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
 		native->nativeResourceForWindow("display", NULL));
@@ -712,15 +731,13 @@ display_handle_t gs_frame::handle() const
 		return std::make_pair(wl_dpy, wl_surf);
 	}
 	else
-	{
 #endif
 #ifdef HAVE_X11
+	{
 		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
+	}
 #else
 		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-	}
 #endif
 #endif
 }
@@ -1013,6 +1030,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 						QImage screenshot_img(rows[0], img.width(), img.height(), QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
 						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
+						painter.end();
 
 						std::memcpy(rows[0], screenshot_img.constBits(), screenshot_img.sizeInBytes());
 
@@ -1070,10 +1088,22 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 {
-	if (m_disable_mouse || g_cfg.io.move == move_handler::mouse) return;
+	if (m_disable_mouse)
+	{
+		return;
+	}
+
+	switch (g_cfg.io.move)
+	{
+	case move_handler::mouse:
+	case move_handler::raw_mouse:
 #ifdef HAVE_LIBEVDEV
-	if (g_cfg.io.move == move_handler::gun) return;
+	case move_handler::gun:
 #endif
+		return;
+	default:
+		break;
+	}
 
 	if (ev->button() == Qt::LeftButton)
 	{
@@ -1081,13 +1111,19 @@ void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 	}
 }
 
-void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer)
+void gs_frame::handle_cursor(QWindow::Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer)
 {
-	// Update the mouse lock state if the visibility changed.
-	if (from_event)
+	// Let's reload the gui settings when the visibility or the active window changes.
+	if (visibility_changed || active_changed)
 	{
-		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-		m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
+		load_gui_settings();
+
+		// Update the mouse lock state if the visibility changed.
+		if (visibility_changed)
+		{
+			// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
+			m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
+		}
 	}
 
 	// Update the mouse hide timer
@@ -1109,7 +1145,7 @@ void gs_frame::mouse_hide_timeout()
 	// Our idle timeout occured, so we update the cursor
 	if (m_hide_mouse_after_idletime && m_show_mouse)
 	{
-		handle_cursor(visibility(), false, false);
+		handle_cursor(visibility(), false, false, false);
 	}
 }
 
@@ -1160,7 +1196,7 @@ bool gs_frame::event(QEvent* ev)
 	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
 	{
 		// This will make the cursor visible again if it was hidden by the mouse idle timeout
-		handle_cursor(visibility(), false, true);
+		handle_cursor(visibility(), false, false, true);
 	}
 	return QWindow::event(ev);
 }
@@ -1191,4 +1227,9 @@ void gs_frame::progress_increment(int delta)
 void gs_frame::progress_set_limit(int limit)
 {
 	m_progress_indicator->set_range(0, limit);
+}
+
+bool gs_frame::has_alpha()
+{
+	return format().hasAlpha();
 }

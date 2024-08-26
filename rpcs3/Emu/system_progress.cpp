@@ -167,14 +167,25 @@ void progress_dialog_server::operator()()
 		const char* text1 = nullptr;
 
 		const u64 start_time = get_system_time();
+		u64 wait_no_update_count = 0;
+
+		std::shared_ptr<atomic_t<u32>> ppu_cue_refs;
+
+		std::vector<std::pair<u64, u64>> time_left_queue(1024);
+		usz time_left_queue_idx = 0;
 
 		// Update progress
-		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
+		for (u64 sleep_until = get_system_time(), sleep_for = 500;
+			!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting;
+			thread_ctrl::wait_until(&sleep_until, std::exchange(sleep_for, 500)))
 		{
 			const auto& [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
 
-			if (ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new || ftotal_bits != ftotal_bits_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
+			// Force-update every 20 seconds to update remaining time
+			if (wait_no_update_count == 100u * 20 || ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new
+				|| ftotal_bits != ftotal_bits_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 			{
+				wait_no_update_count = 0;
 				ftotal = ftotal_new;
 				fdone  = fdone_new;
 				ftotal_bits = ftotal_bits_new;
@@ -206,11 +217,28 @@ void progress_dialog_server::operator()()
 						// Only show compile notification if we estimate at least 100ms
 						if (remaining_usec >= 100'000ULL)
 						{
-							rsx::overlays::show_ppu_compile_notification();
+							if (!ppu_cue_refs || !*ppu_cue_refs)
+							{
+								ppu_cue_refs = rsx::overlays::show_ppu_compile_notification();
+							}
+
+							// Make sure to update any pending messages. PPU compilation may freeze the image.
+							rsx::overlays::refresh_message_queue();
 						}
 					}
 
-					thread_ctrl::wait_for(10000);
+					if (pdone >= ptotal)
+					{
+						if (ppu_cue_refs)
+						{
+							*ppu_cue_refs = 0;
+							ppu_cue_refs.reset();
+
+							rsx::overlays::refresh_message_queue();
+						}
+					}
+
+					sleep_for = 10000;
 					continue;
 				}
 
@@ -231,23 +259,55 @@ void progress_dialog_server::operator()()
 					if (ptotal)
 						fmt::append(progr, " module %u of %u", pdone, ptotal);
 
-					if (value)
+					const u32 of_1000 = static_cast<u32>(done >= total ? 1000 : done * 1000 / total);
+
+					if (of_1000 >= 2)
 					{
 						const u64 passed = (get_system_time() - start_time);
-						const u64 seconds_passed = passed / 1'000'000;
-						const u64 seconds_total = (passed / 1'000'000 * 100 / value);
-						const u64 seconds_remaining = seconds_total - seconds_passed;
-						const u64 seconds = seconds_remaining % 60;
-						const u64 minutes = (seconds_remaining / 60) % 60;
-						const u64 hours = (seconds_remaining / 3600);
+						const u64 total = utils::rational_mul<u64>(passed, 1000, of_1000);
+						const u64 remaining = total - passed;
 
-						if (seconds_passed < 4)
+						// Stabilize the result by using the maximum one from the recent history
+						// This is a very simple approach yet appears to solve most inconsistencies
+						u64 max_remaining = remaining;
+
+						for (usz i = 0; i < time_left_queue.size(); i++)
+						{
+							const auto& sample = time_left_queue[(time_left_queue.size() + time_left_queue_idx - i) % time_left_queue.size()];
+
+							const u64 sample_age = passed - sample.first;
+
+							if (passed - sample.first >= 4'000'000)
+							{
+								// Ignore old samples
+								break;
+							}
+
+							max_remaining = std::max<u64>(max_remaining, sample.second >= sample_age ? sample.second - sample_age : 0);
+						}
+
+						if (auto new_val = std::make_pair(passed, remaining); time_left_queue[time_left_queue_idx] != new_val)
+						{
+							time_left_queue_idx = (time_left_queue_idx + 1) % time_left_queue.size();
+							time_left_queue[time_left_queue_idx] = new_val;
+						}
+
+						const u64 max_seconds_remaining = max_remaining / 1'000'000;
+						const u64 seconds = max_seconds_remaining % 60;
+						const u64 minutes = (max_seconds_remaining / 60) % 60;
+						const u64 hours = (max_seconds_remaining / 3600);
+
+						if (passed < 4'000'000)
 						{
 							// Cannot rely on such small duration of time for estimation
 						}
+						else if (done >= total)
+						{
+							fmt::append(progr, " (done)", minutes, seconds);
+						}
 						else if (hours)
 						{
-							fmt::append(progr, " (%uh %02um remaining)", hours, minutes);
+							fmt::append(progr, " (%uh %2um remaining)", hours, minutes);
 						}
 						else if (minutes >= 2)
 						{
@@ -255,11 +315,11 @@ void progress_dialog_server::operator()()
 						}
 						else if (minutes == 0)
 						{
-							fmt::append(progr, " (%02us remaining)", seconds);
+							fmt::append(progr, " (%us remaining)", std::max<u64>(seconds, 1));
 						}
 						else
 						{
-							fmt::append(progr, " (%um %02us remaining)", minutes, seconds);
+							fmt::append(progr, " (%um %2us remaining)", minutes, seconds);
 						}
 					}
 				}
@@ -307,7 +367,13 @@ void progress_dialog_server::operator()()
 				break;
 			}
 
-			thread_ctrl::wait_for(10000);
+			sleep_for = 10'000;
+			wait_no_update_count++;
+		}
+
+		if (ppu_cue_refs)
+		{
+			*ppu_cue_refs = 0;
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)

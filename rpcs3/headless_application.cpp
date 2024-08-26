@@ -148,7 +148,7 @@ void headless_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, std::shared_ptr<void>)
+	callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)
 	{
 	};
 

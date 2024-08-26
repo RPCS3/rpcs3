@@ -2,10 +2,25 @@
 
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/display.h"
+#include "Utilities/Config.h"
+#include "Utilities/mutex.h"
+#include "Utilities/Thread.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+static const std::map<std::string, int> raw_mouse_button_map
+{
+	{ "", 0 },
+#ifdef _WIN32
+	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
+	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
+	{ "Button 3", RI_MOUSE_BUTTON_3_UP },
+	{ "Button 4", RI_MOUSE_BUTTON_4_UP },
+	{ "Button 5", RI_MOUSE_BUTTON_5_UP },
+#endif
+};
 
 class raw_mouse_handler;
 
@@ -25,7 +40,15 @@ public:
 	void update_values(const RAWMOUSE& state);
 #endif
 
+	const std::string& device_name() const { return m_device_name; }
+	u32 index() const { return m_index; }
+	void set_index(u32 index);
+	void request_reload() { reload_requested = true; }
+
 private:
+	void reload_config();
+	static std::pair<int, int> get_mouse_button(const cfg::string& button);
+
 	u32 m_index = 0;
 	std::string m_device_name;
 	void* m_handle{};
@@ -38,23 +61,60 @@ private:
 	int m_pos_y{};
 	float m_mouse_acceleration = 1.0f;
 	raw_mouse_handler* m_handler{};
+	std::map<u8, std::pair<int, int>> m_buttons;
+	bool reload_requested = false;
 };
 
 class raw_mouse_handler final : public MouseHandlerBase
 {
+public:
 	using MouseHandlerBase::MouseHandlerBase;
 
-public:
 	virtual ~raw_mouse_handler();
 
 	void Init(const u32 max_connect) override;
+
+	void SetIsForGui(bool value)
+	{
+		m_is_for_gui = value;
+	}
+
+	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
+
+	void set_mouse_press_callback(std::function<void(const std::string&, s32, bool)> cb)
+	{
+		m_mouse_press_callback = std::move(cb);
+	}
+
+	void mouse_press_callback(const std::string& device_name, s32 cell_code, bool pressed)
+	{
+		if (m_mouse_press_callback)
+		{
+			m_mouse_press_callback(device_name, cell_code, pressed);
+		}
+	}
+
+	void update_devices();
 
 #ifdef _WIN32
 	void handle_native_event(const MSG& msg);
 #endif
 
-private:
-	void enumerate_devices(u32 max_connect);
+	shared_mutex m_raw_mutex;
 
+private:
+	u32 get_now_connect(std::set<u32>& connected_mice);
+	std::map<void*, raw_mouse> enumerate_devices(u32 max_connect);
+
+#ifdef _WIN32
+	void register_raw_input_devices();
+	void unregister_raw_input_devices() const;
+	bool m_registered_raw_input_devices = false;
+#endif
+
+	bool m_is_for_gui = false;
 	std::map<void*, raw_mouse> m_raw_mice;
+	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
+
+	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 };

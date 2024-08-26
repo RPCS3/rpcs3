@@ -11,7 +11,7 @@ error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
-LOG_CHANNEL(sys_io);
+LOG_CHANNEL(cellKb);
 
 template<>
 void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
@@ -42,13 +42,16 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 		return;
 	}
 
-	(*ar)(m_info.max_connect);
+	u32 max_connect = 0;
 
-	if (m_info.max_connect)
+	(*ar)(max_connect);
+
+	if (max_connect)
 	{
-		Emu.PostponeInitCode([this]()
+		Emu.PostponeInitCode([this, max_connect]()
 		{
-			Init(m_info.max_connect);
+			std::lock_guard<std::mutex> lock(m_mutex);
+			AddConsumer(keyboard_consumer::identifier::cellKb, max_connect);
 			auto lk = init.init();
 		});
 	}
@@ -56,14 +59,25 @@ KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
 
 void KeyboardHandlerBase::save(utils::serial& ar)
 {
+	u32 max_connect = 0;
 	const auto inited = init.access();
 
-	ar(inited ? m_info.max_connect : 0);
+	if (inited)
+	{
+		std::lock_guard<std::mutex> lock(m_mutex);
+
+		if (auto it = m_consumers.find(keyboard_consumer::identifier::cellKb); it != m_consumers.end())
+		{
+			max_connect = it->second.GetInfo().max_connect;
+		}
+	}
+
+	ar(max_connect);
 }
 
 error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 {
-	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
+	cellKb.warning("cellKbInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -79,14 +93,16 @@ error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 	}
 
 	sys_config_start(ppu);
-	handler.Init(std::min(max_connect, 7u));
+
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	handler.AddConsumer(keyboard_consumer::identifier::cellKb, std::min(max_connect, 7u));
 
 	return CELL_OK;
 }
 
 error_code cellKbEnd(ppu_thread& ppu)
 {
-	sys_io.notice("cellKbEnd()");
+	cellKb.notice("cellKbEnd()");
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -95,6 +111,11 @@ error_code cellKbEnd(ppu_thread& ppu)
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
+	{
+		std::lock_guard<std::mutex> lock(handler.m_mutex);
+		handler.RemoveConsumer(keyboard_consumer::identifier::cellKb);
+	}
+
 	// TODO
 	sys_config_stop(ppu);
 	return CELL_OK;
@@ -102,7 +123,7 @@ error_code cellKbEnd(ppu_thread& ppu)
 
 error_code cellKbClearBuf(u32 port_no)
 {
-	sys_io.trace("cellKbClearBuf(port_no=%d)", port_no);
+	cellKb.trace("cellKbClearBuf(port_no=%d)", port_no);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -116,12 +137,13 @@ error_code cellKbClearBuf(u32 port_no)
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler.GetInfo();
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+	const KbInfo& current_info = consumer.GetInfo();
 
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 	current_data.len = 0;
 	current_data.led = 0;
 	current_data.mkey = 0;
@@ -136,7 +158,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
+	cellKb.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if (rawcode <= CELL_KEYC_E_UNDEF ||
@@ -155,6 +177,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
 	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
 	const bool is_num_lock = led & (CELL_KB_LED_NUM_LOCK);
+	const bool is_shift_lock = is_caps_lock && (arrange == CELL_KB_MAPPING_GERMAN_GERMANY || arrange == CELL_KB_MAPPING_FRENCH_FRANCE);
 
 	// CELL_KB_NUMPAD
 
@@ -172,13 +195,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	// ASCII
 
-	const auto get_ascii = [is_alt, is_shift, is_caps_lock](u16 raw, u16 shifted = 0, u16 altered = 0)
+	const auto get_ascii = [&](u16 raw, u16 shifted = 0, u16 altered = 0)
 	{
-		if ((is_shift || is_caps_lock) && shifted)
+		// Usually caps lock only applies uppercase to letters, but some layouts treat it as shift lock for all keys.
+		if ((is_shift || (is_caps_lock && (is_shift_lock || std::isalpha(raw)))) && shifted)
 		{
 			return shifted;
 		}
-		else if (is_alt && altered)
+		if (is_alt && altered)
 		{
 			return altered;
 		}
@@ -262,11 +286,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
 	{
-		rawcode -=
-			(is_shift)
-				? ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20)
-				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
-		return rawcode + 0x5D;
+		if (is_shift != is_caps_lock)
+		{
+			return rawcode + 0x3D; // Return uppercase if exactly one is active.
+		}
+
+		return rawcode + 0x5D; // Return lowercase if none or both are active.
 	}
 	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
 	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'
@@ -283,7 +308,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
-	sys_io.trace("cellKbGetInfo(info=*0x%x)", info);
+	cellKb.trace("cellKbGetInfo(info=*0x%x)", info);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -298,8 +323,9 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 	std::memset(info.get_ptr(), 0, info.size());
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
 
-	const KbInfo& current_info = handler.GetInfo();
+	const KbInfo& current_info = consumer.GetInfo();
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
 	info->info = current_info.info;
@@ -314,7 +340,7 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
-	sys_io.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
+	cellKb.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -327,13 +353,13 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+	const KbInfo& current_info = consumer.GetInfo();
 
-	const KbInfo& current_info = handler.GetInfo();
-
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 
 	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED) || !is_input_allowed())
 	{
@@ -355,7 +381,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 			data->keycode[i] = current_data.buttons[i].m_keyCode;
 		}
 
-		KbConfig& current_config = handler.GetConfig(port_no);
+		KbConfig& current_config = consumer.GetConfig(port_no);
 
 		// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
 		// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
@@ -371,7 +397,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 error_code cellKbSetCodeType(u32 port_no, u32 type)
 {
-	sys_io.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
+	cellKb.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -383,12 +409,13 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || type > CELL_KB_CODETYPE_ASCII)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler.GetKeyboards().size())
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbConfig& current_config = handler.GetConfig(port_no);
+	KbConfig& current_config = consumer.GetConfig(port_no);
 	current_config.code_type = type;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -398,7 +425,7 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
-	sys_io.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
+	cellKb.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -413,12 +440,13 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 	if (led > 7)
 		return CELL_KB_ERROR_SYS_SETTING_FAILED;
 
-	if (port_no >= handler.GetKeyboards().size() || handler.GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size() || consumer.GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_FATAL;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbData& current_data = handler.GetData(port_no);
+	KbData& current_data = consumer.GetData(port_no);
 	current_data.led = static_cast<u32>(led);
 
 	return CELL_OK;
@@ -426,7 +454,7 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 
 error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 {
-	sys_io.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
+	cellKb.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -438,16 +466,17 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || rmode > CELL_KB_RMODE_PACKET)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler.GetKeyboards().size())
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
+
+	if (port_no >= consumer.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler.m_mutex);
-
-	KbConfig& current_config = handler.GetConfig(port_no);
+	KbConfig& current_config = consumer.GetConfig(port_no);
 	current_config.read_mode = rmode;
 
 	// Key repeat must be disabled in packet mode. But let's just always enable it otherwise.
-	Keyboard& keyboard = handler.GetKeyboards()[port_no];
+	Keyboard& keyboard = consumer.GetKeyboards()[port_no];
 	keyboard.m_key_repeat = rmode != CELL_KB_RMODE_PACKET;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -457,7 +486,7 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
-	sys_io.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
+	cellKb.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -471,16 +500,18 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 
 	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler.GetInfo();
+	keyboard_consumer& consumer = handler.GetConsumer(keyboard_consumer::identifier::cellKb);
 
-	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	const KbInfo& current_info = consumer.GetInfo();
+
+	if (port_no >= consumer.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	// tests show that config is checked only after the device's status
 	if (!config)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	const KbConfig& current_config = handler.GetConfig(port_no);
+	const KbConfig& current_config = consumer.GetConfig(port_no);
 	config->arrange = current_config.arrange;
 	config->read_mode = current_config.read_mode;
 	config->code_type = current_config.code_type;

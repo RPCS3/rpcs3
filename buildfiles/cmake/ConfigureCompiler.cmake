@@ -33,7 +33,9 @@ else()
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
 
-	if (COMPILER_ARM)
+	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
+		add_compile_options(-march=native)
+	elseif(COMPILER_ARM)
 		# This section needs a review. Apple claims armv8.5-a on M-series but doesn't support SVE.
 		# Note that compared to the rest of the 8.x family, 8.1 is very restrictive and we'll have to bump the requirement in future to get anything meaningful.
 		if (APPLE)
@@ -88,10 +90,6 @@ else()
 		add_compile_options(-Wno-unused-command-line-argument)
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		add_compile_options(-Wno-class-memaccess)
-	endif()
-
-	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
-		add_compile_options(-march=native)
 	endif()
 
 	if(NOT APPLE AND NOT WIN32)

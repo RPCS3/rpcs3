@@ -15,6 +15,8 @@ constexpr auto qstr = QString::fromStdString;
 
 extern bool ppu_patch(u32 addr, u32 value);
 
+extern std::string format_spu_func_info(u32 addr, cpu_thread* spu);
+
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
@@ -27,7 +29,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 	const auto cpu = m_get_cpu();
 
-	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	m_cpu_offset = cpu && cpu->get_class() == thread_class::spu ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -58,7 +60,17 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	vbox_right_panel->addWidget(m_instr);
 	vbox_right_panel->addWidget(m_preview);
 
-	if (cpu && cpu->id_type() == 2)
+	if (cpu && cpu->get_class() == thread_class::spu)
+	{
+		// Print block information as if this instruction is its beginning
+		vbox_left_panel->addWidget(new QLabel(tr("Block Info:  ")));
+		m_func_info = new QLabel("", this);
+		vbox_right_panel->addWidget(m_func_info);
+
+		m_func_info->setText(qstr(format_spu_func_info(m_pc, cpu)));
+	}
+
+	if (cpu && cpu->get_class() == thread_class::spu)
 	{
 		const auto& spu = static_cast<spu_thread&>(*cpu);
 
@@ -106,7 +118,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 		const be_t<u32> swapped{static_cast<u32>(opcode)};
 
-		if (cpu->id_type() == 1)
+		if (cpu->get_class() == thread_class::ppu)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{

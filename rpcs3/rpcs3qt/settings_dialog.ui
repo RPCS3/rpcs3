@@ -624,7 +624,7 @@
                     <item>
                      <widget class="QLabel" name="resolutionScaleMin">
                       <property name="text">
-                       <string>50</string>
+                       <string>25</string>
                       </property>
                       <property name="alignment">
                        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1750,7 +1750,7 @@
             </layout>
            </widget>
           </item>
-          <item row="6" column="2">
+          <item row="5" column="2">
            <widget class="QGroupBox" name="gb_midi_3">
             <property name="title">
              <string>Emulated MIDI Device 3</string>
@@ -1769,7 +1769,7 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="2">
+          <item row="4" column="2">
            <widget class="QGroupBox" name="gb_midi_2">
             <property name="title">
              <string>Emulated MIDI Device 2</string>
@@ -1788,7 +1788,7 @@
             </layout>
            </widget>
           </item>
-          <item row="5" column="0" rowspan="2">
+          <item row="4" column="0" rowspan="2">
            <widget class="QGroupBox" name="gb_additional_io_settings">
             <property name="title">
              <string>Additional Settings</string>
@@ -2276,6 +2276,18 @@
               </widget>
              </item>
              <item>
+              <widget class="QGroupBox" name="gb_psnCountryBox">
+               <property name="title">
+                <string>Country</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_psnCountryBox_layout">
+                <item>
+                 <widget class="QComboBox" name="psnCountryBox"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
               <spacer name="networkTabSpacerRight">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
@@ -2378,13 +2390,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="accurateGETLLAR">
-                 <property name="text">
-                  <string>Accurate GETLLAR</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="accurateRSXAccess">
                  <property name="text">
                   <string>Accurate RSX reservation access</string>
@@ -2427,9 +2432,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="suspendSavestates">
+                <widget class="QCheckBox" name="antiCheatSavestates">
                  <property name="text">
-                  <string>Suspend-Emulation Savestates Mode</string>
+                  <string>Anti-Cheat Savestates Mode</string>
                  </property>
                 </widget>
                </item>
@@ -2437,6 +2442,13 @@
                 <widget class="QCheckBox" name="compatibleSavestates">
                  <property name="text">
                   <string>SPU-Compatible Savestates Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="spuProfiler">
+                 <property name="text">
+                  <string>SPU Profiler</string>
                  </property>
                 </widget>
                </item>
@@ -2964,6 +2976,27 @@
                 <widget class="QCheckBox" name="showShaderCompilationHint">
                  <property name="text">
                   <string>Show shader compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
+                 <property name="text">
+                  <string>Show analog limiter toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
+                 <property name="text">
+                  <string>Show pressure intensity toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
+                 <property name="text">
+                  <string>Show mouse and keyboard toggle hint</string>
                  </property>
                 </widget>
                </item>
@@ -3795,7 +3828,7 @@
                   <item>
                    <widget class="QLabel" name="label_log_limit">
                     <property name="text">
-                     <string>Maximum log blocks</string>
+                     <string>Maximum log blocks (0 = no limit)</string>
                     </property>
                    </widget>
                   </item>
@@ -3830,7 +3863,7 @@
                   <item>
                    <widget class="QLabel" name="label_tty_limit">
                     <property name="text">
-                     <string>Maximum TTY blocks</string>
+                     <string>Maximum TTY blocks (0 = no limit)</string>
                     </property>
                    </widget>
                   </item>

@@ -19,16 +19,17 @@ LOG_CHANNEL(sys_log, "SYS");
 
 struct serial_ver_t
 {
+	std::string ver_name;
 	bool used = false;
 	u16 current_version = 0;
 	std::set<u16> compatible_versions;
 };
 
-static std::array<serial_ver_t, 26> s_serial_versions;
+static std::array<serial_ver_t, 27> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
-	const bool s_##name##_serialization_fill = []() { if (::s_serial_versions[identifier].compatible_versions.empty()) ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
+	const bool s_##name##_serialization_fill = []() { auto& e = ::s_serial_versions[identifier]; if (e.compatible_versions.empty()) { e.compatible_versions = {__VA_ARGS__}; e.ver_name = #name; } return true; }();\
 \
 	extern void using_##name##_serialization()\
 	{\
@@ -46,7 +47,7 @@ SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep 
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1)
+SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
 SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
@@ -54,7 +55,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/)
 }
 
 namespace np
@@ -85,6 +86,34 @@ SERIALIZATION_VER(sys_io, 23,                                   2)
 SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
+SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
+
+template <>
+void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
+{
+	bool is_first = true;
+
+	const auto& serials = get_object(arg);
+
+	out += "{ ";
+
+	for (auto& entry : serials)
+	{
+		if (entry.current_version)
+		{
+			if (!is_first)
+			{
+				out += ", ";
+			}
+
+			is_first = false;
+			fmt::append(out, "%s=%d", entry.ver_name, entry.current_version);
+		}
+	}
+
+	out += " }";
+}
+
 std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::string_view filepath)
 {
 	if (!file)
@@ -97,8 +126,18 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 	utils::serial ar;
 	ar.set_reading_state({}, true);
 
-	ar.m_file_handler = filepath.ends_with(".gz") ? static_cast<std::unique_ptr<utils::serialization_file_handler>>(make_compressed_serialization_file_handler(std::move(file)))
-		: make_uncompressed_serialization_file_handler(std::move(file));
+	if (filepath.ends_with(".zst"))
+	{
+		ar.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(file));
+	}
+	else if (filepath.ends_with(".gz"))
+	{
+		ar.m_file_handler = make_compressed_serialization_file_handler(std::move(file));
+	}
+	else
+	{
+		ar.m_file_handler = make_uncompressed_serialization_file_handler(std::move(file));
+	}
 
 	if (u64 r = 0; ar.try_read(r) != 0 || r != "RPCS3SAV"_u64)
 	{
@@ -132,29 +171,47 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 
 	bool ok = true;
 
-	for (auto [identifier, version] : data)
+	if (is_boot_check)
 	{
-		if (identifier >= s_serial_versions.size())
+		for (auto& entry : s_serial_versions)
 		{
-			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version identifier is unknown! (category=%u, version=%u)", identifier, version);
+			// Version 0 means that the entire constructor using the version should be skipped
+			entry.current_version = 0;
+		}
+	}
+
+	auto& channel = (is_boot_check ? sys_log.error : sys_log.trace);
+
+	for (const auto& entry : data)
+	{
+		if (entry.type >= s_serial_versions.size())
+		{
+			channel("Savestate version identifier is unknown! (category=%u, version=%u)", entry.type, entry.version);
 			ok = false; // Log all mismatches
 		}
-		else if (!s_serial_versions[identifier].compatible_versions.count(version))
+		else if (!s_serial_versions[entry.type].compatible_versions.count(entry.version))
 		{
-			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+			channel("Savestate version is not supported. (category=%u, version=%u)", entry.type, entry.version);
 			ok = false;
 		}
 		else if (is_boot_check)
 		{
-			s_serial_versions[identifier].current_version = version;
+			s_serial_versions[entry.type].current_version = entry.version;
 		}
 	}
 
-	if (!ok && is_boot_check)
+	if (is_boot_check)
 	{
-		for (auto [identifier, _] : data)
+		if (ok)
 		{
-			s_serial_versions[identifier].current_version = 0;
+			sys_log.success("Savestate versions: %s", s_serial_versions);
+		}
+		else
+		{
+			for (auto& entry : s_serial_versions)
+			{
+				entry.current_version = 0;
+			}
 		}
 	}
 
@@ -168,7 +225,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	if (abs_id == -1 && rel_id == -1)
 	{
 		// Return directory
-		return fs::get_cache_dir() + "/savestates/" + title + "/";
+		return fs::get_config_dir() + "savestates/" + title + "/";
 	}
 
 	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
@@ -179,7 +236,12 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	// While not needing to keep a 59 chars long suffix at all times for this purpose
 	const char prefix = ::at32("0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"sv, save_id.size());
 
-	std::string path = fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+	std::string path = fs::get_config_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+
+	if (std::string path_compressed = path + ".zst"; fs::is_file(path_compressed))
+	{
+		return path_compressed;
+	}
 
 	if (std::string path_compressed = path + ".gz"; fs::is_file(path_compressed))
 	{
@@ -216,7 +278,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = fs::get_cache_dir() + "/savestates/";
+		const std::string save_dir = get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), -1, -1);
 
 		std::string savestate_path;
 		s64 mtime = smin;
@@ -231,7 +293,12 @@ bool boot_last_savestate(bool testing)
 			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
 			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
 			{
-				if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
+				if (std::string path = save_dir + entry.name + ".zst"; is_savestate_compatible(fs::file(path), path))
+				{
+					savestate_path = std::move(path);
+					mtime = entry.mtime;
+				}
+				else if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
 				{
 					savestate_path = std::move(path);
 					mtime = entry.mtime;
@@ -276,8 +343,8 @@ bool boot_last_savestate(bool testing)
 bool load_and_check_reserved(utils::serial& ar, usz size)
 {
 	u8 bytes[4096];
+	ensure(size < std::size(bytes));
 	std::memset(&bytes[size & (0 - sizeof(v128))], 0, sizeof(v128));
-	ensure(size <= std::size(bytes));
 
 	const usz old_pos = ar.pos;
 	ar(std::span<u8>(bytes, size));
@@ -344,7 +411,7 @@ extern u16 serial_breathe_and_tag(utils::serial& ar, std::string_view name, bool
 [[noreturn]] void hle_locks_t::lock()
 {
 	// Unreachable
-	ensure(false);
+	fmt::throw_exception("Unreachable");
 }
 
 bool hle_locks_t::try_lock()

@@ -488,7 +488,7 @@ class idm
 
 		if (data.second)
 		{
-			if (std::is_same<T, Type>::value || data.first.type() == get_type<Type>())
+			if (std::is_same_v<T, Type> || data.first.type() == get_type<Type>())
 			{
 				if (!id_manager::id_traits<Type>::invl_range.second || data.first.value() == id)
 				{

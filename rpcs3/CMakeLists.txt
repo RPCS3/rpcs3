@@ -27,6 +27,10 @@ if(UNIX AND NOT APPLE)
     if(X11_FOUND)
         add_definitions(-DHAVE_X11)
     endif()
+    find_package(Wayland)
+    if(WAYLAND_FOUND)
+        add_definitions(-DHAVE_WAYLAND)
+    endif()
 endif()
 
 # Qt
@@ -60,6 +64,7 @@ target_sources(rpcs3
     headless_application.cpp
     main.cpp
     main_application.cpp
+    module_verifier.cpp
     rpcs3_version.cpp
     stb_image.cpp
     stdafx.cpp
@@ -76,6 +81,8 @@ target_sources(rpcs3
     Input/keyboard_pad_handler.cpp
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
+    Input/product_info.cpp
+    Input/raw_mouse_config.cpp
     Input/raw_mouse_handler.cpp
     Input/sdl_pad_handler.cpp
     Input/skateboard_pad_handler.cpp
@@ -94,8 +101,7 @@ target_link_libraries(rpcs3 PRIVATE ${ADDITIONAL_LIBS})
 
 # Unix display manager
 if(X11_FOUND)
-    target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
-    target_link_libraries(rpcs3 PRIVATE ${X11_LIBRARIES})
+    target_link_libraries(rpcs3 PRIVATE X11::X11)
 elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE)
     # Wayland has been checked in 3rdparty/CMakeLists.txt already.
     message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")

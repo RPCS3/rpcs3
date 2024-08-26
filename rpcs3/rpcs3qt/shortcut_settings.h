@@ -23,7 +23,6 @@ namespace gui
 			mw_toggle_fullscreen,
 			mw_exit_fullscreen,
 			mw_refresh,
-			mw_welcome_dialog,
 
 			gw_toggle_fullscreen,
 			gw_exit_fullscreen,
@@ -36,6 +35,7 @@ namespace gui
 			gw_restart,
 			gw_rsx_capture,
 			gw_frame_limit,
+			gw_toggle_mouse_and_keyboard,
 
 			count
 		};

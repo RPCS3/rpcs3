@@ -39,6 +39,7 @@ void GSRender::on_exit()
 
 	if (m_frame)
 	{
+		m_frame->hide();
 		m_frame->delete_context(m_context);
 		m_context = nullptr;
 	}

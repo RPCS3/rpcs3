@@ -21,6 +21,7 @@
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
 #include "infinity_dialog.h"
+#include "dimensions_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
 #include "patch_creator_dialog.h"
@@ -35,6 +36,9 @@
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
+#include "basic_mouse_settings_dialog.h"
+#include "raw_mouse_settings_dialog.h"
+#include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 
 #include <thread>
@@ -382,12 +386,6 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 
 	switch (shortcut_key)
 	{
-	case gui::shortcuts::shortcut::mw_welcome_dialog:
-	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
-		welcome->open();
-		break;
-	}
 	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
 	{
 		ui->toolbar_fullscreen->trigger();
@@ -576,6 +574,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -648,8 +647,8 @@ void main_window::BootSavestate()
 		stopped = true;
 	}
 
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
-		"Savestate files (*.SAVESTAT *.SAVESTAT.gz);;"
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_config_dir() + "savestates/"), tr(
+		"Savestate files (*.SAVESTAT *.SAVESTAT.zst *.SAVESTAT.gz);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
@@ -1016,7 +1015,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	pdlg.setAutoClose(false);
 	pdlg.show();
 
-	package_error error = package_error::no_error;
+	package_install_result result = {};
 
 	auto get_app_info = [](compat::package_info& package)
 	{
@@ -1057,16 +1056,16 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	std::deque<std::string> bootable_paths;
 
 	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&readers, &error, &bootable_paths]
+	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths]
 	{
-		error = package_reader::extract_data(readers, bootable_paths);
-		return error == package_error::no_error;
+		result = package_reader::extract_data(readers, bootable_paths);
+		return result.error == package_install_result::error_type::no_error;
 	});
 
 	pdlg.show();
 
 	// Wait for the completion
-	for (usz i = 0, set_text = umax; i < readers.size() && error == package_error::no_error;)
+	for (usz i = 0, set_text = umax; i < readers.size() && result.error == package_install_result::error_type::no_error;)
 	{
 		std::this_thread::sleep_for(5ms);
 
@@ -1219,10 +1218,28 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 			ensure(package);
 
-			if (error == package_error::app_version)
+			if (result.error == package_install_result::error_type::app_version)
 			{
 				gui_log.error("Cannot install %s.", package->path);
-				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
+				const bool has_expected = !result.version.expected.empty();
+				const bool has_found = !result.version.found.empty();
+				if (has_expected && has_found)
+				{
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.found)).arg(package->path));
+				}
+				else if (has_expected)
+				{
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.expected)).arg(package->path));
+				}
+				else
+				{
+					// probably unreachable
+					const QString found = has_found ? tr("version %1").arg(QString::fromStdString(result.version.found)) : tr("no data installed");
+					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.expected)).arg(found).arg(package->path));
+				}
 			}
 			else
 			{
@@ -1745,16 +1762,14 @@ void main_window::DecryptSPRXLibraries()
 void main_window::SaveWindowState() const
 {
 	// Save gui settings
-	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry());
-	m_gui_settings->SetValue(gui::mw_windowState, saveState());
-	m_gui_settings->SetValue(gui::mw_mwState, m_mw->saveState());
+	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry(), false);
+	m_gui_settings->SetValue(gui::mw_windowState, saveState(), false);
+	m_gui_settings->SetValue(gui::mw_mwState, m_mw->saveState(), true);
 
 	// Save column settings
 	m_game_list_frame->SaveSettings();
 	// Save splitter state
 	m_debugger_frame->SaveSettings();
-
-	m_gui_settings->sync();
 }
 
 void main_window::RepaintThumbnailIcons()
@@ -2781,6 +2796,40 @@ void main_window::CreateConnects()
 		dlg->show();
 	});
 
+	connect(ui->confGunCon3Act, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::guncon3, this);
+		dlg->show();
+	});
+
+	connect(ui->confTopShotEliteAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::topshotelite, this);
+		dlg->show();
+	});
+
+	connect(ui->confTopShotFearmasterAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::topshotfearmaster, this);
+		dlg->show();
+	});
+
+	connect(ui->actionBasic_Mouse, &QAction::triggered, this, [this]
+	{
+		basic_mouse_settings_dialog* dlg = new basic_mouse_settings_dialog(this);
+		dlg->show();
+	});
+
+#ifndef _WIN32
+	ui->actionRaw_Mouse->setVisible(false);
+#else
+	connect(ui->actionRaw_Mouse, &QAction::triggered, this, [this]
+	{
+		raw_mouse_settings_dialog* dlg = new raw_mouse_settings_dialog(this);
+		dlg->show();
+	});
+#endif
+
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{
 		camera_settings_dialog dlg(this);
@@ -2837,6 +2886,12 @@ void main_window::CreateConnects()
 	{
 		infinity_dialog* inf_dlg = infinity_dialog::get_dlg(this);
 		inf_dlg->show();
+	});
+
+	connect(ui->actionManage_Dimensions_ToyPad, &QAction::triggered, this, [this]
+	{
+		dimensions_dialog* dim_dlg = dimensions_dialog::get_dlg(this);
+		dim_dlg->show();
 	});
 
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
@@ -2992,6 +3047,12 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsExtractTARAct, &QAction::triggered, this, &main_window::ExtractTar);
 
+	connect(ui->toolsVfsDialogAct, &QAction::triggered, this, [this]()
+	{
+		vfs_tool_dialog* dlg = new vfs_tool_dialog(this);
+		dlg->show();
+	});
+
 	connect(ui->showDebuggerAct, &QAction::triggered, this, [this](bool checked)
 	{
 		checked ? m_debugger_frame->show() : m_debugger_frame->hide();
@@ -3109,7 +3170,7 @@ void main_window::CreateConnects()
 
 	connect(ui->supportAct, &QAction::triggered, this, [this]
 	{
-		QDesktopServices::openUrl(QUrl("https://www.patreon.com/Nekotekina"));
+		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, this, [this]
@@ -3776,7 +3837,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 				type = drop_type::drop_rrc;
 			}
 			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
-			else if (path.toLower().endsWith(".savestat.gz") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
+			else if (path.toLower().endsWith(".savestat.gz") || path.toLower().endsWith(".savestat.zst") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
 				type = drop_type::drop_game;
 			}

@@ -14,7 +14,7 @@ class breakpoint_list : public QListWidget
 
 public:
 	breakpoint_list(QWidget* parent, breakpoint_handler* handler);
-	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
+	void UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm);
 	void ClearBreakpoints();
 	bool AddBreakpoint(u32 pc);
 	void RemoveBreakpoint(u32 addr);
@@ -33,6 +33,5 @@ private:
 	breakpoint_handler* m_ppu_breakpoint_handler;
 	QMenu* m_context_menu = nullptr;
 	QAction* m_delete_action;
-	cpu_thread* m_cpu = nullptr;
-	CPUDisAsm* m_disasm = nullptr;
+	std::shared_ptr<CPUDisAsm> m_disasm = nullptr;
 };

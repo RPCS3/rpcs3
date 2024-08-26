@@ -19,8 +19,8 @@
 
 LOG_CHANNEL(evdev_log, "evdev");
 
-evdev_joystick_handler::evdev_joystick_handler(bool emulation)
-    : PadHandlerBase(pad_handler::evdev, emulation)
+evdev_joystick_handler::evdev_joystick_handler()
+    : PadHandlerBase(pad_handler::evdev)
 {
 	init_configs();
 
@@ -83,8 +83,11 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RY); // DS3 uses the yaw axis for gyros
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
+	cfg->analog_limiter_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
+	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
+	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->lstickdeadzone.def    = 30; // between 0 and 255
 	cfg->rstickdeadzone.def    = 30; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
@@ -236,10 +239,8 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 	if (!Init())
 		return button_values;
 
-	for (const auto& entry : button_list)
+	for (const auto& [code, name] : button_list)
 	{
-		const u32 code = entry.first;
-
 		if (code == NO_BUTTON)
 			continue;
 
@@ -251,9 +252,8 @@ std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonV
 		button_values.emplace(code, std::make_pair<u16, bool>(static_cast<u16>(val > 0 ? 255 : 0), false));
 	}
 
-	for (const auto& entry : axis_list)
+	for (const auto& [code, name] : axis_list)
 	{
-		const u32 code = entry.first;
 		int val = 0;
 
 		if (libevdev_fetch_event_value(dev, EV_ABS, code, &val) == 0)
@@ -295,10 +295,13 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons)
 {
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 		m_blacklist.clear();
+
+	if (call_type == gui_call_type::reset_input || call_type == gui_call_type::blacklist)
+		m_min_button_values.clear();
 
 	// Get our evdev device
 	std::shared_ptr<EvdevDevice> device = get_evdev_device(padId);
@@ -308,6 +311,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			fail_callback(padId);
 		return connection::disconnected;
 	}
+
 	libevdev* dev = device->device;
 
 	// Try to fetch all new events from the joystick.
@@ -329,7 +333,12 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		has_new_event |= ret == LIBEVDEV_READ_STATUS_SUCCESS;
 	}
 
-	auto data = GetButtonValues(device);
+	if (call_type == gui_call_type::get_connection)
+	{
+		return has_new_event ? connection::connected : connection::no_data;
+	}
+
+	const auto data = GetButtonValues(device);
 
 	const auto find_value = [&, this](const std::string& str)
 	{
@@ -375,8 +384,8 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
 	}
 
-	// return if nothing new has happened. ignore this to get the current state for blacklist
-	if (!get_blacklist && !has_new_event)
+	// return if nothing new has happened. ignore this to get the current state for blacklist or reset_input
+	if (call_type != gui_call_type::blacklist && call_type != gui_call_type::reset_input && !has_new_event)
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
@@ -388,6 +397,77 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		u16 value = 0;
 		std::string name;
 	} pressed_button{};
+
+	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type, bool is_rev_axis)
+	{
+		if (call_type != gui_call_type::blacklist && m_blacklist.contains(name))
+			return;
+
+		// Ignore codes that aren't part of the latest events. Otherwise we will get value 0 which will reset our min_value.
+		const auto it = data.find(static_cast<u64>(code));
+		if (it == data.cend())
+		{
+			if (call_type == gui_call_type::reset_input)
+			{
+				// Set to max. We won't have all the events for all the buttons or axis at this point.
+				m_min_button_values[name] = 65535;
+
+				if (ev_type == EV_ABS)
+				{
+					// Also set the other direction to max if it wasn't already found.
+					const auto it_other_axis = is_rev_axis ? axis_list.find(code) : rev_axis_list.find(code);
+					ensure(it_other_axis != (is_rev_axis ? axis_list.cend() : rev_axis_list.cend()));
+					if (const std::string& other_name = it_other_axis->second; !m_min_button_values.contains(other_name))
+					{
+						m_min_button_values[other_name] = 65535;
+					}
+				}
+			}
+			return;
+		}
+
+		const auto& [value, is_rev_ax] = it->second;
+
+		// If we want the value for an axis, its direction has to match the direction of the data.
+		if (ev_type == EV_ABS && is_rev_axis != is_rev_ax)
+			return;
+
+		u16& min_value = m_min_button_values[name];
+
+		if (call_type == gui_call_type::reset_input || value < min_value)
+		{
+			min_value = value;
+			return;
+		}
+
+		if (value <= threshold)
+			return;
+
+		if (call_type == gui_call_type::blacklist)
+		{
+			m_blacklist.insert(name);
+
+			if (ev_type == EV_ABS)
+			{
+				const int min = libevdev_get_abs_minimum(dev, code);
+				const int max = libevdev_get_abs_maximum(dev, code);
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", type, code, libevdev_event_code_get_name(ev_type, code), name, value, min, max);
+			}
+			else
+			{
+				evdev_log.error("Evdev Calibration: Added %s [ %d = %s = %s ] to blacklist. Value = %d", type, code, libevdev_event_code_get_name(ev_type, code), name, value);
+			}
+
+			return;
+		}
+
+		const u16 diff = value > min_value ? value - min_value : 0;
+
+		if (diff > button_press_threshold && value > pressed_button.value)
+		{
+			pressed_button = { .value = value, .name = name };
+		}
+	};
 
 	const bool is_xbox_360_controller = padId.find("Xbox 360") != umax;
 	const bool is_sony_controller = !is_xbox_360_controller && padId.find("Sony") != umax;
@@ -403,75 +483,25 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		if (value > 0)
-		{
-			if (get_blacklist)
-			{
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+		set_button_press(code, name, "button"sv, 0, EV_KEY, false);
 	}
 
 	for (const auto& [code, name] : axis_list)
 	{
-		if (data[code].second)
-			continue;
-
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		if (value > 0 && value >= m_thumb_threshold)
-		{
-			if (get_blacklist)
-			{
-				const int min = libevdev_get_abs_minimum(dev, code);
-				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+		set_button_press(code, name, "axis"sv, m_thumb_threshold, EV_ABS, false);
 	}
 
 	for (const auto& [code, name] : rev_axis_list)
 	{
-		if (!data[code].second)
-			continue;
-
-		if (!get_blacklist && m_blacklist.contains(name))
-			continue;
-
-		const u16 value = data[code].first;
-		if (value > 0 && value >= m_thumb_threshold)
-		{
-			if (get_blacklist)
-			{
-				const int min = libevdev_get_abs_minimum(dev, code);
-				const int max = libevdev_get_abs_maximum(dev, code);
-				m_blacklist.insert(name);
-				evdev_log.error("Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
-			}
-			else if (value > pressed_button.value)
-			{
-				pressed_button = { value, name };
-			}
-		}
+		set_button_press(code, name, "rev axis"sv, m_thumb_threshold, EV_ABS, true);
 	}
 
-	if (get_blacklist)
+	if (call_type == gui_call_type::reset_input)
+	{
+		return connection::no_data;
+	}
+
+	if (call_type == gui_call_type::blacklist)
 	{
 		if (m_blacklist.empty())
 			evdev_log.success("Evdev Calibration: Blacklist is clear. No input spam detected");
@@ -481,9 +511,9 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	if (callback)
 	{
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+			callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values));
 		else
-			callback(0, "", padId, 0, preview_values);
+			callback(0, "", padId, 0, std::move(preview_values));
 	}
 
 	return connection::connected;
@@ -557,15 +587,18 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 	if (fd < 0)
 		return;
 
-	if (large == device->large_motor && small == device->small_motor)
-		return;
+	device->new_output_data = large != device->large_motor || small != device->small_motor;
+
+	const auto now = steady_clock::now();
+	const auto elapsed = now - device->last_output;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse.
 	// So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (clock() - device->last_vibration < 20)
+	if ((!device->new_output_data || elapsed <= 20ms) && elapsed <= min_output_interval)
 		return;
 
-	device->last_vibration = clock();
+	device->new_output_data = false;
+	device->last_output = now;
 
 	// delete the previous effect (which also stops it)
 	if (device->effect_id != -1)
@@ -1082,13 +1115,14 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const bool analog_limiter_enabled = pad->get_analog_limiter_button_active(cfg->analog_limiter_toggle_mode.get(), pad->m_player_id);
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get(), pad->m_player_id);
 	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	const auto update_values = [&](bool& pressed, u16& final_value, bool is_stick_value, u32 code, u16 val)
 	{
 		bool press{};
-		TranslateButtonPress(m_dev, code, press, val, is_stick_value);
+		TranslateButtonPress(m_dev, code, press, val, analog_limiter_enabled, is_stick_value);
 
 		if (press)
 		{
@@ -1210,8 +1244,8 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling);
 
 	pad->m_sticks[0].m_value = lx;
 	pad->m_sticks[1].m_value = 255 - ly;
@@ -1240,12 +1274,12 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 	SetRumble(evdev_device, force_large, force_small);
 }
 
-bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
+bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
-	if (!pad || player_id >= g_cfg_input.player.size())
+	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
 		return false;
 
-	const cfg_player* player_config = g_cfg_input.player[player_id];
+	const cfg_player* player_config = g_cfg_input.player[pad->m_player_id];
 	if (!pad)
 		return false;
 
@@ -1253,9 +1287,9 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 
 	m_dev = std::make_shared<EvdevDevice>();
 
-	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	m_dev->config = &m_pad_configs[player_id];
-	m_dev->player_id = player_id;
+	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+	m_dev->config = &m_pad_configs[pad->m_player_id];
+	m_dev->player_id = pad->m_player_id;
 	cfg_pad* cfg = m_dev->config;
 	if (!cfg)
 		return false;
@@ -1336,8 +1370,17 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	if (b_has_pressure_intensity_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
+		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->analog_limiter_button), special_button_value::analog_limiter);
+		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
@@ -1408,7 +1451,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player
 		else
 		{
 			m_bindings.emplace_back(pad, evdev_device, nullptr);
-			evdev_log.warning("evdev add_motion_device in bindPadToDevice failed for device %s", player_config->buddy_device.to_string());
+
+			if (const std::string buddy_device_name = player_config->buddy_device.to_string(); buddy_device_name != "Null")
+			{
+				evdev_log.warning("evdev add_motion_device in bindPadToDevice failed for device %s", buddy_device_name);
+			}
 		}
 	}
 	else

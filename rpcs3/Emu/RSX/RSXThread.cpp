@@ -27,6 +27,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/unzip.h"
+#include "NV47/HW/context.h"
 
 #include "util/asm.hpp"
 
@@ -122,13 +123,16 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
+	// TODO: Proper context manager
+	static rsx::context s_ctx{ .rsxthr = nullptr, .register_state = &method_registers };
+
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
 		, io(fill_array(-1))
 	{
 	}
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, std::source_location src_loc)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -245,11 +249,11 @@ namespace rsx
 		{
 			// Allow failure if specified size
 			// This is to allow accurate recovery for failures
-			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc);
 			return 0;
 		}
 
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
 	}
 
 	extern void set_rsx_yield_flag() noexcept
@@ -497,8 +501,8 @@ namespace rsx
 			return;
 		}
 
-		u32 offset_x = base % tile->pitch;
-		u32 offset_y = base / tile->pitch;
+		const u32 offset_x = base % tile->pitch;
+		const u32 offset_y = base / tile->pitch;
 
 		switch (tile->comp)
 		{
@@ -513,12 +517,15 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y);
+				u32* dst_line = reinterpret_cast<u32*>(ptr + (offset_y + y) * tile->pitch + offset_x);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)((u8*)src + pitch * y + x * sizeof(u32));
+					u32 value = src_line[x];
 
-					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					dst_line[x * 2 + 0] = value;
+					dst_line[x * 2 + 1] = value;
 				}
 			}
 			break;
@@ -526,14 +533,18 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y);
+				u32* line_0 = reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x);
+				u32* line_1 = reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y + x * sizeof(u32));
+					u32 value = src_line[x];
 
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					line_0[x * 2 + 0] = value;
+					line_0[x * 2 + 1] = value;
+					line_1[x * 2 + 0] = value;
+					line_1[x * 2 + 1] = value;
 				}
 			}
 			break;
@@ -566,11 +577,12 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X1:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(ptr + (offset_y + y) * tile->pitch + offset_x);
+				u32* dst_line = reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)(ptr + (offset_y + y) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
-
-					*(u32*)((u8*)dst + pitch * y + x * sizeof(u32)) = value;
+					dst_line[x] = src_line[x * 2 + 0];
 				}
 			}
 			break;
@@ -578,11 +590,12 @@ namespace rsx
 		case CELL_GCM_COMPMODE_C32_2X2:
 			for (u32 y = 0; y < height; ++y)
 			{
+				const u32* src_line = reinterpret_cast<const u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x);
+				u32* dst_line = reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y);
+
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
-
-					*reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y + x * sizeof(u32)) = value;
+					dst_line[x] = src_line[x * 2 + 0];
 				}
 			}
 			break;
@@ -614,11 +627,6 @@ namespace rsx
 		ar(in_begin_end);
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
-
-		if (in_begin_end)
-		{
-			rsx_log.error("Savestate created in draw call scope. Report to developers if there are issues with it.");
-		}
 
 		if (ar.is_writing() || version >= 2)
 		{
@@ -680,6 +688,10 @@ namespace rsx
 
 		g_user_asked_for_frame_capture = false;
 
+		// TODO: Proper context management in the driver
+		s_ctx.rsxthr = this;
+		m_ctx = &s_ctx;
+
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
@@ -711,15 +723,25 @@ namespace rsx
 
 	avconf::avconf(utils::serial& ar)
 	{
-		ar(*this);
+		save(ar);
 	}
 
 	void avconf::save(utils::serial& ar)
 	{
-		ar(*this);
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
+		if (!ar.is_writing() && version < 3)
+		{
+			// Be compatible with previous bitwise serialization
+			ar(std::span<u8>(reinterpret_cast<u8*>(this), ::offset32(&avconf::scan_mode)));
+			ar.pos += utils::align<usz>(::offset32(&avconf::scan_mode), alignof(avconf)) - ::offset32(&avconf::scan_mode);
+			return;
+		}
+
+		ar(stereo_mode, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state, scan_mode);
 	}
 
-	void thread::capture_frame(const std::string &name)
+	void thread::capture_frame(const std::string& name)
 	{
 		frame_trace_data::draw_state draw_state{};
 
@@ -818,7 +840,7 @@ namespace rsx
 		in_begin_end = false;
 		m_frame_stats.draw_calls++;
 
-		method_registers.current_draw_clause.post_execute_cleanup();
+		method_registers.current_draw_clause.post_execute_cleanup(m_ctx);
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		m_eng_interrupt_mask |= rsx::backend_interrupt;
@@ -853,7 +875,7 @@ namespace rsx
 		method_registers.current_draw_clause.begin();
 		do
 		{
-			method_registers.current_draw_clause.execute_pipeline_dependencies();
+			method_registers.current_draw_clause.execute_pipeline_dependencies(m_ctx);
 		}
 		while (method_registers.current_draw_clause.next());
 	}
@@ -911,7 +933,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}
@@ -923,7 +945,7 @@ namespace rsx
 
 	namespace nv4097
 	{
-		void set_render_mode(thread* rsx, u32, u32 arg);
+		void set_render_mode(context* rsx, u32, u32 arg);
 	}
 
 	void thread::on_task()
@@ -943,6 +965,14 @@ namespace rsx
 		{
 			g_fxo->get<rsx::dma_manager>().init();
 			on_init_thread();
+
+			if (in_begin_end)
+			{
+				// on_init_thread should have prepared the backend resources
+				// Run draw call warmup again if the savestate happened mid-draw
+				ensure(serialized);
+				begin();
+			}
 		}
 
 		is_initialized = true;
@@ -950,12 +980,12 @@ namespace rsx
 
 		if (!zcull_ctrl)
 		{
-			//Backend did not provide an implementation, provide NULL object
+			// Backend did not provide an implementation, provide NULL object
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
 		check_zcull_status(false);
-		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
+		nv4097::set_render_mode(m_ctx, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 
 		performance_counters.state = FIFO::state::empty;
 
@@ -2455,7 +2485,7 @@ namespace rsx
 
 			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
 			{
-				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(float));
+				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(f32));
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -2465,7 +2495,7 @@ namespace rsx
 
 				if (sampler_descriptors[i]->texcoord_xform.clamp)
 				{
-					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(float));
+					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(f32));
 					texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
 				}
 
@@ -2494,14 +2524,28 @@ namespace rsx
 					}
 				}
 
-				if (backend_config.supports_hw_msaa &&
-					sampler_descriptors[i]->samples > 1)
+				if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
 				{
 					current_fp_texture_state.multisampled_textures |= (1 << i);
 					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
 					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
 					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
 					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_S);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_T);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_R);
+					}
 				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
@@ -2568,58 +2612,55 @@ namespace rsx
 					}
 				}
 
-				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
-				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
-
-				const u32 argb8_signed = tex.argb_signed();
-				const u32 gamma = tex.gamma() & ~argb8_signed;
-				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
-				u32 argb8_convert = gamma;
-
-				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
+				if (rsx::is_int8_remapped_format(format))
 				{
-					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
-					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
-					// TODO: Replace this clusterfuck of texture control with matrix transformation
-					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
-					if (remap_ctrl == 0xAA)
-					{
-						argb8_convert |= (sign_convert & 0xFu) << texture_control_bits::EXPAND_OFFSET;
-					}
-					else
-					{
-						if (remap_ctrl & 0x03) argb8_convert |= (sign_convert & 0x1u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x0C) argb8_convert |= (sign_convert & 0x2u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x30) argb8_convert |= (sign_convert & 0x4u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0xC0) argb8_convert |= (sign_convert & 0x8u) << texture_control_bits::EXPAND_OFFSET;
-					}
-				}
+					// Special operations applied to 8-bit formats such as gamma correction and sign conversion
+					// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
+					// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
+					// This is a separate method of setting the format to signed mode without doing so per-channel
+					// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
 
-				if (argb8_convert)
-				{
-					switch (format)
+					const u32 argb8_signed = tex.argb_signed(); // _SNROM
+					const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+					u32 argb8_convert = gamma;
+
+					// The options are mutually exclusive
+					ensure((argb8_signed & gamma) == 0);
+					ensure((argb8_signed & unsigned_remap) == 0);
+					ensure((gamma & unsigned_remap) == 0);
+
+					// Helper function to apply a per-channel mask based on an input mask
+					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
 					{
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-					case CELL_GCM_TEXTURE_X16:
-					case CELL_GCM_TEXTURE_Y16_X16:
-					case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-					case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-					case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-					case CELL_GCM_TEXTURE_X32_FLOAT:
-					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-						// Special data formats (XY, HILO, DEPTH) are not RGB formats
-						// Ignore gamma flags
-						break;
-					default:
-						texture_control |= argb8_convert;
-						break;
+						// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
+						// TODO: Replace this clusterfuck of texture control with matrix transformation
+						const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
+						if (remap_ctrl == 0xAA)
+						{
+							argb8_convert |= (mask & 0xFu) << bit_offset;
+							return;
+						}
+
+						if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
+						if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
+						if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
+						if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
+					};
+
+					if (argb8_signed)
+					{
+						// Apply integer sign extension from uint8 to sint8 and renormalize
+						apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
 					}
+
+					if (unsigned_remap)
+					{
+						// Apply sign expansion, compressed normal-map style (2n - 1)
+						apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
+					}
+
+					texture_control |= argb8_convert;
 				}
 
 				current_fragment_program.texture_params[i].control = texture_control;
@@ -2671,7 +2712,7 @@ namespace rsx
 	{
 		rsx::method_registers.reset();
 		check_zcull_status(false);
-		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
+		nv4097::set_render_mode(m_ctx, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 		m_graphics_state |= pipeline_state::all_dirty;
 	}
 
@@ -3074,7 +3115,7 @@ namespace rsx
 		}
 
 		rsx::reservation_lock<true> lock(sink, 16);
-		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp(), value, 0});
+		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({timestamp(), value, 0});
 	}
 
 	u32 thread::copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination)
@@ -3246,7 +3287,7 @@ namespace rsx
 		return pair;
 	}
 
-	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
+	void thread::recover_fifo(std::source_location src_loc)
 	{
 		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
@@ -3271,7 +3312,7 @@ namespace rsx
 		if (kill_itself)
 		{
 			fmt::throw_exception("Dead FIFO commands queue state has been detected!"
-				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc{line, col, file, func});
+				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc);
 		}
 
 		// Error. Should reset the queue
@@ -3380,7 +3421,7 @@ namespace rsx
 		return fifo_ctrl->last_cmd();
 	}
 
-	void invalid_method(thread*, u32, u32);
+	void invalid_method(context*, u32, u32);
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
@@ -3882,7 +3923,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}

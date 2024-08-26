@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
+#include "util/asm.hpp"
 
 #include "sceNp.h"
 #include "sceNp2.h"
@@ -59,8 +61,96 @@ void fmt_class_string<CellSysutilAvc2AttributeId>::format(std::string& out, u64 
 	});
 }
 
-vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
-vm::ptr<void> avc2_cb_arg{};
+// Callback handle tag type
+struct avc2_cb_handle_t{};
+
+struct avc2_settings
+{
+	avc2_settings() = default;
+
+	avc2_settings(const avc2_settings&) = delete;
+	avc2_settings& operator=(const avc2_settings&) = delete;
+
+	SAVESTATE_INIT_POS(52);
+
+	shared_mutex mutex_cb;
+	vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
+	vm::ptr<void> avc2_cb_arg{};
+
+	u32 streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
+	u8 mic_out_stream_sharing = 0;
+	u8 video_stream_sharing = 0;
+	u32 total_video_bitrate = 0;
+	std::set<u16> voice_muting_players;
+	bool voice_muting = 1;
+	bool video_muting = 1;
+	bool speaker_muting = 1;
+	f32 speaker_volume_level = 40.0f;
+
+	static bool saveable(bool /*is_writing*/) noexcept
+	{
+		return GET_SERIALIZATION_VERSION(cellSysutil) != 0;
+	}
+
+	avc2_settings(utils::serial& ar) noexcept
+	{
+		[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(cellSysutil);
+
+		if (version == 0)
+		{
+			return;
+		}
+
+		save(ar);
+	}
+
+	void save(utils::serial& ar)
+	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellSysutil);
+
+		ar(avc2_cb, avc2_cb_arg, streaming_mode, mic_out_stream_sharing, video_stream_sharing, total_video_bitrate);
+
+		if (ar.is_writing() || version >= 2)
+		{
+			ar(voice_muting_players, voice_muting, video_muting, speaker_muting, speaker_volume_level);
+		}
+	}
+
+	void register_cb_call(u32 event, u32 error_code)
+	{
+		// This is equivalent to the dispatcher code
+		sysutil_register_cb_with_id<avc2_cb_handle_t>([=, this](ppu_thread& cb_ppu) -> s32
+			{
+				vm::ptr<CellSysutilAvc2Callback> avc2_cb{};
+				vm::ptr<void> avc2_cb_arg{};
+
+				{
+					std::lock_guard lock(this->mutex_cb);
+					avc2_cb = this->avc2_cb;
+					avc2_cb_arg = this->avc2_cb_arg;
+				}
+
+				if (avc2_cb)
+				{
+					avc2_cb(cb_ppu, event, error_code, avc2_cb_arg);
+
+					if ((event == CELL_AVC2_EVENT_LOAD_FAILED ||
+							event == CELL_AVC2_EVENT_UNLOAD_SUCCEEDED ||
+							event == CELL_AVC2_EVENT_UNLOAD_FAILED) &&
+						error_code < 2)
+					{
+						sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
+
+						std::lock_guard lock(this->mutex_cb);
+						this->avc2_cb = vm::null;
+						this->avc2_cb_arg = vm::null;
+					}
+				}
+
+				return 0;
+			});
+	}
+};
 
 error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> player_id, vm::ptr<CellSysutilAvc2PlayerInfo> player_info)
 {
@@ -71,7 +161,7 @@ error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> pla
 
 	player_info->connected = 1;
 	player_info->joined = 1;
-	player_info->mic_attached = 0;
+	player_info->mic_attached = CELL_AVC2_MIC_STATUS_DETACHED;
 	player_info->member_id = *player_id;
 
 	return CELL_OK;
@@ -83,13 +173,15 @@ error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::p
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
 
+	auto& settings = g_fxo->get<avc2_settings>();
+
 	[[maybe_unused]] u64 id = 0UL;
 
 	if (room_id)
 	{
 		id = *room_id;
 	}
-	else if (false/*streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL*/) // TODO
+	else if (settings.streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL)
 	{
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 	}
@@ -124,7 +216,8 @@ error_code cellSysutilAvc2GetVideoMuting(vm::ptr<u8> muting)
 	if (!muting)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	*muting = 1;
+	const auto& settings = g_fxo->get<avc2_settings>();
+	*muting = settings.video_muting;
 
 	return CELL_OK;
 }
@@ -172,28 +265,16 @@ error_code cellSysutilAvc2StopStreaming2(u32 mediaType)
 error_code cellSysutilAvc2SetVoiceMuting(u8 muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetVoiceMuting(muting=0x%x)", muting);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.voice_muting = muting;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2StartVoiceDetection()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StartVoiceDetection()");
-	return CELL_OK;
-}
-
-error_code cellSysutilAvc2UnloadAsync()
-{
-	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
-
-	if (avc2_cb)
-	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
-
 	return CELL_OK;
 }
 
@@ -241,28 +322,13 @@ error_code cellSysutilAvc2GetAttribute(vm::ptr<CellSysutilAvc2Attribute> attr)
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
-{
-	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
-
-	avc2_cb = callback_func;
-	avc2_cb_arg = user_data;
-
-	if (avc2_cb)
-	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
-
-	return CELL_OK;
-}
-
 error_code cellSysutilAvc2SetSpeakerVolumeLevel(f32 level)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetSpeakerVolumeLevel(level=0x%x)", level);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.speaker_volume_level = level;
+
 	return CELL_OK;
 }
 
@@ -366,12 +432,27 @@ error_code cellSysutilAvc2SetVideoMuting(u8 muting)
 	if (muting > 1) // Weird check, lol
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.video_muting = muting;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2SetPlayerVoiceMuting(SceNpMatching2RoomMemberId member_id, u8 muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetPlayerVoiceMuting(member_id=0x%x, muting=0x%x)", member_id, muting);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	if (muting)
+	{
+		settings.voice_muting_players.insert(member_id);
+	}
+	else
+	{
+		settings.voice_muting_players.erase(member_id);
+	}
+
 	return CELL_OK;
 }
 
@@ -386,7 +467,28 @@ error_code cellSysutilAvc2Unload()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Unload()");
 
-	// TODO: CELL_AVC2_ERROR_NOT_INITIALIZED
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	std::lock_guard lock(settings.mutex_cb);
+
+	if (!settings.avc2_cb)
+	{
+		return CELL_AVC2_ERROR_NOT_INITIALIZED;
+	}
+
+	sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
+	settings.avc2_cb = vm::null;
+	settings.avc2_cb_arg = vm::null;
+
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2UnloadAsync()
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
+
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -410,7 +512,8 @@ error_code cellSysutilAvc2GetSpeakerVolumeLevel(vm::ptr<f32> level)
 	if (!level)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	*level = 100;
+	const auto& settings = g_fxo->get<avc2_settings>();
+	*level = settings.speaker_volume_level;
 
 	return CELL_OK;
 }
@@ -431,7 +534,36 @@ error_code cellSysutilAvc2MicRead(vm::ptr<void> ptr, vm::ptr<u32> pSize)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2MicRead(ptr=*0x%x, pSize=*0x%x)", ptr, pSize);
 
-	// TODO: check arguments ?
+	const auto& settings = g_fxo->get<avc2_settings>();
+
+	if (!settings.mic_out_stream_sharing)
+		return CELL_OK;
+
+	if (!ptr || !pSize)
+	{
+		// Not checked on real hardware
+		cellSysutilAvc2.warning("cellSysutilAvc2MicRead: ptr or pSize is null");
+
+		if (pSize)
+		{
+			*pSize = 0;
+		}
+
+		return CELL_OK;
+	}
+
+	// TODO: ringbuffer (holds 100ms of 16kHz single channel f32 samples)
+	std::vector<u8> buf{};
+
+	u32 size_read = 0;
+
+	if (u32 size_to_read = *pSize; size_to_read > 0 && !buf.empty())
+	{
+		size_read = std::min(size_to_read, ::size32(buf));
+		std::memcpy(ptr.get_ptr(), buf.data(), size_read);
+	}
+
+	*pSize = size_read;
 
 	return CELL_OK;
 }
@@ -443,7 +575,8 @@ error_code cellSysutilAvc2GetPlayerVoiceMuting(SceNpMatching2RoomMemberId member
 	if (!muting)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	*muting = 0;
+	const auto& settings = g_fxo->get<avc2_settings>();
+	*muting = settings.voice_muting_players.contains(member_id);
 
 	return CELL_OK;
 }
@@ -454,27 +587,21 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
 
+	auto& settings = g_fxo->get<avc2_settings>();
+
 	[[maybe_unused]] u64 id = 0UL;
 
 	if (room_id)
 	{
 		id = *room_id;
 	}
-	else if (false/*streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL*/) // TODO
+	else if (settings.streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL)
 	{
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 	}
 
 	// TODO: join chat
-
-	if (avc2_cb)
-	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
+	settings.register_cb_call(CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -572,14 +699,8 @@ error_code cellSysutilAvc2LeaveChatRequest()
 {
 	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChatRequest()");
 
-	if (avc2_cb)
-	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-		{
-			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, avc2_cb_arg);
-			return 0;
-		});
-	}
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.register_cb_call(CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0);
 
 	return CELL_OK;
 }
@@ -608,7 +729,8 @@ error_code cellSysutilAvc2GetSpeakerMuting(vm::ptr<u8> muting)
 	if (!muting)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	*muting = 1;
+	const auto& settings = g_fxo->get<avc2_settings>();
+	*muting = settings.speaker_muting;
 
 	return CELL_OK;
 }
@@ -668,12 +790,198 @@ error_code cellSysutilAvc2LeaveChat()
 error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetSpeakerMuting(muting=0x%x)", muting);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.speaker_muting = muting;
+
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2Load_shared(SceNpMatching2ContextId /*ctx_id*/, u32 /*container*/, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
+{
+	if (!init_param || !init_param->avc_init_param_version ||
+	    !(init_param->avc_init_param_version == 100 ||
+	     init_param->avc_init_param_version == 110 ||
+	     init_param->avc_init_param_version == 120 ||
+	     init_param->avc_init_param_version == 130 ||
+	     init_param->avc_init_param_version == 140)
+	)
+	{
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	switch (init_param->media_type)
+	{
+	case CELL_SYSUTIL_AVC2_VOICE_CHAT:
+	{
+		if (init_param->max_players < 2 ||
+		    init_param->max_players > 64 ||
+		    init_param->spu_load_average > 100 ||
+		    init_param->voice_param.voice_quality != CELL_SYSUTIL_AVC2_VOICE_QUALITY_NORMAL ||
+		    init_param->voice_param.max_speakers == 0 ||
+		    init_param->voice_param.max_speakers > 16
+		)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		u32 streaming_mode = init_param->direct_streaming_mode;
+
+		if (init_param->avc_init_param_version >= 120)
+		{
+			switch (init_param->direct_streaming_mode)
+			{
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
+				streaming_mode = CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL;
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
+				if (init_param->streaming_mode.mode == CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL)
+				{
+					settings.streaming_mode = streaming_mode;
+					return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+				}
+				break;
+			default:
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+		else if (init_param->avc_init_param_version >= 110)
+		{
+			switch (init_param->direct_streaming_mode)
+			{
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL:
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN:
+				break;
+			case CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN:
+			default:
+				return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+			}
+		}
+		else
+		{
+			streaming_mode = settings.streaming_mode;
+		}
+
+		settings.streaming_mode = streaming_mode;
+		settings.mic_out_stream_sharing = init_param->voice_param.mic_out_stream_sharing;
+
+		if (!callback_func)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		std::lock_guard lock(settings.mutex_cb);
+
+		if (settings.avc2_cb)
+		{
+			return CELL_AVC2_ERROR_ALREADY_INITIALIZED;
+		}
+
+		settings.avc2_cb = callback_func;
+		settings.avc2_cb_arg = user_data;
+		break;
+	}
+	case CELL_SYSUTIL_AVC2_VIDEO_CHAT:
+	{
+		if (false) // TODO: syscall to check container
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->avc_init_param_version <= 140)
+		{
+			if (false) // TODO
+			{
+				return CELL_AVC2_ERROR_OUT_OF_MEMORY;
+			}
+		}
+
+		if (callback_func)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->video_param.max_video_windows == 0 ||
+			init_param->video_param.max_video_windows > (init_param->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL ? 6 : 16))
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->video_param.max_video_bitrate < 1000 || init_param->video_param.max_video_bitrate > 512000)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (init_param->video_param.max_video_framerate == 0 || init_param->video_param.max_video_framerate > 30)
+		{
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+
+		s32 bitrate = 0;
+
+		switch (init_param->video_param.max_video_resolution)
+		{
+		case CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QQVGA:
+			bitrate = 76800;
+			break;
+		case CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QVGA:
+			bitrate = 307200;
+			break;
+		default:
+			break;
+		}
+
+		u32 total_bitrate = 0;
+
+		if (bitrate != 0)
+		{
+			u32 window_count = init_param->video_param.max_video_windows;
+
+			if (init_param->video_param.video_stream_sharing == CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_2)
+			{
+				window_count++;
+			}
+
+			total_bitrate = utils::align<u32>(window_count * bitrate, 0x100000) + 0x100000;
+		}
+
+		settings.video_stream_sharing = init_param->video_param.video_stream_sharing;
+		settings.total_video_bitrate = total_bitrate;
+		break;
+	}
+	default:
+		return CELL_AVC2_ERROR_NOT_SUPPORTED;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+	cellSysutilAvc2.warning("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+
+	error_code error = cellSysutilAvc2Load_shared(ctx_id, container, callback_func, user_data, init_param);
+	if (error != CELL_OK)
+		return error;
+
+	return CELL_OK;
+}
+
+error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
+{
+	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+
+	error_code error = cellSysutilAvc2Load_shared(ctx_id, container, callback_func, user_data, init_param);
+	if (error != CELL_OK)
+		return error;
+
+	auto& settings = g_fxo->get<avc2_settings>();
+	settings.register_cb_call(CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0);
+
 	return CELL_OK;
 }
 
@@ -718,12 +1026,54 @@ error_code cellSysutilAvc2SetAttribute(vm::cptr<CellSysutilAvc2Attribute> attr)
 	return CELL_OK;
 }
 
+error_code cellSysutilAvc2Unload2(u32 mediaType)
+{
+	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	switch (mediaType)
+	{
+	case CELL_SYSUTIL_AVC2_VOICE_CHAT:
+	{
+		std::lock_guard lock(settings.mutex_cb);
+
+		if (!settings.avc2_cb)
+		{
+			return CELL_AVC2_ERROR_NOT_INITIALIZED;
+		}
+
+		// TODO: return error if the video chat is still loaded (probably CELL_AVC2_ERROR_INVALID_STATUS)
+		sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
+		settings.avc2_cb = vm::null;
+		settings.avc2_cb_arg = vm::null;
+		break;
+	}
+	case CELL_SYSUTIL_AVC2_VIDEO_CHAT:
+	{
+		// TODO
+		break;
+	}
+	default:
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	return CELL_OK;
+}
+
 error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync2(mediaType=0x%x)", mediaType);
 
 	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	auto& settings = g_fxo->get<avc2_settings>();
+
+	if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0);
+	else
+		settings.register_cb_call(CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 2);
 
 	return CELL_OK;
 }
@@ -757,7 +1107,8 @@ error_code cellSysutilAvc2GetVoiceMuting(vm::ptr<u8> muting)
 	if (!muting)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	*muting = 1;
+	const auto& settings = g_fxo->get<avc2_settings>();
+	*muting = settings.voice_muting;
 
 	return CELL_OK;
 }
@@ -770,16 +1121,6 @@ error_code cellSysutilAvc2GetScreenShowStatus(vm::ptr<u8> visible)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	*visible = 0;
-
-	return CELL_OK;
-}
-
-error_code cellSysutilAvc2Unload2(u32 mediaType)
-{
-	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
-
-	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
-		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
 }

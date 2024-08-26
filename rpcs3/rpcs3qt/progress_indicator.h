@@ -13,6 +13,7 @@ public:
 	~progress_indicator();
 
 	void show(QWindow* window);
+	void hide();
 
 	int value() const;
 

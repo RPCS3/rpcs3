@@ -20,10 +20,11 @@ void perf_monitor::operator()()
 	u64 last_pause_time = umax;
 
 	std::vector<double> per_core_usage;
+	std::string msg;
 
-	while (thread_ctrl::state() != thread_state::aborting)
+	for (u64 sleep_until = get_system_time(); thread_ctrl::state() != thread_state::aborting;)
 	{
-		thread_ctrl::wait_for(update_interval_us);
+		thread_ctrl::wait_until(&sleep_until, update_interval_us);
 		elapsed_us += update_interval_us;
 
 		if (thread_ctrl::state() == thread_state::aborting)
@@ -61,14 +62,15 @@ void perf_monitor::operator()()
 				logged_pause++;
 			}
 
-			std::string msg = fmt::format("CPU Usage: Total: %.1f%%", total_usage);
+			msg.clear();
+			fmt::append(msg, "CPU Usage: Total: %.1f%%", total_usage);
 
 			if (!per_core_usage.empty())
 			{
 				fmt::append(msg, ", Cores:");
 			}
 
-			for (size_t i = 0; i < per_core_usage.size(); i++)
+			for (usz i = 0; i < per_core_usage.size(); i++)
 			{
 				fmt::append(msg, "%s %.1f%%", i > 0 ? "," : "", per_core_usage[i]);
 			}

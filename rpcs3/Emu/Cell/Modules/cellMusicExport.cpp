@@ -226,16 +226,16 @@ error_code cellMusicExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		return { CELL_MUSIC_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
-	std::string filename = param->title.get_ptr();
+	std::string filename;
+
+	if (srcHddFile)
+	{
+		fmt::append(filename, "%s", srcHddFile.get_ptr());
+	}
 
 	if (filename.empty())
 	{
-		return { CELL_MUSIC_EXPORT_UTIL_ERROR_PARAM, "title empty" };
-	}
-
-	if (const std::string extension = get_file_extension(file_path); !extension.empty())
-	{
-		fmt::append(filename, ".%s", extension);
+		return { CELL_MUSIC_EXPORT_UTIL_ERROR_PARAM, "filename empty" };
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32

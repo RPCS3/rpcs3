@@ -408,11 +408,11 @@ namespace np
 
 	void np_handler::init_np_handler_dependencies()
 	{
-		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn && g_fxo->is_init<network_context>() && !m_inited_np_handler_dependencies)
+		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn && g_fxo->is_init<p2p_context>() && !m_inited_np_handler_dependencies)
 		{
 			m_inited_np_handler_dependencies = true;
 
-			auto& nc = g_fxo->get<network_context>();
+			auto& nc = g_fxo->get<p2p_context>();
 			nc.bind_sce_np_port();
 
 			std::lock_guard lock(mutex_rpcn);
@@ -761,9 +761,9 @@ namespace np
 			np_memory.setup(poolptr, poolsize);
 		}
 
-		memset(&npid, 0, sizeof(npid));
-		memset(&online_name, 0, sizeof(online_name));
-		memset(&avatar_url, 0, sizeof(avatar_url));
+		std::memset(&npid, 0, sizeof(npid));
+		std::memset(&online_name, 0, sizeof(online_name));
+		std::memset(&avatar_url, 0, sizeof(avatar_url));
 
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{
@@ -817,6 +817,16 @@ namespace np
 			string_to_online_name(rpcn->get_online_name(), online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), avatar_url);
 			public_ip_addr = rpcn->get_addr_sig();
+
+			if (!public_ip_addr)
+			{
+				rsx::overlays::queue_message(rpcn::rpcn_state_to_localized_string_id(rpcn::rpcn_state::failure_other));
+				rpcn_log.error("Failed to get a reply from RPCN signaling!");
+				is_psn_active = false;
+				rpcn->terminate_connection();
+				return;
+			}
+
 			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
 			break;
@@ -968,17 +978,20 @@ namespace np
 			queue_basic_events.pop();
 		}
 
-		const u32 size_avail = *size;
-		u32 res_size         = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
-
 		*event = cur_event.event;
 		memcpy(from.get_ptr(), &cur_event.from, sizeof(cur_event.from));
-		memcpy(data.get_ptr(), cur_event.data.data(), res_size);
-		*size = res_size;
-
-		if (res_size < cur_event.data.size())
+		if (cur_event.event != SCE_NP_BASIC_EVENT_OFFLINE)
 		{
-			return SCE_NP_BASIC_ERROR_DATA_LOST;
+			const u32 size_avail = *size;
+			const u32 res_size   = std::min(static_cast<u32>(cur_event.data.size()), size_avail);
+
+			memcpy(data.get_ptr(), cur_event.data.data(), res_size);
+			*size = res_size;
+
+			if (res_size < cur_event.data.size())
+			{
+				return SCE_NP_BASIC_ERROR_DATA_LOST;
+			}
 		}
 
 		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
@@ -1584,9 +1597,10 @@ namespace np
 		return np_cache.get_memberids(room_id, sort_method);
 	}
 
-	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data)
+	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id)
 	{
-		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data);
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(ctx_id);
+		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data, include_onlinename, include_avatarurl);
 	}
 
 	void np_handler::upnp_add_port_mapping(u16 internal_port, std::string_view protocol)
@@ -1597,5 +1611,18 @@ namespace np
 	void np_handler::upnp_remove_port_mapping(u16 internal_port, std::string_view protocol)
 	{
 		upnp.remove_port_redir(internal_port, protocol);
+	}
+
+	std::pair<bool, bool> np_handler::get_match2_context_options(u32 ctx_id)
+	{
+		bool include_onlinename = false, include_avatarurl = false;
+
+		if (auto ctx = get_match2_context(ctx_id))
+		{
+			include_onlinename = ctx->include_onlinename;
+			include_avatarurl = ctx->include_avatarurl;
+		}
+
+		return {include_onlinename, include_avatarurl};
 	}
 } // namespace np

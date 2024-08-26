@@ -7,6 +7,7 @@
 #include <QGroupBox>
 #include <QMenu>
 #include <QDialogButtonBox>
+
 #include <thread>
 
 #include "qt_utils.h"
@@ -200,7 +201,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 		{
 			rpcn_add_server_dialog dlg(this);
 			dlg.exec();
-			const auto new_server = dlg.get_new_server();
+			const auto& new_server = dlg.get_new_server();
 			if (new_server)
 			{
 				if (!g_cfg_rpcn.add_host(new_server->first, new_server->second))
@@ -221,8 +222,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			if (index < 0)
 				return;
 
-			const auto desc = cbx_servers->itemText(index).toStdString();
-			const auto host = cbx_servers->itemData(index).toString().toStdString();
+			const std::string desc = cbx_servers->itemText(index).toStdString();
+			const std::string host = cbx_servers->itemData(index).toString().toStdString();
 
 			ensure(g_cfg_rpcn.del_host(desc, host));
 			g_cfg_rpcn.save();
@@ -237,14 +238,14 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                               "- Username can only contain a-z A-Z 0-9 '-' '_'\n"
 			                                               "- Username is case sensitive\n"));
 			dlg_username.exec();
-			auto username = dlg_username.get_username();
+			const auto& username = dlg_username.get_username();
 
 			if (!username)
 				return;
 
 			rpcn_ask_password_dialog dlg_password(this, tr("Please choose your password:\n\n"));
 			dlg_password.exec();
-			auto password = dlg_password.get_password();
+			const auto& password = dlg_password.get_password();
 
 			if (!password)
 				return;
@@ -253,7 +254,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                         "- A valid email is needed to receive the token that validates your account.\n"
 			                                         "- Your email won't be used for anything beyond sending you this token or the password reset token.\n\n"));
 			dlg_email.exec();
-			auto email = dlg_email.get_email();
+			const auto& email = dlg_email.get_email();
 
 			if (!email)
 				return;
@@ -297,7 +298,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			                                         "Now all you need is to enter the token that was sent to your email.\n"
 			                                         "You can skip this step by leaving it empty and entering it later in the Edit Account section too.\n"));
 			token_dlg.exec();
-			auto token = token_dlg.get_token();
+			const auto& token = token_dlg.get_token();
 
 			if (!token)
 				return;
@@ -340,7 +341,7 @@ void rpcn_account_dialog::refresh_combobox()
 {
 	g_cfg_rpcn.load();
 	const auto vec_hosts = g_cfg_rpcn.get_hosts();
-	auto cur_host        = g_cfg_rpcn.get_host();
+	const auto cur_host  = g_cfg_rpcn.get_host();
 	int i = 0, index = 0;
 
 	cbx_servers->clear();
@@ -382,8 +383,8 @@ rpcn_add_server_dialog::rpcn_add_server_dialog(QWidget* parent)
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_description, edt_host]()
 		{
-			auto description = edt_description->text();
-			auto host        = edt_host->text();
+			const QString description = edt_description->text();
+			const QString host        = edt_host->text();
 
 			if (description.isEmpty())
 			{
@@ -563,14 +564,14 @@ rpcn_ask_email_dialog::rpcn_ask_email_dialog(QWidget* parent, const QString& des
 				return;
 			}
 
-			auto email = m_edit_pass1->text().toStdString();
+			std::string email = m_edit_pass1->text().toStdString();
 			if (!validate_email(email))
 			{
 				QMessageBox::critical(this, tr("Invalid Email"), tr("You need to enter a valid email!"), QMessageBox::Ok);
 				return;
 			}
 
-			m_email = email;
+			m_email = std::move(email);
 			QDialog::accept();
 		});
 	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -608,7 +609,7 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [this, edt_token]()
 		{
-			const auto token = edt_token->text().toStdString();
+			std::string token = edt_token->text().toStdString();
 
 			if (!token.empty())
 			{
@@ -621,7 +622,7 @@ rpcn_ask_token_dialog::rpcn_ask_token_dialog(QWidget* parent, const QString& des
 					return;
 				}
 
-				m_token = token;
+				m_token = std::move(token);
 			}
 
 			QDialog::accept();
@@ -687,7 +688,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 			rpcn_ask_password_dialog ask_pass(this, tr("Please enter your password:"));
 			ask_pass.exec();
 
-			auto& password = ask_pass.get_password();
+			const auto& password = ask_pass.get_password();
 			if (!password)
 				return;
 
@@ -713,8 +714,8 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 bool rpcn_account_edit_dialog::save_config()
 {
-	const auto username = m_edit_username->text().toStdString();
-	const auto token    = m_edit_token->text().toStdString();
+	const std::string username = m_edit_username->text().toStdString();
+	const std::string token    = m_edit_token->text().toStdString();
 
 	if (username.empty() || g_cfg_rpcn.get_password().empty())
 	{
@@ -749,8 +750,8 @@ void rpcn_account_edit_dialog::resend_token()
 
 	const auto rpcn = rpcn::rpcn_client::get_instance();
 
-	const auto npid     = g_cfg_rpcn.get_npid();
-	const auto password = g_cfg_rpcn.get_password();
+	const std::string npid     = g_cfg_rpcn.get_npid();
+	const std::string password = g_cfg_rpcn.get_password();
 
 	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 	{
@@ -782,19 +783,19 @@ void rpcn_account_edit_dialog::change_password()
 {
 	rpcn_ask_username_dialog dlg_username(this, tr("Please confirm your username:"));
 	dlg_username.exec();
-	auto username = dlg_username.get_username();
+	const auto& username = dlg_username.get_username();
 
 	if (!username)
 		return;
 
 	switch (QMessageBox::question(this, tr("RPCN: Change Password"), tr("Do you already have a reset password token?\n"
-																		"Note that the reset password token is different from the email verification token.")))
+	                                                                    "Note that the reset password token is different from the email verification token.")))
 	{
 	case QMessageBox::No:
 	{
 		rpcn_ask_email_dialog dlg_email(this, tr("Please enter the email you used to create the account:"));
 		dlg_email.exec();
-		const auto email = dlg_email.get_email();
+		const auto& email = dlg_email.get_email();
 
 		if (!email)
 			return;
@@ -832,14 +833,14 @@ void rpcn_account_edit_dialog::change_password()
 	{
 		rpcn_ask_token_dialog dlg_token(this, tr("Please enter the password reset token you received:"));
 		dlg_token.exec();
-		const auto token = dlg_token.get_token();
+		const auto& token = dlg_token.get_token();
 
 		if (!token)
 			return;
 
 		rpcn_ask_password_dialog dlg_password(this, tr("Please enter your new password:"));
 		dlg_password.exec();
-		const auto password = dlg_password.get_password();
+		const auto& password = dlg_password.get_password();
 
 		if (!password)
 			return;
@@ -898,13 +899,75 @@ namespace np
 }
 
 rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
-	: QDialog(parent),
-	  m_green_icon(gui::utils::circle_pixmap(QColorConstants::Svg::green, devicePixelRatioF() * 2)),
-	  m_red_icon(gui::utils::circle_pixmap(QColorConstants::Svg::red, devicePixelRatioF() * 2)),
-	  m_yellow_icon(gui::utils::circle_pixmap(QColorConstants::Svg::yellow, devicePixelRatioF() * 2)),
-	  m_orange_icon(gui::utils::circle_pixmap(QColorConstants::Svg::orange, devicePixelRatioF() * 2)),
-	  m_black_icon(gui::utils::circle_pixmap(QColorConstants::Svg::black, devicePixelRatioF() * 2))
+	: QDialog(parent)
 {
+	const qreal pixel_ratio = devicePixelRatioF();
+
+	// Create colored circle pixmaps
+	gui::utils::circle_pixmap online_pixmap(QColorConstants::Svg::green, pixel_ratio * 2);
+	gui::utils::circle_pixmap offline_pixmap(QColorConstants::Svg::red, pixel_ratio * 2);
+	gui::utils::circle_pixmap blocked_pixmap(QColorConstants::Svg::red, pixel_ratio * 2);
+	gui::utils::circle_pixmap req_rcvd_pixmap(QColorConstants::Svg::yellow, pixel_ratio * 2);
+	gui::utils::circle_pixmap req_sent_pixmap(QColorConstants::Svg::orange, pixel_ratio * 2);
+
+	// Reset device pixel ratios for further painting
+	online_pixmap.setDevicePixelRatio(1.0);
+	offline_pixmap.setDevicePixelRatio(1.0);
+	blocked_pixmap.setDevicePixelRatio(1.0);
+	req_rcvd_pixmap.setDevicePixelRatio(1.0);
+	req_sent_pixmap.setDevicePixelRatio(1.0);
+
+	// The width and height are identical for all pixmaps
+	const int w = online_pixmap.width();
+	const int h = online_pixmap.height();
+
+	const QPen pen1(QBrush(Qt::black), w * 0.1, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
+	const QPen pen2(QBrush(Qt::black), w * 0.15, Qt::SolidLine, Qt::RoundCap, Qt::MiterJoin);
+
+	QPainter painter;
+	painter.setRenderHint(QPainter::Antialiasing);
+
+	// Render a bar into the offline pixmap
+	{
+		painter.begin(&offline_pixmap);
+		painter.setPen(pen2);
+		painter.drawLine(QPointF(w * 0.25, h * 0.5), QPointF(w * 0.75, h * 0.5));
+		painter.end();
+	}
+
+	// Render a cross into the blocked pixmap
+	{
+		painter.begin(&blocked_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.25, h * 0.25), QPointF(w * 0.75, h * 0.75));
+		painter.drawLine(QPointF(w * 0.25, h * 0.75), QPointF(w * 0.75, h * 0.25));
+		painter.end();
+	}
+
+	// Render a downward arrow into the request received pixmap
+	{
+		painter.begin(&req_rcvd_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
+		painter.drawLines({ QLineF(w * 0.5, h * 0.75, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.75, w * 0.75, h * 0.5) });
+		painter.end();
+	}
+
+	// Render an upward arrow into the request sent pixmap
+	{
+		painter.begin(&req_sent_pixmap);
+		painter.setPen(pen1);
+		painter.drawLine(QPointF(w * 0.5, h * 0.25), QPointF(w * 0.5, h * 0.75));
+		painter.drawLines({ QLineF(w * 0.5, h * 0.25, w * 0.25, h * 0.5), QLineF(w * 0.5, h * 0.25, w * 0.75, h * 0.5) });
+		painter.end();
+	}
+
+	m_icon_online = online_pixmap;
+	m_icon_offline = offline_pixmap;
+	m_icon_blocked = blocked_pixmap;
+	m_icon_request_received = req_rcvd_pixmap;
+	m_icon_request_sent = req_sent_pixmap;
+
 	const auto set_title = [this]()
 	{
 		if (const std::string npid = g_cfg_rpcn.get_npid(); !npid.empty())
@@ -993,37 +1056,37 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	for (const auto& fr : data.friends)
 	{
-		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_green_icon : m_red_icon, fr.second.online);
+		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_icon_online : m_icon_offline, fr.second.online);
 	}
 
 	for (const auto& fr_req : data.requests_sent)
 	{
-		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_orange_icon, QVariant(false));
+		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_icon_request_sent, QVariant(false));
 	}
 
 	for (const auto& fr_req : data.requests_received)
 	{
-		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_yellow_icon, QVariant(true));
+		add_update_list(m_lst_requests, QString::fromStdString(fr_req), m_icon_request_received, QVariant(true));
 	}
 
 	for (const auto& blck : data.blocked)
 	{
-		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_red_icon, QVariant(false));
+		add_update_list(m_lst_blocks, QString::fromStdString(blck), m_icon_blocked, QVariant(false));
 	}
 
 	auto history = np::load_players_history();
 	std::map<u64, std::pair<std::string, std::string>, std::greater<u64>> sorted_history;
 
-	for (const auto& [username, user_info] : history)
+	for (auto& [username, user_info] : history)
 	{
 		if (!data.friends.contains(username) && !data.requests_sent.contains(username) && !data.requests_received.contains(username))
-			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(std::move(username), std::move(user_info.description))));
+			sorted_history.insert(std::make_pair(user_info.timestamp, std::make_pair(username, std::move(user_info.description))));
 	}
 
 	for (const auto& [_, username_and_description] : sorted_history)
 	{
 		const auto& [username, description] = username_and_description;
-		auto* item = new QListWidgetItem(QString::fromStdString(username));
+		QListWidgetItem* item = new QListWidgetItem(QString::fromStdString(username));
 
 		if (!description.empty())
 			item->setToolTip(QString::fromStdString(description));
@@ -1072,17 +1135,36 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			}
 
 			QListWidgetItem* selected_item = m_lst_requests->selectedItems().first();
+			std::string str_sel_friend = selected_item->text().toStdString();
 
-			// Only create context menu for incoming requests
+			QMenu* context_menu = new QMenu();
+
+			// Presents different context based on role
 			if (selected_item->data(Qt::UserRole) == false)
 			{
+				QAction* cancel_friend_request = context_menu->addAction(tr("&Cancel Request"));
+
+				connect(cancel_friend_request, &QAction::triggered, this, [this, str_sel_friend]()
+					{
+						if (!m_rpcn->remove_friend(str_sel_friend))
+						{
+							QMessageBox::critical(this, tr("Error cancelling friend request!"), tr("An error occurred while trying to cancel friend request!"), QMessageBox::Ok);
+						}
+						else
+						{
+							QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully cancelled the friend request!"), QMessageBox::Ok);
+						}
+					});
+
+				context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
+				context_menu->deleteLater();
+
 				return;
 			}
 
-			std::string str_sel_friend = selected_item->text().toStdString();
 
-			QMenu* context_menu           = new QMenu();
 			QAction* accept_request_action = context_menu->addAction(tr("&Accept Request"));
+			QAction* reject_friend_request = context_menu->addAction(tr("&Reject Request"));
 
 			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
@@ -1095,6 +1177,18 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 						QMessageBox::information(this, tr("Friend added!"), tr("You've successfully added a friend!"), QMessageBox::Ok);
 					}
 				});
+
+			connect(reject_friend_request, &QAction::triggered, this, [this, str_sel_friend]()
+			{
+				if (!m_rpcn->remove_friend(str_sel_friend))
+				{
+					QMessageBox::critical(this, tr("Error rejecting friend request!"), tr("An error occurred while trying to reject the friend request!"), QMessageBox::Ok);
+				}
+				else
+				{
+					QMessageBox::information(this, tr("Friend request cancelled!"), tr("You've successfully rejected the friend request!"), QMessageBox::Ok);
+				}
+			});
 
 			context_menu->exec(m_lst_requests->viewport()->mapToGlobal(pos));
 			context_menu->deleteLater();
@@ -1123,7 +1217,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 					}
 
 					QString qstr_friend = QString::fromStdString(str_sel_friend);
-					add_update_list(m_lst_requests, qstr_friend, m_orange_icon, QVariant(false));
+					add_update_list(m_lst_requests, qstr_friend, m_icon_request_sent, QVariant(false));
 					remove_list(m_lst_history, qstr_friend);
 				});
 
@@ -1159,7 +1253,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 			}
 			else
 			{
-				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_orange_icon, QVariant(false));
+				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_icon_request_sent, QVariant(false));
 				QMessageBox::information(this, tr("Friend added!"), tr("Friend was successfully added!"), QMessageBox::Ok);
 			}
 		});
@@ -1205,7 +1299,7 @@ void rpcn_friends_dialog::remove_list(QListWidget* list, const QString& name)
 
 void rpcn_friends_dialog::add_update_friend(QString name, bool status)
 {
-	add_update_list(m_lst_friends, name, status ? m_green_icon : m_red_icon, status);
+	add_update_list(m_lst_friends, name, status ? m_icon_online : m_icon_offline, status);
 	remove_list(m_lst_requests, name);
 }
 
@@ -1217,7 +1311,7 @@ void rpcn_friends_dialog::remove_friend(QString name)
 
 void rpcn_friends_dialog::add_query(QString name)
 {
-	add_update_list(m_lst_requests, name, m_yellow_icon, QVariant(true));
+	add_update_list(m_lst_requests, name, m_icon_request_received, QVariant(true));
 	remove_list(m_lst_history, name);
 }
 

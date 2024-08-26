@@ -571,6 +571,9 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 	if (!ctx)
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 
+	if (!ctx->started.compare_and_swap_test(0, 1))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_STARTED;
+
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
@@ -972,9 +975,12 @@ error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId,
 
 	u32 num_members = std::min(memberIdNum, static_cast<u32>(vec_memberids.size()));
 
-	for (u32 i = 0; i < num_members; i++)
+	if (memberId)
 	{
-		memberId[i] = vec_memberids[i];
+		for (u32 i = 0; i < num_members; i++)
+		{
+			memberId[i] = vec_memberids[i];
+		}
 	}
 
 	return not_an_error(num_members);
@@ -1032,7 +1038,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 	std::vector<SceNpMatching2AttributeId> binattrs_list;
 	for (u32 i = 0; i < attrIdNum; i++)
 	{
-		if (attrId[i] < SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_1_ID || attrId[i] >= SCE_NP_MATCHING2_USER_BIN_ATTR_1_ID)
+		if (!attrId || attrId[i] < SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_1_ID || attrId[i] >= SCE_NP_MATCHING2_USER_BIN_ATTR_1_ID)
 		{
 			return SCE_NP_MATCHING2_ERROR_INVALID_ATTRIBUTE_ID;
 		}
@@ -1044,7 +1050,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
-	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen);
+	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen, ctxId);
 }
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
@@ -1094,6 +1100,9 @@ error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 ti
 	const auto ctx = get_match2_context(ctxId);
 	if (!ctx)
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	if (!ctx->started.compare_and_swap_test(0, 1))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_STARTED;
 
 	if (ctx->context_callback)
 	{
@@ -1290,7 +1299,7 @@ error_code sceNpMatching2GrantRoomOwner(
 error_code sceNpMatching2CreateContext(
     vm::cptr<SceNpId> npId, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passPhrase, vm::ptr<SceNpMatching2ContextId> ctxId, s32 option)
 {
-	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", ctxId, option);
+	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", passPhrase, ctxId, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1309,7 +1318,7 @@ error_code sceNpMatching2CreateContext(
 		return SCE_NP_MATCHING2_ERROR_NOT_NP_SIGN_IN;
 	}
 
-	*ctxId = create_match2_context(commId, passPhrase);
+	*ctxId = create_match2_context(commId, passPhrase, option);
 
 	return CELL_OK;
 }
@@ -1693,10 +1702,11 @@ error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 	const auto ctx = get_match2_context(ctxId);
 
 	if (!ctx)
-	{
 		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
-	}
 
+	if (!ctx->started.compare_and_swap_test(1, 0))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_STARTED;
+	
 	if (ctx->context_callback)
 	{
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32

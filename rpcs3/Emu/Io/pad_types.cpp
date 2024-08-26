@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "pad_types.h"
+#include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 template <>
 void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
@@ -37,7 +39,15 @@ void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
 		case pad_button::rs_right: return "Right Stick Right";
 		case pad_button::rs_x: return "Right Stick X-Axis";
 		case pad_button::rs_y: return "Right Stick Y-Axis";
-		case pad_button::pad_button_max_enum: return unknown;
+		case pad_button::pad_button_max_enum: return "MAX_ENUM";
+		case pad_button::mouse_button_1: return "Mouse Button 1";
+		case pad_button::mouse_button_2: return "Mouse Button 2";
+		case pad_button::mouse_button_3: return "Mouse Button 3";
+		case pad_button::mouse_button_4: return "Mouse Button 4";
+		case pad_button::mouse_button_5: return "Mouse Button 5";
+		case pad_button::mouse_button_6: return "Mouse Button 6";
+		case pad_button::mouse_button_7: return "Mouse Button 7";
+		case pad_button::mouse_button_8: return "Mouse Button 8";
 		}
 
 		return unknown;
@@ -77,7 +87,16 @@ u32 pad_button_offset(pad_button button)
 	case pad_button::rs_right: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X;
 	case pad_button::rs_x: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X;
 	case pad_button::rs_y: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y;
-	case pad_button::pad_button_max_enum: return 0;
+	case pad_button::pad_button_max_enum:
+	case pad_button::mouse_button_1:
+	case pad_button::mouse_button_2:
+	case pad_button::mouse_button_3:
+	case pad_button::mouse_button_4:
+	case pad_button::mouse_button_5:
+	case pad_button::mouse_button_6:
+	case pad_button::mouse_button_7:
+	case pad_button::mouse_button_8:
+		return 0;
 	}
 	return 0;
 }
@@ -116,6 +135,14 @@ u32 pad_button_keycode(pad_button button)
 	case pad_button::rs_x: return static_cast<u32>(axis_direction::both);
 	case pad_button::rs_y: return static_cast<u32>(axis_direction::both);
 	case pad_button::pad_button_max_enum: return 0;
+	case pad_button::mouse_button_1: return 1;
+	case pad_button::mouse_button_2: return 2;
+	case pad_button::mouse_button_3: return 3;
+	case pad_button::mouse_button_4: return 4;
+	case pad_button::mouse_button_5: return 5;
+	case pad_button::mouse_button_6: return 6;
+	case pad_button::mouse_button_7: return 7;
+	case pad_button::mouse_button_8: return 8;
 	}
 	return 0;
 }
@@ -132,7 +159,7 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	}
 }
 
-bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode)
+bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id)
 {
 	if (m_pressure_intensity_button_index < 0)
 	{
@@ -150,6 +177,19 @@ bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode)
 			if (pressed)
 			{
 				m_pressure_intensity_toggled = !m_pressure_intensity_toggled;
+
+				if (g_cfg.misc.show_pressure_intensity_toggle_hint)
+				{
+					const std::string player_id_string = std::to_string(player_id + 1);
+					if (m_pressure_intensity_toggled)
+					{
+						rsx::overlays::queue_message(get_localized_string(localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_ON, player_id_string.c_str()), 3'000'000);
+					}
+					else
+					{
+						rsx::overlays::queue_message(get_localized_string(localized_string_id::RSX_OVERLAYS_PRESSURE_INTENSITY_TOGGLED_OFF, player_id_string.c_str()), 3'000'000);
+					}
+				}
 			}
 		}
 
@@ -157,4 +197,44 @@ bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode)
 	}
 
 	return pressure_intensity_button.m_pressed;
+}
+
+bool Pad::get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id)
+{
+	if (m_analog_limiter_button_index < 0)
+	{
+		return false;
+	}
+
+	const Button& analog_limiter_button = m_buttons[m_analog_limiter_button_index];
+
+	if (is_toggle_mode)
+	{
+		const bool pressed = analog_limiter_button.m_pressed;
+
+		if (std::exchange(m_analog_limiter_button_pressed, pressed) != pressed)
+		{
+			if (pressed)
+			{
+				m_analog_limiter_toggled = !m_analog_limiter_toggled;
+
+				if (g_cfg.misc.show_analog_limiter_toggle_hint)
+				{
+					const std::string player_id_string = std::to_string(player_id + 1);
+					if (m_analog_limiter_toggled)
+					{
+						rsx::overlays::queue_message(get_localized_string(localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_ON, player_id_string.c_str()), 3'000'000);
+					}
+					else
+					{
+						rsx::overlays::queue_message(get_localized_string(localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_OFF, player_id_string.c_str()), 3'000'000);
+					}
+				}
+			}
+		}
+
+		return m_analog_limiter_toggled;
+	}
+
+	return analog_limiter_button.m_pressed;
 }

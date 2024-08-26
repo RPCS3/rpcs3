@@ -128,14 +128,14 @@ error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char
 
 	sample = {}; // Remove reference to string
 
-	if (msg.size() >= 2u && ([&]()
+	if (msg.size() >= 2u && [&]()
 	{
 		static thread_local u64 last_write = 0;
 
 		// Dump thread about every period which TTY was not being touched for about half a second
 		const u64 current = get_system_time();
-		return current - std::exchange(last_write, current) >= 3'000'000;
-	}() || warning))
+		return current - std::exchange(last_write, current) >= (warning ? 500'000 : 3'000'000);
+	}())
 	{
 		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}
