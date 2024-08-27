@@ -8,6 +8,7 @@ COMM_COUNT=$(git rev-list --count HEAD)
 COMM_HASH=$(git rev-parse --short=8 HEAD)
 
 AVVER="${COMM_TAG}-${COMM_COUNT}"
+ARCH="${1:x64}"
 
 # AVVER is used for GitHub releases, it is the version number.
 echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
@@ -52,7 +53,7 @@ echo "IconIndex=0" >> Quickstart.url
 #FILESIZE=$(stat -f %z "$DMG_FILEPATH")
 #SHA256SUM=$(shasum -a 256 "$DMG_FILEPATH" | awk '{ print $1 }')
 
-ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.7z"
+ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos-${ARCH}.7z"
 "$BREW_X64_PATH/bin/7z" a -mx9 "$ARCHIVE_FILEPATH" RPCS3.app Quickstart.url
 FILESIZE=$(stat -f %z "$ARCHIVE_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$ARCHIVE_FILEPATH" | awk '{ print $1 }')
