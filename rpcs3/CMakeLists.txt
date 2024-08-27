@@ -226,3 +226,14 @@ if(BUILD_RPCS3_TESTS)
      )
     endif()
 endif()
+
+# Udev rules, per platform
+if (BUNDLE_UDEV_RULES)
+    if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+        install(FILES ../config/udev/udev.rules
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d/ RENAME 99-rpcs3.rules)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+        install(FILES ../config/udev/devd.conf
+            DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/devd/ RENAME rpcs3.conf)
+    endif()
+endif()
