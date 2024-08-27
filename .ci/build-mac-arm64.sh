@@ -7,7 +7,7 @@ brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-/usr/local/bin/brew install -f --overwrite python@3.12 || arch -x86_64 /usr/local/bin/brew link --overwrite python@3.12
+/usr/local/bin/brew install -f --overwrite python@3.12 || /usr/local/bin/brew link --overwrite python@3.12
 /usr/local/bin/brew update
 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 /usr/local/bin/brew install -f --build-from-source ffmpeg@5
@@ -26,7 +26,7 @@ export BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
 export BREW_PATH="$(brew --prefix)"
 export BREW_BIN="/usr/local/bin"
 export BREW_SBIN="/usr/local/sbin"
-export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=X86'
+export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=AArch64'
 
 export WORKDIR;
 WORKDIR="$(pwd)"

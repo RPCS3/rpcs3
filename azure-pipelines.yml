@@ -200,26 +200,26 @@ jobs:
   steps:
     - task: Cache@2
       inputs:
-        key: ccache | "$(Agent.OS)"
+        key: ccache | "$(Agent.OS)" | arm64
         path: $(CCACHE_DIR)
         restoreKeys: |
-          ccache | "$(Agent.OS)"
+          ccache | "$(Agent.OS)" | arm64
       displayName: Ccache cache
 
     - task: Cache@2
       inputs:
-        key: qt | "$(Agent.OS)" | "$(QT_VER)"
+        key: qt | "$(Agent.OS)" | "$(QT_VER)" | arm64
         path: /tmp/Qt
         restoreKeys: |
-          qt | "$(Agent.OS)" | "$(QT_VER)"
+          qt | "$(Agent.OS)" | "$(QT_VER)"  | arm64
       displayName: Qt cache
 
     - task: Cache@2
       inputs:
-        key: brew | "$(Agent.OS)"
+        key: brew | "$(Agent.OS)" | arm64
         path: /Users/runner/Library/Caches/Homebrew
         restoreKeys: |
-          brew | "$(Agent.OS)"
+          brew | "$(Agent.OS)" | arm64
       displayName: Homebrew cache
 
     - bash: |
