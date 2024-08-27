@@ -132,7 +132,8 @@ namespace vk
 			ds.depthBoundsTestEnable = enable? VK_TRUE : VK_FALSE;
 		}
 
-		void enable_blend(int mrt_index, VkBlendFactor src_factor_rgb, VkBlendFactor src_factor_a,
+		void enable_blend(int mrt_index,
+			VkBlendFactor src_factor_rgb, VkBlendFactor src_factor_a,
 			VkBlendFactor dst_factor_rgb, VkBlendFactor dst_factor_a,
 			VkBlendOp equation_rgb, VkBlendOp equation_a)
 		{
