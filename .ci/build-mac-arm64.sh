@@ -3,22 +3,16 @@
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 brew unlink certifi
-brew install nasm ninja p7zip ccache pipenv cmake #create-dmg
 
-#/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew install -f --overwrite python@3.12 || /usr/local/bin/brew link --overwrite python@3.12
 brew update
-brew uninstall -f --ignore-dependencies ffmpeg
-brew install -f --build-from-source ffmpeg@5
-brew reinstall -f --build-from-source gnutls freetype
-brew install llvm@16 glew cmake sdl2 vulkan-headers coreutils
-brew link -f llvm@16 ffmpeg@5
+brew install molten-vk vulkan-headers sdl2 nasm ninja cmake glew ffmpeg pkg-config llvm@18
+brew link -f llvm@18 ffmpeg
 
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=/usr/bin/clang++
 export CC=/usr/bin/clang
 
@@ -26,7 +20,6 @@ export BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
 export BREW_PATH="$(brew --prefix)"
 export BREW_BIN="/usr/local/bin"
 export BREW_SBIN="/usr/local/sbin"
-export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=AArch64'
 
 export WORKDIR;
 WORKDIR="$(pwd)"
@@ -49,19 +42,17 @@ ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
 export SDL2_DIR="$BREW_PATH/opt/sdl2/lib/cmake/SDL2"
 
-export PATH="$BREW_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
+export PATH="$BREW_PATH/opt/llvm@18/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_PATH/lib -Wl,-rpath,$BREW_PATH/lib"
 export CPPFLAGS="-I$BREW_PATH/include -march=armv8.5-a -no-pie"
 export LIBRARY_PATH="$BREW_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_PATH/lib"
 
-export VULKAN_SDK
-VULKAN_SDK="$BREW_PATH/opt/molten-vk"
+export VULKAN_SDK="$BREW_PATH/opt/molten-vk"
 ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
 export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
-export LLVM_DIR
-LLVM_DIR="$BREW_PATH/opt/llvm@16"
+export LLVM_DIR="$BREW_PATH/opt/llvm@18"
 # exclude ffmpeg, SPIRV and LLVM, and sdl from submodule update
 # shellcheck disable=SC2046
 git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
@@ -94,9 +85,10 @@ mkdir build && cd build || exit 1
     -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
     -DPNG_ARM_NEON=on \
-    $CMAKE_EXTRA_OPTS \
+    -DLLVM_TARGETS_TO_BUILD=AArch64 \
     -DLLVM_TARGET_ARCH=AArch64 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
+    -DCMAKE_SYSTEM_PROCESSOR=arm64 \
     -G Ninja
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
