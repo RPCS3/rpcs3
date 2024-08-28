@@ -9,7 +9,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #define CAN_OVERCOMMIT
 #endif
@@ -185,13 +185,7 @@ static u8* add_jit_memory(usz size, usz align)
 	if (olda != newa) [[unlikely]]
 	{
 #ifndef CAN_OVERCOMMIT
-		// Commit more memory.
-		// NOTE: Calling memory commit in parallel on the same addresses can throw a permission error.
-		{
-			static std::mutex mcommit_lock;
-			std::lock_guard lock(mcommit_lock);
-			utils::memory_commit(pointer + olda, newa - olda, Prot);
-		}
+		utils::memory_commit(pointer + olda, newa - olda, Prot);
 #endif
 		// Acknowledge committed memory
 		Ctr.atomic_op([&](u64& ctr)
