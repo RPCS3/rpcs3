@@ -93,7 +93,7 @@ mkdir build && cd build || exit 1
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
-	-DPNG_ARM_NEON=ON \
+    -DPNG_ARM_NEON=on \
     $CMAKE_EXTRA_OPTS \
     -DLLVM_TARGET_ARCH=AArch64 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
