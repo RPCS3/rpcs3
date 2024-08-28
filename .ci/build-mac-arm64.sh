@@ -62,7 +62,11 @@ sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVer
 
 mkdir build && cd build || exit 1
 
-"$BREW_PATH/bin/cmake" .. \
+# Check host architecture...
+file $(which cmake)
+file $(which sh)
+
+cmake .. \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \
     -DUSE_VULKAN=ON \
