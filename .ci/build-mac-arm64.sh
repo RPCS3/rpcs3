@@ -1,8 +1,7 @@
 #!/bin/sh -ex
 
 # Check host architecture...
-arch
-exit 1
+echo "Starting build on $(arch) host"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
