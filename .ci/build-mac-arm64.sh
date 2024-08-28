@@ -3,7 +3,7 @@
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 brew unlink certifi
-brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
+brew install nasm ninja p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
