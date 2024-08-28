@@ -185,6 +185,7 @@ static u8* add_jit_memory(usz size, usz align)
 	if (olda != newa) [[unlikely]]
 	{
 #ifndef CAN_OVERCOMMIT
+		// Commit more memory.
 		utils::memory_commit(pointer + olda, newa - olda, Prot);
 #endif
 		// Acknowledge committed memory
