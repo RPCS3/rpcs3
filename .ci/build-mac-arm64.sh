@@ -1,5 +1,9 @@
 #!/bin/sh -ex
 
+# Check host architecture...
+arch
+exit 1
+
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 brew unlink certifi
@@ -61,10 +65,6 @@ git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && 
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
 mkdir build && cd build || exit 1
-
-# Check host architecture...
-file $(which cmake)
-file $(which sh)
 
 cmake .. \
     -DUSE_SDL=ON \
