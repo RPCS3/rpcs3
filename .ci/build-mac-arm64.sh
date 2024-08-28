@@ -7,7 +7,7 @@ brew unlink certifi
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew install -f --overwrite python@3.12 || /usr/local/bin/brew link --overwrite python@3.12
 brew update
-brew install molten-vk vulkan-headers sdl2 nasm ninja cmake glew ffmpeg pkg-config llvm@18
+brew install molten-vk vulkan-headers sdl2 nasm ninja cmake glew ffmpeg pkg-config llvm@18 pipenv
 brew link -f llvm@18 ffmpeg
 
 # moltenvk based on commit for 1.2.10 release
@@ -31,9 +31,9 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   cd qt-downloader
   git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
   cd "/tmp/Qt"
-  "$BREW_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
+  pipenv run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
-  "$BREW_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia
+  pipenv run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia
 fi
 
 cd "$WORKDIR"
