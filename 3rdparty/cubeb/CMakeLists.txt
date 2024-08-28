@@ -13,7 +13,7 @@ add_library(3rdparty::cubeb ALIAS cubeb)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM|aarch64|AArch64|Aarch64)")
 	target_compile_definitions(speex PUBLIC
-		#_USE_NEON
+		_USE_NEON
 	)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|X86|amd64|AMD64|em64t|EM64T)")
 	target_compile_definitions(speex PUBLIC

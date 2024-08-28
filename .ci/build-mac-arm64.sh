@@ -3,7 +3,7 @@
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 brew unlink certifi
-brew install nasm ninja p7zip ccache pipenv #create-dmg
+brew install nasm ninja p7zip ccache pipenv cmake #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -19,8 +19,8 @@ brew link -f llvm@16 ffmpeg@5
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 #export MACOSX_DEPLOYMENT_TARGET=12.0
-export CXX=clang++
-export CC=clang
+export CXX=/usr/bin/clang++
+export CC=/usr/bin/clang
 
 export BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
 export BREW_PATH="$(brew --prefix)"
