@@ -7,13 +7,13 @@ brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-/usr/local/bin/brew install -f --overwrite python@3.12 || /usr/local/bin/brew link --overwrite python@3.12
-/usr/local/bin/brew update
-/usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
-/usr/local/bin/brew install -f --build-from-source ffmpeg@5
-/usr/local/bin/brew reinstall -f --build-from-source gnutls freetype
-/usr/local/bin/brew install llvm@16 glew cmake sdl2 vulkan-headers coreutils
-/usr/local/bin/brew link -f llvm@16 ffmpeg@5
+brew install -f --overwrite python@3.12 || /usr/local/bin/brew link --overwrite python@3.12
+brew update
+brew uninstall -f --ignore-dependencies ffmpeg
+brew install -f --build-from-source ffmpeg@5
+brew reinstall -f --build-from-source gnutls freetype
+brew install llvm@16 glew cmake sdl2 vulkan-headers coreutils
+brew link -f llvm@16 ffmpeg@5
 
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
@@ -51,7 +51,7 @@ export SDL2_DIR="$BREW_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_PATH/lib -Wl,-rpath,$BREW_PATH/lib"
-export CPPFLAGS="-I$BREW_PATH/include -msse -msse2 -mcx16 -no-pie"
+export CPPFLAGS="-I$BREW_PATH/include -march=armv8.5-a -no-pie"
 export LIBRARY_PATH="$BREW_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_PATH/lib"
 
@@ -93,6 +93,7 @@ mkdir build && cd build || exit 1
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
+	-DPNG_ARM_NEON=ON \
     $CMAKE_EXTRA_OPTS \
     -DLLVM_TARGET_ARCH=AArch64 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
