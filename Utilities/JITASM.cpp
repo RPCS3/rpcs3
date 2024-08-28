@@ -9,7 +9,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
-#if defined(__linux__) || defined(__APPLE__)
+#ifdef __linux__
 #include <unistd.h>
 #define CAN_OVERCOMMIT
 #endif
