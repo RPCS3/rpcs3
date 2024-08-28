@@ -196,7 +196,7 @@ namespace gl
 		void stencil_back_op(GLenum fail, GLenum zfail, GLenum zpass)
 		{
 			const u64 value = static_cast<u64>(fail) << 32 | static_cast<u64>(zfail) << 16 | static_cast<u64>(zpass);
-			if (!test_and_set_property(STENCIL_FRONT_OP, value))
+			if (!test_and_set_property(STENCIL_BACK_OP, value))
 			{
 				glStencilOpSeparate(GL_BACK, fail, zfail, zpass);
 			}
