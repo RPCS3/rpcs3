@@ -253,6 +253,11 @@ uchar* jit_runtime::_alloc(usz size, usz align) noexcept
 
 u8* jit_runtime::alloc(usz size, usz align, bool exec) noexcept
 {
+#if defined(__APPLE__)
+	static std::mutex s_alloc_lock;
+	std::lock_guard lock(s_alloc_lock);
+#endif
+
 	if (exec)
 	{
 		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(size, align);
