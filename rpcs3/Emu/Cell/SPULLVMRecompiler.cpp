@@ -1486,6 +1486,7 @@ public:
 				{
 					.debug_info = false,         // Set to "true" to insert debug frames on x27
 					.use_stack_frames = false,   // We don't need this since the SPU GW allocates global scratch on the stack
+					.trap_GHC_return = true,     // SPU patches don't support code caves, we can safely trap return paths and benefit from the better codegen
 					.hypervisor_context_offset = ::offset32(&spu_thread::hv_ctx),
 					.exclusion_callback = should_exclude_function,
 					.base_register_lookup = {}   // Unused, always x19 on SPU
