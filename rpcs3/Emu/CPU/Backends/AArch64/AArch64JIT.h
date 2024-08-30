@@ -44,6 +44,7 @@ namespace aarch64
             bool debug_info = false;         // Record debug information
             bool use_stack_frames = true;    // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
             bool optimize = true;            // Optimize instructions when possible. Set to false when debugging.
+            bool trap_GHC_return = false;    // Debugging option. Will inject traps to catch returning GHC functions. Disabled in production to accomodate patches.
             u32 hypervisor_context_offset = 0; // Offset within the "thread" object where we can find the hypervisor context (registers configured at gateway).
             std::function<bool(const std::string&)> exclusion_callback;    // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
             std::vector<std::pair<std::string, gpr>> base_register_lookup; // [Optional] Function lookup table to determine the location of the "thread" context.

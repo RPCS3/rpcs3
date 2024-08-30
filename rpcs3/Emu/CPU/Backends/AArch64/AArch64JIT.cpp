@@ -415,7 +415,8 @@ namespace aarch64
         ensure(llvm::isa<llvm::ReturnInst>(where));
         irb->SetInsertPoint(llvm::dyn_cast<llvm::Instruction>(where));
 
-        if (instruction_info.callee_is_GHC &&                      // Calls to C++ ABI will always return
+        if (m_config.trap_GHC_return &&                            // Only apply this trap if config allows
+            instruction_info.callee_is_GHC &&                      // Calls to C++ ABI will always return
             !instruction_info.is_indirect &&                       // We don't know enough when calling indirectly to know if we'll return or not
             instruction_info.callee_name.find("-pp-") == umax)     // Skip branch patch-points as those are just indirect calls. TODO: Move this to instruction decode.
         {
