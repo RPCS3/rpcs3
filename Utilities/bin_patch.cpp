@@ -1,7 +1,9 @@
 #include "bin_patch.h"
+#include "ppu_patch.h"
 #include "File.h"
 #include "Config.h"
 #include "version.h"
+#include "Emu/IdManager.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -896,10 +898,6 @@ void patch_engine::append_title_patches(std::string_view title_id)
 	load(m_map, fmt::format("%s%s_patch.yml", get_patches_path(), title_id));
 }
 
-void ppu_register_range(u32 addr, u32 size);
-bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false, bool with_toc = false, std::string module_name = {});
-u32 ppu_generate_id(std::string_view name);
-
 void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
 	if (ptr && ptr->flags & (1ull << 62))
@@ -1215,6 +1213,10 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 				ensure(alloc_map->dealloc(addr));
 				continue;
 			}
+
+			// Record the insertion point as a faux block.
+			g_fxo->need<ppu_patch_block_registry_t>();
+			g_fxo->get<ppu_patch_block_registry_t>().block_addresses.insert(resval);
 
 			relocate_instructions_at = addr;
 			break;
