@@ -18,6 +18,8 @@
 
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
+#include "Emu/IdManager.h"
+#include "Utilities/ppu_patch.h"
 #endif
 
 using namespace llvm;
@@ -48,13 +50,22 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 			{ "__", aarch64::x19 }    // Probably link table entries
 		};
 
+		// Build list of imposter functions built by the patch manager.
+		g_fxo->need<ppu_patch_block_registry_t>();
+		std::vector<std::string> faux_functions_list;
+		for (const auto& a : g_fxo->get<ppu_patch_block_registry_t>().block_addresses)
+		{
+			faux_functions_list.push_back(fmt::format("__0x%x", a));
+		}
+
 		aarch64::GHC_frame_preservation_pass::config_t config =
 		{
 			.debug_info = false,         // Set to "true" to insert debug frames on x27
 			.use_stack_frames = false,   // We don't need this since the PPU GW allocates global scratch on the stack
 			.hypervisor_context_offset = ::offset32(&ppu_thread::hv_ctx),
 			.exclusion_callback = {},    // Unused, we don't have special exclusion functions on PPU
-			.base_register_lookup = base_reg_lookup
+			.base_register_lookup = base_reg_lookup,
+			.faux_function_list = std::move(faux_functions_list)
 		};
 
 		// Create transform pass

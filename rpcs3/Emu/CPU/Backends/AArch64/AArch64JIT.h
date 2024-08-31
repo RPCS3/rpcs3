@@ -41,12 +41,13 @@ namespace aarch64
 
         struct config_t
         {
-            bool debug_info = false;         // Record debug information
-            bool use_stack_frames = true;    // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
-            bool optimize = true;            // Optimize instructions when possible. Set to false when debugging.
+            bool debug_info = false;           // Record debug information
+            bool use_stack_frames = true;      // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
+            bool optimize = true;              // Optimize instructions when possible. Set to false when debugging.
             u32 hypervisor_context_offset = 0; // Offset within the "thread" object where we can find the hypervisor context (registers configured at gateway).
             std::function<bool(const std::string&)> exclusion_callback;    // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
             std::vector<std::pair<std::string, gpr>> base_register_lookup; // [Optional] Function lookup table to determine the location of the "thread" context.
+            std::vector<std::string> faux_function_list;                   // [Optional] List of faux block names to treat as untrusted - typically fake functions representing codecaves.
         };
 
     protected:
@@ -63,6 +64,8 @@ namespace aarch64
         bool is_ret_instruction(const llvm::Instruction* i);
 
         bool is_inlined_call(const llvm::CallInst* ci);
+
+        bool is_faux_function(const std::string& function_name);
 
         gpr get_base_register_for_call(const std::string& callee_name, gpr default_reg = gpr::x19);
 
