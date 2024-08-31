@@ -2680,12 +2680,13 @@ reg_state_t reg_state_t::merge(const reg_state_t& rhs, u32 current_pc) const
 				res.tag = reg_state_t::alloc_tag();
 				res.origin = current_pc;
 				res.is_instruction = false;
+				res.is_phi = true;
 				return res;
 			}
 		}
 	}
 
-	return make_unknown(current_pc);
+	return make_unknown(current_pc, current_pc, true);
 }
 
 reg_state_t reg_state_t::build_on_top_of(const reg_state_t& rhs) const
@@ -4190,23 +4191,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
-					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
-
-						if (tb.reg_origin[i] == 0x80000000)
-						{
-							tb.reg_origin[i] = expected;
-						}
-						else if (tb.reg_origin[i] != expected)
-						{
-							// Set -1 if multiple origins merged (requires PHI node)
-							tb.reg_origin[i] = -1;
-
-							must_repeat |= !tb.targets.empty();
-						}
-					}
-
 					if (g_cfg.core.spu_block_size == spu_block_size_type::giga && tb.func == block.func && tb.reg_origin_abs[i] + 2)
 					{
 						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
@@ -5793,7 +5777,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 			case MFC_Cmd:
 			{
-				const auto [af, av, atagg, _3, _5, apc, ainst] = get_reg(op.rt);
+				const auto [af, av, atagg, _3, _5, apc, ainst, aphi] = get_reg(op.rt);
 
 				if (!is_pattern_match)
 				{
@@ -6591,7 +6575,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::HBR:
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
-			const auto [af, av, at, ao, az, apc, ainst] = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = get_reg(op.ra);
 			hbr_tg  = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
 			break;
 		}
@@ -6659,8 +6643,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, av | bv, pos);
 			break;
@@ -6675,7 +6659,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			const auto ra = get_reg(op.ra);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
 
 			inherit_const_value(op.rt, ra, ra, av ^ op.si10, pos);
 			break;
@@ -6691,8 +6675,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, bv ^ av, pos);
 			break;
@@ -6702,8 +6686,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, ~(bv | av), pos);
 			break;
@@ -6725,8 +6709,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, bv & av, pos);
 			break;
@@ -6740,7 +6724,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
 
 			inherit_const_value(op.rt, ra, ra, av + op.si10, pos);
 
@@ -6757,8 +6741,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, bv + av, pos);
 
@@ -6773,7 +6757,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::SFI:
 		{
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az, apc, ainst] = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = get_reg(op.ra);
 
 			inherit_const_value(op.rt, ra, ra, op.si10 - av, pos);
 			break;
@@ -6783,8 +6767,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const auto ra = get_reg(op.ra);
 			const auto rb = get_reg(op.rb);
 
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
-			const auto [bf, bv, bt, bo, bz, bpc, binst] = rb;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
+			const auto [bf, bv, bt, bo, bz, bpc, binst, bphi] = rb;
 
 			inherit_const_value(op.rt, ra, rb, bv - av, pos);
 
@@ -6823,7 +6807,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az, apc, ainst] = get_reg(op.ra);
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = get_reg(op.ra);
 
 			inherit_const_value(op.rt, ra, ra, av >> ((0 - op.i7) & 0x1f), pos);
 			break;
@@ -6843,7 +6827,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
 
 			inherit_const_value(op.rt, ra, ra, av << (op.i7 & 0x1f), pos);
 			break;
@@ -6860,7 +6844,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::CEQI:
 		{
 			const auto ra = get_reg(op.ra);
-			const auto [af, av, at, ao, az, apc, ainst] = ra;
+			const auto [af, av, at, ao, az, apc, ainst, aphi] = ra;
 
 			inherit_const_value(op.rt, ra, ra, av == op.si10 + 0u, pos);
 
@@ -6995,7 +6979,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				bb.reg_const[i] = true;
 				bb.reg_val32[i] = reg.value;
-			} 
+			}
+			else if (reg.is_instruction)
+			{
+				bb.reg_origin[i] = reg.origin;
+			}
+			else if (reg.is_phi)
+			{
+				bb.reg_origin[i] = -1;
+			}
 		}
 	}
 
