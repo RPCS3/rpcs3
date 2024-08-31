@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-
 #include "AArch64JIT.h"
 #include "AArch64ASM.h"
 
@@ -415,9 +414,9 @@ namespace aarch64
         ensure(llvm::isa<llvm::ReturnInst>(where));
         irb->SetInsertPoint(llvm::dyn_cast<llvm::Instruction>(where));
 
-        if (instruction_info.callee_is_GHC &&                      // Calls to C++ ABI will always return
-            !instruction_info.is_indirect &&                       // We don't know enough when calling indirectly to know if we'll return or not
-            instruction_info.callee_name.find("-pp-") == umax)     // Skip branch patch-points as those are just indirect calls. TODO: Move this to instruction decode.
+        if (instruction_info.callee_is_GHC &&                    // Calls to C++ ABI will always return
+            !instruction_info.is_indirect &&                     // We don't know enough when calling indirectly to know if we'll return or not
+            !is_faux_function(instruction_info.callee_name))     // Ignore branch patch-points and imposter functions. Their behavior is unreliable.
         {
             // We're making a one-way call. This branch shouldn't even bother linking as it will never return here.
             ASMBlock c;
@@ -485,6 +484,24 @@ namespace aarch64
         }
 
         return false;
+    }
+
+    bool GHC_frame_preservation_pass::is_faux_function(const std::string& function_name)
+    {
+        // Is it a branch patch-point?
+        if (function_name.find("-pp-") != umax)
+        {
+            return true;
+        }
+
+        // Now we search the known imposters list
+        if (m_config.faux_function_list.empty())
+        {
+            return false;
+        }
+
+        const auto& x = m_config.faux_function_list;
+        return std::find(x.begin(), x.end(), function_name) != x.end();
     }
 
     void GHC_frame_preservation_pass::process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f)
