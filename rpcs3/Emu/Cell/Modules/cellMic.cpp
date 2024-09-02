@@ -273,15 +273,15 @@ inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std:
 		f32 normalized_sample = static_cast<f32>(sample) / std::numeric_limits<s16>::max();
 		normalized_sample = std::clamp(normalized_sample, -1.0f, 1.0f);
 
-		uint32_t temp = *reinterpret_cast<uint32_t*>(&normalized_sample);
+		u32 temp = *reinterpret_cast<u32*>(&normalized_sample);
 
 		temp = ((temp & 0x000000FF) << 24) |
 		       ((temp & 0x0000FF00) << 8) |
 		       ((temp & 0x00FF0000) >> 8) |
 		       ((temp & 0xFF000000) >> 24);
 
-		const uint8_t* bytes = reinterpret_cast<uint8_t*>(&temp);
-		float_buffer.insert(float_buffer.end(), bytes, bytes + sizeof(uint32_t));
+		const u8* bytes = reinterpret_cast<u8*>(&temp);
+		float_buffer.insert(float_buffer.end(), bytes, bytes + sizeof(u32));
 	}
 
 	return float_buffer;
