@@ -727,7 +727,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 	}
 	else
 	{
-		// The same as device RAW stream format, except that the data type is always big-endian
+		// The same as device RAW stream format, except that the data byte is always big-endian
 		rbuf_dsp.write_bytes(buf.data(), bufsize);
 	}
 }
