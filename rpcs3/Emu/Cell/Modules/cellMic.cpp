@@ -270,10 +270,10 @@ inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std:
 	{
 		const s16 sample = static_cast<s16>((buffer[i] << 8) | buffer[i + 1]);
 
-		f32 normalizedSample = static_cast<f32>(sample) / 32768.0f;
-		normalizedSample = std::clamp(normalizedSample, -1.0f, 1.0f);
+		f32 normalized_sample = static_cast<f32>(sample) / std::numeric_limits<s16>::max();
+		normalized_sample = std::clamp(normalized_sample, -1.0f, 1.0f);
 
-		uint32_t temp = *reinterpret_cast<uint32_t*>(&normalizedSample);
+		uint32_t temp = *reinterpret_cast<uint32_t*>(&normalized_sample);
 
 		temp = ((temp & 0x000000FF) << 24) |
 		       ((temp & 0x0000FF00) << 8) |
