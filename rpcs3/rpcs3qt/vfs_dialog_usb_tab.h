@@ -26,6 +26,9 @@ public:
 	// Reset this tab without saving the settings yet
 	void reset() const;
 
+protected:
+	void mouseDoubleClickEvent(QMouseEvent* ev) override;
+
 private:
 	void show_usb_input_dialog(int index);
 	void show_context_menu(const QPoint& pos);

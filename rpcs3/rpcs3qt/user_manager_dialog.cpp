@@ -1,6 +1,7 @@
 #include <QRegularExpressionValidator>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QEvent>
 #include <QScreen>
 #include <QHeaderView>
@@ -495,4 +496,19 @@ bool user_manager_dialog::eventFilter(QObject *object, QEvent *event)
 	}
 
 	return QDialog::eventFilter(object, event);
+}
+
+void user_manager_dialog::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QDialog::mouseDoubleClickEvent(ev);
 }

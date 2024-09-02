@@ -8,6 +8,7 @@
 #include <QHeaderView>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QMouseEvent>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -228,4 +229,19 @@ void save_data_list_dialog::UpdateList()
 	const QSize max_size(preferred_size.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferred_size.boundedTo(max_size));
+}
+
+void save_data_list_dialog::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QDialog::mouseDoubleClickEvent(ev);
 }

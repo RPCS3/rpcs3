@@ -15,16 +15,23 @@ class persistent_settings;
 class user_manager_dialog : public QDialog
 {
 	Q_OBJECT
+
 public:
 	explicit user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
+
 Q_SIGNALS:
 	void OnUserLoginSuccess();
+
 private Q_SLOTS:
 	void OnUserLogin();
 	void OnUserCreate();
 	void OnUserRemove();
 	void OnUserRename();
 	void OnSort(int logicalIndex);
+
+protected:
+	void mouseDoubleClickEvent(QMouseEvent* ev) override;
+
 private:
 	void Init();
 	void UpdateTable(bool mark_only = false);

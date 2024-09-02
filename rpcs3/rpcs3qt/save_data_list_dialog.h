@@ -25,9 +25,14 @@ public:
 	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet>, QWidget* parent = nullptr);
 
 	s32 GetSelection() const;
+
+protected:
+	void mouseDoubleClickEvent(QMouseEvent* ev) override;
+
 private Q_SLOTS:
 	void OnEntryInfo();
 	void OnSort(int logicalIndex);
+
 private:
 	void UpdateSelectionLabel();
 	void UpdateList();
