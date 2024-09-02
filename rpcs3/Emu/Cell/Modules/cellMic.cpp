@@ -258,33 +258,26 @@ inline void microphone_device::variable_byteswap(const void* src, void* dst)
 	}
 }
 
-inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, usz num_bytes)
+inline u32 microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, usz num_bytes)
 {
-	ensure(num_bytes % 2 == 0);
-	ensure(num_bytes < buffer.size());
+	constexpr usz float_buf_size = 2 * inbuf_size;
+	static_assert((float_buf_size % sizeof(u32)) == 0);
 
-	std::vector<u8> float_buffer;
-	float_buffer.reserve(num_bytes * 2);
+	float_buf.resize(float_buf_size, 0);
+	ensure(num_bytes * 2 <= float_buf.size());
+
+	u32* dst = reinterpret_cast<u32*>(float_buf.data());
 
 	for (usz i = 0; i < num_bytes; i += 2)
 	{
 		const s16 sample = static_cast<s16>((buffer[i] << 8) | buffer[i + 1]);
 
-		f32 normalized_sample = static_cast<f32>(sample) / std::numeric_limits<s16>::max();
-		normalized_sample = std::clamp(normalized_sample, -1.0f, 1.0f);
+		const be_t<f32> normalized_sample_be = std::clamp(static_cast<f32>(sample) / std::numeric_limits<s16>::max(), -1.0f, 1.0f);
 
-		u32 temp = *reinterpret_cast<u32*>(&normalized_sample);
-
-		temp = ((temp & 0x000000FF) << 24) |
-		       ((temp & 0x0000FF00) << 8) |
-		       ((temp & 0x00FF0000) >> 8) |
-		       ((temp & 0xFF000000) >> 24);
-
-		const u8* bytes = reinterpret_cast<u8*>(&temp);
-		float_buffer.insert(float_buffer.end(), bytes, bytes + sizeof(u32));
+		write_to_ptr<be_t<f32>>(dst++, normalized_sample_be);
 	}
 
-	return float_buffer;
+	return num_bytes * 2;
 }
 
 // Public functions
@@ -728,8 +721,8 @@ void microphone_device::get_dsp(const u32 num_samples)
 	if (attr_dsptype != 0x01)
 	{
 		// Convert 16-bit PCM audio data to 32-bit float (DSP format)
-		const std::vector<u8> float_buf = convert_16_bit_pcm_to_float(buf, bufsize);
-		rbuf_dsp.write_bytes(float_buf.data(), float_buf.size());
+		const u32 bufsize_float = convert_16_bit_pcm_to_float(buf, bufsize);
+		rbuf_dsp.write_bytes(float_buf.data(), bufsize_float);
 	}
 	else
 	{
