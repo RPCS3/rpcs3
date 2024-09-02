@@ -728,7 +728,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 	if (attr_dsptype != 0x01)
 	{
 		// Convert 16-bit PCM audio data to 32-bit float (DSP format)
-		std::vector<u8> float_buf = convert_16_bit_pcm_to_float(buf, bufsize);
+		const std::vector<u8> float_buf = convert_16_bit_pcm_to_float(buf, bufsize);
 		rbuf_dsp.write_bytes(float_buf.data(), bufsize * 2);
 	}
 	else
