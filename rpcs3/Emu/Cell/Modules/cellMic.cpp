@@ -263,8 +263,8 @@ inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std:
 	ensure(num_bytes % 2 == 0);
 	ensure(num_bytes < buffer.size());
 
-	std::vector<u8> floatBuffer;
-	floatBuffer.reserve(num_bytes * 2);
+	std::vector<u8> float_buffer;
+	float_buffer.reserve(num_bytes * 2);
 
 	for (size_t i = 0; i < num_bytes; i += 2)
 	{
@@ -281,10 +281,10 @@ inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std:
 		       ((temp & 0xFF000000) >> 24);
 
 		uint8_t* bytes = reinterpret_cast<uint8_t*>(&temp);
-		floatBuffer.insert(floatBuffer.end(), bytes, bytes + sizeof(uint32_t));
+		float_buffer.insert(float_buffer.end(), bytes, bytes + sizeof(uint32_t));
 	}
 
-	return floatBuffer;
+	return float_buffer;
 }
 
 // Public functions
