@@ -68,6 +68,15 @@ namespace Darwin_ProcessInfo
 }
 #endif
 
+#if defined(ARCH_ARM64) && defined (_WIN32) && !defined(_MSC_VER)
+static inline u64 __readx18qword(int offset)
+{
+	u64* peb = nullptr;
+	__asm__ volatile("mov %0, x18" : "=r"(peb));
+	return peb[offset];
+}
+#endif
+
 bool utils::has_ssse3()
 {
 #if defined(ARCH_X64)
@@ -583,7 +592,11 @@ std::string utils::get_OS_version()
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
 
 	const DWORD peb_offset = 0x60;
+#if defined(ARCH_X64)
 	const INT_PTR peb = __readgsqword(peb_offset);
+#elif defined(_M_ARM64)
+	const INT_PTR peb = __readx18qword(peb_offset);
+#endif
 
 	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
 	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
