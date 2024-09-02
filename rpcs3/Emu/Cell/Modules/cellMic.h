@@ -323,7 +323,7 @@ public:
 private:
 	template <u32 bytesize>
 	static inline void variable_byteswap(const void* src, void* dst);
-	static inline std::vector<u8> convert16BitPCMtoFloat(const std::vector<u8>& buffer, size_t numBytes);
+	static inline std::vector<u8> convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, size_t numBytes);
 
 	u32 capture_audio();
 

@@ -258,7 +258,7 @@ inline void microphone_device::variable_byteswap(const void* src, void* dst)
 	}
 }
 
-inline std::vector<u8> microphone_device::convert16BitPCMtoFloat(const std::vector<u8>& buffer, size_t numBytes)
+inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, size_t numBytes)
 {
 	ensure(numBytes % 2 == 0);
 	ensure(numBytes < buffer.size());
@@ -728,7 +728,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 	if (attr_dsptype != 0x01)
 	{
 		// Convert 16-bit PCM audio data to 32-bit float (DSP format)
-		std::vector<u8> float_buf = convert16BitPCMtoFloat(buf, bufsize);
+		std::vector<u8> float_buf = convert_16_bit_pcm_to_float(buf, bufsize);
 		rbuf_dsp.write_bytes(float_buf.data(), bufsize * 2);
 	}
 	else
