@@ -33,6 +33,7 @@ private Q_SLOTS:
 
 protected:
 	void select_item(flow_widget_item* item);
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
 
 private:
 	int find_item(const flow_layout::position& pos);

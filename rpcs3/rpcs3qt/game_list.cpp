@@ -89,7 +89,7 @@ void game_list::fix_narrow_columns()
 	}
 }
 
-void game_list::mousePressEvent(QMouseEvent *event)
+void game_list::mousePressEvent(QMouseEvent* event)
 {
 	if (QTableWidgetItem* item = itemAt(event->pos()); !item || !item->data(Qt::UserRole).isValid())
 	{
@@ -99,7 +99,7 @@ void game_list::mousePressEvent(QMouseEvent *event)
 	QTableWidget::mousePressEvent(event);
 }
 
-void game_list::mouseMoveEvent(QMouseEvent *event)
+void game_list::mouseMoveEvent(QMouseEvent* event)
 {
 	movie_item* new_item = static_cast<movie_item*>(itemAt(event->pos()));
 
@@ -118,6 +118,21 @@ void game_list::mouseMoveEvent(QMouseEvent *event)
 	m_last_hover_item = new_item;
 }
 
+void game_list::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QTableWidget::mouseDoubleClickEvent(ev);
+}
+
 void game_list::keyPressEvent(QKeyEvent* event)
 {
 	const auto modifiers = event->modifiers();
@@ -131,7 +146,7 @@ void game_list::keyPressEvent(QKeyEvent* event)
 	QTableWidget::keyPressEvent(event);
 }
 
-void game_list::leaveEvent(QEvent */*event*/)
+void game_list::leaveEvent(QEvent* /*event*/)
 {
 	if (m_last_hover_item)
 	{

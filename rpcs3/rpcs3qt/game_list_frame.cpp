@@ -856,7 +856,7 @@ void game_list_frame::SaveSettings()
 	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState(), true);
 }
 
-void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
+void game_list_frame::doubleClickedSlot(QTableWidgetItem* item)
 {
 	if (!item)
 	{
