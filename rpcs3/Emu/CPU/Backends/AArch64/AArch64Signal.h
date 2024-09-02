@@ -1,7 +1,12 @@
 #pragma once
 
 #include <util/types.hpp>
+
+#ifndef _WIN32
 #include <sys/ucontext.h>
+#else
+using ucontext_t = void;
+#endif
 
 namespace aarch64
 {

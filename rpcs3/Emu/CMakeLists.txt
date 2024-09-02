@@ -389,7 +389,7 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
     target_sources(rpcs3_emu PRIVATE
         CPU/Backends/AArch64/AArch64ASM.cpp
         CPU/Backends/AArch64/AArch64Common.cpp

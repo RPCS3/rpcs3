@@ -132,6 +132,25 @@
 #include <math.h>
 #endif
 
+#if defined(_WIN32)
+static inline int posix_memalign(void** memptr, size_t alignment, size_t size) {
+    // Check for valid alignment (must be a power of two and multiple of sizeof(void*))
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0 || alignment % sizeof(void*) != 0) {
+        return EINVAL;
+    }
+
+    // Allocate memory using _aligned_malloc
+    void* ptr = _aligned_malloc(size, alignment);
+    if (ptr == NULL) {
+        return ENOMEM;
+    }
+
+    // Set the output pointer
+    *memptr = ptr;
+    return 0; // Success
+}
+#endif
+
 /* "__has_builtin" can be used to query support for built-in functions
  * provided by gcc/clang and other compilers that support it.
  */
