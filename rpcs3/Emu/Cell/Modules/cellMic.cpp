@@ -268,7 +268,7 @@ inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std:
 
 	for (size_t i = 0; i < num_bytes; i += 2)
 	{
-		s16 sample = static_cast<s16>((buffer[i] << 8) | buffer[i + 1]);
+		const s16 sample = static_cast<s16>((buffer[i] << 8) | buffer[i + 1]);
 
 		f32 normalizedSample = static_cast<f32>(sample) / 32768.0f;
 		normalizedSample = std::clamp(normalizedSample, -1.0f, 1.0f);
