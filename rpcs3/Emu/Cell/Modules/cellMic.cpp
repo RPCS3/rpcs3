@@ -258,15 +258,15 @@ inline void microphone_device::variable_byteswap(const void* src, void* dst)
 	}
 }
 
-inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, size_t numBytes)
+inline std::vector<u8> microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, size_t num_bytes)
 {
-	ensure(numBytes % 2 == 0);
-	ensure(numBytes < buffer.size());
+	ensure(num_bytes % 2 == 0);
+	ensure(num_bytes < buffer.size());
 
 	std::vector<u8> floatBuffer;
-	floatBuffer.reserve(numBytes * 2);
+	floatBuffer.reserve(num_bytes * 2);
 
-	for (size_t i = 0; i < numBytes; i += 2)
+	for (size_t i = 0; i < num_bytes; i += 2)
 	{
 		s16 sample = static_cast<s16>((buffer[i] << 8) | buffer[i + 1]);
 
