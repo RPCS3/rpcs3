@@ -7,6 +7,7 @@
 
 #include <QMenu>
 #include <QMessageBox>
+#include <QMouseEvent>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -188,8 +189,11 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 
 void breakpoint_list::OnBreakpointListDoubleClicked()
 {
-	const u32 address = currentItem()->data(Qt::UserRole).value<u32>();
-	Q_EMIT RequestShowAddress(address);
+	if (QListWidgetItem* item = currentItem())
+	{
+		const u32 address = item->data(Qt::UserRole).value<u32>();
+		Q_EMIT RequestShowAddress(address);
+	}
 }
 
 void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
@@ -230,4 +234,19 @@ void breakpoint_list::OnBreakpointListDelete()
 	{
 		m_context_menu->close();
 	}
+}
+
+void breakpoint_list::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QListWidget::mouseDoubleClickEvent(ev);
 }
