@@ -362,7 +362,7 @@ private:
 	static constexpr usz inbuf_size = 400000; // Default value unknown
 
 	simple_ringbuf<inbuf_size> rbuf_raw;
-	simple_ringbuf<inbuf_size> rbuf_dsp;
+	simple_ringbuf<inbuf_size * 2> rbuf_dsp;
 	simple_ringbuf<inbuf_size> rbuf_aux;
 };
 
