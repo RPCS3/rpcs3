@@ -4,6 +4,9 @@ include(CMakeDependentOption)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# Defines the ARCHITECTURE variable
+include("DetectArchitecture.cmake")
+
 # Warnings are silenced for 3rdparty code
 if(NOT MSVC)
 	add_compile_options("$<$<COMPILE_LANGUAGE:CXX,C>:-w>")
@@ -267,37 +270,29 @@ if(USE_SYSTEM_FFMPEG)
 	target_include_directories(3rdparty_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
 	target_link_libraries(3rdparty_ffmpeg INTERFACE ${FFMPEG_LIBRARIES})
 else()
-	if (NOT MSVC AND WIN32)
-		message(FATAL_ERROR "-- RPCS3: building ffmpeg submodule is currently not supported")
-	else()
-		message(STATUS "RPCS3: using builtin ffmpeg")
+	message(STATUS "RPCS3: using builtin ffmpeg")
+	add_subdirectory(ffmpeg EXCLUDE_FROM_ALL)
+	# ffmpeg-core libraries are extracted to CMAKE_BINARY_DIR
+	set(FFMPEG_LIB_DIR "${CMAKE_BINARY_DIR}/3rdparty/ffmpeg/lib")
 
-		if (WIN32)
-			set(FFMPEG_LIB_DIR "ffmpeg/lib/windows/x86_64")
-			target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
-		elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-			set(FFMPEG_LIB_DIR "ffmpeg/lib/linux/ubuntu-20.04/x86_64")
-		elseif(APPLE)
-			set(FFMPEG_LIB_DIR "ffmpeg/lib/macos/x86_64")
-		else()
-			message(FATAL_ERROR "Prebuilt ffmpeg is not available on this platform! Try USE_SYSTEM_FFMPEG=ON.")
-		endif()
-
-		find_library(FFMPEG_LIB_AVFORMAT avformat PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-
-		target_link_libraries(3rdparty_ffmpeg
-		INTERFACE
-			${FFMPEG_LIB_AVFORMAT}
-			${FFMPEG_LIB_AVCODEC}
-			${FFMPEG_LIB_AVUTIL}
-			${FFMPEG_LIB_SWSCALE}
-			${FFMPEG_LIB_SWRESAMPLE}
-		)
+	if (WIN32)
+		target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
 	endif()
+
+	find_library(FFMPEG_LIB_AVFORMAT avformat PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+	find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+	find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+	find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+	find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+
+	target_link_libraries(3rdparty_ffmpeg
+	INTERFACE
+		${FFMPEG_LIB_AVFORMAT}
+		${FFMPEG_LIB_AVCODEC}
+		${FFMPEG_LIB_AVUTIL}
+		${FFMPEG_LIB_SWSCALE}
+		${FFMPEG_LIB_SWRESAMPLE}
+	)
 
 	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
 endif()
