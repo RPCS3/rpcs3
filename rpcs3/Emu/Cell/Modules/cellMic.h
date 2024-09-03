@@ -360,9 +360,10 @@ private:
 
 	static constexpr u8 bit_resolution = 16;
 	static constexpr usz inbuf_size = 400000; // Default value unknown
+	static constexpr usz float_buf_size = inbuf_size * (sizeof(f32) / sizeof(s16));
 
 	simple_ringbuf<inbuf_size> rbuf_raw;
-	simple_ringbuf<inbuf_size * 2> rbuf_dsp;
+	simple_ringbuf<float_buf_size> rbuf_dsp;
 	simple_ringbuf<inbuf_size> rbuf_aux;
 };
 
