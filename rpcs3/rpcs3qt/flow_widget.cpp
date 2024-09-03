@@ -242,3 +242,18 @@ void flow_widget::on_navigate(flow_navigation value)
 
 	m_selected_index = selected_index;
 }
+
+void flow_widget::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QWidget::mouseDoubleClickEvent(ev);
+}

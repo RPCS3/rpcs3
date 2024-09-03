@@ -7,6 +7,7 @@
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QMenu>
+#include <QMouseEvent>
 
 constexpr int max_usb_devices = 8;
 
@@ -164,4 +165,19 @@ void vfs_dialog_usb_tab::double_clicked_slot(QTableWidgetItem* item)
 	}
 
 	show_usb_input_dialog(item->row());
+}
+
+void vfs_dialog_usb_tab::mouseDoubleClickEvent(QMouseEvent* ev)
+{
+	if (!ev) return;
+
+	// Qt's itemDoubleClicked signal doesn't distinguish between mouse buttons and there is no simple way to get the pressed button.
+	// So we have to ignore this event when another button is pressed.
+	if (ev->button() != Qt::LeftButton)
+	{
+		ev->ignore();
+		return;
+	}
+
+	QWidget::mouseDoubleClickEvent(ev);
 }

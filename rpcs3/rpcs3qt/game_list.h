@@ -41,8 +41,9 @@ Q_SIGNALS:
 protected:
 	movie_item* m_last_hover_item = nullptr;
 
-	void mousePressEvent(QMouseEvent *event) override;
-	void mouseMoveEvent(QMouseEvent *event) override;
-	void keyPressEvent(QKeyEvent *event) override;
-	void leaveEvent(QEvent *event) override;
+	void mousePressEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+	void leaveEvent(QEvent* event) override;
 };
