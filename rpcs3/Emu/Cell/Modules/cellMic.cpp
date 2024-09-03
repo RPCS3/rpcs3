@@ -258,7 +258,7 @@ inline void microphone_device::variable_byteswap(const void* src, void* dst)
 	}
 }
 
-inline u32 microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, usz num_bytes)
+inline u32 microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, u32 num_bytes)
 {
 	static_assert((float_buf_size % sizeof(f32)) == 0);
 
@@ -266,7 +266,7 @@ inline u32 microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>&
 	const u32 bytes_to_write = static_cast<u32>(num_bytes * (sizeof(f32) / sizeof(s16)));
 	ensure(bytes_to_write <= float_buf.size());
 
-	const be_t<s16>* src = reinterpret_cast<const be_t<s16>*>(static_cast<const void*>(buffer.data()));
+	const be_t<s16>* src = utils::bless<const be_t<s16>>(buffer.data());
 	be_t<f32>* dst = reinterpret_cast<be_t<f32>*>(float_buf.data());
 
 	for (usz i = 0; i < num_bytes / sizeof(s16); i++)
