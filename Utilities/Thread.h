@@ -522,7 +522,7 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 			return next(thread_ctrl::get_current());
 		}
 
-		return 0;
+		return {};
 	}
 #endif
 
