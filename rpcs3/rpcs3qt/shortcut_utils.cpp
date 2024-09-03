@@ -99,7 +99,7 @@ namespace gui::utils
 #ifdef _WIN32
 		else if (location == shortcut_location::rpcs3_shortcuts)
 		{
-			link_path = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()) + "/shortcuts/";
+			link_path = rpcs3::utils::get_games_dir() + "/shortcuts/";
 			fs::create_dir(link_path);
 		}
 #endif

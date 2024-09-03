@@ -97,6 +97,32 @@ games_config::result games_config::add_external_hdd_game(const std::string& key,
 	return res;
 }
 
+games_config::result games_config::remove_game(const std::string& key)
+{
+	std::lock_guard lock(m_mutex);
+
+	// Access node if exist
+	if (auto it = m_games.find(key); it != m_games.end())
+	{
+		// Remove node
+		m_games.erase(key);
+	}
+	else // Node not found
+	{
+		// Nothing to do
+		return result::success;
+	}
+
+	m_dirty = true;
+
+	if (m_save_on_dirty && !save_nl())
+	{
+		return result::failure;
+	}
+
+	return result::success;
+}
+
 bool games_config::save_nl()
 {
 	YAML::Emitter out;
