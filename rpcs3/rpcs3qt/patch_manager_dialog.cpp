@@ -622,7 +622,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	}
 }
 
-void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous)
+void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeWidgetItem* previous)
 {
 	if (!current)
 	{
@@ -670,7 +670,7 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 					// Update the config value combo box with the new config keys
 					ui->configurable_selector->blockSignals(true);
 					ui->configurable_selector->clear();
-					for (const auto& key : info.config_values.keys())
+					for (const QString& key : info.config_values.keys())
 					{
 						const QVariant& variant = info.config_values.value(key);
 						ensure(variant.canConvert<patch_engine::patch_config_value>());
@@ -708,9 +708,12 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 	}
 
 	update_patch_info(info);
+
+	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
+	current->setData(0, config_key_role, key);
 }
 
-void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*column*/)
+void patch_manager_dialog::handle_item_changed(QTreeWidgetItem* item, int /*column*/)
 {
 	if (!item)
 	{
