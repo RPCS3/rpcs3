@@ -323,6 +323,7 @@ public:
 private:
 	template <u32 bytesize>
 	static inline void variable_byteswap(const void* src, void* dst);
+	inline u32 convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, u32 num_bytes);
 
 	u32 capture_audio();
 
@@ -345,6 +346,7 @@ private:
 
 	std::vector<mic_device> devices;
 	std::vector<u8> temp_buf;
+	std::vector<u8> float_buf;
 
 	// Sampling information provided at opening of mic
 	u32 raw_samplingrate = 48000;
@@ -358,9 +360,10 @@ private:
 
 	static constexpr u8 bit_resolution = 16;
 	static constexpr usz inbuf_size = 400000; // Default value unknown
+	static constexpr usz float_buf_size = inbuf_size * (sizeof(f32) / sizeof(s16));
 
 	simple_ringbuf<inbuf_size> rbuf_raw;
-	simple_ringbuf<inbuf_size> rbuf_dsp;
+	simple_ringbuf<float_buf_size> rbuf_dsp;
 	simple_ringbuf<inbuf_size> rbuf_aux;
 };
 
