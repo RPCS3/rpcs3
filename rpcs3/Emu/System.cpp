@@ -4088,9 +4088,9 @@ u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list)
 
 	m_games_config.set_save_on_dirty(false);
 
-	for (size_t i = 0; i < title_id_list.size(); i++)
+	for (const std::string& title_id : title_id_list)
 	{
-		if (RemoveGameFromYml(title_id_list[i]) == game_boot_result::no_errors)
+		if (RemoveGameFromYml(title_id) == game_boot_result::no_errors)
 		{
 			games_removed++;
 		}
