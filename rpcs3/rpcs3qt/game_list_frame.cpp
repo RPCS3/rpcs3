@@ -286,7 +286,10 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 bool game_list_frame::RemoveContentPath(const std::string& path, const std::string& desc)
 {
-	if (fs::exists(path))
+	if (!fs::exists(path))
+	{
+		return true;
+	}
 	{
 		if (fs::is_dir(path))
 		{
