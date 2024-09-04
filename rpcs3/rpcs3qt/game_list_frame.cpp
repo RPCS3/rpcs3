@@ -1340,7 +1340,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	// This is a debug feature, let's hide it by reusing debug tab protection
-	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && fs::is_dir(cache_base_dir))
+	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && has_cache_dir)
 	{
 		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
 		connect(open_cache_folder, &QAction::triggered, this, [cache_base_dir]()
@@ -1588,9 +1588,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		const std::string data_sub_dir = GetFirstSubDirBySerial(rpcs3::utils::get_hdd0_dir() + "/game/", current_game.serial);
 
 		// If data path is present (it could be absent for a disc game)
-		const bool data_avail = !is_disc_game || !data_sub_dir.empty();
+		const bool has_data_dir = !is_disc_game || !data_sub_dir.empty();
 		// Data path to be removed (if any)
-		const std::string data_dir = !is_disc_game ? current_game.path : (data_avail ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
+		const std::string data_dir = !is_disc_game ? current_game.path : (has_data_dir ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
 		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
 
 		if (is_disc_game)
@@ -1603,7 +1603,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		}
 
-		if (data_avail)
+		if (has_data_dir)
 		{
 			text += tr("\nData Info:\nPath: %0\n").arg(qstr(data_dir));
 
@@ -1618,7 +1618,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			text += tr("\nCurrent Free Disk Space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}
 		
-		if (data_avail)
+		if (has_data_dir)
 		{
 			text += tr("\nPermanently remove Data path and selected (optional) contents from drive?\n");
 		}
@@ -1673,7 +1673,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			const bool remove_caches = caches->isChecked();
 
 			// Remove data path in "dev_hdd0/game" folder (if any)
-			if (data_avail && !RemoveContentPath(data_dir, gameinfo->localized_category.toStdString()))
+			if (has_data_dir && !RemoveContentPath(data_dir, gameinfo->localized_category.toStdString()))
 			{
 				QMessageBox::critical(this, tr("Failure!"), remove_caches
 					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(data_dir))
