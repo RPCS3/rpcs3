@@ -1840,10 +1840,18 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		}
 	}
 
-	fmt::append(msg, "Instruction address: %p.\n", pExp->ContextRecord->Rip);
+#if defined(ARCH_X64)
+#define RIP(ctx) ctx->Rip
+#elif defined(ARCH_ARM64)
+#define RIP(ctx) ctx->Pc
+#else
+#error "Unimplemented exception handling for this architecture"
+#endif
+
+	fmt::append(msg, "Instruction address: %p.\n", RIP(pExp->ContextRecord));
 
 	DWORD64 unwind_base;
-	if (const auto rtf = RtlLookupFunctionEntry(pExp->ContextRecord->Rip, &unwind_base, nullptr))
+	if (const auto rtf = RtlLookupFunctionEntry(RIP(pExp->ContextRecord), &unwind_base, nullptr))
 	{
 		// Get function address
 		const DWORD64 func_addr = rtf->BeginAddress + unwind_base;
@@ -1860,7 +1868,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		{
 			const DWORD64 base = reinterpret_cast<DWORD64>(info.lpBaseOfDll);
 
-			if (pExp->ContextRecord->Rip >= base && pExp->ContextRecord->Rip < base + info.SizeOfImage)
+			if (RIP(pExp->ContextRecord) >= base && RIP(pExp->ContextRecord) < base + info.SizeOfImage)
 			{
 				std::string module_name;
 				for (DWORD size = 15; module_name.size() != size;)

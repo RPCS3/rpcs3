@@ -132,6 +132,27 @@
 #include <math.h>
 #endif
 
+/* RPCS3 additions */
+#if defined(_WIN32)
+static inline int posix_memalign(void** memptr, size_t alignment, size_t size)
+{
+    // Check for valid alignment (must be a power of two and multiple of sizeof(void*))
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0 || alignment % sizeof(void*) != 0)
+        return EINVAL;
+
+    // Allocate memory using _aligned_malloc
+    void* ptr = _aligned_malloc(size, alignment);
+    if (!ptr)
+        // NOTE: _aligned_malloc sets errno, ideally we should use that to generate the return code
+        return ENOMEM;
+
+    // Success
+    *memptr = ptr;
+    return 0;
+}
+#endif
+/* End RPCS3 additions */
+
 /* "__has_builtin" can be used to query support for built-in functions
  * provided by gcc/clang and other compilers that support it.
  */

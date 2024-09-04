@@ -511,14 +511,18 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 #if defined(ARCH_X64)
 	static inline thread::native_entry trampoline = thread::make_trampoline(entry_point);
 #else
+#ifdef _WIN32
+	static uint trampoline(void* arg)
+#else
 	static void* trampoline(void* arg)
+#endif
 	{
 		if (const auto next = thread_base::finalize(entry_point(static_cast<thread_base*>(arg))))
 		{
 			return next(thread_ctrl::get_current());
 		}
 
-		return nullptr;
+		return {};
 	}
 #endif
 
