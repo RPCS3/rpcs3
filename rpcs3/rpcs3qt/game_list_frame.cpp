@@ -1284,10 +1284,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	// Disable the Remove menu if empty
-	if (!gameinfo->hasCustomConfig && !gameinfo->hasCustomPadConfig && !has_cache_dir && !has_hdd1_cache_dir)
-	{
-		remove_menu->setEnabled(false);
-	}
+	remove_menu->setEnabled(!remove_menu->isEmpty());
 
 	menu.addSeparator();
 
