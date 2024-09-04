@@ -1760,7 +1760,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
 			game_list_log.success("Removed %s %s in %s", gameinfo->localized_category, current_game.name, data_dir);
 
-			std::vector<std::string> serials_to_remove_from_Yml{};
+			std::vector<std::string> serials_to_remove_from_yml;
 
 			// Prepare list of serials (title id) to remove in "games.yml" file (if any)
 			if (disc_avail && disc->isChecked())
