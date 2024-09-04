@@ -1276,7 +1276,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	const std::string hdd1_cache_base_dir = rpcs3::utils::get_hdd1_dir() + "/caches/";
-	bool has_hdd1_cache_dir = GetFirstSubDirBySerial(hdd1_cache_base_dir, current_game.serial) != "";
+	const bool has_hdd1_cache_dir = !GetFirstSubDirBySerial(hdd1_cache_base_dir, current_game.serial).empty();
 	
 	if (has_hdd1_cache_dir)
 	{
