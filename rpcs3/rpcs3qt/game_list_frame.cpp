@@ -1619,7 +1619,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		// Data path to be removed (if any)
 		const std::string data_dir = !disc_avail ? current_game.path : (data_avail ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
 
-		text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
+		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
 
 		if (disc_avail)
 		{
