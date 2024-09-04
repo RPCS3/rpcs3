@@ -334,34 +334,9 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 			continue;
 		}
 
-		if (found)
+		if (!RemoveContentPath(base_dir + entry.name, desc))
 		{
-			if (entry.is_directory)
-			{
-				if (fs::remove_all(base_dir + entry.name))
-				{
-					game_list_log.notice("Removed '%s' directory: '%s'", desc, base_dir + entry.name);
-				}
-				else
-				{
-					game_list_log.error("Could not remove '%s' directory: '%s' (%s)", desc, base_dir + entry.name, fs::g_tls_error);
-
-					success = false;
-				}
-			}
-			else // If file
-			{
-				if (fs::remove_file(base_dir + entry.name))
-				{
-					game_list_log.notice("Removed '%s' file: '%s'", desc, base_dir + entry.name);
-				}
-				else
-				{
-					game_list_log.error("Could not remove '%s' file: '%s' (%s)", desc, base_dir + entry.name, fs::g_tls_error);
-
-					success = false;
-				}
-			}
+			success = false;
 		}
 	}
 
