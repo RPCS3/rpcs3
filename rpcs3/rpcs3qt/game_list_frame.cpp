@@ -1635,7 +1635,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			text += tr("\nData Info:\nPath: %0\n").arg(qstr(data_dir));
 
-			u64 data_size = fs::get_dir_size(data_dir, 1);
+			const u64 data_size = fs::get_dir_size(data_dir, 1);
 
 			if (data_size != umax) // If size was properly detected
 			{
