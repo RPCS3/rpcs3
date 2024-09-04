@@ -1341,7 +1341,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	// This is a debug feature, let's hide it by reusing debug tab protection 
-	if (fs::is_dir(cache_base_dir) && m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
+	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && fs::is_dir(cache_base_dir))
 	{
 		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
 		connect(open_cache_folder, &QAction::triggered, this, [cache_base_dir]()
