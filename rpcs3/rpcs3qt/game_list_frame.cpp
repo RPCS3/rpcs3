@@ -1666,7 +1666,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		mb.setCheckBox(disc);
 
 		QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout());
-		int index = grid->indexOf(disc);
+		const int index = grid->indexOf(disc);
 		int row, column, rowSpan, columnSpan;
 
 		grid->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
