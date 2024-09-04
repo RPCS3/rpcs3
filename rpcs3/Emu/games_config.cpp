@@ -102,12 +102,8 @@ games_config::result games_config::remove_game(const std::string& key)
 	std::lock_guard lock(m_mutex);
 
 	// Access node if exist
-	if (auto it = m_games.find(key); it != m_games.end())
-	{
-		// Remove node
-		m_games.erase(key);
-	}
-	else // Node not found
+	// Remove node
+	if (m_games.erase(key) == 0)
 	{
 		// Nothing to do
 		return result::success;
