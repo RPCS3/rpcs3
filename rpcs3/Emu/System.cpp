@@ -4086,6 +4086,11 @@ u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list)
 {
 	u32 games_removed = 0;
 
+	if (title_id_list.empty())
+	{
+		return 0;
+	}
+
 	m_games_config.set_save_on_dirty(false);
 
 	for (const std::string& title_id : title_id_list)
