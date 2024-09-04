@@ -326,7 +326,10 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 	for (const auto& entry : fs::dir(base_dir))
 	{
 		// Search for any path starting with serial (e.g. BCES01118_BCES01118)
-		bool found = entry.name.starts_with(serial);
+		if (!entry.name.starts_with(serial))
+		{
+			continue;
+		}
 
 		if (found)
 		{
