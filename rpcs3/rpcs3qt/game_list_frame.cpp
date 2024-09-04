@@ -290,32 +290,31 @@ bool game_list_frame::RemoveContentPath(const std::string& path, const std::stri
 	{
 		return true;
 	}
+
+	if (fs::is_dir(path))
 	{
-		if (fs::is_dir(path))
+		if (fs::remove_all(path))
 		{
-			if (fs::remove_all(path))
-			{
-				game_list_log.notice("Removed '%s' directory: '%s'", desc, path);
-			}
-			else
-			{
-				game_list_log.error("Could not remove '%s' directory: '%s' (%s)", desc, path, fs::g_tls_error);
-
-				return false;
-			}
+			game_list_log.notice("Removed '%s' directory: '%s'", desc, path);
 		}
-		else // If file
+		else
 		{
-			if (fs::remove_file(path))
-			{
-				game_list_log.notice("Removed '%s' file: '%s'", desc, path);
-			}
-			else
-			{
-				game_list_log.error("Could not remove '%s' file: '%s' (%s)", desc, path, fs::g_tls_error);
+			game_list_log.error("Could not remove '%s' directory: '%s' (%s)", desc, path, fs::g_tls_error);
 
-				return false;
-			}
+			return false;
+		}
+	}
+	else // If file
+	{
+		if (fs::remove_file(path))
+		{
+			game_list_log.notice("Removed '%s' file: '%s'", desc, path);
+		}
+		else
+		{
+			game_list_log.error("Could not remove '%s' file: '%s' (%s)", desc, path, fs::g_tls_error);
+
+			return false;
 		}
 	}
 
@@ -336,7 +335,7 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 
 		if (!RemoveContentPath(base_dir + entry.name, desc))
 		{
-			success = false;
+			success = false; // mark as failed if there is at least one failure
 		}
 	}
 
@@ -380,7 +379,7 @@ void game_list_frame::push_path(const std::string& path, std::vector<std::string
 	legit_paths.push_back(path);
 }
 
-void game_list_frame::Refresh(const bool from_drive, const std::vector<std::string>& serials_to_remove_from_Yml, const bool scroll_after)
+void game_list_frame::Refresh(const bool from_drive, const std::vector<std::string>& serials_to_remove_from_yml, const bool scroll_after)
 {
 	if (from_drive)
 	{
@@ -411,7 +410,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		}
 
 		// Remove the specified serials (title id) in "games.yml" file (if any)
-		Emu.RemoveGames(serials_to_remove_from_Yml);
+		Emu.RemoveGames(serials_to_remove_from_yml);
 
 		const std::string games_dir = rpcs3::utils::get_games_dir();
 		const u32 games_added = Emu.AddGamesFromDir(games_dir);
@@ -1340,7 +1339,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	// This is a debug feature, let's hide it by reusing debug tab protection 
+	// This is a debug feature, let's hide it by reusing debug tab protection
 	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && fs::is_dir(cache_base_dir))
 	{
 		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
@@ -1584,19 +1583,17 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			return;
 		}
 
-		QString text;
-		const bool disc_avail = qstr(current_game.category) == cat::cat_disc_game;
-		const bool disc_auto_detect = disc_avail && (current_game.path.starts_with(rpcs3::utils::get_games_dir()));
+		const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
+		const bool is_in_games_dir = is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir());
 		const std::string data_sub_dir = GetFirstSubDirBySerial(rpcs3::utils::get_hdd0_dir() + "/game/", current_game.serial);
 
 		// If data path is present (it could be absent for a disc game)
-		const bool data_avail = !disc_avail || data_sub_dir != "";
+		const bool data_avail = !is_disc_game || !data_sub_dir.empty();
 		// Data path to be removed (if any)
-		const std::string data_dir = !disc_avail ? current_game.path : (data_avail ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
-
+		const std::string data_dir = !is_disc_game ? current_game.path : (data_avail ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
 		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
 
-		if (disc_avail)
+		if (is_disc_game)
 		{
 			text += tr("\nDisc Game Info:\nPath: %0\n").arg(qstr(current_game.path));
 
@@ -1610,17 +1607,13 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			text += tr("\nData Info:\nPath: %0\n").arg(qstr(data_dir));
 
-			const u64 data_size = fs::get_dir_size(data_dir, 1);
-
-			if (data_size != umax) // If size was properly detected
+			if (const u64 data_size = fs::get_dir_size(data_dir, 1); data_size != umax) // If size was properly detected
 			{
 				text += tr("Size: %0\n").arg(gui::utils::format_byte_size(data_size));
 			}
 		}
 
-		fs::device_stat stat{};
-
-		if (fs::statfs(current_game.path, stat))
+		if (fs::device_stat stat{}; fs::statfs(current_game.path, stat))
 		{
 			text += tr("\nCurrent Free Disk Space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}
@@ -1643,9 +1636,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QCheckBox* recordings = new QCheckBox(tr("Remove recordings"));
 		QCheckBox* screenshots = new QCheckBox(tr("Remove screenshots"));
 
-		if (disc_avail)
+		if (is_disc_game)
 		{
-			if (disc_auto_detect)
+			if (is_in_games_dir)
 			{
 				disc->setToolTip(tr("Title located under auto-detection \"games\" folder cannot be removed"));
 				disc->setDisabled(true);
@@ -1662,14 +1655,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		caches->setChecked(true);
 		icons->setChecked(true);
-
 		mb.setCheckBox(disc);
 
 		QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout());
-		const int index = grid->indexOf(disc);
 		int row, column, rowSpan, columnSpan;
 
-		grid->getItemPosition(index, &row, &column, &rowSpan, &columnSpan);
+		grid->getItemPosition(grid->indexOf(disc), &row, &column, &rowSpan, &columnSpan);
 		grid->addWidget(caches, row + 3, column, rowSpan, columnSpan);
 		grid->addWidget(icons, row + 4, column, rowSpan, columnSpan);
 		grid->addWidget(save_states, row + 5, column, rowSpan, columnSpan);
@@ -1735,17 +1726,17 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
 			game_list_log.success("Removed %s %s in %s", gameinfo->localized_category, current_game.name, data_dir);
 
-			std::vector<std::string> serials_to_remove_from_yml;
+			std::vector<std::string> serials_to_remove_from_yml{};
 
 			// Prepare list of serials (title id) to remove in "games.yml" file (if any)
-			if (disc_avail && disc->isChecked())
+			if (is_disc_game && disc->isChecked())
 			{
-				serials_to_remove_from_Yml.push_back(current_game.serial);
+				serials_to_remove_from_yml.push_back(current_game.serial);
 			}
 
 			// Finally, refresh the game list.
 			// Hidden list in "GuiConfigs/CurrentSettings.ini" file is also properly updated (title removed) if needed
-			Refresh(true, serials_to_remove_from_Yml);
+			Refresh(true, serials_to_remove_from_yml);
 		}
 	});
 	connect(configure_patches, &QAction::triggered, this, [this, gameinfo]()
@@ -2710,7 +2701,7 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 		QString title_name = m_titles.value(serial, name).toLower();
 
 		// Ignore trademarks when no search results have been yielded by unmodified search
-		static const QRegularExpression s_ignored_on_fallback(reinterpret_cast<const char*>(u8"[:\\-Â®Â©â„¢]+"));
+		static const QRegularExpression s_ignored_on_fallback(reinterpret_cast<const char*>(u8"[:\\-®©™]+"));
 
 		if (fallback)
 		{

@@ -37,7 +37,7 @@ public:
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
-	void Refresh(const bool from_drive = false, const std::vector<std::string>& serials_to_remove_from_Yml = {}, const bool scroll_after = true);
+	void Refresh(const bool from_drive = false, const std::vector<std::string>& serials_to_remove_from_yml = {}, const bool scroll_after = true);
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);

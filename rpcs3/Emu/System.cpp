@@ -4128,6 +4128,11 @@ game_boot_result Emulator::RemoveGameFromYml(const std::string& title_id)
 		sys_log.notice("Removed title '%s'", title_id);
 		return game_boot_result::no_errors;
 	}
+	case games_config::result::exists: // not applicable for m_games_config.remove_game(). Added just to avoid compilation warnings!
+	{
+		sys_log.notice("Removed title '%s'", title_id);
+		return game_boot_result::no_errors;
+	}
 	}
 
 	return game_boot_result::generic_error;
