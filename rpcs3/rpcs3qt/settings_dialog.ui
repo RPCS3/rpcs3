@@ -4364,7 +4364,7 @@
           </item>
           <item>
            <widget class="QWidget" name="debug_more_stuff" native="true">
-            <layout class="QVBoxLayout" name="debug_more_stuff_layout">
+            <layout class="QVBoxLayout" name="debug_more_stuff_layout" stretch="0,0,0,0,1">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -4420,6 +4420,38 @@
                    </widget>
                   </item>
                  </layout>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_debug_io">
+               <property name="title">
+                <string>I/O</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_debug_io_layout">
+                <item>
+                 <widget class="QCheckBox" name="debugOverlayIO">
+                  <property name="text">
+                   <string>Debug Overlay For Pad Input</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="verticalSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeType">
+                   <enum>QSizePolicy::MinimumExpanding</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>0</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </spacer>
                 </item>
                </layout>
               </widget>
