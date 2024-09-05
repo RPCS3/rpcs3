@@ -61,6 +61,7 @@ class debugger_frame : public custom_dock_widget
 	u64 m_threads_created = -1;
 	u64 m_threads_deleted = -1;
 	system_state m_emu_state{};
+	u64 m_emulation_id{};
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	std::string m_last_reg_state;
