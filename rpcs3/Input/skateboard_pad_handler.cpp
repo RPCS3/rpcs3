@@ -9,6 +9,7 @@ using namespace reports;
 namespace
 {
 	constexpr id_pair SKATEBOARD_ID_0 = {0x12BA, 0x0400}; // Tony Hawk RIDE Skateboard
+	constexpr id_pair SKATEBOARD_ID_1 = {0x1430, 0x0100}; // Tony Hawk SHRED Skateboard
 
 	enum button_flags : u16
 	{
@@ -40,7 +41,7 @@ namespace
 }
 
 skateboard_pad_handler::skateboard_pad_handler()
-    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, {SKATEBOARD_ID_0})
+    : hid_pad_handler<skateboard_device>(pad_handler::skateboard, {SKATEBOARD_ID_0, SKATEBOARD_ID_1})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
