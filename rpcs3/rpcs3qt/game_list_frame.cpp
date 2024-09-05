@@ -342,14 +342,14 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 	return success;
 }
 
-std::string game_list_frame::GetFirstSubDirBySerial(const std::string& base_dir, const std::string& serial)
+std::string game_list_frame::GetFirstDirBySerial(const std::string& base_dir, const std::string& serial)
 {
 	for (const auto& entry : fs::dir(base_dir))
 	{
 		// Check for first sub folder starting with serial (e.g. BCES01118_BCES01118)
 		if (entry.is_directory && entry.name.starts_with(serial))
 		{
-			return entry.name;
+			return base_dir + entry.name;
 		}
 	}
 
@@ -1252,8 +1252,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	const std::string hdd1_cache_base_dir = rpcs3::utils::get_hdd1_dir() + "/caches/";
-	const bool has_hdd1_cache_dir = !GetFirstSubDirBySerial(hdd1_cache_base_dir, current_game.serial).empty();
+	const std::string hdd1_cache_base_dir = rpcs3::utils::get_hdd1_dir() + "caches/";
+	const bool has_hdd1_cache_dir = !GetFirstDirBySerial(hdd1_cache_base_dir, current_game.serial).empty();
 	
 	if (has_hdd1_cache_dir)
 	{
@@ -1585,12 +1585,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
 		const bool is_in_games_dir = is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir());
-		const std::string data_sub_dir = GetFirstSubDirBySerial(rpcs3::utils::get_hdd0_dir() + "/game/", current_game.serial);
-
-		// If data path is present (it could be absent for a disc game)
-		const bool has_data_dir = !is_disc_game || !data_sub_dir.empty();
-		// Data path to be removed (if any)
-		const std::string data_dir = !is_disc_game ? current_game.path : (has_data_dir ? rpcs3::utils::get_hdd0_dir() + "/game/" + data_sub_dir : "");
+		const std::string data_dir = is_disc_game ? GetFirstDirBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial) : current_game.path;
+		const bool has_data_dir = !data_dir.empty(); // "true" if data path is present (it could be absent for a disc game)
 		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
 
 		if (is_disc_game)
@@ -1615,12 +1611,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		if (fs::device_stat stat{}; fs::statfs(current_game.path, stat))
 		{
-			text += tr("\nCurrent Free Disk Space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
+			text += tr("\nCurrent free disk space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}
 		
 		if (has_data_dir)
 		{
-			text += tr("\nPermanently remove Data path and selected (optional) contents from drive?\n");
+			text += tr("\nPermanently remove %0 and selected (optional) contents from drive?\n").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category);
 		}
 		else
 		{
@@ -1683,7 +1679,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 
 			// Remove lock file in "dev_hdd0/game/＄locks" folder (if any)
-			RemoveContentBySerial(rpcs3::utils::get_hdd0_dir() + "/game/＄locks/", current_game.serial, "lock");
+			RemoveContentBySerial(rpcs3::utils::get_hdd0_dir() + "game/＄locks/", current_game.serial, "lock");
 
 			// Remove caches in "cache" and "dev_hdd1/caches" folders (if any) and custom configs in "config/custom_config" folder (if any)
 			if (remove_caches)
@@ -1698,29 +1694,29 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			// Remove icons in "Icons/game_icons" folder, shortcuts in "games/shortcuts" folder and from desktop/start menu
 			if (icons->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "/Icons/game_icons/", current_game.serial, "icons");
-				RemoveContentBySerial(fs::get_config_dir() + "/games/shortcuts/", name.toStdString() + ".lnk", "link");
+				RemoveContentBySerial(fs::get_config_dir() + "Icons/game_icons/", current_game.serial, "icons");
+				RemoveContentBySerial(fs::get_config_dir() + "games/shortcuts/", name.toStdString() + ".lnk", "link");
 				// TODO: Remove shortcuts from desktop/start menu
 			}
 
 			if (save_states->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "/savestates/", current_game.serial, "save states");
+				RemoveContentBySerial(fs::get_config_dir() + "savestates/", current_game.serial, "save states");
 			}
 
 			if (captures->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "/captures/", current_game.serial, "captures");
+				RemoveContentBySerial(fs::get_config_dir() + "captures/", current_game.serial, "captures");
 			}
 
 			if (recordings->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "/recordings/", current_game.serial, "recordings");
+				RemoveContentBySerial(fs::get_config_dir() + "recordings/", current_game.serial, "recordings");
 			}
 
 			if (screenshots->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "/screenshots/", current_game.serial, "screenshots");
+				RemoveContentBySerial(fs::get_config_dir() + "screenshots/", current_game.serial, "screenshots");
 			}
 
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
