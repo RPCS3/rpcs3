@@ -2437,6 +2437,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->perfReport, emu_settings_type::PerformanceReport);
 	SubscribeTooltip(ui->perfReport, tooltips.settings.enable_performance_report);
 
+	// Checkboxes: IO debug options
+	m_emu_settings->EnhanceCheckBox(ui->debugOverlayIO, emu_settings_type::IoDebugOverlay);
+	SubscribeTooltip(ui->debugOverlayIO, tooltips.settings.debug_overlay_io);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->combo_accurate_ppu_128, emu_settings_type::AccuratePPU128Loop, true);
