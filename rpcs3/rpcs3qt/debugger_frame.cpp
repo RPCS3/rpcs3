@@ -87,7 +87,6 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 
 	m_update = new QTimer(this);
 	connect(m_update, &QTimer::timeout, this, &debugger_frame::UpdateUI);
-	EnableUpdateTimer(true);
 
 	m_mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	m_mono.setPointSize(9);
