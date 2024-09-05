@@ -980,12 +980,14 @@ Q_DECLARE_METATYPE(data_type);
 
 void debugger_frame::UpdateUnitList()
 {
+	const u64 emulation_id = static_cast<std::underlying_type_t<Emulator::stop_counter_t>>(Emu.GetEmulationIdentifier());
 	const u64 threads_created = cpu_thread::g_threads_created;
 	const u64 threads_deleted = cpu_thread::g_threads_deleted;
 	const system_state emu_state = Emu.GetStatus();
 
-	if (threads_created != m_threads_created || threads_deleted != m_threads_deleted || emu_state != m_emu_state)
+	if (emulation_id != m_emulation_id || threads_created != m_threads_created || threads_deleted != m_threads_deleted || emu_state != m_emu_state)
 	{
+		m_emulation_id = emulation_id;
 		m_threads_created = threads_created;
 		m_threads_deleted = threads_deleted;
 		m_emu_state = emu_state;
