@@ -138,8 +138,9 @@ private:
 	static bool CreateCPUCaches(const game_info& game);
 
 	static bool RemoveContentPath(const std::string& path, const std::string& desc);
+	static u32 RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc);
 	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
-	static std::string GetFirstDirBySerial(const std::string& base_dir, const std::string& serial);
+	static std::vector<std::string> GetDirListBySerial(const std::string& base_dir, const std::string& serial);
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();

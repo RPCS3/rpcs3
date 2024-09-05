@@ -321,6 +321,21 @@ bool game_list_frame::RemoveContentPath(const std::string& path, const std::stri
 	return true;
 }
 
+u32 game_list_frame::RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc)
+{
+	u32 paths_removed = 0;
+
+	for (const std::string& path : path_list)
+	{
+		if (RemoveContentPath(path, desc))
+		{
+			paths_removed++;
+		}
+	}
+
+	return paths_removed;
+}
+
 bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc)
 {
 	bool success = true;
@@ -342,19 +357,20 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 	return success;
 }
 
-std::string game_list_frame::GetFirstDirBySerial(const std::string& base_dir, const std::string& serial)
+std::vector<std::string> game_list_frame::GetDirListBySerial(const std::string& base_dir, const std::string& serial)
 {
+	std::vector<std::string> dir_list;
+
 	for (const auto& entry : fs::dir(base_dir))
 	{
-		// Check for first sub folder starting with serial (e.g. BCES01118_BCES01118)
+		// Check for sub folder starting with serial (e.g. BCES01118_BCES01118)
 		if (entry.is_directory && entry.name.starts_with(serial))
 		{
-			return base_dir + entry.name;
+			dir_list.push_back(base_dir + entry.name);
 		}
 	}
 
-	// If serial not found
-	return "";
+	return dir_list;
 }
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
@@ -1253,7 +1269,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	const std::string hdd1_cache_base_dir = rpcs3::utils::get_hdd1_dir() + "caches/";
-	const bool has_hdd1_cache_dir = !GetFirstDirBySerial(hdd1_cache_base_dir, current_game.serial).empty();
+	const bool has_hdd1_cache_dir = !GetDirListBySerial(hdd1_cache_base_dir, current_game.serial).empty();
 	
 	if (has_hdd1_cache_dir)
 	{
@@ -1585,8 +1601,18 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
 		const bool is_in_games_dir = is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir());
-		const std::string data_dir = is_disc_game ? GetFirstDirBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial) : current_game.path;
-		const bool has_data_dir = !data_dir.empty(); // "true" if data path is present (it could be absent for a disc game)
+		std::vector<std::string> data_dir_list;
+
+		if (is_disc_game)
+		{
+			data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial);
+		}
+		else
+		{
+			data_dir_list.push_back(current_game.path);
+		}
+
+		const bool has_data_dir = !data_dir_list.empty(); // "true" if data path is present (it could be absent for a disc game)
 		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
 
 		if (is_disc_game)
@@ -1601,15 +1627,28 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		if (has_data_dir)
 		{
-			text += tr("\nData Info:\nPath: %0\n").arg(qstr(data_dir));
+			u64 total_data_size = 0;
 
-			if (const u64 data_size = fs::get_dir_size(data_dir, 1); data_size != umax) // If size was properly detected
+			text += tr("\nData Info:\n");
+
+			for (const std::string& data_dir : data_dir_list)
 			{
-				text += tr("Size: %0\n").arg(gui::utils::format_byte_size(data_size));
+				text += tr("Path: %0\n").arg(qstr(data_dir));
+
+				if (const u64 data_size = fs::get_dir_size(data_dir, 1); data_size != umax) // If size was properly detected
+				{
+					total_data_size += data_size;
+					text += tr("Size: %0\n").arg(gui::utils::format_byte_size(data_size));
+				}
+			}
+
+			if (data_dir_list.size() > 1)
+			{
+				text += tr("Total size: %0\n").arg(gui::utils::format_byte_size(total_data_size));
 			}
 		}
 
-		if (fs::device_stat stat{}; fs::statfs(current_game.path, stat))
+		if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat)) // retrieve disk space info on data path's drive
 		{
 			text += tr("\nCurrent free disk space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}
@@ -1669,11 +1708,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			const bool remove_caches = caches->isChecked();
 
 			// Remove data path in "dev_hdd0/game" folder (if any)
-			if (has_data_dir && !RemoveContentPath(data_dir, gameinfo->localized_category.toStdString()))
+			if (has_data_dir && RemoveContentPathList(data_dir_list, gameinfo->localized_category.toStdString()) != data_dir_list.size())
 			{
 				QMessageBox::critical(this, tr("Failure!"), remove_caches
-					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(data_dir))
-					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(data_dir)));
+					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(data_dir_list[0]))
+					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(data_dir_list[0])));
 
 				return;
 			}
@@ -1720,7 +1759,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-			game_list_log.success("Removed %s %s in %s", gameinfo->localized_category, current_game.name, data_dir);
+			game_list_log.success("Removed %s - %s", gameinfo->localized_category, current_game.name);
 
 			std::vector<std::string> serials_to_remove_from_yml{};
 
