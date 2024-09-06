@@ -160,7 +160,6 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		pad.m_class_type
 	);
 
-	//CELL_PAD_SETTING_LDD = 0x00000001, // Speculative
 	rsx::overlays::set_debug_overlay_text(std::move(text));
 }
 
