@@ -1248,6 +1248,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (has_cache_dir)
 	{
 		remove_menu->addSeparator();
+
 		QAction* remove_shaders_cache = remove_menu->addAction(tr("&Remove Shaders Cache"));
 		remove_shaders_cache->setEnabled(!is_current_running_game);
 		connect(remove_shaders_cache, &QAction::triggered, [this, cache_base_dir]()
@@ -1295,6 +1296,26 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 			RemoveContentPath(cache_base_dir, "cache");
 			RemoveHDD1Cache(hdd1_cache_base_dir, current_game.serial);
+		});
+	}
+
+	std::string savestate_dir = fs::get_config_dir() + "savestates/" + current_game.serial;
+
+	if (fs::is_dir(savestate_dir))
+	{
+		remove_menu->addSeparator();
+
+		QAction* remove_savestate = remove_menu->addAction(tr("&Remove Savestate"));
+		remove_savestate->setEnabled(!is_current_running_game);
+		connect(remove_savestate, &QAction::triggered, [this, current_game, savestate_dir]()
+		{
+			if (is_game_running(current_game.serial))
+				return;
+
+			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestate?")) != QMessageBox::Yes)
+				return;
+
+			RemoveContentPath(savestate_dir, "savestate");
 		});
 	}
 
@@ -1666,7 +1687,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QCheckBox* disc = new QCheckBox(tr("Remove title from game list (Disc Game path is not removed!)"));
 		QCheckBox* caches = new QCheckBox(tr("Remove caches and custom configs"));
 		QCheckBox* icons = new QCheckBox(tr("Remove icons and shortcuts"));
-		QCheckBox* save_states = new QCheckBox(tr("Remove save states"));
+		QCheckBox* savestate = new QCheckBox(tr("Remove savestate"));
 		QCheckBox* captures = new QCheckBox(tr("Remove captures"));
 		QCheckBox* recordings = new QCheckBox(tr("Remove recordings"));
 		QCheckBox* screenshots = new QCheckBox(tr("Remove screenshots"));
@@ -1698,7 +1719,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		grid->getItemPosition(grid->indexOf(disc), &row, &column, &rowSpan, &columnSpan);
 		grid->addWidget(caches, row + 3, column, rowSpan, columnSpan);
 		grid->addWidget(icons, row + 4, column, rowSpan, columnSpan);
-		grid->addWidget(save_states, row + 5, column, rowSpan, columnSpan);
+		grid->addWidget(savestate, row + 5, column, rowSpan, columnSpan);
 		grid->addWidget(captures, row + 6, column, rowSpan, columnSpan);
 		grid->addWidget(recordings, row + 7, column, rowSpan, columnSpan);
 		grid->addWidget(screenshots, row + 8, column, rowSpan, columnSpan);
@@ -1738,9 +1759,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				// TODO: Remove shortcuts from desktop/start menu
 			}
 
-			if (save_states->isChecked())
+			if (savestate->isChecked())
 			{
-				RemoveContentBySerial(fs::get_config_dir() + "savestates/", current_game.serial, "save states");
+				RemoveContentBySerial(fs::get_config_dir() + "savestates/", current_game.serial, "savestate");
 			}
 
 			if (captures->isChecked())
