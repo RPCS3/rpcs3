@@ -139,9 +139,9 @@ enum CellSysUtilAvcVoiceQuality : u32
 
 struct CellSysutilAvcOptionParam
 {
-	be_t<s64> avcOptionParamVersion;
+	be_t<s32> avcOptionParamVersion;
 	b8 sharingVideoBuffer;
-	be_t<s64> maxPlayers; // Not in FW 1.70
+	be_t<s32> maxPlayers; // Not in FW 1.70
 };
 
 struct CellSysutilAvcVoiceDetectData
