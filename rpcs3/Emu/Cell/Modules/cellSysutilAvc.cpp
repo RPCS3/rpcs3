@@ -32,60 +32,100 @@ void fmt_class_string<CellAvcError>::format(std::string& out, u64 arg)
 error_code cellSysutilAvcByeRequest(vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcByeRequest(request_id=*0x%x)", request_id);
+
+	if (!request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcCancelByeRequest(vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcCancelByeRequest(request_id=*0x%x)", request_id);
+
+	if (!request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcCancelJoinRequest(vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcCancelJoinRequest(request_id=*0x%x)", request_id);
+
+	if (!request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcEnumPlayers(vm::ptr<SceNpId> players_id, vm::ptr<s32> players_num)
 {
 	cellSysutil.todo("cellSysutilAvcEnumPlayers(players_id=*0x%x, players_num=*0x%x)", players_id, players_num);
+
+	if (!players_id || !players_num)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetAttribute(CellSysUtilAvcAttribute attr_id, vm::pptr<void> param)
 {
 	cellSysutil.todo("cellSysutilAvcGetAttribute(attr_id=0x%x, param=*0x%x)", +attr_id, param);
+
+	if (!param)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetLayoutMode(vm::ptr<CellSysutilAvcLayoutMode> layout)
 {
 	cellSysutil.todo("cellSysutilAvcGetLayoutMode(layout=*0x%x)", layout);
+
+	if (!layout)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetShowStatus(vm::ptr<b8> is_visible)
 {
 	cellSysutil.todo("cellSysutilAvcGetShowStatus(is_visible=*0x%x)", is_visible);
+
+	if (!is_visible)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetSpeakerVolumeLevel(vm::ptr<s32> volumeLevel)
 {
 	cellSysutil.todo("cellSysutilAvcGetSpeakerVolumeLevel(volumeLevel=*0x%x)", volumeLevel);
+
+	if (!volumeLevel)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetVideoMuting(vm::ptr<b8> is_muting)
 {
 	cellSysutil.todo("cellSysutilAvcGetVideoMuting(is_muting=*0x%x)", is_muting);
+
+	if (!is_muting)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcGetVoiceMuting(vm::ptr<b8> is_muting)
 {
 	cellSysutil.todo("cellSysutilAvcGetVoiceMuting(is_muting=*0x%x)", is_muting);
+
+	if (!is_muting)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -98,6 +138,10 @@ error_code cellSysutilAvcHidePanel()
 error_code cellSysutilAvcJoinRequest(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcJoinRequest(ctx_id=*0x%x, room_id=*0x%x, request_id=*0x%x)", ctx_id, room_id, request_id);
+
+	if (!room_id || !request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -106,24 +150,57 @@ error_code cellSysutilAvcLoadAsync(vm::ptr<CellSysutilAvcCallback> func, vm::ptr
 {
 	cellSysutil.todo("cellSysutilAvcLoadAsync(func=*0x%x, userdata=*0x%x, container=0x%x, media=0x%x, videoQuality=0x%x, voiceQuality=0x%x, request_id=*0x%x)",
 		func, userdata, container, +media, +videoQuality, +voiceQuality, request_id);
+
+	//if (sys_memory_container_get_size(.., container) != CELL_OK)
+	//	return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	switch (media)
+	{
+	case CELL_SYSUTIL_AVC_VOICE_CHAT:
+	case CELL_SYSUTIL_AVC_VIDEO_CHAT:
+		// TODO: return CELL_AVC_ERROR_OUT_OF_MEMORY
+		// TODO: return CELL_AVC_ERROR_INVALID_ARGUMENT
+		break;
+	default:
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (!func || !request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	if (videoQuality != CELL_SYSUTIL_AVC_VIDEO_QUALITY_DEFAULT || voiceQuality != CELL_SYSUTIL_AVC_VOICE_QUALITY_DEFAULT)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcSetAttribute(CellSysUtilAvcAttribute attr_id, vm::ptr<void> param)
 {
 	cellSysutil.todo("cellSysutilAvcSetAttribute(attr_id=0x%x, param=*0x%x)", +attr_id, param);
+
+	if (!param)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcSetLayoutMode(CellSysutilAvcLayoutMode layout)
 {
 	cellSysutil.todo("cellSysutilAvcSetLayoutMode(layout=0x%x)", +layout);
+
+	if (layout > CELL_SYSUTIL_AVC_LAYOUT_BOTTOM)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvcSetSpeakerVolumeLevel(s32 volumeLevel)
 {
 	cellSysutil.todo("cellSysutilAvcSetSpeakerVolumeLevel(volumeLevel=%d)", volumeLevel);
+
+	if (volumeLevel < 0 || volumeLevel > 10)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -148,6 +225,10 @@ error_code cellSysutilAvcShowPanel()
 error_code cellSysutilAvcUnloadAsync(vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcUnloadAsync(request_id=*0x%x)", request_id);
+
+	if (!request_id)
+		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
