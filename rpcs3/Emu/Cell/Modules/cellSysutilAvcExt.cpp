@@ -58,11 +58,9 @@ error_code cellSysutilAvcExtGetWindowShowStatus(vm::ptr<SceNpId> player_id, vm::
 	return CELL_OK;
 }
 
-error_code cellSysutilAvcExtSetChatMode(vm::ptr<CellSysutilAvcCallback> func, vm::ptr<void> userdata, sys_memory_container_t container,
-	CellSysUtilAvcMediaType media, CellSysUtilAvcVideoQuality videoQuality, CellSysUtilAvcVoiceQuality voiceQuality, vm::ptr<CellSysutilAvcOptionParam> option, vm::ptr<CellSysutilAvcRequestId> request_id)
+error_code cellSysutilAvcExtSetChatMode(u32 mode)
 {
-	cellSysutilAvcExt.todo("cellSysutilAvcExtSetChatMode(func=*0x%x, userdata=*0x%x, container=0x%x, media=0x%x, videoQuality=0x%x, voiceQuality=0x%x, option=*0x%x, request_id=*0x%x)",
-		func, userdata, container, +media, +videoQuality, +voiceQuality, option, request_id);
+	cellSysutilAvcExt.todo("cellSysutilAvcExtSetChatMode(mode=0x%x)", mode);
 	return CELL_OK;
 }
 
@@ -134,11 +132,9 @@ error_code cellSysutilAvcExtHideWindow(vm::ptr<SceNpId> player_id, CellSysutilAv
 	return CELL_OK;
 }
 
-error_code cellSysutilAvcExtSetChatGroup(vm::ptr<CellSysutilAvcCallback> func, vm::ptr<void> userdata, sys_memory_container_t container,
-	CellSysUtilAvcMediaType media, CellSysUtilAvcVideoQuality videoQuality, CellSysUtilAvcVoiceQuality voiceQuality, vm::ptr<CellSysutilAvcOptionParam> option, vm::ptr<CellSysutilAvcRequestId> request_id)
+error_code cellSysutilAvcExtSetChatGroup()
 {
-	cellSysutilAvcExt.todo("cellSysutilAvcExtSetChatGroup(func=*0x%x, userdata=*0x%x, container=0x%x, media=0x%x, videoQuality=0x%x, voiceQuality=0x%x, option=*0x%x, request_id=*0x%x)",
-		func, userdata, container, +media, +videoQuality, +voiceQuality, option, request_id);
+	cellSysutilAvcExt.todo("cellSysutilAvcExtSetChatGroup()");
 	return CELL_OK;
 }
 
@@ -178,7 +174,7 @@ error_code cellSysutilAvcExtStopMicDetection()
 	return CELL_OK;
 }
 
-error_code cellSysutilAvcExtInitOptionParam(s64 avcOptionParamVersion, vm::ptr<CellSysutilAvcOptionParam> option)
+error_code cellSysutilAvcExtInitOptionParam(s32 avcOptionParamVersion, vm::ptr<CellSysutilAvcOptionParam> option)
 {
 	cellSysutilAvcExt.todo("cellSysutilAvcExtInitOptionParam(avcOptionParamVersion=0x%x, option=*0x%x)", avcOptionParamVersion, option);
 	return CELL_OK;
