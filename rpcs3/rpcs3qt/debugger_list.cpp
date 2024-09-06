@@ -46,7 +46,7 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 		u32 pc = m_start_addr;
 
-		const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+		const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 		for (; cpu && cpu->get_class() == thread_class::rsx && row; row--)
 		{
@@ -71,7 +71,7 @@ void debugger_list::UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm)
 
 u32 debugger_list::GetStartAddress(u32 address)
 {
-	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 	const u32 steps = m_item_count / 3;
 	const u32 inst_count_jump_on_step = std::min<u32>(steps, 4);
@@ -134,14 +134,14 @@ u32 debugger_list::GetStartAddress(u32 address)
 
 bool debugger_list::IsSpu() const
 {
-	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 	return (cpu && cpu->get_class() == thread_class::spu) || (m_disasm && !cpu);
 }
 
 void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 {
-	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 	const decltype(spu_thread::local_breakpoints)* spu_bps_list{};
 
@@ -299,7 +299,7 @@ void debugger_list::EnableThreadFollowing(bool enable)
 
 void debugger_list::scroll(s32 steps)
 {
-	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 	for (; cpu && cpu->get_class() == thread_class::rsx && steps > 0; steps--)
 	{
@@ -324,7 +324,7 @@ void debugger_list::scroll(s32 steps)
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
-	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 	// Always accept event (so it would not bubble upwards, debugger_frame already sees it)
 	struct accept_event_t
@@ -436,7 +436,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 
 		u32 pc = m_start_addr;
 
-		const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+		const auto cpu = m_disasm && !Emu.IsStopped() ? m_disasm->get_cpu() : nullptr;
 
 		for (; cpu && cpu->get_class() == thread_class::rsx && i; i--)
 		{

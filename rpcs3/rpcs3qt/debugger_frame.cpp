@@ -190,8 +190,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 		m_choice_units->clearFocus();
 	});
 
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::activated), this, &debugger_frame::UpdateUI);
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
+	connect(m_choice_units, QOverload<int>::of(&QComboBox::activated), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
@@ -201,7 +200,9 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	connect(m_call_stack_list, &call_stack_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
 
 	m_debugger_list->RefreshView();
-	UpdateUnitList();
+
+	m_choice_units->clear();
+	m_choice_units->addItem(NoThreadString);
 }
 
 void debugger_frame::SaveSettings() const
@@ -914,7 +915,7 @@ void debugger_frame::UpdateUI()
 		ShowPC();
 	}
 
-	if (m_ui_update_ctr % 20 == 0)
+	if (m_ui_update_ctr % 20 == 0 && !m_thread_list_pending_update)
 	{
 		// Update threads list at 5hz (low priority)
 		UpdateUnitList();
@@ -924,7 +925,12 @@ void debugger_frame::UpdateUI()
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
-			UpdateUnitList();
+			if (m_ui_update_ctr % 20 && !m_thread_list_pending_update)
+			{
+				// Update threads list (thread exited)
+				UpdateUnitList();
+			}
+
 			ShowPC();
 			m_last_query_state.clear();
 			m_last_pc = -1;
@@ -985,36 +991,59 @@ void debugger_frame::UpdateUnitList()
 	const u64 threads_deleted = cpu_thread::g_threads_deleted;
 	const system_state emu_state = Emu.GetStatus();
 
-	if (emulation_id != m_emulation_id || threads_created != m_threads_created || threads_deleted != m_threads_deleted || emu_state != m_emu_state)
-	{
-		m_emulation_id = emulation_id;
-		m_threads_created = threads_created;
-		m_threads_deleted = threads_deleted;
-		m_emu_state = emu_state;
-	}
-	else
+	std::unique_lock<shared_mutex> lock{id_manager::g_mutex, std::defer_lock};
+
+	if (emulation_id == m_emulation_id && threads_created == m_threads_created && threads_deleted == m_threads_deleted && emu_state == m_emu_state)
 	{
 		// Nothing to do
+		m_thread_list_pending_update = false;
 		return;
 	}
 
 	QVariant old_cpu = m_choice_units->currentData();
+	const cpu_thread* old_cpu_ptr = old_cpu.canConvert<data_type>() ? old_cpu.value<data_type>()() : nullptr;
 
-	bool reselected = false;
+	if (!lock.try_lock())
+	{
+		m_thread_list_pending_update = true;
+		QTimer::singleShot(5, [this]() { UpdateUnitList(); });
+		return;
+	}
+
+	m_emulation_id = emulation_id;
+	m_threads_created = threads_created;
+	m_threads_deleted = threads_deleted;
+	m_emu_state = emu_state;
+
+	std::vector<std::pair<QString, QVariant>> cpu_list;
+	usz reselected_index = umax;
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
-		const QVariant var_cpu = QVariant::fromValue<data_type>(make_check_cpu(std::addressof(cpu), true));
+		QVariant var_cpu = QVariant::fromValue<data_type>(make_check_cpu(std::addressof(cpu), true));
 
 		// Space at the end is to pad a gap on the right
-		m_choice_units->addItem(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), var_cpu);
+		cpu_list.emplace_back(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(var_cpu));
 
-		if (!reselected && old_cpu.canConvert<data_type>() && old_cpu.value<data_type>()() == std::addressof(cpu))
+		if (old_cpu_ptr == std::addressof(cpu))
 		{
-			m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
-			reselected = true;
+			reselected_index = cpu_list.size() - 1;
 		}
 	};
+
+	if (emu_state != system_state::stopped)
+	{
+		idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
+		idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
+	}
+
+	if (const auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
+	{
+		on_select(render->id, *render);
+	}
+
+	lock.unlock();
+	m_thread_list_pending_update = false;
 
 	{
 		const QSignalBlocker blocker(m_choice_units);
@@ -1022,20 +1051,19 @@ void debugger_frame::UpdateUnitList()
 		m_choice_units->clear();
 		m_choice_units->addItem(NoThreadString);
 
-		if (emu_state != system_state::stopped)
+		for (auto&& [thread_name, var_cpu] : cpu_list)
 		{
-			idm::select<named_thread<ppu_thread>>(on_select);
-			idm::select<named_thread<spu_thread>>(on_select);
+			m_choice_units->addItem(std::move(thread_name), std::move(var_cpu));
 		}
 
-		if (const auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
+		if (reselected_index != umax)
 		{
-			on_select(render->id, *render);
+			m_choice_units->setCurrentIndex(reselected_index);
 		}
 	}
 
 	// Close dialogs which are tied to the specific thread selected
-	if (!reselected)
+	if (reselected_index == umax)
 	{
 		if (m_reg_editor) m_reg_editor->close();
 		if (m_inst_editor) m_inst_editor->close();
