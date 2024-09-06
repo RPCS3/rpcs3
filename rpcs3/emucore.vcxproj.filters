@@ -2575,6 +2575,9 @@
     <ClInclude Include="Emu\NP\rpcn_countries.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
