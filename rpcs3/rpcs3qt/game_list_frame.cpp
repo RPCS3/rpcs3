@@ -1299,7 +1299,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	std::string savestate_dir = fs::get_config_dir() + "savestates/" + current_game.serial;
+	const std::string savestate_dir = fs::get_config_dir() + "savestates/" + current_game.serial;
 
 	if (fs::is_dir(savestate_dir))
 	{
