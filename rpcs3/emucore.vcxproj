@@ -534,6 +534,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h" />
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
     <ClInclude Include="Emu\config_mode.h" />
