@@ -1116,7 +1116,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	const QString name = qstr(current_game.name).simplified();
 
 	const std::string cache_base_dir = GetCacheDirBySerial(current_game.serial);
-	const std::string data_base_dir  = GetDataDirBySerial(current_game.serial);
+	const std::string config_data_base_dir = GetDataDirBySerial(current_game.serial);
 
 	// Make Actions
 	QMenu menu;
@@ -1362,7 +1362,38 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Open Folder menu
 	QMenu* open_folder_menu = menu.addMenu(tr("&Open Folder"));
 
-	QAction* open_game_folder = open_folder_menu->addAction(tr("&Open Install Folder"));
+	const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
+	const std::string captures_dir = fs::get_config_dir() + "/captures/";
+	const std::string recordings_dir = fs::get_config_dir() + "/recordings/" + current_game.serial;
+	const std::string screenshots_dir = fs::get_config_dir() + "/screenshots/" + current_game.serial;
+	std::vector<std::string> data_dir_list;
+
+	if (is_disc_game)
+	{
+		QAction* open_disc_game_folder = open_folder_menu->addAction(tr("&Open Disc Game Folder"));
+		connect(open_disc_game_folder, &QAction::triggered, [current_game]()
+		{
+			gui::utils::open_dir(current_game.path);
+		});
+
+		data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial); // it could be absent for a disc game
+	}
+	else
+	{
+		data_dir_list.push_back(current_game.path);
+	}
+
+	if (!data_dir_list.empty()) // "true" if data path is present (it could be absent for a disc game)
+	{
+		QAction* open_data_folder = open_folder_menu->addAction(tr("&Open %0 Folder").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category));
+		connect(open_data_folder, &QAction::triggered, [data_dir_list]()
+		{
+			for (const std::string& data_dir : data_dir_list)
+			{
+				gui::utils::open_dir(data_dir);
+			}
+		});
+	}
 
 	if (gameinfo->hasCustomConfig)
 	{
@@ -1380,20 +1411,54 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && has_cache_dir)
 	{
 		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
-		connect(open_cache_folder, &QAction::triggered, this, [cache_base_dir]()
+		connect(open_cache_folder, &QAction::triggered, [cache_base_dir]()
 		{
 			gui::utils::open_dir(cache_base_dir);
 		});
 	}
 
-	if (fs::is_dir(data_base_dir))
+	if (fs::is_dir(config_data_base_dir))
 	{
-		QAction* open_data_dir = open_folder_menu->addAction(tr("&Open Data Folder"));
-		connect(open_data_dir, &QAction::triggered, [data_base_dir]()
+		QAction* open_config_data_dir = open_folder_menu->addAction(tr("&Open Config Data Folder"));
+		connect(open_config_data_dir, &QAction::triggered, [config_data_base_dir]()
 		{
-			gui::utils::open_dir(data_base_dir);
+			gui::utils::open_dir(config_data_base_dir);
 		});
 	}
+
+	if (fs::is_dir(savestate_dir))
+	{
+		QAction* open_savestate_dir = open_folder_menu->addAction(tr("&Open Savestate Folder"));
+		connect(open_savestate_dir, &QAction::triggered, [savestate_dir]()
+		{
+			gui::utils::open_dir(savestate_dir);
+		});
+	}
+
+	QAction* open_captures_dir = open_folder_menu->addAction(tr("&Open Captures Folder"));
+	connect(open_captures_dir, &QAction::triggered, [captures_dir]()
+	{
+		gui::utils::open_dir(captures_dir);
+	});
+
+	if (fs::is_dir(recordings_dir))
+	{
+		QAction* open_recordings_dir = open_folder_menu->addAction(tr("&Open Recordings Folder"));
+		connect(open_recordings_dir, &QAction::triggered, [recordings_dir]()
+		{
+			gui::utils::open_dir(recordings_dir);
+		});
+	}
+
+	if (fs::is_dir(screenshots_dir))
+	{
+		QAction* open_screenshots_dir = open_folder_menu->addAction(tr("&Open Screenshots Folder"));
+		connect(open_screenshots_dir, &QAction::triggered, [screenshots_dir]()
+		{
+			gui::utils::open_dir(screenshots_dir);
+		});
+	}
+
 	menu.addSeparator();
 	QAction* check_compat = menu.addAction(tr("&Check Game Compatibility"));
 	QAction* download_compat = menu.addAction(tr("&Download Compatibility Database"));
@@ -1807,10 +1872,6 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		}
 		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, game_list::GetGameVersion(gameinfo), this);
 		patch_manager.exec();
-	});
-	connect(open_game_folder, &QAction::triggered, this, [current_game]()
-	{
-		gui::utils::open_dir(current_game.path);
 	});
 	connect(check_compat, &QAction::triggered, this, [serial]
 	{
