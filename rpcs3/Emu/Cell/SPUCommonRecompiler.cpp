@@ -5188,7 +5188,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				auto& block = infos[bpc];
 
-				if (g_cfg.core.spu_block_size != spu_block_size_type::safe && (m_ret_info[bpc / 4] || m_entry_info[bpc / 4] || pos == entry_point))
+				if (pos == entry_point || (g_cfg.core.spu_block_size != spu_block_size_type::safe && (m_ret_info[bpc / 4] || m_entry_info[bpc / 4])))
 				{
 					// Do not allow value passthrough
 					for (reg_state_t& f : block->start_reg_state)
