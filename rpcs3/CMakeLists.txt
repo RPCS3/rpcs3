@@ -114,7 +114,7 @@ if(UNIX)
 endif()
 
 if(WIN32)
-    target_link_libraries(rpcs3 PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh c++)
+    target_link_libraries(rpcs3 PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
 else()
     target_link_libraries(rpcs3 PRIVATE ${CMAKE_DL_LIBS})
 endif()
