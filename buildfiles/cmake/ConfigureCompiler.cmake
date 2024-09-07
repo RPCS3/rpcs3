@@ -100,10 +100,6 @@ else()
 			add_link_options(-no-pie)
 		endif()
 	elseif(APPLE)
-		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-			add_compile_options(-stdlib=libc++)
-		endif()
-
 		if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
 			add_link_options(-Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000)
 			add_link_options(-Wl,-no_pie)
@@ -118,5 +114,10 @@ else()
 		add_link_options(-Wl,--stack -Wl,8388608)
 
 		add_link_options(-Wl,--image-base,0x10000)
+	endif()
+
+	# Specify C++ library to use as standard C++ when using clang
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		add_compile_options(-stdlib=libc++)
 	endif()
 endif()
