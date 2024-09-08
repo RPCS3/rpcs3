@@ -119,8 +119,8 @@ else()
 		endif()
 	endif()
 
-	# Specify C++ library to use as standard C++ when using clang
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+	# Specify C++ library to use as standard C++ when using clang (not required on linux due to GNU)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND (APPLE OR WIN32))
 		add_compile_options(-stdlib=libc++)
 	endif()
 endif()
