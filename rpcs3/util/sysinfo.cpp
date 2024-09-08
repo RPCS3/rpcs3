@@ -88,16 +88,23 @@ namespace utils
 
 		const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
 		{
-			char sz[256];
-			DWORD sz_len = sizeof(sz);
+			constexpr usz MAX_SZ_LEN = 255;
+			char sz[MAX_SZ_LEN + 1];
+			DWORD sz_len = MAX_SZ_LEN;
+
+			// Safety; null terminate
+			sz[0] = 0;
+			sz[MAX_SZ_LEN] = 0;
+
+			// Read string
 			if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
 			{
 				return { false, "" };
 			}
 
-			if (sz_len < sizeof(sz))
+			// Safety, force null terminator
+			if (sz_len < MAX_SZ_LEN)
 			{
-				// Safety, force null terminator
 				sz[sz_len] = 0;
 			}
 			return { true, sz };
@@ -109,10 +116,15 @@ namespace utils
 			return "Unknown Windows";
 		}
 
-		// Read ProductName (string), CurrentMajorVersionNumber (dword), CurrentMinorVersionNumber (dword) and CurrentBuildNumber (string) as well as CurrentVersion (string)
+		// ProductName (SZ) - Actual windows install name e.g Windows 10 Pro)
+		// CurrentMajorVersionNumber (DWORD) - e.g 10 for windows 10, 11 for windows 11
+		// CurrentMinorVersionNumber (DWORD) - usually 0 for newer windows, pairs with major version
+		// CurrentBuildNumber (SZ) - Windows build number, e.g 19045, used to identify different releases like 23H2, 24H2, etc
+		// CurrentVersion (SZ) - NT kernel version, e.g 6.3 for Windows 10
 		const auto [product_valid, product_name] = read_reg_sz(hKey, "ProductName");
 		if (!product_valid)
 		{
+			RegCloseKey(hKey);
 			return "Unknown Windows";
 		}
 
