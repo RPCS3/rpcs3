@@ -1177,14 +1177,10 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		range = cfg.lstickmultiplier.to_list();
 		ui->stick_multi_left->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_left->setValue(cfg.lstickmultiplier / 100.0);
-		ui->kb_stick_multi_left->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
-		ui->kb_stick_multi_left->setValue(cfg.lstickmultiplier / 100.0);
 
 		range = cfg.rstickmultiplier.to_list();
 		ui->stick_multi_right->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_right->setValue(cfg.rstickmultiplier / 100.0);
-		ui->kb_stick_multi_right->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
-		ui->kb_stick_multi_right->setValue(cfg.rstickmultiplier / 100.0);
 
 		// Update Squircle Factors
 		range = cfg.lpadsquircling.to_list();
@@ -1247,8 +1243,6 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->chb_show_emulated_values->setEnabled(is_enabled);
 	ui->stick_multi_left->setEnabled(is_enabled);
 	ui->stick_multi_right->setEnabled(is_enabled);
-	ui->kb_stick_multi_left->setEnabled(is_enabled);
-	ui->kb_stick_multi_right->setEnabled(is_enabled);
 	ui->squircle_left->setEnabled(is_enabled);
 	ui->squircle_right->setEnabled(is_enabled);
 	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
@@ -1855,16 +1849,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Apply rest of config
 	auto& cfg = player->config;
 
-	if (m_handler->m_type == pad_handler::keyboard)
-	{
-		cfg.lstickmultiplier.set(ui->kb_stick_multi_left->value() * 100);
-		cfg.rstickmultiplier.set(ui->kb_stick_multi_right->value() * 100);
-	}
-	else
-	{
-		cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
-		cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
-	}
+	cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
+	cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
 
 	cfg.lpadsquircling.set(ui->squircle_left->value());
 	cfg.rpadsquircling.set(ui->squircle_right->value());
@@ -2091,7 +2077,6 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
-	SubscribeTooltip(ui->gb_kb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);
 	SubscribeTooltip(ui->gb_motion_controls, tooltips.gamepad_settings.motion_controls);
 	SubscribeTooltip(ui->gb_stick_deadzones, tooltips.gamepad_settings.stick_deadzones);
