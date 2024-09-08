@@ -1841,9 +1841,9 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	}
 
 #if defined(ARCH_X64)
-	const exec_addr = pExp->ContextRecord->Rip;
+	const auto exec_addr = pExp->ContextRecord->Rip;
 #elif defined(ARCH_ARM64)
-	const exec_addr = pExp->ContextRecord->Pc;
+	const auto exec_addr = pExp->ContextRecord->Pc;
 #else
 #error "Unimplemented exception handling for this architecture"
 #endif

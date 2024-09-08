@@ -113,7 +113,10 @@ else()
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
 
-		add_link_options(-Wl,--image-base,0x10000)
+		# For arm64 windows, the image base cannot be below 4GB or the OS rejects the binary without much explanation.
+		if(COMPILER_X86)
+			add_link_options(-Wl,--image-base,0x10000)
+		endif()
 	endif()
 
 	# Specify C++ library to use as standard C++ when using clang
