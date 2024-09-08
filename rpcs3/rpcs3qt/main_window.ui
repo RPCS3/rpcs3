@@ -193,7 +193,7 @@
      <addaction name="removeAllCachesAct"/>
      <addaction name="removeSavestatesAct"/>
      <addaction name="separator"/>
-     <addaction name="cleanupGamesListAct"/>
+     <addaction name="cleanupGameListAct"/>
     </widget>
     <widget class="QMenu" name="menuFirmware">
      <property name="title">
