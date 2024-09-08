@@ -68,8 +68,8 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def       = 0;
 	cfg->ltriggerthreshold.def    = 0;
 	cfg->rtriggerthreshold.def    = 0;
-	cfg->lpadsquircling.def       = 0;
-	cfg->rpadsquircling.def       = 0;
+	cfg->lpadsquircling.def       = 8000;
+	cfg->rpadsquircling.def       = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -1277,7 +1277,34 @@ void keyboard_pad_handler::process()
 	{
 		auto& pad = m_bindings[i].pad;
 		ensure(pad);
-		pad->m_buttons = m_pads_internal[i].m_buttons;
-		pad->m_sticks = m_pads_internal[i].m_sticks;
+
+		const cfg_pad* cfg = &m_pad_configs[pad->m_player_id];
+		ensure(cfg);
+
+		const Pad& pad_internal = m_pads_internal[i];
+
+		// Normalize and apply pad squircling
+		// Copy sticks first. We don't want to modify the raw internal values
+		std::vector<AnalogStick> squircled_sticks = pad_internal.m_sticks;
+
+		// Apply squircling
+		if (cfg->lpadsquircling != 0)
+		{
+			u16& lx = squircled_sticks[0].m_value;
+			u16& ly = squircled_sticks[1].m_value;
+
+			ConvertToSquirclePoint(lx, ly, cfg->lpadsquircling);
+		}
+
+		if (cfg->rpadsquircling != 0)
+		{
+			u16& rx = squircled_sticks[2].m_value;
+			u16& ry = squircled_sticks[3].m_value;
+
+			ConvertToSquirclePoint(rx, ry, cfg->rpadsquircling);
+		}
+
+		pad->m_buttons = pad_internal.m_buttons;
+		pad->m_sticks = std::move(squircled_sticks);
 	}
 }

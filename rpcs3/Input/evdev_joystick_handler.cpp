@@ -92,8 +92,8 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = 30; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->lpadsquircling.def    = 5000;
-	cfg->rpadsquircling.def    = 5000;
+	cfg->lpadsquircling.def    = 8000;
+	cfg->rpadsquircling.def    = 8000;
 
 	// apply defaults
 	cfg->from_default();
