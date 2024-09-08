@@ -3602,8 +3602,11 @@ void main_window::RemoveSavestates()
 
 void main_window::CleanupGamesList()
 {
-	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove no more discoverable games from games list \"games.yml\" file?")) != QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from games list?\n" \
+		"Undetectable (zombies) and/or corrupted games will be removed from games list \"games.yml\" file")) != QMessageBox::Yes)
+	{
 		return;
+	}
 
 	// List of serials (title id) to remove in "games.yml" file (if any)
 	std::vector<std::string> serials_to_remove_from_yml{};
@@ -3629,7 +3632,7 @@ void main_window::CleanupGamesList()
 	}
 
 	// Remove the found serials (title id) in "games.yml" file (if any)
-	QMessageBox::information(this, tr("Summary"), tr("%0 undiscoverable game(s) removed from games list").arg(Emu.RemoveGames(serials_to_remove_from_yml)));
+	QMessageBox::information(this, tr("Summary"), tr("%0 game(s) removed from games list").arg(Emu.RemoveGames(serials_to_remove_from_yml)));
 }
 
 void main_window::RemoveFirmwareCache()
