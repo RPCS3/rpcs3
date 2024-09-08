@@ -100,10 +100,6 @@ else()
 			add_link_options(-no-pie)
 		endif()
 	elseif(APPLE)
-		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-			add_compile_options(-stdlib=libc++)
-		endif()
-
 		if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
 			add_link_options(-Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000)
 			add_link_options(-Wl,-no_pie)
@@ -117,6 +113,14 @@ else()
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
 
-		add_link_options(-Wl,--image-base,0x10000)
+		# For arm64 windows, the image base cannot be below 4GB or the OS rejects the binary without much explanation.
+		if(COMPILER_X86)
+			add_link_options(-Wl,--image-base,0x10000)
+		endif()
+	endif()
+
+	# Specify C++ library to use as standard C++ when using clang (not required on linux due to GNU)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND (APPLE OR WIN32))
+		add_compile_options(-stdlib=libc++)
 	endif()
 endif()
