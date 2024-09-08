@@ -131,7 +131,7 @@ private Q_SLOTS:
 	void RemoveHDD1Caches();
 	void RemoveAllCaches();
 	void RemoveSavestates();
-	void CleanupGamesList();
+	void CleanupGameList();
 
 	void RemoveFirmwareCache();
 	void CreateFirmwareCache();

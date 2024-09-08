@@ -1166,9 +1166,9 @@
     <string>Remove Savestates</string>
    </property>
   </action>
-  <action name="cleanupGamesListAct">
+  <action name="cleanupGameListAct">
    <property name="text">
-    <string>Clean up Games List</string>
+    <string>Clean up Game List</string>
    </property>
   </action>
   <action name="actionManage_Skylanders_Portal">

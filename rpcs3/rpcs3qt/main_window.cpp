@@ -1986,7 +1986,7 @@ void main_window::OnEmuStop()
 	ui->removeHDD1CachesAct->setEnabled(true);
 	ui->removeAllCachesAct->setEnabled(true);
 	ui->removeSavestatesAct->setEnabled(true);
-	ui->cleanupGamesListAct->setEnabled(true);
+	ui->cleanupGameListAct->setEnabled(true);
 
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
@@ -2039,7 +2039,7 @@ void main_window::OnEmuReady() const
 	ui->removeHDD1CachesAct->setEnabled(false);
 	ui->removeAllCachesAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
-	ui->cleanupGamesListAct->setEnabled(false);
+	ui->cleanupGameListAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2519,7 +2519,7 @@ void main_window::CreateConnects()
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
 	{
-		// Enable/Disable Recent Games List
+		// Enable/Disable Recent Game List
 		const bool stopped = Emu.IsStopped();
 		for (QAction* act : ui->bootRecentMenu->actions())
 		{
@@ -2694,7 +2694,7 @@ void main_window::CreateConnects()
 	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, &main_window::RemoveHDD1Caches);
 	connect(ui->removeAllCachesAct, &QAction::triggered, this, &main_window::RemoveAllCaches);
 	connect(ui->removeSavestatesAct, &QAction::triggered, this, &main_window::RemoveSavestates);
-	connect(ui->cleanupGamesListAct, &QAction::triggered, this, &main_window::CleanupGamesList);
+	connect(ui->cleanupGameListAct, &QAction::triggered, this, &main_window::CleanupGameList);
 
 	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
 	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
@@ -3600,9 +3600,9 @@ void main_window::RemoveSavestates()
 	}
 }
 
-void main_window::CleanupGamesList()
+void main_window::CleanupGameList()
 {
-	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from games list?\n" \
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n" \
 		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (\"games.yml\").")) != QMessageBox::Yes)
 	{
 		return;
@@ -3611,13 +3611,13 @@ void main_window::CleanupGamesList()
 	// List of serials (title id) to remove in "games.yml" file (if any)
 	std::vector<std::string> serials_to_remove_from_yml{};
 
-	for (const auto& [serial, path] : Emu.GetGamesConfig().get_games()) // Loop on games list "games.yml" file
+	for (const auto& [serial, path] : Emu.GetGamesConfig().get_games()) // Loop on game list file
 	{
 		bool found = false;
 
 		for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on discovered games
 		{
-			// If Disc Game and its serial is found in games list "games.yml" file
+			// If Disc Game and its serial is found in game list file
 			if (game && qstr(game->info.category) == cat::cat_disc_game && game->info.serial == serial)
 			{
 				found = true;
@@ -3632,7 +3632,7 @@ void main_window::CleanupGamesList()
 	}
 
 	// Remove the found serials (title id) in "games.yml" file (if any)
-	QMessageBox::information(this, tr("Summary"), tr("%0 game(s) removed from games list").arg(Emu.RemoveGames(serials_to_remove_from_yml)));
+	QMessageBox::information(this, tr("Summary"), tr("%0 game(s) removed from game list").arg(Emu.RemoveGames(serials_to_remove_from_yml)));
 }
 
 void main_window::RemoveFirmwareCache()
