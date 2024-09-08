@@ -1058,7 +1058,7 @@ void debugger_frame::UpdateUnitList()
 
 		if (reselected_index != umax)
 		{
-			m_choice_units->setCurrentIndex(reselected_index);
+			m_choice_units->setCurrentIndex(::narrow<s32>(reselected_index));
 		}
 	}
 
