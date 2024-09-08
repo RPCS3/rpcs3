@@ -3603,7 +3603,7 @@ void main_window::RemoveSavestates()
 void main_window::CleanupGamesList()
 {
 	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from games list?\n" \
-		"Undetectable (zombies) and/or corrupted games will be removed from games list \"games.yml\" file")) != QMessageBox::Yes)
+		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (\"games.yml\").")) != QMessageBox::Yes)
 	{
 		return;
 	}
