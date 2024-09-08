@@ -252,7 +252,7 @@ error_code cellSysutilAvcExtStopMicDetection()
 
 error_code cellSysutilAvcExtInitOptionParam(s32 avcOptionParamVersion, vm::ptr<CellSysutilAvcOptionParam> option)
 {
-	cellSysutilAvcExt.todo("cellSysutilAvcExtInitOptionParam(avcOptionParamVersion=0x%x, option=*0x%x)", avcOptionParamVersion, option);
+	cellSysutilAvcExt.notice("cellSysutilAvcExtInitOptionParam(avcOptionParamVersion=0x%x, option=*0x%x)", avcOptionParamVersion, option);
 
 	if (!option)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;

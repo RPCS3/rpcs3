@@ -63,8 +63,18 @@ error_code cellSysutilAvcEnumPlayers(vm::ptr<SceNpId> players_id, vm::ptr<s32> p
 {
 	cellSysutil.todo("cellSysutilAvcEnumPlayers(players_id=*0x%x, players_num=*0x%x)", players_id, players_num);
 
-	if (!players_id || !players_num)
+	if (!players_num)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	if (players_id)
+	{
+		// Fill players_id with players_num participants
+	}
+	else
+	{
+		// Return number of participants
+		*players_num = 0;
+	}
 
 	return CELL_OK;
 }
