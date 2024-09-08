@@ -350,7 +350,7 @@ bool game_list_frame::RemoveContentBySerial(const std::string& base_dir, const s
 
 		if (!RemoveContentPath(base_dir + entry.name, desc))
 		{
-			success = false; // mark as failed if there is at least one failure
+			success = false; // Mark as failed if there is at least one failure
 		}
 	}
 
@@ -1347,11 +1347,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	manage_game_menu->addSeparator();
 
-	// Rename/hide game in game list
-	QAction* rename_title = manage_game_menu->addAction(tr("&Rename In Game List"));
+	// Hide/rename game in game list
 	QAction* hide_serial = manage_game_menu->addAction(tr("&Hide From Game List"));
 	hide_serial->setCheckable(true);
 	hide_serial->setChecked(m_hidden_list.contains(serial));
+	QAction* rename_title = manage_game_menu->addAction(tr("&Rename In Game List"));
+
+	QAction* edit_notes = manage_game_menu->addAction(tr("&Edit Tooltip Notes"));
+	QAction* reset_time_played = manage_game_menu->addAction(tr("&Reset Time Played"));
 
 	manage_game_menu->addSeparator();
 
@@ -1359,113 +1362,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
 	remove_game->setEnabled(!is_current_running_game);
 
-	// Open Folder menu
-	QMenu* open_folder_menu = menu.addMenu(tr("&Open Folder"));
-
-	const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
-	const std::string captures_dir = fs::get_config_dir() + "/captures/";
-	const std::string recordings_dir = fs::get_config_dir() + "/recordings/" + current_game.serial;
-	const std::string screenshots_dir = fs::get_config_dir() + "/screenshots/" + current_game.serial;
-	std::vector<std::string> data_dir_list;
-
-	if (is_disc_game)
-	{
-		QAction* open_disc_game_folder = open_folder_menu->addAction(tr("&Open Disc Game Folder"));
-		connect(open_disc_game_folder, &QAction::triggered, [current_game]()
-		{
-			gui::utils::open_dir(current_game.path);
-		});
-
-		data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial); // it could be absent for a disc game
-	}
-	else
-	{
-		data_dir_list.push_back(current_game.path);
-	}
-
-	if (!data_dir_list.empty()) // "true" if data path is present (it could be absent for a disc game)
-	{
-		QAction* open_data_folder = open_folder_menu->addAction(tr("&Open %0 Folder").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category));
-		connect(open_data_folder, &QAction::triggered, [data_dir_list]()
-		{
-			for (const std::string& data_dir : data_dir_list)
-			{
-				gui::utils::open_dir(data_dir);
-			}
-		});
-	}
-
-	if (gameinfo->hasCustomConfig)
-	{
-		QAction* open_config_dir = open_folder_menu->addAction(tr("&Open Custom Config Folder"));
-		connect(open_config_dir, &QAction::triggered, [current_game]()
-		{
-			const std::string config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
-
-			if (fs::is_file(config_path))
-				gui::utils::open_dir(config_path);
-		});
-	}
-
-	// This is a debug feature, let's hide it by reusing debug tab protection
-	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && has_cache_dir)
-	{
-		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
-		connect(open_cache_folder, &QAction::triggered, [cache_base_dir]()
-		{
-			gui::utils::open_dir(cache_base_dir);
-		});
-	}
-
-	if (fs::is_dir(config_data_base_dir))
-	{
-		QAction* open_config_data_dir = open_folder_menu->addAction(tr("&Open Config Data Folder"));
-		connect(open_config_data_dir, &QAction::triggered, [config_data_base_dir]()
-		{
-			gui::utils::open_dir(config_data_base_dir);
-		});
-	}
-
-	if (fs::is_dir(savestate_dir))
-	{
-		QAction* open_savestate_dir = open_folder_menu->addAction(tr("&Open Savestate Folder"));
-		connect(open_savestate_dir, &QAction::triggered, [savestate_dir]()
-		{
-			gui::utils::open_dir(savestate_dir);
-		});
-	}
-
-	QAction* open_captures_dir = open_folder_menu->addAction(tr("&Open Captures Folder"));
-	connect(open_captures_dir, &QAction::triggered, [captures_dir]()
-	{
-		gui::utils::open_dir(captures_dir);
-	});
-
-	if (fs::is_dir(recordings_dir))
-	{
-		QAction* open_recordings_dir = open_folder_menu->addAction(tr("&Open Recordings Folder"));
-		connect(open_recordings_dir, &QAction::triggered, [recordings_dir]()
-		{
-			gui::utils::open_dir(recordings_dir);
-		});
-	}
-
-	if (fs::is_dir(screenshots_dir))
-	{
-		QAction* open_screenshots_dir = open_folder_menu->addAction(tr("&Open Screenshots Folder"));
-		connect(open_screenshots_dir, &QAction::triggered, [screenshots_dir]()
-		{
-			gui::utils::open_dir(screenshots_dir);
-		});
-	}
-
-	menu.addSeparator();
-	QAction* check_compat = menu.addAction(tr("&Check Game Compatibility"));
-	QAction* download_compat = menu.addAction(tr("&Download Compatibility Database"));
-	menu.addSeparator();
-	QAction* edit_notes = menu.addAction(tr("&Edit Tooltip Notes"));
-	QAction* reset_time_played = menu.addAction(tr("&Reset Time Played"));
-
+	// Custom Images menu
 	QMenu* icon_menu = menu.addMenu(tr("&Custom Images"));
 	const std::array<QAction*, 3> custom_icon_actions =
 	{
@@ -1612,10 +1509,118 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		icon_menu->setEnabled(false);
 	}
 
+	menu.addSeparator();
+
+	// Open Folder menu
+	QMenu* open_folder_menu = menu.addMenu(tr("&Open Folder"));
+
+	const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
+	const std::string captures_dir = fs::get_config_dir() + "/captures/";
+	const std::string recordings_dir = fs::get_config_dir() + "/recordings/" + current_game.serial;
+	const std::string screenshots_dir = fs::get_config_dir() + "/screenshots/" + current_game.serial;
+	std::vector<std::string> data_dir_list;
+
+	if (is_disc_game)
+	{
+		QAction* open_disc_game_folder = open_folder_menu->addAction(tr("&Open Disc Game Folder"));
+		connect(open_disc_game_folder, &QAction::triggered, [current_game]()
+			{
+				gui::utils::open_dir(current_game.path);
+			});
+
+		data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial); // it could be absent for a disc game
+	}
+	else
+	{
+		data_dir_list.push_back(current_game.path);
+	}
+
+	if (!data_dir_list.empty()) // "true" if data path is present (it could be absent for a disc game)
+	{
+		QAction* open_data_folder = open_folder_menu->addAction(tr("&Open %0 Folder").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category));
+		connect(open_data_folder, &QAction::triggered, [data_dir_list]()
+			{
+				for (const std::string& data_dir : data_dir_list)
+				{
+					gui::utils::open_dir(data_dir);
+				}
+			});
+	}
+
+	if (gameinfo->hasCustomConfig)
+	{
+		QAction* open_config_dir = open_folder_menu->addAction(tr("&Open Custom Config Folder"));
+		connect(open_config_dir, &QAction::triggered, [current_game]()
+			{
+				const std::string config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
+
+				if (fs::is_file(config_path))
+					gui::utils::open_dir(config_path);
+			});
+	}
+
+	// This is a debug feature, let's hide it by reusing debug tab protection
+	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && has_cache_dir)
+	{
+		QAction* open_cache_folder = open_folder_menu->addAction(tr("&Open Cache Folder"));
+		connect(open_cache_folder, &QAction::triggered, [cache_base_dir]()
+			{
+				gui::utils::open_dir(cache_base_dir);
+			});
+	}
+
+	if (fs::is_dir(config_data_base_dir))
+	{
+		QAction* open_config_data_dir = open_folder_menu->addAction(tr("&Open Config Data Folder"));
+		connect(open_config_data_dir, &QAction::triggered, [config_data_base_dir]()
+			{
+				gui::utils::open_dir(config_data_base_dir);
+			});
+	}
+
+	if (fs::is_dir(savestate_dir))
+	{
+		QAction* open_savestate_dir = open_folder_menu->addAction(tr("&Open Savestate Folder"));
+		connect(open_savestate_dir, &QAction::triggered, [savestate_dir]()
+			{
+				gui::utils::open_dir(savestate_dir);
+			});
+	}
+
+	QAction* open_captures_dir = open_folder_menu->addAction(tr("&Open Captures Folder"));
+	connect(open_captures_dir, &QAction::triggered, [captures_dir]()
+		{
+			gui::utils::open_dir(captures_dir);
+		});
+
+	if (fs::is_dir(recordings_dir))
+	{
+		QAction* open_recordings_dir = open_folder_menu->addAction(tr("&Open Recordings Folder"));
+		connect(open_recordings_dir, &QAction::triggered, [recordings_dir]()
+			{
+				gui::utils::open_dir(recordings_dir);
+			});
+	}
+
+	if (fs::is_dir(screenshots_dir))
+	{
+		QAction* open_screenshots_dir = open_folder_menu->addAction(tr("&Open Screenshots Folder"));
+		connect(open_screenshots_dir, &QAction::triggered, [screenshots_dir]()
+			{
+				gui::utils::open_dir(screenshots_dir);
+			});
+	}
+
+	// Copy Info menu
 	QMenu* info_menu = menu.addMenu(tr("&Copy Info"));
 	QAction* copy_info = info_menu->addAction(tr("&Copy Name + Serial"));
 	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
 	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
+
+	menu.addSeparator();
+
+	QAction* check_compat = menu.addAction(tr("&Check Game Compatibility"));
+	QAction* download_compat = menu.addAction(tr("&Download Compatibility Database"));
 
 	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
