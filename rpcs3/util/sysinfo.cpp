@@ -68,14 +68,88 @@ namespace Darwin_ProcessInfo
 }
 #endif
 
-#if defined(ARCH_ARM64) && defined (_WIN32) && !defined(_MSC_VER)
-static inline u64 __readx18qword(int offset)
+namespace utils
 {
-	u64* peb = nullptr;
-	__asm__ volatile("mov %0, x18" : "=r"(peb));
-	return peb[offset];
-}
+#ifdef _WIN32
+	// Alternative way to read OS version using the registry.
+	static std::string get_fallback_windows_version()
+	{
+		// Some helpers for sanity
+		const auto read_reg_dword = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, DWORD>
+		{
+			DWORD val;
+			DWORD len = sizeof(val);
+			if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(&val), &len))
+			{
+				return { false, 0 };
+			}
+			return { true, val };
+		};
+
+		const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
+		{
+			constexpr usz MAX_SZ_LEN = 255;
+			char sz[MAX_SZ_LEN + 1];
+			DWORD sz_len = MAX_SZ_LEN;
+
+			// Safety; null terminate
+			sz[0] = 0;
+			sz[MAX_SZ_LEN] = 0;
+
+			// Read string
+			if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
+			{
+				return { false, "" };
+			}
+
+			// Safety, force null terminator
+			if (sz_len < MAX_SZ_LEN)
+			{
+				sz[sz_len] = 0;
+			}
+			return { true, sz };
+		};
+
+		HKEY hKey;
+		if (ERROR_SUCCESS != RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey))
+		{
+			return "Unknown Windows";
+		}
+
+		// ProductName (SZ) - Actual windows install name e.g Windows 10 Pro)
+		// CurrentMajorVersionNumber (DWORD) - e.g 10 for windows 10, 11 for windows 11
+		// CurrentMinorVersionNumber (DWORD) - usually 0 for newer windows, pairs with major version
+		// CurrentBuildNumber (SZ) - Windows build number, e.g 19045, used to identify different releases like 23H2, 24H2, etc
+		// CurrentVersion (SZ) - NT kernel version, e.g 6.3 for Windows 10
+		const auto [product_valid, product_name] = read_reg_sz(hKey, "ProductName");
+		if (!product_valid)
+		{
+			RegCloseKey(hKey);
+			return "Unknown Windows";
+		}
+
+		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
+		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
+		const auto [check_build_no, build_no] = read_reg_sz(hKey, "CurrentBuildNumber");
+		const auto [check_nt_ver, nt_ver] = read_reg_sz(hKey, "CurrentVersion");
+
+		// Close the registry key
+		RegCloseKey(hKey);
+
+		std::string version_id = "Unknown";
+		if (check_major && check_minor && check_build_no)
+		{
+			version_id = fmt::format("%u.%u.%s", version_major, version_minor, build_no);
+			if (check_nt_ver)
+			{
+				version_id += " NT" + nt_ver;
+			}
+		}
+
+		return fmt::format("Operating system: %s, Version %s", product_name, version_id);
+	}
 #endif
+}
 
 bool utils::has_ssse3()
 {
@@ -590,14 +664,9 @@ std::string utils::get_OS_version()
 #ifdef _WIN32
 	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
-
-	const DWORD peb_offset = 0x60;
 #if defined(ARCH_X64)
+	const DWORD peb_offset = 0x60;
 	const INT_PTR peb = __readgsqword(peb_offset);
-#elif defined(_M_ARM64)
-	const INT_PTR peb = __readx18qword(peb_offset);
-#endif
-
 	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
 	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
 	const WORD build = *reinterpret_cast<const WORD*>(peb + 0x120);
@@ -615,6 +684,11 @@ std::string utils::get_OS_version()
 	fmt::append(output,
 		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
 		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+#else
+	// PEB cannot be easily accessed on ARM64, fall back to registry
+	static const auto s_windows_version = utils::get_fallback_windows_version();
+	return s_windows_version;
+#endif
 #elif defined (__APPLE__)
 	const int major_version = Darwin_Version::getNSmajorVersion();
 	const int minor_version = Darwin_Version::getNSminorVersion();
