@@ -76,6 +76,7 @@ export VULKAN_SDK
 VULKAN_SDK="$BREW_ARM64_PATH/opt/molten-vk"
 ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib" || true
 export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+export Vulkan_INCLUDE_DIR="$BREW_ARM64_PATH/opt/vulkan-headers/include"
 
 export LLVM_DIR
 LLVM_DIR="$BREW_ARM64_PATH/opt/llvm@18"
