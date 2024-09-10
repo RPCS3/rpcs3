@@ -19,9 +19,11 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 /usr/local/bin/brew update
+/usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
+/usr/local/bin/brew install -f --build-from-source ffmpeg@5
 /usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
 /usr/local/bin/brew install llvm@18 cmake vulkan-headers
-/usr/local/bin/brew link -f llvm@18
+/usr/local/bin/brew link -f llvm@18 ffmpeg@5
 
 export BREW_ARM64_PATH="/opt/homebrew1"
 sudo mkdir -p "$BREW_ARM64_PATH"
