@@ -58,7 +58,7 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   "$BREW_X64_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
   "$BREW_X64_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia
-#fi
+fi
 
 cd "$WORKDIR"
 ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
