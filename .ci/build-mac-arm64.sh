@@ -29,6 +29,7 @@ sudo chmod 777 "$BREW_ARM64_PATH"
 curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "$BREW_ARM64_PATH"
 
 brew_arm64_install_packages 0mq aom aribb24 ca-certificates cjson curl dav1d ffmpeg@5 fontconfig freetype freetype2 gettext glew gmp gnutls lame libbluray libidn2 libnettle libogg libpng librist libsodium libsoxr libtasn libtasn1 libunistring libvmaf libvorbis libvpx libx11 libxau libxcb libxdmcp llvm@18 mbedtls molten-vk nettle opencore-amr openjpeg openssl opus p11-kit pkg-config pkgconfig pzstd rav1e sdl2 snappy speex srt svt-av1 theora vulkan-headers webp x264 x265 xz z3 zeromq zmq zstd
+"$BREW_ARM64_PATH/bin/brew" link -f ffmpeg@5
 
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
