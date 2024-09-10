@@ -67,7 +67,7 @@ export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN
 export SDL2_DIR="$BREW_ARM64_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_X64_PATH/opt/llvm@18/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
-export LDFLAGS="-L$BREW_ARM64_PATH/lib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavcodec.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavformat.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavutil.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswscale.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswresample.dylib $BREW_ARM64_PATH/opt/llvm@18/lib/c++/libc++.1.dylib $BREW_ARM64_PATH/lib/libSDL2.dylib /opt/homebrew/lib/libGLEW.dylib $BREW_ARM64_PATH/opt/llvm@18/lib/libunwind.1.dylib -Wl,-rpath,$BREW_ARM64_PATH/lib"
+export LDFLAGS="-L$BREW_ARM64_PATH/lib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavcodec.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavformat.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavutil.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswscale.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswresample.dylib $BREW_ARM64_PATH/opt/llvm@18/lib/c++/libc++.1.dylib $BREW_ARM64_PATH/lib/libSDL2.dylib $BREW_ARM64_PATH/lib/libGLEW.dylib $BREW_ARM64_PATH/opt/llvm@18/lib/libunwind.1.dylib -Wl,-rpath,$BREW_ARM64_PATH/lib"
 export CPPFLAGS="-I$BREW_ARM64_PATH/include -no-pie"
 export LIBRARY_PATH="$BREW_ARM64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_ARM64_PATH/lib"
