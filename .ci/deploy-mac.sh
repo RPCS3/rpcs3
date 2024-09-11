@@ -28,6 +28,8 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Plugins/virtualkeyboard" \
 "rpcs3.app/Contents/Resources/git"
 
+../../.ci/optimize-mac.sh rpcs3.app
+
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
