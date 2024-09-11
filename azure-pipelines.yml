@@ -167,6 +167,8 @@ jobs:
         chmod +x ".ci/build-mac.sh"
         chmod +x ".ci/deploy-mac.sh"
         ".ci/build-mac.sh"
+        chmod +x ".ci/build-mac-arm64.sh"
+        chmod +x ".ci/deploy-mac-arm64.sh"
         ".ci/build-mac-arm64.sh"
       displayName: Build MacOS
 
