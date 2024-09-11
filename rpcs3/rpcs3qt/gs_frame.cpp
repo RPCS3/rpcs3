@@ -781,6 +781,23 @@ int gs_frame::client_height()
 	return height() * devicePixelRatio();
 }
 
+f64 gs_frame::client_display_rate()
+{
+	f64 rate = 20.; // Minimum is 20
+
+	Emu.BlockingCallFromMainThread([this, &rate]()
+	{
+		const QList<QScreen*> screens = QGuiApplication::screens();
+
+		for (int i = 0; i < screens.count(); i++)
+		{
+			rate = std::fmax(rate, ::at32(screens, i)->refreshRate());
+		}
+	});
+
+	return rate;
+}
+
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
