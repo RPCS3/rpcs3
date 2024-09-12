@@ -34,6 +34,9 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
 
+# NOTE: "--deep" is deprecated
+codesign --deep -fs - RPCS3.app
+
 echo "[InternetShortcut]" > Quickstart.url
 echo "URL=https://rpcs3.net/quickstart" >> Quickstart.url
 echo "IconIndex=0" >> Quickstart.url
