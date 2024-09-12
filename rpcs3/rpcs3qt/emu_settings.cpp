@@ -958,9 +958,11 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<frame_limit_type>(index))
 		{
 		case frame_limit_type::none: return tr("Off", "Frame limit");
+		case frame_limit_type::_30: return tr("30", "Frame limit");
 		case frame_limit_type::_50: return tr("50", "Frame limit");
 		case frame_limit_type::_60: return tr("60", "Frame limit");
-		case frame_limit_type::_30: return tr("30", "Frame limit");
+		case frame_limit_type::_120: return tr("120", "Frame limit");
+		case frame_limit_type::display_rate: return tr("Display", "Frame limit");
 		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
 		case frame_limit_type::_ps3: return tr("PS3 Native", "Frame limit");
 		case frame_limit_type::infinite: return tr("Infinite", "Frame limit");
