@@ -188,7 +188,7 @@ jobs:
     CCACHE_DIR: "/tmp/ccache_dir"
     CCACHE_MAXSIZE: 300M
     CI_HAS_ARTIFACTS: true
-    UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
+    UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac-arm64"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     ARTDIR: $(Build.ArtifactStagingDirectory)
