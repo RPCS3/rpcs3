@@ -1353,6 +1353,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	hide_serial->setChecked(m_hidden_list.contains(serial));
 	QAction* rename_title = manage_game_menu->addAction(tr("&Rename In Game List"));
 
+	// Edit tooltip notes/reset time played
 	QAction* edit_notes = manage_game_menu->addAction(tr("&Edit Tooltip Notes"));
 	QAction* reset_time_played = manage_game_menu->addAction(tr("&Reset Time Played"));
 
@@ -1528,7 +1529,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			gui::utils::open_dir(current_game.path);
 		});
 
-		data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial); // it could be absent for a disc game
+		data_dir_list = GetDirListBySerial(rpcs3::utils::get_hdd0_dir() + "game/", current_game.serial); // It could be absent for a disc game
 	}
 	else
 	{
