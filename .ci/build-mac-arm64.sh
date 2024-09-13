@@ -3,11 +3,12 @@
 brew_arm64_install_packages() {
     for pkg in "$@"; do
         echo "Fetching bottle for $pkg..."
-	"$BREW_ARM64_PATH/bin/brew" fetch --force --bottle-tag=arm64_monterey "$pkg"
         bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_monterey "$pkg")"
         if [ ! -f "$bottle_path" ]; then
-            echo "Failed to fetch bottle for $pkg"
-            return 1
+            if [ ! "$BREW_ARM64_PATH/bin/brew" fetch --force --bottle-tag=arm64_monterey "$pkg" ]; then
+                echo "Failed to fetch bottle for $pkg"
+                return 1
+            fi
         fi
 
         echo "Installing $pkg..."
