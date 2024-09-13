@@ -9,6 +9,7 @@ brew_arm64_install_packages() {
                 echo "Failed to fetch bottle for $pkg"
                 return 1
             fi
+            bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_monterey "$pkg")"
         fi
 
         echo "Installing $pkg..."
