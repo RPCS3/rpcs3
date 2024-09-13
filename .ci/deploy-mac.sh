@@ -39,8 +39,8 @@ install_name_tool \
 -delete_rpath /opt/homebrew1/lib \
 -delete_rpath /opt/homebrew/lib \
 -delete_rpath /usr/local/lib \
-#-delete_rpath /usr/local/Cellar/sdl2/2.30.3/lib \
 -delete_rpath /usr/local/opt/llvm@16/lib RPCS3.app/Contents/MacOS/rpcs3
+#-delete_rpath /usr/local/Cellar/sdl2/2.30.3/lib
 
 # NOTE: "--deep" is deprecated
 codesign --deep -fs - RPCS3.app
