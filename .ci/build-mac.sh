@@ -52,7 +52,8 @@ export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_X64_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
-export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie -macosx_version_min=13.0"
+export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie -D__MAC_OS_X_VERSION_MIN_REQUIRED=130000"
+export CFLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=130000"
 export LIBRARY_PATH="$BREW_X64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_X64_PATH/lib"
 
@@ -100,6 +101,7 @@ export MACOSX_DEPLOYMENT_TARGET=13.0
     -DLLVM_TARGET_ARCH=X86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
+    -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=130000" \
     -G Ninja
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
