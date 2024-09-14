@@ -172,24 +172,28 @@ u16 PadHandlerBase::ConvertAxis(f32 value)
 // using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 // this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
 // This function assumes inX and inY is already in 0-255
-std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, u32 squircle_factor)
+void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
 {
-	// convert inX and Y to a (-1, 1) vector;
-	const f32 x = (inX - 127.5f) / 127.5f;
-	const f32 y = (inY - 127.5f) / 127.5f;
+	if (!squircle_factor)
+		return;
 
-	// compute angle and len of given point to be used for squircle radius
+	constexpr f32 radius = 127.5f;
+
+	// convert inX and Y to a (-1, 1) vector;
+	const f32 x = (inX - radius) / radius;
+	const f32 y = (inY - radius) / radius;
+
+	// compute angle and len of given point to be used for squircle radius. Clamp to circle, we don't want to exceed the squircle.
 	const f32 angle = std::atan2(y, x);
-	const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
+	const f32 distance_to_center = std::min(1.0f, std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f)));
 
 	// now find len/point on the given squircle from our current angle and radius in polar coords
 	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
+	const f32 new_len = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * distance_to_center;
 
 	// we now have len and angle, convert to cartesian
-	const int newX = Clamp0To255(std::round(((newLen * std::cos(angle)) + 1) * 127.5f));
-	const int newY = Clamp0To255(std::round(((newLen * std::sin(angle)) + 1) * 127.5f));
-	return std::tuple<u16, u16>(newX, newY);
+	inX = Clamp0To255(std::round(((new_len * std::cos(angle)) + 1) * radius));
+	inY = Clamp0To255(std::round(((new_len * std::sin(angle)) + 1) * radius));
 }
 
 void PadHandlerBase::init_configs()
@@ -366,7 +370,7 @@ void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 
 	// Apply pad squircling if necessary
 	if (padsquircling != 0)
 	{
-		std::tie(x_out, y_out) = ConvertToSquirclePoint(x_out, y_out, padsquircling);
+		ConvertToSquirclePoint(x_out, y_out, padsquircling);
 	}
 }
 

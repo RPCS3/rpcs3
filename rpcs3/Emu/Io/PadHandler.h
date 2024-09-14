@@ -245,6 +245,7 @@ protected:
 
 	// get clamped value between 0 and 255
 	static u16 Clamp0To255(f32 input);
+
 	// get clamped value between 0 and 1023
 	static u16 Clamp0To1023(f32 input);
 
@@ -255,7 +256,7 @@ protected:
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
 	// This function assumes inX and inY is already in 0-255
-	static std::tuple<u16, u16> ConvertToSquirclePoint(u16 inX, u16 inY, u32 squircle_factor);
+	static void ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
 
 public:
 	// u32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
