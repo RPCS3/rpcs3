@@ -40,7 +40,7 @@ brew_arm64_install_packages 0mq aom aribb24 ca-certificates cjson curl dav1d ffm
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-export MACOSX_DEPLOYMENT_TARGET=12.0
+#export MACOSX_DEPLOYMENT_TARGET=13.0
 export CXX=clang++
 export CC=clang
 
