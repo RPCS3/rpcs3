@@ -545,6 +545,33 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings_type::FrameLimit);
 	SubscribeTooltip(ui->gb_frameLimit, tooltips.settings.frame_limit);
 
+	{
+		const QList<QScreen*> screens = QGuiApplication::screens();
+
+		f64 rate = 20.; // Minimum rate
+
+		for (int i = 0; i < screens.count(); i++)
+		{
+			rate = std::fmax(rate, ::at32(screens, i)->refreshRate());
+		}
+
+		for (int i = 0; i < ui->frameLimitBox->count(); i++)
+		{
+			const QVariantList var_list = ui->frameLimitBox->itemData(i).toList();
+
+			if (var_list.size() != 2 || !var_list[1].canConvert<int>())
+			{
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", i, ui->frameLimitBox->itemText(i), var_list.size(), ui->frameLimitBox->count());
+			}
+
+			if (static_cast<int>(frame_limit_type::display_rate) == var_list[1].toInt())
+			{
+				ui->frameLimitBox->setItemText(i, tr("Display (%1)", "Frame Limit").arg(std::round(rate)));
+				break;
+			}
+		}
+	}
+
 	m_emu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings_type::MSAA);
 	SubscribeTooltip(ui->gb_antiAliasing, tooltips.settings.anti_aliasing);
 

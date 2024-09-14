@@ -1757,7 +1757,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Booting disc game from wrong location
 				sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
-				const std::string games_common = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir());
+				const std::string games_common = rpcs3::utils::get_games_dir();
 				const std::string dst_dir = games_common + sfb_dir.substr(hdd0_game.size());
 
 				// Move and retry from correct location
@@ -4080,6 +4080,56 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 
 	sys_log.notice("Nothing to add in path %s (title_id=%s, category=%s)", path, title_id, cat);
 	return game_boot_result::invalid_file_or_folder;
+}
+
+u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list)
+{
+	if (title_id_list.empty())
+	{
+		return 0;
+	}
+
+	u32 games_removed = 0;
+
+	m_games_config.set_save_on_dirty(false);
+
+	for (const std::string& title_id : title_id_list)
+	{
+		if (RemoveGameFromYml(title_id) == game_boot_result::no_errors)
+		{
+			games_removed++;
+		}
+	}
+
+	m_games_config.set_save_on_dirty(true);
+
+	if (m_games_config.is_dirty() && !m_games_config.save())
+	{
+		sys_log.error("Failed to save games.yml after removing games");
+	}
+
+	return games_removed;
+}
+
+game_boot_result Emulator::RemoveGameFromYml(const std::string& title_id)
+{
+	// Remove title from games.yml
+	switch (m_games_config.remove_game(title_id))
+	{
+	case games_config::result::failure:
+	{
+		sys_log.error("Failed to remove title '%s' (error=%s)", title_id, fs::g_tls_error);
+		return game_boot_result::generic_error;
+	}
+	case games_config::result::success:
+	case games_config::result::exists: // not applicable for m_games_config.remove_game(). Added just to avoid compilation warnings!
+	{
+		sys_log.notice("Removed title '%s'", title_id);
+		return game_boot_result::no_errors;
+	}
+	}
+
+	return game_boot_result::generic_error;
 }
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const

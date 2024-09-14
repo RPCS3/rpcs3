@@ -379,6 +379,8 @@ public:
 	u32 AddGamesFromDir(const std::string& path);
 	game_boot_result AddGame(const std::string& path);
 	game_boot_result AddGameToYml(const std::string& path);
+	u32 RemoveGames(const std::vector<std::string>& title_id_list);
+	game_boot_result RemoveGameFromYml(const std::string& title_id);
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;

@@ -37,7 +37,7 @@ public:
 	~game_list_frame();
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
-	void Refresh(const bool from_drive = false, const bool scroll_after = true);
+	void Refresh(const bool from_drive = false, const std::vector<std::string>& serials_to_remove_from_yml = {}, const bool scroll_after = true);
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
@@ -137,6 +137,10 @@ private:
 	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {});
 	static bool CreateCPUCaches(const game_info& game);
 
+	static bool RemoveContentPath(const std::string& path, const std::string& desc);
+	static u32 RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc);
+	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
+	static std::vector<std::string> GetDirListBySerial(const std::string& base_dir, const std::string& serial);
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();
