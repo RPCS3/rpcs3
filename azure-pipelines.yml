@@ -155,13 +155,13 @@ jobs:
           qt | "$(Agent.OS)" | "$(QT_VER)"
       displayName: Qt cache
     
-    - task: Cache@2
-      inputs:
-        key: brew | "$(Agent.OS)"
-        path: /Users/runner/Library/Caches/Homebrew
-        restoreKeys: |
-          brew | "$(Agent.OS)"
-      displayName: Homebrew cache
+    # - task: Cache@2
+    #   inputs:
+    #     key: brew | "$(Agent.OS)"
+    #     path: /Users/runner/Library/Caches/Homebrew
+    #     restoreKeys: |
+    #       brew | "$(Agent.OS)"
+    #   displayName: Homebrew cache
 
     - bash: |
         chmod +x ".ci/build-mac.sh"
@@ -215,13 +215,13 @@ jobs:
           qt | "$(Agent.OS)" | "$(QT_VER)"
       displayName: Qt cache
     
-    - task: Cache@2
-      inputs:
-        key: brew | "$(Agent.OS)"
-        path: /Users/runner/Library/Caches/Homebrew
-        restoreKeys: |
-          brew | "$(Agent.OS)"
-      displayName: Homebrew cache
+    # - task: Cache@2
+    #   inputs:
+    #     key: brew | "$(Agent.OS)"
+    #     path: /Users/runner/Library/Caches/Homebrew
+    #     restoreKeys: |
+    #       brew | "$(Agent.OS)"
+    #   displayName: Homebrew cache
 
     - bash: |
         chmod +x ".ci/build-mac-arm64.sh"
