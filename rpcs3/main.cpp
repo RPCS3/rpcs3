@@ -61,13 +61,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
-// sysinfo_darwin.mm
-namespace Darwin_Version
-{
-	extern int getNSmajorVersion();
-	extern int getNSminorVersion();
-	extern int getNSpatchVersion();
-}
 #endif
 
 #include "Utilities/Config.h"
@@ -535,16 +528,6 @@ int main(int argc, char** argv)
 	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
 	{
 		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error{static_cast<unsigned long>(res), nullptr}));
-	}
-#endif
-
-#ifdef __APPLE__
-	const int osx_ver_major = Darwin_Version::getNSmajorVersion();
-	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
-	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
-	{
-		const int osx_ver_patch = Darwin_Version::getNSpatchVersion();
-		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", osx_ver_major, osx_ver_minor, osx_ver_patch));
 	}
 #endif
 
