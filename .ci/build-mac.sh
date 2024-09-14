@@ -18,7 +18,7 @@ arch -x86_64 /usr/local/bin/brew link -f llvm@16 ffmpeg@5
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=12.0
+export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 
