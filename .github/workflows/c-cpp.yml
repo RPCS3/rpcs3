@@ -1,0 +1,17 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: [ubuntu-latest, arm64]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: configure
+      run: echo "Hello world"
