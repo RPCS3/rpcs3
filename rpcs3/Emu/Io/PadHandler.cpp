@@ -7,9 +7,7 @@
 
 cfg_input g_cfg_input;
 
-extern void pad_state_notify_state_change(usz index, u32 state);
-
-PadHandlerBase::PadHandlerBase(pad_handler type, bool emulation) : m_type(type), m_emulation(emulation)
+PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
@@ -82,7 +80,7 @@ f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32
 }
 
 // Get normalized trigger value based on the range defined by a threshold
-u16 PadHandlerBase::NormalizeTriggerInput(u16 value, s32 threshold) const
+u16 PadHandlerBase::NormalizeTriggerInput(u16 value, u32 threshold) const
 {
 	if (value <= threshold || threshold >= trigger_max)
 	{
@@ -116,40 +114,39 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, s32 threshold, s32 multip
 	return static_cast<u16>(ScaledInput(static_cast<f32>(scaled_value), 0.0f, static_cast<f32>(thumb_max), static_cast<f32>(threshold)));
 }
 
-// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
+// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13% (default of anti deadzone)
 // X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 // return is new x and y values in 0-255 range
-std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone) const
+std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone, u32 anti_deadzone) const
 {
-	const f32 dz_range = deadzone / static_cast<f32>(std::abs(thumb_max)); // NOTE: thumb_max should be positive anyway
-
 	f32 X = inX / 255.0f;
 	f32 Y = inY / 255.0f;
 
-	if (dz_range > 0.f)
+	const f32 mag = std::min(sqrtf(X * X + Y * Y), 1.f);
+
+	if (mag > 0.f)
 	{
-		const f32 mag = std::min(sqrtf(X * X + Y * Y), 1.f);
+		const f32 dz_max = static_cast<f32>(thumb_max);
+		const f32 dz = deadzone / dz_max;
+		const f32 anti_dz = anti_deadzone / dz_max;
 
-		if (mag <= 0)
-		{
-			return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
-		}
+		f32 pos;
 
-		if (mag > dz_range)
+		if (dz <= 0.f || mag > dz)
 		{
-			const f32 pos = std::lerp(0.13f, 1.f, (mag - dz_range) / (1 - dz_range));
-			const f32 scale = pos / mag;
-			X = X * scale;
-			Y = Y * scale;
+			const f32 range = 1.f - dz;
+			pos = std::lerp(anti_dz, 1.f, (mag - dz) / range);
 		}
 		else
 		{
-			const f32 pos = std::lerp(0.f, 0.13f, mag / dz_range);
-			const f32 scale = pos / mag;
-			X = X * scale;
-			Y = Y * scale;
+			pos = std::lerp(0.f, anti_dz, mag / dz);
 		}
+
+		const f32 scale = pos / mag;
+		X *= scale;
+		Y *= scale;
 	}
+
 	return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
 }
 
@@ -175,79 +172,28 @@ u16 PadHandlerBase::ConvertAxis(f32 value)
 // using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 // this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
 // This function assumes inX and inY is already in 0-255
-std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor)
+void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
 {
-	// convert inX and Y to a (-1, 1) vector;
-	const f32 x = (inX - 127.5f) / 127.5f;
-	const f32 y = (inY - 127.5f) / 127.5f;
+	if (!squircle_factor)
+		return;
 
-	// compute angle and len of given point to be used for squircle radius
+	constexpr f32 radius = 127.5f;
+
+	// convert inX and Y to a (-1, 1) vector;
+	const f32 x = (inX - radius) / radius;
+	const f32 y = (inY - radius) / radius;
+
+	// compute angle and len of given point to be used for squircle radius. Clamp to circle, we don't want to exceed the squircle.
 	const f32 angle = std::atan2(y, x);
-	const f32 r = std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f));
+	const f32 distance_to_center = std::min(1.0f, std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f)));
 
 	// now find len/point on the given squircle from our current angle and radius in polar coords
 	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
+	const f32 new_len = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * distance_to_center;
 
 	// we now have len and angle, convert to cartesian
-	const int newX = Clamp0To255(std::round(((newLen * std::cos(angle)) + 1) * 127.5f));
-	const int newY = Clamp0To255(std::round(((newLen * std::sin(angle)) + 1) * 127.5f));
-	return std::tuple<u16, u16>(newX, newY);
-}
-
-std::string PadHandlerBase::name_string() const
-{
-	return m_name_string;
-}
-
-usz PadHandlerBase::max_devices() const
-{
-	return m_max_devices;
-}
-
-bool PadHandlerBase::has_config() const
-{
-	return b_has_config;
-}
-
-bool PadHandlerBase::has_rumble() const
-{
-	return b_has_rumble;
-}
-
-bool PadHandlerBase::has_motion() const
-{
-	return b_has_motion;
-}
-
-bool PadHandlerBase::has_deadzones() const
-{
-	return b_has_deadzones;
-}
-
-bool PadHandlerBase::has_led() const
-{
-	return b_has_led;
-}
-
-bool PadHandlerBase::has_rgb() const
-{
-	return b_has_rgb;
-}
-
-bool PadHandlerBase::has_player_led() const
-{
-	return b_has_player_led;
-}
-
-bool PadHandlerBase::has_battery() const
-{
-	return b_has_battery;
-}
-
-bool PadHandlerBase::has_pressure_intensity_button() const
-{
-	return b_has_pressure_intensity_button;
+	inX = Clamp0To255(std::round(((new_len * std::cos(angle)) + 1) * radius));
+	inY = Clamp0To255(std::round(((new_len * std::sin(angle)) + 1) * radius));
 }
 
 void PadHandlerBase::init_configs()
@@ -278,10 +224,13 @@ cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
 	return nullptr;
 }
 
-PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& /*buttons*/)
 {
-	if (get_blacklist)
+	if (call_type == gui_call_type::blacklist)
 		blacklist.clear();
+
+	if (call_type == gui_call_type::reset_input || call_type == gui_call_type::blacklist)
+		min_button_values.clear();
 
 	auto device = get_device(pad_id);
 
@@ -293,7 +242,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		return status;
 	}
 
-	if (status == connection::no_data)
+	if (status == connection::no_data || call_type == gui_call_type::get_connection)
 	{
 		return status;
 	}
@@ -312,30 +261,50 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	for (const auto& [keycode, name] : button_list)
 	{
-		const u16& value = data[keycode];
-
-		if (!get_blacklist && blacklist.contains(keycode))
+		if (call_type != gui_call_type::blacklist && blacklist.contains(keycode))
 			continue;
+
+		const u16 value = data[keycode];
+		u16& min_value = min_button_values[keycode];
+
+		if (call_type == gui_call_type::reset_input || value < min_value)
+		{
+			min_value = value;
+			continue;
+		}
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
 		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
-		const bool is_button = !is_trigger && !is_stick;
+		const bool is_touch_motion = !is_trigger && !is_stick && get_is_touch_pad_motion(device, keycode);
+		const bool is_button = !is_trigger && !is_stick && !is_touch_motion;
 
-		if ((is_trigger && (value > m_trigger_threshold)) || (is_stick && (value > m_thumb_threshold)) || (is_button && (value > 0)))
+		if ((is_trigger && (value > m_trigger_threshold)) ||
+			(is_stick && (value > m_thumb_threshold)) ||
+			(is_button && (value > button_press_threshold)) ||
+			(is_touch_motion && (value > touch_threshold)))
 		{
-			if (get_blacklist)
+			if (call_type == gui_call_type::blacklist)
 			{
 				blacklist.insert(keycode);
 				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
+				continue;
 			}
-			else if (value > pressed_button.value)
+
+			const u16 diff = value > min_value ? value - min_value : 0;
+
+			if (diff > button_press_threshold && value > pressed_button.value)
 			{
 				pressed_button = { .value = value, .name = name };
 			}
 		}
 	}
 
-	if (get_blacklist)
+	if (call_type == gui_call_type::reset_input)
+	{
+		return connection::no_data;
+	}
+
+	if (call_type == gui_call_type::blacklist)
 	{
 		if (blacklist.empty())
 			input_log.success("%s Calibration: Blacklist is clear. No input spam detected", m_type);
@@ -344,13 +313,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	if (callback)
 	{
-		const pad_preview_values preview_values = get_preview_values(data);
+		pad_preview_values preview_values = get_preview_values(data);
 		const u32 battery_level = get_battery_level(pad_id);
 
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values));
 		else
-			callback(0, "", pad_id, battery_level, preview_values);
+			callback(0, "", pad_id, battery_level, std::move(preview_values));
 	}
 
 	return status;
@@ -380,7 +349,7 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	}
 
 	// Get the current motion values
-	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0);
+	std::shared_ptr<Pad> pad = std::make_shared<Pad>(m_type, 0, 0, 0, 0);
 	pad->m_sensors.resize(preview_values.size(), AnalogSensor(0, 0, 0, 0, 0));
 	pad_ensemble binding{pad, device, nullptr};
 	get_extended_info(binding);
@@ -393,20 +362,20 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	callback(pad_id, std::move(preview_values));
 }
 
-void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, const s32& x_in, const s32& y_in, const s32& deadzone, const s32& padsquircling) const
+void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const
 {
 	// Normalize our stick axis based on the deadzone
-	std::tie(x_out, y_out) = NormalizeStickDeadzone(x_in, y_in, deadzone);
+	std::tie(x_out, y_out) = NormalizeStickDeadzone(x_in, y_in, deadzone, anti_deadzone);
 
 	// Apply pad squircling if necessary
 	if (padsquircling != 0)
 	{
-		std::tie(x_out, y_out) = ConvertToSquirclePoint(x_out, y_out, padsquircling);
+		ConvertToSquirclePoint(x_out, y_out, padsquircling);
 	}
 }
 
 // Update the pad button values based on their type and thresholds. With this you can use axis or triggers as buttons or vice versa
-void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold, bool ignore_trigger_threshold)
+void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool use_stick_multipliers, bool ignore_stick_threshold, bool ignore_trigger_threshold)
 {
 	if (!device || !device->config)
 	{
@@ -426,12 +395,12 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	else if (get_is_left_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, device->config->lstickmultiplier, ignore_stick_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, use_stick_multipliers ? device->config->lstickmultiplier : 100, ignore_stick_threshold) : 0;
 	}
 	else if (get_is_right_stick(device, keyCode))
 	{
 		pressed = val > (ignore_stick_threshold ? 0 : device->config->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, device->config->rstickmultiplier, ignore_stick_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, use_stick_multipliers ? device->config->rstickmultiplier : 100, ignore_stick_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{
@@ -440,14 +409,14 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
-bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 {
-	if (!pad || player_id >= g_cfg_input.player.size())
+	if (!pad || pad->m_player_id >= g_cfg_input.player.size())
 	{
 		return false;
 	}
 
-	const cfg_player* player_config = g_cfg_input.player[player_id];
+	const cfg_player* player_config = g_cfg_input.player[pad->m_player_id];
 	if (!player_config)
 	{
 		return false;
@@ -460,9 +429,9 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 		return false;
 	}
 
-	m_pad_configs[player_id].from_string(player_config->config.to_string());
-	pad_device->config = &m_pad_configs[player_id];
-	pad_device->player_id = player_id;
+	m_pad_configs[pad->m_player_id].from_string(player_config->config.to_string());
+	pad_device->config = &m_pad_configs[pad->m_player_id];
+	pad_device->player_id = pad->m_player_id;
 	cfg_pad* config = pad_device->config;
 	if (config == nullptr)
 	{
@@ -496,8 +465,17 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id)
 		config->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	if (b_has_pressure_intensity_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
+		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, mapping[button::analog_limiter_button], special_button_value::analog_limiter);
+		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
@@ -595,7 +573,15 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	mapping[button::skateboard_tilt_left]  = FindKeyCodes<u32, u32>(button_list, cfg->tilt_left);
 	mapping[button::skateboard_tilt_right] = FindKeyCodes<u32, u32>(button_list, cfg->tilt_right);
 
-	mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
+	if (b_has_pressure_intensity_button)
+	{
+		mapping[button::pressure_intensity_button] = FindKeyCodes<u32, u32>(button_list, cfg->pressure_intensity_button);
+	}
+
+	if (b_has_analog_limiter_button)
+	{
+		mapping[button::analog_limiter_button] = FindKeyCodes<u32, u32>(button_list, cfg->analog_limiter_button);
+	}
 
 	return mapping;
 }
@@ -616,7 +602,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
-	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get());
+	const bool analog_limiter_enabled = pad->get_analog_limiter_button_active(cfg->analog_limiter_toggle_mode.get(), pad->m_player_id);
+	const bool adjust_pressure = pad->get_pressure_intensity_button_active(cfg->pressure_intensity_toggle_mode.get(), pad->m_player_id);
 	const u32 pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
@@ -630,7 +617,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 			bool press{};
 			u16 val = button_values[code];
 
-			TranslateButtonPress(device, code, press, val);
+			TranslateButtonPress(device, code, press, val, analog_limiter_enabled);
 
 			if (press)
 			{
@@ -672,7 +659,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		{
 			u16 val = button_values[key_min];
 
-			TranslateButtonPress(device, key_min, pressed, val, true);
+			TranslateButtonPress(device, key_min, pressed, val, analog_limiter_enabled, true);
 
 			if (pressed)
 			{
@@ -685,7 +672,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		{
 			u16 val = button_values[key_max];
 
-			TranslateButtonPress(device, key_max, pressed, val, true);
+			TranslateButtonPress(device, key_max, pressed, val, analog_limiter_enabled, true);
 
 			if (pressed)
 			{
@@ -700,8 +687,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{
@@ -748,11 +735,6 @@ void PadHandlerBase::process()
 
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-				if (m_emulation)
-				{
-					pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
-				}
-
 				last_connection_status[i] = true;
 				connected_devices++;
 			}
@@ -776,11 +758,6 @@ void PadHandlerBase::process()
 
 					pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
 
-					if (m_emulation)
-					{
-						pad_state_notify_state_change(i, CELL_PAD_STATUS_CONNECTED);
-					}
-
 					last_connection_status[i] = true;
 					connected_devices++;
 				}
@@ -793,11 +770,6 @@ void PadHandlerBase::process()
 
 				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-
-				if (m_emulation)
-				{
-					pad_state_notify_state_change(i, CELL_PAD_STATUS_DISCONNECTED);
-				}
 
 				last_connection_status[i] = false;
 				connected_devices--;

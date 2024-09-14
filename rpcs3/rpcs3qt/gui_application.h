@@ -13,6 +13,7 @@
 #include "main_application.h"
 
 #include "Emu/System.h"
+#include "Input/raw_mouse_handler.h"
 
 #include <memory>
 #include <functional>
@@ -23,6 +24,8 @@ class main_window;
 class gui_settings;
 class emu_settings;
 class persistent_settings;
+
+extern std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler; // Only used for GUI
 
 /** RPCS3 GUI Application Class
  * The main point of this class is to do application initialization, to hold the main and game windows and to initialize callbacks.

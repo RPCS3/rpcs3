@@ -67,9 +67,6 @@ static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 sta
 // Callback for wait() function for a second custon condition, commonly passed with timeout
 static thread_local bool(*s_tls_one_time_wait_cb)(u64 attempts) = nullptr;
 
-// Callback for notification functions for optimizations
-static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = nullptr;
-
 // Compare data in memory with old value, and return true if they are equal
 static NEVER_INLINE bool ptr_cmp(const void* data, u32 old, atomic_wait::info* ext = nullptr)
 {
@@ -1247,22 +1244,12 @@ void atomic_wait_engine::set_one_time_use_wait_callback(bool(*cb)(u64 progress))
 	s_tls_one_time_wait_cb = cb;
 }
 
-void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
-{
-	s_tls_notify_cb = cb;
-}
-
 void atomic_wait_engine::notify_one(const void* data)
 {
-	if (s_tls_notify_cb)
-		s_tls_notify_cb(data, 0);
-
 #ifdef __linux__
 	if (has_waitv())
 	{
 		futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, 1);
-		if (s_tls_notify_cb)
-			s_tls_notify_cb(data, -1);
 		return;
 	}
 #endif
@@ -1277,23 +1264,15 @@ void atomic_wait_engine::notify_one(const void* data)
 
 		return false;
 	});
-
-	if (s_tls_notify_cb)
-		s_tls_notify_cb(data, -1);
 }
 
 SAFE_BUFFERS(void)
 atomic_wait_engine::notify_all(const void* data)
 {
-	if (s_tls_notify_cb)
-		s_tls_notify_cb(data, 0);
-
 #ifdef __linux__
 	if (has_waitv())
 	{
 		futex(const_cast<void*>(data), FUTEX_WAKE_PRIVATE, INT_MAX);
-		if (s_tls_notify_cb)
-			s_tls_notify_cb(data, -1);
 		return;
 	}
 #endif
@@ -1369,9 +1348,6 @@ atomic_wait_engine::notify_all(const void* data)
 	{
 		cond_free(~*(std::end(cond_ids) - i - 1));
 	}
-
-	if (s_tls_notify_cb)
-		s_tls_notify_cb(data, -1);
 }
 
 namespace atomic_wait

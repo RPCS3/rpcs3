@@ -14,7 +14,7 @@ class pad_led_settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_player_led, bool player_led_enabled, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness);
+	explicit pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_player_led, bool player_led_enabled, bool has_battery, bool has_battery_led, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness);
 	~pad_led_settings_dialog();
 
 	struct led_settings

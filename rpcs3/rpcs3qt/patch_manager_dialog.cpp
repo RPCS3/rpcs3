@@ -154,9 +154,8 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 void patch_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	// Save gui settings
-	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
-	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
-	m_gui_settings->sync();
+	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry(), false);
+	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState(), true);
 
 	QDialog::closeEvent(event);
 }
@@ -211,11 +210,12 @@ void patch_manager_dialog::load_patches(bool show_error)
 
 	bool has_errors = false;
 
-	for (const auto& path : path_list)
+	for (const QString& path : path_list)
 	{
 		if (!patch_engine::load(m_map, patches_path + path.toStdString()))
 		{
 			has_errors = true;
+			patch_log.error("Errors in patch file '%s'", path);
 		}
 	}
 
@@ -402,7 +402,7 @@ void patch_manager_dialog::populate_tree()
 		const auto item = all_title_items[0];
 		ensure(item && all_title_items.size() == 1);
 
-		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); index >= 0)
+		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); item && index >= 0)
 		{
 			const bool all_titles_expanded = item->isExpanded();
 			const auto all_serials_item = item->child(0);
@@ -622,7 +622,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	}
 }
 
-void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous)
+void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeWidgetItem* previous)
 {
 	if (!current)
 	{
@@ -670,7 +670,7 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 					// Update the config value combo box with the new config keys
 					ui->configurable_selector->blockSignals(true);
 					ui->configurable_selector->clear();
-					for (const auto& key : info.config_values.keys())
+					for (const QString& key : info.config_values.keys())
 					{
 						const QVariant& variant = info.config_values.value(key);
 						ensure(variant.canConvert<patch_engine::patch_config_value>());
@@ -708,9 +708,12 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 	}
 
 	update_patch_info(info);
+
+	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
+	current->setData(0, config_key_role, key);
 }
 
-void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*column*/)
+void patch_manager_dialog::handle_item_changed(QTreeWidgetItem* item, int /*column*/)
 {
 	if (!item)
 	{
@@ -1065,9 +1068,10 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 			else
 			{
 				QString message = tr("Errors were found in the patch file.");
-				QMessageBox mb(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
-				mb.setInformativeText(tr("To see the error log, please click \"Show Details\"."));
-				mb.setDetailedText(tr("%0").arg(summary));
+				QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
+				mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
+				mb->setDetailedText(tr("%0").arg(summary));
+				mb->setAttribute(Qt::WA_DeleteOnClose);
 
 				// Smartass hack to make the unresizeable message box wide enough for the changelog
 				const int log_width = QLabel(summary).sizeHint().width();
@@ -1076,8 +1080,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 					message += "          ";
 				}
 
-				mb.setText(message);
-				mb.exec();
+				mb->setText(message);
+				mb->show();
 			}
 		}
 	}
@@ -1277,9 +1281,10 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		else
 		{
 			QString message = tr("Errors were found in the downloaded patch file.");
-			QMessageBox mb(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
-			mb.setInformativeText(tr("To see the error log, please click \"Show Details\"."));
-			mb.setDetailedText(tr("%0").arg(summary));
+			QMessageBox* mb = new QMessageBox(QMessageBox::Icon::Critical, tr("Validation failed"), message, QMessageBox::Ok, this);
+			mb->setInformativeText(tr("To see the error log, please click \"Show Details\"."));
+			mb->setDetailedText(tr("%0").arg(summary));
+			mb->setAttribute(Qt::WA_DeleteOnClose);
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int log_width = QLabel(message).sizeHint().width();
@@ -1288,8 +1293,8 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 				message += "          ";
 			}
 
-			mb.setText(message);
-			mb.exec();
+			mb->setText(message);
+			mb->show();
 		}
 	}
 

@@ -240,11 +240,22 @@
      <addaction name="confTurntableAct"/>
      <addaction name="confUSIOAct"/>
      <addaction name="confPSMoveDS3Act"/>
+     <addaction name="confGunCon3Act"/>
+     <addaction name="confTopShotEliteAct"/>
+     <addaction name="confTopShotFearmasterAct"/>
+    </widget>
+    <widget class="QMenu" name="menuMice">
+     <property name="title">
+      <string>Mice</string>
+     </property>
+     <addaction name="actionBasic_Mouse"/>
+     <addaction name="actionRaw_Mouse"/>
     </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="menuMice"/>
     <addaction name="menuEmulatedPads"/>
     <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
@@ -273,6 +284,7 @@
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Skylanders_Portal"/>
     <addaction name="actionManage_Infinity_Base"/>
+    <addaction name="actionManage_Dimensions_ToyPad"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
@@ -289,6 +301,7 @@
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
+    <addaction name="toolsVfsDialogAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
     <addaction name="separator"/>
@@ -1150,6 +1163,11 @@
     <string>Infinity Base</string>
    </property>
   </action>
+  <action name="actionManage_Dimensions_ToyPad">
+   <property name="text">
+    <string>Dimensions Toypad</string>
+   </property>
+  </action>
   <action name="actionManage_Cheats">
    <property name="text">
     <string>Cheats</string>
@@ -1194,7 +1212,7 @@
     <string>Create Savestate</string>
    </property>
   </action>
-    <action name="actionCreate_Savestate_And_Exit">
+  <action name="actionCreate_Savestate_And_Exit">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -1322,6 +1340,36 @@
   <action name="confPSMoveDS3Act">
    <property name="text">
     <string>PS Move (Fake)</string>
+   </property>
+  </action>
+  <action name="confGunCon3Act">
+   <property name="text">
+    <string>GunCon 3</string>
+   </property>
+  </action>
+  <action name="confTopShotEliteAct">
+   <property name="text">
+    <string>Top Shot Elite</string>
+   </property>
+  </action>
+  <action name="confTopShotFearmasterAct">
+   <property name="text">
+    <string>Top Shot Fearmaster</string>
+   </property>
+  </action>
+  <action name="actionBasic_Mouse">
+   <property name="text">
+    <string>Basic Mouse</string>
+   </property>
+  </action>
+  <action name="actionRaw_Mouse">
+   <property name="text">
+    <string>Raw Mouse</string>
+   </property>
+  </action>
+  <action name="toolsVfsDialogAct">
+   <property name="text">
+    <string>VFS Tool</string>
    </property>
   </action>
  </widget>

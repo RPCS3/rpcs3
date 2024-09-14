@@ -21,7 +21,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager.
 
-* Clang 12+ or GCC 11+
+* Clang 17+ or GCC 13+
 * [CMake 3.28.0+](https://www.cmake.org/download/)
 * [Qt 6.6.3](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
@@ -31,7 +31,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia sdl2 sndio jack2 base-devel
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia qt6-svg sdl2 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 
@@ -42,16 +42,16 @@ Ubuntu is usually horrendously out of date, and some packages need to be downloa
 
 Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is currently no PPA available to work around this.
 
-##### GCC 11.x installation
+##### GCC 13.x installation
 
-If the `gcc-11` package is not available on your system, use the following commands
+If the `gcc-13` package is not available on your system, use the following commands
 ```
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
-sudo apt-get install gcc-11 g++-11
+sudo apt-get install gcc-13 g++-13
 ```
 
-You can either use `update-alternatives` to setup `gcc-11`/`g++-11` as your default compilers or prefix any `cmake` command by `CXX=g++-11 CC=gcc-11 ` to use it.
+You can either use `update-alternatives` to setup `gcc-13`/`g++-13` as your default compilers or prefix any `cmake` command by `CXX=g++-13 CC=gcc-13 ` to use it.
 
 ##### Vulkan SDK
 
@@ -122,7 +122,7 @@ Afterwards:
 While still in the project root:
 
 1) `cd .. && mkdir --parents rpcs3_build && cd rpcs3_build`
-2) `cmake ../rpcs3/ && make` or `CXX=g++-11 CC=gcc-11 cmake ../rpcs3/ && make` to force these compilers
+2) `cmake ../rpcs3/ && make` or `CXX=g++-13 CC=gcc-13 cmake ../rpcs3/ && make` to force these compilers
 3) Run RPCS3 with `./bin/rpcs3`
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).

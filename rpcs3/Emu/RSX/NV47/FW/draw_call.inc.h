@@ -17,7 +17,9 @@ namespace rsx
 		primitive_restart_barrier,
 		vertex_base_modifier_barrier,
 		index_base_modifier_barrier,
-		vertex_array_offset_modifier_barrier
+		vertex_array_offset_modifier_barrier,
+		transform_constant_load_modifier_barrier,
+		transform_constant_update_barrier
 	};
 
 	enum command_execution_flags : u32
@@ -25,6 +27,7 @@ namespace rsx
 		vertex_base_changed = (1 << 0),
 		index_base_changed = (1 << 1),
 		vertex_arrays_changed = (1 << 2),
+		transform_constants_changed = (1 << 3)
 	};
 
 	enum class primitive_class
@@ -40,7 +43,8 @@ namespace rsx
 
 		u32 address;
 		u32 index;
-		u32 arg;
+		u32 arg0;
+		u32 arg1;
 		u32 flags;
 		command_barrier_type type;
 

@@ -149,5 +149,6 @@ void main()
 	ocol = (limit_range == FALSE)
 		? color
 		: ((color * 220.) + 16.) / 255.;
+	ocol.a = 1.f;
 }
 )"

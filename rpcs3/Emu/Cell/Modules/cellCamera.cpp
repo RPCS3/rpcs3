@@ -1679,9 +1679,9 @@ void camera_context::operator()()
 						data3 = 0; // unused
 					}
 
-					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) != 0) [[unlikely]]
+					if (CellError err = queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3)) [[unlikely]]
 					{
-						cellCamera.warning("Failed to send frame update event");
+						cellCamera.warning("Failed to send frame update event (error=0x%x)", err);
 					}
 
 					frame_update_event_sent = true;
@@ -1819,9 +1819,9 @@ void camera_context::send_attach_state(bool attached)
 	{
 		if (auto queue = lv2_event_queue::find(key))
 		{
-			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) != 0) [[unlikely]]
+			if (CellError err = queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0)) [[unlikely]]
 			{
-				cellCamera.warning("Failed to send attach event (attached=%d)", attached);
+				cellCamera.warning("Failed to send attach event (attached=%d, error=0x%x)", attached, err);
 			}
 		}
 	}

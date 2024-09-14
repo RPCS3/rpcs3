@@ -1134,6 +1134,29 @@ namespace rsx
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
+	bool is_int8_remapped_format(u32 format)
+	{
+		switch (format)
+		{
+		case CELL_GCM_TEXTURE_DEPTH24_D8:
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+			// NOTE: Special data formats (XY, HILO, DEPTH) are not RGB formats
+			return false;
+		default:
+			return true;
+		}
+	}
+
 	/**
 	 * A texture is stored as an array of blocks, where a block is a pixel for standard texture
 	 * but is a structure containing several pixels for compressed format
@@ -1525,5 +1548,27 @@ namespace rsx
 	u32 get_max_depth_value(rsx::surface_depth_format2 format)
 	{
 		return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
+	}
+
+	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode)
+	{
+		switch (mode)
+		{
+			// Clamping modes
+			default:
+				rsx_log.error("Unknown texture wrap mode: %d", static_cast<int>(mode));
+				[[ fallthrough ]];
+			case rsx::texture_wrap_mode::border:
+			case rsx::texture_wrap_mode::clamp:
+			case rsx::texture_wrap_mode::clamp_to_edge:
+			case rsx::texture_wrap_mode::mirror_once_clamp_to_edge:
+			case rsx::texture_wrap_mode::mirror_once_border:
+			case rsx::texture_wrap_mode::mirror_once_clamp:
+				return false;
+			// Wrapping modes
+			case rsx::texture_wrap_mode::wrap:
+			case rsx::texture_wrap_mode::mirror:
+				return true;
+		}
 	}
 }

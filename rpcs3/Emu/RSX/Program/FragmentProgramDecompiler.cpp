@@ -68,12 +68,12 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		if (dst.fp16 && device_props.has_native_half_support && !(flags & OPFLAGS::skip_type_cast))
 		{
 			// Cast to native data type
-			code = ClampValue(code, 1);
+			code = ClampValue(code, RSX_FP_PRECISION_HALF);
 		}
 
 		if (dst.saturate)
 		{
-			code = ClampValue(code, 4);
+			code = ClampValue(code, RSX_FP_PRECISION_SATURATE);
 		}
 		else if (dst.prec)
 		{

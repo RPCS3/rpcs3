@@ -15,7 +15,6 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 		m_dst_reg_name = fmt::format("RC%s, ", GetMask());
 		op_name = rsx_fp_op_names[m_opcode] + "XC";
 	}
-
 	else
 	{
 		m_dst_reg_name = fmt::format("%s%d%s, ", dst.fp16 ? "H" : "R", dst.dest_reg, GetMask());
@@ -189,8 +188,8 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 			}
 			break;
 		}
+		break;
 	}
-	break;
 
 	case 2: //const
 		ret += AddConstDisAsm();

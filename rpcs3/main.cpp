@@ -154,7 +154,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	{
 		utils::attach_console(utils::console_stream::std_err, true);
 
-		std::cerr << fmt::format("RPCS3: %s\n", text);
+		utils::output_stderr(fmt::format("RPCS3: %s\n", text));
 #ifdef __linux__
 		jit_announce(0, 0, "");
 #endif
@@ -174,7 +174,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	}
 	else
 	{
-		std::cerr << fmt::format("RPCS3: %s\n", text);
+		utils::output_stderr(fmt::format("RPCS3: %s\n", text));
 	}
 
 	static auto show_report = [is_html, include_help_text](std::string_view text)
@@ -277,7 +277,7 @@ struct fatal_error_listener final : logs::listener
 			utils::attach_console(utils::console_stream::std_err, false);
 
 			// Output to error stream as is
-			std::cerr << _msg;
+			utils::output_stderr(_msg);
 
 #ifdef _WIN32
 			if (IsDebuggerPresent())
@@ -401,7 +401,7 @@ QCoreApplication* create_application(int& argc, char* argv[])
 				{
 					const std::string msg = fmt::format("The command line value %s for %s is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.", arg_val, arg_rounding);
 					sys_log.error("%s", msg); // Don't exit with fatal error. The resulting dialog might be unreadable with dpi problems.
-					std::cerr << msg << std::endl;
+					utils::output_stderr(msg, true);
 				}
 			}
 		}
@@ -491,9 +491,6 @@ int main(int argc, char** argv)
 		report_fatal_error(error);
 	}
 
-	// Before we proceed, run some sanity checks
-	run_platform_sanity_checks();
-
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
 	static fs::file instance_lock;
@@ -546,7 +543,7 @@ int main(int argc, char** argv)
 	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
 	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
 	{
-    	int osx_ver_patch = Darwin_Version::getNSpatchVersion();
+		const int osx_ver_patch = Darwin_Version::getNSpatchVersion();
 		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", osx_ver_major, osx_ver_minor, osx_ver_patch));
 	}
 #endif
@@ -611,6 +608,9 @@ int main(int argc, char** argv)
 		if (i != argc - 1) argument_str += " ";
 	}
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
+
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
 
 #ifdef __linux__
 	struct ::rlimit rlim;

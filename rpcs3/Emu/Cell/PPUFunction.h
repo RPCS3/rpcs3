@@ -305,6 +305,16 @@ public:
 		return addr + index * 8 + (is_code_addr ? 4 : 0);
 	}
 
+	bool is_func(u32 cia) const
+	{
+		if (cia % 4 || !addr || cia < addr)
+		{
+			return false;
+		}
+
+		return (cia - addr) / 8 < access().size();
+	}
+
 	// Allocation address
 	u32 addr = 0;
 

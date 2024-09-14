@@ -66,6 +66,15 @@ namespace rsx
 			return m_refs && *m_refs == 0 ? 0 : m_expiration_time;
 		}
 
+		void message_item::ensure_expired()
+		{
+			// If reference counting is enabled and reached 0 consider it expired
+			if (m_refs)
+			{
+				*m_refs = 0;
+			}
+		}
+
 		bool message_item::text_matches(const std::u32string& text) const
 		{
 			return m_text.text == text;
@@ -165,6 +174,8 @@ namespace rsx
 			{
 				if (it->get_expiration() < cur_time)
 				{
+					// Enusre reference counter is updated on timeout
+					it->ensure_expired();
 					it = vis_set.erase(it);
 				}
 				else

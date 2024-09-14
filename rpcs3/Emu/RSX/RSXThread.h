@@ -33,6 +33,8 @@
 #include "Core/RSXIOMap.hpp"
 #include "Core/RSXVertexTypes.h"
 
+#include "NV47/FW/GRAPH_backend.h"
+
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 extern rsx::frame_trace_data frame_debug;
@@ -121,11 +123,7 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION());
+	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
 
 	struct backend_configuration
 	{
@@ -150,7 +148,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public GCM_context
+	class thread : public cpu_thread, public GCM_context, public GRAPH_backend
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
@@ -196,12 +194,17 @@ namespace rsx
 		// Overlays
 		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
+		atomic_t<u64> m_display_rate_fetch_count = 0;
+		atomic_t<f64> m_cached_display_rate = 60.;
+		f64 get_cached_display_refresh_rate();
+		virtual f64 get_display_refresh_rate() const = 0;
+
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
-		frame_statistics_t m_frame_stats;
+		frame_statistics_t m_frame_stats{};
 
 		// Savestates related
 		u32 m_pause_after_x_flips = 0;
@@ -224,10 +227,7 @@ namespace rsx
 		// Returns [count of found commands, PC of their start]
 		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const;
 
-		void recover_fifo(u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION());
+		void recover_fifo(std::source_location src_loc = std::source_location::current());
 
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
@@ -260,7 +260,7 @@ namespace rsx
 		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
 
-		void capture_frame(const std::string &name);
+		void capture_frame(const std::string& name);
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 	public:
@@ -270,8 +270,8 @@ namespace rsx
 		bool isHLE{ false };
 		bool serialized = false;
 
-		u32 flip_status;
-		int debug_level;
+		u32 flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		int debug_level = CELL_GCM_DEBUG_LEVEL0;
 
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};

@@ -41,12 +41,18 @@ namespace utils
 		RtlCaptureContext(&context);
 
 		STACKFRAME64 stack = {};
-		stack.AddrPC.Offset = context.Rip;
 		stack.AddrPC.Mode = AddrModeFlat;
-		stack.AddrStack.Offset = context.Rsp;
 		stack.AddrStack.Mode = AddrModeFlat;
-		stack.AddrFrame.Offset = context.Rbp;
 		stack.AddrFrame.Mode = AddrModeFlat;
+#if defined(ARCH_X64)
+		stack.AddrPC.Offset = context.Rip;
+		stack.AddrStack.Offset = context.Rsp;
+		stack.AddrFrame.Offset = context.Rbp;
+#elif defined(ARCH_ARM64)
+		stack.AddrPC.Offset = context.Pc;
+		stack.AddrStack.Offset = context.Sp;
+		stack.AddrFrame.Offset = context.Fp;
+#endif
 
 		while (max_depth--)
 		{

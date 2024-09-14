@@ -55,7 +55,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/)
 }
 
 namespace np
@@ -126,8 +126,18 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 	utils::serial ar;
 	ar.set_reading_state({}, true);
 
-	ar.m_file_handler = filepath.ends_with(".gz") ? static_cast<std::unique_ptr<utils::serialization_file_handler>>(make_compressed_serialization_file_handler(std::move(file)))
-		: make_uncompressed_serialization_file_handler(std::move(file));
+	if (filepath.ends_with(".zst"))
+	{
+		ar.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(file));
+	}
+	else if (filepath.ends_with(".gz"))
+	{
+		ar.m_file_handler = make_compressed_serialization_file_handler(std::move(file));
+	}
+	else
+	{
+		ar.m_file_handler = make_uncompressed_serialization_file_handler(std::move(file));
+	}
 
 	if (u64 r = 0; ar.try_read(r) != 0 || r != "RPCS3SAV"_u64)
 	{
@@ -215,7 +225,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	if (abs_id == -1 && rel_id == -1)
 	{
 		// Return directory
-		return fs::get_cache_dir() + "/savestates/" + title + "/";
+		return fs::get_config_dir() + "savestates/" + title + "/";
 	}
 
 	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
@@ -226,7 +236,12 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 	// While not needing to keep a 59 chars long suffix at all times for this purpose
 	const char prefix = ::at32("0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"sv, save_id.size());
 
-	std::string path = fs::get_cache_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+	std::string path = fs::get_config_dir() + "/savestates/" + title + "/" + title + '_' + prefix + '_' + save_id + ".SAVESTAT";
+
+	if (std::string path_compressed = path + ".zst"; fs::is_file(path_compressed))
+	{
+		return path_compressed;
+	}
 
 	if (std::string path_compressed = path + ".gz"; fs::is_file(path_compressed))
 	{
@@ -263,7 +278,7 @@ bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = fs::get_cache_dir() + "/savestates/" + Emu.GetTitleID() + '/';
+		const std::string save_dir = get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), -1, -1);
 
 		std::string savestate_path;
 		s64 mtime = smin;
@@ -278,7 +293,12 @@ bool boot_last_savestate(bool testing)
 			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
 			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
 			{
-				if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
+				if (std::string path = save_dir + entry.name + ".zst"; is_savestate_compatible(fs::file(path), path))
+				{
+					savestate_path = std::move(path);
+					mtime = entry.mtime;
+				}
+				else if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
 				{
 					savestate_path = std::move(path);
 					mtime = entry.mtime;

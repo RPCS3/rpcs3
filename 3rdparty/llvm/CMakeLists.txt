@@ -14,7 +14,7 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_TESTS OFF)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
-		option(LLVM_CCACHE_BUILD ON)
+		option(LLVM_CCACHE_BUILD OFF)
 		set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
 
 		if(WIN32)

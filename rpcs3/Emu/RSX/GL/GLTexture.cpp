@@ -910,6 +910,7 @@ namespace gl
 		case GL_BGRA8:
 			return { true, 4 };
 			// 16-bit
+		case GL_RG8:
 		case GL_RG16:
 		case GL_RG16F:
 		case GL_R16:

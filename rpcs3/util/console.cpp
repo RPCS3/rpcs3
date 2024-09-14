@@ -5,6 +5,8 @@
 #include <stdio.h>
 #endif
 
+#include <iostream>
+
 namespace utils
 {
 	void attach_console([[maybe_unused]] int stream, [[maybe_unused]] bool open_console)
@@ -34,6 +36,26 @@ namespace utils
 		{
 			[[maybe_unused]] const auto con_in = freopen("CONIN$", "r", stdin);
 		}
+#endif
+	}
+
+	void output_stderr(std::string_view str, bool with_endline)
+	{
+		if (with_endline)
+		{
+#ifdef _WIN32
+			std::clog << str;
+#else
+			std::cerr << str;
+#endif
+			str = "\n";
+		}
+
+#ifdef _WIN32
+		// Flush seems broken on Windows (deadlocks)
+		std::clog << str;
+#else
+		std::cerr << str;
 #endif
 	}
 }

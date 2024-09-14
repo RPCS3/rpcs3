@@ -8,6 +8,8 @@
 #include <Emu/IdManager.h>
 #include <Emu/Cell/lv2/sys_event.h>
 
+#include <numeric>
+
 LOG_CHANNEL(cellMic);
 
 template<>
@@ -73,14 +75,13 @@ void mic_context::operator()()
 	// Timestep in microseconds
 	constexpr u64 TIMESTEP = 256ull * 1'000'000ull / 48000ull;
 	u64 timeout = 0;
-	u32 oldvalue = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		if (timeout != 0)
 		{
-			thread_ctrl::wait_on(wakey, oldvalue, timeout);
-			oldvalue = wakey;
+			thread_ctrl::wait_on(wakey, 0, timeout);
+			wakey.store(0);
 		}
 
 		std::lock_guard lock(mutex);
@@ -124,7 +125,7 @@ void mic_context::operator()()
 
 void mic_context::wake_up()
 {
-	wakey++;
+	wakey.store(1);
 	wakey.notify_one();
 }
 
@@ -149,6 +150,8 @@ void mic_context::load_config_and_init()
 			{
 				device.add_device(device_list[1]);
 			}
+
+			wake_up();
 		}
 		else
 		{
@@ -238,14 +241,44 @@ bool mic_context::check_device(u32 dev_num)
 
 // Static functions
 
-void microphone_device::variable_byteswap(const void* src, void* dst, const u32 bytesize)
+template <u32 bytesize>
+inline void microphone_device::variable_byteswap(const void* src, void* dst)
 {
-	switch (bytesize)
+	if constexpr (bytesize == 4)
 	{
-	case 4: *static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src); break;
-	case 2: *static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src); break;
-	default: break;
+		*static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src);
 	}
+	else if constexpr (bytesize == 2)
+	{
+		*static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src);
+	}
+	else
+	{
+		fmt::throw_exception("variable_byteswap with bytesize %d unimplemented", bytesize);
+	}
+}
+
+inline u32 microphone_device::convert_16_bit_pcm_to_float(const std::vector<u8>& buffer, u32 num_bytes)
+{
+	static_assert((float_buf_size % sizeof(f32)) == 0);
+
+	float_buf.resize(float_buf_size, 0);
+	const u32 bytes_to_write = static_cast<u32>(num_bytes * (sizeof(f32) / sizeof(s16)));
+	ensure(bytes_to_write <= float_buf.size());
+
+	const be_t<s16>* src = utils::bless<const be_t<s16>>(buffer.data());
+	be_t<f32>* dst = reinterpret_cast<be_t<f32>*>(float_buf.data());
+
+	for (usz i = 0; i < num_bytes / sizeof(s16); i++)
+	{
+		const be_t<s16> sample = *src++;
+
+		const be_t<f32> normalized_sample_be = std::clamp(static_cast<f32>(sample) / std::numeric_limits<s16>::max(), -1.0f, 1.0f);
+
+		*dst++ = normalized_sample_be;
+	}
+
+	return bytes_to_write;
 }
 
 // Public functions
@@ -257,7 +290,9 @@ microphone_device::microphone_device(microphone_handler type)
 
 void microphone_device::add_device(const std::string& name)
 {
-	device_name.push_back(name);
+	devices.push_back(mic_device{
+		.name = name
+	});
 }
 
 error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32 raw_r, const u8 channels)
@@ -403,39 +438,42 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 
 	aux_samplingrate = dsp_samplingrate = raw_samplingrate; // Same rate for now
 
-	ensure(!device_name.empty());
+	ensure(!devices.empty());
 
-	ALCdevice* device = alcCaptureOpenDevice(device_name[0].c_str(), raw_samplingrate, num_al_channels, inbuf_size);
+	ALCdevice* device = alcCaptureOpenDevice(devices[0].name.c_str(), raw_samplingrate, num_al_channels, inbuf_size);
 
-	if (alcGetError(device) != ALC_NO_ERROR)
+	if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 	{
-		cellMic.error("Error opening capture device %s", device_name[0]);
+		cellMic.error("Error opening capture device %s (error=0x%x, device=*0x%x)", devices[0].name, err, device);
 #ifdef _WIN32
 		cellMic.error("Make sure microphone use is authorized under \"Microphone privacy settings\" in windows configuration");
 #endif
 		return CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT;
 	}
 
-	input_devices.push_back(device);
-	internal_bufs.emplace_back();
-	internal_bufs[0].resize(inbuf_size, 0);
-	temp_buf.resize(inbuf_size, 0);
+	devices[0].device = device;
+	devices[0].buf.resize(inbuf_size, 0);
 
-	if (device_type == microphone_handler::singstar && device_name.size() >= 2)
+	if (device_type == microphone_handler::singstar && devices.size() >= 2)
 	{
 		// Open a 2nd microphone into the same device
-		device = alcCaptureOpenDevice(device_name[1].c_str(), raw_samplingrate, AL_FORMAT_MONO16, inbuf_size);
-		if (alcGetError(device) != ALC_NO_ERROR)
+		device = alcCaptureOpenDevice(devices[1].name.c_str(), raw_samplingrate, AL_FORMAT_MONO16, inbuf_size);
+
+		if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 		{
 			// Ignore it and move on
-			cellMic.error("Error opening 2nd SingStar capture device %s", device_name[1]);
+			cellMic.error("Error opening 2nd SingStar capture device %s (error=0x%x, device=*0x%x)", devices[1].name, err, device);
 		}
 		else
 		{
-			input_devices.push_back(device);
-			internal_bufs.emplace_back();
-			internal_bufs[1].resize(inbuf_size, 0);
+			devices[1].device = device;
+			devices[1].buf.resize(inbuf_size, 0);
 		}
+	}
+
+	if (device_type != microphone_handler::real_singstar)
+	{
+		temp_buf.resize(inbuf_size, 0);
 	}
 
 	sample_size = (bit_resolution / 8) * num_channels;
@@ -451,17 +489,18 @@ error_code microphone_device::close_microphone()
 		stop_microphone();
 	}
 
-	for (const auto& micdevice : input_devices)
+	for (mic_device& micdevice : devices)
 	{
-		if (alcCaptureCloseDevice(micdevice) != ALC_TRUE)
+		if (alcCaptureCloseDevice(micdevice.device) != ALC_TRUE)
 		{
-			cellMic.error("Error closing capture device");
+			cellMic.error("Error closing capture device %s", micdevice.name);
 		}
+
+		micdevice.device = nullptr;
+		micdevice.buf.clear();
 	}
 
-	input_devices.clear();
-	internal_bufs.clear();
-
+	temp_buf.clear();
 	mic_opened = false;
 
 	return CELL_OK;
@@ -469,12 +508,12 @@ error_code microphone_device::close_microphone()
 
 error_code microphone_device::start_microphone()
 {
-	for (const auto& micdevice : input_devices)
+	for (const mic_device& micdevice : devices)
 	{
-		alcCaptureStart(micdevice);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		alcCaptureStart(micdevice.device);
+		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error starting capture");
+			cellMic.error("Error starting capture of device %s (error=0x%x)", micdevice.name, err);
 			stop_microphone();
 			return CELL_MICIN_ERROR_FATAL;
 		}
@@ -487,12 +526,12 @@ error_code microphone_device::start_microphone()
 
 error_code microphone_device::stop_microphone()
 {
-	for (const auto& micdevice : input_devices)
+	for (const mic_device& micdevice : devices)
 	{
-		alcCaptureStop(micdevice);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		alcCaptureStop(micdevice.device);
+		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error stopping capture");
+			cellMic.error("Error stopping capture of device %s (error=0x%x)", micdevice.name, err);
 		}
 	}
 
@@ -510,10 +549,22 @@ void microphone_device::update_audio()
 
 		const u32 num_samples = capture_audio();
 
+		if ((signal_types & CELLMIC_SIGTYPE_RAW) ||
+			(signal_types & CELLMIC_SIGTYPE_DSP))
+		{
+			get_data(num_samples);
+		}
+
 		if (signal_types & CELLMIC_SIGTYPE_RAW)
+		{
 			get_raw(num_samples);
+		}
+
 		if (signal_types & CELLMIC_SIGTYPE_DSP)
+		{
 			get_dsp(num_samples);
+		}
+
 		// TODO: aux?
 	}
 }
@@ -529,21 +580,33 @@ u32 microphone_device::capture_audio()
 
 	u32 num_samples = inbuf_size / sample_size;
 
-	for (const auto micdevice : input_devices)
+	for (const mic_device& micdevice : devices)
 	{
 		ALCint samples_in = 0;
-		alcGetIntegerv(micdevice, ALC_CAPTURE_SAMPLES, 1, &samples_in);
-		if (alcGetError(micdevice) != ALC_NO_ERROR)
+		alcGetIntegerv(micdevice.device, ALC_CAPTURE_SAMPLES, 1, &samples_in);
+
+		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error getting number of captured samples");
+			cellMic.error("Error getting number of captured samples of device %s (error=0x%x)", micdevice.name, err);
 			return CELL_MICIN_ERROR_FATAL;
 		}
+
 		num_samples = std::min<u32>(num_samples, samples_in);
 	}
 
-	for (u32 index = 0; index < input_devices.size(); index++)
+	if (num_samples == 0)
 	{
-		alcCaptureSamples(input_devices[index], internal_bufs[index].data(), num_samples);
+		return 0;
+	}
+
+	for (mic_device& micdevice : devices)
+	{
+		alcCaptureSamples(micdevice.device, micdevice.buf.data(), num_samples);
+
+		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
+		{
+			cellMic.error("Error capturing samples of device %s (error=0x%x)", micdevice.name, err);
+		}
 	}
 
 	return num_samples;
@@ -551,115 +614,123 @@ u32 microphone_device::capture_audio()
 
 // Private functions
 
-void microphone_device::get_raw(const u32 num_samples)
+void microphone_device::get_data(const u32 num_samples)
 {
-	u8* tmp_ptr = temp_buf.data();
+	if (num_samples == 0)
+	{
+		return;
+	}
 
 	switch (device_type)
 	{
 	case microphone_handler::real_singstar:
-		// Straight copy from device
-		memcpy(tmp_ptr, internal_bufs[0].data(), num_samples * (bit_resolution / 8) * num_channels);
+	{
+		// Straight copy from device. No need for intermediate buffer.
 		break;
+	}
 	case microphone_handler::standard:
 	case microphone_handler::rocksmith:
+	{
+		constexpr u8 channel_size = bit_resolution / 8;
+		const usz bufsize = num_samples * sample_size;
+		const std::vector<u8>& buf = ::at32(devices, 0).buf;
+		ensure(bufsize <= buf.size());
+		ensure(bufsize <= temp_buf.size());
+
+		u8* tmp_ptr = temp_buf.data();
+
 		// BE Translation
-		for (u32 index = 0; index < num_samples; index++)
+		for (u32 index = 0; index < bufsize; index += channel_size)
 		{
-			for (u32 indchan = 0; indchan < num_channels; indchan++)
-			{
-				const u32 curindex = (index * sample_size) + indchan * (bit_resolution / 8);
-				microphone_device::variable_byteswap(internal_bufs[0].data() + curindex, tmp_ptr + curindex, bit_resolution / 8);
-			}
+			microphone_device::variable_byteswap<channel_size>(buf.data() + index, tmp_ptr + index);
 		}
 		break;
+	}
 	case microphone_handler::singstar:
+	{
 		ensure(sample_size == 4);
 
-		// Mixing the 2 mics as if channels
-		if (input_devices.size() == 2)
+		// Each device buffer contains 16 bit mono samples
+		const usz bufsize = num_samples * sizeof(u16);
+		const std::vector<u8>& buf_0 = ::at32(devices, 0).buf;
+		ensure(bufsize <= buf_0.size());
+
+		u8* tmp_ptr = temp_buf.data();
+
+		// Mixing the 2 mics into the 2 destination channels
+		if (devices.size() == 2)
 		{
+			const std::vector<u8>& buf_1 = ::at32(devices, 1).buf;
+			ensure(bufsize <= buf_1.size());
+
 			for (u32 index = 0; index < (num_samples * 4); index += 4)
 			{
-				tmp_ptr[index]     = internal_bufs[0][(index / 2)];
-				tmp_ptr[index + 1] = internal_bufs[0][(index / 2) + 1];
-				tmp_ptr[index + 2] = internal_bufs[1][(index / 2)];
-				tmp_ptr[index + 3] = internal_bufs[1][(index / 2) + 1];
+				const u32 src_index = index / 2;
+
+				tmp_ptr[index]     = buf_0[src_index];
+				tmp_ptr[index + 1] = buf_0[src_index + 1];
+				tmp_ptr[index + 2] = buf_1[src_index];
+				tmp_ptr[index + 3] = buf_1[src_index + 1];
 			}
 		}
 		else
 		{
 			for (u32 index = 0; index < (num_samples * 4); index += 4)
 			{
-				tmp_ptr[index]     = internal_bufs[0][(index / 2)];
-				tmp_ptr[index + 1] = internal_bufs[0][(index / 2) + 1];
+				const u32 src_index = index / 2;
+
+				tmp_ptr[index]     = buf_0[src_index];
+				tmp_ptr[index + 1] = buf_0[src_index + 1];
 				tmp_ptr[index + 2] = 0;
 				tmp_ptr[index + 3] = 0;
 			}
 		}
 
 		break;
+	}
 	case microphone_handler::null:
-	default: ensure(false); break;
+		ensure(false);
+		break;
+	}
+}
+
+void microphone_device::get_raw(const u32 num_samples)
+{
+	if (num_samples == 0)
+	{
+		return;
 	}
 
-	rbuf_raw.write_bytes(tmp_ptr, num_samples * sample_size);
-};
+	const std::vector<u8>& buf = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
+	const u32 bufsize = num_samples * sample_size;
+	ensure(bufsize <= buf.size());
+
+	rbuf_raw.write_bytes(buf.data(), bufsize);
+}
 
 void microphone_device::get_dsp(const u32 num_samples)
 {
-	u8* tmp_ptr = temp_buf.data();
-
-	switch (device_type)
+	if (num_samples == 0)
 	{
-	case microphone_handler::real_singstar:
-		// Straight copy from device
-		memcpy(tmp_ptr, internal_bufs[0].data(), num_samples * (bit_resolution / 8) * num_channels);
-		break;
-	case microphone_handler::standard:
-	case microphone_handler::rocksmith:
-		// BE Translation
-		for (u32 index = 0; index < num_samples; index++)
-		{
-			for (u32 indchan = 0; indchan < num_channels; indchan++)
-			{
-				const u32 curindex = (index * sample_size) + indchan * (bit_resolution / 8);
-				microphone_device::variable_byteswap(internal_bufs[0].data() + curindex, tmp_ptr + curindex, bit_resolution / 8);
-			}
-		}
-		break;
-	case microphone_handler::singstar:
-		ensure(sample_size == 4);
-
-		// Mixing the 2 mics as if channels
-		if (input_devices.size() == 2)
-		{
-			for (u32 index = 0; index < (num_samples * 4); index += 4)
-			{
-				tmp_ptr[index]     = internal_bufs[0][(index / 2)];
-				tmp_ptr[index + 1] = internal_bufs[0][(index / 2) + 1];
-				tmp_ptr[index + 2] = internal_bufs[1][(index / 2)];
-				tmp_ptr[index + 3] = internal_bufs[1][(index / 2) + 1];
-			}
-		}
-		else
-		{
-			for (u32 index = 0; index < (num_samples * 4); index += 4)
-			{
-				tmp_ptr[index]     = internal_bufs[0][(index / 2)];
-				tmp_ptr[index + 1] = internal_bufs[0][(index / 2) + 1];
-				tmp_ptr[index + 2] = 0;
-				tmp_ptr[index + 3] = 0;
-			}
-		}
-
-		break;
-	case microphone_handler::null:
-	default: ensure(false); break;
+		return;
 	}
 
-	rbuf_dsp.write_bytes(tmp_ptr, num_samples * sample_size);
-};
+	const std::vector<u8>& buf = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
+	const u32 bufsize = num_samples * sample_size;
+	ensure(bufsize <= buf.size());
+
+	if (attr_dsptype != 0x01)
+	{
+		// Convert 16-bit PCM audio data to 32-bit float (DSP format)
+		const u32 bufsize_float = convert_16_bit_pcm_to_float(buf, bufsize);
+		rbuf_dsp.write_bytes(float_buf.data(), bufsize_float);
+	}
+	else
+	{
+		// The same as device RAW stream format, except that the data byte is always big-endian
+		rbuf_dsp.write_bytes(buf.data(), bufsize);
+	}
+}
 
 /// Initialization/Shutdown Functions
 
@@ -864,7 +935,17 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 		case CELLMIC_DEVATTR_CHANVOL:
 			if (*arg1 > 2 || !arg2)
 				return CELL_MICIN_ERROR_PARAM;
-			*arg2 = ::at32(device.attr_chanvol, *arg1);
+
+			if (*arg1 == 0)
+			{
+				// Calculate average volume of the channels
+				*arg2 = std::accumulate(device.attr_chanvol.begin(), device.attr_chanvol.end(), 0u) / ::size32(device.attr_chanvol);
+			}
+			else
+			{
+				*arg2 = ::at32(device.attr_chanvol, *arg1 - 1);
+			}
+
 			break;
 		case CELLMIC_DEVATTR_LED: *arg1 = device.attr_led; break;
 		case CELLMIC_DEVATTR_GAIN: *arg1 = device.attr_gain; break;
@@ -898,7 +979,16 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 		// Used by SingStar to set the volume of each mic
 		if (arg1 > 2)
 			return CELL_MICIN_ERROR_PARAM;
-		::at32(device.attr_chanvol, arg1) = arg2;
+
+		if (arg1 == 0)
+		{
+			device.attr_chanvol.fill(arg2);
+		}
+		else
+		{
+			::at32(device.attr_chanvol, arg1 - 1) = arg2;
+		}
+
 		break;
 	case CELLMIC_DEVATTR_LED: device.attr_led = arg1; break;
 	case CELLMIC_DEVATTR_GAIN: device.attr_gain = arg1; break;

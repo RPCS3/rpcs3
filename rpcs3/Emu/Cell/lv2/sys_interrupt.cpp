@@ -92,7 +92,7 @@ void lv2_int_serv::join() const
 		std::bit_cast<u64>(&ppu_thread_exit)
 	});
 
-	thread->cmd_notify++;
+	thread->cmd_notify.store(1);
 	thread->cmd_notify.notify_one();
 	(*thread)();
 

@@ -21,7 +21,8 @@ protected:
 	cpu_disasm_mode m_mode{};
 	const u8* m_offset{};
 	const u32 m_start_pc;
-	const std::add_pointer_t<const cpu_thread> m_cpu{};
+	std::add_pointer_t<const cpu_thread> m_cpu{};
+	std::shared_ptr<cpu_thread> m_cpu_handle;
 	u32 m_op = 0;
 
 	void format_by_mode()
@@ -73,6 +74,25 @@ public:
 	const u8* change_ptr(const u8* ptr)
 	{
 		return std::exchange(m_offset, ptr);
+	}
+
+	cpu_thread* get_cpu() const
+	{
+		return const_cast<cpu_thread*>(m_cpu);
+	}
+
+	void set_cpu_handle(std::shared_ptr<cpu_thread> cpu)
+	{
+		m_cpu_handle = std::move(cpu);
+
+		if (!m_cpu)
+		{
+			m_cpu = m_cpu_handle.get();
+		}
+		else
+		{
+			AUDIT(m_cpu == m_cpu_handle.get());
+		}
 	}
 
 protected:

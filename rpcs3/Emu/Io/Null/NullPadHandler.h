@@ -5,7 +5,7 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
-	NullPadHandler(bool emulation) : PadHandlerBase(pad_handler::null, emulation)
+	NullPadHandler() : PadHandlerBase(pad_handler::null)
 	{
 		b_has_pressure_intensity_button = false;
 	}
@@ -47,6 +47,7 @@ public:
 		cfg->l3.def       = "";
 
 		cfg->pressure_intensity_button.def = "";
+		cfg->analog_limiter_button.def = "";
 
 		// Apply defaults
 		cfg->from_default();
@@ -59,7 +60,7 @@ public:
 		return nulllist;
 	}
 
-	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, u8 /*player_id*/) override
+	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/) override
 	{
 		return true;
 	}

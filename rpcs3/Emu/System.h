@@ -19,6 +19,11 @@ void init_fxo_for_exec(utils::serial*, bool);
 enum class localized_string_id;
 enum class video_renderer;
 
+class spu_thread;
+
+template <typename T>
+class named_thread;
+
 enum class system_state : u32
 {
 	stopped,
@@ -186,17 +191,10 @@ public:
 
 	// Call from the GUI thread
 	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* fun = __builtin_FUNCTION()) const;
+		std::source_location src_loc = std::source_location::current()) const;
 
 	// Blocking call from the GUI thread
-	void BlockingCallFromMainThread(std::function<void()>&& func,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* fun = __builtin_FUNCTION()) const;
+	void BlockingCallFromMainThread(std::function<void()>&& func, std::source_location src_loc = std::source_location::current()) const;
 
 	enum class stop_counter_t : u64{};
 
@@ -207,12 +205,9 @@ public:
 	}
 
 	void CallFromMainThread(std::function<void()>&& func, stop_counter_t counter,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* fun = __builtin_FUNCTION()) const
+		std::source_location src_loc = std::source_location::current()) const
 	{
-		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter), line, col, file, fun);
+		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter), src_loc);
 	}
 
 	void PostponeInitCode(std::function<void()>&& func)
@@ -351,6 +346,7 @@ private:
 	struct savestate_stage
 	{
 		bool prepared = false;
+		std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 	};
 public:
 
@@ -377,7 +373,7 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	void ConfigurePPUCache(bool with_title_id = true) const;
+	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
 	u32 AddGamesFromDir(const std::string& path);

@@ -1163,12 +1163,12 @@ void fs::sync()
 #endif
 }
 
-[[noreturn]] void fs::xnull(const src_loc& loc)
+[[noreturn]] void fs::xnull(std::source_location loc)
 {
 	fmt::throw_exception("Null object.%s", loc);
 }
 
-[[noreturn]] void fs::xfail(const src_loc& loc)
+[[noreturn]] void fs::xfail(std::source_location loc)
 {
 	fmt::throw_exception("Unexpected fs::error %s%s", g_tls_error, loc);
 }
@@ -2479,10 +2479,13 @@ bool fs::pending_file::commit(bool overwrite)
 #endif
 
 #ifdef _WIN32
-	// Disable auto-delete
-	FILE_DISPOSITION_INFO disp;
-	disp.DeleteFileW = false;
-	SetFileInformationByHandle(file.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+	if (file)
+	{
+		// Disable auto-delete
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = false;
+		ensure(SetFileInformationByHandle(file.get_handle(), FileDispositionInfo, &disp, sizeof(disp)));
+	}
 #endif
 
 	file.close();

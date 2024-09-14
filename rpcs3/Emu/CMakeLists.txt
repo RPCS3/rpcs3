@@ -25,7 +25,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PRIVATE
-        3rdparty::zlib 3rdparty::yaml-cpp
+        3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
     PUBLIC
         3rdparty::libevdev 3rdparty::flatbuffers)
 
@@ -132,7 +132,7 @@ target_sources(rpcs3_emu PRIVATE
 
 if(USE_FAUDIO)
     find_package(SDL2)
-    if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
+    if(SDL2_FOUND AND SDL2_VERSION VERSION_GREATER_EQUAL 2.0.9)
         target_sources(rpcs3_emu PRIVATE
             Audio/FAudio/FAudioBackend.cpp
             Audio/FAudio/faudio_enumerator.cpp
@@ -390,6 +390,15 @@ target_sources(rpcs3_emu PRIVATE
     CPU/CPUTranslator.cpp
 )
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|arm64|aarch64")
+    target_sources(rpcs3_emu PRIVATE
+        CPU/Backends/AArch64/AArch64ASM.cpp
+        CPU/Backends/AArch64/AArch64Common.cpp
+        CPU/Backends/AArch64/AArch64JIT.cpp
+        CPU/Backends/AArch64/AArch64Signal.cpp
+    )
+endif()
+
 target_link_libraries(rpcs3_emu
     PUBLIC 3rdparty::llvm 3rdparty::asmjit)
 
@@ -398,12 +407,16 @@ target_link_libraries(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     Io/Buzz.cpp
     Io/camera_config.cpp
+    Io/Dimensions.cpp
     Io/GameTablet.cpp
     Io/GHLtar.cpp
+    Io/GunCon3.cpp
     Io/Infinity.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
     Io/midi_config_types.cpp
+    Io/mouse_config.cpp
+    Io/MouseHandler.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp
@@ -414,6 +427,8 @@ target_sources(rpcs3_emu PRIVATE
     Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
     Io/Skylander.cpp
+    Io/TopShotElite.cpp
+    Io/TopShotFearmaster.cpp
     Io/Turntable.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp
@@ -438,6 +453,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
+    NP/rpcn_countries.cpp
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
 )
@@ -486,6 +502,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GSRender.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
     RSX/NV47/HW/nv0039.cpp
@@ -610,4 +627,8 @@ endif()
 
 if(USE_PRECOMPILED_HEADERS)
     target_precompile_headers(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/rpcs3/stdafx.h")
+endif()
+
+if(WAYLAND_FOUND)
+    target_link_libraries(rpcs3_emu PRIVATE OpenGL::EGL)
 endif()

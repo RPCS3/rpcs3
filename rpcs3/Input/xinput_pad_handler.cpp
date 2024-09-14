@@ -14,7 +14,7 @@ namespace XINPUT_INFO
 	};
 } // namespace XINPUT_INFO
 
-xinput_pad_handler::xinput_pad_handler(bool emulation) : PadHandlerBase(pad_handler::xinput, emulation)
+xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -37,6 +37,10 @@ xinput_pad_handler::xinput_pad_handler(bool emulation) : PadHandlerBase(pad_hand
 		{ XInputKeyCodes::Guide,  "Guide" },
 		{ XInputKeyCodes::LT,     "LT" },
 		{ XInputKeyCodes::RT,     "RT" },
+		{ XInputKeyCodes::LT_Pos, "LT+" },
+		{ XInputKeyCodes::LT_Neg, "LT-" },
+		{ XInputKeyCodes::RT_Pos, "RT+" },
+		{ XInputKeyCodes::RT_Neg, "RT-" },
 		{ XInputKeyCodes::LSXNeg, "LS X-" },
 		{ XInputKeyCodes::LSXPos, "LS X+" },
 		{ XInputKeyCodes::LSYPos, "LS Y+" },
@@ -59,6 +63,7 @@ xinput_pad_handler::xinput_pad_handler(bool emulation) : PadHandlerBase(pad_hand
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_battery = true;
+	b_has_battery_led = false;
 
 	m_name_string = "XInput Pad #";
 	m_max_devices = XUSER_MAX_COUNT;
@@ -113,8 +118,11 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	cfg->l3.def       = ::at32(button_list, XInputKeyCodes::LS);
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, XInputKeyCodes::None);
+	cfg->analog_limiter_button.def = ::at32(button_list, XInputKeyCodes::None);
 
 	// Set default misc variables
+	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
+	cfg->rstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
 	cfg->lstickdeadzone.def    = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
 	cfg->rstickdeadzone.def    = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
 	cfg->ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
@@ -134,10 +142,11 @@ void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, 
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects.
-	XINPUT_VIBRATION vibrate;
-
-	vibrate.wLeftMotorSpeed = large_motor * 257;  // between 0 to 65535
-	vibrate.wRightMotorSpeed = small_motor * 257; // between 0 to 65535
+	XINPUT_VIBRATION vibrate
+	{
+		.wLeftMotorSpeed = static_cast<u16>(large_motor * 257), // between 0 to 65535
+		.wRightMotorSpeed = static_cast<u16>(small_motor * 257) // between 0 to 65535
+	};
 
 	xinputSetState(static_cast<u32>(device_number), &vibrate);
 }
@@ -203,19 +212,34 @@ std::unordered_map<u64, u16> xinput_pad_handler::get_button_values(const std::sh
 	// Try SCP first, if it fails for that pad then try normal XInput
 	if (dev->is_scp_device)
 	{
-		return get_button_values_scp(dev->state_scp);
+		return get_button_values_scp(dev->state_scp, m_trigger_recognition_mode);
 	}
 
-	return get_button_values_base(dev->state_base);
+	return get_button_values_base(dev->state_base, m_trigger_recognition_mode);
 }
 
-xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(const XINPUT_STATE& state)
+xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(const XINPUT_STATE& state, trigger_recognition_mode trigger_mode)
 {
 	PadButtonValues values;
 
 	// Triggers
-	values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
-	values[XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::one_directional)
+	{
+		values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
+		values[XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
+	}
+
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::two_directional)
+	{
+		const float lTrigger = state.Gamepad.bLeftTrigger / 255.0f;
+		const float rTrigger = state.Gamepad.bRightTrigger / 255.0f;
+
+		values[XInputKeyCodes::LT_Pos] = static_cast<u16>(lTrigger > 0.5f ? std::clamp((lTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::LT_Neg] = static_cast<u16>(lTrigger < 0.5f ? std::clamp((0.5f - lTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+
+		values[XInputKeyCodes::RT_Pos] = static_cast<u16>(rTrigger > 0.5f ? std::clamp((rTrigger - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Neg] = static_cast<u16>(rTrigger < 0.5f ? std::clamp((0.5f - rTrigger) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+	}
 
 	// Sticks
 	const int lx = state.Gamepad.sThumbLX;
@@ -268,13 +292,25 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(c
 	return values;
 }
 
-xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(const SCP_EXTN& state)
+xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(const SCP_EXTN& state, trigger_recognition_mode trigger_mode)
 {
 	PadButtonValues values;
 
 	// Triggers
-	values[xinput_pad_handler::XInputKeyCodes::LT] = static_cast<u16>(state.SCP_L2 * 255.0f);
-	values[xinput_pad_handler::XInputKeyCodes::RT] = static_cast<u16>(state.SCP_R2 * 255.0f);
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::one_directional)
+	{
+		values[xinput_pad_handler::XInputKeyCodes::LT] = static_cast<u16>(state.SCP_L2 * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::RT] = static_cast<u16>(state.SCP_R2 * 255.0f);
+	}
+
+	if (trigger_mode == trigger_recognition_mode::any || trigger_mode == trigger_recognition_mode::two_directional)
+	{
+		values[XInputKeyCodes::LT_Pos] = static_cast<u16>(state.SCP_L2 > 0.5f ? std::clamp((state.SCP_L2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::LT_Neg] = static_cast<u16>(state.SCP_L2 < 0.5f ? std::clamp((0.5f - state.SCP_L2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+
+		values[XInputKeyCodes::RT_Pos] = static_cast<u16>(state.SCP_R2 > 0.5f ? std::clamp((state.SCP_R2 - 0.5f) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+		values[XInputKeyCodes::RT_Neg] = static_cast<u16>(state.SCP_R2 < 0.5f ? std::clamp((0.5f - state.SCP_R2) * 2.0f * 255.0f, 0.0f, 255.0f) : 0.0f);
+	}
 
 	// Sticks
 	const float lx = state.SCP_LX;
@@ -420,10 +456,10 @@ std::shared_ptr<PadDevice> xinput_pad_handler::get_device(const std::string& dev
 	if (device_number < 0)
 		return nullptr;
 
-	std::shared_ptr<XInputDevice> x_device = std::make_shared<XInputDevice>();
-	x_device->deviceNumber = static_cast<u32>(device_number);
+	std::shared_ptr<XInputDevice> dev = std::make_shared<XInputDevice>();
+	dev->deviceNumber = static_cast<u32>(device_number);
 
-	return x_device;
+	return dev;
 }
 
 bool xinput_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
@@ -539,22 +575,27 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
 	const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
-	dev->newVibrateData |= dev->large_motor != speed_large || dev->small_motor != speed_small;
+	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 
 	dev->large_motor = speed_large;
 	dev->small_motor = speed_small;
 
+	const auto now = steady_clock::now();
+	const auto elapsed = now - dev->last_output;
+
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (dev->newVibrateData && steady_clock::now() - dev->last_vibration > 20ms)
+	if ((dev->new_output_data && elapsed > 20ms) || elapsed > min_output_interval)
 	{
-		XINPUT_VIBRATION vibrate;
-		vibrate.wLeftMotorSpeed = speed_large * 257;  // between 0 to 65535
-		vibrate.wRightMotorSpeed = speed_small * 257; // between 0 to 65535
+		XINPUT_VIBRATION vibrate
+		{
+			.wLeftMotorSpeed = static_cast<u16>(speed_large * 257), // between 0 to 65535
+			.wRightMotorSpeed = static_cast<u16>(speed_small * 257) // between 0 to 65535
+		};
 
 		if (xinputSetState(padnum, &vibrate) == ERROR_SUCCESS)
 		{
-			dev->newVibrateData = false;
-			dev->last_vibration = steady_clock::now();
+			dev->new_output_data = false;
+			dev->last_output = now;
 		}
 	}
 }

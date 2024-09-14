@@ -33,7 +33,9 @@ else()
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
 
-	if (COMPILER_ARM)
+	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
+		add_compile_options(-march=native)
+	elseif(COMPILER_ARM)
 		# This section needs a review. Apple claims armv8.5-a on M-series but doesn't support SVE.
 		# Note that compared to the rest of the 8.x family, 8.1 is very restrictive and we'll have to bump the requirement in future to get anything meaningful.
 		if (APPLE)
@@ -90,10 +92,6 @@ else()
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 
-	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
-		add_compile_options(-march=native)
-	endif()
-
 	if(NOT APPLE AND NOT WIN32)
 		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		add_link_options(-Wl,--exclude-libs,ALL)
@@ -102,10 +100,6 @@ else()
 			add_link_options(-no-pie)
 		endif()
 	elseif(APPLE)
-		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-			add_compile_options(-stdlib=libc++)
-		endif()
-
 		if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
 			add_link_options(-Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000)
 			add_link_options(-Wl,-no_pie)
@@ -119,6 +113,14 @@ else()
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
 
-		add_link_options(-Wl,--image-base,0x10000)
+		# For arm64 windows, the image base cannot be below 4GB or the OS rejects the binary without much explanation.
+		if(COMPILER_X86)
+			add_link_options(-Wl,--image-base,0x10000)
+		endif()
+	endif()
+
+	# Specify C++ library to use as standard C++ when using clang (not required on linux due to GNU)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND (APPLE OR WIN32))
+		add_compile_options(-stdlib=libc++)
 	endif()
 endif()

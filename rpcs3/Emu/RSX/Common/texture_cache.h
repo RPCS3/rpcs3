@@ -695,7 +695,7 @@ namespace rsx
 		//       Otherwise the page protections will end up incorrect and things will break!
 		void unprotect_set(thrashed_set& data)
 		{
-			auto protect_ranges = [this](address_range_vector& _set, utils::protection _prot)
+			auto protect_ranges = [](address_range_vector& _set, utils::protection _prot)
 			{
 				//u32 count = 0;
 				for (auto &range : _set)
@@ -709,7 +709,7 @@ namespace rsx
 				//rsx_log.error("Set protection of %d blocks to 0x%x", count, static_cast<u32>(prot));
 			};
 
-			auto discard_set = [this](std::vector<section_storage_type*>& _set)
+			auto discard_set = [](std::vector<section_storage_type*>& _set)
 			{
 				for (auto* section : _set)
 				{
@@ -2584,7 +2584,7 @@ namespace rsx
 				return rsxthr->get_tiled_memory_region(range);
 			};
 
-			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
 				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, access);
 				if (list.empty())

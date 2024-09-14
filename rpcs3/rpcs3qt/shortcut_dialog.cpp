@@ -91,8 +91,9 @@ void shortcut_dialog::save()
 
 	for (const auto& entry : m_values)
 	{
-		m_gui_settings->SetValue(sc_settings.get_shortcut_gui_save(entry.first), entry.second);
+		m_gui_settings->SetValue(sc_settings.get_shortcut_gui_save(entry.first), entry.second, false);
 	}
+	m_gui_settings->sync();
 
 	Q_EMIT saved();
 }

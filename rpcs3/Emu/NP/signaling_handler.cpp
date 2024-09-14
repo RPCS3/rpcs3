@@ -371,6 +371,7 @@ void signaling_handler::process_incoming_messages()
 			schedule_repeat = false;
 			sent_packet.command = signal_finished_ack;
 			update_ext_si_status(si, false);
+			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TERMINATED_BY_PEER);
 			break;
 		case signal_finished_ack:
 			reply = false;
@@ -593,6 +594,9 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 
 void signaling_handler::update_ext_si_status(std::shared_ptr<signaling_info>& si, bool op_activated)
 {
+	if (!si)
+		return;
+
 	if (op_activated && !si->op_activated)
 	{
 		si->op_activated = true;
@@ -679,7 +683,6 @@ void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 	sent_packet.command = signal_connect;
 	sent_packet.timestamp_sender = get_micro_timestamp(steady_clock::now());
 
-	ensure(sig_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
 
 	const auto now = steady_clock::now();

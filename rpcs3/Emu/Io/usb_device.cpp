@@ -85,7 +85,7 @@ void usb_device_passthrough::send_libusb_transfer(libusb_transfer* transfer)
 		case LIBUSB_ERROR_BUSY: continue;
 		default:
 		{
-			sys_usbd.error("Unexpected error from libusb_submit_transfer: %d", res);
+			sys_usbd.error("Unexpected error from libusb_submit_transfer: %d(%s)", res, libusb_error_name(res));
 			return;
 		}
 		}
@@ -114,7 +114,7 @@ void usb_device_passthrough::read_descriptors()
 		int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
 		if (ssize < 0)
 		{
-			sys_usbd.fatal("Couldn't get the config from the device: %d", ssize);
+			sys_usbd.fatal("Couldn't get the config from the device: %d(%s)", ssize, libusb_error_name(ssize));
 			continue;
 		}
 

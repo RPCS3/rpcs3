@@ -75,9 +75,6 @@
     <ClCompile Include="curl\lib\curl_ntlm_core.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\curl_ntlm_wb.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\curl_path.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -645,9 +642,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_ntlm_core.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\curl_ntlm_wb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_path.h">

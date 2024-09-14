@@ -202,7 +202,7 @@ namespace vk
 			}
 		}
 
-		if (get_chip_class() == chip_class::AMD_vega)
+		if (get_chip_class() == chip_class::AMD_vega && shader_types_support.allow_float16)
 		{
 			// Disable fp16 if driver uses LLVM emitter. It does fine with AMD proprietary drivers though.
 			shader_types_support.allow_float16 = (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY_KHR);
@@ -243,6 +243,11 @@ namespace vk
 
 			if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
 			{
+				if (gpu_name.find("NVK") != umax)
+				{
+					return driver_vendor::NVK;
+				}
+
 				return driver_vendor::NVIDIA;
 			}
 
@@ -258,6 +263,11 @@ namespace vk
 			if (gpu_name.find("llvmpipe") != umax)
 			{
 				return driver_vendor::LAVAPIPE;
+			}
+
+			if (gpu_name.find("V3D") != umax)
+			{
+				return driver_vendor::V3DV;
 			}
 
 			return driver_vendor::unknown;
@@ -281,6 +291,10 @@ namespace vk
 				return driver_vendor::DOZEN;
 			case VK_DRIVER_ID_MESA_LLVMPIPE:
 				return driver_vendor::LAVAPIPE;
+			case VK_DRIVER_ID_MESA_NVK:
+				return driver_vendor::NVK;
+			case VK_DRIVER_ID_MESA_V3DV:
+				return driver_vendor::V3DV;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
@@ -365,7 +379,6 @@ namespace vk
 	// Render Device - The actual usable device
 	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx)
 	{
-		std::string message_on_error;
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
@@ -600,6 +613,13 @@ namespace vk
 			enabled_features.logicOp = VK_FALSE;
 		}
 
+		if (!pgpu->features.textureCompressionBC && pgpu->get_driver_vendor() == driver_vendor::V3DV)
+		{
+			// v3dv supports BC1-BC3 which is all we require, support is reported as false since not all formats are supported
+			rsx_log.error("Your GPU running on the V3DV driver does not support full texture block compression. Graphics may not render correctly.");
+			enabled_features.textureCompressionBC = VK_FALSE;
+		}
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
@@ -673,7 +693,11 @@ namespace vk
 			device.pNext = &synchronization2_info;
 		}
 
-		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
+		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))
+		{
+			dump_debug_info(requested_extensions, enabled_features);
+			vk::die_with_error(error);
+		}
 
 		// Dump some diagnostics to the log
 		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));
@@ -799,6 +823,87 @@ namespace vk
 	{
 		// Rebalance device local memory types
 		memory_map.device_local.rebalance();
+	}
+
+	void render_device::dump_debug_info(
+		const std::vector<const char*>& requested_extensions,
+		const VkPhysicalDeviceFeatures& requested_features) const
+	{
+		rsx_log.notice("Dumping requested extensions...");
+		auto device_extensions = vk::supported_extensions(vk::supported_extensions::enumeration_class::device, nullptr, *pgpu);
+		for (const auto& ext : requested_extensions)
+		{
+			rsx_log.notice("[%s] %s", device_extensions.is_supported(ext) ? "Supported" : "Not supported", ext);
+		}
+
+		rsx_log.notice("Dumping requested features...");
+		const auto& supported_features = pgpu->features;
+
+#define TEST_VK_FEATURE(name) \
+		if (requested_features.name) {\
+			if (supported_features.name) \
+				rsx_log.notice("[Supported] "#name); \
+			else \
+				rsx_log.error("[Not supported] "#name); \
+		}
+
+		TEST_VK_FEATURE(robustBufferAccess);
+		TEST_VK_FEATURE(fullDrawIndexUint32);
+		TEST_VK_FEATURE(imageCubeArray);
+		TEST_VK_FEATURE(independentBlend);
+		TEST_VK_FEATURE(geometryShader);
+		TEST_VK_FEATURE(tessellationShader);
+		TEST_VK_FEATURE(sampleRateShading);
+		TEST_VK_FEATURE(dualSrcBlend);
+		TEST_VK_FEATURE(logicOp);
+		TEST_VK_FEATURE(multiDrawIndirect);
+		TEST_VK_FEATURE(drawIndirectFirstInstance);
+		TEST_VK_FEATURE(depthClamp);
+		TEST_VK_FEATURE(depthBiasClamp);
+		TEST_VK_FEATURE(fillModeNonSolid);
+		TEST_VK_FEATURE(depthBounds);
+		TEST_VK_FEATURE(wideLines);
+		TEST_VK_FEATURE(largePoints);
+		TEST_VK_FEATURE(alphaToOne);
+		TEST_VK_FEATURE(multiViewport);
+		TEST_VK_FEATURE(samplerAnisotropy);
+		TEST_VK_FEATURE(textureCompressionETC2);
+		TEST_VK_FEATURE(textureCompressionASTC_LDR);
+		TEST_VK_FEATURE(textureCompressionBC);
+		TEST_VK_FEATURE(occlusionQueryPrecise);
+		TEST_VK_FEATURE(pipelineStatisticsQuery);
+		TEST_VK_FEATURE(vertexPipelineStoresAndAtomics);
+		TEST_VK_FEATURE(fragmentStoresAndAtomics);
+		TEST_VK_FEATURE(shaderTessellationAndGeometryPointSize);
+		TEST_VK_FEATURE(shaderImageGatherExtended);
+		TEST_VK_FEATURE(shaderStorageImageExtendedFormats);
+		TEST_VK_FEATURE(shaderStorageImageMultisample);
+		TEST_VK_FEATURE(shaderStorageImageReadWithoutFormat);
+		TEST_VK_FEATURE(shaderStorageImageWriteWithoutFormat);
+		TEST_VK_FEATURE(shaderUniformBufferArrayDynamicIndexing);
+		TEST_VK_FEATURE(shaderSampledImageArrayDynamicIndexing);
+		TEST_VK_FEATURE(shaderStorageBufferArrayDynamicIndexing);
+		TEST_VK_FEATURE(shaderStorageImageArrayDynamicIndexing);
+		TEST_VK_FEATURE(shaderClipDistance);
+		TEST_VK_FEATURE(shaderCullDistance);
+		TEST_VK_FEATURE(shaderFloat64);
+		TEST_VK_FEATURE(shaderInt64);
+		TEST_VK_FEATURE(shaderInt16);
+		TEST_VK_FEATURE(shaderResourceResidency);
+		TEST_VK_FEATURE(shaderResourceMinLod);
+		TEST_VK_FEATURE(sparseBinding);
+		TEST_VK_FEATURE(sparseResidencyBuffer);
+		TEST_VK_FEATURE(sparseResidencyImage2D);
+		TEST_VK_FEATURE(sparseResidencyImage3D);
+		TEST_VK_FEATURE(sparseResidency2Samples);
+		TEST_VK_FEATURE(sparseResidency4Samples);
+		TEST_VK_FEATURE(sparseResidency8Samples);
+		TEST_VK_FEATURE(sparseResidency16Samples);
+		TEST_VK_FEATURE(sparseResidencyAliased);
+		TEST_VK_FEATURE(variableMultisampleRate);
+		TEST_VK_FEATURE(inheritedQueries);
+
+#undef TEST_VK_FEATURE
 	}
 
 	// Shared Util

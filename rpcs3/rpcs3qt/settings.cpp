@@ -32,19 +32,24 @@ QString settings::ComputeSettingsDir()
 	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
 }
 
-void settings::RemoveValue(const QString& key, const QString& name) const
+void settings::RemoveValue(const QString& key, const QString& name, bool sync) const
 {
 	if (m_settings)
 	{
 		m_settings->beginGroup(key);
 		m_settings->remove(name);
 		m_settings->endGroup();
+
+		if (sync)
+		{
+			m_settings->sync();
+		}
 	}
 }
 
-void settings::RemoveValue(const gui_save& entry) const
+void settings::RemoveValue(const gui_save& entry, bool sync) const
 {
-	RemoveValue(entry.key, entry.name);
+	RemoveValue(entry.key, entry.name, sync);
 }
 
 QVariant settings::GetValue(const QString& key, const QString& name, const QVariant& def) const
@@ -74,30 +79,35 @@ q_pair_list settings::Var2List(const QVariant& var)
 	return list;
 }
 
-void settings::SetValue(const gui_save& entry, const QVariant& value) const
+void settings::SetValue(const gui_save& entry, const QVariant& value, bool sync) const
 {
-	if (m_settings)
-	{
-		m_settings->beginGroup(entry.key);
-		m_settings->setValue(entry.name, value);
-		m_settings->endGroup();
-	}
+	SetValue(entry.key, entry.name, value, sync);
 }
 
-void settings::SetValue(const QString& key, const QVariant& value) const
+void settings::SetValue(const QString& key, const QVariant& value, bool sync) const
 {
 	if (m_settings)
 	{
 		m_settings->setValue(key, value);
+
+		if (sync)
+		{
+			m_settings->sync();
+		}
 	}
 }
 
-void settings::SetValue(const QString& key, const QString& name, const QVariant& value) const
+void settings::SetValue(const QString& key, const QString& name, const QVariant& value, bool sync) const
 {
 	if (m_settings)
 	{
 		m_settings->beginGroup(key);
 		m_settings->setValue(name, value);
 		m_settings->endGroup();
+
+		if (sync)
+		{
+			m_settings->sync();
+		}
 	}
 }

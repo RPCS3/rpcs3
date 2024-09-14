@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 namespace utils
 {
 	enum console_stream
@@ -10,4 +12,6 @@ namespace utils
 	};
 
 	void attach_console(int stream, bool open_console);
+
+	void output_stderr(std::string_view str, bool with_endline = false);
 }

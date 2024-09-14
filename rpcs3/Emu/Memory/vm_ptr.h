@@ -101,23 +101,31 @@ namespace vm
 			return vm::cast(m_addr);
 		}
 
+		template <bool Strict = false>
 		T* get_ptr() const
 		{
+			if constexpr (Strict)
+			{
+				AUDIT(m_addr);
+			}
+
 			return static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
 		T* operator ->() const requires (!std::is_void_v<T>)
 		{
-			return get_ptr();
+			return get_ptr<true>();
 		}
 
 		std::add_lvalue_reference_t<T> operator *() const requires (!std::is_void_v<T>)
 		{
-			return *static_cast<T*>(vm::base(vm::cast(m_addr)));
+			return *get_ptr<true>();
 		}
 
 		std::add_lvalue_reference_t<T> operator [](u32 index) const requires (!std::is_void_v<T>)
 		{
+			AUDIT(m_addr);
+
 			return *static_cast<T*>(vm::base(vm::cast(m_addr) + u32{sizeof(T)} * index));
 		}
 

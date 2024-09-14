@@ -320,18 +320,37 @@ namespace fmt
 		const uchar* data;
 		usz size;
 
+		base57() = default;
+
 		template <typename T>
-		base57(const T& arg)
-			: data(reinterpret_cast<const uchar*>(&arg))
+		base57(const T& arg) noexcept
+			: data(reinterpret_cast<const uchar*>(std::addressof(arg)))
 			, size(sizeof(T))
 		{
 		}
 
-		base57(const uchar* data, usz size)
+		base57(const uchar* data, usz size) noexcept
 			: data(data)
 			, size(size)
 		{
 		}
+	};
+
+	struct base57_result : public base57
+	{
+		std::unique_ptr<uchar[]> memory;
+
+		base57_result() noexcept = default;
+		base57_result(base57_result&&) = default;
+		base57_result& operator=(base57_result&&) = default;
+
+		explicit base57_result(usz size) noexcept
+			: base57(size ? new uchar[size] : nullptr, size)
+			, memory(const_cast<uchar*>(this->data))
+		{
+		}
+
+		static base57_result from_string(std::string_view str);
 	};
 
 	template <typename... Args>
@@ -357,19 +376,18 @@ namespace fmt
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	[[noreturn]] void raw_throw_exception(const src_loc&, const char*, const fmt_type_info*, const u64*);
+	[[noreturn]] void raw_throw_exception(std::source_location, const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
 	template <typename CharT, usz N, typename... Args>
 	struct throw_exception
 	{
+		struct args_break_t {};
+
 		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT(&fmt)[N], const Args&... args,
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION())
+			args_break_t = args_break_t{}, std::source_location src_loc = std::source_location::current())
 		{
-			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+			raw_throw_exception(src_loc, reinterpret_cast<const char*>(fmt), type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 		}
 
 #ifndef _MSC_VER
@@ -424,11 +442,7 @@ namespace fmt
 
 	// Ensure with formatting
 	template <typename T, typename CharT, usz N, typename... Args>
-	decltype(auto) ensure(T&& arg, const CharT(&fmt)[N], tie<Args...> args,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION()) noexcept
+	decltype(auto) ensure(T&& arg, const CharT(&fmt)[N], tie<Args...> args, std::source_location src_loc = std::source_location::current()) noexcept
 	{
 		if (std::forward<T>(arg)) [[likely]]
 		{
@@ -439,6 +453,6 @@ namespace fmt
 		u64 data[sizeof...(Args) + 1];
 		args.init(data);
 
-		raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_info_v<std::remove_cvref_t<Args>...>, +data);
+		raw_throw_exception(src_loc, reinterpret_cast<const char*>(fmt), type_info_v<std::remove_cvref_t<Args>...>, +data);
 	}
 }

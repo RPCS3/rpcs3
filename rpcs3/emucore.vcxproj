@@ -40,10 +40,12 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;..\3rdparty\llvm\llvm\include;..\3rdparty\llvm\llvm\llvm\include;..\3rdparty\llvm\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
+      <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
     </ClCompile>
     <PreBuildEvent>
       <Command>cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
@@ -69,33 +71,40 @@
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp" />
     <ClCompile Include="Emu\games_config.cpp" />
+    <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
+    <ClCompile Include="Emu\Io\GameTablet.cpp" />
+    <ClCompile Include="Emu\Io\GHLtar.cpp" />
+    <ClCompile Include="Emu\Io\GunCon3.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
+    <ClCompile Include="Emu\Io\MouseHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
     <ClCompile Include="Emu\Io\rb3drums_config.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
+    <ClCompile Include="Emu\Io\TopShotElite.cpp" />
+    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp" />
     <ClCompile Include="Emu\Io\Turntable.cpp" />
-    <ClCompile Include="Emu\Io\GameTablet.cpp" />
-    <ClCompile Include="Emu\Io\GHLtar.cpp" />
-    <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Io\usio.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
     <ClCompile Include="Emu\Io\interception.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
+    <ClCompile Include="Emu\Io\mouse_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
     <ClCompile Include="Emu\IPC_config.cpp" />
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
+    <ClCompile Include="Emu\NP\rpcn_countries.cpp" />
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv0039.cpp" />
@@ -407,6 +416,7 @@
     <ClCompile Include="Emu\Cell\SPUDisAsm.cpp" />
     <ClCompile Include="Emu\Cell\SPUInterpreter.cpp" />
     <ClCompile Include="Emu\IdManager.cpp" />
+    <ClCompile Include="Emu\Io\Dimensions.cpp" />
     <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
@@ -500,7 +510,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />
@@ -525,37 +535,45 @@
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h" />
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
     <ClInclude Include="Emu\config_mode.h" />
+    <ClInclude Include="Emu\CPU\Hypervisor.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
     <ClInclude Include="Emu\games_config.h" />
+    <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\buzz_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
     <ClInclude Include="Emu\Io\emulated_pad_config.h" />
+    <ClInclude Include="Emu\Io\GameTablet.h" />
     <ClInclude Include="Emu\Io\gem_config.h" />
+    <ClInclude Include="Emu\Io\GHLtar.h" />
     <ClInclude Include="Emu\Io\ghltar_config.h" />
+    <ClInclude Include="Emu\Io\guncon3_config.h" />
+    <ClInclude Include="Emu\Io\GunCon3.h" />
+    <ClInclude Include="Emu\Io\interception.h" />
+    <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\midi_config_types.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
     <ClInclude Include="Emu\Io\Null\null_music_handler.h" />
+    <ClInclude Include="Emu\Io\pad_config.h" />
+    <ClInclude Include="Emu\Io\pad_config_types.h" />
+    <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\rb3drums_config.h" />
     <ClInclude Include="Emu\Io\RB3MidiDrums.h" />
     <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
     <ClInclude Include="Emu\Io\RB3MidiKeyboard.h" />
     <ClInclude Include="Emu\Io\recording_config.h" />
+    <ClInclude Include="Emu\Io\TopShotElite.h" />
+    <ClInclude Include="Emu\Io\topshotelite_config.h" />
+    <ClInclude Include="Emu\Io\TopShotFearmaster.h" />
+    <ClInclude Include="Emu\Io\topshotfearmaster_config.h" />
     <ClInclude Include="Emu\Io\Turntable.h" />
-    <ClInclude Include="Emu\Io\GameTablet.h" />
-    <ClInclude Include="Emu\Io\GHLtar.h" />
-    <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\usio.h" />
-    <ClInclude Include="Emu\Io\interception.h" />
-    <ClInclude Include="Emu\Io\pad_types.h" />
-    <ClInclude Include="Emu\Io\Keyboard.h" />
-    <ClInclude Include="Emu\Io\pad_config.h" />
-    <ClInclude Include="Emu\Io\pad_config_types.h" />
     <ClInclude Include="Emu\Io\usio_config.h" />
     <ClInclude Include="Emu\IPC_config.h" />
     <ClInclude Include="Emu\IPC_socket.h" />
@@ -563,6 +581,7 @@
     <ClInclude Include="Emu\localized_string_id.h" />
     <ClInclude Include="Emu\NP\generated\np2_structs_generated.h" />
     <ClInclude Include="Emu\NP\np_handler.h" />
+    <ClInclude Include="Emu\NP\rpcn_countries.h" />
     <ClInclude Include="Emu\NP\signaling_handler.h" />
     <ClInclude Include="Emu\NP\upnp_config.h" />
     <ClInclude Include="Emu\NP\upnp_handler.h" />
@@ -596,6 +615,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.inc.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\reg_context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.define.h" />
@@ -657,7 +677,6 @@
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Emu\vfs_config.h" />
-    <ClInclude Include="Input\raw_mouse_config.h" />
     <ClInclude Include="Loader\disc.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
@@ -733,6 +752,7 @@
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
+    <ClInclude Include="Emu\Io\Dimensions.h" />
     <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
@@ -900,7 +920,6 @@
     <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h" />
-    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\surface_store.h" />
@@ -943,6 +962,12 @@
     </ProjectReference>
     <ProjectReference Include="..\3rdparty\yaml-cpp\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zlib\zlib.vcxproj">
+      <Project>{60f89955-91c6-3a36-8000-13c592fec2df}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zstd\zstd.vcxproj">
+      <Project>{4e52a41a-f33b-4c7a-8c36-a1a6b4f4277c}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

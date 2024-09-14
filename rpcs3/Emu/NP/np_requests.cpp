@@ -187,11 +187,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to CreateRoom command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2CreateJoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -253,11 +254,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to JoinRoom command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2JoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -334,6 +336,7 @@ namespace np
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
 		auto* search_resp = reinterpret_cast<SceNpMatching2SearchRoomResponse*>(edata.data());
+		// The online_name and avatar_url are naturally filtered by the reply from the server
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
@@ -372,10 +375,11 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomDataExternalList command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
 		auto* sce_get_room_ext_resp = reinterpret_cast<SceNpMatching2GetRoomDataExternalListResponse*>(edata.data());
-		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp);
+		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
@@ -440,11 +444,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomDataInternal command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2GetRoomDataInternalResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
@@ -527,11 +532,12 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
 
 		u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
 		auto* mdata_resp = reinterpret_cast<SceNpMatching2GetRoomMemberDataInternalResponse*>(edata.data());
 		auto* mdata_info = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), mdata_resp->roomMemberDataInternal);
-		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info);
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, resp, nullptr, mdata_info, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
@@ -1056,7 +1062,7 @@ namespace np
 		return score_trans->set_result_and_wake(not_an_error(to_copy));
 	}
 
-	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1070,6 +1076,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = false,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1078,6 +1086,25 @@ namespace np
 		get_rpcn()->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
 
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	template <typename T>
+	void set_rankdata_values(T& cur_rank, const ScoreRankData* fb_rankdata)
+	{
+		string_to_npid(fb_rankdata->npId()->string_view(), cur_rank.npId);
+		string_to_online_name(fb_rankdata->onlineName()->string_view(), cur_rank.onlineName);
+
+		static_assert(std::is_same_v<T, SceNpScoreRankData> || std::is_same_v<T, SceNpScoreRankData_deprecated>);
+
+		if constexpr (std::is_same_v<T, SceNpScoreRankData>)
+			cur_rank.pcId = fb_rankdata->pcId();
+
+		cur_rank.serialRank = fb_rankdata->rank();
+		cur_rank.rank = fb_rankdata->rank();
+		cur_rank.highestRank = fb_rankdata->rank();
+		cur_rank.scoreValue = fb_rankdata->score();
+		cur_rank.hasGameData = fb_rankdata->hasGameData();
+		cur_rank.recordDate.tick = fb_rankdata->recordDate();
 	}
 
 	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result)
@@ -1114,8 +1141,10 @@ namespace np
 		memset(tdata->rankArray.get_ptr(), 0, tdata->rankArraySize);
 		auto* fb_rankarray = resp->rankArray();
 
-		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
 		vm::ptr<SceNpScorePlayerRankData> rankPlayerArray = vm::static_ptr_cast<SceNpScorePlayerRankData>(tdata->rankArray);
+		vm::ptr<SceNpScorePlayerRankData_deprecated> rankPlayerArray_deprecated = vm::static_ptr_cast<SceNpScorePlayerRankData_deprecated>(tdata->rankArray);
+		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
+		vm::ptr<SceNpScoreRankData_deprecated> rankArray_deprecated = vm::static_ptr_cast<SceNpScoreRankData_deprecated>(tdata->rankArray);
 
 		for (flatbuffers::uoffset_t i = 0; i < fb_rankarray->size(); i++)
 		{
@@ -1125,27 +1154,30 @@ namespace np
 			if (fb_rankdata->recordDate() == 0)
 				continue;
 
-			SceNpScoreRankData* cur_rank;
-			if (tdata->rankArraySize == (tdata->arrayNum * sizeof(SceNpScoreRankData)))
+			if (tdata->player_rank_data)
 			{
-				cur_rank = &rankArray[i];
+				if (tdata->deprecated)
+				{
+					rankPlayerArray_deprecated[i].hasData = 1;
+					set_rankdata_values(rankPlayerArray_deprecated[i].rankData, fb_rankdata);
+				}
+				else
+				{
+					rankPlayerArray[i].hasData = 1;
+					set_rankdata_values(rankPlayerArray[i].rankData, fb_rankdata);
+				}
 			}
 			else
 			{
-				rankPlayerArray[i].hasData = 1;
-				cur_rank = &rankPlayerArray[i].rankData;
+				if (tdata->deprecated)
+				{
+					set_rankdata_values(rankArray_deprecated[i], fb_rankdata);
+				}
+				else
+				{
+					set_rankdata_values(rankArray[i], fb_rankdata);
+				}
 			}
-
-			string_to_npid(fb_rankdata->npId()->string_view(), cur_rank->npId);
-			string_to_online_name(fb_rankdata->onlineName()->string_view(), cur_rank->onlineName);
-
-			cur_rank->pcId = fb_rankdata->pcId();
-			cur_rank->serialRank = fb_rankdata->rank();
-			cur_rank->rank = fb_rankdata->rank();
-			cur_rank->highestRank = fb_rankdata->rank();
-			cur_rank->scoreValue = fb_rankdata->score();
-			cur_rank->hasGameData = fb_rankdata->hasGameData();
-			cur_rank->recordDate.tick = fb_rankdata->recordDate();
 		}
 
 		if (tdata->commentArray)
@@ -1208,7 +1240,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1221,6 +1253,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = false,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1235,7 +1269,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1248,6 +1282,8 @@ namespace np
 			.arrayNum = arrayNum,
 			.lastSortDate = lastSortDate,
 			.totalRecord = totalRecord,
+			.player_rank_data = true,
+			.deprecated = deprecated,
 		};
 
 		bool with_comments = !!commentArray;

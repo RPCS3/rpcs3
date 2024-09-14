@@ -8,6 +8,10 @@
 #include <QMessageBox>
 #include <QPushButton>
 
+#if QT_CONFIG(permissions)
+#include <QPermissions>
+#endif
+
 LOG_CHANNEL(camera_log, "Camera");
 
 template <>
@@ -225,6 +229,27 @@ void camera_settings_dialog::handle_settings_change(int index)
 		QMessageBox::warning(this, tr("Camera not available"), tr("The selected camera is not available.\nIt might be blocked by another application."));
 		return;
 	}
+
+#if QT_CONFIG(permissions)
+	QCameraPermission permission;
+	switch (qApp->checkPermission(permission))
+	{
+	case Qt::PermissionStatus::Undetermined:
+		camera_log.notice("Requesting camera permission");
+		qApp->requestPermission(permission, this, [this, index]()
+		{
+			handle_settings_change(index);
+		});
+		return;
+	case Qt::PermissionStatus::Denied:
+		camera_log.error("RPCS3 has no permissions to access cameras on this device.");
+		QMessageBox::warning(this, tr("Camera permissions denied!"), tr("RPCS3 has no permissions to access cameras on this device."));
+		return;
+	case Qt::PermissionStatus::Granted:
+		camera_log.notice("Camera permission granted");
+		break;
+	}
+#endif
 
 	if (index >= 0 && ui->combo_settings->itemData(index).canConvert<QCameraFormat>() && ui->combo_camera->currentData().canConvert<QCameraDevice>())
 	{

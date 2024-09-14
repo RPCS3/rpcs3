@@ -26,6 +26,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/InlineAsm.h"
 
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -2936,9 +2937,9 @@ struct llvm_calli
 
 	std::tuple<llvm_expr_t<A>...> a;
 
-	std::array<usz, sizeof...(A)> order_equality_hint = []()
+	std::array<usz, std::max<usz>(sizeof...(A), 1)> order_equality_hint = []()
 	{
-		std::array<usz, sizeof...(A)> r{};
+		std::array<usz, std::max<usz>(sizeof...(A), 1)> r{};
 
 		for (usz i = 0; i < r.size(); i++)
 		{
@@ -2958,7 +2959,7 @@ struct llvm_calli
 	template <usz... I>
 	llvm::Value* eval(llvm::IRBuilder<>* ir, std::index_sequence<I...>) const
 	{
-		llvm::Value* v[sizeof...(A)]{std::get<I>(a).eval(ir)...};
+		llvm::Value* v[std::max<usz>(sizeof...(A), 1)]{std::get<I>(a).eval(ir)...};
 
 		if (c && (llvm::isa<llvm::Constant>(v[I]) || ...))
 		{
@@ -3032,6 +3033,16 @@ struct llvm_calli
 	}
 };
 
+class translator_pass
+{
+public:
+	translator_pass() = default;
+	virtual ~translator_pass() {}
+
+	virtual void run(llvm::IRBuilder<>* irb, llvm::Function& func) = 0;
+	virtual void reset() = 0;
+};
+
 class cpu_translator
 {
 protected:
@@ -3073,9 +3084,24 @@ protected:
 	// IR builder
 	llvm::IRBuilder<>* m_ir = nullptr;
 
+	// CUstomized transformation passes. Technically the intrinsics replacement belongs here.
+	std::vector<std::unique_ptr<translator_pass>> m_transform_passes;
+
 	void initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine);
 
+	// Run intrinsics replacement pass
+	void replace_intrinsics(llvm::Function&);
+
 public:
+	// Register a transformation pass to be run before final compilation by llvm
+	void register_transform_pass(std::unique_ptr<translator_pass>& pass);
+
+	// Delete all transform passes
+	void clear_transforms();
+
+	// Reset internal state of all passes to evict caches and such. Use when resetting a JIT.
+	void reset_transforms();
+
 	// Convert a C++ type to an LLVM type (TODO: remove)
 	template <typename T>
 	llvm::Type* GetType()
@@ -3777,8 +3803,8 @@ public:
 		}
 	}
 
-	// Finalize processing custom intrinsics
-	void replace_intrinsics(llvm::Function&);
+	// Finalize processing
+	void run_transforms(llvm::Function&);
 
 	// Erase store instructions of provided
 	void erase_stores(llvm::ArrayRef<llvm::Value*> args);
@@ -3897,5 +3923,54 @@ struct fmt_unveil<llvm::TypeSize, void>
 		return arg;
 	}
 };
+
+// Inline assembly wrappers.
+// TODO: Move these to proper location and replace macros with templates
+static inline
+llvm::InlineAsm* compile_inline_asm(
+	llvm::Type* returnType,
+	llvm::ArrayRef<llvm::Type*> argTypes,
+	const std::string& code,
+	const std::string& constraints)
+{
+	const auto callSig = llvm::FunctionType::get(returnType, argTypes, false);
+	return llvm::InlineAsm::get(callSig, code, constraints, true, false);
+}
+
+// Helper for ASM generation with dynamic number of arguments
+static inline
+llvm::CallInst* llvm_asm(
+	llvm::IRBuilder<>* irb,
+	const std::string& asm_,
+	llvm::ArrayRef<llvm::Value*> args,
+	const std::string& constraints,
+	llvm::LLVMContext& context)
+{
+	llvm::ArrayRef<llvm::Type*> types_ref = std::nullopt;
+	std::vector<llvm::Type*> types;
+	types.reserve(args.size());
+
+	if (!args.empty())
+	{
+		for (const auto& arg : args)
+		{
+			types.push_back(arg->getType());
+		}
+		types_ref = types;
+	}
+
+	auto return_type = llvm::Type::getVoidTy(context);
+	auto callee = compile_inline_asm(return_type, types_ref, asm_, constraints);
+	auto c = irb->CreateCall(callee, args);
+	c->addFnAttr(llvm::Attribute::AlwaysInline);
+	return c;
+}
+
+#define LLVM_ASM(asm_, args, constraints, irb, ctx)\
+	llvm_asm(irb, asm_, args, constraints, ctx)
+
+// Helper for ASM generation with 0 args
+#define LLVM_ASM_VOID(asm_, irb, ctx)\
+	llvm_asm(irb, asm_, {}, "", ctx)
 
 #endif

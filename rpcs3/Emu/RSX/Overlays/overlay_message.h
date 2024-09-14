@@ -25,6 +25,7 @@ namespace rsx
 
 			void reset_expiration();
 			u64 get_expiration() const;
+			void ensure_expired();
 			compiled_resource& get_compiled() override;
 
 			bool text_matches(const std::u32string& text) const;

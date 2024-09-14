@@ -3,7 +3,7 @@
  <class>pad_settings_dialog</class>
  <widget class="QDialog" name="pad_settings_dialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::WindowModality::WindowModal</enum>
   </property>
   <property name="geometry">
    <rect>
@@ -24,7 +24,7 @@
    <item>
     <widget class="QScrollArea" name="scrollArea">
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="lineWidth">
       <number>0</number>
@@ -36,9 +36,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>0</y>
-        <width>1304</width>
-        <height>837</height>
+        <y>-71</y>
+        <width>1290</width>
+        <height>907</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
@@ -231,7 +231,7 @@
                   <item>
                    <spacer name="dpad_up_spacer_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -275,7 +275,7 @@
                   <item>
                    <spacer name="dpad_up_spacer_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -372,7 +372,7 @@
                   <item>
                    <spacer name="dpad_down_spacer_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -416,7 +416,7 @@
                   <item>
                    <spacer name="dpad_down_spacer_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -468,7 +468,7 @@
                   <item>
                    <spacer name="left_stick_up_spacer_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -512,7 +512,7 @@
                   <item>
                    <spacer name="left_stick_up_spacer_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -609,7 +609,7 @@
                   <item>
                    <spacer name="left_stick_down_spacer_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -653,7 +653,7 @@
                   <item>
                    <spacer name="left_stick_down_spacer_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -664,6 +664,57 @@
                    </spacer>
                   </item>
                  </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_analog_limiter">
+              <property name="title">
+               <string>Analog Limiter</string>
+              </property>
+              <layout class="QHBoxLayout" name="analog_limiter_layout" stretch="2,1,1">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="b_analog_limiter">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="cb_analog_limiter_toggle_mode">
+                 <property name="text">
+                  <string>Toggle</string>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -723,10 +774,22 @@
                <string>Pressure Sensitivity Deadzone</string>
               </property>
               <layout class="QHBoxLayout" name="layout_gb_pressure_intensity_deadzone">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
                <item>
                 <widget class="QSlider" name="pressure_intensity_deadzone">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                 </widget>
                </item>
@@ -784,14 +847,14 @@
                      <item>
                       <widget class="QSlider" name="slider_trigger_left">
                        <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                        <enum>Qt::Orientation::Horizontal</enum>
                        </property>
                       </widget>
                      </item>
                      <item>
                       <widget class="QSlider" name="preview_trigger_left">
                        <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                        <enum>Qt::Orientation::Horizontal</enum>
                        </property>
                       </widget>
                      </item>
@@ -802,14 +865,14 @@
                      <item>
                       <widget class="QSlider" name="slider_trigger_right">
                        <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                        <enum>Qt::Orientation::Horizontal</enum>
                        </property>
                       </widget>
                      </item>
                      <item>
                       <widget class="QSlider" name="preview_trigger_right">
                        <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                        <enum>Qt::Orientation::Horizontal</enum>
                        </property>
                       </widget>
                      </item>
@@ -869,7 +932,7 @@
                 <item>
                  <spacer name="pad_page_spacer">
                   <property name="orientation">
-                   <enum>Qt::Vertical</enum>
+                   <enum>Qt::Orientation::Vertical</enum>
                   </property>
                   <property name="sizeHint" stdset="0">
                    <size>
@@ -930,10 +993,10 @@
                    <item>
                     <spacer name="mouse_accel_x_spacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -960,10 +1023,10 @@
                    <item>
                     <spacer name="mouse_accel_y_spacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1007,10 +1070,10 @@
                    <item>
                     <spacer name="mouse_dz_x_spacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1033,10 +1096,10 @@
                    <item>
                     <spacer name="mouse_dz_y_spacer">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1076,10 +1139,10 @@
                 <item>
                  <spacer name="mouse_page_spacer">
                   <property name="orientation">
-                   <enum>Qt::Vertical</enum>
+                   <enum>Qt::Orientation::Vertical</enum>
                   </property>
                   <property name="sizeType">
-                   <enum>QSizePolicy::MinimumExpanding</enum>
+                   <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                   </property>
                   <property name="sizeHint" stdset="0">
                    <size>
@@ -1096,10 +1159,10 @@
             <item>
              <spacer name="verticalSpacer_left">
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Orientation::Vertical</enum>
               </property>
               <property name="sizeType">
-               <enum>QSizePolicy::MinimumExpanding</enum>
+               <enum>QSizePolicy::Policy::MinimumExpanding</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -1197,7 +1260,7 @@
                   <item>
                    <spacer name="spacer_select_start_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1272,7 +1335,7 @@
                   <item>
                    <spacer name="spacer_select_start_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1305,7 +1368,7 @@
                    <item>
                     <spacer name="spacer_ps_button_left">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1349,7 +1412,7 @@
                    <item>
                     <spacer name="spacer_ps_button_right">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -1468,7 +1531,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignBottom|Qt::AlignHCenter</set>
+                  <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignHCenter</set>
                  </property>
                 </widget>
                </item>
@@ -1483,7 +1546,7 @@
               <item>
                <spacer name="spacer_middle_bottom_left">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -1558,7 +1621,7 @@
               <item>
                <spacer name="spacer_middle_bottom_right">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -1663,10 +1726,10 @@
             <item>
              <spacer name="verticalSpacer_middle">
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Orientation::Vertical</enum>
               </property>
               <property name="sizeType">
-               <enum>QSizePolicy::MinimumExpanding</enum>
+               <enum>QSizePolicy::Policy::MinimumExpanding</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -1688,10 +1751,10 @@
                   <string notr="true">This text should be replaced by an actual description.&lt;br/&gt;&lt;br/&gt;</string>
                  </property>
                  <property name="textFormat">
-                  <enum>Qt::RichText</enum>
+                  <enum>Qt::TextFormat::RichText</enum>
                  </property>
                  <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                  <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
                  </property>
                  <property name="wordWrap">
                   <bool>true</bool>
@@ -1747,7 +1810,7 @@
                   <item>
                    <spacer name="spacer_triangle_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1791,7 +1854,7 @@
                   <item>
                    <spacer name="spacer_triangle_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1888,7 +1951,7 @@
                   <item>
                    <spacer name="spacer_cross_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1932,7 +1995,7 @@
                   <item>
                    <spacer name="spacer_cross_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -1984,7 +2047,7 @@
                   <item>
                    <spacer name="spacer_right_stick_up_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -2028,7 +2091,7 @@
                   <item>
                    <spacer name="spacer_right_stick_up_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -2125,7 +2188,7 @@
                   <item>
                    <spacer name="spacer_right_stick_down_left">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -2169,7 +2232,7 @@
                   <item>
                    <spacer name="spacer_right_stick_down_right">
                     <property name="orientation">
-                     <enum>Qt::Horizontal</enum>
+                     <enum>Qt::Orientation::Horizontal</enum>
                     </property>
                     <property name="sizeHint" stdset="0">
                      <size>
@@ -2186,9 +2249,165 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_squircle">
+              <property name="title">
+               <string>Squircle Values</string>
+              </property>
+              <layout class="QHBoxLayout" name="layout_squircle">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_squircle_left">
+                 <property name="text">
+                  <string>Left</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="squircle_left">
+                 <property name="maximum">
+                  <number>1000000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>1000</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="spacer_squircle_left">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_squircle_right">
+                 <property name="text">
+                  <string>Right</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSpinBox" name="squircle_right">
+                 <property name="maximum">
+                  <number>1000000</number>
+                 </property>
+                 <property name="singleStep">
+                  <number>1000</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="spacer_squircle_right">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_stick_multi">
+              <property name="title">
+               <string>Stick Multipliers</string>
+              </property>
+              <layout class="QHBoxLayout" name="gb_stick_multi_layout">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="label_stick_multi_left">
+                 <property name="text">
+                  <string>Left</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QDoubleSpinBox" name="stick_multi_left">
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="spacer_stick_multi_left">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_stick_multi_right">
+                 <property name="text">
+                  <string>Right</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QDoubleSpinBox" name="stick_multi_right">
+                 <property name="singleStep">
+                  <double>0.100000000000000</double>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="spacer_stick_multi_right">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QStackedWidget" name="right_stack">
               <property name="currentIndex">
-               <number>0</number>
+               <number>1</number>
               </property>
               <widget class="QWidget" name="stick_page">
                <layout class="QVBoxLayout" name="stick_page_layout">
@@ -2205,11 +2424,11 @@
                  <number>0</number>
                 </property>
                 <item>
-                 <widget class="QGroupBox" name="gb_stick_multi">
+                 <widget class="QGroupBox" name="gb_stick_deadzones">
                   <property name="title">
-                   <string>Stick Multipliers</string>
+                   <string>Analog Stick Deadzones</string>
                   </property>
-                  <layout class="QHBoxLayout" name="gb_stick_multi_layout">
+                  <layout class="QHBoxLayout" name="gb_stick_deadzones_layout">
                    <property name="leftMargin">
                     <number>5</number>
                    </property>
@@ -2223,68 +2442,28 @@
                     <number>5</number>
                    </property>
                    <item>
-                    <widget class="QLabel" name="label_stick_multi_left">
-                     <property name="text">
-                      <string>Left</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QDoubleSpinBox" name="stick_multi_left">
-                     <property name="singleStep">
-                      <double>0.100000000000000</double>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_stick_multi_left">
+                    <widget class="QSlider" name="slider_stick_left">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_stick_multi_right">
-                     <property name="text">
-                      <string>Right</string>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QDoubleSpinBox" name="stick_multi_right">
-                     <property name="singleStep">
-                      <double>0.100000000000000</double>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_stick_multi_right">
+                    <widget class="QSlider" name="slider_stick_right">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
+                    </widget>
                    </item>
                   </layout>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QGroupBox" name="gb_squircle">
+                 <widget class="QGroupBox" name="gb_stick_anti_deadzones">
                   <property name="title">
-                   <string>Squircle Values</string>
+                   <string>Analog Stick Anti-Deadzones</string>
                   </property>
-                  <layout class="QHBoxLayout" name="layout_squircle">
+                  <layout class="QHBoxLayout" name="gb_stick_anti_deadzones_layout">
                    <property name="leftMargin">
                     <number>5</number>
                    </property>
@@ -2298,61 +2477,18 @@
                     <number>5</number>
                    </property>
                    <item>
-                    <widget class="QLabel" name="label_squircle_left">
-                     <property name="text">
-                      <string>Left</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QSpinBox" name="squircle_left">
-                     <property name="maximum">
-                      <number>1000000</number>
-                     </property>
-                     <property name="singleStep">
-                      <number>1000</number>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_squircle_left">
+                    <widget class="QSlider" name="anti_deadzone_slider_stick_left">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_squircle_right">
-                     <property name="text">
-                      <string>Right</string>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QSpinBox" name="squircle_right">
-                     <property name="maximum">
-                      <number>1000000</number>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_squircle_right">
+                    <widget class="QSlider" name="anti_deadzone_slider_stick_right">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
+                    </widget>
                    </item>
                   </layout>
                  </widget>
@@ -2382,54 +2518,27 @@
                      </property>
                     </widget>
                    </item>
-                  </layout>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QGroupBox" name="gb_sticks">
-                  <property name="title">
-                   <string>Analog Stick Deadzones</string>
-                  </property>
-                  <layout class="QHBoxLayout" name="gb_sticks_layout">
-                   <property name="leftMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>5</number>
-                   </property>
                    <item>
-                    <layout class="QVBoxLayout" name="gb_stick_left">
-                     <item>
-                      <widget class="QSlider" name="slider_stick_left">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
-                       </property>
-                      </widget>
-                     </item>
+                    <layout class="QHBoxLayout" name="gb_stick_previews_layout">
+                     <property name="leftMargin">
+                      <number>5</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>5</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>5</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>5</number>
+                     </property>
                      <item>
                       <widget class="QLabel" name="preview_stick_left">
                        <property name="text">
                         <string/>
                        </property>
                        <property name="alignment">
-                        <set>Qt::AlignCenter</set>
-                       </property>
-                      </widget>
-                     </item>
-                    </layout>
-                   </item>
-                   <item>
-                    <layout class="QVBoxLayout" name="gb_stick_right">
-                     <item>
-                      <widget class="QSlider" name="slider_stick_right">
-                       <property name="orientation">
-                        <enum>Qt::Horizontal</enum>
+                        <set>Qt::AlignmentFlag::AlignCenter</set>
                        </property>
                       </widget>
                      </item>
@@ -2439,7 +2548,7 @@
                         <string/>
                        </property>
                        <property name="alignment">
-                        <set>Qt::AlignCenter</set>
+                        <set>Qt::AlignmentFlag::AlignCenter</set>
                        </property>
                       </widget>
                      </item>
@@ -2464,81 +2573,6 @@
                 <property name="bottomMargin">
                  <number>0</number>
                 </property>
-                <item>
-                 <widget class="QGroupBox" name="gb_kb_stick_multi">
-                  <property name="title">
-                   <string>Stick Multipliers</string>
-                  </property>
-                  <layout class="QHBoxLayout" name="gb_kb_stick_multi_layout">
-                   <property name="leftMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>5</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>5</number>
-                   </property>
-                   <item>
-                    <widget class="QLabel" name="label_kb_stick_multi_left">
-                     <property name="text">
-                      <string>Left</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QDoubleSpinBox" name="kb_stick_multi_left">
-                     <property name="singleStep">
-                      <double>0.100000000000000</double>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_kb_stick_multi_left">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_kb_stick_multi_right">
-                     <property name="text">
-                      <string>Right</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QDoubleSpinBox" name="kb_stick_multi_right">
-                     <property name="singleStep">
-                      <double>0.100000000000000</double>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="spacer_kb_stick_multi_right">
-                     <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>0</width>
-                       <height>0</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                  </layout>
-                 </widget>
-                </item>
                 <item>
                  <widget class="QGroupBox" name="gb_stick_lerp">
                   <property name="title">
@@ -2574,10 +2608,10 @@
                    <item>
                     <spacer name="horizontalSpacer_27">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -2604,10 +2638,10 @@
                    <item>
                     <spacer name="horizontalSpacer_28">
                      <property name="orientation">
-                      <enum>Qt::Horizontal</enum>
+                      <enum>Qt::Orientation::Horizontal</enum>
                      </property>
                      <property name="sizeType">
-                      <enum>QSizePolicy::MinimumExpanding</enum>
+                      <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                      </property>
                      <property name="sizeHint" stdset="0">
                       <size>
@@ -2623,10 +2657,10 @@
                 <item>
                  <spacer name="keyboard_page_spacer">
                   <property name="orientation">
-                   <enum>Qt::Vertical</enum>
+                   <enum>Qt::Orientation::Vertical</enum>
                   </property>
                   <property name="sizeType">
-                   <enum>QSizePolicy::MinimumExpanding</enum>
+                   <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                   </property>
                   <property name="sizeHint" stdset="0">
                    <size>
@@ -2643,10 +2677,10 @@
             <item>
              <spacer name="verticalSpacer_right">
               <property name="orientation">
-               <enum>Qt::Vertical</enum>
+               <enum>Qt::Orientation::Vertical</enum>
               </property>
               <property name="sizeType">
-               <enum>QSizePolicy::MinimumExpanding</enum>
+               <enum>QSizePolicy::Policy::MinimumExpanding</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -2668,7 +2702,7 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Reset|QDialogButtonBox::RestoreDefaults|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Reset|QDialogButtonBox::StandardButton::RestoreDefaults|QDialogButtonBox::StandardButton::Save</set>
      </property>
      <property name="centerButtons">
       <bool>false</bool>

@@ -46,8 +46,8 @@ public:
 
 private Q_SLOTS:
 	void filter_patches(const QString& term);
-	void handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous);
-	void handle_item_changed(QTreeWidgetItem *item, int column);
+	void handle_item_selected(QTreeWidgetItem* current, QTreeWidgetItem* previous);
+	void handle_item_changed(QTreeWidgetItem* item, int column);
 	void handle_config_value_changed(double value);
 	void handle_custom_context_menu_requested(const QPoint& pos);
 	void handle_show_owned_games_only(int state);

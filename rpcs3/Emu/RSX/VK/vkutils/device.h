@@ -129,6 +129,10 @@ namespace vk
 		u32 m_present_queue_family = 0;
 		u32 m_transfer_queue_family = 0;
 
+		void dump_debug_info(
+			const std::vector<const char*>& requested_extensions,
+			const VkPhysicalDeviceFeatures& requested_features) const;
+
 	public:
 		// Exported device endpoints
 		PFN_vkCmdBeginConditionalRenderingEXT _vkCmdBeginConditionalRenderingEXT = nullptr;

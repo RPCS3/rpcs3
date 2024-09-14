@@ -22,6 +22,10 @@
 	<string>${RPCS3_GIT_TAG}</string>
 	<key>CFBundleVersion</key>
 	<string>${RPCS3_GIT_TAG}</string>
+ 	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>Licensed under GPLv2</string>
 	<key>NSHighResolutionCapable</key>

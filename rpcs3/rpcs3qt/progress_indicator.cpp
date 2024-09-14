@@ -46,6 +46,13 @@ void progress_indicator::show(QWindow* window)
 #endif
 }
 
+void progress_indicator::hide()
+{
+#ifdef HAS_QT_WIN_STUFF
+	m_tb_button->progress()->hide();
+#endif
+}
+
 int progress_indicator::value() const
 {
 #ifdef HAS_QT_WIN_STUFF

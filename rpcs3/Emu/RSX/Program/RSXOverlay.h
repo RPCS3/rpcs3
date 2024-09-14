@@ -7,7 +7,7 @@ namespace rsx
 	namespace overlays
 	{
 		// This is overlay common code meant only for render backends
-		enum class texture_sampling_mode: s32
+		enum class texture_sampling_mode : s32
 		{
 			none = 0,
 			font2D = 1,

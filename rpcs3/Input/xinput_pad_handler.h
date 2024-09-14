@@ -78,6 +78,11 @@ class xinput_pad_handler final : public PadHandlerBase
 		LT,
 		RT,
 
+		LT_Pos,
+		LT_Neg,
+		RT_Pos,
+		RT_Neg,
+
 		LSXNeg,
 		LSXPos,
 		LSYNeg,
@@ -93,8 +98,6 @@ class xinput_pad_handler final : public PadHandlerBase
 	struct XInputDevice : public PadDevice
 	{
 		u32 deviceNumber{ 0 };
-		bool newVibrateData{ true };
-		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
 		SCP_EXTN state_scp{};
@@ -102,7 +105,7 @@ class xinput_pad_handler final : public PadHandlerBase
 	};
 
 public:
-	xinput_pad_handler(bool emulation);
+	xinput_pad_handler();
 	~xinput_pad_handler();
 
 	bool Init() override;
@@ -120,8 +123,8 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 	int GetDeviceNumber(const std::string& padId);
-	static PadButtonValues get_button_values_base(const XINPUT_STATE& state);
-	static PadButtonValues get_button_values_scp(const SCP_EXTN& state);
+	static PadButtonValues get_button_values_base(const XINPUT_STATE& state, trigger_recognition_mode trigger_mode);
+	static PadButtonValues get_button_values_scp(const SCP_EXTN& state, trigger_recognition_mode trigger_mode);
 
 	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };

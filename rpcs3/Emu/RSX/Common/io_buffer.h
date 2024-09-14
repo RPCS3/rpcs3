@@ -22,7 +22,8 @@ namespace rsx
 		mutable void* m_ptr = nullptr;
 		mutable usz m_size = 0;
 
-		std::function<std::tuple<void*, usz>()> m_allocator{};
+		std::function<std::tuple<void*, usz>(usz)> m_allocator{};
+		mutable usz m_allocation_size = 0u;
 
 	public:
 		io_buffer() = default;
@@ -34,7 +35,7 @@ namespace rsx
 			m_size = container.size_bytes();
 		}
 
-		io_buffer(std::function<std::tuple<void*, usz> ()> allocator)
+		io_buffer(std::function<std::tuple<void*, usz>(usz)> allocator)
 		{
 			ensure(allocator);
 			m_allocator = allocator;
@@ -50,6 +51,11 @@ namespace rsx
 			: m_ptr(const_cast<void*>(ptr)), m_size(size)
 		{}
 
+		void reserve(usz size) const
+		{
+			m_allocation_size = size;
+		}
+
 		std::pair<void*, usz> raw() const
 		{
 			return { m_ptr, m_size };
@@ -60,7 +66,7 @@ namespace rsx
 		{
 			if (!m_ptr && m_allocator)
 			{
-				std::tie(m_ptr, m_size) = m_allocator();
+				std::tie(m_ptr, m_size) = m_allocator(m_allocation_size);
 			}
 
 			return static_cast<T*>(m_ptr);
@@ -76,6 +82,11 @@ namespace rsx
 		{
 			auto bytes = data();
 			return { utils::bless<T>(bytes), m_size / sizeof(T) };
+		}
+
+		bool empty() const
+		{
+			return m_size == 0;
 		}
 	};
 }

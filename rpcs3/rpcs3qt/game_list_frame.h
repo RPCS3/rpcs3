@@ -84,7 +84,7 @@ private Q_SLOTS:
 	void OnCompatFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
-	void doubleClickedSlot(QTableWidgetItem *item);
+	void doubleClickedSlot(QTableWidgetItem* item);
 	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
 Q_SIGNALS:
@@ -158,9 +158,6 @@ private:
 	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
-	atomic_t<int> m_progress_dialog_value = 0; // Workaround for inexplicable setValue crash in progressValueChanged slot
-	QTimer m_progress_dialog_update_timer;     // Workaround for inexplicable setValue crash in progressValueChanged slot
-	QTimer m_progress_dialog_timer;
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_col_sort_order{};
 	int m_sort_column{};

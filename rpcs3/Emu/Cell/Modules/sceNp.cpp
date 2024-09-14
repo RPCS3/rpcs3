@@ -744,7 +744,7 @@ error_code sceNpDrmIsAvailable(ppu_thread& ppu, vm::cptr<u8> k_licensee_addr, vm
 	lv2_obj::sleep(ppu);
 
 	const auto ret = npDrmIsAvailable(k_licensee_addr, drm_path);
-	lv2_sleep(50'000, &ppu);
+	lv2_sleep(25'000, &ppu);
 
 	return ret;
 }
@@ -922,7 +922,7 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 
 error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? static_cast<const char *>(context->data) : "", handler, arg);
+	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? context->data : "", handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -948,7 +948,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 
 error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? context->data : "", handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1169,8 +1169,8 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 
 	if (msg)
 	{
-		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count);
-		for (u32 i = 0; i < msg->count; i++)
+		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d, npids: *0x%x", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count, msg->npids);
+		for (u32 i = 0; i < msg->count && msg->npids; i++)
 		{
 			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, static_cast<char*>(&msg->npids[i].handle.data[0]));
 		}
@@ -1338,9 +1338,12 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 		.msgFeatures = msg->msgFeatures};
 	std::set<std::string> npids;
 
-	for (u32 i = 0; i < msg->count; i++)
+	if (msg->npids)
 	{
-		npids.insert(std::string(msg->npids[i].handle.data));
+		for (u32 i = 0; i < msg->count; i++)
+		{
+			npids.insert(std::string(msg->npids[i].handle.data));
+		}
 	}
 
 	if (msg->subject)
@@ -2967,7 +2970,7 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 
 	for (u32 i = 0; i < menu->numActions; i++)
 	{
-		if (!menu->actions[i].name)
+		if (!menu->actions || !menu->actions[i].name)
 		{
 			return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 		}
@@ -3832,9 +3835,11 @@ error_code sceNpManagerGetNpId(vm::ptr<SceNpId> npId)
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
+error_code sceNpManagerGetOnlineName(ppu_thread& ppu, vm::ptr<SceNpOnlineName> onlineName)
 {
-	sceNp.warning("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
+	ppu.state += cpu_flag::wait;
+
+	sceNp.trace("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3858,14 +3863,17 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(onlineName.get_ptr(), &nph.get_online_name(), onlineName.size());
+	ppu.check_state();
+	std::memcpy(onlineName.get_ptr(), &nph.get_online_name(), onlineName.size());
 
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
+error_code sceNpManagerGetAvatarUrl(ppu_thread& ppu, vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
-	sceNp.warning("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
+	ppu.state += cpu_flag::wait;
+
+	sceNp.trace("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3889,7 +3897,8 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memcpy(avatarUrl.get_ptr(), &nph.get_avatar_url(), avatarUrl.size());
+	ppu.check_state();
+	std::memcpy(avatarUrl.get_ptr(), &nph.get_avatar_url(), avatarUrl.size());
 
 	return CELL_OK;
 }
@@ -3953,9 +3962,10 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	memset(countryCode.get_ptr(), 0, sizeof(SceNpCountryCode));
-	countryCode->data[0] = 'u';
-	countryCode->data[1] = 's';
+	const std::string ccode = g_cfg.net.country.to_string();
+	std::memset(countryCode.get_ptr(), 0, sizeof(countryCode));
+	ensure(ccode.size() == sizeof(SceNpCountryCode::data));
+	std::memcpy(countryCode->data, ccode.data(), sizeof(SceNpCountryCode::data));
 
 	*language = CELL_SYSUTIL_LANG_ENGLISH_US;
 
@@ -5297,7 +5307,7 @@ error_code sceNpScoreTerm()
 
 error_code sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpScoreCreateTitleCtx(communicationId=*0x%x, passphrase=*0x%x, selfNpId=*0x%x)", communicationId, passphrase, selfNpId);
+	sceNp.warning("sceNpScoreCreateTitleCtx(communicationId=*0x%x(%s), passphrase=*0x%x, selfNpId=*0x%x)", communicationId, communicationId ? np::communication_id_to_string(*communicationId).c_str() : "", passphrase, selfNpId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5694,7 +5704,7 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, 
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto [res, trans_ctx] = get_score_transaction_context(transId);
+	auto [res, trans_ctx] = get_score_transaction_context(transId, false);
 	if (res)
 		return *res;
 
@@ -5826,8 +5836,10 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	// Function can actually accept SceNpScoreRankData though it is undocumented
-	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// SceNpScorePlayerRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScorePlayerRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -5863,7 +5875,7 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		}
 	}
 
-	nph.get_score_npid(trans_ctx, boardId, npid_vec, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_npid(trans_ctx, boardId, npid_vec, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{
@@ -5954,7 +5966,10 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// SceNpScoreRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScoreRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -5964,7 +5979,7 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	nph.get_score_range(trans_ctx, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_range(trans_ctx, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{
@@ -6033,7 +6048,10 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	// The SceNpScoreRankData changed with 180.002
+	const bool deprecated = (rankArraySize == (arrayNum * sizeof(SceNpScoreRankData_deprecated)));
+
+	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)) && !deprecated)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -6043,7 +6061,7 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	nph.get_score_friend(trans_ctx, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_friend(trans_ctx, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async, deprecated);
 
 	if (async)
 	{

@@ -22,6 +22,7 @@
 #endif
 
 #include <QFile>
+#include <QImageWriter>
 #include <QPixmap>
 #include <QStandardPaths>
 
@@ -49,13 +50,14 @@ namespace gui::utils
 		QFile icon_file(QString::fromStdString(target_icon_path));
 		if (!icon_file.open(QFile::OpenModeFlag::ReadWrite | QFile::OpenModeFlag::Truncate))
 		{
-			sys_log.error("Failed to create icon file: %s", target_icon_path);
+			sys_log.error("Failed to create icon file '%s': %s", target_icon_path, icon_file.errorString());
 			return false;
 		}
 
-		if (!icon.save(&icon_file, fmt::to_upper(extension).c_str()))
+		// Use QImageWriter instead of QPixmap::save in order to be able to log errors
+		if (QImageWriter writer(&icon_file, fmt::to_upper(extension).c_str()); !writer.write(icon.toImage()))
 		{
-			sys_log.error("Failed to write icon file: %s", target_icon_path);
+			sys_log.error("Failed to write icon file '%s': %s", target_icon_path, writer.errorString());
 			return false;
 		}
 
@@ -230,8 +232,8 @@ namespace gui::utils
 		fmt::append(link_path, "/%s.app", simple_name);
 
 		const std::string contents_dir = link_path + "/Contents/";
-		const std::string macos_dir = contents_dir + "/MacOS/";
-		const std::string resources_dir = contents_dir + "/Resources/";
+		const std::string macos_dir = contents_dir + "MacOS/";
+		const std::string resources_dir = contents_dir + "Resources/";
 
 		if (!fs::create_path(contents_dir) || !fs::create_path(macos_dir) || !fs::create_path(resources_dir))
 		{

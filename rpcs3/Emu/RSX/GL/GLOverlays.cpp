@@ -164,7 +164,7 @@ namespace gl
 			if (enable_blending)
 			{
 				cmd->enablei(GL_BLEND, 0);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 				glBlendEquation(GL_FUNC_ADD);
 			}
 			else

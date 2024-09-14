@@ -87,6 +87,7 @@ extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
+extern void check_microphone_permissions();
 
 extern void signal_system_cache_can_stay();
 
@@ -101,6 +102,8 @@ std::mutex g_tty_mutex;
 thread_local std::string_view g_tls_serialize_name;
 
 extern thread_local std::string(*g_tls_log_prefix)();
+
+extern f64 get_cpu_program_usage_percent(u64 hash);
 
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
@@ -162,9 +165,9 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, u32 line, u32 col, const char* file, const char* fun) const
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, std::source_location src_loc) const
 {
-	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc{line, col, file, fun}
+	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
 		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
 		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped()));
@@ -180,19 +183,22 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 	m_cb.call_from_main_thread(std::move(final_func), wake_up);
 }
 
-void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, u32 line, u32 col, const char* file, const char* fun) const
+void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, std::source_location src_loc) const
 {
 	atomic_t<u32> wake_up = 0;
 
-	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc{line, col, file, fun});
+	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc);
 
-	CallFromMainThread(std::move(func), &wake_up, true, umax, line, col, file, fun);
+	CallFromMainThread(std::move(func), &wake_up, true, umax, src_loc);
+
+	bool logged = false;
 
 	while (!wake_up)
 	{
-		if (!thread_ctrl::get_current())
+		if (!logged && !thread_ctrl::get_current())
 		{
-			fmt::throw_exception("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc{line, col, file, fun});
+			logged = true;
+			sys_log.error("Calling thread of BlockingCallFromMainThread is not of named_thread<>, calling from %s", src_loc);
 		}
 
 		wake_up.wait(0);
@@ -247,7 +253,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 }
 
 // Some settings are not allowed in certain PPU decoders
-void fixup_ppu_settings()
+static void fixup_settings(const psf::registry* _psf)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
@@ -269,18 +275,50 @@ void fixup_ppu_settings()
 			g_cfg.core.ppu_set_fpcc.set(false);
 		}
 	}
+
+	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
+	{
+		const std::map<video_resolution, u32> resolutions
+		{
+			{ video_resolution::_480p,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_480i,       psf::resolution_flag::_480 | psf::resolution_flag::_480_16_9 },
+			{ video_resolution::_576p,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_576i,       psf::resolution_flag::_576 | psf::resolution_flag::_576_16_9 },
+			{ video_resolution::_720p,       psf::resolution_flag::_720  },
+			{ video_resolution::_1080p,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1080i,      psf::resolution_flag::_1080 },
+			{ video_resolution::_1600x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1440x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_1280x1080p, psf::resolution_flag::_1080 },
+			{ video_resolution::_960x1080p,  psf::resolution_flag::_1080 },
+		};
+
+		const video_resolution resolution = g_cfg.video.resolution;
+		constexpr video_resolution new_resolution = video_resolution::_720p;
+
+		if (!resolutions.contains(resolution) || !(psf_resolution & resolutions.at(resolution)))
+		{
+			sys_log.error("The game does not support a resolution of %s, so we are forcing the resolution to %s.", resolution, new_resolution);
+			g_cfg.video.resolution.set(new_resolution);
+		}
+	}
 }
 
-void dump_executable(std::span<const u8> data, main_ppu_module* _main, std::string_view title_id)
+extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id)
 {
+	std::string_view filename = _module->path;
+	filename = filename.substr(filename.find_last_of('/') + 1);
+
+	const std::string lower = fmt::to_lower(filename);
+
 	// Format filename and directory name
 	// Make each directory for each file so tools like IDA can work on it cleanly
-	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1))  + '/';
-	const std::string filename = dir_path + "exec.elf";
+	const std::string dir_path = fs::get_cache_dir() + "ppu_progs/" + std::string{!title_id.empty() ? title_id : "untitled"} + fmt::format("-%s-%s", fmt::base57(_module->sha1), filename)  + '/';
+	const std::string file_path = dir_path + (lower.ends_with(".prx") || lower.ends_with(".sprx") ? "prog.prx" : "exec.elf");
 
 	if (fs::create_dir(dir_path) || fs::g_tls_error == fs::error::exist)
 	{
-		if (fs::file out{filename, fs::create + fs::write})
+		if (fs::file out{file_path, fs::create + fs::write})
 		{
 			if (out.size() == data.size())
 			{
@@ -442,7 +480,7 @@ void Emulator::Init()
 	}
 
 	// Disable incompatible settings
-	fixup_ppu_settings();
+	fixup_settings(nullptr);
 
 	// Backup config
 	g_backup_cfg.from_string(g_cfg.to_string());
@@ -744,10 +782,19 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
 	load.set_reading_state();
+ 
+ 	const std::string lower = fmt::to_lower(path);
 
-	if (fmt::to_lower(path).ends_with(".gz"))
+	if (lower.ends_with(".gz") || lower.ends_with(".zst"))
 	{
-		load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		if (lower.ends_with(".gz"))
+		{
+			load.m_file_handler = make_compressed_serialization_file_handler(std::move(in_file));
+		}
+		else
+		{
+			load.m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(in_file));
+		}
 
 		// Forcefully read some data to check validity
 		load.pop<uchar>();
@@ -929,12 +976,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			fs::file save{m_path, fs::isfile + fs::read};
 
-			if (!m_path.ends_with(".gz") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+			if (m_path.ends_with(".SAVESTAT") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
 			{
 				m_ar = std::make_shared<utils::serial>();
 				m_ar->set_reading_state();
 
 				m_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
+			}
+			else if (save && m_path.ends_with(".zst"))
+			{
+				m_ar = std::make_shared<utils::serial>();
+				m_ar->set_reading_state();
+
+				m_ar->m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(save));
+
+				if (m_ar->try_read<u64>().second != "RPCS3SAV"_u64)
+				{
+					m_ar.reset();
+				}
+				else
+				{
+					m_ar->pos = 0;
+				}
 			}
 			else if (save && m_path.ends_with(".gz"))
 			{
@@ -1440,7 +1503,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
@@ -1535,7 +1598,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_cfg.core.spu_cache.set(true);
 
 			// Disable incompatible settings
-			fixup_ppu_settings();
+			fixup_settings(&_psf);
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
@@ -1624,7 +1687,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			{
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
 				{
-					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, [](){ return Emu.IsStopped(); }))
+					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}
@@ -1658,6 +1721,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			Run(false);
 
 			return game_boot_result::no_errors;
+		}
+
+		// Check microphone permissions
+		if (g_cfg.audio.microphone_type != microphone_handler::null)
+		{
+			if (const std::vector<std::string> device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"}); !device_list.empty())
+			{
+				check_microphone_permissions();
+			}
 		}
 
 		// Detect boot location
@@ -2338,7 +2410,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 void Emulator::Run(bool start_playtime)
 {
-	ensure(IsReady());
+	ensure(IsReady() || GetStatus(false) == system_state::frozen);
 
 	GetCallbacks().on_run(start_playtime);
 
@@ -2516,21 +2588,35 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 	const system_state pause_state = freeze_emulation ? system_state::frozen : system_state::paused;
 
 	// Try to pause
-	if (!m_state.compare_and_swap_test(system_state::running, pause_state))
+	const auto [old_state, done] = m_state.fetch_op([&](system_state& state)
 	{
+		if (state == system_state::running)
+		{
+			state = pause_state;
+			return true;
+		}
+
 		if (!freeze_emulation)
 		{
 			return false;
 		}
 
-		if (!m_state.compare_and_swap_test(system_state::ready, pause_state))
+		if (state == system_state::ready || state == system_state::paused)
 		{
-			if (!m_state.compare_and_swap_test(system_state::paused, pause_state))
-			{
-				return false;
-			}
+			state = pause_state;
+			return true;
 		}
 
+		return false;
+	});
+
+	if (!done)
+	{
+		return false;
+	}
+
+	if (old_state == system_state::ready || old_state == system_state::paused)
+	{
 		// Perform the side effects of Resume here when transforming paused to frozen state
 		BlockingCallFromMainThread([this]()
 		{
@@ -2820,7 +2906,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool check_if_vdec_contexts_exist();
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list = nullptr);
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
@@ -2842,7 +2928,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
-				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates())
+				std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+
+				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
 				{
 					sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
 
@@ -2910,10 +2998,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					return;
 				}
 
-				CallFromMainThread([allow_autoexit, this]()
+				CallFromMainThread([allow_autoexit, this, paused_spus]()
 				{
 					savestate_stage stage{};
 					stage.prepared = true;
+					stage.paused_spus = paused_spus;
 					Kill(allow_autoexit, true, &stage);
 				});
 
@@ -3019,7 +3108,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -3090,6 +3179,18 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 		}
 
+		for (const auto& spu : save_stage.paused_spus)
+		{
+			if (spu.first->pc != spu.second || spu.first->unsavable)
+			{
+				std::string dump; 
+				spu.first->dump_all(dump);
+
+				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
+				spu_log.notice("SPU thread context:\n%s", dump);
+			}
+		}
+
 		// Save it first for maximum timing accuracy
 		const u64 timestamp = get_timebased_time();
 		const u64 start_time = get_system_time();
@@ -3111,12 +3212,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			path = get_savestate_file(m_title_id, m_path, 0, 0);
 
-			// The function is meant for reading files, so if there is no GZ file it would not return compressed file path
+			// The function is meant for reading files, so if there is no ZST file it would not return compressed file path
 			// So this is the only place where the result is edited if need to be
-			if (!path.ends_with(".gz"))
-			{
-				path += ".gz";
-			}
+			constexpr std::string_view save = ".SAVESTAT";
+			path.resize(path.rfind(save) + save.size());
+			path += ".zst";
 
 			if (!fs::create_path(fs::get_parent_dir(path)))
 			{
@@ -3133,7 +3233,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 
 			auto serial_ptr = stx::make_single<utils::serial>();
-			serial_ptr->m_file_handler = make_compressed_serialization_file_handler(file.file);
+			serial_ptr->m_file_handler = make_compressed_zstd_serialization_file_handler(file.file);
 			*to_ar = std::move(serial_ptr);
 
 			signal_system_cache_can_stay();
@@ -3318,6 +3418,14 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			set_progress_message("Commiting File");
 
+			{
+				auto& ar = *to_ar->load();
+				auto reset = init_mtx->reset();
+				ar = {};
+				ar.set_reading_state(); // Guard against using it
+				reset.set_init();
+			}
+
 			if (!file.commit() || !fs::get_stat(path, file_stat))
 			{
 				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
@@ -3401,13 +3509,65 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					for (std::string_view not_logged = log_buffer; !not_logged.empty(); part_ctr++, not_logged.remove_prefix(to_remove))
 					{
 						std::string_view to_log = not_logged;
-						to_log = to_log.substr(0, 0x2'0000);
+						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
 						to_remove = to_log.size();
 
+						std::string new_log(to_log);
+
+						for (usz iter = 0, out_added = 0; iter < to_log.size();)
+						{
+							const usz index = to_log.find(") ==========", iter);
+
+							if (index == umax)
+							{
+								break;
+							}
+
+							const std::string_view until = to_log.substr(0, index);
+							const usz seperator = until.rfind(", ");
+
+							if (seperator == umax)
+							{
+								iter = index + 1;
+								continue;
+							}
+
+							const std::string_view prog_hash = until.substr(seperator + 2);
+
+							if (prog_hash.empty())
+							{
+								iter = index + 1;
+								continue;
+							}
+
+							const fmt::base57_result result = fmt::base57_result::from_string(prog_hash);
+
+							if (result.size < sizeof(be_t<u64>))
+							{
+								iter = index + 1;
+								continue;
+							}
+
+							const u64 hash_val = read_from_ptr<be_t<u64>>(result.data) & -65536;
+							const f64 usage = get_cpu_program_usage_percent(hash_val);
+
+							if (usage == 0)
+							{
+								iter = index + 1;
+								continue;
+							}
+
+							const std::string text_append = fmt::format("usage %%%g, ", usage);
+							new_log.insert(new_log.begin() + seperator + out_added + 2, text_append.begin(), text_append.end());
+
+							out_added += text_append.size();
+							iter = index + 1;
+						}
+
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
 						// Assume the block prefix exists because it is created by RPCS3 (or log it in an ugly manner if it does not exist)
-						sys_log.notice("Logging spu.log part %u:\n\n%s\n", part_ctr, to_log);
+						sys_log.notice("Logging spu.log #%u:\n\n%s\n", part_ctr, new_log);
 					}
 
 					sys_log.notice("End spu.log (%u bytes)", total_size);
@@ -3660,17 +3820,11 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 	return result;
 }
 
-void Emulator::ConfigurePPUCache(bool with_title_id) const
+void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	_main.cache = rpcs3::utils::get_cache_dir();
-
-	if (with_title_id && !m_title_id.empty() && m_cat != "1P")
-	{
-		_main.cache += GetTitleID();
-		_main.cache += '/';
-	}
+	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 
 	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 

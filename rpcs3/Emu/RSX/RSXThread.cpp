@@ -132,7 +132,7 @@ namespace rsx
 	{
 	}
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, std::source_location src_loc)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -249,11 +249,11 @@ namespace rsx
 		{
 			// Allow failure if specified size
 			// This is to allow accurate recovery for failures
-			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc);
 			return 0;
 		}
 
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
 	}
 
 	extern void set_rsx_yield_flag() noexcept
@@ -723,15 +723,25 @@ namespace rsx
 
 	avconf::avconf(utils::serial& ar)
 	{
-		ar(*this);
+		save(ar);
 	}
 
 	void avconf::save(utils::serial& ar)
 	{
-		ar(*this);
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
+		if (!ar.is_writing() && version < 3)
+		{
+			// Be compatible with previous bitwise serialization
+			ar(std::span<u8>(reinterpret_cast<u8*>(this), ::offset32(&avconf::scan_mode)));
+			ar.pos += utils::align<usz>(::offset32(&avconf::scan_mode), alignof(avconf)) - ::offset32(&avconf::scan_mode);
+			return;
+		}
+
+		ar(stereo_mode, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state, scan_mode);
 	}
 
-	void thread::capture_frame(const std::string &name)
+	void thread::capture_frame(const std::string& name)
 	{
 		frame_trace_data::draw_state draw_state{};
 
@@ -923,7 +933,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}
@@ -2475,7 +2485,7 @@ namespace rsx
 
 			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
 			{
-				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(float));
+				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(f32));
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -2485,7 +2495,7 @@ namespace rsx
 
 				if (sampler_descriptors[i]->texcoord_xform.clamp)
 				{
-					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(float));
+					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(f32));
 					texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
 				}
 
@@ -2514,14 +2524,28 @@ namespace rsx
 					}
 				}
 
-				if (backend_config.supports_hw_msaa &&
-					sampler_descriptors[i]->samples > 1)
+				if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
 				{
 					current_fp_texture_state.multisampled_textures |= (1 << i);
 					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
 					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
 					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
 					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_S);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_T);
+					}
+
+					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
+					{
+						texture_control |= (1 << texture_control_bits::WRAP_R);
+					}
 				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
@@ -2588,58 +2612,55 @@ namespace rsx
 					}
 				}
 
-				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
-				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
-
-				const u32 argb8_signed = tex.argb_signed();
-				const u32 gamma = tex.gamma() & ~argb8_signed;
-				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
-				u32 argb8_convert = gamma;
-
-				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
+				if (rsx::is_int8_remapped_format(format))
 				{
-					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
-					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
-					// TODO: Replace this clusterfuck of texture control with matrix transformation
-					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
-					if (remap_ctrl == 0xAA)
-					{
-						argb8_convert |= (sign_convert & 0xFu) << texture_control_bits::EXPAND_OFFSET;
-					}
-					else
-					{
-						if (remap_ctrl & 0x03) argb8_convert |= (sign_convert & 0x1u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x0C) argb8_convert |= (sign_convert & 0x2u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0x30) argb8_convert |= (sign_convert & 0x4u) << texture_control_bits::EXPAND_OFFSET;
-						if (remap_ctrl & 0xC0) argb8_convert |= (sign_convert & 0x8u) << texture_control_bits::EXPAND_OFFSET;
-					}
-				}
+					// Special operations applied to 8-bit formats such as gamma correction and sign conversion
+					// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
+					// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
+					// This is a separate method of setting the format to signed mode without doing so per-channel
+					// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
 
-				if (argb8_convert)
-				{
-					switch (format)
+					const u32 argb8_signed = tex.argb_signed(); // _SNROM
+					const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+					u32 argb8_convert = gamma;
+
+					// The options are mutually exclusive
+					ensure((argb8_signed & gamma) == 0);
+					ensure((argb8_signed & unsigned_remap) == 0);
+					ensure((gamma & unsigned_remap) == 0);
+
+					// Helper function to apply a per-channel mask based on an input mask
+					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
 					{
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-					case CELL_GCM_TEXTURE_X16:
-					case CELL_GCM_TEXTURE_Y16_X16:
-					case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-					case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-					case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-					case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-					case CELL_GCM_TEXTURE_X32_FLOAT:
-					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-						// Special data formats (XY, HILO, DEPTH) are not RGB formats
-						// Ignore gamma flags
-						break;
-					default:
-						texture_control |= argb8_convert;
-						break;
+						// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
+						// TODO: Replace this clusterfuck of texture control with matrix transformation
+						const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
+						if (remap_ctrl == 0xAA)
+						{
+							argb8_convert |= (mask & 0xFu) << bit_offset;
+							return;
+						}
+
+						if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
+						if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
+						if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
+						if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
+					};
+
+					if (argb8_signed)
+					{
+						// Apply integer sign extension from uint8 to sint8 and renormalize
+						apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
 					}
+
+					if (unsigned_remap)
+					{
+						// Apply sign expansion, compressed normal-map style (2n - 1)
+						apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
+					}
+
+					texture_control |= argb8_convert;
 				}
 
 				current_fragment_program.texture_params[i].control = texture_control;
@@ -3094,7 +3115,7 @@ namespace rsx
 		}
 
 		rsx::reservation_lock<true> lock(sink, 16);
-		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp(), value, 0});
+		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({timestamp(), value, 0});
 	}
 
 	u32 thread::copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination)
@@ -3266,7 +3287,7 @@ namespace rsx
 		return pair;
 	}
 
-	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
+	void thread::recover_fifo(std::source_location src_loc)
 	{
 		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
@@ -3291,7 +3312,7 @@ namespace rsx
 		if (kill_itself)
 		{
 			fmt::throw_exception("Dead FIFO commands queue state has been detected!"
-				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc{line, col, file, func});
+				"\nTry increasing \"Driver Wake-Up Delay\" setting or setting \"RSX FIFO Accuracy\" to \"%s\", both in Advanced settings. Called from %s", std::min<rsx_fifo_mode>(rsx_fifo_mode{static_cast<u32>(g_cfg.core.rsx_fifo_accuracy.get()) + 1}, rsx_fifo_mode::atomic_ordered), src_loc);
 		}
 
 		// Error. Should reset the queue
@@ -3754,6 +3775,39 @@ namespace rsx
 		m_profiler.enabled = !!g_cfg.video.overlay;
 	}
 
+	f64 thread::get_cached_display_refresh_rate()
+	{
+		constexpr u64 uses_per_query = 512;
+
+		f64 result = m_cached_display_rate;
+		u64 count = m_display_rate_fetch_count++;
+
+		while (true)
+		{
+			if (count % 512 == 0)
+			{
+				result = get_display_refresh_rate();
+				m_cached_display_rate.store(result);
+				m_display_rate_fetch_count += uses_per_query; // Notify users of the new value
+				break;
+			}
+
+			const u64 new_count = m_display_rate_fetch_count;
+			const f64 new_cached = m_cached_display_rate;
+
+			if (result == new_cached && count / uses_per_query == new_count / uses_per_query)
+			{
+				break;
+			}
+
+			// An update might have gone through
+			count = new_count;
+			result = new_cached;
+		}
+
+		return result;
+	}
+
 	bool thread::request_emu_flip(u32 buffer)
 	{
 		if (is_current_thread()) // requested through command buffer
@@ -3805,9 +3859,11 @@ namespace rsx
 		switch (frame_limit)
 		{
 		case frame_limit_type::none: limit = g_cfg.core.max_cpu_preempt_count_per_frame ? static_cast<double>(g_cfg.video.vblank_rate) : 0.; break;
+		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
-		case frame_limit_type::_30: limit = 30.; break;
+ 		case frame_limit_type::_120: limit = 120.; break;
+		case frame_limit_type::display_rate: limit = get_cached_display_refresh_rate(); break;
 		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
 		case frame_limit_type::_ps3: limit = 0.; break;
 		case frame_limit_type::infinite: limit = 0.; break;
@@ -3902,7 +3958,7 @@ namespace rsx
 					{ ppu_cmd::sleep, 0 }
 				});
 
-				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.store(1);
 				intr_thread->cmd_notify.notify_one();
 			}
 		}

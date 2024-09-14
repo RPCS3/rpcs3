@@ -14,6 +14,7 @@
 #include "Utilities/lockless.h"
 
 #include <span>
+#include <deque>
 
 LOG_CHANNEL(cellSysutil);
 
@@ -58,6 +59,8 @@ void fmt_class_string<CellBgmplaybackError>::format(std::string& out, u64 arg)
 	});
 }
 
+atomic_t<usz> g_sysutil_callback_id_assigner = 0;
+
 struct sysutil_cb_manager
 {
 	struct alignas(8) registered_dispatcher
@@ -65,6 +68,7 @@ struct sysutil_cb_manager
 		u32 event_code = 0;
 		u32 func_addr = 0;
 	};
+
 	std::array<atomic_t<registered_dispatcher>, 32> dispatchers{};
 
 	struct alignas(8) registered_cb
@@ -77,7 +81,26 @@ struct sysutil_cb_manager
 
 	atomic_t<registered_cb> callbacks[4]{};
 
-	lf_queue<std::function<s32(ppu_thread&)>> registered;
+	struct dispatcher_cb
+	{
+		std::function<s32(ppu_thread&)> func;
+		std::shared_ptr<atomic_t<bool>> call_active;
+	};
+
+	std::deque<lf_queue<std::shared_ptr<atomic_t<bool>>>> registered_callbacks_abort_handles = []()
+	{
+		// Do resize for deque (cheap container which can store all non-movable value types)
+		std::deque<lf_queue<std::shared_ptr<atomic_t<bool>>>> result;
+
+		for (usz i = 0 ; i < g_sysutil_callback_id_assigner; i++)
+		{
+			result.emplace_back();
+		}
+
+		return result;
+	}();
+
+	lf_queue<dispatcher_cb> registered;
 
 	atomic_t<bool> draw_cb_started{};
 	atomic_t<u64> read_counter{0};
@@ -98,11 +121,40 @@ struct sysutil_cb_manager
 	}
 };
 
+void sysutil_register_cb_with_id_internal(std::function<s32(ppu_thread&)>&& cb, usz call_id)
+{
+	auto& cbm = *ensure(g_fxo->try_get<sysutil_cb_manager>());
+
+	sysutil_cb_manager::dispatcher_cb info{std::move(cb)};
+
+	if (call_id != umax)
+	{
+		info.call_active = std::make_shared<atomic_t<bool>>(true);
+		::at32(cbm.registered_callbacks_abort_handles, call_id).push(info.call_active);
+	}
+
+	cbm.registered.push(std::move(info));
+}
+
+extern void sysutil_unregister_cb_with_id_internal(usz call_id)
+{
+	const auto cbm = g_fxo->try_get<sysutil_cb_manager>();
+
+	if (!cbm)
+	{
+		return;
+	}
+
+	for (auto&& abort_handle : ::at32(cbm->registered_callbacks_abort_handles, call_id).pop_all())
+	{
+		// Deactivate the existing event once
+		abort_handle->store(false);
+	}
+}
+
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	auto& cbm = g_fxo->get<sysutil_cb_manager>();
-
-	cbm.registered.push(std::move(cb));
+	sysutil_register_cb_with_id_internal(std::move(cb), umax);
 }
 
 extern s32 sysutil_send_system_cmd(u64 status, u64 param)
@@ -136,12 +188,12 @@ extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 		{
 			if (cb.callback)
 			{
-				cbm->registered.push([=](ppu_thread& ppu) -> s32
+				cbm->registered.push(sysutil_cb_manager::dispatcher_cb{[=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 					cb.callback(ppu, status, param, cb.user_data);
 					return CELL_OK;
-				});
+				}});
 
 				count++;
 			}
@@ -532,9 +584,14 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	for (auto&& func : cbm.registered.pop_all())
 	{
+		if (func.call_active && !*func.call_active)
+		{
+			continue;
+		}
+
 		read = true;
 
-		if (s32 res = func(ppu))
+		if (s32 res = func.func(ppu))
 		{
 			// Currently impossible
 			return not_an_error(res);

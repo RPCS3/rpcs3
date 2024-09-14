@@ -275,7 +275,7 @@ void emu_settings::RestoreDefaults()
 	Q_EMIT RestoreDefaultsSignal();
 }
 
-void emu_settings::SaveSettings()
+void emu_settings::SaveSettings() const
 {
 	YAML::Emitter out;
 	emit_data(out, m_current_settings);
@@ -938,13 +938,31 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case shader_mode::interpreter_only: return tr("Shader Interpreter only", "Shader Mode");
 		}
 		break;
+	case emu_settings_type::Resolution:
+		switch (static_cast<video_resolution>(index))
+		{
+		case video_resolution::_1080p: return tr("1080p", "Resolution");
+		case video_resolution::_1080i: return tr("1080i", "Resolution");
+		case video_resolution::_720p: return tr("720p", "Resolution");
+		case video_resolution::_480p: return tr("480p", "Resolution");
+		case video_resolution::_480i: return tr("480i", "Resolution");
+		case video_resolution::_576p: return tr("576p", "Resolution");
+		case video_resolution::_576i: return tr("576i", "Resolution");
+		case video_resolution::_1600x1080p: return tr("1600x1080p", "Resolution");
+		case video_resolution::_1440x1080p: return tr("1440x1080p", "Resolution");
+		case video_resolution::_1280x1080p: return tr("1280x1080p", "Resolution");
+		case video_resolution::_960x1080p: return tr("960x1080p", "Resolution");
+		}
+		break;
 	case emu_settings_type::FrameLimit:
 		switch (static_cast<frame_limit_type>(index))
 		{
 		case frame_limit_type::none: return tr("Off", "Frame limit");
+		case frame_limit_type::_30: return tr("30", "Frame limit");
 		case frame_limit_type::_50: return tr("50", "Frame limit");
 		case frame_limit_type::_60: return tr("60", "Frame limit");
-		case frame_limit_type::_30: return tr("30", "Frame limit");
+		case frame_limit_type::_120: return tr("120", "Frame limit");
+		case frame_limit_type::display_rate: return tr("Display", "Frame limit");
 		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
 		case frame_limit_type::_ps3: return tr("PS3 Native", "Frame limit");
 		case frame_limit_type::infinite: return tr("Infinite", "Frame limit");
@@ -1086,13 +1104,6 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case ghltar_handler::null: return tr("Null", "GHLtar handler");
 		case ghltar_handler::one_controller: return tr("1 controller", "GHLtar handler");
 		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
-		}
-		break;
-	case emu_settings_type::GameTablet:
-		switch (static_cast<gametablet_handler>(index))
-		{
-		case gametablet_handler::disabled: return tr("Disabled", "GameTablet handler");
-		case gametablet_handler::enabled: return tr("Enabled", "GameTablet handler");
 		}
 		break;
 	case emu_settings_type::InternetStatus:
@@ -1336,6 +1347,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case xfloat_accuracy::relaxed: return tr("Relaxed XFloat");
 		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
 		}
+		break;
 	default:
 		break;
 	}

@@ -864,6 +864,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Dimensions.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\Infinity.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -931,6 +934,9 @@
       <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\GHLtar.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\GunCon3.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\Buzz.cpp">
@@ -1034,6 +1040,12 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotElite.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\Turntable.cpp">
       <Filter>Emu\Io</Filter>
@@ -1245,6 +1257,18 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\mouse_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\MouseHandler.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\rpcn_countries.cpp">
+      <Filter>Emu\NP</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1980,6 +2004,9 @@
     <ClInclude Include="Emu\Io\Keyboard.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\Dimensions.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\Infinity.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2068,6 +2095,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\GHLtar.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\GunCon3.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Buzz.h">
@@ -2166,6 +2196,12 @@
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotElite.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotFearmaster.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\Turntable.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2196,14 +2232,11 @@
     <ClInclude Include="Emu\Cell\timers.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\GLSLCommon.h">
-      <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\program_util.h">
@@ -2443,6 +2476,15 @@
     <ClInclude Include="Emu\Io\ghltar_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotelite_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotfearmaster_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\usio_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2480,9 +2522,6 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\rb3drums_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\raw_mouse_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h">
@@ -2532,6 +2571,18 @@
     </ClInclude>
     <ClInclude Include="Emu\savestate_utils.hpp">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\CPU\Hypervisor.h">
+      <Filter>Emu\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\rpcn_countries.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -15,7 +15,7 @@ namespace rsx
 
 		void push_vertex_data(rsx::context* ctx, u32 attrib_index, u32 channel_select, int count, rsx::vertex_base_type vtype, u32 value);
 
-		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg);
+		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg0, u32 arg1 = 0u, u32 index = 0u);
 
 		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 index);
 

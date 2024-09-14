@@ -4,7 +4,7 @@
 #include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 
-#include "3rdparty/OpenAL/include/alext.h"
+#include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
 
 LOG_CHANNEL(cfg_log, "CFG");
 

@@ -11,7 +11,7 @@ error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
 
-LOG_CHANNEL(sys_io);
+LOG_CHANNEL(cellKb);
 
 template<>
 void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
@@ -77,7 +77,7 @@ void KeyboardHandlerBase::save(utils::serial& ar)
 
 error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 {
-	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
+	cellKb.warning("cellKbInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -102,7 +102,7 @@ error_code cellKbInit(ppu_thread& ppu, u32 max_connect)
 
 error_code cellKbEnd(ppu_thread& ppu)
 {
-	sys_io.notice("cellKbEnd()");
+	cellKb.notice("cellKbEnd()");
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -123,7 +123,7 @@ error_code cellKbEnd(ppu_thread& ppu)
 
 error_code cellKbClearBuf(u32 port_no)
 {
-	sys_io.trace("cellKbClearBuf(port_no=%d)", port_no);
+	cellKb.trace("cellKbClearBuf(port_no=%d)", port_no);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -158,7 +158,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
+	cellKb.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if (rawcode <= CELL_KEYC_E_UNDEF ||
@@ -177,6 +177,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
 	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
 	const bool is_num_lock = led & (CELL_KB_LED_NUM_LOCK);
+	const bool is_shift_lock = is_caps_lock && (arrange == CELL_KB_MAPPING_GERMAN_GERMANY || arrange == CELL_KB_MAPPING_FRENCH_FRANCE);
 
 	// CELL_KB_NUMPAD
 
@@ -194,13 +195,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	// ASCII
 
-	const auto get_ascii = [is_alt, is_shift, is_caps_lock](u16 raw, u16 shifted = 0, u16 altered = 0)
+	const auto get_ascii = [&](u16 raw, u16 shifted = 0, u16 altered = 0)
 	{
-		if ((is_shift || is_caps_lock) && shifted)
+		// Usually caps lock only applies uppercase to letters, but some layouts treat it as shift lock for all keys.
+		if ((is_shift || (is_caps_lock && (is_shift_lock || std::isalpha(raw)))) && shifted)
 		{
 			return shifted;
 		}
-		else if (is_alt && altered)
+		if (is_alt && altered)
 		{
 			return altered;
 		}
@@ -284,11 +286,12 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
 	{
-		rawcode -=
-			(is_shift)
-				? ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0 : 0x20)
-				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
-		return rawcode + 0x5D;
+		if (is_shift != is_caps_lock)
+		{
+			return rawcode + 0x3D; // Return uppercase if exactly one is active.
+		}
+
+		return rawcode + 0x5D; // Return lowercase if none or both are active.
 	}
 	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
 	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'
@@ -305,7 +308,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
-	sys_io.trace("cellKbGetInfo(info=*0x%x)", info);
+	cellKb.trace("cellKbGetInfo(info=*0x%x)", info);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -337,7 +340,7 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
-	sys_io.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
+	cellKb.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -394,7 +397,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 error_code cellKbSetCodeType(u32 port_no, u32 type)
 {
-	sys_io.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
+	cellKb.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -422,7 +425,7 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 
 error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
-	sys_io.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
+	cellKb.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -451,7 +454,7 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 
 error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 {
-	sys_io.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
+	cellKb.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
@@ -483,7 +486,7 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
-	sys_io.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
+	cellKb.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 

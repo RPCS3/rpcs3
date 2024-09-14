@@ -22,6 +22,11 @@ namespace np
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
 
+	std::string communication_id_to_string(const SceNpCommunicationId& communicationId)
+	{
+		return fmt::format("%s_%02d", communicationId.data, communicationId.num);
+	}
+
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
 	{
 		memset(&user_info, 0, sizeof(user_info));

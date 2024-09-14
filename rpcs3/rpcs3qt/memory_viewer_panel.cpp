@@ -39,28 +39,36 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	, m_type([&]()
 	{
 		const auto cpu = m_get_cpu();
+		if (!cpu) return thread_class::general;
 
-		if (!cpu) return thread_type::none;
-		if (cpu->id_type() == 1) return thread_type::ppu;
-		if (cpu->id_type() == 0x55) return thread_type::rsx;
-		if (cpu->id_type() == 2) return thread_type::spu;
+		thread_class type = cpu->get_class();
 
-		fmt::throw_exception("Unknown CPU type (0x%x)", cpu->id_type());
+		switch (type)
+		{
+		case thread_class::ppu:
+		case thread_class::spu:
+		case thread_class::rsx:
+			break;
+		default:
+			fmt::throw_exception("Unknown CPU type (0x%x)", cpu->id_type());
+		}
+
+		return type;
 	}())
-	, m_rsx(m_type == thread_type::rsx ? static_cast<rsx::thread*>(m_get_cpu()) : nullptr)
+	, m_rsx(m_type == thread_class::rsx ? static_cast<rsx::thread*>(m_get_cpu()) : nullptr)
 	, m_spu_shm([&]()
 	{
 		const auto cpu = m_get_cpu();
-		return cpu && m_type == thread_type::spu ? static_cast<spu_thread*>(cpu)->shm : nullptr;
+		return cpu && m_type == thread_class::spu ? static_cast<spu_thread*>(cpu)->shm : nullptr;
 	}())
-	, m_addr_mask(m_type == thread_type::spu ? SPU_LS_SIZE - 1 : ~0)
+	, m_addr_mask(m_type == thread_class::spu ? SPU_LS_SIZE - 1 : ~0)
 	, m_disasm(std::move(disasm))
 {
 	const auto cpu = m_get_cpu();
 
 	setWindowTitle(
-		cpu && m_type == thread_type::spu ? tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())) :
-		cpu && m_type == thread_type::rsx ? tr("Memory Viewer Of RSX[0x55555555]") :
+		cpu && m_type == thread_class::spu ? tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())) :
+		cpu && m_type == thread_class::rsx ? tr("Memory Viewer Of RSX[0x55555555]") :
 		tr("Memory Viewer"));
 
 	setObjectName("memory_viewer");
@@ -92,7 +100,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
-	m_addr_line->setValidator(new QRegularExpressionValidator(QRegularExpression(m_type == thread_type::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
+	m_addr_line->setValidator(new QRegularExpressionValidator(QRegularExpression(m_type == thread_class::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
@@ -170,8 +178,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	QLabel* l_x = new QLabel(" x ");
 	QSpinBox* sb_img_size_x = new QSpinBox(this);
 	QSpinBox* sb_img_size_y = new QSpinBox(this);
-	sb_img_size_x->setRange(1, m_type == thread_type::spu ? 256 : 4096);
-	sb_img_size_y->setRange(1, m_type == thread_type::spu ? 256 : 4096);
+	sb_img_size_x->setRange(1, m_type == thread_class::spu ? 256 : 4096);
+	sb_img_size_y->setRange(1, m_type == thread_class::spu ? 256 : 4096);
 	sb_img_size_x->setValue(256);
 	sb_img_size_y->setValue(256);
 	hbox_tools_img_size->addWidget(sb_img_size_x);
@@ -645,7 +653,7 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 
 std::string memory_viewer_panel::getHeaderAtAddr(u32 addr) const
 {
-	if (m_type == thread_type::spu) return {};
+	if (m_type == thread_class::spu) return {};
 
 	// Check if its an SPU Local Storage beginning
 	const u32 spu_boundary = utils::align<u32>(addr, SPU_LS_SIZE);
@@ -684,7 +692,7 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr) const
 
 void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 {
-	if (m_type >= thread_type::spu && !m_get_cpu())
+	if (m_type >= thread_class::spu && !m_get_cpu())
 	{
 		return nullptr;
 	}
@@ -696,8 +704,8 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 
 	switch (m_type)
 	{
-	case thread_type::none:
-	case thread_type::ppu:
+	case thread_class::general:
+	case thread_class::ppu:
 	{
 		if (vm::check_addr(addr, 0, size))
 		{
@@ -706,7 +714,7 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 
 		break;
 	}
-	case thread_type::spu:
+	case thread_class::spu:
 	{
 		if (size <= SPU_LS_SIZE && SPU_LS_SIZE - size >= (addr % SPU_LS_SIZE))
 		{
@@ -715,7 +723,7 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 
 		break;
 	}
-	case thread_type::rsx:
+	case thread_class::rsx:
 	{
 		u32 final_addr = 0;
 

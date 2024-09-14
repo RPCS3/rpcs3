@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vm.h"
+#include "Emu/RSX/rsx_utils.h"
 
 class cpu_thread;
 class shared_mutex;
@@ -43,6 +44,14 @@ namespace vm
 	template <uint Size = 0>
 	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 _size)
 	{
+		if constexpr (Size == 0)
+		{
+			if (begin >> 28 == rsx::constants::local_mem_base >> 28)
+			{
+				return;
+			}
+		}
+
 		// Optimistic locking.
 		// Note that we store the range we will be accessing, without any clamping.
 		range_lock->store(begin | (u64{_size} << 32));
