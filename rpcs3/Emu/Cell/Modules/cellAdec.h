@@ -111,68 +111,6 @@ enum CellAdecError : u32
 	CELL_ADEC_ERROR_AT3_ERROR  = 0x80612180,
 
 
-	CELL_ADEC_ERROR_ATX_OFFSET = 0x80612200,
-	CELL_ADEC_ERROR_ATX_NONE                       = 0x80612200,
-	CELL_ADEC_ERROR_ATX_OK                         = 0x80612200,
-	CELL_ADEC_ERROR_ATX_BUSY                       = 0x80612264,
-	CELL_ADEC_ERROR_ATX_EMPTY                      = 0x80612265,
-	CELL_ADEC_ERROR_ATX_ATSHDR                     = 0x80612266,
-	CELL_ADEC_ERROR_ATX_NON_FATAL                  = 0x80612281,
-	CELL_ADEC_ERROR_ATX_NOT_IMPLE                  = 0x80612282,
-	CELL_ADEC_ERROR_ATX_PACK_CE_OVERFLOW           = 0x80612283,
-	CELL_ADEC_ERROR_ATX_ILLEGAL_NPROCQUS           = 0x80612284,
-	CELL_ADEC_ERROR_ATX_FATAL                      = 0x8061228c,
-	CELL_ADEC_ERROR_ATX_ENC_OVERFLOW               = 0x8061228d,
-	CELL_ADEC_ERROR_ATX_PACK_CE_UNDERFLOW          = 0x8061228e,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT                = 0x8061228f,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GAINADJ             = 0x80612290,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF                = 0x80612291,
-	CELL_ADEC_ERROR_ATX_SYNTAX_SPECTRA             = 0x80612292,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL	               = 0x80612293,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GHWAVE              = 0x80612294,
-	CELL_ADEC_ERROR_ATX_SYNTAX_SHEADER             = 0x80612295,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_A              = 0x80612296,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_B              = 0x80612297,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_C              = 0x80612298,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_D              = 0x80612299,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_E              = 0x8061229a,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_A              = 0x8061229b,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_B              = 0x8061229c,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_C              = 0x8061229d,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_D              = 0x8061229e,
-	CELL_ADEC_ERROR_ATX_SYNTAX_IDCT_A              = 0x8061229f,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_NGC              = 0x806122a0,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_A          = 0x806122a1,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_A          = 0x806122a2,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_B          = 0x806122a3,
-	CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_B          = 0x806122a4,
-	CELL_ADEC_ERROR_ATX_SYNTAX_SN_NWVS             = 0x806122a5,
-	CELL_ADEC_ERROR_ATX_FATAL_HANDLE               = 0x806122aa,
-	CELL_ADEC_ERROR_ATX_ASSERT_SAMPLING_FREQ       = 0x806122ab,
-	CELL_ADEC_ERROR_ATX_ASSERT_CH_CONFIG_INDEX     = 0x806122ac,
-	CELL_ADEC_ERROR_ATX_ASSERT_NBYTES              = 0x806122ad,
-	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_NUM           = 0x806122ae,
-	CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_ID            = 0x806122af,
-	CELL_ADEC_ERROR_ATX_ASSERT_CHANNELS            = 0x806122b0,
-	CELL_ADEC_ERROR_ATX_UNINIT_BLOCK_SPECIFIED     = 0x806122b1,
-	CELL_ADEC_ERROR_ATX_POSCFG_PRESENT             = 0x806122b2,
-	CELL_ADEC_ERROR_ATX_BUFFER_OVERFLOW            = 0x806122b3,
-	CELL_ADEC_ERROR_ATX_ILL_BLK_TYPE_ID            = 0x806122b4,
-	CELL_ADEC_ERROR_ATX_UNPACK_CHANNEL_BLK_FAILED  = 0x806122b5,
-	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_1          = 0x806122b6,
-	CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_2          = 0x806122b7,
-	CELL_ADEC_ERROR_ATX_ILLEGAL_ENC_SETTING        = 0x806122b8,
-	CELL_ADEC_ERROR_ATX_ILLEGAL_DEC_SETTING        = 0x806122b9,
-	CELL_ADEC_ERROR_ATX_ASSERT_NSAMPLES            = 0x806122ba,
-
-	CELL_ADEC_ERROR_ATX_ILL_SYNCWORD               = 0x806122bb,
-	CELL_ADEC_ERROR_ATX_ILL_SAMPLING_FREQ          = 0x806122bc,
-	CELL_ADEC_ERROR_ATX_ILL_CH_CONFIG_INDEX        = 0x806122bd,
-	CELL_ADEC_ERROR_ATX_RAW_DATA_FRAME_SIZE_OVER   = 0x806122be,
-	CELL_ADEC_ERROR_ATX_SYNTAX_ENHANCE_LENGTH_OVER = 0x806122bf,
-	CELL_ADEC_ERROR_ATX_SPU_INTERNAL_FAIL          = 0x806122c8,
-
-
 	CELL_ADEC_ERROR_LPCM_FATAL = 0x80612001,
 	CELL_ADEC_ERROR_LPCM_SEQ   = 0x80612002,
 	CELL_ADEC_ERROR_LPCM_ARG   = 0x80612003,
@@ -250,38 +188,38 @@ enum CellAdecError : u32
 // Audio Codec Type
 enum AudioCodecType : s32
 {
-	CELL_ADEC_TYPE_RESERVED1,
+	CELL_ADEC_TYPE_INVALID1,
 	CELL_ADEC_TYPE_LPCM_PAMF,
 	CELL_ADEC_TYPE_AC3,
 	CELL_ADEC_TYPE_ATRACX,
 	CELL_ADEC_TYPE_MP3,
 	CELL_ADEC_TYPE_ATRAC3,
 	CELL_ADEC_TYPE_MPEG_L2,
-	CELL_ADEC_TYPE_RESERVED5,
-	CELL_ADEC_TYPE_RESERVED6,
-	CELL_ADEC_TYPE_RESERVED7,
-	CELL_ADEC_TYPE_RESERVED8,
+	CELL_ADEC_TYPE_M2AAC,
+	CELL_ADEC_TYPE_EAC3,
+	CELL_ADEC_TYPE_TRUEHD,
+	CELL_ADEC_TYPE_DTS, // Removed in firmware 4.00, integrated into DTSHD
 	CELL_ADEC_TYPE_CELP,
-	CELL_ADEC_TYPE_RESERVED10,
+	CELL_ADEC_TYPE_LPCM_BLURAY,
 	CELL_ADEC_TYPE_ATRACX_2CH,
 	CELL_ADEC_TYPE_ATRACX_6CH,
 	CELL_ADEC_TYPE_ATRACX_8CH,
 	CELL_ADEC_TYPE_M4AAC,
-	CELL_ADEC_TYPE_RESERVED12,
-	CELL_ADEC_TYPE_RESERVED13,
-	CELL_ADEC_TYPE_RESERVED14,
-	CELL_ADEC_TYPE_RESERVED15,
-	CELL_ADEC_TYPE_RESERVED16,
-	CELL_ADEC_TYPE_RESERVED17,
-	CELL_ADEC_TYPE_RESERVED18,
-	CELL_ADEC_TYPE_RESERVED19,
+	CELL_ADEC_TYPE_LPCM_DVD,
+	CELL_ADEC_TYPE_WMA,
+	CELL_ADEC_TYPE_DTSLBR,
+	CELL_ADEC_TYPE_M4AAC_2CH,
+	CELL_ADEC_TYPE_DTSHD,
+	CELL_ADEC_TYPE_MPEG_L1,
+	CELL_ADEC_TYPE_MP3S,
+	CELL_ADEC_TYPE_M4AAC_2CH_MOD,
 	CELL_ADEC_TYPE_CELP8,
-	CELL_ADEC_TYPE_RESERVED20,
-	CELL_ADEC_TYPE_RESERVED21,
-	CELL_ADEC_TYPE_RESERVED22,
-	CELL_ADEC_TYPE_RESERVED23,
-	CELL_ADEC_TYPE_RESERVED24,
-	CELL_ADEC_TYPE_RESERVED25,
+	CELL_ADEC_TYPE_INVALID2,
+	CELL_ADEC_TYPE_INVALID3,
+	CELL_ADEC_TYPE_RESERVED22, // Either WMA Pro or WMA Lossless, was never released
+	CELL_ADEC_TYPE_RESERVED23, // Either WMA Pro or WMA Lossless, was never released
+	CELL_ADEC_TYPE_DTSHDCORE, // Removed in firmware 4.00, integrated into DTSHD
+	CELL_ADEC_TYPE_ATRAC3MULTI,
 };
 
 inline bool adecIsAtracX(s32 type)
@@ -313,10 +251,12 @@ enum CellAdecChannel : s32
 // Sampling Rate
 enum CellAdecSampleRate : s32
 {
-	CELL_ADEC_FS_RESERVED1 = 0,
-	CELL_ADEC_FS_48kHz = 1,
-	CELL_ADEC_FS_16kHz = 2,
-	CELL_ADEC_FS_8kHz = 5,
+	CELL_ADEC_FS_RESERVED1,
+	CELL_ADEC_FS_48kHz,
+	CELL_ADEC_FS_16kHz,
+	CELL_ADEC_FS_96kHz,
+	CELL_ADEC_FS_192kHz,
+	CELL_ADEC_FS_8kHz,
 };
 
 enum CellAdecBitLength : s32
@@ -359,6 +299,13 @@ struct CellAdecResourceEx
 	be_t<u32> maxContention;
 };
 
+struct CellAdecResourceSpurs
+{
+	be_t<u32> spurs_addr; // CellSpurs*
+	u8 priority[8];
+	be_t<u32> maxContention;
+};
+
 // Callback Messages
 enum CellAdecMsgType : s32
 {
@@ -370,16 +317,20 @@ enum CellAdecMsgType : s32
 
 using CellAdecCbMsg = s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
 
-struct CellAdecCb
+// Used for internal callbacks as well
+template <typename F>
+struct AdecCb
 {
-	vm::bptr<CellAdecCbMsg> cbFunc;
-	be_t<u32> cbArg;
+	vm::bptr<F> cbFunc;
+	vm::bptr<void> cbArg;
 };
+
+using CellAdecCb = AdecCb<CellAdecCbMsg>;
 
 // AU Info
 struct CellAdecAuInfo
 {
-	be_t<u32> startAddr;
+	vm::bcptr<u8> startAddr;
 	be_t<u32> size;
 	CellCodecTimeStamp pts;
 	be_t<u64> userData;
@@ -399,6 +350,125 @@ struct CellAdecPcmItem
 	be_t<u32> size;
 	CellAdecPcmAttr	pcmAttr;
 	CellAdecAuInfo auInfo;
+};
+
+// Controls how much is added to the presentation time stamp of the previous frame if the game didn't set a pts itself in CellAdecAuInfo when calling cellAdecDecodeAu()
+enum AdecCorrectPtsValueType : s8
+{
+	ADEC_CORRECT_PTS_VALUE_TYPE_UNSPECIFIED = -1,
+
+	// Adds a fixed amount
+	ADEC_CORRECT_PTS_VALUE_TYPE_LPCM = 0,
+	// 1
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz = 2,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz = 3,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz = 4,
+	// 5: Dolby Digital
+	// 6: ATRAC3
+	// 7: MP3
+	// 8: MP3
+	// 9: MP3
+	// 39: ATRAC3 multi-track
+
+	// Calls a decoder function (_SceAdecCorrectPtsValue_codec())
+	// 17: Dolby Digital Plus
+	// 18
+	// 19
+	// 20
+	// 21: DTS HD
+	// 22
+	// 23
+	// 24: CELP
+	// 25: MPEG-2 AAC
+	// 26: MPEG-2 BC
+	// 27: Dolby TrueHD
+	// 28: DTS
+	// 29: MPEG-4 AAC
+	// 30: Windows Media Audio
+	// 31: DTS Express
+	// 32: MP1
+	// 33: MP3 Surround
+	// 34: CELP8
+	// 35: Windows Media Audio Professional
+	// 36: Windows Media Audio Lossless
+	// 37: DTS HD Core
+	// 38: DTS HD Core
+};
+
+// Internal callbacks
+using AdecNotifyAuDone = error_code(s32 pcmHandle, vm::ptr<void> cbArg);
+using AdecNotifyPcmOut = error_code(s32 pcmHandle, vm::ptr<void> pcmAddr, u32 pcmSize, vm::ptr<void> cbArg, vm::cpptr<void> bsiInfo, AdecCorrectPtsValueType correctPtsValueType, s32 errorCode);
+using AdecNotifyError = error_code(s32 errorCode, vm::ptr<void> cbArg);
+using AdecNotifySeqDone = error_code(vm::ptr<void> cbArg);
+
+// Decoder functions
+using CellAdecCoreOpGetMemSize = error_code(vm::ptr<CellAdecAttr> attr);
+using CellAdecCoreOpOpen = error_code(vm::ptr<void> coreHandle, vm::ptr<AdecNotifyAuDone> cbFuncAuDone, vm::ptr<void> cbArgAuDone, vm::ptr<AdecNotifyPcmOut> cbFuncPcmOut, vm::ptr<void> cbArgPcmOut,
+	vm::ptr<AdecNotifyError> cbFuncError, vm::ptr<void> cbArgError, vm::ptr<AdecNotifySeqDone> cbFuncSeqDone, vm::ptr<void> cbArgSeqDone, vm::cptr<CellAdecResource> res);
+using CellAdecCoreOpClose = error_code(vm::ptr<void> coreHandle);
+using CellAdecCoreOpStartSeq = error_code(vm::ptr<void> coreHandle, vm::cptr<void> param);
+using CellAdecCoreOpEndSeq = error_code(vm::ptr<void> coreHandle);
+using CellAdecCoreOpDecodeAu = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<CellAdecAuInfo> auInfo);
+using CellAdecCoreOpGetVersion = void(vm::ptr<be_t<u32, 1>> version);
+using CellAdecCoreOpRealign = error_code(vm::ptr<void> coreHandle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr);
+using CellAdecCoreOpReleasePcm = error_code(vm::ptr<void> coreHandle, s32 pcmHandle, vm::cptr<void> outBuffer);
+using CellAdecCoreOpGetPcmHandleNum = s32();
+using CellAdecCoreOpGetBsiInfoSize = u32();
+using CellAdecCoreOpOpenExt = error_code(vm::ptr<void> coreHandle, vm::ptr<AdecNotifyAuDone> cbFuncAuDone, vm::ptr<void> cbArgAuDone, vm::ptr<AdecNotifyPcmOut> cbFuncPcmOut, vm::ptr<void> cbArgPcmOut,
+	vm::ptr<AdecNotifyError> cbFuncError, vm::ptr<void> cbArgError, vm::ptr<AdecNotifySeqDone> cbFuncSeqDone, vm::ptr<void> cbArgSeqDone, vm::cptr<CellAdecResource> res, vm::cptr<CellAdecResourceSpurs> spursRes);
+
+// Decoders export a pointer to this struct
+struct CellAdecCoreOps
+{
+	vm::bptr<CellAdecCoreOpGetMemSize> getMemSize;
+	vm::bptr<CellAdecCoreOpOpen> open;
+	vm::bptr<CellAdecCoreOpClose> close;
+	vm::bptr<CellAdecCoreOpStartSeq> startSeq;
+	vm::bptr<CellAdecCoreOpEndSeq> endSeq;
+	vm::bptr<CellAdecCoreOpDecodeAu> decodeAu;
+	vm::bptr<CellAdecCoreOpGetVersion> getVersion;
+	vm::bptr<CellAdecCoreOpRealign> realign;
+	vm::bptr<CellAdecCoreOpReleasePcm> releasePcm;
+	vm::bptr<CellAdecCoreOpGetPcmHandleNum> getPcmHandleNum;
+	vm::bptr<CellAdecCoreOpGetBsiInfoSize> getBsiInfoSize;
+	vm::bptr<CellAdecCoreOpOpenExt> openExt;
+};
+
+// Used by several decoders as command queue
+template <typename T>
+struct AdecCmdQueue
+{
+	T elements[4];
+
+	be_t<s32> front = 0;
+	be_t<s32> back = 0;
+	be_t<s32> size = 0;
+
+	template <bool is_peek = false>
+	void pop(T& cmd)
+	{
+		// LLE returns uninitialized stack memory if the queue is empty
+		cmd = elements[front];
+
+		if constexpr (!is_peek)
+		{
+			elements[front].pcm_handle = 0xff;
+			front = (front + 1) & 3;
+			size--;
+		}
+	}
+
+	void emplace(auto&&... args)
+	{
+		new (&elements[back]) T(std::forward<decltype(args)>(args)...);
+
+		back = (back + 1) & 3;
+		size++;
+	}
+
+	void peek(T& cmd) const { return pop<true>(cmd); }
+	bool empty() const { return size == 0; }
+	bool full() const { return size >= 4; }
 };
 
 struct CellAdecParamLpcm
@@ -769,45 +839,6 @@ struct CellAdecAtrac3Info
 	be_t<s32> nch;
 	be_t<s32> isJoint; // ATRAC3_JointType
 	be_t<s32> nbytes;
-};
-
-enum ATRACX_WordSize : s32
-{
-	CELL_ADEC_ATRACX_WORD_SZ_16BIT = 0x02,
-	CELL_ADEC_ATRACX_WORD_SZ_24BIT = 0x03,
-	CELL_ADEC_ATRACX_WORD_SZ_32BIT = 0x04,
-	CELL_ADEC_ATRACX_WORD_SZ_FLOAT = 0x84,
-};
-
-enum ATRACX_ATSHeaderInclude : u8
-{
-	CELL_ADEC_ATRACX_ATS_HDR_NOTINC = 0,
-	CELL_ADEC_ATRACX_ATS_HDR_INC = 1,
-};
-
-enum ATRACX_DownmixFlag : u8
-{
-	ATRACX_DOWNMIX_OFF = 0,
-	ATRACX_DOWNMIX_ON = 1,
-};
-
-struct CellAdecParamAtracX
-{
-	be_t<s32> sampling_freq;
-	be_t<s32> ch_config_idx;
-	be_t<s32> nch_out;
-	be_t<s32> nbytes;
-	std::array<u8, 4> extra_config_data; // downmix coefficients
-	be_t<s32> bw_pcm; // ATRACX_WordSize
-	ATRACX_DownmixFlag downmix_flag;
-	ATRACX_ATSHeaderInclude au_includes_ats_hdr_flg;
-};
-
-struct CellAdecAtracXInfo
-{
-	be_t<u32> samplingFreq; // [Hz]
-	be_t<u32> channelConfigIndex;
-	be_t<u32> nbytes;
 };
 
 enum MP3_WordSize : s32
