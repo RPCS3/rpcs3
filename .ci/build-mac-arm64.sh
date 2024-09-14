@@ -74,8 +74,7 @@ export SDL2_DIR="$BREW_ARM64_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_X64_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_ARM64_PATH/lib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavcodec.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavformat.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavutil.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswscale.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswresample.dylib $BREW_ARM64_PATH/opt/llvm@16/lib/c++/libc++.1.dylib $BREW_ARM64_PATH/lib/libSDL2.dylib $BREW_ARM64_PATH/lib/libGLEW.dylib $BREW_ARM64_PATH/opt/llvm@16/lib/libunwind.1.dylib -Wl,-rpath,$BREW_ARM64_PATH/lib"
-export CPPFLAGS="-I$BREW_ARM64_PATH/include -I$BREW_X64_PATH/include -no-pie -macosx_version_min=14.0"
-export CFLAGS="-macosx_version_min=14.0"
+export CPPFLAGS="-I$BREW_ARM64_PATH/include -I$BREW_X64_PATH/include -no-pie -macosx_version_min=13.0"
 export LIBRARY_PATH="$BREW_ARM64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_ARM64_PATH/lib"
 
@@ -96,7 +95,7 @@ sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVer
 rm -rf build
 mkdir build && cd build || exit 1
 
-export MACOSX_DEPLOYMENT_TARGET=14.0
+export MACOSX_DEPLOYMENT_TARGET=13.0
 
 "$BREW_X64_PATH/bin/cmake" .. \
     -DUSE_SDL=ON \
