@@ -40,7 +40,6 @@ brew_arm64_install_packages 0mq aom aribb24 ca-certificates cjson curl dav1d ffm
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 
@@ -75,7 +74,8 @@ export SDL2_DIR="$BREW_ARM64_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_X64_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_ARM64_PATH/lib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavcodec.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavformat.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libavutil.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswscale.dylib $BREW_ARM64_PATH/opt/ffmpeg@5/lib/libswresample.dylib $BREW_ARM64_PATH/opt/llvm@16/lib/c++/libc++.1.dylib $BREW_ARM64_PATH/lib/libSDL2.dylib $BREW_ARM64_PATH/lib/libGLEW.dylib $BREW_ARM64_PATH/opt/llvm@16/lib/libunwind.1.dylib -Wl,-rpath,$BREW_ARM64_PATH/lib"
-export CPPFLAGS="-I$BREW_ARM64_PATH/include -I$BREW_X64_PATH/include -no-pie"
+export CPPFLAGS="-I$BREW_ARM64_PATH/include -I$BREW_X64_PATH/include -no-pie -macosx_version_min=14.0"
+export CFLAGS="-macosx_version_min=14.0"
 export LIBRARY_PATH="$BREW_ARM64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_ARM64_PATH/lib"
 
@@ -96,9 +96,7 @@ sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVer
 rm -rf build
 mkdir build && cd build || exit 1
 
-export CXXFLAGS="-DSDL_DISABLE_IMMINTRIN_H=1 -DSDL_DISABLE_MMINTRIN_H=1 -DSDL_DISABLE_XMMINTRIN_H=1 -DSDL_DISABLE_EMMINTRIN_H=1 -DSDL_DISABLE_PMMINTRIN_H=1"
-export CFLAGS="-DSDL_DISABLE_IMMINTRIN_H=1 -DSDL_DISABLE_MMINTRIN_H=1 -DSDL_DISABLE_XMMINTRIN_H=1 -DSDL_DISABLE_EMMINTRIN_H=1 -DSDL_DISABLE_PMMINTRIN_H=1"
-export CMAKE_SYSTEM_PROCESSOR=arm64
+export MACOSX_DEPLOYMENT_TARGET=14.0
 
 "$BREW_X64_PATH/bin/cmake" .. \
     -DUSE_SDL=ON \

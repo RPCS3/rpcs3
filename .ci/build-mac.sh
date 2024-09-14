@@ -18,7 +18,6 @@ arch -x86_64 /usr/local/bin/brew link -f llvm@16 ffmpeg@5
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 
@@ -53,7 +52,8 @@ export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export PATH="$BREW_X64_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
-export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie"
+export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie -macosx_version_min=14.0"
+export CFLAGS="-macosx_version_min=14.0"
 export LIBRARY_PATH="$BREW_X64_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_X64_PATH/lib"
 
@@ -72,6 +72,8 @@ git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && 
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
 mkdir build && cd build || exit 1
+
+export MACOSX_DEPLOYMENT_TARGET=14.0
 
 "$BREW_X64_PATH/bin/cmake" .. \
     -DUSE_SDL=ON \
