@@ -12,13 +12,13 @@ arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg@5
 arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetype
-arch -x86_64 /usr/local/bin/brew install llvm@18 glew cmake sdl2 vulkan-headers coreutils
-arch -x86_64 /usr/local/bin/brew link -f llvm@18 ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install llvm@16 glew cmake sdl2 vulkan-headers coreutils
+arch -x86_64 /usr/local/bin/brew link -f llvm@16 ffmpeg@5
 
 # moltenvk based on commit for 1.2.10 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
-#export MACOSX_DEPLOYMENT_TARGET=13.0
+#export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 
@@ -51,7 +51,7 @@ ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
 export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
 
-export PATH="$BREW_X64_PATH/opt/llvm@18/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
+export PATH="$BREW_X64_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
 export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie"
 export LIBRARY_PATH="$BREW_X64_PATH/lib"
@@ -63,7 +63,7 @@ ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
 export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
 export LLVM_DIR
-LLVM_DIR="BREW_X64_PATH/opt/llvm@18"
+LLVM_DIR="BREW_X64_PATH/opt/llvm@16"
 # exclude ffmpeg, SPIRV and LLVM, and sdl from submodule update
 # shellcheck disable=SC2046
 git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)

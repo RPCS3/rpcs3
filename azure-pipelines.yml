@@ -136,7 +136,7 @@ jobs:
     QT_VER_MAIN: '6'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2
@@ -196,7 +196,7 @@ jobs:
     QT_VER_MAIN: '6'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2
