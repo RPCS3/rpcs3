@@ -15,7 +15,7 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/"
 
-cp "/usr/local/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+cp "/usr/local/opt/llvm@18/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
 cp "$(realpath /usr/local/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /usr/local/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 
@@ -37,7 +37,7 @@ mv RPCS3_.app RPCS3.app
 # Hack
 install_name_tool \
 -delete_rpath /usr/local/lib \
--delete_rpath /usr/local/opt/llvm@16/lib RPCS3.app/Contents/MacOS/rpcs3
+-delete_rpath /usr/local/opt/llvm@18/lib RPCS3.app/Contents/MacOS/rpcs3
 #-delete_rpath /usr/local/Cellar/sdl2/2.30.3/lib
 
 # NOTE: "--deep" is deprecated

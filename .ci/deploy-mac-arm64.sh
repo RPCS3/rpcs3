@@ -15,7 +15,7 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/" || true
 
-cp "$(realpath /opt/homebrew1/opt/llvm@16/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
+cp "$(realpath /opt/homebrew1/opt/llvm@18/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
 cp "$(realpath /opt/homebrew1/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /opt/homebrew1/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 
@@ -34,7 +34,7 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 install_name_tool \
 -delete_rpath /opt/homebrew1/lib \
 -delete_rpath /opt/homebrew/lib \
--delete_rpath /opt/homebrew1/opt/llvm@16/lib \
+-delete_rpath /opt/homebrew1/opt/llvm@18/lib \
 -delete_rpath /usr/local/lib RPCS3.app/Contents/MacOS/rpcs3
 #-delete_rpath /opt/homebrew1/Cellar/sdl2/2.30.7/lib
 
