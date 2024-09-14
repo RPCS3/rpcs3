@@ -24,6 +24,7 @@ public:
 	};
 	result add_game(const std::string& key, const std::string& path);
 	result add_external_hdd_game(const std::string& key, std::string& path);
+	result remove_game(const std::string& key);
 	bool save();
 
 private:
