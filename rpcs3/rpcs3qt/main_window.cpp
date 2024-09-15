@@ -2519,7 +2519,7 @@ void main_window::CreateConnects()
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
 	{
-		// Enable/Disable Recent Game List
+		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
 		for (QAction* act : ui->bootRecentMenu->actions())
 		{
@@ -3560,7 +3560,7 @@ void main_window::RemoveAllCaches()
 	u64 caches_count = 0;
 	u64 caches_removed = 0;
 
-	for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on discovered games
+	for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
 	{
 		if (game && qstr(game->info.category) != cat::cat_ps3_os && fs::exists(cache_base_dir + game->info.serial)) // If not OS category and cache exists
 		{
@@ -3602,8 +3602,8 @@ void main_window::RemoveSavestates()
 
 void main_window::CleanupGameList()
 {
-	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n" \
-		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (\"games.yml\").")) != QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n"
+		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (games.yml)")) != QMessageBox::Yes)
 	{
 		return;
 	}
@@ -3615,7 +3615,7 @@ void main_window::CleanupGameList()
 	{
 		bool found = false;
 
-		for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on discovered games
+		for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
 		{
 			// If Disc Game and its serial is found in game list file
 			if (game && qstr(game->info.category) == cat::cat_disc_game && game->info.serial == serial)
@@ -3625,7 +3625,7 @@ void main_window::CleanupGameList()
 			}
 		}
 
-		if (!found) // If serial not found, add it in the removal list
+		if (!found) // If serial not found, add it to the removal list
 		{
 			serials_to_remove_from_yml.push_back(serial);
 		}
