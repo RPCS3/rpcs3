@@ -1,0 +1,154 @@
+name: Build RPCS3
+
+on:
+  push:
+    paths-ignore:
+      - '.cirrus.yml'
+      - '.azure-pipelines.yml'
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - '.cirrus.yml'
+      - '.azure-pipelines.yml'
+      - 'README.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  BUILD_REPOSITORY_NAME: ${{ github.repository }}
+  BUILD_SOURCEBRANCHNAME: ${{ github.ref_name }}
+
+jobs:
+  Linux_Build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [clang, gcc]
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/ccache
+      CI_HAS_ARTIFACTS: true
+      DEPLOY_APPIMAGE: true
+      APPDIR: "/rpcs3/build/appdir"
+      ARTDIR: "/root/artifacts"
+      RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage-${{ matrix.compiler }}.txt"
+      COMPILER: ${{ matrix.compiler }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}
+
+      - name: Append Compiler version to appimage
+        run: |
+          file=".ci/deploy-linux.sh"
+          sed -i 's/RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_linux64.AppImage"/RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}-${COMPILER}_linux64.AppImage"/g' $file
+
+      - name: Docker setup and build
+        run: |
+          docker pull --quiet rpcs3/rpcs3-ci-focal:1.7
+          docker run                      \
+            -v $PWD:/rpcs3              \
+            --env-file .ci/docker.env \
+            -v ${{ env.CCACHE_DIR }}:/root/.ccache  \
+            -v ${{ github.workspace }}/artifacts:/root/artifacts \
+            rpcs3/rpcs3-ci-focal:1.7 \
+            /rpcs3/.ci/build-linux.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Linux (${{ matrix.compiler }})
+          path: ${{ github.workspace }}/build/*.AppImage
+          compression-level: 0
+
+  Windows_Build:
+    runs-on: windows-latest
+    env:
+      COMPILER: msvc
+      QT_VER_MAIN: '6'
+      QT_VER: '6.6.3'
+      QT_VER_MSVC: 'msvc2019'
+      QT_DATE: '202403191840'
+      VULKAN_VER: '1.3.268.0'
+      VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
+      CACHE_DIR: ./cache
+      BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}\build
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup env
+        run: |
+          echo "QTDIR=C:\Qt\${{ env.QT_VER }}\${{ env.QT_VER_MSVC }}_64" >> ${{ github.env }}
+          echo "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_VER }}" >> ${{ github.env }}
+
+      - name: Get Cache Keys
+        shell: bash
+        run: .ci/get_keys-windows.sh
+
+      - name: Setup Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: ${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-llvm.lock-glslang.lock
+          restore-keys: ${{ runner.os }}-${{ env.COMPILER }}
+
+      - name: Download and unpack dependencies
+        shell: bash
+        run: .ci/setup-windows.sh
+
+      - name: Export Variables
+        run: |
+          Get-Content ".ci/ci-vars.env" | ForEach-Object {
+              # Skip over lines containing comments.
+              if ($_ -notmatch '^\s*#')
+              {
+                  $line = $_ -split '='
+                  $key = $line[0]
+                  $val = $line[1]
+                  echo "$key=$val" >> $env:GITHUB_ENV
+              }
+          }
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@main
+
+      - name: Compile RPCS3
+        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Pack up build artifacts
+        shell: bash
+        run: |
+          mkdir -p build
+          .ci/deploy-windows.sh
+          mkdir -p bin2/${{ env.BUILD_RAW }}
+          mv bin/* bin2/${{ env.BUILD_RAW }}
+
+      - name: Upload artifacts (zip)
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (MSVC) (zip)
+          path: bin2
+          if-no-files-found: error
+
+      - name: Upload artifacts (7z)
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (MSVC) (7z)
+          path: build
+          if-no-files-found: error
