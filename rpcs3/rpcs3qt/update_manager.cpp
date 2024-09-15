@@ -9,6 +9,7 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Crypto/utils.h"
+#include "util/types.hpp"
 #include "util/logs.hpp"
 
 #include <QApplication>
@@ -41,6 +42,16 @@
 #else
 #include <unistd.h>
 #include <sys/stat.h>
+#endif
+
+#if defined(__APPLE__)
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
@@ -96,7 +107,18 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
+#ifdef __APPLE__
+	const std::string url = "https://update.rpcs3.net/?api=v3&c=" + rpcs3::get_commit_and_hash().second +
+	"&os_type=macos" +
+#ifdef ARCH_X64
+	"&os_arch=x64" +
+#elifdef ARCH_ARM64
+	"&os_arch=arm64" +
+#endif
+	"&os_version=" + fmt::format("%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion());
+#else
 	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
+#endif
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
