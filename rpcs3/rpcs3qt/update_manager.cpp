@@ -107,18 +107,24 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
-#ifdef __APPLE__
-	const std::string url = "https://update.rpcs3.net/?api=v3&c=" + rpcs3::get_commit_and_hash().second +
-	"&os_type=macos" +
-#ifdef ARCH_X64
-	"&os_arch=x64" +
-#elifdef ARCH_ARM64
-	"&os_arch=arm64" +
+	const std::string url = "https://update.rpcs3.net/?api=v3&c=" + rpcs3::get_commit_and_hash().second
+#if defined(_WIN32)
+		+ "&os_type=windows"
+		// todo os_version
+#elif defined(__linux__)
+		+ "&os_type=linux"
+		// todo os_version
+#elif defined(__APPLE__)
+		+ "&os_type=macos"
+		+ "&os_version=" + fmt::format("%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion())
 #endif
-	"&os_version=" + fmt::format("%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion());
-#else
-	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
+#if defined(ARCH_X64)
+		+ "&os_arch=x64"
+#elif defined(ARCH_ARM64)
+		+ "&os_arch=arm64"
 #endif
+	;
+	
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
