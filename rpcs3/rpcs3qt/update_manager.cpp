@@ -112,10 +112,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		"?api=v3"
 		"&c=%s"
 		"&os_type=macos"
+		"&os_arch="
 #if defined(ARCH_X64)
-		"&os_arch=x64"
+		"x64"
 #elif defined(ARCH_ARM64)
-		"&os_arch=arm64"
+		"arm64"
 #endif
 		"&os_version=%i.%i.%i",
 		rpcs3::get_commit_and_hash().second,
