@@ -11,6 +11,7 @@
 #include "Crypto/utils.h"
 #include "util/types.hpp"
 #include "util/logs.hpp"
+#include "util/sysinfo.hpp"
 
 #include <QApplication>
 #include <QDateTime>
@@ -44,16 +45,6 @@
 #else
 #include <unistd.h>
 #include <sys/stat.h>
-#endif
-
-#if defined(__APPLE__)
-// sysinfo_darwin.mm
-namespace Darwin_Version
-{
-	extern int getNSmajorVersion();
-	extern int getNSminorVersion();
-	extern int getNSpatchVersion();
-}
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
@@ -109,7 +100,15 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
-	// todo this part needs refactoring
+	// todo tidy up
+#if defined(__linux__)
+	struct utsname details = {};
+	std::string linux_ver = uname(&details) ? "" : fmt::format("&os_version=%s.%s", details.release, details.version);
+#elif defined(_WIN32)
+	WindowsVersion winver;
+	utils::get_Windows_version(winver);
+	std::string windows_ver = fmt::format("&os_version=%lu.%lu.%s", winver.version_major, winver.version_minor, winver.build_str);
+#endif
 	const std::string url = "https://update.rpcs3.net/?api=v3&c=" + rpcs3::get_commit_and_hash().second +
 #if defined(ARCH_X64)
 		"&os_arch=x64"
@@ -118,14 +117,10 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 #endif
 #if defined(_WIN32)
 		"&os_type=windows"
-		// todo os_version
+		+  windows_ver
 #elif defined(__linux__)
 		"&os_type=linux"
-		struct utsname details = {};
-		if (!uname(&details))
-		{
-			+ fmt::format("&os_version=%s.%s", details.release, details.version)
-		}
+		+ linux_ver
 #elif defined(__APPLE__)
 		"&os_type=macos"
 		+ fmt::format("&os_version=%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion())

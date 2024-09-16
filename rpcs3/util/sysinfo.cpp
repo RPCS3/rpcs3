@@ -72,7 +72,7 @@ namespace utils
 {
 #ifdef _WIN32
 	// Alternative way to read OS version using the registry.
-	static std::string get_fallback_windows_version()
+	static void get_fallback_windows_version(WindowsVersion &winver)
 	{
 		// Some helpers for sanity
 		const auto read_reg_dword = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, DWORD>
@@ -113,7 +113,7 @@ namespace utils
 		HKEY hKey;
 		if (ERROR_SUCCESS != RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey))
 		{
-			return "Unknown Windows";
+			return;
 		}
 
 		// ProductName (SZ) - Actual windows install name e.g Windows 10 Pro)
@@ -125,7 +125,7 @@ namespace utils
 		if (!product_valid)
 		{
 			RegCloseKey(hKey);
-			return "Unknown Windows";
+			return;
 		}
 
 		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
@@ -139,14 +139,16 @@ namespace utils
 		std::string version_id = "Unknown";
 		if (check_major && check_minor && check_build_no)
 		{
-			version_id = fmt::format("%u.%u.%s", version_major, version_minor, build_no);
+			winver.version_major = version_major;
+			winver.version_minor = version_minor;
+			winver.build_str = build_no;
 			if (check_nt_ver)
 			{
-				version_id += " NT" + nt_ver;
+				winver.nt_str = "NT" + nt_ver;
 			}
 		}
 
-		return fmt::format("Operating system: %s, Version %s", product_name, version_id);
+		winver.product_name = product_name;
 	}
 #endif
 }
@@ -658,20 +660,21 @@ std::string utils::get_firmware_version()
 	return {};
 }
 
-std::string utils::get_OS_version()
-{
-	std::string output;
 #ifdef _WIN32
+void utils::get_Windows_version(WindowsVersion &winver)
+{
+	winver = {};
 	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
 #if defined(ARCH_X64)
 	const DWORD peb_offset = 0x60;
 	const INT_PTR peb = __readgsqword(peb_offset);
-	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
-	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
-	const WORD build = *reinterpret_cast<const WORD*>(peb + 0x120);
-	const UNICODE_STRING service_pack = *reinterpret_cast<const UNICODE_STRING*>(peb + 0x02E8);
-	const u64 compatibility_mode = *reinterpret_cast<const u64*>(peb + 0x02C8); // Two DWORDs, major & minor version
+	winver.version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
+	winver.version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
+	winver.build = *reinterpret_cast<const WORD*>(peb + 0x120);
+	winver.build_str = std::to_string(winver.build);
+	UNICODE_STRING service_pack = *reinterpret_cast<const UNICODE_STRING*>(peb + 0x02E8);
+	winver.compatibility_mode = *reinterpret_cast<const u64*>(peb + 0x02C8); // Two DWORDs, major & minor version
 
 	const bool has_sp = service_pack.Length > 0;
 	std::vector<char> holder(service_pack.Length + 1, '\0');
@@ -681,14 +684,31 @@ std::string utils::get_OS_version()
 			static_cast<LPSTR>(holder.data()), static_cast<int>(holder.size()), nullptr, nullptr);
 	}
 
-	fmt::append(output,
-		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
-		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+	winver.service_pack = has_sp ? holder.data() : "none";
 #else
 	// PEB cannot be easily accessed on ARM64, fall back to registry
-	static const auto s_windows_version = utils::get_fallback_windows_version();
-	return s_windows_version;
+	utils::get_fallback_windows_version(winver);
 #endif
+}
+#endif
+
+std::string utils::get_OS_version()
+{
+	std::string output;
+#ifdef _WIN32
+	WindowsVersion winver;
+	getWindowsVersion(winver);
+	
+	if (winver.build)
+	{
+		fmt::append(output,
+			"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
+			winver.version_major, winver.version_minor, winver.build, winver.service_pack, winver.compatibility_mode);
+	}
+	else
+	{
+		fmt::append("Operating system: %s, Version %lu.%lu.%s", winver.product_name, winver.version_major, winver.version_minor, winver.build_str + winver.nt_str);
+	}
 #elif defined (__APPLE__)
 	const int major_version = Darwin_Version::getNSmajorVersion();
 	const int minor_version = Darwin_Version::getNSminorVersion();

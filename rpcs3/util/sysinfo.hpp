@@ -67,6 +67,22 @@ namespace utils
 
 	std::string get_firmware_version();
 
+#ifdef _WIN32
+	struct WindowsVersion
+	{
+		std::string product_name;
+		DWORD version_major;
+		DWORD version_minor;
+		WORD build;
+		std::string build_str;
+		std::string nt_str;
+		std::string service_pack;
+		u64 compatibility_mode;
+	};
+
+	std::string get_Windows_version();
+#endif
+
 	std::string get_OS_version();
 
 	int get_maxfiles();
