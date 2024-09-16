@@ -119,7 +119,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		struct utsname details = {};
 		if (!uname(&details))
 		{
-			+ fmt::format("&os_version="%s.%s", details.release, details.version)
+			+ fmt::format("&os_version=%s.%s", details.release, details.version)
 		}
 #elif defined(__APPLE__)
 		"&os_type=macos"
