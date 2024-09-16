@@ -119,11 +119,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		struct utsname details = {};
 		if (!uname(&details))
 		{
-			"&os_version=" + fmt::format("%s.%s", details.release, details.version)
+			+ fmt::format("&os_version="%s.%s", details.release, details.version)
 		}
 #elif defined(__APPLE__)
 		"&os_type=macos"
-		"&os_version=" + fmt::format("%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion())
+		+ fmt::format("&os_version=%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion())
 #endif
 #if defined(ARCH_X64)
 		"&os_arch=x64"
