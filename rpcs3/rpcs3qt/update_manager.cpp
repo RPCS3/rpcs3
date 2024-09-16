@@ -111,6 +111,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 
 	// todo this part needs refactoring
 	const std::string url = "https://update.rpcs3.net/?api=v3&c=" + rpcs3::get_commit_and_hash().second +
+#if defined(ARCH_X64)
+		"&os_arch=x64"
+#elif defined(ARCH_ARM64)
+		"&os_arch=arm64"
+#endif
 #if defined(_WIN32)
 		"&os_type=windows"
 		// todo os_version
@@ -124,11 +129,6 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 #elif defined(__APPLE__)
 		"&os_type=macos"
 		+ fmt::format("&os_version=%i.%i.%i", Darwin_Version::getNSmajorVersion(), Darwin_Version::getNSminorVersion(), Darwin_Version::getNSpatchVersion())
-#endif
-#if defined(ARCH_X64)
-		"&os_arch=x64"
-#elif defined(ARCH_ARM64)
-		"&os_arch=arm64"
 #endif
 	;
 	
