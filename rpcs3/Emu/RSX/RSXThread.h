@@ -194,6 +194,11 @@ namespace rsx
 		// Overlays
 		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
+		atomic_t<u64> m_display_rate_fetch_count = 0;
+		atomic_t<f64> m_cached_display_rate = 60.;
+		f64 get_cached_display_refresh_rate();
+		virtual f64 get_display_refresh_rate() const = 0;
+
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 

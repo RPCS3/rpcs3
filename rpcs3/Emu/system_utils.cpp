@@ -107,6 +107,11 @@ namespace rpcs3::utils
 		return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 	}
 
+	std::string get_games_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.games_dir, get_emu_dir());
+	}
+
 	std::string get_hdd0_dir()
 	{
 		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, get_emu_dir());

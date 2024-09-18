@@ -3775,6 +3775,39 @@ namespace rsx
 		m_profiler.enabled = !!g_cfg.video.overlay;
 	}
 
+	f64 thread::get_cached_display_refresh_rate()
+	{
+		constexpr u64 uses_per_query = 512;
+
+		f64 result = m_cached_display_rate;
+		u64 count = m_display_rate_fetch_count++;
+
+		while (true)
+		{
+			if (count % 512 == 0)
+			{
+				result = get_display_refresh_rate();
+				m_cached_display_rate.store(result);
+				m_display_rate_fetch_count += uses_per_query; // Notify users of the new value
+				break;
+			}
+
+			const u64 new_count = m_display_rate_fetch_count;
+			const f64 new_cached = m_cached_display_rate;
+
+			if (result == new_cached && count / uses_per_query == new_count / uses_per_query)
+			{
+				break;
+			}
+
+			// An update might have gone through
+			count = new_count;
+			result = new_cached;
+		}
+
+		return result;
+	}
+
 	bool thread::request_emu_flip(u32 buffer)
 	{
 		if (is_current_thread()) // requested through command buffer
@@ -3826,9 +3859,11 @@ namespace rsx
 		switch (frame_limit)
 		{
 		case frame_limit_type::none: limit = g_cfg.core.max_cpu_preempt_count_per_frame ? static_cast<double>(g_cfg.video.vblank_rate) : 0.; break;
+		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
-		case frame_limit_type::_30: limit = 30.; break;
+ 		case frame_limit_type::_120: limit = 120.; break;
+		case frame_limit_type::display_rate: limit = get_cached_display_refresh_rate(); break;
 		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
 		case frame_limit_type::_ps3: limit = 0.; break;
 		case frame_limit_type::infinite: limit = 0.; break;

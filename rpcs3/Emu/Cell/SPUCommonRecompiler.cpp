@@ -5028,8 +5028,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 
 		auto& vregs = is_form_block ? infos[bpc]->local_state : *true_state_walkby;
-		auto& atomic16 = is_pattern_match ? ::at32(reg_state_it, wi).atomic16 : dummy16;
-		auto& rchcnt_loop = is_pattern_match ? ::at32(reg_state_it, wi).rchcnt_loop : dummy_loop;
+		const auto atomic16 = is_pattern_match ? &::at32(reg_state_it, wi).atomic16 : &dummy16;
+		const auto rchcnt_loop = is_pattern_match ? &::at32(reg_state_it, wi).rchcnt_loop : &dummy_loop;
 
 		const u32 pos = wa;
 
@@ -5153,8 +5153,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		const auto break_all_patterns = [&](u32 cause)
 		{
-			break_putllc16(cause, atomic16.discard());
-			break_channel_pattern(cause, rchcnt_loop.discard());
+			break_putllc16(cause, atomic16->discard());
+			break_channel_pattern(cause, rchcnt_loop->discard());
 		};
 
 		const auto calculate_absolute_ls_difference = [](u32 addr1, u32 addr2)
@@ -5429,6 +5429,18 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				if (wi != stackframe_it || may_return || !insert_entry)
+				{
+					// Possible function end
+					if (rchcnt_loop->active)
+					{
+						// Does not post-dominates channel reads
+						auto& pair = rchcnt_loop_all[rchcnt_loop->read_pc];
+						pair.failed = true;
+						pair.active = false;
+					}
+				}
+
 				// Backup analyser information
 				const auto atomic16_info = reg_state_it[stackframe_it].atomic16;
 				const auto rchcnt_loop_info = reg_state_it[stackframe_it].rchcnt_loop;
@@ -5447,18 +5459,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						// Should not be reachable at the moment
 						//ensure(false);
 						spu_log.error("Failed to clean block analyis steps at block_id %d", reg_state_it[it].iterator_id);
-					}
-				}
-
-				if (wi != stackframe_it || may_return || !insert_entry)
-				{
-					// Possible function end
-					if (rchcnt_loop.active)
-					{
-						// Does not post-dominates channel reads
-						auto& pair = rchcnt_loop_all[rchcnt_loop.read_pc];
-						pair.failed = true;
-						pair.active = false;
 					}
 				}
 
@@ -5484,10 +5484,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break_putllc16(39, atomic16_info);
 						}
 
-						if (rchcnt_loop.active)
+						if (rchcnt_loop_info.active)
 						{
 							// Does not post-dominates channel read
-							auto& pair = rchcnt_loop_all[rchcnt_loop.read_pc];
+							auto& pair = rchcnt_loop_all[rchcnt_loop_info.read_pc];
 							pair.failed = true;
 							pair.active = false;
 						}
@@ -5648,20 +5648,20 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		}
 
-		if (atomic16.active)
+		if (atomic16->active)
 		{
-			for (auto state : {&atomic16.lsa, &atomic16.ls, &atomic16.ls_offs})
+			for (auto state : {&atomic16->lsa, &atomic16->ls, &atomic16->ls_offs})
 			{
 				state->invalidate_if_created(pos);
 			}
 		}
 
-		if (rchcnt_loop.active)
+		if (rchcnt_loop->active)
 		{
-			if (rchcnt_loop.origins.find_first_of(pos) != umax)
+			if (rchcnt_loop->origins.find_first_of(pos) != umax)
 			{
-				rchcnt_loop.failed = true;
-				rchcnt_loop.active = false;
+				rchcnt_loop->failed = true;
+				rchcnt_loop->active = false;
 			}
 		}
 
@@ -5719,7 +5719,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				dis_asm.last_opcode.pop_back();
 			}
 
-			spu_log.always()("[SPU=0%x, it=%d] %s%s     [%d]", pos, reg_state_it[wi].iterator_id, dis_asm.last_opcode, consts, atomic16.active);
+			spu_log.always()("[SPU=0%x, it=%d] %s%s     [%d]", pos, reg_state_it[wi].iterator_id, dis_asm.last_opcode, consts, atomic16->active);
 		}
 
 		// Analyse instruction
@@ -5798,22 +5798,22 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const u32 next_pc = spu_branch_target(pos, 1);
 			const u32 target = spu_branch_target(pos, op.i16);
 
-			if (rchcnt_loop.active)
+			if (rchcnt_loop->active)
 			{
 				const reg_state_t& rt = vregs[op.rt];
 
-				if (rt.is_instruction && (rchcnt_loop.ch_state.origin == rt.origin || rchcnt_loop.ch_product.origin == rt.origin))
+				if (rt.is_instruction && (rchcnt_loop->ch_state.origin == rt.origin || rchcnt_loop->ch_product.origin == rt.origin))
 				{
-					if (rchcnt_loop.conditioned)
+					if (rchcnt_loop->conditioned)
 					{
 						// Let's not make it complicated, have a single branch determining the condition
-						break_channel_pattern(54, rchcnt_loop.discard());
+						break_channel_pattern(54, rchcnt_loop->discard());
 						break;
 					}
 
-					rchcnt_loop.conditioned = true;
-					rchcnt_loop.branch_pc = pos;
-					rchcnt_loop.branch_target = rchcnt_loop.product_test_negate != (type == spu_itype::BRZ) ? target : next_pc;
+					rchcnt_loop->conditioned = true;
+					rchcnt_loop->branch_pc = pos;
+					rchcnt_loop->branch_target = rchcnt_loop->product_test_negate != (type == spu_itype::BRZ) ? target : next_pc;
 					break;
 				}
 			}
@@ -5845,7 +5845,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		case spu_itype::WRCH:
 		{
-			break_channel_pattern(56, rchcnt_loop.discard());
+			break_channel_pattern(56, rchcnt_loop->discard());
 
 			switch (op.ra)
 			{
@@ -5861,7 +5861,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if (is_pattern_match)
 				{
-					atomic16.lsa_last_pc = pos;
+					atomic16->lsa_last_pc = pos;
 				}
 
 				break;
@@ -5897,27 +5897,27 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						auto lsa = get_reg(s_reg_mfc_lsa);
 						vregs[s_reg_mfc_lsa] = old_lsa;
 
-						const u32 lsa_pc = atomic16.lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16.lsa_last_pc;
+						const u32 lsa_pc = atomic16->lsa_last_pc == SPU_LS_SIZE ? bpc : atomic16->lsa_last_pc;
 
-						if (atomic16.active)
+						if (atomic16->active)
 						{
-							if (atomic16.lsa_pc != lsa_pc || atomic16.get_pc != pos || atomic16.lsa != lsa)
+							if (atomic16->lsa_pc != lsa_pc || atomic16->get_pc != pos || atomic16->lsa != lsa)
 							{
-								break_putllc16(30, atomic16.discard());
+								break_putllc16(30, atomic16->discard());
 							}
 						}
 
 						// If LSA write has not happened, use block start
-						atomic16.lsa_pc = lsa_pc;
-						atomic16.get_pc = pos;
-						atomic16.active = true;
+						atomic16->lsa_pc = lsa_pc;
+						atomic16->get_pc = pos;
+						atomic16->active = true;
 
-						atomic16.lsa = lsa;
+						atomic16->lsa = lsa;
 
 						if (likely_putllc_loop)
 						{
 							// Register loop entry
-							if (getllar_starts.emplace(atomic16.lsa_pc, false).second)
+							if (getllar_starts.emplace(atomic16->lsa_pc, false).second)
 							{
 								g_fxo->get<putllc16_statistics_t>().all++;
 								spu_log.notice("[0x%05x] GETLLAR pattern entry point", pos);
@@ -5928,17 +5928,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 					case MFC_PUTLLC_CMD:
 					{
-						if (atomic16.active)
+						if (atomic16->active)
 						{
 							const auto _lsa = get_reg(s_reg_mfc_lsa);
 
 							// Search the value of LS address stoire/load in latest register file
-							if (atomic16.ls_access && atomic16.ls_write && !atomic16.ls_pc_rel && !atomic16.ls.is_const())
+							if (atomic16->ls_access && atomic16->ls_write && !atomic16->ls_pc_rel && !atomic16->ls.is_const())
 							{
 								usz reg_it = umax;
 								u32 regs[2]{s_reg_max, s_reg_max};
 
-								for (auto val : {&atomic16.ls, &atomic16.ls_offs})
+								for (auto val : {&atomic16->ls, &atomic16->ls_offs})
 								{
 									reg_it++;
 
@@ -5968,68 +5968,68 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 								if (regs[0] == s_reg_max || regs[1] == s_reg_max)
 								{
-									break_putllc16(3, atomic16.discard());
+									break_putllc16(3, atomic16->discard());
 									break;
 								}
 
-								atomic16.reg = regs[0];
+								atomic16->reg = regs[0];
 
-								if (!atomic16.ls_offs.is_const())
+								if (!atomic16->ls_offs.is_const())
 								{
-									atomic16.reg2 = regs[1];
+									atomic16->reg2 = regs[1];
 								}
 							}
 
-							if (atomic16.ls_access && atomic16.ls_write && !atomic16.lsa.compare_with_mask_indifference(_lsa, SPU_LS_MASK_128))
+							if (atomic16->ls_access && atomic16->ls_write && !atomic16->lsa.compare_with_mask_indifference(_lsa, SPU_LS_MASK_128))
 							{
 								// LSA latest value mismatches with the one written with GETLLAR
 
-								if (atomic16.lsa.flag != _lsa.flag)
+								if (atomic16->lsa.flag != _lsa.flag)
 								{
-									break_putllc16(1, atomic16.discard());
+									break_putllc16(1, atomic16->discard());
 								}
 								else
 								{
-									break_putllc16(2, atomic16.discard());
+									break_putllc16(2, atomic16->discard());
 								}
 
 								break;
 							}
 
-							if (atomic16.ls_access && atomic16.ls_write)
+							if (atomic16->ls_access && atomic16->ls_write)
 							{
-								atomic16.select_16_or_0_at_runtime = false;
+								atomic16->select_16_or_0_at_runtime = false;
 
 								bool ok = false;
 
-								if (atomic16.ls_pc_rel || !atomic16.ls_offs.is_const())
+								if (atomic16->ls_pc_rel || !atomic16->ls_offs.is_const())
 								{
 									//
 								}
-								else if (atomic16.lsa.is_const())
+								else if (atomic16->lsa.is_const())
 								{
-									if (atomic16.ls.is_const())
+									if (atomic16->ls.is_const())
 									{
-										if (atomic16.ls_offs.value != 0)
+										if (atomic16->ls_offs.value != 0)
 										{
 											// Rebase constant so we can get rid of ls_offs
-											atomic16.ls.value = spu_ls_target(atomic16.ls_offs.value + atomic16.ls.value);
-											atomic16.ls_offs = reg_state_t::from_value(0);
+											atomic16->ls.value = spu_ls_target(atomic16->ls_offs.value + atomic16->ls.value);
+											atomic16->ls_offs = reg_state_t::from_value(0);
 										}
 
-										if (atomic16.ls.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128))
+										if (atomic16->ls.compare_with_mask_indifference(atomic16->lsa, SPU_LS_MASK_128))
 										{
 											ok = true;
 										}
 									}
-									else if (atomic16.ls_offs.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128) && atomic16.ls.is_less_than(128 - (atomic16.ls_offs.value & 127)))
+									else if (atomic16->ls_offs.compare_with_mask_indifference(atomic16->lsa, SPU_LS_MASK_128) && atomic16->ls.is_less_than(128 - (atomic16->ls_offs.value & 127)))
 									{
 										// Relative memory access with offset less than 128 bytes
 										// Common around SPU utilities which have less strict restrictions about memory alignment 
 										ok = true;
 									}
 								}
-								else if (atomic16.lsa.compare_with_mask_indifference(atomic16.ls, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+								else if (atomic16->lsa.compare_with_mask_indifference(atomic16->ls, SPU_LS_MASK_128) && atomic16->ls_offs == 0)
 								{
 									// Unknown value with known offset of less than 128 bytes
 									ok = true;
@@ -6039,37 +6039,37 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 								{
 									// This is quite common.. let's try to select between putllc16 and putllc0 at runtime!
 									// break_putllc16(100);
-									// atomic16.discard();
+									// atomic16->discard();
 									// break;
-									atomic16.select_16_or_0_at_runtime = true;
+									atomic16->select_16_or_0_at_runtime = true;
 								}
 							}
 
-							if (!atomic16.get_rdatomic)
+							if (!atomic16->get_rdatomic)
 							{
 								// MFC_RdAtomicStat must have been read, otherwise GETLLAR may not be executed (according to HW tests)
-								break_putllc16(21, atomic16.discard());
+								break_putllc16(21, atomic16->discard());
 							}
 
-							atomic16.put_pc = pos;
-							atomic16.put_active = true;
+							atomic16->put_pc = pos;
+							atomic16->put_active = true;
 						}
 
 						break;
 					}
 					default:
 					{
-						break_putllc16(4, atomic16.discard());
+						break_putllc16(4, atomic16->discard());
 						break;
 					}
 					}
 				}
 				else
 				{
-					break_putllc16(5, atomic16.discard());
+					break_putllc16(5, atomic16->discard());
 				}
 
-				if (!atomic16.active)
+				if (!atomic16->active)
 				{
 					// Propagate failure
 					for (auto& atm : atomic16_all)
@@ -6113,7 +6113,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (it != rchcnt_loop_all.end())
 			{
-				if (rchcnt_loop.failed || !rchcnt_loop.conditioned || rchcnt_loop.read_pc != pos)
+				if (rchcnt_loop->failed || !rchcnt_loop->conditioned || rchcnt_loop->read_pc != pos)
 				{
 					// Propagate faiure
 					it->second.failed = true;
@@ -6125,14 +6125,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					it->second.active = false;
 				}
 
-				rchcnt_loop.active = false;
+				rchcnt_loop->active = false;
 			}
 
-			if (rchcnt_loop.active)
+			if (rchcnt_loop->active)
 			{
-				if (rchcnt_loop.read_pc != pos)
+				if (rchcnt_loop->read_pc != pos)
 				{
-					break_channel_pattern(53, rchcnt_loop.discard());
+					break_channel_pattern(53, rchcnt_loop->discard());
 				}
 			}
 
@@ -6145,13 +6145,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					break;
 				}
 
-				if (atomic16.active)
+				if (atomic16->active)
 				{
-					if (atomic16.put_active)
+					if (atomic16->put_active)
 					{
-						if (getllar_starts.contains(atomic16.lsa_pc) && getllar_starts[atomic16.lsa_pc])
+						if (getllar_starts.contains(atomic16->lsa_pc) && getllar_starts[atomic16->lsa_pc])
 						{
-							break_putllc16(24, atomic16.discard());
+							break_putllc16(24, atomic16->discard());
 							break;
 						}
 
@@ -6178,53 +6178,53 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 								return a.second == b.second;
 							};
 
-							if (existing.lsa_pc != atomic16.lsa_pc || existing.put_pc != atomic16.put_pc || !existing.lsa.compare_with_mask_indifference(atomic16.lsa, SPU_LS_MASK_128))
+							if (existing.lsa_pc != atomic16->lsa_pc || existing.put_pc != atomic16->put_pc || !existing.lsa.compare_with_mask_indifference(atomic16->lsa, SPU_LS_MASK_128))
 							{
 								// Register twice
-								break_putllc16(22, atomic16.discard());
+								break_putllc16(22, atomic16->discard());
 								break_putllc16(22, existing.discard());
 							}
 
-							if (existing.active && existing.ls_access && atomic16.ls_access && (!compare_tag_and_reg({&existing.ls, existing.reg}, {&atomic16.ls, atomic16.reg}) || existing.ls_offs != atomic16.ls_offs || existing.reg2 != atomic16.reg2))
+							if (existing.active && existing.ls_access && atomic16->ls_access && (!compare_tag_and_reg({&existing.ls, existing.reg}, {&atomic16->ls, atomic16->reg}) || existing.ls_offs != atomic16->ls_offs || existing.reg2 != atomic16->reg2))
 							{
 								// Conflicting loads with stores in more than one code path
-								break_putllc16(27, atomic16.set_invalid_ls(existing.ls_write || atomic16.ls_write));
+								break_putllc16(27, atomic16->set_invalid_ls(existing.ls_write || atomic16->ls_write));
 
-								if (!atomic16.active)
+								if (!atomic16->active)
 								{
 									existing.active = false;
 								}
 							}
 
-							if (existing.active && (existing.ls_write || atomic16.ls_write) && (existing.ls_invalid || atomic16.ls_invalid))
+							if (existing.active && (existing.ls_write || atomic16->ls_write) && (existing.ls_invalid || atomic16->ls_invalid))
 							{
 								// Conflicting loads with stores in more than one code path
-								break_putllc16(33, atomic16.discard());
+								break_putllc16(33, atomic16->discard());
 								existing.active = false;
 								existing.ls_invalid = true;
 							}
 
-							if (existing.active && !existing.ls_access && atomic16.ls_access)
+							if (existing.active && !existing.ls_access && atomic16->ls_access)
 							{
 								// Propagate LS access
-								existing.ls = atomic16.ls;
-								existing.reg = atomic16.reg;
-								existing.reg2 = atomic16.reg2;
-								existing.ls_offs = atomic16.ls_offs;
+								existing.ls = atomic16->ls;
+								existing.reg = atomic16->reg;
+								existing.reg2 = atomic16->reg2;
+								existing.ls_offs = atomic16->ls_offs;
 							}
 
-							existing.ls_write |= atomic16.ls_write;
-							existing.ls_invalid |= atomic16.ls_invalid;
-							existing.ls_access |= atomic16.ls_access;
-							existing.mem_count = std::max<u32>(existing.mem_count, atomic16.mem_count);
-							existing.select_16_or_0_at_runtime |= atomic16.select_16_or_0_at_runtime;
+							existing.ls_write |= atomic16->ls_write;
+							existing.ls_invalid |= atomic16->ls_invalid;
+							existing.ls_access |= atomic16->ls_access;
+							existing.mem_count = std::max<u32>(existing.mem_count, atomic16->mem_count);
+							existing.select_16_or_0_at_runtime |= atomic16->select_16_or_0_at_runtime;
 						}
 
-						atomic16.discard();
+						atomic16->discard();
 					}
-					else if (!atomic16.get_rdatomic)
+					else if (!atomic16->get_rdatomic)
 					{
-						atomic16.get_rdatomic = true;
+						atomic16->get_rdatomic = true;
 
 						// Go above and beyond and also set the constant for it
 						set_const_value(op.rt, MFC_GETLLAR_SUCCESS);
@@ -6244,30 +6244,30 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				if (is_read)
 				{
-					break_putllc16(28, atomic16.discard());
+					break_putllc16(28, atomic16->discard());
 				}
 				else
 				{
-					break_putllc16(29, atomic16.discard());
+					break_putllc16(29, atomic16->discard());
 				}
 
 				if (!is_pattern_match || is_read)
 				{
 					//
 				}
-				else if (!rchcnt_loop.active && it == rchcnt_loop_all.end())
+				else if (!rchcnt_loop->active && it == rchcnt_loop_all.end())
 				{
-					rchcnt_loop.read_pc = pos;
-					rchcnt_loop.channel = op.ra;
-					rchcnt_loop.active = true;
+					rchcnt_loop->read_pc = pos;
+					rchcnt_loop->channel = op.ra;
+					rchcnt_loop->active = true;
 					unconst(op.rt, pos);
-					rchcnt_loop.ch_state = vregs[op.rt];
+					rchcnt_loop->ch_state = vregs[op.rt];
 					invalidate = false;
 				}
-				else if (rchcnt_loop.active)
+				else if (rchcnt_loop->active)
 				{
 					// Success
-					rchcnt_loop.active = false;
+					rchcnt_loop->active = false;
 
 					if (it == rchcnt_loop_all.end())
 					{
@@ -6295,20 +6295,20 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			const bool is_store = type == spu_itype::STQR;
 
-			if (atomic16.active)
+			if (atomic16->active)
 			{
-				atomic16.mem_count++;
+				atomic16->mem_count++;
 
 				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis 
 				const u32 offs = spu_branch_target(pos - result.lower_bound, op.si16);
 
-				if (atomic16.lsa.is_const() && [&]()
+				if (atomic16->lsa.is_const() && [&]()
 				{
 					bool hack = false;
 
 					if (offs % 16 == 0 && (pos - result.lower_bound + op.si16 * 4) == offs)
 					{
-						const u32 reservation_bound = (atomic16.lsa.value | 127);
+						const u32 reservation_bound = (atomic16->lsa.value | 127);
 						const u32 min_offs = offs;
 
 						// Hack: assume there is no overflow in relative instruction offset
@@ -6325,37 +6325,37 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					// Ignore memory access in this case
 				}
-				else if (atomic16.ls_invalid && is_store)
+				else if (atomic16->ls_invalid && is_store)
 				{
-					break_putllc16(35, atomic16.set_invalid_ls(is_store));
+					break_putllc16(35, atomic16->set_invalid_ls(is_store));
 				}
-				else if (atomic16.ls_access && atomic16.ls != start_program_count)
+				else if (atomic16->ls_access && atomic16->ls != start_program_count)
 				{
-					break_putllc16(7, atomic16.set_invalid_ls(is_store));
+					break_putllc16(7, atomic16->set_invalid_ls(is_store));
 				}
-				else if (atomic16.ls_access && offs != atomic16.ls_offs)
+				else if (atomic16->ls_access && offs != atomic16->ls_offs)
 				{
-					if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+					if (atomic16->ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
 					{
-						atomic16.ls_write |= is_store;
+						atomic16->ls_write |= is_store;
 					}
 					else
 					{
 						// Sad
-						break_putllc16(8, atomic16.set_invalid_ls(is_store));
+						break_putllc16(8, atomic16->set_invalid_ls(is_store));
 					}
 				}
 				else
 				{
-					atomic16.ls = start_program_count;
-					atomic16.ls_offs = reg_state_t::from_value(offs);
-					atomic16.ls_pc_rel = true;
-					atomic16.ls_write |= is_store;
-					atomic16.ls_access = true;
+					atomic16->ls = start_program_count;
+					atomic16->ls_offs = reg_state_t::from_value(offs);
+					atomic16->ls_pc_rel = true;
+					atomic16->ls_write |= is_store;
+					atomic16->ls_access = true;
 				}
 
-				// atomic16.ls_reg[offs % 128 / 16] = start_program_count;
-				// atomic16.ls_offs[offs % 128 / 16] = offs;
+				// atomic16->ls_reg[offs % 128 / 16] = start_program_count;
+				// atomic16->ls_offs[offs % 128 / 16] = offs;
 			}
 
 			if (is_store)
@@ -6373,9 +6373,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			const bool is_store = type == spu_itype::STQX;
 
-			if (atomic16.active)
+			if (atomic16->active)
 			{
-				atomic16.mem_count++;
+				atomic16->mem_count++;
 
 				auto ra = get_reg(op.ra);
 				ra.value &= SPU_LS_MASK_1;
@@ -6393,37 +6393,37 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					add_res.value &= SPU_LS_MASK_16;
 					add_res.tag = umax;
 
-					if (atomic16.lsa.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128))
+					if (atomic16->lsa.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128))
 					{
 						// Unrelated, ignore
 					}
-					else if (atomic16.ls_invalid && is_store)
+					else if (atomic16->ls_invalid && is_store)
 					{
-						break_putllc16(20, atomic16.set_invalid_ls(is_store));
+						break_putllc16(20, atomic16->set_invalid_ls(is_store));
 					}
-					else if (atomic16.ls_access && add_res != atomic16.ls)
+					else if (atomic16->ls_access && add_res != atomic16->ls)
 					{
-						if (atomic16.ls.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+						if (atomic16->ls.unequal_with_mask_indifference(add_res, SPU_LS_MASK_128) && atomic16->ls_offs == 0)
 						{
 							// Ok
 						}
-						else if (atomic16.ls_pc_rel)
+						else if (atomic16->ls_pc_rel)
 						{
-							break_putllc16(8, atomic16.set_invalid_ls(is_store));
+							break_putllc16(8, atomic16->set_invalid_ls(is_store));
 						}
 						else
 						{
 							// Sad
-							break_putllc16(9, atomic16.set_invalid_ls(is_store));
+							break_putllc16(9, atomic16->set_invalid_ls(is_store));
 						}
 					}
 					else
 					{
-						atomic16.ls = reg_state_t::from_value(add_res.value);
-						atomic16.ls_offs = reg_state_t::from_value(0);
-						atomic16.ls_pc_rel = false;
-						atomic16.ls_write |= is_store;
-						atomic16.ls_access = true;
+						atomic16->ls = reg_state_t::from_value(add_res.value);
+						atomic16->ls_offs = reg_state_t::from_value(0);
+						atomic16->ls_pc_rel = false;
+						atomic16->ls_write |= is_store;
+						atomic16->ls_access = true;
 					}
 
 					break;
@@ -6431,7 +6431,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				case 1:
 				{
 					const auto& state = ra.is_const() ? rb : ra;
-					const auto& _lsa = atomic16.lsa;
+					const auto& _lsa = atomic16->lsa;
 					const u32 offs = (ra.is_const() ? ra.value : rb.value) & SPU_LS_MASK_1;
 					const u32 abs_diff = calculate_absolute_ls_difference(offs, 0);
 
@@ -6443,82 +6443,82 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						// We already know it's an unrelated load/store
 						// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
 					}
-					else if (atomic16.ls_invalid && is_store)
+					else if (atomic16->ls_invalid && is_store)
 					{
-						break_putllc16(23, atomic16.set_invalid_ls(is_store));
+						break_putllc16(23, atomic16->set_invalid_ls(is_store));
 					}
-					else if (atomic16.ls_access && atomic16.ls != state)
+					else if (atomic16->ls_access && atomic16->ls != state)
 					{
-						if (atomic16.ls.unequal_with_mask_indifference(state, SPU_LS_MASK_128) && offs == 0)
+						if (atomic16->ls.unequal_with_mask_indifference(state, SPU_LS_MASK_128) && offs == 0)
 						{
 							// Ok
 						}
-						else if (atomic16.ls_pc_rel)
+						else if (atomic16->ls_pc_rel)
 						{
-							break_putllc16(36, atomic16.set_invalid_ls(is_store));
+							break_putllc16(36, atomic16->set_invalid_ls(is_store));
 						}
 						else
 						{
 							// Sad
-							break_putllc16(11, atomic16.set_invalid_ls(is_store));
+							break_putllc16(11, atomic16->set_invalid_ls(is_store));
 						}
 					}
-					else if (atomic16.ls_access)
+					else if (atomic16->ls_access)
 					{
-						ensure(!atomic16.ls.is_const());
+						ensure(!atomic16->ls.is_const());
 
-						if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+						if (atomic16->ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
 						{
 							// Ok
-							atomic16.ls_write |= is_store;
+							atomic16->ls_write |= is_store;
 						}
-						else if (atomic16.ls_offs.is_const() && atomic16.ls_offs.value / 16 == offs / 16 && state.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16.ls_offs.value % 16))
+						else if (atomic16->ls_offs.is_const() && atomic16->ls_offs.value / 16 == offs / 16 && state.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16->ls_offs.value % 16))
 						{
 							// For special case observed in games (offset cannot cause the address to roll over the next 16 bytes)
-							atomic16.ls_write |= is_store;
+							atomic16->ls_write |= is_store;
 						}
 						else
 						{
-							break_putllc16(12, atomic16.set_invalid_ls(is_store));
+							break_putllc16(12, atomic16->set_invalid_ls(is_store));
 						}
 					}
 					else
 					{
-						atomic16.ls = state;
-						atomic16.ls_offs = reg_state_t::from_value(offs);
-						atomic16.ls_pc_rel = false;
-						atomic16.ls_write |= is_store;
-						atomic16.ls_access = true;
+						atomic16->ls = state;
+						atomic16->ls_offs = reg_state_t::from_value(offs);
+						atomic16->ls_pc_rel = false;
+						atomic16->ls_write |= is_store;
+						atomic16->ls_access = true;
 					}
 
 					break;
 				}
 				case 0:
 				{
-					const bool is_ra_first = atomic16.ls_access ? ra == atomic16.ls : op.ra <= op.rb;
+					const bool is_ra_first = atomic16->ls_access ? ra == atomic16->ls : op.ra <= op.rb;
 
 					const auto& state1 = is_ra_first ? ra : rb;
 					const auto& state2 = is_ra_first ? rb : ra;
 
-					if (atomic16.ls_access && (atomic16.ls != state1 || atomic16.ls_offs != state2))
+					if (atomic16->ls_access && (atomic16->ls != state1 || atomic16->ls_offs != state2))
 					{
-						if (atomic16.ls_pc_rel)
+						if (atomic16->ls_pc_rel)
 						{
-							break_putllc16(32, atomic16.set_invalid_ls(is_store));
+							break_putllc16(32, atomic16->set_invalid_ls(is_store));
 						}
 						else
 						{
 							// Sad
-							break_putllc16(13, atomic16.set_invalid_ls(is_store));
+							break_putllc16(13, atomic16->set_invalid_ls(is_store));
 						}
 					}
 					else
 					{
-						atomic16.ls = state1;
-						atomic16.ls_offs = state2;
-						atomic16.ls_pc_rel = false;
-						atomic16.ls_write |= is_store;
-						atomic16.ls_access = true;
+						atomic16->ls = state1;
+						atomic16->ls_offs = state2;
+						atomic16->ls_pc_rel = false;
+						atomic16->ls_write |= is_store;
+						atomic16->ls_access = true;
 					}
 
 					break;
@@ -6541,43 +6541,43 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			const bool is_store = type == spu_itype::STQA;
 
-			if (atomic16.active)
+			if (atomic16->active)
 			{
-				atomic16.mem_count++;
+				atomic16->mem_count++;
 
 				const reg_state_t ca = reg_state_t::from_value(spu_ls_target(0, op.i16));
 
-				if (atomic16.lsa.unequal_with_mask_indifference(ca, SPU_LS_MASK_128))
+				if (atomic16->lsa.unequal_with_mask_indifference(ca, SPU_LS_MASK_128))
 				{
 					// We already know it's an unrelated load/store
 				}
-				else if (atomic16.ls_invalid && is_store)
+				else if (atomic16->ls_invalid && is_store)
 				{
-					break_putllc16(37, atomic16.set_invalid_ls(is_store));
+					break_putllc16(37, atomic16->set_invalid_ls(is_store));
 				}
-				else if (atomic16.ls_access && ca != atomic16.ls)
+				else if (atomic16->ls_access && ca != atomic16->ls)
 				{
-					if (atomic16.ls.unequal_with_mask_indifference(ca, SPU_LS_MASK_128) && atomic16.ls_offs == 0)
+					if (atomic16->ls.unequal_with_mask_indifference(ca, SPU_LS_MASK_128) && atomic16->ls_offs == 0)
 					{
 						// Ok
 					}
-					else if (atomic16.ls_pc_rel)
+					else if (atomic16->ls_pc_rel)
 					{
-						break_putllc16(14, atomic16.set_invalid_ls(is_store));
+						break_putllc16(14, atomic16->set_invalid_ls(is_store));
 					}
 					else
 					{
 						// Sad
-						break_putllc16(15, atomic16.set_invalid_ls(is_store));
+						break_putllc16(15, atomic16->set_invalid_ls(is_store));
 					}
 				}
 				else
 				{
-					atomic16.ls = ca;
-					atomic16.ls_offs = reg_state_t::from_value(0);
-					atomic16.ls_pc_rel = false;
-					atomic16.ls_write |= is_store;
-					atomic16.ls_access = true;
+					atomic16->ls = ca;
+					atomic16->ls_offs = reg_state_t::from_value(0);
+					atomic16->ls_pc_rel = false;
+					atomic16->ls_write |= is_store;
+					atomic16->ls_access = true;
 				}
 			}
 
@@ -6596,12 +6596,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			const bool is_store = type == spu_itype::STQD;
 
-			if (atomic16.active)
+			if (atomic16->active)
 			{
-				atomic16.mem_count++;
+				atomic16->mem_count++;
 
 				auto ra = get_reg(op.ra);
-				const auto& _lsa = atomic16.lsa;
+				const auto& _lsa = atomic16->lsa;
 
 				ra.value = ra.is_const() ? spu_ls_target(ra.value, op.si10 * 4) : 0;
 				const u32 offs = ra.is_const() ? 0 : spu_ls_target(0, op.si10 * 4);
@@ -6615,49 +6615,49 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					// We already know it's an unrelated load/store
 					// The reason for SPU_LS_SIZE - 128 check is that in case LSA is not aligned, it detects the possible wraparound
 				}
-				else if (atomic16.ls_invalid && is_store)
+				else if (atomic16->ls_invalid && is_store)
 				{
-					break_putllc16(34, atomic16.set_invalid_ls(is_store));
+					break_putllc16(34, atomic16->set_invalid_ls(is_store));
 				}
-				else if (atomic16.ls_access && atomic16.ls != ra)
+				else if (atomic16->ls_access && atomic16->ls != ra)
 				{
-					if (atomic16.ls.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && (offs == 0 && atomic16.ls_offs == 0))
+					if (atomic16->ls.unequal_with_mask_indifference(ra, SPU_LS_MASK_128) && (offs == 0 && atomic16->ls_offs == 0))
 					{
 						// Ok
 					}
-					else if (atomic16.ls_pc_rel)
+					else if (atomic16->ls_pc_rel)
 					{
-						break_putllc16(16, atomic16.set_invalid_ls(is_store));
+						break_putllc16(16, atomic16->set_invalid_ls(is_store));
 					}
 					else
 					{
 						// Sad
-						break_putllc16(17, atomic16.set_invalid_ls(is_store));
+						break_putllc16(17, atomic16->set_invalid_ls(is_store));
 					}
 				}
-				else if (atomic16.ls_access)
+				else if (atomic16->ls_access)
 				{
-					if (atomic16.ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
+					if (atomic16->ls_offs.compare_with_mask_indifference(offs, SPU_LS_MASK_1))
 					{
-						atomic16.ls_write |= is_store;
+						atomic16->ls_write |= is_store;
 					}
-					else if (atomic16.ls_offs.is_const() && atomic16.ls_offs.value / 16 == offs / 16 && ra.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16.ls_offs.value % 16))
+					else if (atomic16->ls_offs.is_const() && atomic16->ls_offs.value / 16 == offs / 16 && ra.get_known_zeroes() % 16 >= std::max<u32>(offs % 16, atomic16->ls_offs.value % 16))
 					{
 						// For special case observed in games (offset cannot cause the address to roll over the next 16 bytes)
-						atomic16.ls_write |= is_store;
+						atomic16->ls_write |= is_store;
 					}
 					else
 					{
-						break_putllc16(18, atomic16.set_invalid_ls(is_store));
+						break_putllc16(18, atomic16->set_invalid_ls(is_store));
 					}
 				}
 				else
 				{
-					atomic16.ls = ra;
-					atomic16.ls_offs = reg_state_t::from_value(offs);
-					atomic16.ls_pc_rel = false;
-					atomic16.ls_write |= is_store;
-					atomic16.ls_access = true;
+					atomic16->ls = ra;
+					atomic16->ls_offs = reg_state_t::from_value(offs);
+					atomic16->ls_pc_rel = false;
+					atomic16->ls_write |= is_store;
+					atomic16->ls_access = true;
 				}
 			}
 
@@ -6947,18 +6947,18 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			inherit_const_value(op.rt, ra, ra, av == op.si10 + 0u, pos);
 
-			if (rchcnt_loop.active)
+			if (rchcnt_loop->active)
 			{
-				if (ra.is_instruction && ra.origin == rchcnt_loop.ch_state.origin)
+				if (ra.is_instruction && ra.origin == rchcnt_loop->ch_state.origin)
 				{
 					if (op.si10 != 0 && op.si10 != 1)
 					{
-						break_channel_pattern(55, rchcnt_loop.discard());
+						break_channel_pattern(55, rchcnt_loop->discard());
 						break;
 					}
 
-					rchcnt_loop.ch_product = vregs[op.rt];
-					rchcnt_loop.product_test_negate = op.si10 == 1;
+					rchcnt_loop->ch_product = vregs[op.rt];
+					rchcnt_loop->product_test_negate = op.si10 == 1;
 				}
 			}
 
@@ -7030,11 +7030,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				unconst(op_rt, reg_pos == SPU_LS_SIZE ? pos : reg_pos);
 
-				if (rchcnt_loop.active)
+				if (rchcnt_loop->active)
 				{
-					if (rchcnt_loop.origins.find_first_of(vregs[op_rt].origin) == umax)
+					if (rchcnt_loop->origins.find_first_of(vregs[op_rt].origin) == umax)
 					{
-						rchcnt_loop.origins.push_back(vregs[op_rt].origin);
+						rchcnt_loop->origins.push_back(vregs[op_rt].origin);
 					}
 				}
 			}
