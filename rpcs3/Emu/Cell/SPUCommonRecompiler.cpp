@@ -6160,7 +6160,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						if (it == atomic16_all.end())
 						{
 							// Fresh new pattern detected in a single code path
-							atomic16_all.emplace(pos, atomic16);
+							atomic16_all.emplace(pos, *atomic16);
 						}
 						else if (it->second.active)
 						{
@@ -6271,7 +6271,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (it == rchcnt_loop_all.end())
 					{
-						rchcnt_loop_all.emplace(pos, rchcnt_loop);
+						rchcnt_loop_all.emplace(pos, *rchcnt_loop);
 					}
 				}
 

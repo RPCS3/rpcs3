@@ -679,6 +679,17 @@ enum
 
 enum
 {
+	SCE_NP_MATCHING_ATTR_ID_MIN                         = 1,
+	SCE_NP_MATCHING_ATTR_ID_MAX                         = 16,
+	SCE_NP_MATCHING_ATTR_ID_FOR_SEARCH_CONDITION_MAX    = 8,
+	SCE_NP_MATCHING_ATTR_ID_FOR_GRLGLIMIT_SRCH_COND_MAX = 8,
+	SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX            = 2,
+	SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_SMALL             = 64,
+	SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_BIG               = 256,
+};
+
+enum
+{
 	SCE_NP_MATCHING_ROOM_ATTR_ID_TOTAL_SLOT = 1,
 	SCE_NP_MATCHING_ROOM_ATTR_ID_PRIVATE_SLOT = 2,
 	SCE_NP_MATCHING_ROOM_ATTR_ID_CUR_TOTAL_NUM = 3,
@@ -686,6 +697,7 @@ enum
 	SCE_NP_MATCHING_ROOM_ATTR_ID_CUR_PRIVATE_NUM = 5,
 	SCE_NP_MATCHING_ROOM_ATTR_ID_PRIVILEGE_TYPE = 6,
 	SCE_NP_MATCHING_ROOM_ATTR_ID_ROOM_SEARCH_FLAG = 7,
+	SCE_NP_MATCHING_ROOM_ATTR_ID_MAX = 8,
 };
 
 enum
@@ -708,12 +720,20 @@ enum
 
 enum
 {
+	SCE_NP_MATCHING_COND_MAX               = 9,
+	SCE_NP_MATCHING_GRLG_LIMIT_COND_MAX    = 9,
+	SCE_NP_MATCHING_COMP_OP_INEQUALITY_MAX = 9,
+};
+
+enum
+{
 	SCE_NP_MATCHING_CONDITION_SEARCH_EQ = 0,
 	SCE_NP_MATCHING_CONDITION_SEARCH_NE = 1,
 	SCE_NP_MATCHING_CONDITION_SEARCH_LT = 2,
 	SCE_NP_MATCHING_CONDITION_SEARCH_LE = 3,
 	SCE_NP_MATCHING_CONDITION_SEARCH_GT = 4,
 	SCE_NP_MATCHING_CONDITION_SEARCH_GE = 5,
+	SCE_NP_MATCHING_CONDITION_SEARCH_MAX = 6,
 };
 
 enum
@@ -724,6 +744,19 @@ enum
 enum
 {
 	SCE_NP_MATCHING_INVITATION_DESTINATION_MAX = 12,
+	SCE_NP_MATCHING_INVITATION_SUBJECT_MAX_CHARS = 16,
+	SCE_NP_MATCHING_INVITATION_BODY_MAX_CHARS = 128,
+
+	SCE_NP_MATCHING_KICK_OPT_MAX_LENGTH = 16,
+
+	SCE_NP_MATCHING_ROOM_MAX_SLOT = 16,
+	SCE_NP_MATCHING_CTX_MAX = 8,
+};
+
+enum
+{
+	SCE_NP_MATCHING_SEND_INVITATION_MEMSIZE   = 16 * 1024 * 1024,
+	SCE_NP_MATCHING_ACCEPT_INVITATION_MEMSIZE = 16 * 1024 * 1024,
 };
 
 // Basic presence options
@@ -1170,7 +1203,7 @@ enum
 	SCE_NP_MATCHING_GUI_EVENT_ACCEPT_INVITATION   = 0x0007,
 	SCE_NP_MATCHING_GUI_EVENT_COMMON_LOAD         = 0x0008,
 	SCE_NP_MATCHING_GUI_EVENT_COMMON_UNLOAD       = 0x0009,
-	SCE_NP_MATCHING_GUI_EVENT_RESERVED3           = 0x000a,
+	SCE_NP_MATCHING_GUI_EVENT_GET_ROOM_LIST       = 0x000a,
 	SCE_NP_MATCHING_GUI_EVENT_GET_ROOM_LIST_LIMIT = 0x000b
 };
 
@@ -1697,6 +1730,59 @@ struct SceNpScoreRecordOptParam
 	vm::bptr<CellRtcTick> reserved;
 };
 
+// Old GUI API structures
+
+struct SceNpMatchingRoomMember
+{
+	vm::bptr<SceNpMatchingRoomMember> next;
+	SceNpUserInfo user_info;
+	be_t<s32> owner;
+};
+
+struct SceNpMatchingRoomStatus
+{
+	SceNpRoomId id;
+	vm::bptr<SceNpMatchingRoomMember> members;
+	be_t<s32> num;
+	vm::bptr<SceNpId> kick_actor;
+	vm::bptr<void> opt;
+	be_t<s32> opt_len;
+};
+
+struct SceNpMatchingJoinedRoomInfo
+{
+	SceNpLobbyId lobbyid;
+	SceNpMatchingRoomStatus room_status;
+};
+
+struct SceNpMatchingRange
+{
+	be_t<u32> start;
+	be_t<u32> results;
+	be_t<u32> total;
+};
+
+struct SceNpMatchingRoom
+{
+	vm::bptr<SceNpMatchingRoom> next;
+	SceNpRoomId id;
+	vm::bptr<SceNpMatchingAttr> attr;
+};
+
+struct SceNpMatchingRoomList
+{
+	SceNpLobbyId lobbyid;
+	SceNpMatchingRange range;
+	vm::bptr<SceNpMatchingRoom> head;
+};
+
+struct SceNpMatchingSearchJoinRoomInfo
+{
+	SceNpLobbyId lobbyid;
+	SceNpMatchingRoomStatus room_status;
+	vm::bptr<SceNpMatchingAttr> attr;
+};
+
 // NP callback functions
 using SceNpCustomMenuEventHandler = s32(s32 retCode, u32 index, vm::cptr<SceNpId> npid, SceNpCustomMenuSelectedType type, vm::ptr<void> arg);
 using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
@@ -1756,3 +1842,12 @@ public:
 protected:
 	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 };
+
+// Generic functions, also used in SceNpMatchingInt.cpp
+error_code matching_create_room(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+error_code matching_join_room(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+error_code matching_get_room_list(u32 ctx_id, vm::ptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingReqRange> range, vm::ptr<SceNpMatchingSearchCondition> cond,
+	vm::ptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg, bool limit);
+error_code matching_set_room_info(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id, bool limit);
+error_code matching_get_room_info(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id, bool limit);
+error_code matching_get_room_member_list(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf);
