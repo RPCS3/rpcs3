@@ -10,6 +10,7 @@
 #include "Emu/system_utils.hpp"
 #include "Crypto/utils.h"
 #include "util/logs.hpp"
+#include "util/types.hpp"
 
 #include <QApplication>
 #include <QDateTime>
@@ -41,6 +42,16 @@
 #else
 #include <unistd.h>
 #include <sys/stat.h>
+#endif
+
+#if defined(__APPLE__)
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
@@ -96,7 +107,26 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
+#if defined(__APPLE__)
+	const std::string url = fmt::format("https://update.rpcs3.net/"
+		"?api=v3"
+		"&c=%s"
+		"&os_type=macos"
+		"&os_arch="
+#if defined(ARCH_X64)
+		"x64"
+#elif defined(ARCH_ARM64)
+		"arm64"
+#endif
+		"&os_version=%i.%i.%i",
+		rpcs3::get_commit_and_hash().second,
+		Darwin_Version::getNSmajorVersion(),
+		Darwin_Version::getNSminorVersion(),
+		Darwin_Version::getNSpatchVersion());
+#else
 	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
+#endif
+	
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
