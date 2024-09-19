@@ -147,8 +147,10 @@
     <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
     <ClCompile Include="Emu\NP\np_cache.cpp" />
+    <ClCompile Include="Emu\NP\np_gui_cache.cpp" />
     <ClCompile Include="Emu\NP\np_contexts.cpp" />
     <ClCompile Include="Emu\NP\np_dnshook.cpp" />
+    <ClCompile Include="Emu\NP\np_requests_gui.cpp" />
     <ClCompile Include="Emu\NP\np_handler.cpp" />
     <ClCompile Include="Emu\NP\np_helpers.cpp" />
     <ClCompile Include="Emu\NP\np_notifications.cpp" />

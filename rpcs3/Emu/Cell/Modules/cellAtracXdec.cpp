@@ -121,6 +121,7 @@ void AtracXdecDecoder::alloc_avcodec()
 
 	// Allows FFmpeg to output directly into guest memory
 	ctx->opaque = this;
+	ctx->thread_type = FF_THREAD_SLICE; // Silences a warning by FFmpeg about requesting frame threading with a custom get_buffer2(). Default is FF_THREAD_FRAME & FF_THREAD_SLICE
 	ctx->get_buffer2 = [](AVCodecContext* s, AVFrame* frame, int /*flags*/) -> int
 	{
 		for (s32 i = 0; i < frame->ch_layout.nb_channels; i++)

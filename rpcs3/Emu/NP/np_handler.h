@@ -14,17 +14,30 @@
 #include "Emu/NP/signaling_handler.h"
 #include "Emu/NP/np_allocator.h"
 #include "Emu/NP/np_cache.h"
+#include "Emu/NP/np_gui_cache.h"
 #include "Emu/NP/np_event_data.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/upnp_handler.h"
 
 namespace np
 {
+	constexpr usz MAX_SceNpMatchingAttr_list_SIZE = ((SCE_NP_MATCHING_ATTR_ID_MAX * 2) * sizeof(SceNpMatchingAttr))
+		+ (SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_BIG) +
+		+ ((SCE_NP_MATCHING_ATTR_ID_MAX - SCE_NP_MATCHING_ATTR_BIN_BIG_SIZE_ID_MAX) * SCE_NP_MATCHING_ATTR_BIN_MAX_SIZE_SMALL);
+	constexpr usz MAX_MEMBERS_PER_ROOM = 64;
+	constexpr usz MAX_ROOMS_PER_GET_ROOM_LIST = 20;
+	constexpr usz MAX_SceNpMatchingRoomStatus_SIZE = sizeof(SceNpMatchingRoomStatus) + (MAX_MEMBERS_PER_ROOM * sizeof(SceNpMatchingRoomMember)) + sizeof(SceNpId);
+	constexpr usz MAX_SceNpMatchingJoinedRoomInfo_SIZE = sizeof(SceNpMatchingJoinedRoomInfo) + (MAX_MEMBERS_PER_ROOM * sizeof(SceNpMatchingRoomMember)) + sizeof(SceNpId);
+	constexpr usz MAX_SceNpMatchingRoomList_SIZE = sizeof(SceNpMatchingRoomList) + MAX_ROOMS_PER_GET_ROOM_LIST * (sizeof(SceNpMatchingRoom) + MAX_SceNpMatchingAttr_list_SIZE);
+	constexpr usz MAX_SceNpMatchingRoom_SIZE = sizeof(SceNpMatchingRoom) + MAX_SceNpMatchingAttr_list_SIZE;
+	constexpr usz MAX_SceNpMatchingSearchJoinRoomInfo_SIZE = sizeof(SceNpMatchingSearchJoinRoomInfo) + MAX_SceNpMatchingAttr_list_SIZE;
+
 	enum class REQUEST_ID_HIGH : u16
 	{
 		MISC = 0x3333,
 		SCORE = 0x3334,
 		TUS = 0x3335,
+		GUI = 0x3336,
 	};
 
 	struct ticket_data
@@ -175,6 +188,22 @@ namespace np
 
 		u32 get_match2_event(SceNpMatching2EventKey event_key, u32 dest_addr, u32 size);
 
+		// Old GUI Matching requests
+		error_code get_matching_result(u32 ctx_id, u32 req_id, vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event);
+		error_code get_result_gui(vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event);
+		error_code create_room_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+		error_code join_room_gui(u32 ctx_id, vm::ptr<SceNpRoomId> roomid, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+		error_code leave_room_gui(u32 ctx_id, vm::cptr<SceNpRoomId> roomid);
+		error_code get_room_list_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingReqRange> range, vm::ptr<SceNpMatchingSearchCondition> cond, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg, bool limit);
+		error_code set_room_search_flag_gui(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, s32 flag);
+		error_code get_room_search_flag_gui(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id);
+		error_code set_room_info_gui(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr);
+		error_code get_room_info_gui(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr);
+		error_code quickmatch_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num, s32 timeout, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+		error_code searchjoin_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+
+		void set_current_gui_ctx_id(u32 id);
+
 		// Score requests
 		void transaction_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<generic_async_transaction_context>& trans_ctx, u32 req_id, bool async);
 		void get_board_infos(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, bool async);
@@ -206,6 +235,9 @@ namespace np
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> local_get_room_password(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method);
 		error_code local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id);
+
+		// Local GUI functions
+		error_code get_room_member_list_local_gui(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf);
 
 		// Friend stuff
 		u32 get_num_friends();
@@ -271,6 +303,15 @@ namespace np
 		void notif_signaling_info(std::vector<u8>& data);
 		void notif_room_message_received(std::vector<u8>& data);
 
+		void generic_gui_notification_handler(std::vector<u8>& data, std::string_view name, s32 notification_type);
+
+		void notif_member_joined_room_gui(std::vector<u8>& data);
+		void notif_member_left_room_gui(std::vector<u8>& data);
+		void notif_room_disappeared_gui(std::vector<u8>& data);
+		void notif_room_owner_changed_gui(std::vector<u8>& data);
+		void notif_user_kicked_gui(std::vector<u8>& data);
+		void notif_quickmatch_complete_gui(std::vector<u8>& data);
+
 		// Reply handlers
 		bool reply_get_world_list(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_create_join_room(u32 req_id, std::vector<u8>& reply_data);
@@ -308,27 +349,19 @@ namespace np
 		bool reply_tus_get_multiuser_data_status(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_tus_get_friends_data_status(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_tus_delete_multislot_data(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_create_room_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_join_room_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_leave_room_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_room_list_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_set_room_search_flag_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_room_search_flag_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_set_room_info_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_room_info_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_quickmatch_gui(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_searchjoin_gui(u32 req_id, std::vector<u8>& reply_data);
 
-		// Helper functions(fb=>np2)
+		// Helper functions
 		std::pair<bool, bool> get_match2_context_options(u32 ctx_id);
-		void BinAttr_to_SceNpMatching2BinAttr(event_data& edata, const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info);
-		void BinAttrs_to_SceNpMatching2BinAttrs(event_data& edata, const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, SceNpMatching2BinAttr* binattr_info);
-		void RoomMemberBinAttrInternal_to_SceNpMatching2RoomMemberBinAttrInternal(event_data& edata, const RoomMemberBinAttrInternal* fb_attr, SceNpMatching2RoomMemberBinAttrInternal* binattr_info);
-		void RoomBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(event_data& edata, const BinAttrInternal* fb_attr, SceNpMatching2RoomBinAttrInternal* binattr_info);
-		void RoomGroup_to_SceNpMatching2RoomGroup(const RoomGroup* fb_group, SceNpMatching2RoomGroup* sce_group);
-		void RoomGroups_to_SceNpMatching2RoomGroups(const flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>* fb_groups, SceNpMatching2RoomGroup* sce_groups);
-		void UserInfo2_to_SceNpUserInfo2(event_data& edata, const UserInfo2* user, SceNpUserInfo2* user_info, bool include_onlinename, bool include_avatarurl);
-		void RoomDataExternal_to_SceNpMatching2RoomDataExternal(event_data& edata, const RoomDataExternal* room, SceNpMatching2RoomDataExternal* room_info, bool include_onlinename, bool include_avatarurl);
-		void SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(event_data& edata, const SearchRoomResponse* resp, SceNpMatching2SearchRoomResponse* search_resp);
-		void GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(event_data& edata, const GetRoomDataExternalListResponse* resp, SceNpMatching2GetRoomDataExternalListResponse* get_resp, bool include_onlinename, bool include_avatarurl);
-		u16 RoomDataInternal_to_SceNpMatching2RoomDataInternal(event_data& edata, const RoomDataInternal* resp, SceNpMatching2RoomDataInternal* room_resp, const SceNpId& npid, bool include_onlinename, bool include_avatarurl);
-		void RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(event_data& edata, const RoomMemberDataInternal* member_data, const SceNpMatching2RoomDataInternal* room_info, SceNpMatching2RoomMemberDataInternal* sce_member_data, bool include_onlinename, bool include_avatarurl);
-		void RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(event_data& edata, const RoomMemberUpdateInfo* resp, SceNpMatching2RoomMemberUpdateInfo* room_info, bool include_onlinename, bool include_avatarurl);
-		void RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(const RoomUpdateInfo* update_info, SceNpMatching2RoomUpdateInfo* sce_update_info);
-		void GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(const GetPingInfoResponse* resp, SceNpMatching2SignalingGetPingInfoResponse* sce_resp);
-		void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(event_data& edata, const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi, bool include_onlinename, bool include_avatarurl);
-		void RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(event_data& edata, const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid, bool include_onlinename, bool include_avatarurl);
-		void RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data& edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info, bool include_onlinename, bool include_avatarurl);
 		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result = false);
 		bool handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data);
 		bool handle_TusVarResponse(u32 req_id, std::vector<u8>& reply_data);
@@ -346,7 +379,7 @@ namespace np
 			{
 				if (cb)
 				{
-					sysutil_register_cb([=, *this](ppu_thread& cb_ppu) -> s32
+					sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
 					{
 						cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
 						return 0;
@@ -403,6 +436,7 @@ namespace np
 		// Cache related
 		std::optional<SceNpMatching2SessionPassword> cached_cj_password;
 		cache_manager np_cache;
+		gui_cache_manager gui_cache;
 
 		// Messages related
 		std::optional<u64> selected_invite_id{};
@@ -432,6 +466,31 @@ namespace np
 		}
 		event_data& allocate_req_result(u32 event_key, u32 max_size, u32 initial_size);
 
+		// GUI result
+		struct
+		{
+			shared_mutex mutex;
+			s32 event = 0;
+			event_data data;
+		} gui_result;
+
+		void set_gui_result(s32 event, event_data data);
+
+		// GUI notifications
+		struct gui_notification
+		{
+			s32 event = 0;
+			event_data edata;
+		};
+
+		struct
+		{
+			shared_mutex mutex;
+			std::map<std::pair<u32, u32>, gui_notification> list; // (ctx_id, req_id), notif
+			u32 counter_req_id = 1;
+			u32 current_gui_ctx_id = 0;
+		} gui_notifications;
+
 		// Async transaction threads
 		shared_mutex mutex_async_transactions;
 		std::unordered_map<u32, std::shared_ptr<generic_async_transaction_context>> async_transactions; // (req_id, transaction_ctx)
@@ -459,5 +518,19 @@ namespace np
 
 		shared_mutex mutex_history;
 		std::map<std::string, player_history> players_history; // npid / history
+
+		struct
+		{
+			shared_mutex mutex;
+			std::map<u32, u32> list; // req_id / ctx_id
+		} gui_requests;
+
+		void add_gui_request(u32 req_id, u32 ctx_id);
+		void remove_gui_request(u32 req_id);
+		u32 take_gui_request(u32 req_id);
+		std::shared_ptr<matching_ctx> take_pending_gui_request(u32 req_id);
+
+		shared_mutex mutex_quickmatching;
+		std::map<SceNpRoomId, u32> pending_quickmatching;
 	};
 } // namespace np

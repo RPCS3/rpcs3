@@ -35,7 +35,7 @@ namespace extra_nps
 		const auto ptr = +bin->ptr;
 		const u32 size = bin->size;
 
-		sceNp2.warning("Id: %d, Size: %d, ptr: 0x%x", bin->id, size, ptr);
+		sceNp2.warning("Id: %d, Size: %d, ptr: *0x%x", bin->id, size, ptr);
 
 		if (ptr && size)
 		{
@@ -436,6 +436,123 @@ namespace extra_nps
 		sceNp.warning("scoreValue: %d", data->scoreValue);
 		sceNp.warning("hasGameData: %d", data->hasGameData);
 		sceNp.warning("recordDate: %d", data->recordDate.tick);
+	}
+
+	void print_SceNpMatchingAttr(const SceNpMatchingAttr* data)
+	{
+		sceNp.warning("SceNpMatchingAttr:");
+		sceNp.warning("next: 0x%x", data->next);
+		sceNp.warning("type: %d", data->type);
+		sceNp.warning("id: %d", data->id);
+
+		if (data->type == SCE_NP_MATCHING_ATTR_TYPE_BASIC_BIN || data->type == SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN)
+		{
+			sceNp.warning("ptr: *0x%x", data->value.data.ptr);
+			sceNp.warning("size: %d", data->value.data.size);
+			sceNp.warning("data:\n%s", fmt::buf_to_hexstring(static_cast<u8 *>(data->value.data.ptr.get_ptr()), data->value.data.size));
+		}
+		else
+		{
+			sceNp.warning("num: %d(0x%x)", data->value.num, data->value.num);
+		}
+	}
+
+	void print_SceNpMatchingSearchCondition(const SceNpMatchingSearchCondition* data)
+	{
+		sceNp.warning("SceNpMatchingSearchCondition:");
+		sceNp.warning("target_attr_type: %d", data->target_attr_type);
+		sceNp.warning("target_attr_id: %d", data->target_attr_id);
+		sceNp.warning("comp_type: %d", data->comp_type);
+		sceNp.warning("comp_op: %d", data->comp_op);
+		sceNp.warning("next: 0x%x", data->next);
+		print_SceNpMatchingAttr(&data->compared);
+	}
+
+	void print_SceNpMatchingRoom(const SceNpMatchingRoom* data)
+	{
+		sceNp.warning("SceNpMatchingRoom:");
+		sceNp.warning("next: 0x%x", data->next);
+		print_SceNpRoomId(data->id);
+
+		for (auto it = data->attr; it; it = it->next)
+		{
+			print_SceNpMatchingAttr(it.get_ptr());
+		}
+	}
+
+	void print_SceNpMatchingRoomList(const SceNpMatchingRoomList* data)
+	{
+		sceNp.warning("SceNpMatchingRoomList:");
+		sceNp.warning("lobbyid.opt: %s", fmt::buf_to_hexstring(data->lobbyid.opt, sizeof(data->lobbyid.opt), sizeof(data->lobbyid.opt)));
+		sceNp.warning("start: %d", data->range.start);
+		sceNp.warning("results: %d", data->range.results);
+		sceNp.warning("total: %d", data->range.total);
+
+		for (auto it = data->head; it; it = it->next)
+		{
+			print_SceNpMatchingRoom(it.get_ptr());
+		}
+	}
+
+	void print_SceNpUserInfo(const SceNpUserInfo* data)
+	{
+		sceNp.warning("userId: %s", data->userId.handle.data);
+		sceNp.warning("name: %s", data->name.data);
+		sceNp.warning("icon: %s", data->icon.data);
+	}
+
+	void print_SceNpRoomId(const SceNpRoomId& room_id)
+	{
+		sceNp.warning("room_id: %s", fmt::buf_to_hexstring(room_id.opt, sizeof(room_id.opt), sizeof(room_id.opt)));
+	}
+
+	void print_SceNpMatchingRoomMember(const SceNpMatchingRoomMember* data)
+	{
+		sceNp.warning("SceNpMatchingRoomMember:");
+		sceNp.warning("next: 0x%x", data->next);
+		sceNp.warning("owner: %d", data->owner);
+		print_SceNpUserInfo(&data->user_info);
+	}
+
+	void print_SceNpMatchingRoomStatus(const SceNpMatchingRoomStatus* data)
+	{
+		sceNp.warning("SceNpMatchingRoomStatus:");
+		print_SceNpRoomId(data->id);
+		sceNp.warning("members: 0x%x", data->members);
+		sceNp.warning("num: %d", data->num);
+
+		for (auto it = data->members; it; it = it->next)
+		{
+			print_SceNpMatchingRoomMember(it.get_ptr());
+		}
+
+		sceNp.warning("kick_actor: 0x%x", data->kick_actor);
+
+		if (data->kick_actor)
+		{
+			sceNp.warning("kick_actor: %s", data->kick_actor->handle.data);
+		}
+
+		sceNp.warning("opt: 0x%x", data->kick_actor);
+		sceNp.warning("opt_len: %d", data->opt_len);
+	}
+
+	void print_SceNpMatchingJoinedRoomInfo(const SceNpMatchingJoinedRoomInfo* data)
+	{
+		sceNp.warning("SceNpMatchingJoinedRoomInfo:");
+		sceNp.warning("lobbyid.opt: %s", fmt::buf_to_hexstring(data->lobbyid.opt, sizeof(data->lobbyid.opt), sizeof(data->lobbyid.opt)));
+		print_SceNpMatchingRoomStatus(&data->room_status);
+	}
+
+	void print_SceNpMatchingSearchJoinRoomInfo(const SceNpMatchingSearchJoinRoomInfo* data)
+	{
+		sceNp.warning("SceNpMatchingSearchJoinRoomInfo:");
+		sceNp.warning("lobbyid.opt: %s", fmt::buf_to_hexstring(data->lobbyid.opt, sizeof(data->lobbyid.opt), sizeof(data->lobbyid.opt)));
+		print_SceNpMatchingRoomStatus(&data->room_status);
+		for (auto it = data->attr; it; it = it->next)
+		{
+			print_SceNpMatchingAttr(it.get_ptr());
+		}
 	}
 
 } // namespace extra_nps

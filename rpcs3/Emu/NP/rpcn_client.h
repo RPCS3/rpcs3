@@ -39,7 +39,12 @@
 #pragma GCC diagnostic pop
 #endif
 
-constexpr usz COMMUNICATION_ID_SIZE = 9;
+// COMID is sent as 9 chars - + '_' + 2 digits
+constexpr usz COMMUNICATION_ID_COMID_COMPONENT_SIZE = 9;
+constexpr usz COMMUNICATION_ID_SUBID_COMPONENT_SIZE = 2;
+constexpr usz COMMUNICATION_ID_SIZE = COMMUNICATION_ID_COMID_COMPONENT_SIZE + COMMUNICATION_ID_SUBID_COMPONENT_SIZE + 1;
+
+
 
 class vec_stream
 {
@@ -110,7 +115,17 @@ public:
 		}
 
 		SceNpCommunicationId com_id{};
-		std::memcpy(&com_id.data[0], &vec[i], COMMUNICATION_ID_SIZE);
+		std::memcpy(&com_id.data[0], &vec[i], COMMUNICATION_ID_COMID_COMPONENT_SIZE);
+		const std::string sub_id(reinterpret_cast<const char*>(&vec[i + COMMUNICATION_ID_COMID_COMPONENT_SIZE + 1]), COMMUNICATION_ID_SUBID_COMPONENT_SIZE);
+		const unsigned long result_num = std::strtoul(sub_id.c_str(), nullptr, 10);
+
+		if (result_num > 99)
+		{
+			error = true;
+			return {};
+		}
+
+		com_id.num = static_cast<u8>(result_num);
 		i += COMMUNICATION_ID_SIZE;
 		return com_id;
 	}
@@ -223,6 +238,16 @@ namespace rpcn
 		TusDeleteMultiSlotData,
 		ClearPresence,
 		SetPresence,
+		CreateRoomGUI,
+		JoinRoomGUI,
+		LeaveRoomGUI,
+		GetRoomListGUI,
+		SetRoomSearchFlagGUI,
+		GetRoomSearchFlagGUI,
+		SetRoomInfoGUI,
+		GetRoomInfoGUI,
+		QuickMatchGUI,
+		SearchJoinRoomGUI,
 	};
 
 	enum NotificationType : u16
@@ -242,6 +267,12 @@ namespace rpcn
 		MessageReceived,
 		FriendPresenceChanged,
 		SignalingInfo,
+		MemberJoinedRoomGUI,
+		MemberLeftRoomGUI,
+		RoomDisappearedGUI,
+		RoomOwnerChangedGUI,
+		UserKickedGUI,
+		QuickMatchCompleteGUI,
 	};
 
 	enum class rpcn_state
@@ -485,6 +516,16 @@ namespace rpcn
 		bool tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
 		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
 		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
+		bool createjoin_room_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingAttr* attr_list);
+		bool join_room_gui(u32 req_id, const SceNpRoomId& room_id);
+		bool leave_room_gui(u32 req_id, const SceNpRoomId& room_id);
+		bool get_room_list_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingReqRange* range, vm::ptr<SceNpMatchingSearchCondition> cond, vm::ptr<SceNpMatchingAttr> attr);
+		bool set_room_search_flag_gui(u32 req_id, const SceNpRoomId& room_id, bool stealth);
+		bool get_room_search_flag_gui(u32 req_id, const SceNpRoomId& room_id);
+		bool set_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs);
+		bool get_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs);
+		bool quickmatch_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num);
+		bool searchjoin_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr);
 
 		const std::string& get_online_name() const;
 		const std::string& get_avatar_url() const;
@@ -497,9 +538,12 @@ namespace rpcn
 	private:
 		bool get_reply(u64 expected_id, std::vector<u8>& data);
 
+		static void write_communication_id(const SceNpCommunicationId& com_id, std::vector<u8>& data);
+
 		std::vector<u8> forge_request(u16 command, u64 packet_id, const std::vector<u8>& data) const;
 		bool forge_send(u16 command, u64 packet_id, const std::vector<u8>& data);
 		bool forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
+		bool forge_request_with_data(const flatbuffers::FlatBufferBuilder& builder, CommandType command, u64 packet_id);
 		bool forge_send_reply(u16 command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
 		bool error_and_disconnect(const std::string& error_mgs);
