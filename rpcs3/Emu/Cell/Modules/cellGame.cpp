@@ -579,7 +579,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg), msg_dialog_source::_cellGame);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -664,7 +664,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellHddGameExitBroken()
 {
 	cellGame.warning("cellHddGameExitBroken()");
-	return open_exit_dialog(get_localized_string(localized_string_id::CELL_HDD_GAME_EXIT_BROKEN), true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_HDD_GAME_EXIT_BROKEN), true, msg_dialog_source::_cellGame);
 }
 
 error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
@@ -723,7 +723,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellGameDataExitBroken()
 {
 	cellGame.warning("cellGameDataExitBroken()");
-	return open_exit_dialog(get_localized_string(localized_string_id::CELL_GAME_DATA_EXIT_BROKEN), true);
+	return open_exit_dialog(get_localized_string(localized_string_id::CELL_GAME_DATA_EXIT_BROKEN), true, msg_dialog_source::_cellGame);
 }
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
@@ -1198,7 +1198,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg));
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(error_msg), msg_dialog_source::_cellGame);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -1714,7 +1714,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
-	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);
+	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE, msg_dialog_source::_cellGame);
 }
 
 error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)
