@@ -1656,6 +1656,13 @@ error_code sceNpMatching2GetLobbyInfoList(
 		return res;
 	}
 
+	const u32 request_id = nph.get_lobby_info_list(ctxId, optParam, reqParam.get_ptr());
+
+	if (assignedReqId)
+	{
+		*assignedReqId = request_id;
+	}
+
 	return CELL_OK;
 }
 

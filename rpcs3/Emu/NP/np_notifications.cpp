@@ -23,7 +23,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
@@ -35,7 +35,7 @@ namespace np
 			return;
 
 		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
-		extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
+		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
 		if (room_event_cb)
 		{
@@ -59,7 +59,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
@@ -71,7 +71,7 @@ namespace np
 			return;
 
 		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
-		extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
+		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
 		if (room_event_cb)
 		{
@@ -95,7 +95,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomUpdateInfo, sizeof(SceNpMatching2RoomUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomUpdateInfo*>(edata.data());
@@ -129,7 +129,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomDataInternalUpdateInfo, sizeof(SceNpMatching2RoomDataInternalUpdateInfo));
@@ -139,7 +139,7 @@ namespace np
 
 		np_cache.insert_room(notif_data->newRoomDataInternal.get_ptr());
 
-		extra_nps::print_room_data_internal(notif_data->newRoomDataInternal.get_ptr());
+		extra_nps::print_SceNpMatching2RoomDataInternal(notif_data->newRoomDataInternal.get_ptr());
 
 		rpcn_log.notice("Received notification that room(%d)'s data was updated", room_id);
 
@@ -165,7 +165,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberDataInternalUpdateInfo, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo));
@@ -177,7 +177,7 @@ namespace np
 			return;
 
 		rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", notif_data->newRoomMemberDataInternal->userInfo.npId.handle.data, notif_data->newRoomMemberDataInternal->memberId, room_id);
-		extra_nps::print_room_member_data_internal(notif_data->newRoomMemberDataInternal.get_ptr());
+		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->newRoomMemberDataInternal.get_ptr());
 
 		if (room_event_cb)
 		{
@@ -202,7 +202,7 @@ namespace np
 			return;
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMessageInfo, sizeof(SceNpMatching2RoomMessageInfo));

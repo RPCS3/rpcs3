@@ -64,7 +64,7 @@ namespace np
 	{
 		// TODO: actually implement interaction with server for this?
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo);
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetServerInfo, sizeof(SceNpMatching2GetServerInfoResponse));
 		SceNpMatching2GetServerInfoResponse* serv_info = reinterpret_cast<SceNpMatching2GetServerInfoResponse*>(edata.data());
@@ -135,7 +135,7 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetWorldList command");
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
 		auto* world_info = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
@@ -160,7 +160,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom);
 
-		extra_nps::print_createjoinroom(req);
+		extra_nps::print_SceNpMatching2CreateJoinRoomRequest(req);
 
 		if (!get_rpcn()->createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -187,7 +187,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to CreateRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
@@ -199,7 +199,7 @@ namespace np
 		np_cache.insert_room(room_info);
 		np_cache.update_password(room_resp->roomDataInternal->roomId, cached_cj_password);
 
-		extra_nps::print_create_room_resp(room_resp);
+		extra_nps::print_SceNpMatching2CreateJoinRoomResponse(room_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -210,7 +210,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom);
 
-		extra_nps::print_joinroom(req);
+		extra_nps::print_SceNpMatching2JoinRoomRequest(req);
 
 		if (!get_rpcn()->join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -254,7 +254,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to JoinRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
@@ -265,7 +265,7 @@ namespace np
 
 		np_cache.insert_room(room_info);
 
-		extra_nps::print_room_data_internal(room_info);
+		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -309,7 +309,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom);
 
-		extra_nps::print_search_room(req);
+		extra_nps::print_SceNpMatching2SearchRoomRequest(req);
 
 		if (!get_rpcn()->search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -333,7 +333,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to SearchRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
 		auto* search_resp = reinterpret_cast<SceNpMatching2SearchRoomResponse*>(edata.data());
@@ -341,7 +341,7 @@ namespace np
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_search_room_resp(search_resp);
+		extra_nps::print_SceNpMatching2SearchRoomResponse(search_resp);
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
@@ -351,7 +351,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList);
 
-		extra_nps::print_get_roomdata_external_list_req(req);
+		extra_nps::print_SceNpMatching2GetRoomDataExternalListRequest(req);
 
 		if (!get_rpcn()->get_roomdata_external_list(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -375,7 +375,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomDataExternalList command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
@@ -383,7 +383,7 @@ namespace np
 		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
+		extra_nps::print_SceNpMatching2GetRoomDataExternalListResponse(sce_get_room_ext_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -394,7 +394,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal);
 
-		extra_nps::print_set_roomdata_ext_req(req);
+		extra_nps::print_SceNpMatching2SetRoomDataExternalRequest(req);
 
 		if (!get_rpcn()->set_roomdata_external(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -444,7 +444,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomDataInternal command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
@@ -455,7 +455,7 @@ namespace np
 
 		np_cache.insert_room(room_info);
 
-		extra_nps::print_room_data_internal(room_info);
+		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -466,7 +466,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
 
-		extra_nps::print_set_roomdata_int_req(req);
+		extra_nps::print_SceNpMatching2SetRoomDataInternalRequest(req);
 
 		if (!get_rpcn()->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -492,7 +492,7 @@ namespace np
 	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
-		extra_nps::print_get_roommemberdata_int_req(req);
+		extra_nps::print_SceNpMatching2GetRoomMemberDataInternalRequest(req);
 
 		if (!get_rpcn()->get_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -532,7 +532,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
@@ -549,7 +549,7 @@ namespace np
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal);
 
-		extra_nps::print_set_roommemberdata_int_req(req);
+		extra_nps::print_SceNpMatching2SetRoomMemberDataInternalRequest(req);
 
 		if (!get_rpcn()->set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -629,7 +629,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to PingRoomOwner command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SignalingGetPingInfo, sizeof(SceNpMatching2SignalingGetPingInfoResponse));
 		auto* final_ping_resp = reinterpret_cast<SceNpMatching2SignalingGetPingInfoResponse*>(edata.data());
@@ -706,8 +706,8 @@ namespace np
 		}
 
 		vec_stream reply(reply_data, 1);
-		u32 addr = reply.get<u32>();
-		u16 port = reply.get<u16>();
+		const u32 addr = reply.get<u32>();
+		const u16 port = reply.get<u16>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to RequestSignalingInfos command");
@@ -716,6 +716,41 @@ namespace np
 		sigh.start_sig(conn_id, addr, port);
 
 		return true;
+	}
+
+	u32 np_handler::get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req)
+	{
+		// Hack
+		// Note that this is fake and needs to be properly implemented both on server and on rpcs3
+
+		extra_nps::print_SceNpMatching2GetLobbyInfoListRequest(req);
+
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		const u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetLobbyInfoList, sizeof(SceNpMatching2GetLobbyInfoListResponse));
+		auto* resp = reinterpret_cast<SceNpMatching2GetLobbyInfoListResponse*>(edata.data());
+
+		resp->range.size = 1;
+		resp->range.startIndex = 1;
+		resp->range.total = 1;
+		auto lobby_data = edata.allocate<SceNpMatching2LobbyDataExternal>(sizeof(SceNpMatching2LobbyDataExternal), resp->lobbyDataExternal);
+		lobby_data->serverId = 1;
+		lobby_data->worldId = req->worldId;
+		lobby_data->lobbyId = 1;
+		lobby_data->maxSlot = 64;
+		lobby_data->curMemberNum = 0;
+		lobby_data->flagAttr = SCE_NP_MATCHING2_LOBBY_FLAG_ATTR_PERMANENT;
+
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+
+		return req_id;
 	}
 
 	void np_handler::req_ticket([[maybe_unused]] u32 version, [[maybe_unused]] const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, [[maybe_unused]] const char* entitlement_id, [[maybe_unused]] u32 consumed_count)
