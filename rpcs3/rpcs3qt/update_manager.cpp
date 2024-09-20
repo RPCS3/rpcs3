@@ -63,6 +63,8 @@ update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gu
 
 void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
+	update_log.notice("Checking for updates: automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
+
 	m_update_message.clear();
 	m_changelog.clear();
 
@@ -70,11 +72,17 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	{
 		// Don't check for updates on local builds
 		if (rpcs3::is_local_build())
+		{
+			update_log.notice("Skipped automatic update check: this is a local build");
 			return;
+		}
 #ifdef __linux__
 		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
 		if (!::getenv("APPIMAGE"))
+		{
+			update_log.notice("Skipped automatic update check: this is not an AppImage");
 			return;
+		}
 #endif
 	}
 
@@ -132,6 +140,8 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 
 bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
 {
+	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
+
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
@@ -325,6 +335,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	if (check_only)
 	{
+		update_log.notice("Update postponed. Check only is active");
 		m_downloader->close_progress_dialog();
 		return true;
 	}
@@ -335,6 +346,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 void update_manager::update(bool auto_accept)
 {
+	update_log.notice("Updating with auto_accept=%d", auto_accept);
+
 	ensure(m_downloader);
 
 	if (!auto_accept)
@@ -342,6 +355,7 @@ void update_manager::update(bool auto_accept)
 		if (m_update_message.isEmpty())
 		{
 			// This can happen if we abort the check_for_updates download. Just check again in this case.
+			update_log.notice("Aborting update: Update message is empty. Trying again...");
 			m_downloader->close_progress_dialog();
 			check_for_updates(false, false, false, m_parent);
 			return;
@@ -378,8 +392,11 @@ void update_manager::update(bool auto_accept)
 			mb.setText(m_update_message);
 		}
 
+		update_log.notice("Asking user for permission to update...");
+
 		if (mb.exec() == QMessageBox::No)
 		{
+			update_log.notice("Aborting update: User declined update");
 			m_downloader->close_progress_dialog();
 			return;
 		}
@@ -387,6 +404,7 @@ void update_manager::update(bool auto_accept)
 
 	if (!Emu.IsStopped())
 	{
+		update_log.notice("Aborting update: Emulation is running...");
 		m_downloader->close_progress_dialog();
 		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 		return;
@@ -414,11 +432,14 @@ void update_manager::update(bool auto_accept)
 		Q_EMIT signal_update_available(false);
 	});
 
+	update_log.notice("Downloading update...");
 	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
 }
 
 bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
+	update_log.notice("Download of update file finished. Updating rpcs3 with auto_accept=%d", auto_accept);
+
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
 	if (m_expected_size != static_cast<u64>(data.size()))
@@ -446,6 +467,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	const std::string tmpfile_path = fs::get_temp_dir() + "rpcs3_update.7z";
 #endif
 
+	update_log.notice("Writing temporary update file: %s", tmpfile_path);
+
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!tmpfile)
 	{
@@ -458,6 +481,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 	tmpfile.close();
+
+	update_log.notice("Unpacking update file: %s", tmpfile_path);
 
 	// 7z stuff (most of this stuff is from 7z Util sample and has been reworked to be more stl friendly)
 
@@ -482,15 +507,16 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	LookToRead2_CreateVTable(&lookStream, False);
 
 	SRes res = SZ_OK;
+
+	lookStream.buf = static_cast<Byte*>(ISzAlloc_Alloc(&allocImp, kInputBufSize));
+	if (!lookStream.buf)
 	{
-		lookStream.buf = static_cast<Byte*>(ISzAlloc_Alloc(&allocImp, kInputBufSize));
-		if (!lookStream.buf)
-			res = SZ_ERROR_MEM;
-		else
-		{
-			lookStream.bufSize    = kInputBufSize;
-			lookStream.realStream = &archiveStream.vt;
-		}
+		res = SZ_ERROR_MEM;
+	}
+	else
+	{
+		lookStream.bufSize    = kInputBufSize;
+		lookStream.realStream = &archiveStream.vt;
 	}
 
 	CrcGenerateTable();
@@ -662,6 +688,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	if (res)
 		return false;
 
+	update_log.success("Update successful!");
+
 #else
 
 	std::string replace_path = fs::get_executable_path();
@@ -724,6 +752,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	Emu.CleanUp();
 
 #ifdef _WIN32
+	update_log.notice("Relaunching %s with _wexecl", wchar_to_utf8(wchar_orig_path));
 	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
 #elif defined(__APPLE__)
 	// Execute helper script to replace the app and relaunch
@@ -733,6 +762,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	const int ret = execl(helper_script.c_str(), helper_script.c_str(), extracted_app.c_str(), orig_path.c_str(), nullptr);
 #else
 	// execv is used for compatibility with checkrt
+	update_log.notice("Relaunching %s with execv", replace_path);
 	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
 	const int ret = execv(replace_path.c_str(), const_cast<char * const *>(&params[0]));
 #endif
