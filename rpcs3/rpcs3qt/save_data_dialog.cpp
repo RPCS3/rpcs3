@@ -15,6 +15,8 @@ LOG_CHANNEL(cellSaveData);
 
 s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
 {
+	cellSaveData.notice("ShowSaveDataList(save_entries=%d, focused=%d, op=0x%x, listSet=*0x%x, enable_overlay=%d)", save_entries.size(), focused, op, listSet, enable_overlay);
+
 	// TODO: Implement proper error checking in savedata_op?
 	const bool use_end = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0) >= 0;
 
@@ -26,21 +28,28 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 	// TODO: Install native shell as an Emu callback
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
+		cellSaveData.notice("ShowSaveDataList: Showing native UI dialog");
+
 		const s32 result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, focused, op, listSet, enable_overlay);
 		if (result != rsx::overlays::user_interface::selection_code::error)
 		{
+			cellSaveData.notice("ShowSaveDataList: Native UI dialog returned with selection %d", result);
 			if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return result;
 		}
+
+		cellSaveData.error("ShowSaveDataList: Native UI dialog returned error");
 	}
 
 	if (!Emu.HasGui())
 	{
+		cellSaveData.notice("ShowSaveDataList(): Aborting: Emulation has no GUI attached");
 		if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 		return -2;
 	}
 
 	// Fall back to front-end GUI
+	cellSaveData.notice("ShowSaveDataList(): Using fallback GUI");
 	atomic_t<s32> selection = 0;
 
 	input::SetIntercepted(true);
