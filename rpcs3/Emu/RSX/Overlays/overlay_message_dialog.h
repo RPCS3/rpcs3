@@ -10,6 +10,8 @@ namespace rsx
 	{
 		class message_dialog : public user_interface
 		{
+			msg_dialog_source m_source = msg_dialog_source::_cellMsgDialog;
+
 			label text_display;
 			image_button btn_ok;
 			image_button btn_cancel;
@@ -44,7 +46,7 @@ namespace rsx
 			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 			void close(bool use_callback, bool stop_pad_interception) override;
 
-			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
+			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, msg_dialog_source source, std::function<void(s32 status)> on_close);
 
 			void set_text(std::string text);
 			void update_custom_background();
@@ -56,6 +58,8 @@ namespace rsx
 			error_code progress_bar_set_value(u32 index, f32 value);
 			error_code progress_bar_reset(u32 index);
 			error_code progress_bar_set_limit(u32 index, u32 limit);
+
+			msg_dialog_source source() const { return m_source; }
 		};
 	}
 }
