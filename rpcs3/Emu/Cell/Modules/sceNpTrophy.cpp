@@ -572,7 +572,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	{
 		if (!!(options & SCE_NP_TROPHY_OPTIONS_REGISTER_CONTEXT_SHOW_ERROR_EXIT))
 		{
-			static_cast<void>(open_exit_dialog("Error during trophy registration! The game will now be terminated.", true));
+			static_cast<void>(open_exit_dialog("Error during trophy registration! The game will now be terminated.", true, msg_dialog_source::_sceNpTrophy));
 		}
 	};
 

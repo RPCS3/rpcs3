@@ -89,9 +89,21 @@ enum class MsgDialogState
 	Close,
 };
 
+enum class msg_dialog_source
+{
+	_cellMsgDialog,
+	_cellSaveData,
+	_cellGame,
+	_cellCrossController,
+	_sceNp,
+	_sceNpTrophy,
+	sys_progress,
+	shader_loading,
+};
+
 void close_msg_dialog();
-error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null, s32* return_code = nullptr);
-error_code open_exit_dialog(const std::string& message, bool is_exit_requested);
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, msg_dialog_source source, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null, s32* return_code = nullptr);
+error_code open_exit_dialog(const std::string& message, bool is_exit_requested, msg_dialog_source source);
 
 class MsgDialogBase
 {
@@ -103,6 +115,7 @@ public:
 	atomic_t<MsgDialogState> state{ MsgDialogState::Close };
 
 	MsgDialogType type{};
+	msg_dialog_source source = msg_dialog_source::_cellMsgDialog;
 
 	std::function<void(s32 status)> on_close = nullptr;
 
