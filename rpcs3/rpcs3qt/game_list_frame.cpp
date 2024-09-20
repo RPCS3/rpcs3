@@ -425,13 +425,27 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 			m_progress_dialog->SetValue(0);
 		}
 
-		// Remove the specified serials (title id) in "games.yml" file (if any)
-		Emu.RemoveGames(serials_to_remove_from_yml);
-
 		const std::string games_dir = rpcs3::utils::get_games_dir();
-		const u32 games_added = Emu.AddGamesFromDir(games_dir);
 
-		if (games_added)
+		// List of serials (title id) to remove in "games.yml" file (if any)
+		std::vector<std::string> serials_to_remove = serials_to_remove_from_yml; // Initialize the list with the specified serials (if any)
+
+		// Scan game list to detect the titles belonging to auto-detection "games" folder
+		for (const auto& [serial, path] : Emu.GetGamesConfig().get_games()) // Loop on game list file
+		{
+			// NOTE: Used starts_with(games_dir) instead of Emu.IsPathInsideDir(path, games_dir) due the latter would check also the existence of the paths
+			//
+			if (path.starts_with(games_dir)) // If game path belongs to auto-detection "games" folder, add the serial to the removal list
+			{
+				serials_to_remove.push_back(serial);
+			}
+		}
+
+		// Remove the specified and detected serials (title id) only from the game list in memory (not yet in "games.yml" file)
+		Emu.RemoveGames(serials_to_remove, false);
+
+		// Scan auto-detection "games" folder adding the detected titles to the game list plus flushing also all the other changes in "games.yml" file
+		if (const u32 games_added = Emu.AddGamesFromDir(games_dir); games_added != 0)
 		{
 			game_list_log.notice("Refresh added %d new entries found in %s", games_added, games_dir);
 		}
@@ -1721,7 +1735,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			u64 total_data_size = 0;
 
-			text += tr("\nData Info:\n");
+			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category);
 
 			for (const std::string& data_dir : data_dir_list)
 			{
@@ -1740,7 +1754,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		}
 
-		if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat)) // retrieve disk space info on data path's drive
+		if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat)) // Retrieve disk space info on data path's drive
 		{
 			text += tr("\nCurrent free disk space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}

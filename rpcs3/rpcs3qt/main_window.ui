@@ -186,11 +186,14 @@
      <addaction name="separator"/>
      <addaction name="batchRemoveCustomConfigurationsAct"/>
      <addaction name="batchRemoveCustomPadConfigurationsAct"/>
+     <addaction name="batchRemoveShaderCachesAct"/>
      <addaction name="batchRemovePPUCachesAct"/>
      <addaction name="batchRemoveSPUCachesAct"/>
-     <addaction name="batchRemoveShaderCachesAct"/>
+     <addaction name="removeHDD1CachesAct"/>
+     <addaction name="removeAllCachesAct"/>
+     <addaction name="removeSavestatesAct"/>
      <addaction name="separator"/>
-     <addaction name="removeDiskCacheAct"/>
+     <addaction name="cleanupGameListAct"/>
     </widget>
     <widget class="QMenu" name="menuFirmware">
      <property name="title">
@@ -1128,6 +1131,16 @@
     <string>Remove Custom Configurations</string>
    </property>
   </action>
+  <action name="batchRemoveCustomPadConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Pad Configurations</string>
+   </property>
+  </action>
+  <action name="batchRemoveShaderCachesAct">
+   <property name="text">
+    <string>Remove Shader Caches</string>
+   </property>
+  </action>
   <action name="batchRemovePPUCachesAct">
    <property name="text">
     <string>Remove PPU Caches</string>
@@ -1138,19 +1151,24 @@
     <string>Remove SPU Caches</string>
    </property>
   </action>
-  <action name="batchRemoveShaderCachesAct">
+  <action name="removeHDD1CachesAct">
    <property name="text">
-    <string>Remove Shader Caches</string>
+    <string>Remove HDD1 Caches</string>
    </property>
   </action>
-  <action name="batchRemoveCustomPadConfigurationsAct">
+  <action name="removeAllCachesAct">
    <property name="text">
-    <string>Remove Custom Pad Configurations</string>
+    <string>Remove All Caches</string>
    </property>
   </action>
-  <action name="removeDiskCacheAct">
+  <action name="removeSavestatesAct">
    <property name="text">
-    <string>Remove Disk Cache</string>
+    <string>Remove Savestates</string>
+   </property>
+  </action>
+  <action name="cleanupGameListAct">
+   <property name="text">
+    <string>Clean up Game List</string>
    </property>
   </action>
   <action name="actionManage_Skylanders_Portal">

@@ -21,7 +21,7 @@ namespace rsx
 
 		dlg = g_fxo->get<rsx::overlays::display_manager>().create<rsx::overlays::message_dialog>(true);
 		dlg->progress_bar_set_taskbar_index(-1);
-		dlg->show(false, msg, type, [](s32 status)
+		dlg->show(false, msg, type, msg_dialog_source::shader_loading, [](s32 status)
 		{
 			if (status != CELL_OK)
 			{

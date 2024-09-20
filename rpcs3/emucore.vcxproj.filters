@@ -978,10 +978,16 @@
     <ClCompile Include="Emu\NP\np_cache.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_gui_cache.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_contexts.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_dnshook.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_requests_gui.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">

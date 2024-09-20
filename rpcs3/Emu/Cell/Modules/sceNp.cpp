@@ -1946,7 +1946,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, 
 
 error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 {
-	sceNp.todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
+	sceNp.warning("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
 	if (options > SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL)
 	{
@@ -3176,7 +3176,7 @@ error_code sceNpLookupInit()
 
 error_code sceNpLookupTerm()
 {
-	sceNp.todo("sceNpLookupTerm()");
+	sceNp.warning("sceNpLookupTerm()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4450,140 +4450,165 @@ error_code check_text(vm::cptr<char> text)
 
 error_code sceNpMatchingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
 {
-	sceNp.todo("sceNpMatchingCreateCtx(npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", npId, handler, arg, ctx_id);
+	sceNp.warning("sceNpMatchingCreateCtx(npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", npId, handler, arg, ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
+	{
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
+	}
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
+	{
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
+	}
 
-	if (false) // TODO
+	// assumed checks done on vsh
+	if (!npId || !handler || !ctx_id)
+	{
+		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
+	}
+
+	const s32 id = create_matching_context(npId, handler, arg);
+
+	if (!id)
+	{
 		return SCE_NP_MATCHING_ERROR_CTX_MAX;
+	}
 
+	nph.set_current_gui_ctx_id(id);
+
+	*ctx_id = static_cast<u32>(id);
 	return CELL_OK;
 }
 
 error_code sceNpMatchingDestroyCtx(u32 ctx_id)
 {
-	sceNp.todo("sceNpMatchingDestroyCtx(ctx_id=%d)", ctx_id);
+	sceNp.warning("sceNpMatchingDestroyCtx(ctx_id=%d)", ctx_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
-	if (false) // TODO
+	if (!destroy_matching_context(ctx_id))
 		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+
+	nph.set_current_gui_ctx_id(0);
 
 	return CELL_OK;
 }
 
 error_code sceNpMatchingGetResult(u32 ctx_id, u32 req_id, vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event)
 {
-	sceNp.todo("sceNpMatchingGetResult(ctx_id=%d, req_id=%d, buf=*0x%x, size=*0x%x, event=*0x%x)", ctx_id, req_id, buf, size, event);
+	sceNp.warning("sceNpMatchingGetResult(ctx_id=%d, req_id=%d, buf=*0x%x, size=*0x%x, event=*0x%x)", ctx_id, req_id, buf, size, event);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!size)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	return nph.get_matching_result(ctx_id, req_id, buf, size, event);
 
-	const u64 id_check = static_cast<s64>(static_cast<s32>(req_id)) >> 0x17 & 0x3f;
-	if (id_check > 32 || (1ULL << id_check & 0x1f89ad040U) == 0)
-		return SCE_NP_MATCHING_ERROR_INVALID_REQ_ID;
-
-	if (buf)
-	{
-		// TODO: copy data to buf
-	}
-	else
-	{
-		constexpr u32 required_size = 0; // TODO
-		*size = required_size;
-	}
-
-	if (event)
-	{
-		//*event = some_event; // TODO: example: SCE_NP_MATCHING_GUI_EVENT_CREATE_ROOM
-	}
-
-	return CELL_OK;
+	// const u64 id_check = static_cast<s64>(static_cast<s32>(req_id)) >> 0x17 & 0x3f;
+	// if (id_check > 32 || (1ULL << id_check & 0x1f89ad040U) == 0)
+	// 	return SCE_NP_MATCHING_ERROR_INVALID_REQ_ID;
 }
 
 error_code sceNpMatchingGetResultGUI(vm::ptr<void> buf, vm::ptr<u32> size, vm::ptr<s32> event)
 {
-	sceNp.todo("sceNpMatchingGetResultGUI(buf=*0x%x, size=*0x%x, event=*0x%x)", buf, size, event);
+	sceNp.warning("sceNpMatchingGetResultGUI(buf=*0x%x, size=*0x%x, event=*0x%x)", buf, size, event);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!size)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (buf)
+	return nph.get_result_gui(buf, size, event);
+}
+
+error_code matching_set_room_info(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id, bool limit)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
+		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
+
+	if (!nph.is_NP_init)
+		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
+
+	if (limit)
 	{
-		// TODO: copy data to buf
-	}
-	else
-	{
-		constexpr u32 required_size = 0; // TODO
-		*size = required_size;
+		static u64 last_call = 0;
+
+		if (last_call != 0 && (get_system_time() - last_call) < 30'000'000)
+			return SCE_NP_MATCHING_ERROR_BUSY;
+
+		last_call = get_system_time();
 	}
 
-	if (event)
-	{
-		//*event = some_event; // TODO: example: SCE_NP_MATCHING_GUI_EVENT_CREATE_ROOM
-	}
+	if (!lobby_id || !room_id || !req_id || !attr)
+		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
+	error_code err = check_attr_id_and_duplicate(attr);
+	if (err != CELL_OK)
+		return err;
+
+	auto res = nph.set_room_info_gui(ctx_id, lobby_id, room_id, attr);
+
+	if (res < 0)
+		return res;
+
+	*req_id = res;
 	return CELL_OK;
 }
 
 error_code sceNpMatchingSetRoomInfo(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingSetRoomInfo(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
+	sceNp.warning("sceNpMatchingSetRoomInfo(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
-
-	if (false) // TODO: some timeout with 30000000 us ?
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	if (!lobby_id || !room_id || !req_id || !attr)
-		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
-
-	error_code err = check_attr_id_and_duplicate(attr);
-	if (err != CELL_OK)
-		return err;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
-
-	return CELL_OK;
+	return matching_set_room_info(ctx_id, lobby_id, room_id, attr, req_id, true);
 }
 
 error_code sceNpMatchingSetRoomInfoNoLimit(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingSetRoomInfoNoLimit(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
+	sceNp.warning("sceNpMatchingSetRoomInfoNoLimit(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
 
-	if (false) // TODO
+	return matching_set_room_info(ctx_id, lobby_id, room_id, attr, req_id, false);
+}
+
+error_code matching_get_room_info(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id, bool limit)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
+
+	if (limit)
+	{
+		static u64 last_call = 0;
+
+		if (last_call != 0 && (get_system_time() - last_call) < 30'000'000)
+			return SCE_NP_MATCHING_ERROR_BUSY;
+
+		last_call = get_system_time();
+	}
 
 	if (!lobby_id || !room_id || !req_id || !attr)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
@@ -4592,131 +4617,98 @@ error_code sceNpMatchingSetRoomInfoNoLimit(u32 ctx_id, vm::ptr<SceNpLobbyId> lob
 	if (err != CELL_OK)
 		return err;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	auto res = nph.get_room_info_gui(ctx_id, lobby_id, room_id, attr);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	if (res < 0)
+		return res;
 
+	*req_id = res;
 	return CELL_OK;
 }
 
 error_code sceNpMatchingGetRoomInfo(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingGetRoomInfo(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
+	sceNp.warning("sceNpMatchingGetRoomInfo(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
-
-	if (false) // TODO: some timeout with 30000000 us ?
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	if (!lobby_id || !room_id || !req_id || !attr)
-		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
-
-	error_code err = check_attr_id_and_duplicate(attr);
-	if (err != CELL_OK)
-		return err;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
-
-	return CELL_OK;
+	return matching_get_room_info(ctx_id, lobby_id, room_id, attr, req_id, true);
 }
 
 error_code sceNpMatchingGetRoomInfoNoLimit(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingGetRoomInfoNoLimit(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
+	sceNp.warning("sceNpMatchingGetRoomInfoNoLimit(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, attr=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, attr, req_id);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
-
-	if (!lobby_id || !room_id || !req_id || !attr)
-		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
-
-	error_code err = check_attr_id_and_duplicate(attr);
-	if (err != CELL_OK)
-		return err;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
-
-	return CELL_OK;
+	return matching_get_room_info(ctx_id, lobby_id, room_id, attr, req_id, false);
 }
 
 error_code sceNpMatchingSetRoomSearchFlag(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, s32 flag, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingSetRoomSearchFlag(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, flag=%d, req_id=*0x%x)", ctx_id, lobby_id, room_id, flag, req_id);
+	sceNp.warning("sceNpMatchingSetRoomSearchFlag(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, flag=%d, req_id=*0x%x)", ctx_id, lobby_id, room_id, flag, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!lobby_id || !room_id || !req_id || (flag < SCE_NP_MATCHING_ROOM_SEARCH_FLAG_OPEN || flag >	SCE_NP_MATCHING_ROOM_SEARCH_FLAG_STEALTH))
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	auto res = nph.set_room_search_flag_gui(ctx_id, lobby_id, room_id, flag);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	if (res < 0)
+		return res;
 
+	*req_id = res;
 	return CELL_OK;
 }
 
 error_code sceNpMatchingGetRoomSearchFlag(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingGetRoomSearchFlag(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, req_id);
+	sceNp.warning("sceNpMatchingGetRoomSearchFlag(ctx_id=%d, lobby_id=*0x%x, room_id=*0x%x, req_id=*0x%x)", ctx_id, lobby_id, room_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!lobby_id || !room_id || !req_id)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	auto res = nph.get_room_search_flag_gui(ctx_id, lobby_id, room_id);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	if (res < 0)
+		return res;
 
+	*req_id = res;
 	return CELL_OK;
 }
 
-error_code sceNpMatchingGetRoomMemberListLocal(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf)
+error_code matching_get_room_member_list(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf)
 {
-	sceNp.todo("sceNpMatchingGetRoomMemberListLocal(ctx_id=%d, room_id=*0x%x, buflen=*0x%x, buf=*0x%x)", ctx_id, room_id, buflen, buf);
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	if (false) // TODO
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!buflen)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	return nph.get_room_member_list_local_gui(ctx_id, room_id, buflen, buf);
+}
 
-	return CELL_OK;
+error_code sceNpMatchingGetRoomMemberListLocal(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf)
+{
+	sceNp.warning("sceNpMatchingGetRoomMemberListLocal(ctx_id=%d, room_id=*0x%x, buflen=*0x%x, buf=*0x%x)", ctx_id, room_id, buflen, buf);
+
+	return matching_get_room_member_list(ctx_id, room_id, buflen, buf);
 }
 
 // FUN_00014bdc
@@ -4788,41 +4780,42 @@ error_code check_room_list_params([[maybe_unused]] u32 ctx_id, vm::ptr<SceNpComm
 	return check_attr_id_and_duplicate(attribute);
 }
 
-error_code sceNpMatchingGetRoomListLimitGUI(u32 ctx_id, vm::ptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingReqRange> range, vm::ptr<SceNpMatchingSearchCondition> cond,
-    vm::ptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+error_code matching_get_room_list(u32 ctx_id, vm::ptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingReqRange> range, vm::ptr<SceNpMatchingSearchCondition> cond,
+	vm::ptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg, bool limit)
 {
-	sceNp.todo("sceNpMatchingGetRoomListLimitGUI(ctx_id=%d, communicationId=*0x%x, range=*0x%x, cond=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, range, cond, attr, handler, arg);
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	if (false) // TODO
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
+
+	// TODO: add limiter
 
 	// This check is used in all sceNpMatchingGetRoomList functions
 	error_code err = check_room_list_params(ctx_id, communicationId, range, cond, attr, handler, 1, 0);
 	if (err != CELL_OK)
 		return err;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	return nph.get_room_list_gui(ctx_id, communicationId, range, cond, attr, handler, arg, limit);
+}
 
-	// TODO: set callback: handler + arg
+error_code sceNpMatchingGetRoomListLimitGUI(u32 ctx_id, vm::ptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingReqRange> range, vm::ptr<SceNpMatchingSearchCondition> cond,
+    vm::ptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+{
+	sceNp.warning("sceNpMatchingGetRoomListLimitGUI(ctx_id=%d, communicationId=*0x%x, range=*0x%x, cond=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, range, cond, attr, handler, arg);
 
-	err = CELL_OK; // GetRoomListLimit
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return CELL_OK;
+	return matching_get_room_list(ctx_id, communicationId, range, cond, attr, handler, arg, true);
 }
 
 error_code sceNpMatchingKickRoomMember(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpId> user_id, vm::ptr<u32> req_id)
 {
 	sceNp.todo("sceNpMatchingKickRoomMember(ctx_id=%d, room_id=*0x%x, user_id=*0x%x, req_id=*0x%x)", ctx_id, room_id, user_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!room_id || !user_id || !req_id)
@@ -4841,10 +4834,12 @@ error_code sceNpMatchingKickRoomMemberWithOpt(u32 ctx_id, vm::cptr<SceNpRoomId> 
 {
 	sceNp.todo("sceNpMatchingKickRoomMemberWithOpt(ctx_id=%d, room_id=*0x%x, user_id=*0x%x, opt=*0x%x, opt_len=%d, req_id=*0x%x)", ctx_id, room_id, user_id, opt, opt_len, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!room_id || !user_id || !req_id)
@@ -4865,10 +4860,12 @@ error_code sceNpMatchingKickRoomMemberWithOpt(u32 ctx_id, vm::cptr<SceNpRoomId> 
 error_code sceNpMatchingQuickMatchGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num, s32 timeout,
     vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingQuickMatchGUI(ctx_id=%d, communicationId=*0x%x, cond=*0x%x, available_num=%d, timeout=%d, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, cond, available_num, timeout,
+	sceNp.warning("sceNpMatchingQuickMatchGUI(ctx_id=%d, communicationId=*0x%x, cond=*0x%x, available_num=%d, timeout=%d, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, cond, available_num, timeout,
 	    handler, arg);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!communicationId || !handler || available_num < 2 || timeout < 1)
@@ -4908,15 +4905,7 @@ error_code sceNpMatchingQuickMatchGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 		}
 	}
 
-	// TODO: set callback: handler + arg
-
-	error_code err = CELL_OK; // QuickMatch
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return nph.quickmatch_gui(ctx_id, communicationId, cond, available_num, timeout, handler, arg);
 }
 
 error_code sceNpMatchingSendInvitationGUI(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> dsts, s32 num, s32 slot_type,
@@ -4925,7 +4914,9 @@ error_code sceNpMatchingSendInvitationGUI(u32 ctx_id, vm::cptr<SceNpRoomId> room
 	sceNp.todo("sceNpMatchingSendInvitationGUI(ctx_id=%d, room_id=*0x%x, communicationId=*0x%x, dsts=*0x%x, num=%d, slot_type=%d, subject=%s, body=%s, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id,
 	    room_id, communicationId, dsts, num, slot_type, subject, body, container, handler, arg);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!room_id || !communicationId || !subject || !body) // TODO: || (in_stack_0000007c != 0)
@@ -4969,7 +4960,9 @@ error_code sceNpMatchingAcceptInvitationGUI(u32 ctx_id, vm::cptr<SceNpCommunicat
 {
 	sceNp.todo("sceNpMatchingAcceptInvitationGUI(ctx_id=%d, communicationId=*0x%x, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, container, handler, arg);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!communicationId || !handler)
@@ -5058,12 +5051,14 @@ error_code check_attr_create_room(vm::cptr<SceNpMatchingAttr> attribute)
 	return SCE_NP_MATCHING_ERROR_ATTR_NOT_SPECIFIED;
 }
 
-error_code sceNpMatchingCreateRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+error_code matching_create_room(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingCreateRoomGUI(ctx_id=%d, communicationId=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, attr, handler, arg);
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	if (false) // TODO
+	if (nph.is_NP2_Match2_init)
+	{
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
+	}
 
 	if (!communicationId || !handler)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
@@ -5073,69 +5068,66 @@ error_code sceNpMatchingCreateRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 	if (err != CELL_OK)
 		return err;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	// TODO: set callback: handler + arg
-
-	err = CELL_OK; // create_room
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return nph.create_room_gui(ctx_id, communicationId, attr, handler, arg);
 }
 
-error_code sceNpMatchingJoinRoomGUI(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+error_code sceNpMatchingCreateRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingJoinRoomGUI(ctx_id=%d, room_id=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, room_id, handler, arg);
+	sceNp.warning("sceNpMatchingCreateRoomGUI(ctx_id=%d, communicationId=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, attr, handler, arg);
 
-	if (false) // TODO
+	return matching_create_room(ctx_id, communicationId, attr, handler, arg);
+}
+
+error_code matching_join_room(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+{
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!room_id || !handler)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	return nph.join_room_gui(ctx_id, room_id, handler, arg);
+}
 
-	// TODO: set callback: handler + arg
+error_code sceNpMatchingJoinRoomGUI(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+{
+	sceNp.warning("sceNpMatchingJoinRoomGUI(ctx_id=%d, room_id=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, room_id, handler, arg);
 
-	error_code err = CELL_OK; // join_room
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return matching_join_room(ctx_id, room_id, handler, arg);
 }
 
 error_code sceNpMatchingLeaveRoom(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::ptr<u32> req_id)
 {
-	sceNp.todo("sceNpMatchingLeaveRoom(ctx_id=%d, room_id=*0x%x, req_id=*0x%x)", ctx_id, room_id, req_id);
+	sceNp.warning("sceNpMatchingLeaveRoom(ctx_id=%d, room_id=*0x%x, req_id=*0x%x)", ctx_id, room_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
+	auto res = nph.leave_room_gui(ctx_id, room_id);
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_CTX_NOT_FOUND;
+	if (res < 0)
+		return res;
+
+	*req_id = res;
 
 	return CELL_OK;
 }
 
-error_code sceNpMatchingSearchJoinRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attribute,
+error_code sceNpMatchingSearchJoinRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr,
     vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingSearchJoinRoomGUI(ctx_id=%d, communicationId=*0x%x, cond=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, cond, attribute, handler, arg);
+	sceNp.warning("sceNpMatchingSearchJoinRoomGUI(ctx_id=%d, communicationId=*0x%x, cond=*0x%x, attr=*0x%x, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, cond, attr, handler, arg);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
 	if (!communicationId || !handler)
@@ -5183,32 +5175,23 @@ error_code sceNpMatchingSearchJoinRoomGUI(u32 ctx_id, vm::cptr<SceNpCommunicatio
 		}
 	}
 
-	error_code err = check_attr_id_and_duplicate(attribute);
+	error_code err = check_attr_id_and_duplicate(attr);
 	if (err != CELL_OK)
 		return err;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	// TODO: set callback: handler + arg
-
-	//err = search_join_room
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return nph.searchjoin_gui(ctx_id, communicationId, cond, attr, handler, arg);
 }
 
 error_code sceNpMatchingGrantOwnership(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpId> user_id, vm::ptr<u32> req_id)
 {
 	sceNp.todo("sceNpMatchingGrantOwnership(ctx_id=%d, room_id=*0x%x, user_id=*0x%x, req_id=*0x%x)", ctx_id, room_id, user_id, req_id);
 
-	if (false) // TODO
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (nph.is_NP2_Match2_init)
 		return SCE_NP_MATCHING_ERROR_UTILITY_UNAVAILABLE;
 
-	if (false) // TODO
+	if (!nph.is_NP_init)
 		return SCE_NP_MATCHING_ERROR_NOT_INITIALIZED;
 
 	if (!room_id || !user_id || !req_id)
@@ -6230,7 +6213,7 @@ error_code sceNpScoreGetRankingByNpIdPcIdAsync(s32 transId, SceNpScoreBoardId bo
 
 error_code sceNpScoreAbortTransaction(s32 transId)
 {
-	sceNp.todo("sceNpScoreAbortTransaction(transId=%d)", transId);
+	sceNp.warning("sceNpScoreAbortTransaction(transId=%d)", transId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

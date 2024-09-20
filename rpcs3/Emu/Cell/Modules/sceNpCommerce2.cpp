@@ -220,9 +220,9 @@ error_code sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, 
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
 		{
-			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, ctx->context_callback_param);
+			context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, context_callback_param);
 			return 0;
 		});
 	}
@@ -276,9 +276,9 @@ error_code sceNpCommerce2CreateSessionStart(u32 ctx_id)
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
 		{
-			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, ctx->context_callback_param);
+			context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, context_callback_param);
 			return 0;
 		});
 	}

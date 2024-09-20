@@ -247,7 +247,7 @@ namespace rsx
 					// Hide list
 					visible = false;
 
-					error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(confirmation_msg), vm::null, vm::null, vm::null, &confirmation_code);
+					error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(confirmation_msg), msg_dialog_source::_sceNp, vm::null, vm::null, vm::null, &confirmation_code);
 					if (res != CELL_OK)
 					{
 						rsx_log.fatal("sendmessage dialog failed to open confirmation dialog (error=%d)", +res);

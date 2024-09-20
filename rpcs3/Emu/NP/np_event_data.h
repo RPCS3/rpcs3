@@ -14,6 +14,10 @@ namespace np
 			m_data_ptr.set(vm_addr);
 		}
 
+		event_data()
+		{
+		}
+
 		u8* data()
 		{
 			return m_data_ptr.get_ptr();
@@ -99,8 +103,8 @@ namespace np
 		}
 
 	private:
-		vm::bptr<u8> m_data_ptr;
-		u32 m_max_size, m_cur_size;
+		vm::bptr<u8> m_data_ptr{};
+		u32 m_max_size = 0, m_cur_size = 0;
 		std::vector<u32> m_relocs;
 	};
 } // namespace np

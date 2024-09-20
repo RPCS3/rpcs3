@@ -333,7 +333,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 
 		// Get user confirmation by opening a blocking dialog
 		s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg), vm::null, vm::null, vm::null, &return_code);
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -370,7 +370,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 			lv2_obj::sleep(ppu);
 
 			// Display success message by opening a blocking dialog (return value should be irrelevant here)
-			res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(msg));
+			res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(msg), msg_dialog_source::_cellSaveData);
 
 			// Reschedule after blocking dialog returns
 			if (ppu.check_state())
@@ -423,7 +423,7 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	lv2_obj::sleep(ppu);
 
 	// Get user confirmation by opening a blocking dialog (return value should be irrelevant here)
-	[[maybe_unused]] error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, use_invalid_message ? result.invalidMsg : vm::make_str(msg));
+	[[maybe_unused]] error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, use_invalid_message ? result.invalidMsg : vm::make_str(msg), msg_dialog_source::_cellSaveData);
 
 	// Reschedule after a blocking dialog returns
 	if (ppu.check_state())
@@ -1219,7 +1219,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Get user confirmation by opening a blocking dialog
 			s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
-			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), vm::null, vm::null, vm::null, &return_code);
+			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 
 			// Reschedule after a blocking dialog returns
 			if (ppu.check_state())
@@ -1350,7 +1350,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				// Get user confirmation by opening a blocking dialog
 				s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
-				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), vm::null, vm::null, vm::null, &return_code);
+				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 
 				// Reschedule after a blocking dialog returns
 				if (ppu.check_state())

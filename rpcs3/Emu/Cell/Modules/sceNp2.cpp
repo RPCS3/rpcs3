@@ -576,9 +576,9 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
 		{
-			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, context_callback_param);
 			return 0;
 		});
 	}
@@ -1106,9 +1106,9 @@ error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 ti
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
 		{
-			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
 			return 0;
 		});
 	}
@@ -1709,9 +1709,9 @@ error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 	
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([=, context_callback = ctx->context_callback, context_callback_param = ctx->context_callback_param](ppu_thread& cb_ppu) -> s32
 		{
-			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Stop, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Stop, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, context_callback_param);
 			return 0;
 		});
 	}
