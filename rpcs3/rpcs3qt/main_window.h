@@ -128,7 +128,11 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
-	void RemoveDiskCache();
+	void RemoveHDD1Caches();
+	void RemoveAllCaches();
+	void RemoveSavestates();
+	void CleanupGameList();
+
 	void RemoveFirmwareCache();
 	void CreateFirmwareCache();
 

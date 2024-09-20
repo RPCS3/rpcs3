@@ -4082,7 +4082,7 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	return game_boot_result::invalid_file_or_folder;
 }
 
-u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list)
+u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list, bool save_on_disk)
 {
 	if (title_id_list.empty())
 	{
@@ -4103,7 +4103,7 @@ u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list)
 
 	m_games_config.set_save_on_dirty(true);
 
-	if (m_games_config.is_dirty() && !m_games_config.save())
+	if (save_on_disk && m_games_config.is_dirty() && !m_games_config.save())
 	{
 		sys_log.error("Failed to save games.yml after removing games");
 	}

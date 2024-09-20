@@ -1980,10 +1980,13 @@ void main_window::OnEmuStop()
 #endif
 	}
 
+	ui->batchRemoveShaderCachesAct->setEnabled(true);
 	ui->batchRemovePPUCachesAct->setEnabled(true);
 	ui->batchRemoveSPUCachesAct->setEnabled(true);
-	ui->batchRemoveShaderCachesAct->setEnabled(true);
-	ui->removeDiskCacheAct->setEnabled(true);
+	ui->removeHDD1CachesAct->setEnabled(true);
+	ui->removeAllCachesAct->setEnabled(true);
+	ui->removeSavestatesAct->setEnabled(true);
+	ui->cleanupGameListAct->setEnabled(true);
 
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
@@ -2030,10 +2033,13 @@ void main_window::OnEmuReady() const
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
 
+	ui->batchRemoveShaderCachesAct->setEnabled(false);
 	ui->batchRemovePPUCachesAct->setEnabled(false);
 	ui->batchRemoveSPUCachesAct->setEnabled(false);
-	ui->batchRemoveShaderCachesAct->setEnabled(false);
-	ui->removeDiskCacheAct->setEnabled(false);
+	ui->removeHDD1CachesAct->setEnabled(false);
+	ui->removeAllCachesAct->setEnabled(false);
+	ui->removeSavestatesAct->setEnabled(false);
+	ui->cleanupGameListAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2680,13 +2686,15 @@ void main_window::CreateConnects()
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
 	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]() { list->BatchCreateCPUCaches(); });
-	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
-	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
-	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
 	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveCustomConfigurations);
 	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveCustomPadConfigurations);
-
-	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
+	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
+	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
+	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
+	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, &main_window::RemoveHDD1Caches);
+	connect(ui->removeAllCachesAct, &QAction::triggered, this, &main_window::RemoveAllCaches);
+	connect(ui->removeSavestatesAct, &QAction::triggered, this, &main_window::RemoveSavestates);
+	connect(ui->cleanupGameListAct, &QAction::triggered, this, &main_window::CleanupGameList);
 
 	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
 	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
@@ -3531,18 +3539,100 @@ void main_window::SetIconSizeActions(int idx) const
 		ui->setIconSizeLargeAct->setChecked(true);
 }
 
-void main_window::RemoveDiskCache()
+void main_window::RemoveHDD1Caches()
 {
-	const std::string cache_dir = rpcs3::utils::get_hdd1_dir() + "/caches";
-
-	if (fs::remove_all(cache_dir, false))
+	if (fs::remove_all(rpcs3::utils::get_hdd1_dir() + "caches", false))
 	{
-		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
+		QMessageBox::information(this, tr("HDD1 Caches Removed"), tr("HDD1 caches successfully removed"));
 	}
 	else
 	{
-		QMessageBox::warning(this, tr("Error"), tr("Could not remove disk cache"));
+		QMessageBox::warning(this, tr("Error"), tr("Could not remove HDD1 caches"));
 	}
+}
+
+void main_window::RemoveAllCaches()
+{
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
+		return;
+
+	const std::string cache_base_dir = rpcs3::utils::get_cache_dir();
+	u64 caches_count = 0;
+	u64 caches_removed = 0;
+
+	for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
+	{
+		if (game && qstr(game->info.category) != cat::cat_ps3_os && fs::exists(cache_base_dir + game->info.serial)) // If not OS category and cache exists
+		{
+			caches_count++;
+
+			if (fs::remove_all(cache_base_dir + game->info.serial))
+			{
+				caches_removed++;
+			}
+		}
+	}
+
+	if (caches_count == caches_removed)
+	{
+		QMessageBox::information(this, tr("Caches Removed"), tr("%0 cache(s) successfully removed").arg(caches_removed));
+	}
+	else
+	{
+		QMessageBox::warning(this, tr("Error"), tr("Could not remove %0 of %1 cache(s)").arg(caches_count - caches_removed).arg(caches_count));
+	}
+
+	RemoveHDD1Caches();
+}
+
+void main_window::RemoveSavestates()
+{
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestates?")) != QMessageBox::Yes)
+		return;
+
+	if (fs::remove_all(fs::get_config_dir() + "savestates", false))
+	{
+		QMessageBox::information(this, tr("Savestates Removed"), tr("Savestates successfully removed"));
+	}
+	else
+	{
+		QMessageBox::warning(this, tr("Error"), tr("Could not remove savestates"));
+	}
+}
+
+void main_window::CleanupGameList()
+{
+	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n"
+		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (games.yml)")) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	// List of serials (title id) to remove in "games.yml" file (if any)
+	std::vector<std::string> serials_to_remove_from_yml{};
+
+	for (const auto& [serial, path] : Emu.GetGamesConfig().get_games()) // Loop on game list file
+	{
+		bool found = false;
+
+		for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
+		{
+			// If Disc Game and its serial is found in game list file
+			if (game && qstr(game->info.category) == cat::cat_disc_game && game->info.serial == serial)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) // If serial not found, add it to the removal list
+		{
+			serials_to_remove_from_yml.push_back(serial);
+		}
+	}
+
+	// Remove the found serials (title id) in "games.yml" file (if any)
+	QMessageBox::information(this, tr("Summary"), tr("%0 game(s) removed from game list").arg(Emu.RemoveGames(serials_to_remove_from_yml)));
 }
 
 void main_window::RemoveFirmwareCache()
