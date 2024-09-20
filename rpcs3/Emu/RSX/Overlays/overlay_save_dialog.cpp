@@ -199,6 +199,8 @@ namespace rsx
 
 		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
 		{
+			rsx_log.notice("Showing native UI save_dialog (save_entries=%d, focused=%d, op=0x%x, listSet=*0x%x, enable_overlay=%d)", save_entries.size(), focused, op, listSet, enable_overlay);
+
 			visible = false;
 
 			if (enable_overlay)
