@@ -190,7 +190,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 		m_choice_units->clearFocus();
 	});
 
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::activated), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
+	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
@@ -804,34 +804,35 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 cpu_thread* debugger_frame::get_cpu()
 {
+	if (m_emu_state == system_state::stopped)
+	{
+		m_rsx = nullptr;
+		m_cpu.reset();
+		return nullptr;
+	}
+
 	// Wait flag is raised by the thread itself, acknowledging exit
 	if (m_cpu)
 	{
-		if (+m_cpu->state + cpu_flag::wait + cpu_flag::exit != +m_cpu->state)
+		if (m_cpu->state.all_of(cpu_flag::wait + cpu_flag::exit))
 		{
-			return m_cpu.get();
+			m_cpu.reset();
+			return nullptr;
 		}
+
+		return m_cpu.get();
 	}
 
 	// m_rsx is raw pointer, when emulation is stopped it won't be cleared
 	// Therefore need to do invalidation checks manually
 
-	if (m_emu_state == system_state::stopped)
+	if (m_rsx)
 	{
-		m_rsx = nullptr;
-		return m_rsx;
-	}
-
-	if (!g_fxo->is_init<rsx::thread>())
-	{
-		m_rsx = nullptr;
-		return m_rsx;
-	}
-
-	if (m_rsx && !m_rsx->ctrl)
-	{
-		m_rsx = nullptr;
-		return m_rsx;
+		if (g_fxo->try_get<rsx::thread>() != m_rsx || !m_rsx->ctrl || m_rsx->state.all_of(cpu_flag::wait + cpu_flag::exit))
+		{
+			m_rsx = nullptr;
+			return nullptr;
+		}
 	}
 
 	return m_rsx;
@@ -839,8 +840,14 @@ cpu_thread* debugger_frame::get_cpu()
 
 std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, bool unlocked)
 {
-	const u32 id = cpu ? cpu->id : umax;
-	const u32 type = id >> 24;
+	constexpr cpu_thread* null_cpu = nullptr;
+
+	if (Emu.IsStopped())
+	{
+		return []() { return null_cpu; };
+	}
+
+	const auto type = cpu ? cpu->get_class() : thread_class::general;
 
 	std::shared_ptr<cpu_thread> shared;
 
@@ -848,46 +855,56 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 	{
 		if (unlocked)
 		{
-			if (type == 1)
+			if (type == thread_class::ppu)
 			{
-				shared = idm::get_unlocked<named_thread<ppu_thread>>(id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
 			}
-			else if (type == 2)
+			else if (type == thread_class::spu)
 			{
-				shared = idm::get_unlocked<named_thread<spu_thread>>(id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
 			}
 		}
 		else
 		{
-			if (type == 1)
+			if (type == thread_class::ppu)
 			{
-				shared = idm::get<named_thread<ppu_thread>>(id);
+				shared = idm::get<named_thread<ppu_thread>>(cpu->id);
 			}
-			else if (type == 2)
+			else if (type == thread_class::spu)
 			{
-				shared = idm::get<named_thread<spu_thread>>(id);
+				shared = idm::get<named_thread<spu_thread>>(cpu->id);
 			}
 		}
 	}
 
-	if (shared.get() != cpu)
+	if (type == thread_class::rsx)
 	{
-		shared.reset();
+		if (g_fxo->try_get<rsx::thread>() != cpu)
+		{
+			return []() { return null_cpu; };
+		}
+	}
+	else if (!shared || shared.get() != cpu)
+	{
+		return []() { return null_cpu; };
 	}
 
-	return [cpu, type, shared = std::move(shared), emulation_id = Emu.GetEmulationIdentifier()]() -> cpu_thread*
+	return [cpu, type, shared = std::move(shared), emulation_id = Emu.GetEmulationIdentifier()]() mutable -> cpu_thread*
 	{
-		if (emulation_id != Emu.GetEmulationIdentifier())
+		if (emulation_id != Emu.GetEmulationIdentifier() || Emu.IsStopped())
 		{
 			// Invalidate all data after Emu.Kill()
+			shared.reset();
+			cpu = nullptr;
 			return nullptr;
 		}
 
-		if (type == 1 || type == 2)
+		if (type == thread_class::ppu || type == thread_class::spu)
 		{
 			// SPU and PPU
 			if (!shared || shared->state.all_of(cpu_flag::exit + cpu_flag::wait))
 			{
+				shared.reset();
 				return nullptr;
 			}
 
@@ -895,12 +912,18 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 		}
 
 		// RSX
-		if (g_fxo->try_get<rsx::thread>() == cpu)
+		const auto rsx = g_fxo->try_get<rsx::thread>();
+
+		if (cpu)
 		{
-			return cpu;
+			if (rsx != cpu || !rsx->ctrl || rsx->state.all_of(cpu_flag::wait + cpu_flag::exit))
+			{
+				cpu = nullptr;
+				return nullptr;
+			}
 		}
 
-		return nullptr;
+		return cpu;
 	};
 }
 
@@ -980,10 +1003,6 @@ void debugger_frame::UpdateUI()
 	m_ui_update_ctr++;
 }
 
-using data_type = std::function<cpu_thread*()>;
-
-Q_DECLARE_METATYPE(data_type);
-
 void debugger_frame::UpdateUnitList()
 {
 	const u64 emulation_id = static_cast<std::underlying_type_t<Emulator::stop_counter_t>>(Emu.GetEmulationIdentifier());
@@ -1000,8 +1019,7 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
-	QVariant old_cpu = m_choice_units->currentData();
-	const cpu_thread* old_cpu_ptr = old_cpu.canConvert<data_type>() ? old_cpu.value<data_type>()() : nullptr;
+	const cpu_thread* old_cpu_ptr = get_cpu();
 
 	if (!lock.try_lock())
 	{
@@ -1010,20 +1028,17 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
-	m_emulation_id = emulation_id;
-	m_threads_created = threads_created;
-	m_threads_deleted = threads_deleted;
-	m_emu_state = emu_state;
+	std::vector<std::pair<QString, std::function<cpu_thread*()>>> cpu_list;
+	cpu_list.reserve(threads_created >= threads_deleted ? 0 : threads_created - threads_deleted);
 
-	std::vector<std::pair<QString, QVariant>> cpu_list;
 	usz reselected_index = umax;
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
-		QVariant var_cpu = QVariant::fromValue<data_type>(make_check_cpu(std::addressof(cpu), true));
+		std::function<cpu_thread*()> func_cpu = make_check_cpu(std::addressof(cpu), true);
 
 		// Space at the end is to pad a gap on the right
-		cpu_list.emplace_back(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(var_cpu));
+		cpu_list.emplace_back(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
 
 		if (old_cpu_ptr == std::addressof(cpu))
 		{
@@ -1035,30 +1050,40 @@ void debugger_frame::UpdateUnitList()
 	{
 		idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
 		idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
-	}
 
-	if (const auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
-	{
-		on_select(render->id, *render);
+		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->ctrl)
+		{
+			on_select(render->id, *render);
+		}
 	}
 
 	lock.unlock();
+
+	m_emulation_id = emulation_id;
+	m_threads_created = threads_created;
+	m_threads_deleted = threads_deleted;
+	m_emu_state = emu_state;
 	m_thread_list_pending_update = false;
 
 	{
 		const QSignalBlocker blocker(m_choice_units);
 
+		m_threads_info.clear();
 		m_choice_units->clear();
+
+		m_threads_info.emplace_back(make_check_cpu(nullptr));
 		m_choice_units->addItem(NoThreadString);
 
-		for (auto&& [thread_name, var_cpu] : cpu_list)
+		for (auto&& [thread_name, func_cpu] : cpu_list)
 		{
-			m_choice_units->addItem(std::move(thread_name), std::move(var_cpu));
+			m_threads_info.emplace_back(std::move(func_cpu));
+			m_choice_units->addItem(std::move(thread_name));
 		}
 
 		if (reselected_index != umax)
 		{
-			m_choice_units->setCurrentIndex(::narrow<s32>(reselected_index));
+			// Include no-thread at index 0 
+			m_choice_units->setCurrentIndex(::narrow<s32>(reselected_index + 1));
 		}
 	}
 
@@ -1092,9 +1117,9 @@ void debugger_frame::OnSelectUnit()
 
 	if (m_emu_state != system_state::stopped)
 	{
-		if (const QVariant data = m_choice_units->currentData(); data.canConvert<data_type>())
+		if (int index = m_choice_units->currentIndex(); index >= 0 && index + 0u < m_threads_info.size())
 		{
-			selected = data.value<data_type>()();
+			selected = ::at32(m_threads_info, index)();
 		}
 
 		if (selected && m_cpu.get() == selected)
@@ -1480,18 +1505,13 @@ void debugger_frame::PerformGoToThreadRequest(const QString& text_argument)
 
 	if (thread_id != umax)
 	{
-		for (int i = 0; i < m_choice_units->count(); i++)
+		for (usz i = 0; i < m_threads_info.size(); i++)
 		{
-			QVariant cpu = m_choice_units->itemData(i);
-
-			if (cpu.canConvert<data_type>())
+			if (cpu_thread* ptr = m_threads_info[i](); ptr && ptr->id == thread_id)
 			{
-				if (cpu_thread* ptr = cpu.value<data_type>()(); ptr && ptr->id == thread_id)
-				{
-					// Success
-					m_choice_units->setCurrentIndex(i);
-					return;
-				}
+				// Success
+				m_choice_units->setCurrentIndex(i);
+				return;
 			}
 		}
 	}
