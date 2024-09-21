@@ -1057,7 +1057,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	default: return CELL_ESTAT;
 	}
 
-	const u32 max_threads = group->max_run;
+	const u32 max_threads = group->max_num;
 
 	group->join_state = 0;
 	group->exit_status = 0;
