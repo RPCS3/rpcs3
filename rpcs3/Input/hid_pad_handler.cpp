@@ -17,8 +17,58 @@
 
 LOG_CHANNEL(hid_log, "HID");
 
-static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and pad_settings_dialog
-static u8 s_hid_instances{0};
+struct hid_instance
+{
+public:
+	hid_instance() = default;
+	~hid_instance()
+	{
+		std::lock_guard lock(m_hid_mutex);
+
+		// Only exit HIDAPI once on exit. HIDAPI uses a global state internally...
+		if (m_initialized)
+		{
+			hid_log.notice("Exiting HIDAPI...");
+
+			if (hid_exit() != 0)
+			{
+				hid_log.error("hid_exit failed!");
+			}
+		}
+	}
+
+	static hid_instance& get_instance()
+	{
+		static hid_instance instance {};
+		return instance;
+	}
+
+	bool initialize()
+	{
+		std::lock_guard lock(m_hid_mutex);
+
+		// Only init HIDAPI once. HIDAPI uses a global state internally...
+		if (m_initialized)
+		{
+			return true;
+		}
+
+		hid_log.notice("Initializing HIDAPI ...");
+
+		if (hid_init() != 0)
+		{
+			hid_log.fatal("hid_init error");
+			return false;
+		}
+
+		m_initialized = true;
+		return true;
+	}
+
+private:
+	bool m_initialized = false;
+	std::mutex m_hid_mutex;
+};
 
 void HidDevice::close()
 {
@@ -33,8 +83,6 @@ template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
     : PadHandlerBase(type), m_ids(std::move(ids))
 {
-	std::scoped_lock lock(s_hid_mutex);
-	ensure(s_hid_instances++ < 255);
 };
 
 template <class Device>
@@ -54,17 +102,6 @@ hid_pad_handler<Device>::~hid_pad_handler()
 			controller.second->close();
 		}
 	}
-
-	std::scoped_lock lock(s_hid_mutex);
-	ensure(s_hid_instances-- > 0);
-	if (s_hid_instances == 0)
-	{
-		// Call hid_exit after all hid_pad_handlers are finished
-		if (hid_exit() != 0)
-		{
-			hid_log.error("hid_exit failed!");
-		}
-	}
 }
 
 template <class Device>
@@ -73,9 +110,8 @@ bool hid_pad_handler<Device>::Init()
 	if (m_is_init)
 		return true;
 
-	const int res = hid_init();
-	if (res != 0)
-		fmt::throw_exception("%s hidapi-init error.threadproc", m_type);
+	if (!hid_instance::get_instance().initialize())
+		return false;
 
 #if defined(__APPLE__)
 	hid_darwin_set_open_exclusive(0);
