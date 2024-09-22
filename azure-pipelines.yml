@@ -122,7 +122,7 @@ jobs:
       env:
         RPCS3_TOKEN: $(RPCS3-Token)
 
-- job: Mac_Build
+- job: Mac_Build_x86_64
   timeoutInMinutes: 180
   variables:
     CCACHE_DIR: "/tmp/ccache_dir"
@@ -134,9 +134,10 @@ jobs:
     ARTDIR: $(Build.ArtifactStagingDirectory)
     QT_VER: '6.6.3'
     QT_VER_MAIN: '6'
+    LLVM_COMPILER_VER: '16'
 
   pool:
-    vmImage: "macOS-12"
+    vmImage: "macOS-13"
 
   steps:
     - task: Cache@2
@@ -155,23 +156,85 @@ jobs:
           qt | "$(Agent.OS)" | "$(QT_VER)"
       displayName: Qt cache
     
-    - task: Cache@2
-      inputs:
-        key: brew | "$(Agent.OS)"
-        path: /Users/runner/Library/Caches/Homebrew
-        restoreKeys: |
-          brew | "$(Agent.OS)"
-      displayName: Homebrew cache
+    # - task: Cache@2
+    #   inputs:
+    #     key: brew | "$(Agent.OS)"
+    #     path: /Users/runner/Library/Caches/Homebrew
+    #     restoreKeys: |
+    #       brew | "$(Agent.OS)"
+    #   displayName: Homebrew cache
 
     - bash: |
         chmod +x ".ci/build-mac.sh"
         chmod +x ".ci/deploy-mac.sh"
+        chmod +x ".ci/optimize-mac.sh"
         ".ci/build-mac.sh"
-      displayName: Build MacOS
+      displayName: Build macOS (x86_64)
 
     - publish: $(Build.ArtifactStagingDirectory)
       condition: succeeded()
-      artifact: RPCS3 for Mac
+      artifact: RPCS3 for Mac (Intel)
+
+    - bash: |
+        source './.ci/export-cirrus-vars.sh'
+        .ci/github-upload.sh
+      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+      displayName: Push build to GitHub
+      env:
+        RPCS3_TOKEN: $(RPCS3-Token)
+        
+- job: Mac_Build_arm64
+  timeoutInMinutes: 180
+  variables:
+    CCACHE_DIR: "/tmp/ccache_dir"
+    CCACHE_MAXSIZE: 300M
+    CI_HAS_ARTIFACTS: true
+    UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
+    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac-arm64"
+    RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+    ARTDIR: $(Build.ArtifactStagingDirectory)
+    QT_VER: '6.6.3'
+    QT_VER_MAIN: '6'
+    LLVM_COMPILER_VER: '16'
+
+  pool:
+    vmImage: "macOS-13"
+
+  steps:
+    - task: Cache@2
+      inputs:
+        key: ccache | "$(Agent.OS)"
+        path: $(CCACHE_DIR)
+        restoreKeys: |
+          ccache | "$(Agent.OS)"
+      displayName: Ccache cache
+    
+    - task: Cache@2
+      inputs:
+        key: qt | "$(Agent.OS)" | "$(QT_VER)"
+        path: /tmp/Qt
+        restoreKeys: |
+          qt | "$(Agent.OS)" | "$(QT_VER)"
+      displayName: Qt cache
+    
+    # - task: Cache@2
+    #   inputs:
+    #     key: brew | "$(Agent.OS)"
+    #     path: /Users/runner/Library/Caches/Homebrew
+    #     restoreKeys: |
+    #       brew | "$(Agent.OS)"
+    #   displayName: Homebrew cache
+
+    - bash: |
+        chmod +x ".ci/build-mac-arm64.sh"
+        chmod +x ".ci/deploy-mac-arm64.sh"
+        chmod +x ".ci/optimize-mac.sh"
+        ".ci/build-mac-arm64.sh"
+      displayName: Build macOS (arm64)
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      condition: succeeded()
+      artifact: RPCS3 for Mac (Apple Silicon)
 
     - bash: |
         source './.ci/export-cirrus-vars.sh'
