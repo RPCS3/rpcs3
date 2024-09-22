@@ -1510,7 +1510,7 @@ void debugger_frame::PerformGoToThreadRequest(const QString& text_argument)
 			if (cpu_thread* ptr = m_threads_info[i](); ptr && ptr->id == thread_id)
 			{
 				// Success
-				m_choice_units->setCurrentIndex(i);
+				m_choice_units->setCurrentIndex(::narrow<s32>(i));
 				return;
 			}
 		}
