@@ -767,6 +767,7 @@ public:
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
 	u32 spurs_addr = 0;
+	bool spurs_waited = false;
 
 	spu_thread* next_cpu{}; // LV2 thread queues' node link
 
