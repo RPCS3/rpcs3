@@ -1823,23 +1823,33 @@ void spu_thread::cpu_task()
 		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
-	if (!spurs_addr)
+	constexpr u32 invalid_spurs = 0u - 0x80;
+
+	if (spurs_addr == 0)
 	{
 		// Evaluate it
 		if (!group)
 		{
-			spurs_addr = -0x80; // Some invalid non-0 address
+			spurs_addr = invalid_spurs; // Some invalid non-0 address
 		}
 		else
 		{
 			const u32 arg = static_cast<u32>(group->args[index][1]);
-			spurs_addr = group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg) ? arg : 0u - 0x80;
-		}
-	}
 
-	if (spurs_addr && group->max_run != 6)
-	{
-		group->spurs_running++;
+			if (group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg))
+			{
+				spurs_addr = arg;
+
+				if (group->max_run != group->max_num)
+				{
+					group->spurs_running++;
+				}
+			}
+			else
+			{
+				spurs_addr = invalid_spurs;
+			}
+		}
 	}
 
 	if (jit)
@@ -1890,7 +1900,7 @@ void spu_thread::cpu_task()
 		allow_interrupts_in_cpu_work = false;
 	}
 
-	if (spurs_addr && group->max_run != 6)
+	if (spurs_addr != invalid_spurs && group->max_run != group->max_num)
 	{
 		if (group->spurs_running.exchange(0))
 		{
@@ -4887,6 +4897,7 @@ bool spu_thread::process_mfc_cmd()
 		if (do_putllc(ch_mfc_cmd))
 		{
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
+			spurs_waited = false;
 		}
 		else
 		{
@@ -5482,10 +5493,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdEventStat:
 	{
-		const bool is_spurs_task_wait = pc == 0x11a8 && group->max_run != 6 && spurs_addr;
+		const bool is_spurs_task_wait = pc == 0x11a8 && group->max_run != group->max_num && spurs_addr == raddr && !spurs_waited;
 
 		if (is_spurs_task_wait)
 		{
+			spurs_waited = true;
+
 			const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
 			{
 				if (x)
