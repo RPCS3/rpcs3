@@ -3,8 +3,6 @@
 
 namespace aarch64
 {
-    constexpr u32 ESR_CTX_MAGIC = 0x45535201;
-
     // Some of the EC codes we care about
     enum class EL1_exception_class
     {
@@ -23,6 +21,8 @@ namespace aarch64
     };
 
 #ifdef __linux__
+    constexpr u32 ESR_CTX_MAGIC = 0x45535201;
+
     const aarch64_esr_ctx* find_EL1_esr_context(const ucontext_t* ctx)
     {
         u32 offset = 0;
