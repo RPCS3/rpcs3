@@ -112,7 +112,7 @@ extern void check_microphone_permissions()
 #if QT_CONFIG(permissions)
 	Emu.BlockingCallFromMainThread([]()
 	{
-		QMicrophonePermission permission;
+		const QMicrophonePermission permission;
 		switch (qApp->checkPermission(permission))
 		{
 		case Qt::PermissionStatus::Undetermined:
