@@ -5701,7 +5701,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					static thread_local bool s_tls_try_notify = false;
 					s_tls_try_notify = false;
 
-					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
+					const auto wait_cb = mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
 						AUDIT(_this->get_class() == thread_class::spu);
@@ -5750,10 +5750,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 
 						return true;
-					});
+					};
 
 					if (auto wait_var = vm::reservation_notifier_begin_wait(_raddr, rtime))
 					{
+						atomic_wait_engine::set_one_time_use_wait_callback(wait_cb);
 						utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{80'000});
 						vm::reservation_notifier_end_wait(*wait_var);
 					}
