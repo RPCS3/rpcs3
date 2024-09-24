@@ -23,6 +23,12 @@ public:
 		}
 	}
 
+	static sdl_instance& get_instance()
+	{
+		static sdl_instance instance {};
+		return instance;
+	}
+
 	bool initialize()
 	{
 		// Only init SDL once. SDL uses a global state internally...
@@ -256,8 +262,7 @@ bool sdl_pad_handler::Init()
 	if (m_is_init)
 		return true;
 
-	static sdl_instance s_sdl_instance {};
-	if (!s_sdl_instance.initialize())
+	if (!sdl_instance::get_instance().initialize())
 		return false;
 
 	if (g_cfg.io.load_sdl_mappings)

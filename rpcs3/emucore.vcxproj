@@ -1001,6 +1001,14 @@
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_a_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_fsr1_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ubershader.glsl" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64ASM.h" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Common.h" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64JIT.h" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Signal.h" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64ASM.cpp" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Common.cpp" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64JIT.cpp" />
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Signal.cpp" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

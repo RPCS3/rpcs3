@@ -106,6 +106,12 @@
     <Filter Include="Emu\GPU\RSX\NV47\FW">
       <UniqueIdentifier>{fdb8ff8f-5a03-45a2-8c0a-16a89b7a574b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\CPU\Backends">
+      <UniqueIdentifier>{636c461d-99c0-4f98-89dc-1d4ec7157bfc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\CPU\Backends\AArch64">
+      <UniqueIdentifier>{73650043-acf8-4890-9f84-5bfa7a8c946b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -2675,6 +2681,30 @@
     </None>
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ubershader.glsl">
       <Filter>Emu\GPU\RSX\Program\Upscalers\FSR1</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64ASM.h">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Common.h">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64JIT.h">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Signal.h">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64ASM.cpp">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Common.cpp">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64JIT.cpp">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
+    </None>
+    <None Include="Emu\CPU\Backends\AArch64\AArch64Signal.cpp">
+      <Filter>Emu\CPU\Backends\AArch64</Filter>
     </None>
   </ItemGroup>
 </Project>
