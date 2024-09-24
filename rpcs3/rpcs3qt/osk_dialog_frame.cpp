@@ -12,8 +12,6 @@
 #include <QFormLayout>
 #include <QRegularExpressionValidator>
 
-constexpr auto qstr = QString::fromStdString;
-
 osk_dialog_frame::~osk_dialog_frame()
 {
 	if (m_dialog)
@@ -38,7 +36,7 @@ void osk_dialog_frame::Create(const osk_params& params)
 	m_dialog->setModal(true);
 
 	// Title
-	m_dialog->setWindowTitle(qstr(params.title));
+	m_dialog->setWindowTitle(QString::fromStdString(params.title));
 
 	// Message
 	QLabel* message_label = new QLabel(QString::fromStdU16String(params.message));

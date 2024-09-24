@@ -5,8 +5,6 @@
 #include <QHeaderView>
 #include "Emu/System.h"
 
-constexpr auto qstr = QString::fromStdString;
-
 save_data_info_dialog::save_data_info_dialog(SaveDataEntry save, QWidget* parent)
 	: QDialog(parent)
 	, m_entry(std::move(save))
@@ -62,16 +60,16 @@ void save_data_info_dialog::UpdateData()
 
 	//Maybe there should be more details of save data.
 	m_list->setItem(0, 0, new QTableWidgetItem(tr("User ID")));
-	m_list->setItem(0, 1, new QTableWidgetItem(qstr(Emu.GetUsr())));
+	m_list->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(Emu.GetUsr())));
 
 	m_list->setItem(1, 0, new QTableWidgetItem(tr("Title")));
-	m_list->setItem(1, 1, new QTableWidgetItem(qstr(m_entry.title)));
+	m_list->setItem(1, 1, new QTableWidgetItem(QString::fromStdString(m_entry.title)));
 
 	m_list->setItem(2, 0, new QTableWidgetItem(tr("Subtitle")));
-	m_list->setItem(2, 1, new QTableWidgetItem(qstr(m_entry.subtitle)));
+	m_list->setItem(2, 1, new QTableWidgetItem(QString::fromStdString(m_entry.subtitle)));
 
 	m_list->setItem(3, 0, new QTableWidgetItem(tr("Detail")));
-	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
+	m_list->setItem(3, 1, new QTableWidgetItem(QString::fromStdString(m_entry.details)));
 
 	QImage img;
 	if (!m_entry.iconBuf.empty() && img.loadFromData(m_entry.iconBuf.data(), static_cast<int>(m_entry.iconBuf.size()), "PNG"))
