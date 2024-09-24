@@ -130,6 +130,7 @@ if(APPLE)
     else()
         set(QT_DEPLOY_FLAGS "")
     endif()
+    qt_finalize_target(rpcs3)
     add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
