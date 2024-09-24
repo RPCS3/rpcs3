@@ -150,10 +150,10 @@ jobs:
     
     - task: Cache@2
       inputs:
-        key: qt | "$(Agent.OS)" | "$(QT_VER)"
+        key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)" 
         path: /tmp/Qt
         restoreKeys: |
-          qt | "$(Agent.OS)" | "$(QT_VER)"
+          qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)" 
       displayName: Qt cache
     
     # - task: Cache@2
@@ -211,10 +211,10 @@ jobs:
     
     - task: Cache@2
       inputs:
-        key: qt | "$(Agent.OS)" | "$(QT_VER)"
+        key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)"
         path: /tmp/Qt
         restoreKeys: |
-          qt | "$(Agent.OS)" | "$(QT_VER)"
+          qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)"
       displayName: Qt cache
     
     # - task: Cache@2
