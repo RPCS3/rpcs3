@@ -731,14 +731,16 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	if (++group->init == group->max_num)
 	{
-		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > 0u + g_cfg.core.max_spurs_threads)
+		if (u32 max_threads = std::min<u32>(g_cfg.core.max_spurs_threads, group->max_num); group->max_num > max_threads)
 		{
-			if (group->name.ends_with("CellSpursKernelGroup") && !group->name.ends_with("_libsailCellSpursKernelGroup"))
+			constexpr std::string_view spurs_suffix = "CellSpursKernelGroup"sv;
+
+			if (group->name.ends_with(spurs_suffix) && !group->name.substr(0, group->name.size() - spurs_suffix.size()).ends_with("_libsail"))
 			{
 				// Hack: don't run more SPURS threads than specified.
-				group->max_run = g_cfg.core.max_spurs_threads;
+				group->max_run = max_threads;
 
-				spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group_id, +g_cfg.core.max_spurs_threads);
+				spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group_id, max_threads);
 			}
 		}
 
