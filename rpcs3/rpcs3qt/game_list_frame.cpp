@@ -1077,7 +1077,7 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 #endif
 		}
 
-		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
+		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
 		{
 			game_list_log.success("Created %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
 		}
