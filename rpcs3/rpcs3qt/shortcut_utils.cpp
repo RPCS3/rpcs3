@@ -66,6 +66,7 @@ namespace gui::utils
 	}
 
 	bool create_shortcut(const std::string& name,
+	    [[maybe_unused]] const std::string& serial,
 	    [[maybe_unused]] const std::string& target_cli_args,
 	    [[maybe_unused]] const std::string& description,
 	    [[maybe_unused]] const std::string& src_icon_path,
@@ -280,6 +281,16 @@ namespace gui::utils
 										  "\t<string>APPL</string>\n"
 										  "\t<key>CFBundleSignature</key>\n"
 										  "\t<string>\?\?\?\?</string>\n"
+#if defined(ARCH_ARM64)
+										  "\t<key>CFBundleIdentifier</key>\n"
+										  "\t<string>net.rpcs3" + (serial.empty() ? "" : ("." + serial)) + "</string>\n"
+										  "\t<key>LSArchitecturePriority</key>\n"
+										  "\t<array>\n"
+										  "\t\t<string>arm64</string>\n"
+										  "\t</array>\n"
+										  "\t<key>LSRequiresNativeExecution</key>\n"
+										  "\t<true/>\n"
+#endif
 										  "</dict>\n"
 										  "</plist>\n";
 
