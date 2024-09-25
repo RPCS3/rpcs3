@@ -104,7 +104,7 @@ namespace gui::utils
 		}
 #endif
 
-		if (!fs::is_dir(link_path))
+		if (!fs::is_dir(link_path) && !fs::create_dir(link_path))
 		{
 			sys_log.error("Failed to create shortcut. Folder does not exist: %s", link_path);
 			return false;
