@@ -36,11 +36,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-namespace
-{
-	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
-}
-
 enum GameUserRole
 {
 	GameIndex = Qt::UserRole,
@@ -705,7 +700,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 							}
 							else
 							{
-								gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, sstr(path));
+								gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, path);
 							}
 						}
 					}
@@ -1027,7 +1022,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	atomic_t<usz> error_count{};
 	futureWatcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &folder_list](const int& i)
 	{
-		const std::string dir_name = sstr(folder_list.value(i));
+		const std::string dir_name = folder_list.value(i).toStdString();
 		gui_log.trace("Loading trophy dir: %s", dir_name);
 
 		if (!LoadTrophyFolderToDB(dir_name))
