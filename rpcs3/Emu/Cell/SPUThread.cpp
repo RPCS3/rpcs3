@@ -4894,46 +4894,42 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
-		const bool is_spurs_task_wait = pc == 0x11e4 && group->max_run != group->max_num && spurs_addr != 0u - 0x80 && !spurs_waited;
+		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
 
 		if (is_spurs_task_wait)
 		{
-			const u32 prev_running = group->spurs_running;
-
 			// Wait for other threads to complete their tasks (temporarily)
-			if (!is_stopped())
+			const u32 max_run = group->max_run;
+
+			u32 prev_running = group->spurs_running;
+
+			if (prev_running > max_run)
 			{
-				const u32 max_run = group->max_run;
+				const u64 before = get_system_time();
+				u64 current = before;
 
-				u32 prev_running = group->spurs_running;
-
-				if (prev_running > max_run)
+				while (true)
 				{
-					const u64 before = get_system_time();
-
-					spurs_waited = true;
-
-					while (true)
+					if (is_stopped())
 					{
-						thread_ctrl::wait_on(group->spurs_running, prev_running, 10000);
+						break;
+					}
 
-						if (is_stopped())
-						{
-							break;
-						}
+					thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
 
-						prev_running = group->spurs_running;
+					prev_running = group->spurs_running;
 
-						if (prev_running <= max_run)
-						{
-							break;
-						}
+					if (prev_running <= max_run)
+					{
+						break;
+					}
 
-						if (get_system_time() - before >= 4000)
-						{
-							// Timed-out
-							break;
-						}
+					current = get_system_time();
+
+					if (current - before >= 18000u)
+					{
+						// Timed-out
+						break;
 					}
 				}
 			}
@@ -5539,7 +5535,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdEventStat:
 	{
-		const bool is_spurs_task_wait = pc == 0x11a8 && group->max_run != group->max_num && spurs_addr == raddr && !spurs_waited;
+		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
 
 		if (is_spurs_task_wait)
 		{
@@ -5556,7 +5552,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (prev_running == group->max_run)
 			{
-				group->spurs_running.notify_all();
+				group->spurs_running.notify_one();
 			}
 		}
 
@@ -5573,9 +5569,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 				{
 					const u32 max_run = group->max_run;
 
-					u32 prev_running = group->spurs_running.fetch_op([max = max_run](u32& x)
+					u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 					{
-						if (x < max)
+						if (x < max_run)
 						{
 							x++;
 							return true;
@@ -5587,17 +5583,18 @@ s64 spu_thread::get_ch_value(u32 ch)
 					if (prev_running >= max_run)
 					{
 						const u64 before = get_system_time();
+						u64 current = before;
 
 						spurs_waited = true;
 
 						while (true)
 						{
-							thread_ctrl::wait_on(group->spurs_running, prev_running, 10000);
-
 							if (is_stopped())
 							{
 								break;
 							}
+
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
 
 							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 							{
@@ -5615,7 +5612,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 								break;
 							}
 
-							if (get_system_time() - before >= 4000)
+							current = get_system_time();
+
+							if (current - before >= 18000u)
 							{
 								// Timed-out
 								group->spurs_running++;
