@@ -63,6 +63,7 @@ namespace rsx
 			add_unsigned_slider(&g_cfg.core.max_cpu_preempt_count_per_frame, "Max Power Saving CPU-Preemptions", "", 1);
 			add_checkbox(&g_cfg.core.rsx_accurate_res_access, "Accurate RSX reservation access");
 			add_dropdown(&g_cfg.core.sleep_timers_accuracy, "Sleep Timers Accuracy");
+			add_signed_slider(&g_cfg.core.max_spurs_threads, "Max SPURS Threads", "", 1);
 
 			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, {}, g_cfg.video.driver_wakeup_delay.min, 800);
 			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 30);

@@ -4894,6 +4894,52 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
+		const bool is_spurs_task_wait = pc == 0x11e4 && group->max_run != group->max_num && spurs_addr != 0u - 0x80 && !spurs_waited;
+
+		if (is_spurs_task_wait)
+		{
+			const u32 prev_running = group->spurs_running;
+
+			// Wait for other threads to complete their tasks (temporarily)
+			if (!is_stopped())
+			{
+				const u32 max_run = group->max_run;
+
+				u32 prev_running = group->spurs_running;
+
+				if (prev_running > max_run)
+				{
+					const u64 before = get_system_time();
+
+					spurs_waited = true;
+
+					while (true)
+					{
+						thread_ctrl::wait_on(group->spurs_running, prev_running, 10000);
+
+						if (is_stopped())
+						{
+							break;
+						}
+
+						prev_running = group->spurs_running;
+
+						if (prev_running <= max_run)
+						{
+							break;
+						}
+
+						if (get_system_time() - before >= 4000)
+						{
+							// Timed-out
+							break;
+						}
+					}
+				}
+			}
+		}
+
+
 		if (do_putllc(ch_mfc_cmd))
 		{
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
@@ -5497,8 +5543,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		if (is_spurs_task_wait)
 		{
-			spurs_waited = true;
-
 			const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
 			{
 				if (x)
@@ -5527,7 +5571,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Wait for other threads to complete their tasks (temporarily)
 				if (!is_stopped())
 				{
-					const u32 prev_running = group->spurs_running.fetch_op([max = group->max_run](u32& x)
+					const u32 max_run = group->max_run;
+
+					u32 prev_running = group->spurs_running.fetch_op([max = max_run](u32& x)
 					{
 						if (x < max)
 						{
@@ -5538,20 +5584,44 @@ s64 spu_thread::get_ch_value(u32 ch)
 						return false;
 					}).first;
 
-					if (prev_running >= group->max_run)
+					if (prev_running >= max_run)
 					{
 						const u64 before = get_system_time();
-						thread_ctrl::wait_on(group->spurs_running, prev_running, 10000);
 
-						// Check for missed waiting (due to thread-state notification or value change)
-						const u32 new_running = group->spurs_running;
+						spurs_waited = true;
 
-						if (!is_stopped() && new_running >= group->max_run && get_system_time() - before < 1500)
+						while (true)
 						{
-							thread_ctrl::wait_on(group->spurs_running, new_running, 10000);
-						}
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 10000);
 
-						group->spurs_running++;
+							if (is_stopped())
+							{
+								break;
+							}
+
+							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+							{
+								if (x < max_run)
+								{
+									x++;
+									return true;
+								}
+
+								return false;
+							}).first;
+
+							if (prev_running < max_run)
+							{
+								break;
+							}
+
+							if (get_system_time() - before >= 4000)
+							{
+								// Timed-out
+								group->spurs_running++;
+								break;
+							}
+						}
 					}
 				}
 			}
@@ -5659,6 +5729,24 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Don't busy-wait with TSX - memory is sensitive
 				if (g_use_rtm || !reservation_busy_waiting)
 				{
+					if (u32 max_threads = std::min<u32>(g_cfg.core.max_spurs_threads, group->max_num); group->max_run != max_threads)
+					{
+						constexpr std::string_view spurs_suffix = "CellSpursKernelGroup"sv;
+
+						if (group->name.ends_with(spurs_suffix) && !group->name.substr(0, group->name.size() - spurs_suffix.size()).ends_with("_libsail"))
+						{
+							// Hack: don't run more SPURS threads than specified.
+							if (u32 old = atomic_storage<u32>::exchange(group->max_run, max_threads); old > max_threads)
+							{
+								spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group->id, max_threads);
+							}
+							else if (u32 running = group->spurs_running; old < max_threads && running >= old && running < max_threads)
+							{
+								group->spurs_running.notify_all();
+							}
+						}
+					}
+
 					if (u32 work_count = g_spu_work_count)
 					{
 						const u32 true_free = utils::sub_saturate<u32>(utils::get_thread_count(), 10);
