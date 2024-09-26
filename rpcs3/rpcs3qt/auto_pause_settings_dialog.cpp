@@ -13,8 +13,6 @@
 
 LOG_CHANNEL(autopause_log, "AutoPause");
 
-constexpr auto qstr = QString::fromStdString;
-
 auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialog(parent)
 {
 	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
@@ -127,7 +125,7 @@ void auto_pause_settings_dialog::UpdateList()
 		typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
 		if (m_entries[i] != 0xFFFFFFFF)
 		{
-			callItem->setData(Qt::DisplayRole, qstr(fmt::format("%08x", m_entries[i])));
+			callItem->setData(Qt::DisplayRole, QString::fromStdString(fmt::format("%08x", m_entries[i])));
 		}
 		else
 		{
@@ -230,7 +228,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_current_converted->setWordWrap(true);
 
 	m_id = new QLineEdit(this);
-	m_id->setText(qstr(fmt::format("%08x", m_entry)));
+	m_id->setText(QString::fromStdString(fmt::format("%08x", m_entry)));
 	m_id->setPlaceholderText("ffffffff");
 	m_id->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
 	m_id->setMaxLength(8);

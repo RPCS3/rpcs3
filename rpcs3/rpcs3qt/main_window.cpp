@@ -112,7 +112,7 @@ extern void check_microphone_permissions()
 #if QT_CONFIG(permissions)
 	Emu.BlockingCallFromMainThread([]()
 	{
-		QMicrophonePermission permission;
+		const QMicrophonePermission permission;
 		switch (qApp->checkPermission(permission))
 		{
 		case Qt::PermissionStatus::Undetermined:
@@ -278,7 +278,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 		}
 	});
 
-#if !defined(ARCH_ARM64) && (defined(_WIN32) || defined(__linux__) || defined(__APPLE__))
+#if (!defined(ARCH_ARM64) || defined(__APPLE__)) && (defined(_WIN32) || defined(__linux__) || defined(__APPLE__))
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
@@ -2157,7 +2157,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	{
 		if (m_rg_entries.contains(entry))
 		{
-			gui_log.warning("Recent Game not valid, removing from Boot Recent list: %s", sstr(entry.first));
+			gui_log.warning("Recent Game not valid, removing from Boot Recent list: %s", entry.first);
 
 			const int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
@@ -3163,7 +3163,7 @@ void main_window::CreateConnects()
 
 	connect(ui->updateAct, &QAction::triggered, this, [this]()
 	{
-#if (!defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)) || defined(ARCH_ARM64)
+#if (!defined(_WIN32) && !defined(__linux__) && !defined(__APPLE__)) || (defined(ARCH_ARM64) && !defined(__APPLE__))
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 		return;
 #endif

@@ -24,4 +24,33 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="hidapi\windows\hidapi_descriptor_reconstruct.c">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="hidapi\linux\hid.c">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="hidapi\mac\hid.c">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="hidapi\windows\hidapi_descriptor_reconstruct.h">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="hidapi\windows\hidapi_hidclass.h">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="hidapi\windows\hidapi_hidpi.h">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="hidapi\windows\hidapi_hidsdi.h">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="hidapi\windows\hidapi_winapi.h">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="hidapi\mac\hidapi_darwin.h">
+      <Filter>Header Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

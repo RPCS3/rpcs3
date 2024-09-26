@@ -186,12 +186,12 @@ void qt_camera_handler::start_camera()
 	}
 
 #if QT_CONFIG(permissions)
-	QCameraPermission permission;
+	const QCameraPermission permission;
 	switch (qApp->checkPermission(permission))
 	{
 	case Qt::PermissionStatus::Undetermined:
 		camera_log.notice("Requesting camera permission");
-		qApp->requestPermission(permission, [this]()
+		qApp->requestPermission(permission, this, [this]()
 		{
 			start_camera();
 		});
