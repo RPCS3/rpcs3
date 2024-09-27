@@ -19,6 +19,7 @@ namespace gui
 			// main window toolbar
 			"QToolBar#mw_toolbar { background-color: #F0F0F0; border: none; }"
 			"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
+			"QToolButton:disabled { color: #787878; }"
 
 			// main window toolbar icon color
 			"QLabel#toolbar_icon_color { color: #5b5b5b; }"
@@ -101,6 +102,11 @@ namespace gui
 
 			// pad settings
 			"QLabel#l_controller { color: #434343; }"
+
+			// Top menu bar (Workaround for transparent menus in Qt 6.7.3)
+			"QMenu { color: #000; background-color: #F0F0F0; alternate-background-color: #f2f2f2; }"
+			"QMenu::item:selected { background: #90C8F6; }"
+			"QMenu::item:disabled { color: #787878; }"
 		);
 	}
 }
