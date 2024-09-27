@@ -222,14 +222,6 @@ namespace gui::utils
 		return cleanup(true, {});
 
 #elif defined(__APPLE__)
-
-		const std::string app_bundle_path = fs::get_executable_path();
-		if (app_bundle_path.empty())
-		{
-			sys_log.error("Failed to create shortcut. App bundle path empty.");
-			return false;
-		}
-
 		fmt::append(link_path, "/%s.app", simple_name);
 
 		const std::string contents_dir = link_path + "/Contents/";
@@ -246,7 +238,7 @@ namespace gui::utils
 		const std::string launcher_path = macos_dir + "launcher";
 
 		std::string launcher_content;
-		fmt::append(launcher_content, "#!/bin/bash\nopen \"%s\" --args %s", app_bundle_path, target_cli_args);
+		fmt::append(launcher_content, "#!/bin/bash\nopen -b net.rpcs3.rpcs3 --args %s", target_cli_args);
 
 		fs::file launcher_file(launcher_path, fs::read + fs::rewrite);
 		if (!launcher_file)
