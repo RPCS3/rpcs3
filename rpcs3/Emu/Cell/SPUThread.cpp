@@ -4915,7 +4915,7 @@ bool spu_thread::process_mfc_cmd()
 						break;
 					}
 
-					thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
+					thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
 
 					prev_running = group->spurs_running;
 
@@ -4926,7 +4926,7 @@ bool spu_thread::process_mfc_cmd()
 
 					current = get_system_time();
 
-					if (current - before >= 18000u)
+					if (current - before >= 8000u)
 					{
 						// Timed-out
 						break;
@@ -5594,7 +5594,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 								break;
 							}
 
-							thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
 
 							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 							{
@@ -5614,7 +5614,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 							current = get_system_time();
 
-							if (current - before >= 18000u)
+							if (current - before >= 8000u)
 							{
 								// Timed-out
 								group->spurs_running++;
