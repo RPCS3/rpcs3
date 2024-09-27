@@ -98,6 +98,7 @@ Q_SIGNALS:
 	void RequestDialogRepaint();
 	void NotifyEmuSettingsChange();
 	void NotifyWindowCloseEvent(bool closed);
+	void NotifyShortcutHandlers();
 
 public Q_SLOTS:
 	void OnEmuStop();

@@ -200,7 +200,7 @@ namespace pine
 					if (!SafetyChecks(buf_cnt, 4, ret_cnt, 1, buf_size))
 						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
-					if (!Impl::template check_addr(a))
+					if (!Impl::template check_addr<1>(a))
 						return error();
 					const u8 res = Impl::read8(a);
 					ToArray(ret_buffer, res, ret_cnt);
@@ -252,7 +252,7 @@ namespace pine
 					if (!SafetyChecks(buf_cnt, 1 + 4, ret_cnt, 0, buf_size))
 						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
-					if (!Impl::template check_addr(a, vm::page_writable))
+					if (!Impl::template check_addr<1>(a, vm::page_writable))
 						return error();
 					Impl::write8(a, FromArray<u8>(&buf[buf_cnt], 4));
 					buf_cnt += 5;

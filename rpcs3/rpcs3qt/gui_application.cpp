@@ -309,6 +309,7 @@ void gui_application::InitializeConnects()
 		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
 		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
+		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
 		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
@@ -1028,6 +1029,14 @@ void gui_application::OnChangeStyleSheetRequest()
 	if (m_main_window)
 	{
 		m_main_window->RepaintGui();
+	}
+}
+
+void gui_application::OnShortcutChange()
+{
+	if (m_game_window)
+	{
+		static_cast<gs_frame*>(m_game_window)->update_shortcuts();
 	}
 }
 

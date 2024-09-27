@@ -4,7 +4,7 @@
 
 LOG_CHANNEL(shortcut_log, "Shortcuts");
 
-shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QWidget* parent, const std::shared_ptr<gui_settings>& gui_settings)
+shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QObject* parent, const std::shared_ptr<gui_settings>& gui_settings)
 	: QObject(parent), m_handler_id(handler_id), m_gui_settings(gui_settings)
 {
 	// Initialize shortcuts
@@ -38,7 +38,7 @@ shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_i
 			// TODO: do not allow same shortcuts and remove this connect
 			// activatedAmbiguously will trigger if you have the same key sequence for several shortcuts
 			const QKeySequence& key_sequence = m_shortcuts[key].key_sequence;
-			shortcut_log.error("Shortcut activated ambiguously: %s (%s)", key, key_sequence.toString());
+			shortcut_log.error("%s: Shortcut activated ambiguously: %s (%s)", m_handler_id, key, key_sequence.toString());
 			handle_shortcut(key, key_sequence);
 		});
 	}
@@ -46,7 +46,7 @@ shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_i
 
 void shortcut_handler::update()
 {
-	shortcut_log.notice("Updating shortcuts");
+	shortcut_log.notice("%s: Updating shortcuts", m_handler_id);
 
 	shortcut_settings sc_settings{};
 
@@ -71,7 +71,7 @@ void shortcut_handler::update()
 
 void shortcut_handler::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
 {
-	shortcut_log.notice("Shortcut pressed: %s (%s)", shortcut_key, key_sequence.toString());
+	shortcut_log.notice("%s: Shortcut pressed: %s (%s)", m_handler_id, shortcut_key, key_sequence.toString());
 
 	Q_EMIT shortcut_activated(shortcut_key, key_sequence);
 }
