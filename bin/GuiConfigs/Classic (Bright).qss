@@ -20,6 +20,9 @@ QToolBar#mw_toolbar::separator {
 	margin-top:2px;
 	margin-bottom: 2px;
 }
+QToolButton:disabled {
+	color: #787878;
+}
 QSlider#sizeSlider::groove:horizontal {
 	border: 0em solid transparent;
 	height: .3em;
@@ -146,4 +149,17 @@ QLabel#l_controller {
 }
 #game_list_grid_item[focus="true"] #game_list_grid_item_title_label {
 	color: #fff;
+}
+
+/* Top menu bar (Workaround for transparent menus in Qt 6.7.3) */
+QMenu {
+	color: #000;
+	background-color: #F0F0F0;
+	alternate-background-color: #f2f2f2;
+}
+QMenu::item:selected {
+	background: #90C8F6;
+}
+QMenu::item:disabled {
+	color: #787878;
 }
