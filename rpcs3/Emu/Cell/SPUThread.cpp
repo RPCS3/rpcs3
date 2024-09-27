@@ -5540,6 +5540,13 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		auto events = get_events(mask1, false, true);
 
+		if (events.count)
+		{
+			return events.events & mask1;
+		}
+
+		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
+
 		const auto wait_spurs_task = [&]
 		{
 			if (is_spurs_task_wait)
@@ -5607,13 +5614,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 				}
 			}
 		};
-
-		if (events.count)
-		{
-			return events.events & mask1;
-		}
-
-		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
 
 		if (is_spurs_task_wait)
 		{
