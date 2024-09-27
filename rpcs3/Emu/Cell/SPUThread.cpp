@@ -4899,7 +4899,7 @@ bool spu_thread::process_mfc_cmd()
 		if (is_spurs_task_wait)
 		{
 			// Wait for other threads to complete their tasks (temporarily)
-			const u32 max_run = group->max_run;
+			u32 max_run = group->max_run;
 
 			u32 prev_running = group->spurs_running;
 
@@ -4917,6 +4917,7 @@ bool spu_thread::process_mfc_cmd()
 
 					thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
 
+					max_run = group->max_run;
 					prev_running = group->spurs_running;
 
 					if (prev_running <= max_run)
@@ -5567,7 +5568,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Wait for other threads to complete their tasks (temporarily)
 				if (!is_stopped())
 				{
-					const u32 max_run = group->max_run;
+					u32 max_run = group->max_run;
 
 					u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 					{
@@ -5595,6 +5596,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 							}
 
 							thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
+
+							max_run = group->max_run;
 
 							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 							{
