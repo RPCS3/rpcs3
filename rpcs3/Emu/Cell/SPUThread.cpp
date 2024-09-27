@@ -4899,7 +4899,7 @@ bool spu_thread::process_mfc_cmd()
 		if (is_spurs_task_wait)
 		{
 			// Wait for other threads to complete their tasks (temporarily)
-			const u32 max_run = group->max_run;
+			u32 max_run = group->max_run;
 
 			u32 prev_running = group->spurs_running;
 
@@ -4915,8 +4915,9 @@ bool spu_thread::process_mfc_cmd()
 						break;
 					}
 
-					thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
+					thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
 
+					max_run = group->max_run;
 					prev_running = group->spurs_running;
 
 					if (prev_running <= max_run)
@@ -4926,7 +4927,7 @@ bool spu_thread::process_mfc_cmd()
 
 					current = get_system_time();
 
-					if (current - before >= 18000u)
+					if (current - before >= 5000u)
 					{
 						// Timed-out
 						break;
@@ -5535,30 +5536,16 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdEventStat:
 	{
-		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
-
-		if (is_spurs_task_wait)
-		{
-			const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
-			{
-				if (x)
-				{
-					x--;
-					return true;
-				}
-
-				return false;
-			}).first;
-
-			if (prev_running == group->max_run)
-			{
-				group->spurs_running.notify_one();
-			}
-		}
-
 		const u32 mask1 = ch_events.load().mask;
 
 		auto events = get_events(mask1, false, true);
+
+		if (events.count)
+		{
+			return events.events & mask1;
+		}
+
+		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
 
 		const auto wait_spurs_task = [&]
 		{
@@ -5567,7 +5554,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Wait for other threads to complete their tasks (temporarily)
 				if (!is_stopped())
 				{
-					const u32 max_run = group->max_run;
+					u32 max_run = group->max_run;
 
 					u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 					{
@@ -5594,7 +5581,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 								break;
 							}
 
-							thread_ctrl::wait_on(group->spurs_running, prev_running, 20000 - (current - before));
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
+
+							max_run = group->max_run;
 
 							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 							{
@@ -5614,7 +5603,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 							current = get_system_time();
 
-							if (current - before >= 18000u)
+							if (current - before >= 5000u)
 							{
 								// Timed-out
 								group->spurs_running++;
@@ -5626,10 +5615,23 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		};
 
-		if (events.count)
+		if (is_spurs_task_wait)
 		{
-			wait_spurs_task();
-			return events.events & mask1;
+			const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
+			{
+				if (x)
+				{
+					x--;
+					return true;
+				}
+
+				return false;
+			}).first;
+
+			if (prev_running == group->max_run)
+			{
+				group->spurs_running.notify_one();
+			}
 		}
 
 		spu_function_logger logger(*this, "MFC Events read");
@@ -5725,27 +5727,27 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
 			{
+				if (u32 max_threads = std::min<u32>(g_cfg.core.max_spurs_threads, group ? group->max_num : u32{umax}); group && group->max_run != max_threads)
+				{
+					constexpr std::string_view spurs_suffix = "CellSpursKernelGroup"sv;
+
+					if (group->name.ends_with(spurs_suffix) && !group->name.substr(0, group->name.size() - spurs_suffix.size()).ends_with("_libsail"))
+					{
+						// Hack: don't run more SPURS threads than specified.
+						if (u32 old = atomic_storage<u32>::exchange(group->max_run, max_threads); old > max_threads)
+						{
+							spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group->id, max_threads);
+						}
+						else if (u32 running = group->spurs_running; old < max_threads && running >= old && running < max_threads)
+						{
+							group->spurs_running.notify_all();
+						}
+					}
+				}
+
 				// Don't busy-wait with TSX - memory is sensitive
 				if (g_use_rtm || !reservation_busy_waiting)
 				{
-					if (u32 max_threads = std::min<u32>(g_cfg.core.max_spurs_threads, group->max_num); group->max_run != max_threads)
-					{
-						constexpr std::string_view spurs_suffix = "CellSpursKernelGroup"sv;
-
-						if (group->name.ends_with(spurs_suffix) && !group->name.substr(0, group->name.size() - spurs_suffix.size()).ends_with("_libsail"))
-						{
-							// Hack: don't run more SPURS threads than specified.
-							if (u32 old = atomic_storage<u32>::exchange(group->max_run, max_threads); old > max_threads)
-							{
-								spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group->id, max_threads);
-							}
-							else if (u32 running = group->spurs_running; old < max_threads && running >= old && running < max_threads)
-							{
-								group->spurs_running.notify_all();
-							}
-						}
-					}
-
 					if (u32 work_count = g_spu_work_count)
 					{
 						const u32 true_free = utils::sub_saturate<u32>(utils::get_thread_count(), 10);
