@@ -2762,7 +2762,11 @@ void main_window::CreateConnects()
 	connect(ui->confShortcutsAct, &QAction::triggered, [this]()
 	{
 		shortcut_dialog dlg(m_gui_settings, this);
-		connect(&dlg, &shortcut_dialog::saved, m_shortcut_handler, &shortcut_handler::update);
+		connect(&dlg, &shortcut_dialog::saved, this, [this]()
+		{
+			m_shortcut_handler->update();
+			NotifyShortcutHandlers();
+		});
 		dlg.exec();
 	});
 

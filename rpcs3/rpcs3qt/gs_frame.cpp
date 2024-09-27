@@ -123,9 +123,8 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 		create();
 	}
 
-	// TODO: enable in Qt6
-	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
-	//connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
+	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
+	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
@@ -178,6 +177,14 @@ void gs_frame::load_gui_settings()
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 }
 
+void gs_frame::update_shortcuts()
+{
+	if (m_shortcut_handler)
+	{
+		m_shortcut_handler->update();
+	}
+}
+
 void gs_frame::paintEvent(QPaintEvent *event)
 {
 	Q_UNUSED(event)
@@ -224,94 +231,6 @@ void gs_frame::showEvent(QShowEvent *event)
 	setFramePosition(pos);
 
 	QWindow::showEvent(event);
-}
-
-// TODO: remove when shortcuts are properly hooked up (also check keyboard_pad_handler::processKeyEvent)
-void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
-{
-	if (keyEvent->isAutoRepeat())
-	{
-		keyEvent->ignore();
-		return;
-	}
-
-	// NOTE: needs to be updated with keyboard_pad_handler::processKeyEvent
-
-	switch (keyEvent->key())
-	{
-	case Qt::Key_L:
-	{
-		if (keyEvent->modifiers() == Qt::AltModifier)
-		{
-			handle_shortcut(gui::shortcuts::shortcut::gw_log_mark, {});
-			break;
-		}
-		else if (keyEvent->modifiers() == Qt::ControlModifier)
-		{
-			handle_shortcut(gui::shortcuts::shortcut::gw_mouse_lock, {});
-			break;
-		}
-		break;
-	}
-	case Qt::Key_Return:
-	{
-		if (keyEvent->modifiers() == Qt::AltModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_fullscreen, {});
-		break;
-	}
-	case Qt::Key_Escape:
-	{
-		handle_shortcut(gui::shortcuts::shortcut::gw_exit_fullscreen, {});
-		break;
-	}
-	case Qt::Key_P:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_pause_play, {});
-		break;
-	}
-	case Qt::Key_S:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_savestate, {});
-		break;
-	}
-	case Qt::Key_R:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_restart, {});
-		break;
-	}
-	case Qt::Key_C:
-	{
-		if (keyEvent->modifiers() == Qt::AltModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_rsx_capture, {});
-		break;
-	}
-	case Qt::Key_F10:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_frame_limit, {});
-		break;
-	}
-	case Qt::Key_F11:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard, {});
-		else
-			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
-		break;
-	}
-	case Qt::Key_F12:
-	{
-		handle_shortcut(gui::shortcuts::shortcut::gw_screenshot, {});
-		break;
-	}
-	default:
-	{
-		break;
-	}
-	}
 }
 
 void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)

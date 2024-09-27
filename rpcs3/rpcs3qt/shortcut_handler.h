@@ -13,7 +13,7 @@ class shortcut_handler : public QObject
 	Q_OBJECT
 
 public:
-	shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QWidget* parent, const std::shared_ptr<gui_settings>& gui_settings);
+	shortcut_handler(gui::shortcuts::shortcut_handler_id handler_id, QObject* parent, const std::shared_ptr<gui_settings>& gui_settings);
 
 Q_SIGNALS:
 	void shortcut_activated(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);

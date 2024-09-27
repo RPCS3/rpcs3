@@ -435,34 +435,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		}
 	};
 
-	// We need to ignore keys when using rpcs3 keyboard shortcuts
-	// NOTE: needs to be updated with gs_frame::keyPressEvent
-	switch (event->key())
-	{
-	case Qt::Key_Escape:
-	case Qt::Key_F11:
-	case Qt::Key_F12:
-		break;
-	case Qt::Key_L:
-		if (event->modifiers() != Qt::AltModifier && event->modifiers() != Qt::ControlModifier)
-			handle_key();
-		break;
-	case Qt::Key_Return:
-		if (event->modifiers() != Qt::AltModifier)
-			handle_key();
-		break;
-	case Qt::Key_P:
-	case Qt::Key_S:
-	case Qt::Key_R:
-	case Qt::Key_E:
-	case Qt::Key_0:
-		if (event->modifiers() != Qt::ControlModifier)
-			handle_key();
-		break;
-	default:
-		handle_key();
-		break;
-	}
+	handle_key();
 	event->ignore();
 }
 
