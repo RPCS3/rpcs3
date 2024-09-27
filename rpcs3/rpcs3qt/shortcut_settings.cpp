@@ -3,9 +3,9 @@
 using namespace gui::shortcuts;
 
 template <>
-void fmt_class_string<gui::shortcuts::shortcut>::format(std::string& out, u64 arg)
+void fmt_class_string<shortcut>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](gui::shortcuts::shortcut value)
+	format_enum(out, arg, [](shortcut value)
 	{
 		switch (value)
 		{
@@ -29,6 +29,21 @@ void fmt_class_string<gui::shortcuts::shortcut>::format(std::string& out, u64 ar
 		case shortcut::gw_frame_limit: return "gw_frame_limit";
 		case shortcut::gw_toggle_mouse_and_keyboard: return "gw_toggle_mouse_and_keyboard";
 		case shortcut::count: return "count";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<shortcut_handler_id>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gui::shortcuts::shortcut_handler_id value)
+	{
+		switch (value)
+		{
+			case shortcut_handler_id::main_window: return "main_window";
+			case shortcut_handler_id::game_window: return "game_window";
 		}
 
 		return unknown;
