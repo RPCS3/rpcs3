@@ -43,7 +43,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 		return false;
 	}
 
-	// Workaround
+	// Initialize vfs_manager if not yet initialized (e.g. g_fxo->reset() was previously invoked)
 	g_fxo->need<vfs_manager>();
 
 	auto& table = g_fxo->get<vfs_manager>();
@@ -196,6 +196,9 @@ bool vfs::unmount(std::string_view vpath)
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
 {
+	// Initialize vfs_manager if not yet initialized (e.g. g_fxo->reset() was previously invoked)
+	g_fxo->need<vfs_manager>();
+
 	auto& table = g_fxo->get<vfs_manager>();
 
 	reader_lock lock(table.mutex);
@@ -372,6 +375,9 @@ using char2 = char8_t;
 
 std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std::vector<std::string_view>* mount_path)
 {
+	// Initialize vfs_manager if not yet initialized (e.g. g_fxo->reset() was previously invoked)
+	g_fxo->need<vfs_manager>();
+
 	auto& table = g_fxo->get<vfs_manager>();
 
 	if (!node)
