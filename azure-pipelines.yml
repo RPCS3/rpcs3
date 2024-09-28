@@ -193,7 +193,7 @@ jobs:
     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac-arm64"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     ARTDIR: $(Build.ArtifactStagingDirectory)
-    QT_VER: '6.6.3'
+    QT_VER: '6.7.3'
     QT_VER_MAIN: '6'
     LLVM_COMPILER_VER: '16'
 
