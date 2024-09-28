@@ -69,6 +69,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->create_applications_menu_shortcut->setText(tr("&Create Start Menu shortcut"));
 #elif defined(__APPLE__)
 	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
+	ui->use_dark_theme->setVisible(false);
 #else
 	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
 #endif
