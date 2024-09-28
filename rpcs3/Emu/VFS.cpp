@@ -196,8 +196,12 @@ bool vfs::unmount(std::string_view vpath)
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
 {
-	// Initialize vfs_manager if not yet initialized (e.g. g_fxo->reset() was previously invoked)
-	g_fxo->need<vfs_manager>();
+	// Just to make the code more robust.
+	// It should never happen because we take care to initialize Emu (and so also vfs_manager) with Emu.Init() before this function is invoked
+	if (!g_fxo->is_init<vfs_manager>())
+	{
+		fmt::throw_exception("vfs_manager not initialized");
+	}
 
 	auto& table = g_fxo->get<vfs_manager>();
 
@@ -375,8 +379,12 @@ using char2 = char8_t;
 
 std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std::vector<std::string_view>* mount_path)
 {
-	// Initialize vfs_manager if not yet initialized (e.g. g_fxo->reset() was previously invoked)
-	g_fxo->need<vfs_manager>();
+	// Just to make the code more robust.
+	// It should never happen because we take care to initialize Emu (and so also vfs_manager) with Emu.Init() before this function is invoked
+	if (!g_fxo->is_init<vfs_manager>())
+	{
+		fmt::throw_exception("vfs_manager not initialized");
+	}
 
 	auto& table = g_fxo->get<vfs_manager>();
 
