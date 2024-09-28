@@ -213,7 +213,11 @@ namespace gui
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
+#ifdef __APPLE__
+	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", "native (macOS)");
+#else
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", DefaultStylesheet);
+#endif
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_attachCommandLine = gui_save(meta, "attachCommandLine", false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
