@@ -33,7 +33,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
 
     APPIMAGE_SUFFIX="linux_${CPU_ARCH}"
-    if [[ "$CPU_ARCH" = "x86_64" ]]; then
+    if [ "$CPU_ARCH" = "x86_64" ]; then
         # Preserve back compat. Previous versions never included the full arch.
         APPIMAGE_SUFFIX="linux64"
     fi
