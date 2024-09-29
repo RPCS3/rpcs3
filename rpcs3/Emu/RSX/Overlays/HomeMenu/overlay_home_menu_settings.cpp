@@ -43,7 +43,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_VIDEO))
 		{
 			add_dropdown(&g_cfg.video.frame_limit, "Frame Limit");
-			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, "Anisotropic Filter Override", "x", 2, {{0, "Auto"}});
+			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, "Anisotropic Filter Override", "x", 2, {{0, "Auto"}}, {14});
 
 			add_dropdown(&g_cfg.video.output_scaling, "Output Scaling");
 			if (g_cfg.video.renderer == video_renderer::vulkan && g_cfg.video.output_scaling == output_scaling_mode::fsr)
@@ -65,7 +65,7 @@ namespace rsx
 			add_dropdown(&g_cfg.core.sleep_timers_accuracy, "Sleep Timers Accuracy");
 			add_signed_slider(&g_cfg.core.max_spurs_threads, "Max SPURS Threads", "", 1);
 
-			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, {}, g_cfg.video.driver_wakeup_delay.min, 800);
+			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, "Driver Wake-Up Delay", " µs", 20, {}, {}, g_cfg.video.driver_wakeup_delay.min, 800);
 			add_signed_slider(&g_cfg.video.vblank_rate, "VBlank Frequency", " Hz", 30);
 			add_checkbox(&g_cfg.video.vblank_ntsc, "VBlank NTSC Fixup");
 
