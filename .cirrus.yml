@@ -121,9 +121,9 @@ linux_aarch64_task:
     CCACHE_DIR: "/tmp/ccache_dir"
     CCACHE_MAXSIZE: 300M
     CI_HAS_ARTIFACTS: true
-    UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
-    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux-aarch64"
-    DEPLOY_APPIMAGE: false
+    UPLOAD_COMMIT_HASH: a1d35836e8d45bfc6f63c26f0a3e5d46ef622fe1
+    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux-arm64"
+    DEPLOY_APPIMAGE: true
     APPDIR: "./appdir"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     COMPILER: clang
@@ -138,14 +138,3 @@ linux_aarch64_task:
       clang_script:
         - mkdir artifacts
         - "sh -ex ./.ci/build-linux-aarch64.sh"
-  artifacts:
-    name: Artifact
-    path: "artifacts/*"
-#  push_script: |
-#    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ] && [ "$COMPILER" = "gcc" ]; then
-#      COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
-#      COMM_COUNT=$(git rev-list --count HEAD)
-#      COMM_HASH=$(git rev-parse --short=8 HEAD
-#      export AVVER="${COMM_TAG}-${COMM_COUNT}
-#      .ci/github-upload.sh
-#    fi;
