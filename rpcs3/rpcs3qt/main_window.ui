@@ -193,7 +193,7 @@
      <addaction name="removeAllCachesAct"/>
      <addaction name="removeSavestatesAct"/>
      <addaction name="separator"/>
-     <addaction name="cleanupGameListAct"/>
+     <addaction name="cleanUpGameListAct"/>
     </widget>
     <widget class="QMenu" name="menuFirmware">
      <property name="title">
@@ -1166,7 +1166,7 @@
     <string>Remove Savestates</string>
    </property>
   </action>
-  <action name="cleanupGameListAct">
+  <action name="cleanUpGameListAct">
    <property name="text">
     <string>Clean up Game List</string>
    </property>

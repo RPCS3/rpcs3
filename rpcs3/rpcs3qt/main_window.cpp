@@ -1986,7 +1986,7 @@ void main_window::OnEmuStop()
 	ui->removeHDD1CachesAct->setEnabled(true);
 	ui->removeAllCachesAct->setEnabled(true);
 	ui->removeSavestatesAct->setEnabled(true);
-	ui->cleanupGameListAct->setEnabled(true);
+	ui->cleanUpGameListAct->setEnabled(true);
 
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
@@ -2039,7 +2039,7 @@ void main_window::OnEmuReady() const
 	ui->removeHDD1CachesAct->setEnabled(false);
 	ui->removeAllCachesAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
-	ui->cleanupGameListAct->setEnabled(false);
+	ui->cleanUpGameListAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2694,7 +2694,7 @@ void main_window::CreateConnects()
 	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, &main_window::RemoveHDD1Caches);
 	connect(ui->removeAllCachesAct, &QAction::triggered, this, &main_window::RemoveAllCaches);
 	connect(ui->removeSavestatesAct, &QAction::triggered, this, &main_window::RemoveSavestates);
-	connect(ui->cleanupGameListAct, &QAction::triggered, this, &main_window::CleanupGameList);
+	connect(ui->cleanUpGameListAct, &QAction::triggered, this, &main_window::CleanUpGameList);
 
 	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
 	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
@@ -3604,7 +3604,7 @@ void main_window::RemoveSavestates()
 	}
 }
 
-void main_window::CleanupGameList()
+void main_window::CleanUpGameList()
 {
 	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n"
 		"Undetectable games (zombies) as well as corrupted games will be removed from the game list file (games.yml)")) != QMessageBox::Yes)
