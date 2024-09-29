@@ -5641,11 +5641,6 @@ error_code scenp_score_record_score(s32 transId, SceNpScoreBoardId boardId, SceN
 		data_size = 64;
 	}
 
-	if (option)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
 	nph.record_score(trans_ctx, boardId, score, scoreComment, data, data_size, tmpRank, async);
 
 	if (async)
