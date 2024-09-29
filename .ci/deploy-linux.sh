@@ -32,10 +32,16 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     linuxdeploy --appimage-extract
     ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
 
+    APPIMAGE_SUFFIX="linux_${CPU_ARCH}"
+    if [[ "$CPU_ARCH" = "x86_64" ]]; then
+        # Preserve back compat. Previous versions never included the full arch.
+        APPIMAGE_SUFFIX="linux64"
+    fi
+
     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ../rpcs3/rpcs3_version.cpp)
     COMM_COUNT="$(git rev-list --count HEAD)"
     COMM_HASH="$(git rev-parse --short=8 HEAD)"
-    RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_linux64.AppImage"
+    RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_${APPIMAGE_SUFFIX}.AppImage"
 
     mv ./RPCS3*.AppImage "$RPCS3_APPIMAGE"
 
