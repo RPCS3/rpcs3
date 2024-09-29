@@ -2,6 +2,7 @@
 #include "vfs_tool_dialog.h"
 #include "ui_vfs_tool_dialog.h"
 #include "Emu/VFS.h"
+#include "Emu/System.h"
 
 vfs_tool_dialog::vfs_tool_dialog(QWidget *parent)
 	: QDialog(parent)
@@ -22,6 +23,12 @@ vfs_tool_dialog::~vfs_tool_dialog()
 
 void vfs_tool_dialog::handle_vfs_path(const QString& path)
 {
+	// Initialize Emu if not yet initialized (e.g. Emu.Kill() was previously invoked) before using some of the following vfs:: functions (e.g. vfs::get())
+	if (Emu.IsStopped())
+	{
+		Emu.Init();
+	}
+
 	const std::string spath = path.toStdString();
 	const std::string vfs_get_path = vfs::get(spath);
 	const std::string vfs_retrieve_path = vfs::retrieve(spath);
