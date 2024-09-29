@@ -4,6 +4,14 @@ if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
 fi
 
+git config --global --add safe.directory '*'
+
+# Pull all the submodules except llvm
+# shellcheck disable=SC2046
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
+
+mkdir build && cd build || exit 1
+
 export CC=clang
 export CXX=clang++
 
