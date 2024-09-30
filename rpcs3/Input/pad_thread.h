@@ -76,6 +76,7 @@ namespace pad
 	extern atomic_t<bool> g_enabled;
 	extern atomic_t<bool> g_reset;
 	extern atomic_t<bool> g_started;
+	extern atomic_t<bool> g_home_menu_requested;
 
 	static inline class pad_thread* get_current_handler(bool relaxed = false)
 	{
