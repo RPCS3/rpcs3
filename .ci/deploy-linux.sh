@@ -19,7 +19,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     if [ "$CPU_ARCH" = "aarch64" ]; then
         # Ideally we should always ship the wayland integration libraries. Unfortunately glibc ABI issues on steam deck make this undesirable right now, so we only ship for arm64
-        export EXTRA_QT_PLUGINS="$EXTRA_QTPLUGINS;waylandcompositor"
+        export EXTRA_QT_PLUGINS="$EXTRA_QT_PLUGINS;waylandcompositor"
     fi
 
     APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
