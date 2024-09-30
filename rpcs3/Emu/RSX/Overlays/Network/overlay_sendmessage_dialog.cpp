@@ -412,6 +412,7 @@ namespace rsx
 			switch (ntype)
 			{
 			case rpcn::NotificationType::FriendQuery: // Other user sent a friend request
+			case rpcn::NotificationType::FriendPresenceChanged:
 				break;
 			case rpcn::NotificationType::FriendNew: // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
 			{

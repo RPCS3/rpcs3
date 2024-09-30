@@ -161,6 +161,7 @@ void sendmessage_dialog_frame::callback_handler(u16 ntype, const std::string& us
 	switch (ntype)
 	{
 	case rpcn::NotificationType::FriendQuery: // Other user sent a friend request
+	case rpcn::NotificationType::FriendPresenceChanged:
 		break;
 	case rpcn::NotificationType::FriendNew: // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
 	{

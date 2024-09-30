@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "overlay_home_menu_main_menu.h"
 #include "overlay_home_menu_components.h"
+#include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 
@@ -30,6 +32,27 @@ namespace rsx
 			});
 
 			add_page(std::make_shared<home_menu_settings>(x, y, width, height, use_separators, this));
+
+			std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
+			add_item(friends, [](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross) return page_navigation::stay;
+
+				rsx_log.notice("User selected friends in home menu");
+				Emu.CallFromMainThread([]()
+				{
+					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					{
+						const error_code result = manager->create<rsx::overlays::friends_list_dialog>()->show(true, [](s32 status)
+						{
+							rsx_log.notice("Closing friends list with status %d", status);
+						});
+
+						(result ? rsx_log.error : rsx_log.notice)("Opened friends list with result %d", s32{result});
+					}
+				});
+				return page_navigation::stay;
+			});
 
 			std::unique_ptr<overlay_element> screenshot = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT));
 			add_item(screenshot, [](pad_button btn) -> page_navigation
@@ -100,7 +123,7 @@ namespace rsx
 				if (btn != pad_button::cross) return page_navigation::stay;
 
 				rsx_log.notice("User selected restart in home menu");
-				
+
 				Emu.CallFromMainThread([]()
 				{
 					Emu.Restart(false);

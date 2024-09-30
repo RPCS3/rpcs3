@@ -106,7 +106,7 @@ class rpcn_friends_dialog : public QDialog
 public:
 	rpcn_friends_dialog(QWidget* parent = nullptr);
 	~rpcn_friends_dialog();
-	void callback_handler(rpcn::NotificationType ntype, std::string username, bool status);
+	void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
 	bool is_ok() const;
 
 private:
@@ -114,14 +114,14 @@ private:
 	void remove_list(QListWidget* list, const QString& name);
 
 private Q_SLOTS:
-	void add_update_friend(QString name, bool status);
-	void remove_friend(QString name);
-	void add_query(QString name);
+	void add_update_friend(const QString& name, bool status);
+	void remove_friend(const QString& name);
+	void add_query(const QString& name);
 
 Q_SIGNALS:
-	void signal_add_update_friend(QString name, bool status);
-	void signal_remove_friend(QString name);
-	void signal_add_query(QString name);
+	void signal_add_update_friend(const QString& name, bool status);
+	void signal_remove_friend(const QString& name);
+	void signal_add_query(const QString& name);
 
 private:
 	QIcon m_icon_online;

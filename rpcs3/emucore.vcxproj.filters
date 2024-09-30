@@ -112,6 +112,9 @@
     <Filter Include="Emu\CPU\Backends\AArch64">
       <UniqueIdentifier>{73650043-acf8-4890-9f84-5bfa7a8c946b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\FriendsList">
+      <UniqueIdentifier>{a9d2ff9f-b5cd-4fd4-afca-424e876aa656}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Emu\GPU\RSX\Decoders">
       <UniqueIdentifier>{40f6640a-ed40-4096-b79b-995ae5be3052}</UniqueIdentifier>
     </Filter>
@@ -1257,6 +1260,9 @@
     </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_countries.cpp">
       <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\FriendsList</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
       <Filter>Emu\GPU\RSX\Decoders</Filter>
@@ -2556,6 +2562,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\FriendsList</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXTexture.h">
       <Filter>Emu\GPU\RSX\Decoders</Filter>
