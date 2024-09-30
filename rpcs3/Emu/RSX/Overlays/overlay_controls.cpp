@@ -648,8 +648,8 @@ namespace rsx
 
 		void layout_container::set_pos(s16 _x, s16 _y)
 		{
-			s16 dx = _x - x;
-			s16 dy = _y - y;
+			const s16 dx = _x - x;
+			const s16 dy = _y - y;
 			translate(dx, dy);
 		}
 

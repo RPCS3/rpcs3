@@ -512,6 +512,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/NV47/HW/nv308a.cpp
     RSX/NV47/HW/nv406e.cpp
     RSX/NV47/HW/nv4097.cpp
+    RSX/Overlays/FriendsList/overlay_friends_list_dialog.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp

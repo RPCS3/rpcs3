@@ -112,6 +112,7 @@
     <ClCompile Include="Emu\RSX\NV47\HW\nv308a.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv406e.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv4097.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp" />
@@ -631,6 +632,7 @@
     <ClInclude Include="Emu\RSX\NV47\HW\nv47.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\common.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\nv47_sync.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.h" />

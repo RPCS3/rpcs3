@@ -439,6 +439,7 @@ namespace rpcn
 		rpcn_state wait_for_authentified();
 		bool terminate_connection();
 
+		void get_friends(friend_data& friend_infos);
 		void get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param);
 		void register_friend_cb(friend_cb_func, void* cb_param);
 		void remove_friend_cb(friend_cb_func, void* cb_param);

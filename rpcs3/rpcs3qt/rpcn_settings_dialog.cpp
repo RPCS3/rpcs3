@@ -1054,9 +1054,9 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	rpcn::friend_data data;
 	m_rpcn->get_friends_and_register_cb(data, friend_callback, this);
 
-	for (const auto& fr : data.friends)
+	for (const auto& [username, data] : data.friends)
 	{
-		add_update_list(m_lst_friends, QString::fromStdString(fr.first), fr.second.online ? m_icon_online : m_icon_offline, fr.second.online);
+		add_update_list(m_lst_friends, QString::fromStdString(username), data.online ? m_icon_online : m_icon_offline, data.online);
 	}
 
 	for (const auto& fr_req : data.requests_sent)
@@ -1297,27 +1297,27 @@ void rpcn_friends_dialog::remove_list(QListWidget* list, const QString& name)
 	}
 }
 
-void rpcn_friends_dialog::add_update_friend(QString name, bool status)
+void rpcn_friends_dialog::add_update_friend(const QString& name, bool status)
 {
 	add_update_list(m_lst_friends, name, status ? m_icon_online : m_icon_offline, status);
 	remove_list(m_lst_requests, name);
 }
 
-void rpcn_friends_dialog::remove_friend(QString name)
+void rpcn_friends_dialog::remove_friend(const QString& name)
 {
 	remove_list(m_lst_friends, name);
 	remove_list(m_lst_requests, name);
 }
 
-void rpcn_friends_dialog::add_query(QString name)
+void rpcn_friends_dialog::add_query(const QString& name)
 {
 	add_update_list(m_lst_requests, name, m_icon_request_received, QVariant(true));
 	remove_list(m_lst_history, name);
 }
 
-void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, std::string username, bool status)
+void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status)
 {
-	QString qtr_username = QString::fromStdString(username);
+	const QString qtr_username = QString::fromStdString(username);
 	switch (ntype)
 	{
 	case rpcn::NotificationType::FriendQuery: // Other user sent a friend request
@@ -1338,6 +1338,10 @@ void rpcn_friends_dialog::callback_handler(rpcn::NotificationType ntype, std::st
 	case rpcn::NotificationType::FriendStatus: // Set status of friend to Offline or Online
 	{
 		Q_EMIT signal_add_update_friend(qtr_username, status);
+		break;
+	}
+	case rpcn::NotificationType::FriendPresenceChanged:
+	{
 		break;
 	}
 	default:

@@ -75,7 +75,7 @@ namespace rpcn
 		}
 	}
 
-	void overlay_friend_callback(void* param, rpcn::NotificationType ntype, const std::string& username, bool status)
+	void overlay_friend_callback(void* /*param*/, rpcn::NotificationType ntype, const std::string& username, bool status)
 	{
 		if (!g_cfg.misc.show_rpcn_popups)
 			return;
@@ -88,6 +88,7 @@ namespace rpcn
 		case rpcn::NotificationType::FriendNew: loc_id = localized_string_id::RPCN_FRIEND_ADDED; break;
 		case rpcn::NotificationType::FriendLost: loc_id = localized_string_id::RPCN_FRIEND_LOST; break;
 		case rpcn::NotificationType::FriendStatus: loc_id = status ? localized_string_id::RPCN_FRIEND_LOGGED_IN : localized_string_id::RPCN_FRIEND_LOGGED_OUT; break;
+		case rpcn::NotificationType::FriendPresenceChanged: return;
 		default: rpcn_log.fatal("An unhandled notification type was received by the overlay friend callback!"); break;
 		}
 
@@ -2572,6 +2573,12 @@ namespace rpcn
 		return state;
 	}
 
+	void rpcn_client::get_friends(friend_data& friend_infos)
+	{
+		std::lock_guard lock(mutex_friends);
+		friend_infos = this->friend_infos;
+	}
+
 	void rpcn_client::get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param)
 	{
 		std::lock_guard lock(mutex_friends);
@@ -2619,7 +2626,7 @@ namespace rpcn
 		{
 		case NotificationType::FriendQuery: // Other user sent a friend request
 		{
-			std::string username = vdata.get_string(false);
+			const std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
 				rpcn_log.error("Error parsing FriendQuery notification");
@@ -2632,8 +2639,8 @@ namespace rpcn
 		}
 		case NotificationType::FriendNew: // Add a friend to the friendlist(either accepted a friend request or friend accepted it)
 		{
-			bool online = !!vdata.get<u8>();
-			std::string username = vdata.get_string(false);
+			const bool online = !!vdata.get<u8>();
+			const std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
 				rpcn_log.error("Error parsing FriendNew notification");
@@ -2649,22 +2656,24 @@ namespace rpcn
 		}
 		case NotificationType::FriendLost: // Remove friend from the friendlist(user removed friend or friend removed friend)
 		{
-			std::string username = vdata.get_string(false);
+			const std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
 				rpcn_log.error("Error parsing FriendLost notification");
 				break;
 			}
 
+			friend_infos.requests_received.erase(username);
+			friend_infos.requests_sent.erase(username);
 			friend_infos.friends.erase(username);
 			call_callbacks(ntype, username, false);
 			break;
 		}
 		case NotificationType::FriendStatus: // Set status of friend to Offline or Online
 		{
-			bool online = !!vdata.get<u8>();
-			u64 timestamp        = vdata.get<u64>();
-			std::string username = vdata.get_string(false);
+			const bool online = !!vdata.get<u8>();
+			const u64 timestamp        = vdata.get<u64>();
+			const std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
 				rpcn_log.error("Error parsing FriendStatus notification");
@@ -2692,7 +2701,7 @@ namespace rpcn
 		}
 		case NotificationType::FriendPresenceChanged:
 		{
-			std::string npid = vdata.get_string(true);
+			const std::string username = vdata.get_string(true);
 			SceNpCommunicationId pr_com_id = vdata.get_com_id();
 			std::string pr_title = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
 			std::string pr_status = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
@@ -2709,7 +2718,7 @@ namespace rpcn
 				break;
 			}
 
-			if (auto u = friend_infos.friends.find(npid); u != friend_infos.friends.end())
+			if (auto u = friend_infos.friends.find(username); u != friend_infos.friends.end())
 			{
 				u->second.pr_com_id = std::move(pr_com_id);
 				u->second.pr_title = std::move(pr_title);
@@ -2718,9 +2727,10 @@ namespace rpcn
 				u->second.pr_data = std::move(pr_data);
 
 				std::lock_guard lock(mutex_presence_updates);
-				presence_updates.insert_or_assign(std::move(npid), u->second);
+				presence_updates.insert_or_assign(username, u->second);
 			}
 
+			call_callbacks(ntype, username, false);
 			break;
 		}
 		default:
