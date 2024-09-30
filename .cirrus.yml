@@ -138,3 +138,14 @@ linux_aarch64_task:
       clang_script:
         - mkdir artifacts
         - "sh -ex ./.ci/build-linux-aarch64.sh"
+  artifacts:
+    name: Artifact
+    path: "artifacts/*"
+  push_script: |
+    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+      COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
+      COMM_COUNT=$(git rev-list --count HEAD)
+      COMM_HASH=$(git rev-parse --short=8 HEAD)
+      export AVVER="${COMM_TAG}-${COMM_COUNT}"
+      .ci/github-upload.sh
+    fi;
