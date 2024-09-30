@@ -2016,6 +2016,16 @@
     <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss" />
     <None Include="..\bin\GuiConfigs\Skyline.qss" />
     <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss" />
+    <None Include="..\buildfiles\cmake\ConfigureCompiler.cmake" />
+    <None Include="..\buildfiles\cmake\FindFFMPEG.cmake" />
+    <None Include="..\buildfiles\cmake\FindWayland.cmake" />
+    <None Include="..\buildfiles\cmake\TCDarwinARM64.cmake" />
+    <None Include="..\buildfiles\msvc\common_default.props" />
+    <None Include="..\buildfiles\msvc\common_default_clang_cl.props" />
+    <None Include="..\buildfiles\msvc\common_default_macros.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_debug.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_default.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_release.props" />
     <None Include="..\Utilities\git-version-gen.cmd" />
     <None Include="update_helper.sh" />
   </ItemGroup>
