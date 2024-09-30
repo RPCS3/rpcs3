@@ -125,5 +125,7 @@ While still in the project root:
 2) `cmake ../rpcs3/ && make` or `CXX=g++-13 CC=gcc-13 cmake ../rpcs3/ && make` to force these compilers
 3) Run RPCS3 with `./bin/rpcs3`
 
+If compiling for ARM, pass the flag `-DUSE_NATIVE_INSTRUCTIONS=OFF` to the cmake command. This resolves some Neon errors when compiling our SIMD headers.
+
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 If desired, use the various build options in [CMakeLists](https://github.com/RPCS3/rpcs3/blob/master/CMakeLists.txt).
