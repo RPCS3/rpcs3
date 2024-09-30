@@ -57,6 +57,11 @@ extern atomic_t<recording_mode> g_recording_mode;
 
 atomic_t<bool> g_game_window_focused = false;
 
+namespace pad
+{
+	extern atomic_t<bool> g_home_menu_requested;
+}
+
 bool is_input_allowed()
 {
 	return g_game_window_focused || g_cfg.io.background_input_enabled;
@@ -149,6 +154,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 gs_frame::~gs_frame()
 {
 	g_user_asked_for_screenshot = false;
+	pad::g_home_menu_requested = false;
 
 	// Save active screen to gui settings
 	const QScreen* current_screen = screen();
@@ -347,6 +353,11 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	case gui::shortcuts::shortcut::gw_toggle_mouse_and_keyboard:
 	{
 		input::toggle_mouse_and_keyboard();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_home_menu:
+	{
+		pad::g_home_menu_requested = true;
 		break;
 	}
 	default:

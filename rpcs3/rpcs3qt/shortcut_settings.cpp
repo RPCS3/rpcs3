@@ -28,6 +28,7 @@ void fmt_class_string<shortcut>::format(std::string& out, u64 arg)
 		case shortcut::gw_rsx_capture: return "gw_rsx_capture";
 		case shortcut::gw_frame_limit: return "gw_frame_limit";
 		case shortcut::gw_toggle_mouse_and_keyboard: return "gw_toggle_mouse_and_keyboard";
+		case shortcut::gw_home_menu: return "gw_home_menu";
 		case shortcut::count: return "count";
 		}
 
@@ -71,6 +72,7 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::gw_rsx_capture, shortcut_info{ "game_window_rsx_capture", tr("RSX Capture"), "Alt+C", shortcut_handler_id::game_window } },
 		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window } },
 		{ shortcut::gw_toggle_mouse_and_keyboard, shortcut_info{ "game_window_toggle_mouse_and_keyboard", tr("Toggle Keyboard"), "Ctrl+F11", shortcut_handler_id::game_window } },
+		{ shortcut::gw_home_menu, shortcut_info{ "gw_home_menu", tr("Open Home Menu"), "Shift+F10", shortcut_handler_id::game_window } },
 	})
 {
 }
