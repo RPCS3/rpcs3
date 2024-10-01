@@ -61,5 +61,5 @@ shellcheck .ci/*.sh
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
-    .ci/deploy-linux.sh "x86_64"
+    .ci/deploy-linux-legacy.sh "x86_64"
 fi
