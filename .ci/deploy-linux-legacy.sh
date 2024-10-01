@@ -2,21 +2,18 @@
 
 cd build || exit 1
 
-CPU_ARCH="${1:-x86_64}"
-
 if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     DESTDIR=AppDir ninja install
 
-    curl -fsSLo /usr/bin/linuxdeploy "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-$CPU_ARCH.AppImage"
+    curl -fsSLo /usr/bin/linuxdeploy https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy
-    curl -fsSLo /usr/bin/linuxdeploy-plugin-qt "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-$CPU_ARCH.AppImage"
+    curl -fsSLo /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy-plugin-qt
-    curl -fsSLo linuxdeploy-plugin-checkrt.sh https://github.com/darealshinji/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt.sh
+    curl -fsSLo linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
     chmod +x ./linuxdeploy-plugin-checkrt.sh
 
     export EXTRA_PLATFORM_PLUGINS="libqwayland-egl.so;libqwayland-generic.so"
-    export EXTRA_QT_PLUGINS="svg;wayland-decoration-client;wayland-graphics-integration-client;wayland-shell-integration;waylandcompositor"
-
+    export EXTRA_QT_PLUGINS="svg;wayland-decoration-client;wayland-graphics-integration-client;wayland-shell-integration"
     APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
 
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
@@ -33,16 +30,10 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     linuxdeploy --appimage-extract
     ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
 
-    APPIMAGE_SUFFIX="linux_${CPU_ARCH}"
-    if [ "$CPU_ARCH" = "x86_64" ]; then
-        # Preserve back compat. Previous versions never included the full arch.
-        APPIMAGE_SUFFIX="linux64"
-    fi
-
     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ../rpcs3/rpcs3_version.cpp)
     COMM_COUNT="$(git rev-list --count HEAD)"
     COMM_HASH="$(git rev-parse --short=8 HEAD)"
-    RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_${APPIMAGE_SUFFIX}.AppImage"
+    RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_linux64.AppImage"
 
     mv ./RPCS3*.AppImage "$RPCS3_APPIMAGE"
 
