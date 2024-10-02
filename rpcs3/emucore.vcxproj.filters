@@ -112,6 +112,18 @@
     <Filter Include="Emu\CPU\Backends\AArch64">
       <UniqueIdentifier>{73650043-acf8-4890-9f84-5bfa7a8c946b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Decoders">
+      <UniqueIdentifier>{40f6640a-ed40-4096-b79b-995ae5be3052}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Game Window">
+      <UniqueIdentifier>{8a3a8944-dd32-4fd2-972e-451547a13f98}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Host Mini-Driver">
+      <UniqueIdentifier>{3bc6035f-0c00-4bc3-98cd-7ed26f6a4ecb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Utils">
+      <UniqueIdentifier>{0e218fca-53a6-4066-a412-4e0659d6ff0b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -180,15 +192,6 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXTexture.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXThread.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\rXml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -230,12 +233,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_utils.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_methods.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
@@ -765,14 +762,8 @@
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\gcm_enums.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="Loader\ELF.cpp">
       <Filter>Loader</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\gcm_printing.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\mutex.cpp">
       <Filter>Utilities</Filter>
@@ -858,9 +849,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXFIFO.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -902,9 +890,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXOffload.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp">
       <Filter>Emu\Io</Filter>
@@ -1044,9 +1029,6 @@
     <ClCompile Include="Emu\Io\interception.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXDisAsm.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
@@ -1123,9 +1105,6 @@
     <ClCompile Include="Emu\Io\camera_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Audio\audio_resampler.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
@@ -1137,9 +1116,6 @@
     </ClCompile>
     <ClCompile Include="Crypto\decrypt_binaries.cpp">
       <Filter>Crypto</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\RSXZCULL.cpp">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
     <ClCompile Include="Emu\IPC_socket.cpp">
       <Filter>Emu</Filter>
@@ -1282,6 +1258,42 @@
     <ClCompile Include="Emu\NP\rpcn_countries.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXTexture.cpp">
+      <Filter>Emu\GPU\RSX\Decoders</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GSRender.cpp">
+      <Filter>Emu\GPU\RSX\Game Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXOffload.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXThread.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\gcm_printing.cpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_utils.cpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_methods.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXZCULL.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXFIFO.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXDisAsm.cpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\gcm_enums.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1395,26 +1407,14 @@
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GSRender.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Program\RSXFragmentProgram.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXTexture.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXThread.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\RSXVertexProgram.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\GCM.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\IdManager.h">
       <Filter>Emu</Filter>
@@ -1484,12 +1484,6 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_utils.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_methods.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\surface_store.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
@@ -1857,29 +1851,14 @@
     <ClInclude Include="..\Utilities\sync.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_cache.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\JIT.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_vertex_data.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_decode.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\gcm_enums.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\cfmt.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\bit_set.h">
       <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\gcm_printing.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\mutex.h">
       <Filter>Utilities</Filter>
@@ -1986,9 +1965,6 @@
     <ClInclude Include="Emu\RSX\Common\texture_cache_utils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXFIFO.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_predictor.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
@@ -2009,9 +1985,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\surface_utils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXOffload.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Keyboard.h">
       <Filter>Emu\Io</Filter>
@@ -2196,15 +2169,6 @@
     <ClInclude Include="Emu\Io\interception.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GSFrameBase.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\display.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXDisAsm.h">
-      <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
@@ -2367,9 +2331,6 @@
     </ClInclude>
     <ClInclude Include="Crypto\decrypt_binaries.h">
       <Filter>Crypto</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\RSXZCULL.h">
-      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\IPC_socket.h">
       <Filter>Emu</Filter>
@@ -2595,6 +2556,57 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSysutilAvc.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXTexture.h">
+      <Filter>Emu\GPU\RSX\Decoders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_decode.h">
+      <Filter>Emu\GPU\RSX\Decoders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GSFrameBase.h">
+      <Filter>Emu\GPU\RSX\Game Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GSRender.h">
+      <Filter>Emu\GPU\RSX\Game Window</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXOffload.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXThread.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\gcm_printing.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_utils.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_vertex_data.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_methods.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\rsx_cache.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXZCULL.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXFIFO.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXDisAsm.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\gcm_enums.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GCM.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\display.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
