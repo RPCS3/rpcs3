@@ -385,9 +385,9 @@ namespace gl
 			return format;
 		}
 
-		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		gl::texture_view* get_view(const rsx::texture_channel_remap_t& remap)
 		{
-			return vram_texture->get_view(remap_encoding, remap);
+			return vram_texture->get_view(remap);
 		}
 
 		gl::viewable_image* get_raw_texture() const
@@ -402,7 +402,7 @@ namespace gl
 
 		gl::texture_view* get_raw_view()
 		{
-			return vram_texture->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector);
+			return vram_texture->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY));
 		}
 
 		bool is_depth_texture() const

@@ -899,15 +899,15 @@ namespace vk
 		m_cyclic_ref_tracker.reset();
 	}
 
-	image_view* render_target::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, VkImageAspectFlags mask)
+	image_view* render_target::get_view(const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
 	{
-		if (remap_encoding == VK_REMAP_VIEW_MULTISAMPLED)
+		if (remap.encoded == VK_REMAP_VIEW_MULTISAMPLED)
 		{
 			// Special remap flag, intercept here
-			return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
+			return vk::viewable_image::get_view(remap.with_encoding(VK_REMAP_IDENTITY), mask);
 		}
 
-		return vk::viewable_image::get_view(remap_encoding, remap, mask);
+		return vk::viewable_image::get_view(remap, mask);
 	}
 
 	void render_target::memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)

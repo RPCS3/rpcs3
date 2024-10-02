@@ -1,6 +1,7 @@
 #pragma once
 
 #include "io_buffer.h"
+#include "../color_utils.h"
 #include "../RSXTexture.h"
 
 #include <span>
@@ -276,7 +277,7 @@ namespace rsx
 	/**
 	* Reverse encoding
 	*/
-	u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
+	u32 get_remap_encoding(const texture_channel_remap_t& remap);
 
 	/**
 	 * Get gcm texel layout. Returns <format, byteswapped>

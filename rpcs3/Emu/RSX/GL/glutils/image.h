@@ -459,10 +459,10 @@ namespace gl
 	public:
 		using texture::texture;
 
-		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, GLenum aspect_flags = image_aspect::color | image_aspect::depth);
+		texture_view* get_view(const rsx::texture_channel_remap_t& remap, GLenum aspect_flags = image_aspect::color | image_aspect::depth);
 		void set_native_component_layout(const std::array<GLenum, 4>& layout);
 	};
 
 	// Texture helpers
-	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
+	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const rsx::texture_channel_remap_t& decoded_remap);
 }

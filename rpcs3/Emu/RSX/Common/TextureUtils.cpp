@@ -1440,17 +1440,18 @@ namespace rsx
 			texture.border_type() ^ 1);
 	}
 
-	u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+	u32 get_remap_encoding(const texture_channel_remap_t& remap)
 	{
 		u32 encode = 0;
-		encode |= (remap.first[0] << 0);
-		encode |= (remap.first[1] << 2);
-		encode |= (remap.first[2] << 4);
-		encode |= (remap.first[3] << 6);
-		encode |= (remap.second[0] << 8);
-		encode |= (remap.second[1] << 10);
-		encode |= (remap.second[2] << 12);
-		encode |= (remap.second[3] << 14);
+		encode |= (remap.channel_map[0] << 0);
+		encode |= (remap.channel_map[1] << 2);
+		encode |= (remap.channel_map[2] << 4);
+		encode |= (remap.channel_map[3] << 6);
+
+		encode |= (remap.control_map[0] << 8);
+		encode |= (remap.control_map[1] << 10);
+		encode |= (remap.control_map[2] << 12);
+		encode |= (remap.control_map[3] << 14);
 		return encode;
 	}
 

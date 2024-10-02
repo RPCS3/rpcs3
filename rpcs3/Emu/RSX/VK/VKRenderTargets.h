@@ -113,7 +113,7 @@ namespace vk
 		bool matches_dimensions(u16 _width, u16 _height) const;
 		void reset_surface_counters();
 
-		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+		image_view* get_view(const rsx::texture_channel_remap_t& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override;
 
 		// Memory management

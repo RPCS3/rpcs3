@@ -134,7 +134,7 @@ namespace vk
 	public:
 		using image::image;
 
-		virtual image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+		virtual image_view* get_view(const rsx::texture_channel_remap_t& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
 
 		void set_native_component_layout(VkComponentMapping new_layout);

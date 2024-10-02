@@ -908,7 +908,7 @@ namespace vk
 		for (auto& img : src)
 		{
 			img->push_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			views.push_back(img->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector));
+			views.push_back(img->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY)));
 		}
 
 		if (views.size() < 2)
