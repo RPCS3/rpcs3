@@ -38,13 +38,13 @@ jobs:
     displayName: ccache
 
   - bash: |
-      docker pull --quiet rpcs3/rpcs3-ci-focal:1.7
+      docker pull --quiet rpcs3/rpcs3-ci-focal:1.7.1
       docker run                      \
         -v $(pwd):/rpcs3              \
         --env-file .ci/docker.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-ci-focal:1.7 \
+        rpcs3/rpcs3-ci-focal:1.7.1 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
