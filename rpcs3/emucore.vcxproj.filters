@@ -2608,6 +2608,9 @@
     <ClInclude Include="Emu\RSX\display.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\color_utils.h">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

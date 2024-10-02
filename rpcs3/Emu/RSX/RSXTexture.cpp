@@ -165,7 +165,7 @@ namespace rsx
 		return (registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)]);
 	}
 
-	std::pair<std::array<u8, 4>, std::array<u8, 4>> fragment_texture::decoded_remap() const
+	rsx::texture_channel_remap_t fragment_texture::decoded_remap() const
 	{
 		u32 remap_ctl = registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)];
 		u32 remap_override = (remap_ctl >> 16) & 0xFFFF;
@@ -359,18 +359,14 @@ namespace rsx
 		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
-	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const
+	rsx::texture_channel_remap_t vertex_texture::decoded_remap() const
 	{
-		return
-		{
-			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
-			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
-		};
+		return rsx::default_remap_vector;
 	}
 
 	u32 vertex_texture::remap() const
 	{
-		//disabled
+		// disabled
 		return 0xAAE4;
 	}
 

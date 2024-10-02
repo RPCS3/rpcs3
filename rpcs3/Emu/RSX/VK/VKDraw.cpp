@@ -538,7 +538,7 @@ bool VKGSRender::bind_texture_env()
 			{
 				// Stencil mirror required
 				auto root_image = static_cast<vk::viewable_image*>(view->image());
-				auto stencil_view = root_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+				auto stencil_view = root_image->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
 
 				if (!m_stencil_mirror_sampler)
 				{

@@ -5,8 +5,6 @@
 
 namespace rsx
 {
-	using texture_channel_remap_t = std::pair<std::array<u8, 4>, std::array<u8, 4>>;
-
 	// Defines pixel operation to be performed on a surface before it is ready for use
 	enum surface_transform : u32
 	{
@@ -551,11 +549,10 @@ namespace rsx
 			const position2i& offset,
 			const size2i& desired_dimensions,
 			const size2i& actual_dimensions,
-			u32 encoded_remap,
 			const texture_channel_remap_t& decoded_remap,
 			bool cyclic_reference)
 		{
-			desc.image_handle = desc.external_subresource_desc.as_viewable()->get_view(encoded_remap, decoded_remap);
+			desc.image_handle = desc.external_subresource_desc.as_viewable()->get_view(decoded_remap);
 			desc.ref_address = desc.external_subresource_desc.external_ref_addr;
 			desc.is_cyclic_reference = cyclic_reference;
 			desc.samples = desc.external_subresource_desc.external_handle->samples();
@@ -567,7 +564,6 @@ namespace rsx
 		template <typename sampled_image_descriptor>
 		void convert_image_blit_to_clip_descriptor(
 			sampled_image_descriptor& desc,
-			u32 encoded_remap,
 			const texture_channel_remap_t& decoded_remap,
 			bool cyclic_reference)
 		{
@@ -602,7 +598,6 @@ namespace rsx
 				position2i(section.src_x, section.src_y),
 				size2i(section.src_w, section.src_h),
 				size2i(surface_width, surface_height),
-				encoded_remap,
 				decoded_remap,
 				cyclic_reference);
 		}
@@ -613,7 +608,7 @@ namespace rsx
 			const image_section_attributes_t& attr,
 			const size3f& scale,
 			texture_dimension_extended extended_dimension,
-			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
+			const texture_channel_remap_t& decoded_remap,
 			bool surface_is_rop_target,
 			bool force_convert)
 		{
@@ -710,7 +705,7 @@ namespace rsx
 
 				texptr->memory_barrier(cmd, access_type);
 				auto viewed_surface = texptr->get_surface(access_type);
-				sampled_image_descriptor result = { viewed_surface->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
+				sampled_image_descriptor result = { viewed_surface->get_view(decoded_remap), texture_upload_context::framebuffer_storage,
 						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
 
 				if (requires_clip)
@@ -746,7 +741,7 @@ namespace rsx
 			const image_section_attributes_t& attr,
 			const size3f& scale,
 			texture_dimension_extended extended_dimension,
-			u32 /*encoded_remap*/, const texture_channel_remap_t& decoded_remap,
+			const texture_channel_remap_t& decoded_remap,
 			int select_hint = -1)
 		{
 			ensure((select_hint & 0x1) == select_hint);

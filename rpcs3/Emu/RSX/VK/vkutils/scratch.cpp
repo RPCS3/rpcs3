@@ -61,7 +61,7 @@ namespace vk
 		if (auto found = g_null_image_views.find(type);
 			found != g_null_image_views.end())
 		{
-			return found->second->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
+			return found->second->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 		}
 
 		VkImageType image_type;
@@ -118,7 +118,7 @@ namespace vk
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		// Return view
-		return tex->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
+		return tex->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 	}
 
 	vk::image* get_typeless_helper(VkFormat format, rsx::format_class format_class, u32 requested_width, u32 requested_height)

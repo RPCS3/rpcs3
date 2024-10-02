@@ -119,8 +119,8 @@ namespace vk
 
 		void bind_resources() override
 		{
-			auto msaa_view = multisampled->get_view(VK_REMAP_VIEW_MULTISAMPLED, rsx::default_remap_vector);
-			auto resolved_view = resolve->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
+			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
+			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, "multisampled", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
 			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
 		}
@@ -277,7 +277,7 @@ namespace vk
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
 		{
 			update_sample_configuration(msaa_image);
-			auto src_view = msaa_image->get_view(VK_REMAP_VIEW_MULTISAMPLED, rsx::default_remap_vector);
+			auto src_view = msaa_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 
 			overlay_pass::run(
 				cmd,
@@ -308,7 +308,7 @@ namespace vk
 			renderpass_config.set_multisample_shading_rate(1.f);
 			update_sample_configuration(msaa_image);
 
-			auto src_view = resolve_image->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
+			auto src_view = resolve_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 
 			overlay_pass::run(
 				cmd,
@@ -372,7 +372,7 @@ namespace vk
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
 		{
 			update_sample_configuration(msaa_image);
-			auto stencil_view = msaa_image->get_view(VK_REMAP_VIEW_MULTISAMPLED, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+			auto stencil_view = msaa_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED), VK_IMAGE_ASPECT_STENCIL_BIT);
 
 			region.rect.extent.width = resolve_image->width();
 			region.rect.extent.height = resolve_image->height();
@@ -442,7 +442,7 @@ namespace vk
 			renderpass_config.set_multisample_shading_rate(1.f);
 			update_sample_configuration(msaa_image);
 
-			auto stencil_view = resolve_image->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+			auto stencil_view = resolve_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY), VK_IMAGE_ASPECT_STENCIL_BIT);
 
 			region.rect.extent.width = resolve_image->width();
 			region.rect.extent.height = resolve_image->height();
@@ -486,8 +486,8 @@ namespace vk
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
 		{
 			update_sample_configuration(msaa_image);
-			auto depth_view = msaa_image->get_view(VK_REMAP_VIEW_MULTISAMPLED, rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
-			auto stencil_view = msaa_image->get_view(VK_REMAP_VIEW_MULTISAMPLED, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+			auto depth_view = msaa_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED), VK_IMAGE_ASPECT_DEPTH_BIT);
+			auto stencil_view = msaa_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED), VK_IMAGE_ASPECT_STENCIL_BIT);
 
 			overlay_pass::run(
 				cmd,
@@ -531,8 +531,8 @@ namespace vk
 			renderpass_config.set_multisample_shading_rate(1.f);
 			update_sample_configuration(msaa_image);
 
-			auto depth_view = resolve_image->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
-			auto stencil_view = resolve_image->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+			auto depth_view = resolve_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY), VK_IMAGE_ASPECT_DEPTH_BIT);
+			auto stencil_view = resolve_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY), VK_IMAGE_ASPECT_STENCIL_BIT);
 
 			overlay_pass::run(
 				cmd,

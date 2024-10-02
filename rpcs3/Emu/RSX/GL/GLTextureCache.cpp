@@ -181,8 +181,7 @@ namespace gl
 			dst->set_native_component_layout(components);
 		}
 
-		const auto encoding = rsx::get_remap_encoding(remap);
-		return dst->get_view(encoding, remap);
+		return dst->get_view(remap);
 	}
 
 	void texture_cache::copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources) const
