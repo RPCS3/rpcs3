@@ -201,6 +201,16 @@ namespace rsx
 		return result;
 	}
 
+	static inline u32 encode_color_to_storage_key(color4f color)
+	{
+		const u32 r = static_cast<u8>(color.r * 255);
+		const u32 g = static_cast<u8>(color.g * 255);
+		const u32 b = static_cast<u8>(color.b * 255);
+		const u32 a = static_cast<u8>(color.a * 255);
+
+		return (a << 24) | (b << 16) | (g << 8) | r;
+	}
+
 	static inline const std::array<bool, 4> get_write_output_mask(rsx::surface_color_format format)
 	{
 		constexpr std::array<bool, 4> rgba = { true, true, true, true };

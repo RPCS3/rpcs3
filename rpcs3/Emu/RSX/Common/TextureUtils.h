@@ -289,4 +289,11 @@ namespace rsx
 	format_class classify_format(u32 gcm_format);
 
 	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode);
+	bool is_border_clamped_texture(rsx::texture_wrap_mode wrap_s, rsx::texture_wrap_mode wrap_t, rsx::texture_wrap_mode wrap_r, rsx::texture_dimension dimension);
+
+	template <typename TextureType>
+	bool is_border_clamped_texture(const TextureType& tex)
+	{
+		return is_border_clamped_texture(tex.wrap_s(), tex.wrap_t(), tex.wrap_r(), tex.dimension());
+	}
 }

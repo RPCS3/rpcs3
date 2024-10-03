@@ -1572,4 +1572,25 @@ namespace rsx
 				return true;
 		}
 	}
+
+	bool is_border_clamped_texture(
+		rsx::texture_wrap_mode wrap_s,
+		rsx::texture_wrap_mode wrap_t,
+		rsx::texture_wrap_mode wrap_r,
+		rsx::texture_dimension dimension)
+	{
+		// Technically we should check border and mirror_once_border
+		// However, the latter is not implemented in any modern API, so we can just ignore it (emulated with mirror_once_clamp).
+		switch (dimension)
+		{
+		case rsx::texture_dimension::dimension1d:
+			return wrap_s == rsx::texture_wrap_mode::border;
+		case rsx::texture_dimension::dimension2d:
+			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border;
+		case rsx::texture_dimension::dimension3d:
+			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border || wrap_r == rsx::texture_wrap_mode::border;
+		default:
+			return false;
+		}
+	}
 }
