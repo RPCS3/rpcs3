@@ -8,13 +8,15 @@ namespace rsx
 {
 	struct texture_channel_remap_t
 	{
-		u32 encoded;
+		u32 encoded = 0xDEAD;
 		std::array<u8, 4> control_map;
 		std::array<u8, 4> channel_map;
 
 		template <typename T>
 		std::array<T, 4> remap(const std::array<T, 4>& components, T select_zero, T select_one) const
 		{
+			ensure(encoded != 0xDEAD, "Channel remap was not initialized");
+
 			std::array<T, 4> remapped{};
 			for (u8 channel = 0; channel < 4; ++channel)
 			{
