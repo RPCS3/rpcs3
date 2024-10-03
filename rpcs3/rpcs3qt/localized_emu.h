@@ -192,6 +192,11 @@ private:
 		case localized_string_id::RPCN_ERROR_INVALID_PROTOCOL_VERSION: return tr("RPCN Misc Error: Protocol Version Error (outdated RPCS3?)");
 		case localized_string_id::RPCN_ERROR_UNKNOWN: return tr("RPCN: Unknown Error");
 		case localized_string_id::RPCN_SUCCESS_LOGGED_ON: return tr("Successfully logged on RPCN!");
+		case localized_string_id::RPCN_FRIEND_REQUEST_RECEIVED: return tr("RPCN: Received friend request: %0", "RCPN Friends").arg(std::forward<Args>(args)...);
+		case localized_string_id::RPCN_FRIEND_ADDED: return tr("RPCN: Friend added: %0", "RCPN Friends").arg(std::forward<Args>(args)...);
+		case localized_string_id::RPCN_FRIEND_LOST: return tr("RPCN: Friend removed: %0", "RCPN Friends").arg(std::forward<Args>(args)...);
+		case localized_string_id::RPCN_FRIEND_LOGGED_IN: return tr("RPCN: %0 logged in", "RCPN Friends").arg(std::forward<Args>(args)...);
+		case localized_string_id::RPCN_FRIEND_LOGGED_OUT: return tr("RPCN: %0 logged out", "RCPN Friends").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_TITLE: return tr("Home Menu");
 		case localized_string_id::HOME_MENU_EXIT_GAME: return tr("Exit Game");
 		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");

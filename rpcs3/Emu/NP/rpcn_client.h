@@ -440,6 +440,7 @@ namespace rpcn
 		bool terminate_connection();
 
 		void get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param);
+		void register_friend_cb(friend_cb_func, void* cb_param);
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
 		ErrorType create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email);

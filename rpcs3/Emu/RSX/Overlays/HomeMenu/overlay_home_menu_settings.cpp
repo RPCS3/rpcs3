@@ -94,6 +94,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_OVERLAYS))
 		{
 			add_checkbox(&g_cfg.misc.show_trophy_popups, "Show Trophy Popups");
+			add_checkbox(&g_cfg.misc.show_rpcn_popups, "Show RPCN Popups");
 			add_checkbox(&g_cfg.misc.show_shader_compilation_hint, "Show Shader Compilation Hint");
 			add_checkbox(&g_cfg.misc.show_ppu_compilation_hint, "Show PPU Compilation Hint");
 
