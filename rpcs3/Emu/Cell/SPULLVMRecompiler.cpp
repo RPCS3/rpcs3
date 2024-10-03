@@ -6704,8 +6704,22 @@ public:
 			}
 		});
 
-		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+		if (m_use_avx512)
 		{
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{
+				const auto div = value<f32[4]>(ci->getOperand(0));
+				const auto the_one = value<f32[4]>(ci->getOperand(1));
+
+				const auto div_result = the_one / div;
+
+				return vfixupimmps(div_result, div_result, splat<u32[4]>(0x00330088u), 0, 0xff);
+			});	
+		}
+		else
+		{
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{			
 			const auto div = value<f32[4]>(ci->getOperand(0));
 			const auto the_one = value<f32[4]>(ci->getOperand(1));
 
@@ -6718,10 +6732,11 @@ public:
 
 			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
 			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
-
 			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
-		});
+			});
+		}
 
+		
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
 		static const auto MT = match<f32[4]>();
 
