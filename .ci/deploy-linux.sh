@@ -17,7 +17,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     export EXTRA_PLATFORM_PLUGINS="libqwayland-egl.so;libqwayland-generic.so"
     export EXTRA_QT_PLUGINS="svg;wayland-decoration-client;wayland-graphics-integration-client;wayland-shell-integration;waylandcompositor"
 
-    APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
+    APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt --plugin checkrt
 
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
     rm -f ./AppDir/usr/lib/libwayland-client.so*
@@ -27,8 +27,6 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
-
-    ./linuxdeploy-plugin-checkrt.sh --appdir AppDir
 
     linuxdeploy --appimage-extract
     ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
