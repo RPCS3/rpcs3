@@ -79,13 +79,15 @@ namespace gl
 		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
 		set_parameteri(GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
 
-		if (const auto color = tex.border_color();
-			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
+		if (rsx::is_border_clamped_texture(tex))
 		{
-			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
-
-			const color4f border_color = rsx::decode_border_color(color);
-			glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+			const auto border_color = tex.remapped_border_color();
+			const auto encoded_color = rsx::encode_color_to_storage_key(border_color);
+			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
+			{
+				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
+				glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+			}
 		}
 
 		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
@@ -150,13 +152,15 @@ namespace gl
 
 	void sampler_state::apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* /*sampled_image*/)
 	{
-		if (const auto color = tex.border_color();
-			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
+		if (rsx::is_border_clamped_texture(tex))
 		{
-			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
-
-			const color4f border_color = rsx::decode_border_color(color);
-			glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+			const auto border_color = tex.remapped_border_color();
+			const auto encoded_color = rsx::encode_color_to_storage_key(border_color);
+			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
+			{
+				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
+				glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+			}
 		}
 
 		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));

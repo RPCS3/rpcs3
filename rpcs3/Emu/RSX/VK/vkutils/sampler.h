@@ -13,7 +13,7 @@ namespace vk
 		VkImageCreateFlags aspect;
 		color4f color_value;
 
-		border_color_t(u32 encoded_color, VkFormat fmt = VK_FORMAT_UNDEFINED, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
+		border_color_t(const color4f& color, VkFormat fmt = VK_FORMAT_UNDEFINED, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
 
 		border_color_t(VkBorderColor color);
 

@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "sampler.h"
+#include "../../color_utils.h"
 #include "../../rsx_utils.h"
 
 namespace vk
@@ -20,9 +21,10 @@ namespace vk
 		return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 	}
 
-	border_color_t::border_color_t(u32 encoded_color, VkFormat fmt, VkImageAspectFlags aspect)
-		: storage_key(0), format(fmt), aspect(aspect)
+	border_color_t::border_color_t(const color4f& color, VkFormat fmt, VkImageAspectFlags aspect)
+		: format(fmt), aspect(aspect), color_value(color)
 	{
+		const auto encoded_color = rsx::encode_color_to_storage_key(color);
 		value = vk::get_border_color(encoded_color);
 
 		if (value != VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
@@ -31,7 +33,6 @@ namespace vk
 			return;
 		}
 
-		color_value = rsx::decode_border_color(encoded_color);
 		if (!g_render_device->get_custom_border_color_support())
 		{
 			value = get_closest_border_color_enum(color_value);
