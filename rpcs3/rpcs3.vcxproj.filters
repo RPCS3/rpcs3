@@ -1740,5 +1740,23 @@
     <None Include="..\buildfiles\cmake\TCDarwinARM64.cmake">
       <Filter>buildfiles\cmake</Filter>
     </None>
+    <None Include="..\.ci\build-linux-aarch64.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\build-mac-arm64.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-linux-legacy.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-mac-arm64.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\docker.env">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\optimize-mac.sh">
+      <Filter>CI</Filter>
+    </None>
   </ItemGroup>
 </Project>
