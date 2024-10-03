@@ -421,7 +421,7 @@ namespace vk
 				native_component_map.g == VK_COMPONENT_SWIZZLE_G &&
 				native_component_map.b == VK_COMPONENT_SWIZZLE_B)
 			{
-				remap_encoding = 0xAAE4;
+				remap_encoding = RSX_TEXTURE_REMAP_IDENTITY;
 			}
 		}
 
@@ -439,7 +439,7 @@ namespace vk
 		case VK_REMAP_IDENTITY:
 			real_mapping = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
 			break;
-		case 0xAAE4:
+		case RSX_TEXTURE_REMAP_IDENTITY:
 			real_mapping = native_component_map;
 			break;
 		default:

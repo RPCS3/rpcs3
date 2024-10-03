@@ -44,6 +44,14 @@ namespace rsx
 		}
 
 		template <typename T>
+		color4_base<T> remap(const color4_base<T>& components)
+		{
+			const std::array<T, 4> values = { components.a, components.r, components.g, components.b };
+			const auto shuffled = remap(values, T{ 0 }, T{ 1 });
+			return color4_base<T>(shuffled[1], shuffled[2], shuffled[3], shuffled[0]);
+		}
+
+		template <typename T>
 			requires std::is_integral_v<T> || std::is_enum_v<T>
 		texture_channel_remap_t with_encoding(T encoding) const
 		{
@@ -55,7 +63,7 @@ namespace rsx
 
 	static const texture_channel_remap_t default_remap_vector =
 	{
-		.encoded = 0xAAE4,
+		.encoded = RSX_TEXTURE_REMAP_IDENTITY,
 		.control_map = { CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP },
 		.channel_map = { CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B }
 	};
