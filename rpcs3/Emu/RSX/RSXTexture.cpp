@@ -295,6 +295,16 @@ namespace rsx
 		return registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
 	}
 
+	color4f fragment_texture::remapped_border_color() const
+	{
+		color4f base_color = rsx::decode_border_color(border_color());
+		if (remap() == RSX_TEXTURE_REMAP_IDENTITY)
+		{
+			return base_color;
+		}
+		return decoded_remap().remap(base_color);
+	}
+
 	u16 fragment_texture::depth() const
 	{
 		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20) : 1;
@@ -367,7 +377,7 @@ namespace rsx
 	u32 vertex_texture::remap() const
 	{
 		// disabled
-		return 0xAAE4;
+		return RSX_TEXTURE_REMAP_IDENTITY;
 	}
 
 	bool vertex_texture::enabled() const
@@ -429,6 +439,11 @@ namespace rsx
 	u32 vertex_texture::border_color() const
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)];
+	}
+
+	color4f vertex_texture::remapped_border_color() const
+	{
+		return rsx::decode_border_color(border_color());
 	}
 
 	u16 vertex_texture::depth() const
