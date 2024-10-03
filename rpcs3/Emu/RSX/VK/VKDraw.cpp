@@ -303,6 +303,9 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
+
+				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
+				// It is a direct texel replacement and must be remapped before attaching to the sampler.
 				const auto border_color = rsx::is_border_clamped_texture(tex)
 					? vk::border_color_t(tex.remapped_border_color())
 					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
@@ -446,6 +449,8 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 
+				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
+				// It is a direct texel replacement and must be remapped before attaching to the sampler.
 				const auto border_color = is_border_clamped_texture(tex)
 					? vk::border_color_t(tex.remapped_border_color())
 					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);

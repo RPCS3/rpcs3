@@ -81,11 +81,13 @@ namespace gl
 
 		if (rsx::is_border_clamped_texture(tex))
 		{
-			const auto border_color = tex.remapped_border_color();
-			const auto encoded_color = rsx::encode_color_to_storage_key(border_color);
+			// NOTE: In OpenGL, the border texels are processed by the pipeline and will be swizzled by the texture view.
+			// Therefore, we pass the raw value here, and the texture view will handle the rest for us.
+			const auto encoded_color = tex.border_color();
 			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
 			{
 				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
+				const auto border_color = rsx::decode_border_color(encoded_color);
 				glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
 			}
 		}
@@ -154,11 +156,13 @@ namespace gl
 	{
 		if (rsx::is_border_clamped_texture(tex))
 		{
-			const auto border_color = tex.remapped_border_color();
-			const auto encoded_color = rsx::encode_color_to_storage_key(border_color);
+			// NOTE: In OpenGL, the border texels are processed by the pipeline and will be swizzled by the texture view.
+			// Therefore, we pass the raw value here, and the texture view will handle the rest for us.
+			const auto encoded_color = tex.border_color();
 			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
 			{
 				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
+				const auto border_color = rsx::decode_border_color(encoded_color);
 				glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
 			}
 		}
