@@ -111,7 +111,6 @@ You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/ll
 If you're not using the precompiled libs, build the following projects in *__BUILD_BEFORE* folder by right-clicking on a project > *Build*.:
 * glslang
 * **Either** llvm_build **or** llvm_build_clang_cl
-* spirv
 
 Afterwards:
 

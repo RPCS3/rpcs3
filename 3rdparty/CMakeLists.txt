@@ -89,7 +89,6 @@ add_subdirectory(hidapi)
 
 # Vulkan
 add_subdirectory(glslang EXCLUDE_FROM_ALL)
-#add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
 
 
 # yaml-cpp

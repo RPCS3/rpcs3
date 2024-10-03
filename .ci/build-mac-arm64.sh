@@ -87,9 +87,9 @@ export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
 export LLVM_DIR
 LLVM_DIR="$BREW_ARM64_PATH/opt/llvm@$LLVM_COMPILER_VER"
-# exclude ffmpeg, SPIRV and LLVM, and sdl from submodule update
+# exclude ffmpeg, LLVM, and sdl from submodule update
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/SPIRV/ && !/SDL/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/SDL/ { print $3 }' .gitmodules)
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c

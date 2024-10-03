@@ -15,14 +15,6 @@
 	path = 3rdparty/glslang/glslang
 	url = ../../KhronosGroup/glslang.git
 	ignore = dirty
-[submodule "3rdparty/SPIRV-Tools"]
-	path = 3rdparty/SPIRV/SPIRV-Tools
-	url = ../../KhronosGroup/SPIRV-Tools.git
-	ignore = dirty
-[submodule "3rdparty/SPIRV-Headers"]
-	path = 3rdparty/SPIRV/SPIRV-Headers
-	url = ../../KhronosGroup/SPIRV-Headers.git
-	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib/zlib
 	url = ../../madler/zlib
