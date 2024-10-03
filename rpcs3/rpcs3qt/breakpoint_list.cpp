@@ -9,8 +9,6 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 
-constexpr auto qstr = QString::fromStdString;
-
 extern bool is_using_interpreter(thread_class t_class);
 
 breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_ppu_breakpoint_handler(handler)
@@ -83,7 +81,7 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 
 	m_disasm->disasm(pc);
 
-	QString text = qstr(m_disasm->last_opcode);
+	QString text = QString::fromStdString(m_disasm->last_opcode);
 	text.remove(10, 13);
 
 	QListWidgetItem* breakpoint_item = new QListWidgetItem(text);

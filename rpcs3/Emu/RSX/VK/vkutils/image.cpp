@@ -411,8 +411,9 @@ namespace vk
 		return result;
 	}
 
-	image_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, VkImageAspectFlags mask)
+	image_view* viewable_image::get_view(const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
 	{
+		u32 remap_encoding = remap.encoded;
 		if (remap_encoding == VK_REMAP_IDENTITY)
 		{
 			if (native_component_map.a == VK_COMPONENT_SWIZZLE_A &&
@@ -420,7 +421,7 @@ namespace vk
 				native_component_map.g == VK_COMPONENT_SWIZZLE_G &&
 				native_component_map.b == VK_COMPONENT_SWIZZLE_B)
 			{
-				remap_encoding = 0xAAE4;
+				remap_encoding = RSX_TEXTURE_REMAP_IDENTITY;
 			}
 		}
 
@@ -438,7 +439,7 @@ namespace vk
 		case VK_REMAP_IDENTITY:
 			real_mapping = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
 			break;
-		case 0xAAE4:
+		case RSX_TEXTURE_REMAP_IDENTITY:
 			real_mapping = native_component_map;
 			break;
 		default:

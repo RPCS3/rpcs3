@@ -9,6 +9,7 @@
 #include "np_contexts.h"
 #include "np_helpers.h"
 #include "np_structs_extra.h"
+#include "fb_helpers.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -62,8 +63,8 @@ namespace np
 	u32 np_handler::get_server_status(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
 		// TODO: actually implement interaction with server for this?
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo);
-		u32 event_key = get_event_key();
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo);
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetServerInfo, sizeof(SceNpMatching2GetServerInfoResponse));
 		SceNpMatching2GetServerInfoResponse* serv_info = reinterpret_cast<SceNpMatching2GetServerInfoResponse*>(edata.data());
@@ -80,7 +81,7 @@ namespace np
 
 	u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext);
 
 		const auto cb_info_opt = take_pending_request(req_id);
 		ensure(cb_info_opt);
@@ -91,7 +92,7 @@ namespace np
 
 	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext);
 
 		const auto cb_info_opt = take_pending_request(req_id);
 		ensure(cb_info_opt);
@@ -102,7 +103,7 @@ namespace np
 
 	u32 np_handler::get_world_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList);
 
 		if (!get_rpcn()->get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
 		{
@@ -134,7 +135,7 @@ namespace np
 			return error_and_disconnect("Malformed reply to GetWorldList command");
 		}
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
 		auto* world_info = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
@@ -157,9 +158,9 @@ namespace np
 
 	u32 np_handler::create_join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2CreateJoinRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom);
 
-		extra_nps::print_createjoinroom(req);
+		extra_nps::print_SceNpMatching2CreateJoinRoomRequest(req);
 
 		if (!get_rpcn()->createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -181,12 +182,12 @@ namespace np
 			return true;
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<RoomDataInternal>();
+		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to CreateRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
@@ -198,7 +199,7 @@ namespace np
 		np_cache.insert_room(room_info);
 		np_cache.update_password(room_resp->roomDataInternal->roomId, cached_cj_password);
 
-		extra_nps::print_create_room_resp(room_resp);
+		extra_nps::print_SceNpMatching2CreateJoinRoomResponse(room_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -207,9 +208,9 @@ namespace np
 
 	u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom);
 
-		extra_nps::print_joinroom(req);
+		extra_nps::print_SceNpMatching2JoinRoomRequest(req);
 
 		if (!get_rpcn()->join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -248,12 +249,12 @@ namespace np
 
 		vec_stream reply(reply_data, 1);
 
-		auto* resp = reply.get_flatbuffer<RoomDataInternal>();
+		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to JoinRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
@@ -264,7 +265,7 @@ namespace np
 
 		np_cache.insert_room(room_info);
 
-		extra_nps::print_room_data_internal(room_info);
+		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -273,7 +274,7 @@ namespace np
 
 	u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom);
 
 		if (!get_rpcn()->leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -306,9 +307,9 @@ namespace np
 
 	u32 np_handler::search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SearchRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom);
 
-		extra_nps::print_search_room(req);
+		extra_nps::print_SceNpMatching2SearchRoomRequest(req);
 
 		if (!get_rpcn()->search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -327,12 +328,12 @@ namespace np
 			return true;
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<SearchRoomResponse>();
+		const auto* resp = reply.get_flatbuffer<SearchRoomResponse>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to SearchRoom command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
 		auto* search_resp = reinterpret_cast<SceNpMatching2SearchRoomResponse*>(edata.data());
@@ -340,7 +341,7 @@ namespace np
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_search_room_resp(search_resp);
+		extra_nps::print_SceNpMatching2SearchRoomResponse(search_resp);
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
@@ -348,9 +349,9 @@ namespace np
 
 	u32 np_handler::get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList);
 
-		extra_nps::print_get_roomdata_external_list_req(req);
+		extra_nps::print_SceNpMatching2GetRoomDataExternalListRequest(req);
 
 		if (!get_rpcn()->get_roomdata_external_list(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -369,12 +370,12 @@ namespace np
 			return true;
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<GetRoomDataExternalListResponse>();
+		const auto* resp = reply.get_flatbuffer<GetRoomDataExternalListResponse>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomDataExternalList command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
@@ -382,7 +383,7 @@ namespace np
 		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
+		extra_nps::print_SceNpMatching2GetRoomDataExternalListResponse(sce_get_room_ext_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -391,9 +392,9 @@ namespace np
 
 	u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal);
 
-		extra_nps::print_set_roomdata_ext_req(req);
+		extra_nps::print_SceNpMatching2SetRoomDataExternalRequest(req);
 
 		if (!get_rpcn()->set_roomdata_external(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -418,7 +419,7 @@ namespace np
 
 	u32 np_handler::get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal);
 
 		if (!get_rpcn()->get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -438,12 +439,12 @@ namespace np
 
 		vec_stream reply(reply_data, 1);
 
-		auto* resp = reply.get_flatbuffer<RoomDataInternal>();
+		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomDataInternal command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
@@ -454,7 +455,7 @@ namespace np
 
 		np_cache.insert_room(room_info);
 
-		extra_nps::print_room_data_internal(room_info);
+		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
@@ -463,9 +464,9 @@ namespace np
 
 	u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
 
-		extra_nps::print_set_roomdata_int_req(req);
+		extra_nps::print_SceNpMatching2SetRoomDataInternalRequest(req);
 
 		if (!get_rpcn()->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -490,8 +491,8 @@ namespace np
 
 	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
-		extra_nps::print_get_roommemberdata_int_req(req);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
+		extra_nps::print_SceNpMatching2GetRoomMemberDataInternalRequest(req);
 
 		if (!get_rpcn()->get_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -526,12 +527,12 @@ namespace np
 
 		vec_stream reply(reply_data, 1);
 
-		auto* resp = reply.get_flatbuffer<RoomMemberDataInternal>();
+		const auto* resp = reply.get_flatbuffer<RoomMemberDataInternal>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataInternal, sizeof(SceNpMatching2GetRoomMemberDataInternalResponse));
@@ -546,9 +547,9 @@ namespace np
 
 	u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal);
 
-		extra_nps::print_set_roommemberdata_int_req(req);
+		extra_nps::print_SceNpMatching2SetRoomMemberDataInternalRequest(req);
 
 		if (!get_rpcn()->set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -573,7 +574,7 @@ namespace np
 
 	u32 np_handler::set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo);
 
 		if (!get_rpcn()->set_userinfo(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -603,7 +604,7 @@ namespace np
 
 	u32 np_handler::get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo);
 
 		if (!get_rpcn()->ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 		{
@@ -623,12 +624,12 @@ namespace np
 
 		vec_stream reply(reply_data, 1);
 
-		auto* resp = reply.get_flatbuffer<GetPingInfoResponse>();
+		const auto* resp = reply.get_flatbuffer<GetPingInfoResponse>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to PingRoomOwner command");
 
-		u32 event_key = get_event_key();
+		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SignalingGetPingInfo, sizeof(SceNpMatching2SignalingGetPingInfoResponse));
 		auto* final_ping_resp = reinterpret_cast<SceNpMatching2SignalingGetPingInfoResponse*>(edata.data());
@@ -641,7 +642,7 @@ namespace np
 
 	u32 np_handler::send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage);
 
 		if (!get_rpcn()->send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -666,7 +667,7 @@ namespace np
 
 	void np_handler::req_sign_infos(const std::string& npid, u32 conn_id)
 	{
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 		{
 			std::lock_guard lock(mutex_pending_sign_infos_requests);
 			pending_sign_infos_requests[req_id] = conn_id;
@@ -705,8 +706,8 @@ namespace np
 		}
 
 		vec_stream reply(reply_data, 1);
-		u32 addr = reply.get<u32>();
-		u16 port = reply.get<u16>();
+		const u32 addr = reply.get<u32>();
+		const u16 port = reply.get<u16>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to RequestSignalingInfos command");
@@ -717,9 +718,44 @@ namespace np
 		return true;
 	}
 
+	u32 np_handler::get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req)
+	{
+		// Hack
+		// Note that this is fake and needs to be properly implemented both on server and on rpcs3
+
+		extra_nps::print_SceNpMatching2GetLobbyInfoListRequest(req);
+
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
+		const u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetLobbyInfoList, sizeof(SceNpMatching2GetLobbyInfoListResponse));
+		auto* resp = reinterpret_cast<SceNpMatching2GetLobbyInfoListResponse*>(edata.data());
+
+		resp->range.size = 1;
+		resp->range.startIndex = 1;
+		resp->range.total = 1;
+		auto lobby_data = edata.allocate<SceNpMatching2LobbyDataExternal>(sizeof(SceNpMatching2LobbyDataExternal), resp->lobbyDataExternal);
+		lobby_data->serverId = 1;
+		lobby_data->worldId = req->worldId;
+		lobby_data->lobbyId = 1;
+		lobby_data->maxSlot = 64;
+		lobby_data->curMemberNum = 0;
+		lobby_data->flagAttr = SCE_NP_MATCHING2_LOBBY_FLAG_ATTR_PERMANENT;
+
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+
+		return req_id;
+	}
+
 	void np_handler::req_ticket([[maybe_unused]] u32 version, [[maybe_unused]] const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, [[maybe_unused]] const char* entitlement_id, [[maybe_unused]] u32 consumed_count)
 	{
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 
 		std::string service_id_str(service_id);
 
@@ -785,7 +821,7 @@ namespace np
 			}
 
 			// Only 2 cases should be timeout or caller setting result
-			ensure(trans_ctx->result, "transaction_async_handler: trans_ctx->result is no set");
+			ensure(trans_ctx->result, "transaction_async_handler: trans_ctx->result is not set");
 			trans_ctx->completion_cond.notify_one();
 		};
 
@@ -810,7 +846,7 @@ namespace np
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_board_infos{.boardInfo = boardInfo};
 		get_rpcn()->get_board_infos(req_id, trans_ctx->communicationId, boardId);
 
@@ -821,7 +857,7 @@ namespace np
 	{
 		vec_stream reply(reply_data, 1);
 
-		auto* resp = reply.get_flatbuffer<BoardInfo>();
+		const auto* resp = reply.get_flatbuffer<BoardInfo>();
 
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to GetBoardInfos command");
@@ -859,7 +895,7 @@ namespace np
 	void np_handler::record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		std::optional<std::string> str_comment = scoreComment ? std::optional(std::string(reinterpret_cast<const char*>(scoreComment->data))) : std::nullopt;
 		std::optional<std::vector<u8>> vec_data;
 
@@ -942,7 +978,7 @@ namespace np
 		if (tdata->game_data.size() == tdata->game_data_size)
 		{
 			trans_ctx->result = std::nullopt;
-			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+			const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 			get_rpcn()->record_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, score, tdata->game_data);
 			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 		}
@@ -994,7 +1030,7 @@ namespace np
 		{
 			trans_ctx->tdata = tdata_get_score_data{.totalSize = totalSize, .recvSize = recvSize, .score_data = score_data};
 
-			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+			const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 			get_rpcn()->get_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, npId);
 			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 			return;
@@ -1065,7 +1101,7 @@ namespace np
 	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
@@ -1126,7 +1162,7 @@ namespace np
 		}
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<GetScoreResponse>();
+		const auto* resp = reply.get_flatbuffer<GetScoreResponse>();
 
 		if (reply.is_error())
 		{
@@ -1243,7 +1279,7 @@ namespace np
 	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
@@ -1272,7 +1308,7 @@ namespace np
 	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
@@ -1356,7 +1392,7 @@ namespace np
 		}
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<TusVarResponse>();
+		const auto* resp = reply.get_flatbuffer<TusVarResponse>();
 
 		if (reply.is_error())
 		{
@@ -1482,7 +1518,7 @@ namespace np
 		}
 
 		vec_stream reply(reply_data, 1);
-		auto* resp = reply.get_flatbuffer<TusDataStatusResponse>();
+		const auto* resp = reply.get_flatbuffer<TusDataStatusResponse>();
 
 		if (reply.is_error())
 		{
@@ -1531,7 +1567,7 @@ namespace np
 	void np_handler::tus_set_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		get_rpcn()->tus_set_multislot_variable(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, variableArray, arrayNum, vuser);
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
@@ -1545,7 +1581,7 @@ namespace np
 	void np_handler::tus_get_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_variables_generic {
 			.variableArray = variableArray,
@@ -1564,7 +1600,7 @@ namespace np
 	void np_handler::tus_get_multiuser_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_variables_generic {
 			.variableArray = variableArray,
@@ -1583,7 +1619,7 @@ namespace np
 	void np_handler::tus_get_friends_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_variables_generic {
 			.variableArray = variableArray,
@@ -1602,7 +1638,7 @@ namespace np
 	void np_handler::tus_add_and_get_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_variable_generic {
 			.outVariable = outVariable,
@@ -1620,7 +1656,7 @@ namespace np
 	void np_handler::tus_try_and_set_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_variable_generic {
 			.outVariable = resultVariable,
@@ -1638,7 +1674,7 @@ namespace np
 	void np_handler::tus_delete_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		get_rpcn()->tus_delete_multislot_variable(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
@@ -1668,7 +1704,7 @@ namespace np
 		if (tdata->tus_data.size() == tdata->tus_data_size)
 		{
 			trans_ctx->result = std::nullopt;
-			u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+			const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 			get_rpcn()->tus_set_data(req_id, trans_ctx->communicationId, targetNpId, slotId, tdata->tus_data, info, option, vuser);
 			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 		}
@@ -1691,7 +1727,7 @@ namespace np
 		if (!tdata)
 		{
 			trans_ctx->tdata = tdata_tus_get_data{.recvSize = recvSize, .dataStatus = dataStatus, .data = data};
-			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+			const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 			get_rpcn()->tus_get_data(req_id, trans_ctx->communicationId, targetNpId, slotId, vuser);
 			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 			return;
@@ -1798,7 +1834,7 @@ namespace np
 	void np_handler::tus_get_multislot_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
 			.statusArray = statusArray,
@@ -1817,7 +1853,7 @@ namespace np
 	void np_handler::tus_get_multiuser_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
 			.statusArray = statusArray,
@@ -1836,7 +1872,7 @@ namespace np
 	void np_handler::tus_get_friends_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
 			.statusArray = statusArray,
@@ -1855,7 +1891,7 @@ namespace np
 	void np_handler::tus_delete_multislot_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 
 		get_rpcn()->tus_delete_multislot_data(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
@@ -1865,8 +1901,4 @@ namespace np
 	{
 		return handle_tus_no_data(req_id, reply_data);
 	}
-
-	
-
-
 } // namespace np

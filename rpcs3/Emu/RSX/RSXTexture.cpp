@@ -165,7 +165,7 @@ namespace rsx
 		return (registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)]);
 	}
 
-	std::pair<std::array<u8, 4>, std::array<u8, 4>> fragment_texture::decoded_remap() const
+	rsx::texture_channel_remap_t fragment_texture::decoded_remap() const
 	{
 		u32 remap_ctl = registers[NV4097_SET_TEXTURE_CONTROL1 + (m_index * 8)];
 		u32 remap_override = (remap_ctl >> 16) & 0xFFFF;
@@ -295,6 +295,16 @@ namespace rsx
 		return registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
 	}
 
+	color4f fragment_texture::remapped_border_color() const
+	{
+		color4f base_color = rsx::decode_border_color(border_color());
+		if (remap() == RSX_TEXTURE_REMAP_IDENTITY)
+		{
+			return base_color;
+		}
+		return decoded_remap().remap(base_color);
+	}
+
 	u16 fragment_texture::depth() const
 	{
 		return dimension() == rsx::texture_dimension::dimension3d ? (registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] >> 20) : 1;
@@ -359,19 +369,15 @@ namespace rsx
 		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
-	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const
+	rsx::texture_channel_remap_t vertex_texture::decoded_remap() const
 	{
-		return
-		{
-			{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },
-			{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
-		};
+		return rsx::default_remap_vector;
 	}
 
 	u32 vertex_texture::remap() const
 	{
-		//disabled
-		return 0xAAE4;
+		// disabled
+		return RSX_TEXTURE_REMAP_IDENTITY;
 	}
 
 	bool vertex_texture::enabled() const
@@ -433,6 +439,11 @@ namespace rsx
 	u32 vertex_texture::border_color() const
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)];
+	}
+
+	color4f vertex_texture::remapped_border_color() const
+	{
+		return rsx::decode_border_color(border_color());
 	}
 
 	u16 vertex_texture::depth() const

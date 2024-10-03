@@ -42,6 +42,7 @@ namespace pad
 	atomic_t<bool> g_started{false};
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
+	atomic_t<bool> g_home_menu_requested{false};
 }
 
 namespace rsx
@@ -451,7 +452,7 @@ void pad_thread::operator()()
 			}
 
 			// Make sure we call this function only once per button press
-			if (ps_button_pressed && !m_ps_button_pressed)
+			if ((ps_button_pressed && !m_ps_button_pressed) || pad::g_home_menu_requested.exchange(false))
 			{
 				open_home_menu();
 			}

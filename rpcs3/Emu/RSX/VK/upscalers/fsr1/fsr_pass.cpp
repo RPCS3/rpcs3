@@ -117,8 +117,8 @@ namespace vk
 
 		void fsr_pass::run(const vk::command_buffer& cmd, vk::viewable_image* src, vk::viewable_image* dst, const size2u& input_size, const size2u& output_size)
 		{
-			m_input_image = src->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
-			m_output_image = dst->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
+			m_input_image = src->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
+			m_output_image = dst->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 			m_input_size = input_size;
 			m_output_size = output_size;
 

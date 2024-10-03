@@ -807,37 +807,9 @@ namespace gl
 		}
 	}
 
-	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap)
+	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const rsx::texture_channel_remap_t& decoded_remap)
 	{
-		//Remapping tables; format is A-R-G-B
-		//Remap input table. Contains channel index to read color from
-		const auto remap_inputs = decoded_remap.first;
-
-		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
-		const auto remap_lookup = decoded_remap.second;
-
-		std::array<GLenum, 4> remap_values;
-
-		for (u8 channel = 0; channel < 4; ++channel)
-		{
-			switch (remap_lookup[channel])
-			{
-			default:
-				rsx_log.error("Unknown remap function 0x%X", remap_lookup[channel]);
-				[[fallthrough]];
-			case CELL_GCM_TEXTURE_REMAP_REMAP:
-				remap_values[channel] = swizzle_remap[remap_inputs[channel]];
-				break;
-			case CELL_GCM_TEXTURE_REMAP_ZERO:
-				remap_values[channel] = GL_ZERO;
-				break;
-			case CELL_GCM_TEXTURE_REMAP_ONE:
-				remap_values[channel] = GL_ONE;
-				break;
-			}
-		}
-
-		return remap_values;
+		return decoded_remap.remap<GLenum>(swizzle_remap, GL_ZERO, GL_ONE);
 	}
 
 	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)

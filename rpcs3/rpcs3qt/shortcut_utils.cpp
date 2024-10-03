@@ -66,6 +66,7 @@ namespace gui::utils
 	}
 
 	bool create_shortcut(const std::string& name,
+	    [[maybe_unused]] const std::string& serial,
 	    [[maybe_unused]] const std::string& target_cli_args,
 	    [[maybe_unused]] const std::string& description,
 	    [[maybe_unused]] const std::string& src_icon_path,
@@ -99,12 +100,12 @@ namespace gui::utils
 #ifdef _WIN32
 		else if (location == shortcut_location::rpcs3_shortcuts)
 		{
-			link_path = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()) + "/shortcuts/";
+			link_path = rpcs3::utils::get_games_dir() + "/shortcuts/";
 			fs::create_dir(link_path);
 		}
 #endif
 
-		if (!fs::is_dir(link_path))
+		if (!fs::is_dir(link_path) && !fs::create_dir(link_path))
 		{
 			sys_log.error("Failed to create shortcut. Folder does not exist: %s", link_path);
 			return false;
@@ -221,14 +222,6 @@ namespace gui::utils
 		return cleanup(true, {});
 
 #elif defined(__APPLE__)
-
-		const std::string app_bundle_path = fs::get_executable_path();
-		if (app_bundle_path.empty())
-		{
-			sys_log.error("Failed to create shortcut. App bundle path empty.");
-			return false;
-		}
-
 		fmt::append(link_path, "/%s.app", simple_name);
 
 		const std::string contents_dir = link_path + "/Contents/";
@@ -245,7 +238,7 @@ namespace gui::utils
 		const std::string launcher_path = macos_dir + "launcher";
 
 		std::string launcher_content;
-		fmt::append(launcher_content, "#!/bin/bash\nopen \"%s\" --args %s", app_bundle_path, target_cli_args);
+		fmt::append(launcher_content, "#!/bin/bash\nopen -b net.rpcs3.rpcs3 --args %s", target_cli_args);
 
 		fs::file launcher_file(launcher_path, fs::read + fs::rewrite);
 		if (!launcher_file)
@@ -280,6 +273,16 @@ namespace gui::utils
 										  "\t<string>APPL</string>\n"
 										  "\t<key>CFBundleSignature</key>\n"
 										  "\t<string>\?\?\?\?</string>\n"
+#if defined(ARCH_ARM64)
+										  "\t<key>CFBundleIdentifier</key>\n"
+										  "\t<string>net.rpcs3" + (serial.empty() ? "" : ("." + serial)) + "</string>\n"
+										  "\t<key>LSArchitecturePriority</key>\n"
+										  "\t<array>\n"
+										  "\t\t<string>arm64</string>\n"
+										  "\t</array>\n"
+										  "\t<key>LSRequiresNativeExecution</key>\n"
+										  "\t<true/>\n"
+#endif
 										  "</dict>\n"
 										  "</plist>\n";
 

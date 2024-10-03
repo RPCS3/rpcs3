@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutilAvc.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/IdManager.h"
 
 LOG_CHANNEL(cellSysutil);
 
@@ -29,12 +31,90 @@ void fmt_class_string<CellAvcError>::format(std::string& out, u64 arg)
 	});
 }
 
+// Callback handle tag type
+struct avc_cb_handle_t{};
+
+struct avc_settings
+{
+	avc_settings() = default;
+
+	avc_settings(const avc_settings&) = delete;
+	avc_settings& operator=(const avc_settings&) = delete;
+
+	SAVESTATE_INIT_POS(53);
+
+	shared_mutex mutex_cb;
+	vm::ptr<CellSysutilAvcCallback> avc_cb{};
+	vm::ptr<void> avc_cb_arg{};
+
+	atomic_t<u32> req_id_cnt = 0;
+
+	static bool saveable(bool /*is_writing*/) noexcept
+	{
+		return GET_SERIALIZATION_VERSION(cellSysutil) != 0;
+	}
+
+	avc_settings(utils::serial& ar) noexcept
+	{
+		[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(cellSysutil);
+
+		if (version == 0)
+		{
+			return;
+		}
+
+		save(ar);
+	}
+
+	void save(utils::serial& ar)
+	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellSysutil);
+		ar(avc_cb, avc_cb_arg);
+	}
+
+	void register_cb_call(CellSysutilAvcRequestId req_id, CellSysutilAvcEvent event_id, CellSysUtilAvcEventParam param)
+	{
+		// This is equivalent to the dispatcher code
+		sysutil_register_cb_with_id<avc_cb_handle_t>([=, this](ppu_thread& cb_ppu) -> s32
+			{
+				vm::ptr<CellSysutilAvcCallback> avc_cb{};
+				vm::ptr<void> avc_cb_arg{};
+
+				{
+					std::lock_guard lock(this->mutex_cb);
+					avc_cb = this->avc_cb;
+					avc_cb_arg = this->avc_cb_arg;
+				}
+
+				if (avc_cb)
+				{
+					// TODO: lots of checks before calling the cb
+					if (event_id == CELL_AVC_EVENT_UNLOAD_SUCCEEDED)
+					{
+						std::lock_guard lock(this->mutex_cb);
+						this->avc_cb = {};
+						this->avc_cb_arg = {};
+					}
+
+					avc_cb(cb_ppu, req_id, event_id, param, avc_cb_arg);
+				}
+
+				return 0;
+			});
+	}
+};
+
 error_code cellSysutilAvcByeRequest(vm::ptr<CellSysutilAvcRequestId> request_id)
 {
 	cellSysutil.todo("cellSysutilAvcByeRequest(request_id=*0x%x)", request_id);
 
 	if (!request_id)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	auto& settings = g_fxo->get<avc_settings>();
+	const CellSysutilAvcRequestId req_id = settings.req_id_cnt.fetch_add(1);
+	*request_id = req_id;
+	settings.register_cb_call(req_id, CELL_AVC_EVENT_BYE_SUCCEEDED, static_cast<CellSysUtilAvcEventParam>(0));
 
 	return CELL_OK;
 }
@@ -152,6 +232,11 @@ error_code cellSysutilAvcJoinRequest(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, 
 	if (!room_id || !request_id)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;
 
+	auto& settings = g_fxo->get<avc_settings>();
+	const CellSysutilAvcRequestId req_id = settings.req_id_cnt.fetch_add(1);
+	*request_id = req_id;
+	settings.register_cb_call(req_id, CELL_AVC_EVENT_JOIN_SUCCEEDED, static_cast<CellSysUtilAvcEventParam>(0));
+
 	return CELL_OK;
 }
 
@@ -180,6 +265,22 @@ error_code cellSysutilAvcLoadAsync(vm::ptr<CellSysutilAvcCallback> func, vm::ptr
 
 	if (videoQuality != CELL_SYSUTIL_AVC_VIDEO_QUALITY_DEFAULT || voiceQuality != CELL_SYSUTIL_AVC_VOICE_QUALITY_DEFAULT)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	auto& settings = g_fxo->get<avc_settings>();
+
+	{
+		std::lock_guard lock(settings.mutex_cb);
+
+		if (settings.avc_cb)
+			return CELL_AVC_ERROR_ALREADY_INITIALIZED;
+
+		settings.avc_cb = func;
+		settings.avc_cb_arg = userdata;
+	}
+
+	const CellSysutilAvcRequestId req_id = settings.req_id_cnt.fetch_add(1);
+	*request_id = req_id;
+	settings.register_cb_call(req_id, CELL_AVC_EVENT_LOAD_SUCCEEDED, static_cast<CellSysUtilAvcEventParam>(0));
 
 	return CELL_OK;
 }
@@ -238,6 +339,11 @@ error_code cellSysutilAvcUnloadAsync(vm::ptr<CellSysutilAvcRequestId> request_id
 
 	if (!request_id)
 		return CELL_AVC_ERROR_INVALID_ARGUMENT;
+
+	auto& settings = g_fxo->get<avc_settings>();
+	const CellSysutilAvcRequestId req_id = settings.req_id_cnt.fetch_add(1);
+	*request_id = req_id;
+	settings.register_cb_call(req_id, CELL_AVC_EVENT_UNLOAD_SUCCEEDED, static_cast<CellSysUtilAvcEventParam>(0));
 
 	return CELL_OK;
 }

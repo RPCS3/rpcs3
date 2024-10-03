@@ -239,6 +239,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellAdec.cpp
     Cell/Modules/cellAtrac.cpp
     Cell/Modules/cellAtracMulti.cpp
+    Cell/Modules/cellAtracXdec.cpp
     Cell/Modules/cellAudio.cpp
     Cell/Modules/cellAudioOut.cpp
     Cell/Modules/cellAuthDialog.cpp
@@ -442,8 +443,10 @@ target_link_libraries(rpcs3_emu PRIVATE
 target_sources(rpcs3_emu PRIVATE
     NP/fb_helpers.cpp
     NP/np_cache.cpp
+    NP/np_gui_cache.cpp
     NP/np_contexts.cpp
     NP/np_dnshook.cpp
+    NP/np_requests_gui.cpp
     NP/np_handler.cpp
     NP/np_helpers.cpp
     NP/np_notifications.cpp

@@ -33,6 +33,27 @@ void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<msg_dialog_source>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto src)
+	{
+		switch (src)
+		{
+			case msg_dialog_source::_cellMsgDialog: return "cellMsgDialog";
+			case msg_dialog_source::_cellSaveData: return "cellSaveData";
+			case msg_dialog_source::_cellGame: return "cellGame";
+			case msg_dialog_source::_cellCrossController: return "cellCrossController";
+			case msg_dialog_source::_sceNp: return "sceNp";
+			case msg_dialog_source::_sceNpTrophy: return "sceNpTrophy";
+			case msg_dialog_source::sys_progress: return "sys_progress";
+			case msg_dialog_source::shader_loading: return "shader_loading";
+		}
+
+		return unknown;
+	});
+}
+
 MsgDialogBase::~MsgDialogBase()
 {
 }
@@ -141,9 +162,9 @@ using msg_dlg_thread = named_thread<msg_dlg_thread_info>;
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
 // wrapper to call for other hle dialogs
-error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam, s32* return_code)
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, msg_dialog_source source, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam, s32* return_code)
 {
-	cellSysutil.notice("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x, return_code=*0x%x)", is_blocking, type, msgString, callback, userData, extParam, return_code);
+	cellSysutil.notice("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, source=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x, return_code=*0x%x)", is_blocking, type, msgString, source, callback, userData, extParam, return_code);
 
 	const MsgDialogType _type{ type };
 
@@ -166,7 +187,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 		const auto notify = std::make_shared<atomic_t<u32>>(0);
 
-		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, [callback, userData, &return_code, is_blocking, notify](s32 status)
+		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, source, [callback, userData, &return_code, is_blocking, notify](s32 status)
 		{
 			if (is_blocking && return_code)
 			{
@@ -213,6 +234,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	}
 
 	dlg->type = _type;
+	dlg->source = source;
 
 	dlg->on_close = [callback, userData, is_blocking, &return_code, wptr = std::weak_ptr<MsgDialogBase>(dlg)](s32 status)
 	{
@@ -318,9 +340,9 @@ void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
 	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
 }
 
-error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
+error_code open_exit_dialog(const std::string& message, bool is_exit_requested, msg_dialog_source source)
 {
-	cellSysutil.notice("open_exit_dialog(message=%s, is_exit_requested=%d)", message, is_exit_requested);
+	cellSysutil.notice("open_exit_dialog(message=%s, is_exit_requested=%d, source=%s)", message, is_exit_requested, source);
 
 	vm::bptr<CellMsgDialogCallback> callback = vm::null;
 
@@ -334,6 +356,7 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 		true,
 		CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
 		vm::make_str(message),
+		source,
 		callback
 	);
 
@@ -401,7 +424,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		cellSysutil.error("Opening error message dialog with message: %s", msgString);
 	}
 
-	return open_msg_dialog(false, type, msgString, callback, userData, extParam);
+	return open_msg_dialog(false, type, msgString, msg_dialog_source::_cellMsgDialog, callback, userData, extParam);
 }
 
 error_code cellMsgDialogOpen(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
@@ -496,7 +519,8 @@ error_code cellMsgDialogClose(f32 delay)
 
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>();
+			dlg && dlg->source() == msg_dialog_source::_cellMsgDialog)
 		{
 			auto& thr = g_fxo->get<msg_dlg_thread>();
 			thr.wait_until = wait_until;
@@ -509,7 +533,7 @@ error_code cellMsgDialogClose(f32 delay)
 
 	const auto dlg = g_fxo->get<msg_info>().get();
 
-	if (!dlg)
+	if (!dlg || dlg->source != msg_dialog_source::_cellMsgDialog)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
@@ -526,7 +550,8 @@ error_code cellMsgDialogAbort()
 
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>();
+			dlg && dlg->source() == msg_dialog_source::_cellMsgDialog)
 		{
 			g_fxo->get<msg_dlg_thread>().wait_until = 0;
 			dlg->close(false, true); // this doesn't call on_close
@@ -539,7 +564,7 @@ error_code cellMsgDialogAbort()
 
 	const auto dlg = g_fxo->get<msg_info>().get();
 
-	if (!dlg)
+	if (!dlg || dlg->source != msg_dialog_source::_cellMsgDialog)
 	{
 		return CELL_OK; // Not CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED, tested on HW.
 	}

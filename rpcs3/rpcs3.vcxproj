@@ -62,16 +62,16 @@
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\3rdparty\7zip\7zip\C;..\3rdparty\hidapi\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\libpng\libpng;..\3rdparty\GL;..\3rdparty\stblib\stb;..\3rdparty\openal\openal-soft\include\AL;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib\zlib</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
-    <IncludePath>..\3rdparty\7zip\7zip\C;..\3rdparty\hidapi\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\libpng\libpng;..\3rdparty\GL;..\3rdparty\stblib\stb;..\3rdparty\openal\openal-soft\include\AL;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib\zlib;..\3rdparty\libsdl-org\SDL\include</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\cubeb\extra;..\3rdparty\cubeb\cubeb\include\;..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\curl\curl\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;..\3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -89,8 +89,8 @@
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;SPIRV-Tools.lib;SPIRV-Tools-opt.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\3rdparty\openal\openal-soft\build;..\3rdparty\glslang\build\hlsl\Release;..\3rdparty\glslang\build\SPIRV\Release;..\3rdparty\glslang\build\OGLCompilersDLL\Release;..\3rdparty\glslang\build\glslang\OSDependent\Windows\Release;..\3rdparty\glslang\build\glslang\Release;..\3rdparty\SPIRV\build\source\Release;..\3rdparty\SPIRV\build\source\opt\Release;..\lib\$(CONFIGURATION)-$(PLATFORM);..\3rdparty\discord-rpc\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -123,7 +123,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\cubeb\extra;..\3rdparty\cubeb\cubeb\include\;..\3rdparty\flatbuffers\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\curl\curl\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -140,7 +140,8 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\3rdparty\openal\openal-soft\build;..\3rdparty\glslang\build\hlsl\Debug;..\3rdparty\glslang\build\SPIRV\Debug;..\3rdparty\glslang\build\OGLCompilersDLL\Debug;..\3rdparty\glslang\build\glslang\OSDependent\Windows\Debug;..\3rdparty\glslang\build\glslang\Debug;..\3rdparty\SPIRV\build\source\opt\Debug;..\3rdparty\discord-rpc\lib;..\lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;%(AdditionalLibraryDirectories);$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;OGLCompilerd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"  /VERBOSE %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -1995,16 +1996,22 @@
   <ItemGroup>
     <None Include="..\.cirrus.yml" />
     <None Include="..\.ci\build-freebsd.sh" />
+    <None Include="..\.ci\build-linux-aarch64.sh" />
     <None Include="..\.ci\build-linux.sh" />
+    <None Include="..\.ci\build-mac-arm64.sh" />
     <None Include="..\.ci\build-mac.sh" />
+    <None Include="..\.ci\deploy-linux-legacy.sh" />
     <None Include="..\.ci\deploy-linux.sh" />
+    <None Include="..\.ci\deploy-mac-arm64.sh" />
     <None Include="..\.ci\deploy-mac.sh" />
     <None Include="..\.ci\deploy-windows.sh" />
+    <None Include="..\.ci\docker.env" />
     <None Include="..\.ci\export-azure-vars.sh" />
     <None Include="..\.ci\export-cirrus-vars.sh" />
     <None Include="..\.ci\get_keys-windows.sh" />
     <None Include="..\.ci\github-upload.sh" />
     <None Include="..\.ci\install-freebsd.sh" />
+    <None Include="..\.ci\optimize-mac.sh" />
     <None Include="..\.ci\setup-windows.sh" />
     <None Include="..\azure-pipelines.yml" />
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss" />
@@ -2016,6 +2023,16 @@
     <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss" />
     <None Include="..\bin\GuiConfigs\Skyline.qss" />
     <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss" />
+    <None Include="..\buildfiles\cmake\ConfigureCompiler.cmake" />
+    <None Include="..\buildfiles\cmake\FindFFMPEG.cmake" />
+    <None Include="..\buildfiles\cmake\FindWayland.cmake" />
+    <None Include="..\buildfiles\cmake\TCDarwinARM64.cmake" />
+    <None Include="..\buildfiles\msvc\common_default.props" />
+    <None Include="..\buildfiles\msvc\common_default_clang_cl.props" />
+    <None Include="..\buildfiles\msvc\common_default_macros.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_debug.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_default.props" />
+    <None Include="..\buildfiles\msvc\rpcs3_release.props" />
     <None Include="..\Utilities\git-version-gen.cmd" />
     <None Include="update_helper.sh" />
   </ItemGroup>

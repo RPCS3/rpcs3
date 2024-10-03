@@ -1,5 +1,6 @@
 #include "memory.h"
 #include "sampler.h"
+#include "../../color_utils.h"
 #include "../../rsx_utils.h"
 
 namespace vk
@@ -20,9 +21,10 @@ namespace vk
 		return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 	}
 
-	border_color_t::border_color_t(u32 encoded_color)
-		: storage_key(0)
+	border_color_t::border_color_t(const color4f& color, VkFormat fmt, VkImageAspectFlags aspect)
+		: format(fmt), aspect(aspect), color_value(color)
 	{
+		const auto encoded_color = rsx::encode_color_to_storage_key(color);
 		value = vk::get_border_color(encoded_color);
 
 		if (value != VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
@@ -31,21 +33,39 @@ namespace vk
 			return;
 		}
 
-		color_value = rsx::decode_border_color(encoded_color);
 		if (!g_render_device->get_custom_border_color_support())
 		{
 			value = get_closest_border_color_enum(color_value);
 			return;
 		}
 
-		storage_key = encoded_color;
+		if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			// We must use INT color format for stencil
+			value = VK_BORDER_COLOR_INT_CUSTOM_EXT;
+			auto int_color = static_cast<s32>(color_value.z * 255.f);
+			color_value = color4f(std::bit_cast<f32>(int_color));
+		}
+
+		ensure(aspect <= VK_IMAGE_ASPECT_METADATA_BIT);
+		storage_key = static_cast<u64>(encoded_color)
+			| (static_cast<u64>(aspect) << 32)
+			| (static_cast<u64>(fmt) << 34);
 	}
+
+	border_color_t::border_color_t(VkBorderColor value)
+		: storage_key(0)
+		, value(value)
+		, format(VK_FORMAT_UNDEFINED)
+		, aspect(VK_IMAGE_ASPECT_COLOR_BIT)
+		, color_value(0.f)
+	{}
 
 	sampler::sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 		VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, const vk::border_color_t& border_color,
 		VkBool32 depth_compare, VkCompareOp depth_compare_mode)
-		: m_device(dev)
+		: m_device(dev), m_border_color(border_color)
 	{
 		info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 		info.addressModeU = clamp_u;
@@ -65,12 +85,12 @@ namespace vk
 		info.borderColor = border_color.value;
 
 		VkSamplerCustomBorderColorCreateInfoEXT custom_color_info;
-		if (border_color.value == VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
+		if (border_color.value >= VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
 		{
 			custom_color_info =
 			{
 				.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT,
-				.format = VK_FORMAT_UNDEFINED
+				.format = border_color.format
 			};
 
 			std::memcpy(custom_color_info.customBorderColor.float32, border_color.color_value.rgba, sizeof(float) * 4);
@@ -97,7 +117,7 @@ namespace vk
 		    info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
 		    !rsx::fcmp(info.maxLod, max_lod) || !rsx::fcmp(info.mipLodBias, mipLodBias) || !rsx::fcmp(info.minLod, min_lod) ||
 		    !rsx::fcmp(info.maxAnisotropy, max_anisotropy) ||
-		    info.compareOp != depth_compare_mode || info.borderColor != border_color)
+		    info.compareOp != depth_compare_mode || m_border_color != border_color)
 			return false;
 
 		return true;

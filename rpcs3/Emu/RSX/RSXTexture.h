@@ -1,5 +1,6 @@
 #pragma once
 #include "gcm_enums.h"
+#include "color_utils.h"
 
 namespace rsx
 {
@@ -58,14 +59,7 @@ namespace rsx
 
 		// Control1
 		u32 remap() const;
-
-		/**
-		 * returns a pair of arrays
-		 * First array is a redirection table into the channel indices
-		 * Second array is a lookup reference deciding whether to use the redirection table or use constants 0 and 1
-		 * Both arrays have components in A-R-G-B format
-		 */
-		std::pair<std::array<u8, 4>, std::array<u8, 4>> decoded_remap() const;
+		rsx::texture_channel_remap_t decoded_remap() const;
 
 		// Filter
 		f32 bias() const;
@@ -84,6 +78,8 @@ namespace rsx
 
 		// Border Color
 		u32 border_color() const;
+		color4f remapped_border_color() const;
+
 		u16 depth() const;
 		u32 pitch() const;
 	};
@@ -119,7 +115,7 @@ namespace rsx
 		rsx::texture_wrap_mode wrap_t() const;
 		rsx::texture_wrap_mode wrap_r() const;
 
-		std::pair<std::array<u8, 4>, std::array<u8, 4>> decoded_remap() const;
+		rsx::texture_channel_remap_t decoded_remap() const;
 		u32 remap() const;
 
 		// Control0
@@ -138,6 +134,8 @@ namespace rsx
 
 		// Border Color
 		u32 border_color() const;
+		color4f remapped_border_color() const;
+
 		u16 depth() const;
 		u32 pitch() const;
 

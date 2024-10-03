@@ -16,8 +16,6 @@
 
 LOG_CHANNEL(patch_log, "PAT");
 
-constexpr auto qstr = QString::fromStdString;
-
 Q_DECLARE_METATYPE(patch_type)
 
 enum patch_column : int
@@ -96,7 +94,7 @@ void patch_creator_dialog::init_patch_type_bombo_box(QComboBox* combo_box, patch
 	{
 		if (const patch_type t = patch_engine::get_patch_type(type); t != patch_type::invalid)
 		{
-			types << qstr(type);
+			types << QString::fromStdString(type);
 
 			combo_box->addItem(types.last(), QVariant::fromValue<patch_type>(t));
 
@@ -459,7 +457,7 @@ void patch_creator_dialog::export_patch()
 		return;
 	}
 
-	const QString file_path = QFileDialog::getSaveFileName(this, tr("Select Patch File"), qstr(patch_engine::get_patches_path()), tr("patch.yml files (*.yml);;All files (*.*)"));
+	const QString file_path = QFileDialog::getSaveFileName(this, tr("Select Patch File"), QString::fromStdString(patch_engine::get_patches_path()), tr("patch.yml files (*.yml);;All files (*.*)"));
 	if (file_path.isEmpty())
 	{
 		return;

@@ -98,6 +98,7 @@ Q_SIGNALS:
 	void RequestDialogRepaint();
 	void NotifyEmuSettingsChange();
 	void NotifyWindowCloseEvent(bool closed);
+	void NotifyShortcutHandlers();
 
 public Q_SLOTS:
 	void OnEmuStop();
@@ -128,7 +129,11 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
-	void RemoveDiskCache();
+	void RemoveHDD1Caches();
+	void RemoveAllCaches();
+	void RemoveSavestates();
+	void CleanUpGameList();
+
 	void RemoveFirmwareCache();
 	void CreateFirmwareCache();
 

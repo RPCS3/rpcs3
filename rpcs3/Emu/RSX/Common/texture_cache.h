@@ -1837,7 +1837,6 @@ namespace rsx
 			commandbuffer_type& cmd,
 			const image_section_attributes_t& attr,
 			const size3f& scale,
-			u32 encoded_remap,
 			const texture_channel_remap_t& remap,
 			const texture_cache_search_options& options,
 			const utils::address_range& memory_range,
@@ -1849,7 +1848,7 @@ namespace rsx
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth))
 				{
-					return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
+					return{ cached_texture->get_view(remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
 				}
 			}
 			else
@@ -1863,7 +1862,7 @@ namespace rsx
 						const bool force_convert = !render_target_format_is_compatible(texptr, attr.gcm_format);
 
 						auto result = helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-							cmd, texptr, attr, scale, extended_dimension, encoded_remap, remap, true, force_convert);
+							cmd, texptr, attr, scale, extended_dimension, remap, true, force_convert);
 
 						if (!options.skip_texture_barriers && result.is_cyclic_reference)
 						{
@@ -1887,7 +1886,7 @@ namespace rsx
 						const bool force_convert = !render_target_format_is_compatible(last.surface, attr.gcm_format);
 
 						return helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-							cmd, last.surface, attr, scale, extended_dimension, encoded_remap, remap, false, force_convert);
+							cmd, last.surface, attr, scale, extended_dimension, remap, false, force_convert);
 					}
 
 					return {};
@@ -1941,7 +1940,7 @@ namespace rsx
 							break;
 						}
 
-						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
+						return{ cached_texture->get_view(remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
 					}
 				}
 
@@ -2016,7 +2015,7 @@ namespace rsx
 							{
 								// Clipped view
 								auto viewed_image = last->get_raw_texture();
-								sampled_image_descriptor result = { viewed_image->get_view(encoded_remap, remap), last->get_context(),
+								sampled_image_descriptor result = { viewed_image->get_view(remap), last->get_context(),
 									viewed_image->format_class(), scale, extended_dimension, false, viewed_image->samples() };
 
 								helpers::calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(normalized_width, last->get_height()));
@@ -2029,7 +2028,7 @@ namespace rsx
 					}
 
 					auto result = helpers::merge_cache_resources<sampled_image_descriptor>(
-						cmd, overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
+						cmd, overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, remap, _pool);
 
 					const bool is_simple_subresource_copy =
 						(result.external_subresource_desc.op == deferred_request_command::copy_image_static) ||
@@ -2048,13 +2047,12 @@ namespace rsx
 								position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
 								size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
 								size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
-								encoded_remap, remap, false);
+								remap, false);
 						}
 						else
 						{
 							helpers::convert_image_blit_to_clip_descriptor(
 								result,
-								encoded_remap,
 								remap,
 								false);
 						}
@@ -2348,7 +2346,7 @@ namespace rsx
 			const auto lookup_range = utils::address_range::start_length(attributes.address, attributes.pitch * required_surface_height);
 			reader_lock lock(m_cache_mutex);
 
-			auto result = fast_texture_search(cmd, attributes, scale, tex.remap(), tex.decoded_remap(),
+			auto result = fast_texture_search(cmd, attributes, scale, tex.decoded_remap(),
 				options, lookup_range, extended_dimension, m_rtts,
 				std::forward<Args>(extras)...);
 
@@ -2423,7 +2421,7 @@ namespace rsx
 					}
 
 					const auto range = utils::address_range::start_length(attr2.address, attr2.pitch * attr2.height);
-					auto ret = fast_texture_search(cmd, attr2, scale, tex.remap(), tex.decoded_remap(),
+					auto ret = fast_texture_search(cmd, attr2, scale, tex.decoded_remap(),
 						options, range, extended_dimension, m_rtts, std::forward<Args>(extras)...);
 
 					if (!ret.validate() ||
@@ -2488,7 +2486,7 @@ namespace rsx
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, attributes.swizzled);
 
-			return{ uploaded->get_view(tex.remap(), tex.decoded_remap()),
+			return{ uploaded->get_view(tex.decoded_remap()),
 					texture_upload_context::shader_read, format_class, scale, extended_dimension };
 		}
 

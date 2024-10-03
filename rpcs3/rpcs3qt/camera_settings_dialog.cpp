@@ -231,7 +231,7 @@ void camera_settings_dialog::handle_settings_change(int index)
 	}
 
 #if QT_CONFIG(permissions)
-	QCameraPermission permission;
+	const QCameraPermission permission;
 	switch (qApp->checkPermission(permission))
 	{
 	case Qt::PermissionStatus::Undetermined:

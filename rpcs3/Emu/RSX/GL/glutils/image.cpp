@@ -306,13 +306,13 @@ namespace gl
 		m_id = GL_NONE;
 	}
 
-	texture_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_, GLenum aspect_flags)
+	texture_view* viewable_image::get_view(const rsx::texture_channel_remap_t& remap_, GLenum aspect_flags)
 	{
 		auto remap = remap_;
 		const u64 view_aspect = static_cast<u64>(aspect_flags) & aspect();
 		ensure(view_aspect);
 
-		const u64 key = static_cast<u64>(remap_encoding) | (view_aspect << 32);
+		const u64 key = static_cast<u64>(remap.encoded) | (view_aspect << 32);
 		if (auto found = views.find(key);
 			found != views.end())
 		{
@@ -323,7 +323,7 @@ namespace gl
 		std::array<GLenum, 4> mapping;
 		GLenum* swizzle = nullptr;
 
-		if (remap_encoding != GL_REMAP_IDENTITY)
+		if (remap.encoded != GL_REMAP_IDENTITY)
 		{
 			mapping = apply_swizzle_remap(get_native_component_layout(), remap);
 			swizzle = mapping.data();

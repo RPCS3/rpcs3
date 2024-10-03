@@ -7,11 +7,15 @@ namespace vk
 {
 	struct border_color_t
 	{
-		u32 storage_key;
+		u64 storage_key;
 		VkBorderColor value;
+		VkFormat format;
+		VkImageCreateFlags aspect;
 		color4f color_value;
 
-		border_color_t(u32 encoded_color);
+		border_color_t(const color4f& color, VkFormat fmt = VK_FORMAT_UNDEFINED, VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
+
+		border_color_t(VkBorderColor color);
 
 		bool operator == (const border_color_t& that) const
 		{
@@ -20,12 +24,14 @@ namespace vk
 				return false;
 			}
 
-			if (this->value != VK_BORDER_COLOR_FLOAT_CUSTOM_EXT)
+			switch (this->value)
 			{
+			case VK_BORDER_COLOR_FLOAT_CUSTOM_EXT:
+			case VK_BORDER_COLOR_INT_CUSTOM_EXT:
+				return this->color_value == that.color_value;
+			default:
 				return true;
 			}
-
-			return this->color_value == that.color_value;
 		}
 	};
 
@@ -50,13 +56,14 @@ namespace vk
 		sampler(sampler&&) = delete;
 	private:
 		VkDevice m_device;
+		border_color_t m_border_color;
 	};
 
 	// Caching helpers
 	struct sampler_pool_key_t
 	{
 		u64 base_key;
-		u32 border_color_key;
+		u64 border_color_key;
 	};
 
 	struct cached_sampler_object_t : public vk::sampler, public rsx::ref_counted

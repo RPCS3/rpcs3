@@ -1440,17 +1440,18 @@ namespace rsx
 			texture.border_type() ^ 1);
 	}
 
-	u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+	u32 get_remap_encoding(const texture_channel_remap_t& remap)
 	{
 		u32 encode = 0;
-		encode |= (remap.first[0] << 0);
-		encode |= (remap.first[1] << 2);
-		encode |= (remap.first[2] << 4);
-		encode |= (remap.first[3] << 6);
-		encode |= (remap.second[0] << 8);
-		encode |= (remap.second[1] << 10);
-		encode |= (remap.second[2] << 12);
-		encode |= (remap.second[3] << 14);
+		encode |= (remap.channel_map[0] << 0);
+		encode |= (remap.channel_map[1] << 2);
+		encode |= (remap.channel_map[2] << 4);
+		encode |= (remap.channel_map[3] << 6);
+
+		encode |= (remap.control_map[0] << 8);
+		encode |= (remap.control_map[1] << 10);
+		encode |= (remap.control_map[2] << 12);
+		encode |= (remap.control_map[3] << 14);
 		return encode;
 	}
 
@@ -1569,6 +1570,27 @@ namespace rsx
 			case rsx::texture_wrap_mode::wrap:
 			case rsx::texture_wrap_mode::mirror:
 				return true;
+		}
+	}
+
+	bool is_border_clamped_texture(
+		rsx::texture_wrap_mode wrap_s,
+		rsx::texture_wrap_mode wrap_t,
+		rsx::texture_wrap_mode wrap_r,
+		rsx::texture_dimension dimension)
+	{
+		// Technically we should check border and mirror_once_border
+		// However, the latter is not implemented in any modern API, so we can just ignore it (emulated with mirror_once_clamp).
+		switch (dimension)
+		{
+		case rsx::texture_dimension::dimension1d:
+			return wrap_s == rsx::texture_wrap_mode::border;
+		case rsx::texture_dimension::dimension2d:
+			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border;
+		case rsx::texture_dimension::dimension3d:
+			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border || wrap_r == rsx::texture_wrap_mode::border;
+		default:
+			return false;
 		}
 	}
 }

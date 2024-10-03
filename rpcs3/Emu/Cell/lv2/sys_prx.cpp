@@ -47,7 +47,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libat3multidec.sprx", 0 },
 	{ "libatrac3multi.sprx", 0 },
 	{ "libatrac3plus.sprx", 0 },
-	{ "libatxdec.sprx", 0 },
+	{ "libatxdec.sprx", 1 },
 	{ "libatxdec2.sprx", 0 },
 	{ "libaudio.sprx", 1 },
 	{ "libavcdec.sprx", 0 },

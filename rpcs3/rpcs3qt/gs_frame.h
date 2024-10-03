@@ -24,6 +24,8 @@ private:
 	// taskbar progress
 	std::unique_ptr<progress_indicator> m_progress_indicator;
 
+	shortcut_handler* m_shortcut_handler = nullptr;
+
 	QRect m_initial_geometry;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
@@ -55,6 +57,8 @@ public:
 	void delete_context(draw_context_t context) override;
 	void toggle_fullscreen() override;
 
+	void update_shortcuts();
+
 	// taskbar progress
 	void progress_reset(bool reset_limit = false);
 	void progress_set_value(int value);
@@ -74,8 +78,6 @@ public:
 protected:
 	void paintEvent(QPaintEvent *event) override;
 	void showEvent(QShowEvent *event) override;
-
-	void keyPressEvent(QKeyEvent *keyEvent) override;
 
 	void close() override;
 

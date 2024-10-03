@@ -303,7 +303,12 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
-				const auto border_color = vk::border_color_t(tex.border_color());
+
+				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
+				// It is a direct texel replacement and must be remapped before attaching to the sampler.
+				const auto border_color = rsx::is_border_clamped_texture(tex)
+					? vk::border_color_t(tex.remapped_border_color())
+					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				// Check if non-point filtering can even be used on this format
 				bool can_sample_linear;
@@ -441,11 +446,18 @@ void VKGSRender::load_texture_env()
 				const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 				const auto min_lod = tex.min_lod();
 				const auto max_lod = tex.max_lod();
-				const auto border_color = vk::border_color_t(tex.border_color());
+				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
+				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
+
+				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
+				// It is a direct texel replacement and must be remapped before attaching to the sampler.
+				const auto border_color = is_border_clamped_texture(tex)
+					? vk::border_color_t(tex.remapped_border_color())
+					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				if (vs_sampler_handles[i])
 				{
-					if (!vs_sampler_handles[i]->matches(VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+					if (!vs_sampler_handles[i]->matches(wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 						unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
 					{
 						replace = true;
@@ -457,7 +469,7 @@ void VKGSRender::load_texture_env()
 					vs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
 						*m_device,
 						vs_sampler_handles[i],
-						VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+						wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 						unnormalized_coords,
 						0.f, 1.f, min_lod, max_lod,
 						VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color);
@@ -538,7 +550,7 @@ bool VKGSRender::bind_texture_env()
 			{
 				// Stencil mirror required
 				auto root_image = static_cast<vk::viewable_image*>(view->image());
-				auto stencil_view = root_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+				auto stencil_view = root_image->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
 
 				if (!m_stencil_mirror_sampler)
 				{

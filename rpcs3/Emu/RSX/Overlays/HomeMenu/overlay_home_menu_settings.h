@@ -127,12 +127,13 @@ namespace rsx
 			}
 
 			template <u64 Min, u64 Max>
-			void add_unsigned_slider(cfg::uint<Min, Max>* setting, const std::string& text, const std::string& suffix, u64 step_size, std::map<u64, std::string> special_labels = {}, u64 minimum = Min, u64 maximum = Max)
+			void add_unsigned_slider(cfg::uint<Min, Max>* setting, const std::string& text, const std::string& suffix, u64 step_size, std::map<u64, std::string> special_labels = {}, const std::set<u64>& exceptions = {}, u64 minimum = Min, u64 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
+				ensure(!exceptions.contains(minimum) && !exceptions.contains(maximum));
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, text, suffix, special_labels, minimum, maximum);
 
-				add_item(elem, [this, setting, text, step_size, minimum, maximum](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, text, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
 				{
 					if (setting)
 					{
@@ -141,11 +142,19 @@ namespace rsx
 						{
 						case pad_button::dpad_left:
 						case pad_button::ls_left:
-							value = step_size > value ? minimum : std::max(value - step_size, minimum);
+							do
+							{
+								value = step_size > value ? minimum : std::max(value - step_size, minimum);
+							}
+							while (exceptions.contains(value));
 							break;
 						case pad_button::dpad_right:
 						case pad_button::ls_right:
-							value = std::min(value + step_size, maximum);
+							do
+							{
+								value = std::min(value + step_size, maximum);
+							}
+							while (exceptions.contains(value));
 							break;
 						default:
 							return page_navigation::stay;

@@ -344,8 +344,8 @@ namespace gl
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
 
-		auto depth_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::depth);
-		auto stencil_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::stencil);
+		auto depth_view = src->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY), gl::image_aspect::depth);
+		auto stencil_view = src->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY), gl::image_aspect::stencil);
 
 		if (!m_sampler)
 		{
@@ -396,7 +396,7 @@ namespace gl
 		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
 		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
 
-		auto data_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::color);
+		auto data_view = src->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY), gl::image_aspect::color);
 
 		if (!m_sampler)
 		{

@@ -1823,17 +1823,32 @@ void spu_thread::cpu_task()
 		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
-	if (!spurs_addr)
+	constexpr u32 invalid_spurs = 0u - 0x80;
+
+	if (spurs_addr == 0)
 	{
 		// Evaluate it
 		if (!group)
 		{
-			spurs_addr = -0x80; // Some invalid non-0 address
+			spurs_addr = invalid_spurs; // Some invalid non-0 address
 		}
 		else
 		{
 			const u32 arg = static_cast<u32>(group->args[index][1]);
-			spurs_addr = group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg) ? arg : 0u - 0x80;
+
+			if (group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg))
+			{
+				spurs_addr = arg;
+
+				if (group->max_run != group->max_num)
+				{
+					group->spurs_running++;
+				}
+			}
+			else
+			{
+				spurs_addr = invalid_spurs;
+			}
 		}
 	}
 
@@ -1883,6 +1898,14 @@ void spu_thread::cpu_task()
 		}
 
 		allow_interrupts_in_cpu_work = false;
+	}
+
+	if (spurs_addr != invalid_spurs && group->max_run != group->max_num)
+	{
+		if (group->spurs_running.exchange(0))
+		{
+			group->spurs_running.notify_all();
+		}
 	}
 }
 
@@ -4871,9 +4894,53 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
+		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
+
+		if (is_spurs_task_wait)
+		{
+			// Wait for other threads to complete their tasks (temporarily)
+			u32 max_run = group->max_run;
+
+			u32 prev_running = group->spurs_running;
+
+			if (prev_running > max_run)
+			{
+				const u64 before = get_system_time();
+				u64 current = before;
+
+				while (true)
+				{
+					if (is_stopped())
+					{
+						break;
+					}
+
+					thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
+
+					max_run = group->max_run;
+					prev_running = group->spurs_running;
+
+					if (prev_running <= max_run)
+					{
+						break;
+					}
+
+					current = get_system_time();
+
+					if (current - before >= 5000u)
+					{
+						// Timed-out
+						break;
+					}
+				}
+			}
+		}
+
+
 		if (do_putllc(ch_mfc_cmd))
 		{
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
+			spurs_waited = false;
 		}
 		else
 		{
@@ -5478,6 +5545,95 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return events.events & mask1;
 		}
 
+		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
+
+		const auto wait_spurs_task = [&]
+		{
+			if (is_spurs_task_wait)
+			{
+				// Wait for other threads to complete their tasks (temporarily)
+				if (!is_stopped())
+				{
+					u32 max_run = group->max_run;
+
+					u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+					{
+						if (x < max_run)
+						{
+							x++;
+							return true;
+						}
+
+						return false;
+					}).first;
+
+					if (prev_running >= max_run)
+					{
+						const u64 before = get_system_time();
+						u64 current = before;
+
+						spurs_waited = true;
+
+						while (true)
+						{
+							if (is_stopped())
+							{
+								break;
+							}
+
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
+
+							max_run = group->max_run;
+
+							prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+							{
+								if (x < max_run)
+								{
+									x++;
+									return true;
+								}
+
+								return false;
+							}).first;
+
+							if (prev_running < max_run)
+							{
+								break;
+							}
+
+							current = get_system_time();
+
+							if (current - before >= 5000u)
+							{
+								// Timed-out
+								group->spurs_running++;
+								break;
+							}
+						}
+					}
+				}
+			}
+		};
+
+		if (is_spurs_task_wait)
+		{
+			const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
+			{
+				if (x)
+				{
+					x--;
+					return true;
+				}
+
+				return false;
+			}).first;
+
+			if (prev_running == group->max_run)
+			{
+				group->spurs_running.notify_one();
+			}
+		}
+
 		spu_function_logger logger(*this, "MFC Events read");
 
 		lv2_obj::prepare_for_sleep(*this);
@@ -5490,7 +5646,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 		const u32 old_raddr = raddr;
 
 		// Does not need to safe-access reservation if LR is the only event masked
-		// Because it's either an access violation or a livelock if an invalid memory is passed
+		// Because it's either an access violation or a live-lock if an invalid memory is passed
 		if (raddr && mask1 > SPU_EVENT_LR)
 		{
 			auto area = vm::get(vm::any, raddr);
@@ -5504,7 +5660,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 			else if (area)
 			{
-				// Ensure possesion over reservation memory so it won't be deallocated
+				// Ensure possession over reservation memory so it won't be de-allocated
 				auto [base_addr, shm_] = area->peek(raddr);
 
 				if (shm_)
@@ -5571,6 +5727,24 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
 			{
+				if (u32 max_threads = std::min<u32>(g_cfg.core.max_spurs_threads, group ? group->max_num : u32{umax}); group && group->max_run != max_threads)
+				{
+					constexpr std::string_view spurs_suffix = "CellSpursKernelGroup"sv;
+
+					if (group->name.ends_with(spurs_suffix) && !group->name.substr(0, group->name.size() - spurs_suffix.size()).ends_with("_libsail"))
+					{
+						// Hack: don't run more SPURS threads than specified.
+						if (u32 old = atomic_storage<u32>::exchange(group->max_run, max_threads); old > max_threads)
+						{
+							spu_log.success("HACK: '%s' (0x%x) limited to %u threads.", group->name, group->id, max_threads);
+						}
+						else if (u32 running = group->spurs_running; old < max_threads && running >= old && running < max_threads)
+						{
+							group->spurs_running.notify_all();
+						}
+					}
+				}
+
 				// Don't busy-wait with TSX - memory is sensitive
 				if (g_use_rtm || !reservation_busy_waiting)
 				{
@@ -5616,7 +5790,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					static thread_local bool s_tls_try_notify = false;
 					s_tls_try_notify = false;
 
-					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
+					const auto wait_cb = mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
 						AUDIT(_this->get_class() == thread_class::spu);
@@ -5665,10 +5839,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 
 						return true;
-					});
+					};
 
 					if (auto wait_var = vm::reservation_notifier_begin_wait(_raddr, rtime))
 					{
+						atomic_wait_engine::set_one_time_use_wait_callback(wait_cb);
 						utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{80'000});
 						vm::reservation_notifier_end_wait(*wait_var);
 					}
@@ -5690,6 +5865,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait_on(state, old, 100);
 		}
 
+		wait_spurs_task();
 		wakeup_delay();
 
 		if (is_paused(state - cpu_flag::suspend))

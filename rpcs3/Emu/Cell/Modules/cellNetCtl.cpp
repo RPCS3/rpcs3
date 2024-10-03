@@ -224,14 +224,27 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	case CELL_NET_CTL_INFO_MTU: info->mtu = 1500; break;
 	case CELL_NET_CTL_INFO_LINK: info->link = CELL_NET_CTL_LINK_CONNECTED; break;
 	case CELL_NET_CTL_INFO_LINK_TYPE: info->link_type = CELL_NET_CTL_LINK_TYPE_100BASE_FULL; break;
+	// case CELL_NET_CTL_INFO_BSSID: break;
+	// case CELL_NET_CTL_INFO_SSID: break;
+	// case CELL_NET_CTL_INFO_WLAN_SECURITY: break;
+	// case CELL_NET_CTL_INFO_8021X_TYPE: break;
+	// case CELL_NET_CTL_INFO_8021X_AUTH_NAME: break;
+	case CELL_NET_CTL_INFO_RSSI: info->rssi = 100; break; // wireless: value ranges from 0-100 indicating wireless connection strength
+	case CELL_NET_CTL_INFO_CHANNEL: info->channel = 1; break; // wireless: channel used to connect to the AP?
 	case CELL_NET_CTL_INFO_IP_CONFIG: info->ip_config = CELL_NET_CTL_IP_STATIC; break;
+	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph.get_hostname()); break;
+	// case CELL_NET_CTL_INFO_PPPOE_AUTH_NAME: break;
+	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np::ip_to_string(nph.get_local_ip_addr())); break; // verified on HW
+	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.0"); break;
 	case CELL_NET_CTL_INFO_DEFAULT_ROUTE: strcpy_trunc(info->default_route, "192.168.1.1"); break;
 	case CELL_NET_CTL_INFO_PRIMARY_DNS: strcpy_trunc(info->primary_dns, np::ip_to_string(nph.get_dns_ip())); break;
 	case CELL_NET_CTL_INFO_SECONDARY_DNS: strcpy_trunc(info->secondary_dns, np::ip_to_string(nph.get_dns_ip())); break;
-	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np::ip_to_string(nph.get_local_ip_addr())); break; // verified on HW
-	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.0"); break;
 	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG: info->http_proxy_config = 0; break;
-	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph.get_hostname()); break;
+	// case CELL_NET_CTL_INFO_HTTP_PROXY_SERVER: break;
+	// case CELL_NET_CTL_INFO_HTTP_PROXY_PORT: break;
+	case CELL_NET_CTL_INFO_UPNP_CONFIG: info->upnp_config = (nph.get_upnp_status() == SCE_NP_SIGNALING_NETINFO_UPNP_STATUS_VALID) ? CELL_NET_CTL_UPNP_ON : CELL_NET_CTL_UPNP_OFF; break;
+	// case CELL_NET_CTL_INFO_RESERVED1: break;
+	// case CELL_NET_CTL_INFO_RESERVED2: break;
 	default: cellNetCtl.error("Unsupported request: %s", InfoCodeToName(code)); break;
 	}
 

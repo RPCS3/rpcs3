@@ -72,7 +72,7 @@ struct cross_controller
 		msg_dialog_callback.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(finish_callback)));
 
 		// TODO: Show icons from comboplay_plugin.rco in dialog. Maybe use a new dialog or add an optional icon to this one.
-		error_code res = open_msg_dialog(false, CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF, vm::make_str(msg), msg_dialog_callback, userdata);
+		error_code res = open_msg_dialog(false, CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF, vm::make_str(msg), msg_dialog_source::_cellCrossController, msg_dialog_callback, userdata);
 
 		sysutil_register_cb([this, res](ppu_thread& ppu) -> s32
 		{

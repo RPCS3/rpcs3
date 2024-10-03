@@ -130,7 +130,7 @@ void progress_dialog_server::operator()()
 				type.progress_bar_count = 1;
 
 				native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
-				native_dlg->show(false, text0, type, nullptr);
+				native_dlg->show(false, text0, type, msg_dialog_source::sys_progress, nullptr);
 				native_dlg->progress_bar_set_message(0, "Please wait");
 			}
 		}

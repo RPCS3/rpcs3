@@ -8,8 +8,6 @@
 #include <QValidator>
 #include <QLabel>
 
-constexpr auto qstr = QString::fromStdString;
-
 input_dialog::input_dialog(int max_length, const QString& text, const QString& title, const QString& label, const QString& placeholder, QWidget *parent, Qt::WindowFlags f)
 	: QDialog(parent, f)
 {
@@ -50,7 +48,7 @@ void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample
 {
 	if (const int max = m_input->maxLength(); max > 0 && fix_width && std::isprint(static_cast<uchar>(sample)))
 	{
-		const QString str = qstr(std::string(static_cast<usz>(max), sample));
+		const QString str = QString(max, sample);
 		m_input->setFixedWidth(gui::utils::get_label_width(str, &font));
 	}
 

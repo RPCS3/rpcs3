@@ -14,6 +14,7 @@ namespace rpcs3::utils
 	bool install_pkg(const std::string& path);
 
 	std::string get_emu_dir();
+	std::string get_games_dir();
 	std::string get_hdd0_dir();
 	std::string get_hdd1_dir();
 	std::string get_cache_dir();
