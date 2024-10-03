@@ -14,6 +14,7 @@
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/vport0.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 #include "util/asm.hpp"
 
@@ -72,6 +73,25 @@ namespace rpcn
 		case rpcn::rpcn_state::failure_other: return localized_string_id::RPCN_ERROR_UNKNOWN;
 		default: return localized_string_id::INVALID;
 		}
+	}
+
+	void overlay_friend_callback(void* param, rpcn::NotificationType ntype, const std::string& username, bool status)
+	{
+		if (!g_cfg.misc.show_rpcn_popups)
+			return;
+
+		localized_string_id loc_id = localized_string_id::INVALID;
+
+		switch (ntype)
+		{
+		case rpcn::NotificationType::FriendQuery: loc_id = localized_string_id::RPCN_FRIEND_REQUEST_RECEIVED; break;
+		case rpcn::NotificationType::FriendNew: loc_id = localized_string_id::RPCN_FRIEND_ADDED; break;
+		case rpcn::NotificationType::FriendLost: loc_id = localized_string_id::RPCN_FRIEND_LOST; break;
+		case rpcn::NotificationType::FriendStatus: loc_id = status ? localized_string_id::RPCN_FRIEND_LOGGED_IN : localized_string_id::RPCN_FRIEND_LOGGED_OUT; break;
+		default: rpcn_log.fatal("An unhandled notification type was received by the overlay friend callback!"); break;
+		}
+
+		rsx::overlays::queue_message(get_localized_string(loc_id, username.c_str()), 3'000'000);
 	}
 
 	std::string rpcn_state_to_string(rpcn::rpcn_state state)
@@ -179,7 +199,8 @@ namespace rpcn
 		sptr = instance.lock();
 		if (!sptr)
 		{
-			sptr     = std::shared_ptr<rpcn_client>(new rpcn_client());
+			sptr = std::shared_ptr<rpcn_client>(new rpcn_client());
+			sptr->register_friend_cb(overlay_friend_callback, nullptr);
 			instance = sptr;
 		}
 
@@ -2556,6 +2577,12 @@ namespace rpcn
 		std::lock_guard lock(mutex_friends);
 
 		friend_infos = this->friend_infos;
+		friend_cbs.insert(std::make_pair(cb_func, cb_param));
+	}
+
+	void rpcn_client::register_friend_cb(friend_cb_func cb_func, void* cb_param)
+	{
+		std::lock_guard lock(mutex_friends);
 		friend_cbs.insert(std::make_pair(cb_func, cb_param));
 	}
 
