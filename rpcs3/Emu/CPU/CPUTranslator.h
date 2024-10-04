@@ -3741,7 +3741,7 @@ public:
 		const auto imm32 = immediate.eval(m_ir);
 		const auto immediate2 = (llvm_const_int<u8>{e});
 		const auto imm8 = immediate2.eval(m_ir);
-		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_mask_fixupimm_ps_128), {data0, data1, data2, imm32, imm8});\
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_mask_fixupimm_ps_128), {data0, data1, data2, imm32, imm8});
 		return result;
 	}
 
