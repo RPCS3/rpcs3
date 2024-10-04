@@ -813,7 +813,7 @@ void cell_audio_thread::operator()()
 
 			if (time_left > cfg.period_comparison_margin)
 			{
-				thread_ctrl::wait_for(get_thread_wait_delay(time_left));
+				thread_ctrl::wait_for(time_left - cfg.period_comparison_margin);
 				continue;
 			}
 		}
@@ -886,7 +886,7 @@ void cell_audio_thread::operator()()
 			const s64 time_left = m_dynamic_period - time_since_last_period;
 			if (time_left > cfg.period_comparison_margin)
 			{
-				thread_ctrl::wait_for(get_thread_wait_delay(time_left));
+				thread_ctrl::wait_for(time_left - cfg.period_comparison_margin);
 				continue;
 			}
 
