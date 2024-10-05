@@ -124,7 +124,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	// Global LUTs
 	llvm::GlobalVariable* m_spu_frest_fraction_lut{};
-	llvm::GlobalVariable* m_spu_frest_exponent_lut{};
 	llvm::GlobalVariable* m_spu_frsqest_fraction_lut{};
 	llvm::GlobalVariable* m_spu_frsqest_exponent_lut{};
 
@@ -1507,7 +1506,6 @@ public:
 	{
 		// LUTs for some instructions
 		m_spu_frest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 32), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_fraction_lut));
-		m_spu_frest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_exponent_lut));
 		m_spu_frsqest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 64), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_fraction_lut));
 		m_spu_frsqest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_exponent_lut));
 	}
@@ -6040,23 +6038,22 @@ public:
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 
 			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
-			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
+			const auto a_exponent = (a & splat<u32[4]>(0x7F800000u));
+			const auto r_exponent = sub_sat(build<u16[8]>(0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80), bitcast<u16[8]>(a_exponent));
+			const auto fix_exponent = select((a_exponent > 0), bitcast<u32[4]>(r_exponent), splat<u32[4]>(0x7F800000u));
 			const auto a_sign = (a & splat<u32[4]>(0x80000000));
 			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
 
 			for (u32 i = 0; i < 4; i++)
 			{
 				const auto eval_fraction = eval(extract(a_fraction, i));
-				const auto eval_exponent = eval(extract(a_exponent, i));
-				const auto eval_sign = eval(extract(a_sign, i));
 
 				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-				value_t<u32> r_exponent = load_const<u32>(m_spu_frest_exponent_lut, eval_exponent);
 
-				final_result = eval(insert(final_result, i, eval(r_fraction | eval_sign | r_exponent)));
+				final_result = eval(insert(final_result, i, r_fraction));
 			}
 
-			return bitcast<f32[4]>(final_result);
+			return bitcast<f32[4]>(bitcast<u32[4]>(final_result | bitcast<u32[4]>(fix_exponent) | a_sign));
 		});
 
 		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
@@ -6704,24 +6701,39 @@ public:
 			}
 		});
 
-		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+		if (m_use_avx512)
 		{
-			const auto div = value<f32[4]>(ci->getOperand(0));
-			const auto the_one = value<f32[4]>(ci->getOperand(1));
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{
+				const auto div = value<f32[4]>(ci->getOperand(0));
+				const auto the_one = value<f32[4]>(ci->getOperand(1));
 
-			const auto div_result = the_one / div;
+				const auto div_result = the_one / div;
 
-			// from ps3 hardware testing: Inf => NaN and NaN => Zero
-			const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
-			const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
-			const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
+				return vfixupimmps(bitcast<f32[4]>(splat<u32[4]>(0xFFFFFFFFu)), div_result, splat<u32[4]>(0x11001188u), 0, 0xff);
+			});	
+		}
+		else
+		{
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{			
+				const auto div = value<f32[4]>(ci->getOperand(0));
+				const auto the_one = value<f32[4]>(ci->getOperand(1));
 
-			const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
-			const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+				const auto div_result = the_one / div;
 
-			return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
-		});
+				// from ps3 hardware testing: Inf => NaN and NaN => Zero
+				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
+				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
 
+				const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
+				const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+				return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
+			});
+		}
+
+		
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
 		static const auto MT = match<f32[4]>();
 
@@ -7004,19 +7016,22 @@ public:
 			{
 				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x1F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
+				const auto a_exponent = (a & splat<u32[4]>(0x7F800000u));
+				const auto r_exponent = sub_sat(build<u16[8]>(0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80, 0000, 0x7E80), bitcast<u16[8]>(a_exponent));
+				const auto fix_exponent = select((a_exponent > 0), bitcast<u32[4]>(r_exponent), splat<u32[4]>(0x7F800000u));
 				const auto a_sign = (a & splat<u32[4]>(0x80000000));
 				value_t<u32[4]> b = eval(splat<u32[4]>(0));
 
 				for (u32 i = 0; i < 4; i++)
 				{
 					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-					const auto eval_sign = eval(extract(a_sign, i));
+
 					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frest_exponent_lut, eval_exponent);
-					b = eval(insert(b, i, eval(r_fraction | eval_sign | r_exponent)));
+
+					b = eval(insert(b, i, r_fraction));
 				}
+
+				b = eval(b | fix_exponent | a_sign);
 
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
