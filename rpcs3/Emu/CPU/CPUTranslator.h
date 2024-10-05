@@ -3729,6 +3729,22 @@ public:
 		return result;
 	}
 
+	template <typename T1, typename T2, typename T3>
+	value_t<f32[4]> vfixupimmps(T1 a, T2 b, T3 c, u8 d, u8 e)
+	{
+		value_t<f32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+		const auto immediate = (llvm_const_int<u32>{d});
+		const auto imm32 = immediate.eval(m_ir);
+		const auto immediate2 = (llvm_const_int<u8>{e});
+		const auto imm8 = immediate2.eval(m_ir);
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_mask_fixupimm_ps_128), {data0, data1, data2, imm32, imm8});
+		return result;
+	}
+
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i, llvm::Type* type = nullptr)
 	{
 		return m_ir->CreateLoad(type ? type : g->getValueType(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
