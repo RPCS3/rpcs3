@@ -734,11 +734,14 @@ llvm::StringRef fallback_cpu_detection()
 	const auto family = utils::get_cpu_family();
 	const auto model = utils::get_cpu_model();
 
+	jit_log.error("CPU wasn't identified by LLVM, brand = %s, family = 0x%x, model = 0x%x", brand, family, model);
+
 	if (brand.starts_with("AMD"))
 	{
 		switch (family)
 		{
 		case 0x10:
+		case 0x12: // Unimplemented in LLVM
 			return "amdfam10";
 		case 0x15:
 			// Bulldozer class, includes piledriver, excavator, steamroller, etc
@@ -749,17 +752,17 @@ llvm::StringRef fallback_cpu_detection()
 			return "znver1";
 		case 0x19:
 			// Models 0-Fh are zen3 as are 20h-60h. The rest we can assume are zen4
-			return ((model >= 0x20 && model <= 0x60) || model < 0x10)
-				? "znver3"
-				: "znver4";
+			return ((model >= 0x20 && model <= 0x60) || model < 0x10) ? "znver3" : "znver4";
 		case 0x1a:
 			// Only one generation in family 1a so far, zen5, which we do not support yet.
 			// Return zen4 as a workaround until the next LLVM upgrade.
 			return "znver4";
 		default:
-			return utils::has_avx512()
-				? "znver4"
-				: "znver3";
+		 	// Safest guesses
+			return utils::has_avx512() ? "znver4" :
+				utils::has_avx2() ? "znver1" :
+				utils::has_avx() ? "bdver1" :
+				"nehalem";
 		}
 	}
 	else if (brand.find("Intel") != std::string::npos)
