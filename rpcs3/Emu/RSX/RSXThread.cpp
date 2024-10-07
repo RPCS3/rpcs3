@@ -2619,24 +2619,145 @@ namespace rsx
 					// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
 					// This is a separate method of setting the format to signed mode without doing so per-channel
 					// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
-
-					const u32 argb8_signed = tex.argb_signed(); // _SNROM
-					const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
-					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+					const u32 argb8_signed_cur = tex.argb_signed();
+					const u32 gamma_cur = tex.gamma();
+					const bool isUrnMap = tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL;
+					const bool canRemap = ((tex.remap() >> 8) & 0xAA) == 0xAA;
+					
+					const u32 argb8_signed = tex.argb_signed();                                                                                         // _SNROM
+					const u32 gamma = tex.gamma() & ~argb8_signed;                                                                                      // _SRGB
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
 					u32 argb8_convert = gamma;
+					
+					/*
+					// --- KO --- killzone ghost anche su soldati
+					const u32 gamma = tex.gamma(); // _SRGB
+					const u32 argb8_signed = tex.argb_signed() & ~gamma; // _SNROM
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+					u32 argb8_convert = gamma;
+					**
+					/*
+					// --- KO --- killzone ghost anche su soldati
+					const u32 argb8_signed = tex.argb_signed();
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : (~(argb8_signed) & 0xF); // _BX2
+					const u32 gamma = tex.gamma() & ~(argb8_signed | unsigned_remap);
+					u32 argb8_convert = gamma;
+					*/
+					/*					
+					// OK killzone
+					const u32 gamma = tex.gamma();
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : (~(gamma) & 0xF);
+					const u32 argb8_signed = tex.argb_signed() & ~(gamma | unsigned_remap);
+					u32 argb8_convert = gamma;
+					*/
+					/*					
+					// OK killzone
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
+					const u32 argb8_signed = tex.argb_signed() & ~unsigned_remap;
+					const u32 gamma = tex.gamma() & ~(argb8_signed | unsigned_remap);
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone
+					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
+					const u32 gamma = tex.gamma() & ~unsigned_remap;
+					const u32 argb8_signed = tex.argb_signed() & ~(gamma | unsigned_remap);
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone, Partial OK Resistance
+					const u32 argb8_signed = argb8_signed_cur & 0x1;                                  // _SNROM
+					const u32 gamma = gamma_cur & ~argb8_signed_cur;                                  // _SRGB
+					const u32 unsigned_remap = (isUrnMap) ? 0u : (~(gamma | argb8_signed_cur) & 0xF); // _BX2
+					u32 argb8_convert = gamma;
+					*/
 
+					/*
+					// --KO-- killzone, Partial OK Resistance
+					const u32 argb8_signed = !canRemap ? 0u : tex.argb_signed() & 0xF;
+					const u32 gamma = tex.gamma() & ~(argb8_signed);
+					const u32 unsigned_remap = isUrnMap ? 0u : (~(gamma | argb8_signed) & 0xF);
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone, Partial OK Resistance
+					const u32 gamma = tex.gamma();
+					const u32 unsigned_remap = isUrnMap ? 0u : (~(gamma) & 0xF);
+					const u32 argb8_signed = !canRemap ? 0u : tex.argb_signed() & ~(gamma | unsigned_remap) & 0xF;
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone, Partial OK Resistance
+					const u32 unsigned_remap = isUrnMap ? 0u : 0xF;
+					const u32 argb8_signed = !canRemap ? 0u : tex.argb_signed() & ~unsigned_remap & 0xF;
+					const u32 gamma = tex.gamma() & ~(argb8_signed | unsigned_remap);
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone, Partial OK Resistance
+					const u32 unsigned_remap = isUrnMap ? 0u : 0xF;
+					const u32 gamma = tex.gamma() & ~(unsigned_remap);
+					const u32 argb8_signed = !canRemap ? 0u : tex.argb_signed() & ~(gamma | unsigned_remap) & 0xF;
+					u32 argb8_convert = gamma;
+					*/
+
+
+					/*
+					const u32 gamma = tex.gamma();
+					const u32 argb8_signed = tex.argb_signed() & ~(gamma) & 0xF;
+					const u32 unsigned_remap = isUrnMap ? 0u : (~(gamma | argb8_signed) & 0xF);
+					//const u32 unsigned_remap = isUrnMap ? 0u : (~(gamma) & 0xF);
+					//const u32 argb8_signed = tex.argb_signed() & ~(gamma | unsigned_remap) & 0xF;
+					u32 argb8_convert = gamma;
+					*/
+					/*
+                    // OK killzone, POK Resistance
+					const u32 gamma = gamma_cur;                                                  // _SRGB
+//					const u32 argb8_signed = argb8_signed_cur & ~gamma;                           // _SNROM
+					const u32 argb8_signed = argb8_signed_cur & 0x1;                              // _SNROM
+//					const u32 gamma = gamma_cur & ~argb8_signed;                                  // _SRGB
+					const u32 unsigned_remap = (isUrnMap) ? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					// OK killzone, POK Resistance
+					const u32 gamma = gamma_cur;                                           // _SRGB
+					const u32 unsigned_remap = (isUrnMap) ? 0u : (~(gamma) & 0xF);         // _BX2
+					const u32 argb8_signed = argb8_signed_cur & ~(gamma | unsigned_remap); // _SNROM
+//					const u32 argb8_signed = argb8_signed_cur & 0x1;                       // _SNROM
+//					const u32 gamma = gamma_cur & ~argb8_signed;                           // _SRGB
+					u32 argb8_convert = gamma;
+					*/
+					/*
+					static u32 argb8_signed_prev = 0xFFFFFFFF;
+					static u32 gamma_prev = 0xFFFFFFFF;
+					static u32 unsigned_remap_prev = 0xFFFFFFFF;
+					
+					if (argb8_signed_cur || gamma_cur || unsigned_remap)
+					//if (argb8_signed_cur != argb8_signed_prev || gamma_cur != gamma_prev || unsigned_remap != unsigned_remap_prev)
+					//if (argb8_signed_cur && unsigned_remap)
+					//if (argb8_signed_cur)
+					{
+						rsx_log.error("signed = %d / %d   gamma = %d / %d   unsigned = %d / %d", argb8_signed, argb8_signed_cur, gamma, gamma_cur, unsigned_remap, isUrnMap);
+
+						//argb8_signed_prev = argb8_signed_cur;
+						//gamma_prev = gamma_cur;
+						//unsigned_remap_prev = unsigned_remap;
+					}
+					*/
+					/*
 					// The options are mutually exclusive
 					ensure((argb8_signed & gamma) == 0);
 					ensure((argb8_signed & unsigned_remap) == 0);
 					ensure((gamma & unsigned_remap) == 0);
-
+					*/
 					// Helper function to apply a per-channel mask based on an input mask
-					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
+					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset, bool override)
 					{
 						// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
 						// TODO: Replace this clusterfuck of texture control with matrix transformation
 						const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
-						if (remap_ctrl == 0xAA)
+						if (remap_ctrl == 0xAA || override)
 						{
 							argb8_convert |= (mask & 0xFu) << bit_offset;
 							return;
@@ -2646,20 +2767,31 @@ namespace rsx
 						if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
 						if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
 						if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
+
+						//if ((remap_ctrl & 0x03)) argb8_convert |= (mask & 0x1u) << bit_offset;
+						//if ((remap_ctrl & 0x0C)) argb8_convert |= (mask & 0x2u) << bit_offset;
+						//if ((remap_ctrl & 0x30)) argb8_convert |= (mask & 0x4u) << bit_offset;
+						//if ((remap_ctrl & 0xC0)) argb8_convert |= (mask & 0x8u) << bit_offset;
 					};
 
 					if (argb8_signed)
 					{
 						// Apply integer sign extension from uint8 to sint8 and renormalize
-						apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
+						apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET, false);
 					}
-
+					
 					if (unsigned_remap)
 					{
 						// Apply sign expansion, compressed normal-map style (2n - 1)
-						apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
+						apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET, false);
 					}
-
+					
+					if (gamma)
+					{
+						// Apply sign expansion, compressed normal-map style (2n - 1)
+						apply_sign_convert_mask(gamma, texture_control_bits::GAMMA_A, false);
+					}
+					
 					texture_control |= argb8_convert;
 				}
 

@@ -48,13 +48,16 @@
         "strategy": "external"
       },
       "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
         "USE_FAUDIO": "OFF",
         "USE_PRECOMPILED_HEADERS": "ON",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_NATIVE_INSTRUCTIONS": "ON",
         "BUILD_LLVM": "ON",
-        "STATIC_LINK_LLVM": "ON"
+        "STATIC_LINK_LLVM": "ON",
+        "USE_SYSTEM_OPENAL": "OFF",
+        "USE_SYSTEM_CURL": "OFF"
       },
       "vendor": {
         "microsoft.com/VisualStudioSettings/CMake/1.0": {
