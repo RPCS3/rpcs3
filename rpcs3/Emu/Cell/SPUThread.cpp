@@ -4897,28 +4897,30 @@ bool spu_thread::process_mfc_cmd()
 			// Wait for other threads to complete their tasks (temporarily)
 			u32 max_run = group->max_run;
 
-			u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+			auto [prev_running, ok] = group->spurs_running.fetch_op([max_run, num = group->max_num](u32& x)
 			{
-				if (x >= max_run)
+				if (x >= max_run && max_run < num)
 				{
 					x--;
 					return true;
 				}
 
 				return false;
-			}).first;
+			});
 
-			if (prev_running == max_run && prev_running != group->max_num)
+			if (prev_running == max_run && ok)
 			{
 				group->spurs_running.notify_one();
 
 				if (group->spurs_running == max_run - 1)
 				{
+					spurs_waited = true;
+
 					// Try to let another thread slip in and take over execution 
 					thread_ctrl::wait_for(300);
 
 					// Try to quit waiting
-					prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+					ok = !group->spurs_running.fetch_op([max_run](u32& x)
 					{
 						if (x < max_run)
 						{
@@ -4927,16 +4929,21 @@ bool spu_thread::process_mfc_cmd()
 						}
 
 						return false;
-					}).first;
+					}).second;
 				}
 			}
 
-			if (prev_running >= max_run)
+			if (ok)
 			{
+				// Restore state
+				prev_running--;
+
 				const u64 before = get_system_time();
 				u64 current = before;
 
 				lv2_obj::prepare_for_sleep(*this);
+
+				spurs_waited = true;
 
 				while (true)
 				{
@@ -4945,7 +4952,10 @@ bool spu_thread::process_mfc_cmd()
 						break;
 					}
 
-					thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
+					if (prev_running >= max_run)
+					{
+						thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
+					}
 
 					max_run = group->max_run;
 					
