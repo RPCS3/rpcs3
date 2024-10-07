@@ -1839,11 +1839,7 @@ void spu_thread::cpu_task()
 			if (group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg))
 			{
 				spurs_addr = arg;
-
-				if (group->max_run != group->max_num)
-				{
-					group->spurs_running++;
-				}
+				group->spurs_running++;
 			}
 			else
 			{
@@ -1900,7 +1896,7 @@ void spu_thread::cpu_task()
 		allow_interrupts_in_cpu_work = false;
 	}
 
-	if (spurs_addr != invalid_spurs && group->max_run != group->max_num)
+	if (spurs_addr != invalid_spurs)
 	{
 		if (group->spurs_running.exchange(0))
 		{
@@ -4894,19 +4890,53 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
-		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
+		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr == raddr && g_cfg.core.max_spurs_threads != g_cfg.core.max_spurs_threads.def && !spurs_waited;
 
 		if (is_spurs_task_wait)
 		{
 			// Wait for other threads to complete their tasks (temporarily)
 			u32 max_run = group->max_run;
 
-			u32 prev_running = group->spurs_running;
+			u32 prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+			{
+				if (x >= max_run)
+				{
+					x--;
+					return true;
+				}
 
-			if (prev_running > max_run)
+				return false;
+			}).first;
+
+			if (prev_running == max_run && prev_running != group->max_num)
+			{
+				group->spurs_running.notify_one();
+
+				if (group->spurs_running == max_run - 1)
+				{
+					// Try to let another thread slip in and take over execution 
+					thread_ctrl::wait_for(300);
+
+					// Try to quit waiting
+					prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+					{
+						if (x < max_run)
+						{
+							x++;
+							return true;
+						}
+
+						return false;
+					}).first;
+				}
+			}
+
+			if (prev_running >= max_run)
 			{
 				const u64 before = get_system_time();
 				u64 current = before;
+
+				lv2_obj::prepare_for_sleep(*this);
 
 				while (true)
 				{
@@ -4915,24 +4945,37 @@ bool spu_thread::process_mfc_cmd()
 						break;
 					}
 
-					thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
+					thread_ctrl::wait_on(group->spurs_running, prev_running, 10000 - (current - before));
 
 					max_run = group->max_run;
-					prev_running = group->spurs_running;
+					
+					prev_running = group->spurs_running.fetch_op([max_run](u32& x)
+					{
+						if (x < max_run)
+						{
+							x++;
+							return true;
+						}
 
-					if (prev_running <= max_run)
+						return false;
+					}).first;
+
+					if (prev_running < max_run)
 					{
 						break;
 					}
 
 					current = get_system_time();
 
-					if (current - before >= 5000u)
+					if (current - before >= 10000u)
 					{
 						// Timed-out
 						break;
 					}
 				}
+
+				state += cpu_flag::temp;
+				static_cast<void>(test_stopped());
 			}
 		}
 
@@ -5545,7 +5588,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return events.events & mask1;
 		}
 
-		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && group->max_run != group->max_num && !spurs_waited;
+		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr && g_cfg.core.max_spurs_threads != g_cfg.core.max_spurs_threads.def && !spurs_waited;
 
 		const auto wait_spurs_task = [&]
 		{
@@ -5572,6 +5615,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 						const u64 before = get_system_time();
 						u64 current = before;
 
+						lv2_obj::prepare_for_sleep(*this);
+
 						spurs_waited = true;
 
 						while (true)
@@ -5581,7 +5626,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 								break;
 							}
 
-							thread_ctrl::wait_on(group->spurs_running, prev_running, 5000 - (current - before));
+							thread_ctrl::wait_on(group->spurs_running, prev_running, 10000u - (current - before));
 
 							max_run = group->max_run;
 
@@ -5603,7 +5648,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 							current = get_system_time();
 
-							if (current - before >= 5000u)
+							if (current - before >= 10000u)
 							{
 								// Timed-out
 								group->spurs_running++;
@@ -5628,9 +5673,17 @@ s64 spu_thread::get_ch_value(u32 ch)
 				return false;
 			}).first;
 
-			if (prev_running == group->max_run)
+			if (prev_running == group->max_run && prev_running < group->max_num)
 			{
 				group->spurs_running.notify_one();
+
+				spurs_waited = true;
+
+				if (group->spurs_running == prev_running - 1)
+				{
+					// Try to let another thread slip in and take over execution 
+					thread_ctrl::wait_for(300);
+				}
 			}
 		}
 
