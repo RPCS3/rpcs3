@@ -4,7 +4,7 @@ include(ExternalProject)
 
 ExternalProject_Add(moltenvk
 	GIT_REPOSITORY https://github.com/KhronosGroup/MoltenVK.git
-	GIT_TAG edbdcf0
+	GIT_TAG 81541f6
 	BUILD_IN_SOURCE 1
 	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK
 	CONFIGURE_COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/fetchDependencies" --macos
