@@ -2,6 +2,7 @@
 
 # shellcheck disable=SC2086
 brew_arm64_install_packages() {
+    "$BREW_ARM64_PATH/bin/brew" cleanup
     for pkg in "$@"; do
         echo "Fetching bottle for $pkg..."
         bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_sonoma "$pkg")"
