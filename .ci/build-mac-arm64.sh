@@ -2,16 +2,15 @@
 
 # shellcheck disable=SC2086
 brew_arm64_install_packages() {
-    "$BREW_ARM64_PATH/bin/brew" cleanup
     for pkg in "$@"; do
         echo "Fetching bottle for $pkg..."
-        bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_sonoma "$pkg")"
+        bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_ventura "$pkg")"
         if [ ! -f "$bottle_path" ]; then
-            if ! "$BREW_ARM64_PATH/bin/brew" fetch --force --verbose --debug --bottle-tag=arm64_sonoma "$pkg"; then
+            if ! "$BREW_ARM64_PATH/bin/brew" fetch --force --verbose --debug --bottle-tag=arm64_ventura "$pkg"; then
                 echo "Failed to fetch bottle for $pkg"
                 return 1
             fi
-            bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_sonoma "$pkg")"
+            bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_ventura "$pkg")"
         fi
 
         echo "Installing $pkg..."
