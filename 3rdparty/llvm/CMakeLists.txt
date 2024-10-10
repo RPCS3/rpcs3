@@ -17,7 +17,10 @@ if(WITH_LLVM)
 		option(LLVM_CCACHE_BUILD OFF)
 		set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "Enable compiler warnings.")
 
-		if(WIN32 AND COMPILER_X86)
+		# For Windows x86 (not Windows AArch64).
+		# Check on MSVC is needed due to COMPILER_X86, COMPILER_ARM etc. are not set/supported by the MSVC compiler, if used.
+		# Furthermore, the MSVC compiler is not available/supported on Windows AArch64
+		if(WIN32 AND (COMPILER_X86 OR MSVC))
 			set(LLVM_USE_INTEL_JITEVENTS ON)
 		endif()
 
@@ -70,12 +73,18 @@ if(WITH_LLVM)
 				set(LLVM_TARGETS_TO_BUILD "X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 			endif()
 		endif()
-		if((WIN32 AND BUILD_LLVM) OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND COMPILER_X86))
+
+		# For Windows x86 (not Windows AArch64) only when BUILD_LLVM is enabled and
+		# for Linux x86 (not Linux AArch64) even if BUILD_LLVM is disabled (precompiled llvm used)
+		if(LLVM_USE_INTEL_JITEVENTS OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND COMPILER_X86))
 			list (APPEND LLVM_ADDITIONAL_LIBS IntelJITEvents)
 		endif()
+
+		# For Linux even if BUILD_LLVM is disabled (precompiled llvm used)
 		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			list (APPEND LLVM_ADDITIONAL_LIBS PerfJITEvents)
 		endif()
+
 		llvm_map_components_to_libnames(LLVM_LIBS
 			${LLVM_TARGETS_TO_BUILD}
 			${LLVM_ADDITIONAL_LIBS}
