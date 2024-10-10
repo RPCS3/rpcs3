@@ -29,9 +29,9 @@
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_LIBPNG": "OFF",
+        "LLVM_ENABLE_LIBCXX": "ON",
         "BUILD_LLVM": "OFF",
-        "STATIC_LINK_LLVM": "ON",
-        "LLVM_ENABLE_LIBCXX": "ON"
+        "STATIC_LINK_LLVM": "ON"
       },
       "environment": {
         "CXX": "clang++",

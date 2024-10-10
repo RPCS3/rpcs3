@@ -73,12 +73,18 @@ if(WITH_LLVM)
 				set(LLVM_TARGETS_TO_BUILD "X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 			endif()
 		endif()
+
+		# For Windows x86 (not Windows AArch64) only when BUILD_LLVM is enabled and
+		# for Linux x86 (not Linux AArch64) even if BUILD_LLVM is disabled (precompiled llvm used)
 		if(LLVM_USE_INTEL_JITEVENTS OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND COMPILER_X86))
 			list (APPEND LLVM_ADDITIONAL_LIBS IntelJITEvents)
 		endif()
-		if(LLVM_USE_PERF OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+
+		# For Linux even if BUILD_LLVM is disabled (precompiled llvm used)
+		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			list (APPEND LLVM_ADDITIONAL_LIBS PerfJITEvents)
 		endif()
+
 		llvm_map_components_to_libnames(LLVM_LIBS
 			${LLVM_TARGETS_TO_BUILD}
 			${LLVM_ADDITIONAL_LIBS}
