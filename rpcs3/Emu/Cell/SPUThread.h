@@ -769,7 +769,6 @@ public:
 	u32 spurs_addr = 0;
 	bool spurs_waited = false;
 	bool spurs_entered_wait = false;
-	bool spurs_read_events = false;
 	u64 spurs_wait_duration_last = 0;
 	u64 spurs_average_task_duration = 0;
 	u64 spurs_last_task_timestamp = 0;
