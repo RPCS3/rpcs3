@@ -25,6 +25,8 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 /usr/local/bin/brew update
 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 /usr/local/bin/brew install -f --build-from-source ffmpeg@5 || true
+/usr/local/bin/brew install -f --overwrite python || true
+/usr/local/bin/brew link --overwrite python || true
 /usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl2 vulkan-headers coreutils
 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5 || true
