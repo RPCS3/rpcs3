@@ -3,7 +3,7 @@
 # shellcheck disable=SC2086
 brew_arm64_install_packages() {
     for pkg in "$@"; do
-        echo "Fetching bottle for $pkg..."
+        echo "Fetching bottle for $pkg (arm64)..."
         bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_ventura "$pkg")"
         if [ ! -f "$bottle_path" ]; then
             if ! "$BREW_ARM64_PATH/bin/brew" fetch --force --verbose --debug --bottle-tag=arm64_ventura "$pkg"; then
@@ -13,8 +13,8 @@ brew_arm64_install_packages() {
             bottle_path="$("$BREW_ARM64_PATH/bin/brew" --cache --bottle-tag=arm64_ventura "$pkg")"
         fi
 
-        echo "Installing $pkg..."
-        "$BREW_ARM64_PATH/bin/brew" install --ignore-dependencies "$bottle_path" || true
+        echo "Installing $pkg (arm64)..."
+        "$BREW_ARM64_PATH/bin/brew" install --prefix="$BREW_ARM64_PATH" --ignore-dependencies "$bottle_path" || true
     done
 }
 
