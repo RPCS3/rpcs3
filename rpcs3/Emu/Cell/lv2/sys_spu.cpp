@@ -1933,7 +1933,7 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et, u8 spup)
+error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et, u32 spup)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -1967,7 +1967,7 @@ error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et,
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_disconnect_event(ppu_thread& ppu, u32 id, u32 et, u8 spup)
+error_code sys_spu_thread_disconnect_event(ppu_thread& ppu, u32 id, u32 et, u32 spup)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -2168,7 +2168,7 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread& ppu, u32 id, u8 spup)
+error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread& ppu, u32 id, u32 spup)
 {
 	ppu.state += cpu_flag::wait;
 
