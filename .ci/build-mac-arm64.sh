@@ -27,10 +27,12 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 /usr/local/bin/brew install -f --build-from-source ffmpeg@5 || true
 /usr/local/bin/brew install -f --overwrite python || true
 /usr/local/bin/brew link --overwrite python || true
-/usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
+/usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv curl #create-dmg
+/usr/local/bin/brew link -f curl || true
 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl2 vulkan-headers coreutils
 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5 || true
 
+export HOMEBREW_FORCE_BREWED_CURL=1
 export BREW_ARM64_PATH="/opt/homebrew1"
 sudo mkdir -p "$BREW_ARM64_PATH"
 sudo chmod 777 "$BREW_ARM64_PATH"
