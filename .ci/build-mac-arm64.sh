@@ -14,7 +14,7 @@ brew_arm64_install_packages() {
         fi
 
         echo "Installing $pkg (arm64)..."
-        "$BREW_ARM64_PATH/bin/brew" install --force --ignore-dependencies "$bottle_path" || true
+        "$BREW_ARM64_PATH/bin/brew" install --force --force-bottle --ignore-dependencies "$bottle_path" || true
     done
 }
 
