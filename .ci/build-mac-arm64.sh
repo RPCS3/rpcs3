@@ -37,8 +37,13 @@ sudo mkdir -p "$BREW_ARM64_PATH"
 sudo chmod 777 "$BREW_ARM64_PATH"
 curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C "$BREW_ARM64_PATH"
 
-# "$BREW_ARM64_PATH/bin/brew" update
-brew_arm64_install_packages 0mq aom aribb24 ca-certificates cjson dav1d ffmpeg@5 fontconfig freetype freetype2 gettext glew gmp gnutls lame libbluray libidn2 libnettle libogg libpng librist libsodium libsoxr libtasn libtasn1 libunistring libvmaf libvorbis libvpx libx11 libxau libxcb libxdmcp llvm@$LLVM_COMPILER_VER mbedtls molten-vk nettle opencore-amr openjpeg openssl opus p11-kit pkg-config pkgconfig pzstd rav1e sdl2 snappy speex srt svt-av1 theora vulkan-headers webp x264 x265 xz z3 zeromq zmq zstd curl
+#"$BREW_ARM64_PATH/bin/brew" update
+# libvorbis requires Homebrew-installed curl, but we can't run it on x64, and we also need the aarch64 libs, so we swap the binary
+brew_arm64_install_packages curl
+mv /opt/homebrew1/opt/curl/bin/curl /opt/homebrew1/opt/curl/bin/curl.bak
+ln -s /usr/local/opt/curl/bin/curl /opt/homebrew1/opt/curl/bin/curl
+
+brew_arm64_install_packages 0mq aom aribb24 ca-certificates cjson dav1d ffmpeg@5 fontconfig freetype freetype2 gettext glew gmp gnutls lame libbluray libidn2 libnettle libogg libpng librist libsodium libsoxr libtasn libtasn1 libunistring libvmaf libvorbis libvpx libx11 libxau libxcb libxdmcp llvm@$LLVM_COMPILER_VER mbedtls molten-vk nettle opencore-amr openjpeg openssl opus p11-kit pkg-config pkgconfig pzstd rav1e sdl2 snappy speex srt svt-av1 theora vulkan-headers webp x264 x265 xz z3 zeromq zmq zstd
 "$BREW_ARM64_PATH/bin/brew" link -f ffmpeg@5
 
 # moltenvk based on commit for 1.2.10 release
