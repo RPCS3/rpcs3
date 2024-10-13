@@ -98,14 +98,6 @@ git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
-# remove conflicting x64 dylibs
-/usr/local/bin/brew remove --ignore-dependencies openssl || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f openssl
-/usr/local/bin/brew remove --ignore-dependencies zstd || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f zstd
-/usr/local/bin/brew remove --ignore-dependencies xz || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f xz
-
 rm -rf build
 mkdir build && cd build || exit 1
 
@@ -141,6 +133,14 @@ export MACOSX_DEPLOYMENT_TARGET=13.0
     -DCMAKE_TOOLCHAIN_FILE=buildfiles/cmake/TCDarwinARM64.cmake \
     -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=130000" \
     -G Ninja
+    
+# remove conflicting x64 dylibs
+/usr/local/bin/brew remove --ignore-dependencies openssl || true
+"$BREW_ARM64_PATH/bin/brew" link --overwrite -f openssl
+/usr/local/bin/brew remove --ignore-dependencies zstd || true
+"$BREW_ARM64_PATH/bin/brew" link --overwrite -f zstd
+/usr/local/bin/brew remove --ignore-dependencies xz || true
+"$BREW_ARM64_PATH/bin/brew" link --overwrite -f xz
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
 
