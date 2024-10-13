@@ -129,18 +129,11 @@ export MACOSX_DEPLOYMENT_TARGET=13.0
     -DLLVM_TARGET_ARCH=arm64 \
     -DCMAKE_OSX_ARCHITECTURES=arm64 \
     -DCMAKE_IGNORE_PATH="$BREW_X64_PATH/lib" \
+    -DCMAKE_IGNORE_PREFIX_PATH=/usr/local/opt \
     -DCMAKE_SYSTEM_PROCESSOR=arm64 \
     -DCMAKE_TOOLCHAIN_FILE=buildfiles/cmake/TCDarwinARM64.cmake \
     -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=130000" \
     -G Ninja
-    
-# remove conflicting x64 dylibs
-/usr/local/bin/brew remove --ignore-dependencies openssl || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f openssl
-/usr/local/bin/brew remove --ignore-dependencies zstd || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f zstd
-/usr/local/bin/brew remove --ignore-dependencies xz || true
-"$BREW_ARM64_PATH/bin/brew" link --overwrite -f xz
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
 
