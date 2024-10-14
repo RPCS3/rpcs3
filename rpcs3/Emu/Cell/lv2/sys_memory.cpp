@@ -129,9 +129,9 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	if (const auto area = reserve_map(size, align))
+	if (const auto area = reserve_map(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(size, nullptr, align))
+		if (const u32 addr = area->alloc(static_cast<u32>(size), nullptr, align))
 		{
 			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
 
@@ -139,7 +139,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 			{
 				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-				vm::lock_sudo(addr, size);
+				vm::lock_sudo(addr, static_cast<u32>(size));
 				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
