@@ -93,7 +93,7 @@ std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
 
 // Todo: fix order of error checks
 
-error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	cpu.state += cpu_flag::wait;
 
@@ -155,7 +155,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 	return CELL_ENOMEM;
 }
 
-error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
 	cpu.state += cpu_flag::wait;
 
@@ -203,15 +203,15 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 		return {ct.ret, ct->size - ct->used};
 	}
 
-	if (const auto area = reserve_map(size, align))
+	if (const auto area = reserve_map(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(size))
+		if (const u32 addr = area->alloc(static_cast<u32>(size)))
 		{
 			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
 
 			if (alloc_addr)
 			{
-				vm::lock_sudo(addr, size);
+				vm::lock_sudo(addr, static_cast<u32>(size));
 				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
@@ -320,7 +320,7 @@ error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_u
 	return CELL_OK;
 }
 
-error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size)
+error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 size)
 {
 	cpu.state += cpu_flag::wait;
 
@@ -345,7 +345,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 	}
 
 	// Create the memory container
-	if (const u32 id = idm::make<lv2_memory_container>(size, true))
+	if (const u32 id = idm::make<lv2_memory_container>(static_cast<u32>(size), true))
 	{
 		cpu.check_state();
 		*cid = id;
