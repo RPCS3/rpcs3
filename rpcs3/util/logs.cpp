@@ -451,47 +451,47 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 logs::file_writer::file_writer(const std::string& name, u64 max_size)
 	: m_max_size(max_size)
 {
-	if (!name.empty() && max_size)
+	if (name.empty() || !max_size)
 	{
-		// Initialize ringbuffer
-		m_fptr = std::make_unique<uchar[]>(s_log_size);
+		return;
+	}
 
-		// Actual log file (allowed to fail)
-		if (!m_fout.open(name, fs::rewrite))
-		{
-			fprintf(stderr, "Log file open failed: %s (error %d)\n", name.c_str(), errno);
-		}
+	// Initialize ringbuffer
+	m_fptr = std::make_unique<uchar[]>(s_log_size);
 
-		// Compressed log, make it inaccessible (foolproof)
-		if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
-		{
+	// Actual log file (allowed to fail)
+	if (!m_fout.open(name, fs::rewrite))
+	{
+		fprintf(stderr, "Log file open failed: %s (error %d)\n", name.c_str(), errno);
+	}
+
+	// Compressed log, make it inaccessible (foolproof)
+	if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
+	{
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-			if (deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
+		if (deflateInit2(&m_zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) != Z_OK)
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
-				m_fout2.close();
-		}
-
-		if (!m_fout2)
 		{
-			fprintf(stderr, "Log file open failed: %s.gz (error %d)\n", name.c_str(), errno);
+			m_fout2.close();
 		}
+	}
+
+	if (!m_fout2)
+	{
+		fprintf(stderr, "Log file open failed: %s.gz (error %d)\n", name.c_str(), errno);
+	}
 
 #ifdef _WIN32
-		// Autodelete compressed log file
-		FILE_DISPOSITION_INFO disp;
-		disp.DeleteFileW = true;
-		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+	// Autodelete compressed log file
+	FILE_DISPOSITION_INFO disp{};
+	disp.DeleteFileW = true;
+	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
-	}
-	else
-	{
-		return;
-	}
 
 	m_writer = std::thread([this]()
 	{
