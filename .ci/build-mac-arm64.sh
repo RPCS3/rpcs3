@@ -22,7 +22,11 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
+ls -ld /usr/local/Cellar
 /usr/local/bin/brew update
+ls -ld /usr/local/Cellar
+sudo chown -R $(whoami):admin /usr/local/bin /usr/local/Cellar /usr/local/Homebrew
+ls -ld /usr/local/Cellar
 /usr/local/bin/brew install -f --overwrite curl
 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 /usr/local/bin/brew install -f --build-from-source ffmpeg@5 || true
