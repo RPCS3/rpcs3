@@ -1219,7 +1219,7 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 	s32 stick_val[4]{};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
+	for (usz i = 0; i < pad->m_sticks.size(); i++)
 	{
 		bool pressed{}; // unused
 		u16 val_min{};
@@ -1424,23 +1424,23 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_dev->axis_right[2] = find_buttons(cfg->rs_up);
 	m_dev->axis_right[3] = find_buttons(cfg->rs_down);
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1],  m_dev->axis_left[0]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3],  m_dev->axis_left[2]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev->axis_right[1], m_dev->axis_right[0]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev->axis_right[3], m_dev->axis_right[2]);
+	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1],  m_dev->axis_left[0]);
+	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3],  m_dev->axis_left[2]);
+	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, m_dev->axis_right[1], m_dev->axis_right[0]);
+	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, m_dev->axis_right[3], m_dev->axis_right[2]);
 
 	m_dev->axis_motion[0] = find_motion_button(cfg->motion_sensor_x);
 	m_dev->axis_motion[1] = find_motion_button(cfg->motion_sensor_y);
 	m_dev->axis_motion[2] = find_motion_button(cfg->motion_sensor_z);
 	m_dev->axis_motion[3] = find_motion_button(cfg->motion_sensor_g);
 
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, m_dev->axis_motion[0].code, m_dev->axis_motion[0].mirrored, m_dev->axis_motion[0].shift, DEFAULT_MOTION_X);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, m_dev->axis_motion[1].code, m_dev->axis_motion[1].mirrored, m_dev->axis_motion[1].shift, DEFAULT_MOTION_Y);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, m_dev->axis_motion[2].code, m_dev->axis_motion[2].mirrored, m_dev->axis_motion[2].shift, DEFAULT_MOTION_Z);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, m_dev->axis_motion[3].code, m_dev->axis_motion[3].mirrored, m_dev->axis_motion[3].shift, DEFAULT_MOTION_G);
+	pad->m_sensors[0] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_X, m_dev->axis_motion[0].code, m_dev->axis_motion[0].mirrored, m_dev->axis_motion[0].shift, DEFAULT_MOTION_X);
+	pad->m_sensors[1] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Y, m_dev->axis_motion[1].code, m_dev->axis_motion[1].mirrored, m_dev->axis_motion[1].shift, DEFAULT_MOTION_Y);
+	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, m_dev->axis_motion[2].code, m_dev->axis_motion[2].mirrored, m_dev->axis_motion[2].shift, DEFAULT_MOTION_Z);
+	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, m_dev->axis_motion[3].code, m_dev->axis_motion[3].mirrored, m_dev->axis_motion[3].shift, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors.emplace_back(true, 0);
-	pad->m_vibrateMotors.emplace_back(false, 0);
+	pad->m_vibrateMotors[0] = VibrateMotor(true, 0);
+	pad->m_vibrateMotors[1] = VibrateMotor(false, 0);
 
 	if (std::shared_ptr<EvdevDevice> evdev_device = add_device(player_config->device, false))
 	{

@@ -417,6 +417,7 @@ struct AnalogStick
 	std::map<u32, u16> m_pressed_keys_min{}; // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_keys_max{}; // only used in keyboard_pad_handler
 
+	AnalogStick() {}
 	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
 		: m_offset(offset)
 		, m_key_codes_min(std::move(key_codes_min))
@@ -447,6 +448,7 @@ struct VibrateMotor
 	bool m_is_large_motor = false;
 	u8 m_value = 0;
 
+	VibrateMotor() {}
 	VibrateMotor(bool is_large_motor, u8 value)
 		: m_is_large_motor(is_large_motor)
 		, m_value(value)
@@ -489,9 +491,9 @@ struct Pad
 	u8 m_battery_level{0};
 
 	std::vector<Button> m_buttons;
-	std::vector<AnalogStick> m_sticks;
-	std::vector<AnalogSensor> m_sensors;
-	std::vector<VibrateMotor> m_vibrateMotors;
+	std::array<AnalogStick, 4> m_sticks{};
+	std::array<AnalogSensor, 4> m_sensors{};
+	std::array<VibrateMotor, 2> m_vibrateMotors{};
 
 	// These hold bits for their respective buttons
 	u16 m_digital_1{0};
