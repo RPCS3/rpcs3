@@ -1278,6 +1278,6 @@ void keyboard_pad_handler::process()
 		}
 
 		pad->m_buttons = pad_internal.m_buttons;
-		pad->m_sticks = std::move(squircled_sticks);
+		pad->m_sticks = squircled_sticks; // Don't use std::move here. We assign values lockless, so std::move can lead to segfaults.
 	}
 }
