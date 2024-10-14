@@ -494,6 +494,7 @@ int main(int argc, char** argv)
 	}
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
+	const std::string log_name = fs::get_cache_dir() + "RPCS3.log";
 
 	static fs::file instance_lock;
 
@@ -512,19 +513,19 @@ int main(int argc, char** argv)
 		{
 			if (fs::exists(lock_name))
 			{
-				report_fatal_error("Another instance of RPCS3 is running.\nClose it or kill its process, if necessary.");
+				report_fatal_error(fmt::format("Another instance of RPCS3 is running.\nClose it or kill its process, if necessary.\n'%s' still exists.", lock_name));
 			}
 
-			report_fatal_error("Cannot create RPCS3.log (access denied)."
+			report_fatal_error(fmt::format("Cannot create '%s' or '%s' (access denied).\n"
 #ifdef _WIN32
-				"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
+				"Note that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
 #else
-				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
+				"Please, check RPCS3 permissions."
 #endif
-			);
+				, log_name, lock_name));
 		}
 
-		report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
+		report_fatal_error(fmt::format("Cannot create'%s' or '%s' (error=%s)", log_name, lock_name, fs::g_tls_error));
 	}
 
 #ifdef _WIN32
@@ -568,7 +569,7 @@ int main(int argc, char** argv)
 		}
 
 		// Limit log size to ~25% of free space
-		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
+		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
 	static std::unique_ptr<logs::listener> fatal_listener = std::make_unique<fatal_error_listener>();

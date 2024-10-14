@@ -48,13 +48,18 @@ sys_vm_t::sys_vm_t(utils::serial& ar)
 	g_fxo->get<sys_vm_global_t>().total_vsize += size;
 }
 
-error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
+error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
 	ppu.state += cpu_flag::wait;
 
 	sys_vm.warning("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%x, policy=0x%x, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 
-	if (!vsize || !psize || vsize % 0x2000000 || vsize > 0x10000000 || psize > 0x10000000 || policy != SYS_VM_POLICY_AUTO_RECOMMENDED)
+	if (!vsize || !psize || vsize % 0x200'0000 || vsize > 0x1000'0000 || psize > 0x1000'0000 || psize % 0x1'0000 || psize % policy != SYS_VM_POLICY_AUTO_RECOMMENDED)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (ppu.gpr[11] == 300 && psize < 0x10'0000)
 	{
 		return CELL_EINVAL;
 	}
@@ -68,16 +73,16 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		return CELL_ESRCH;
 	}
 
-	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize](u32& size)
+	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize, has_root = g_ps3_process_info.has_root_perm()](u32& size)
 	{
 		// A single process can hold up to 256MB of virtual memory, even on DECR
 		// VSH can hold more
-		if ((g_ps3_process_info.has_root_perm() ? 0x1E000000 : 0x10000000) - size < vsize)
+		if ((has_root ? 0x1E000000 : 0x10000000) - size < vsize)
 		{
 			return false;
 		}
 
-		size += vsize;
+		size += static_cast<u32>(vsize);
 		return true;
 	}).second)
 	{
@@ -86,7 +91,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 
 	if (!ct->take(psize))
 	{
-		g_fxo->get<sys_vm_global_t>().total_vsize -= vsize;
+		g_fxo->get<sys_vm_global_t>().total_vsize -= static_cast<u32>(vsize);
 		return CELL_ENOMEM;
 	}
 
@@ -96,10 +101,10 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		sys_vm.warning("sys_vm_memory_map(): Found VM 0x%x area (vsize=0x%x)", addr, vsize);
 
 		// Alloc all memory (shall not fail)
-		ensure(area->alloc(vsize));
-		vm::lock_sudo(area->addr, vsize);
+		ensure(area->alloc(static_cast<u32>(vsize)));
+		vm::lock_sudo(area->addr, static_cast<u32>(vsize));
 
-		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
+		idm::make<sys_vm_t>(area->addr, static_cast<u32>(vsize), ct, static_cast<u32>(psize));
 
 		// Write a pointer for the allocated memory
 		ppu.check_state();
@@ -108,11 +113,11 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	}
 
 	ct->free(psize);
-	g_fxo->get<sys_vm_global_t>().total_vsize -= vsize;
+	g_fxo->get<sys_vm_global_t>().total_vsize -= static_cast<u32>(vsize);
 	return CELL_ENOMEM;
 }
 
-error_code sys_vm_memory_map_different(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
+error_code sys_vm_memory_map_different(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -153,7 +158,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 	return CELL_OK;
 }
 
-error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
+error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u64 size)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -176,7 +181,7 @@ error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 			return CELL_ENOMEM;
 		}
 
-		vmo.psize += size;
+		vmo.psize += static_cast<u32>(size);
 		return {};
 	});
 
@@ -193,7 +198,7 @@ error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
+error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u64 size)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -213,12 +218,12 @@ error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 
 		auto [_, ok] = vmo.psize.fetch_op([&](u32& value)
 		{
-			if (value < 0x100000ull + size)
+			if (value <= size || value - size < 0x100000ull)
 			{
 				return false;
 			}
 
-			value -= size;
+			value -= static_cast<u32>(size);
 			return true;
 		});
 
