@@ -4896,7 +4896,7 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
-		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr;
+		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr != -0x80u;
 
 		if (!is_spurs_task_wait || spurs_addr != raddr || spurs_waited)
 		{
@@ -4949,23 +4949,25 @@ bool spu_thread::process_mfc_cmd()
 				spurs_waited = true;
 				spurs_entered_wait = true;
 
-				// Wait the duration of 3 tasks
-				const u64 spurs_wait_time = std::clamp<u64>(spurs_average_task_duration / spurs_task_count_to_calculate * 3 + 2'000, 3'000, 100'000);
+				// Wait the duration of one and a half tasks
+				const u64 spurs_wait_time = std::clamp<u64>(spurs_average_task_duration / spurs_task_count_to_calculate * 3 / 2, 10'000, 100'000);
 				spurs_wait_duration_last = spurs_wait_time;
 
 				if (spurs_last_task_timestamp)
 				{
 					const u64 avg_entry = spurs_average_task_duration / spurs_task_count_to_calculate;
 					spurs_average_task_duration -= avg_entry; 
-					spurs_average_task_duration += std::min<u64>(45'000, before - spurs_last_task_timestamp);
+					spurs_average_task_duration += std::min<u64>(45'000, current - spurs_last_task_timestamp);
 					spu_log.trace("duration: %d, avg=%d", current - spurs_last_task_timestamp, spurs_average_task_duration / spurs_task_count_to_calculate);
 					spurs_last_task_timestamp = 0;
 				}
 
 				while (true)
 				{
-					if (is_stopped())
+					if (is_stopped() || current - before >= spurs_wait_time)
 					{
+						// Timed-out
+						group->spurs_running++;
 						break;
 					}
 
@@ -4993,13 +4995,6 @@ bool spu_thread::process_mfc_cmd()
 					}
 
 					current = get_system_time();
-
-					if (current - before >= spurs_wait_time)
-					{
-						// Timed-out
-						group->spurs_running++;
-						break;
-					}
 				}
 
 				state += cpu_flag::temp;
@@ -5013,20 +5008,50 @@ bool spu_thread::process_mfc_cmd()
 
 			if (is_spurs_task_wait)
 			{
-				const u64 current = get_system_time();
+				const bool is_idle = (_ref<u8>(0x100 + 0x73) & (1u << index)) != 0;
+				const bool was_idle = (static_cast<u8>(rdata[0x73]) & (1u << index)) != 0;
 
-				if (spurs_last_task_timestamp)
+				if (!was_idle && is_idle)
 				{
-					const u64 avg_entry = spurs_average_task_duration / spurs_task_count_to_calculate;
-					spurs_average_task_duration -= avg_entry;
-					spu_log.trace("duration: %d, avg=%d", current - spurs_last_task_timestamp, spurs_average_task_duration / spurs_task_count_to_calculate);
-					spurs_average_task_duration -= avg_entry; 
-					spurs_average_task_duration += std::min<u64>(45'000, current - spurs_last_task_timestamp);
-				}
+					const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
+					{
+						if (x)
+						{
+							x--;
+							return true;
+						}
 
-				spurs_last_task_timestamp = current;
-				spurs_waited = false;
-				spurs_entered_wait = false;
+						return false;
+					}).first;
+
+					if (prev_running)
+					{
+						spurs_entered_wait = true;
+					}
+
+					if (prev_running == group->max_run && prev_running < group->max_num)
+					{
+						group->spurs_running.notify_one();
+					}
+				}
+				else if (was_idle && !is_idle)
+				{
+					// Cleanup
+					const u64 current = get_system_time();
+
+					if (spurs_last_task_timestamp)
+					{
+						const u64 avg_entry = spurs_average_task_duration / spurs_task_count_to_calculate;
+						spurs_average_task_duration -= avg_entry; 
+						spurs_average_task_duration += std::min<u64>(45'000, current - spurs_last_task_timestamp);
+						spu_log.trace("duration: %d, avg=%d", current - spurs_last_task_timestamp, spurs_average_task_duration / spurs_task_count_to_calculate);
+						spurs_last_task_timestamp = 0;
+					}
+
+					spurs_last_task_timestamp = current;
+					spurs_waited = false;
+					spurs_entered_wait = false;
+				}
 			}
 		}
 		else
@@ -5630,41 +5655,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 		if (events.count)
 		{
 			return events.events & mask1;
-		}
-
-		const bool is_spurs_task_wait = pc == 0x11a8 && spurs_addr == raddr;
-
-		if (is_spurs_task_wait)
-		{
-			if (g_cfg.core.max_spurs_threads != g_cfg.core.max_spurs_threads.def && !spurs_entered_wait && (static_cast<u8>(rdata[0x73]) & (1u << index)))
-			{
-				const u32 prev_running = group->spurs_running.fetch_op([](u32& x)
-				{
-					if (x)
-					{
-						x--;
-						return true;
-					}
-
-					return false;
-				}).first;
-
-				if (prev_running)
-				{
-					spurs_entered_wait = true;
-				}
-
-				if (prev_running == group->max_run && prev_running < group->max_num)
-				{
-					group->spurs_running.notify_one();
-
-					if (group->spurs_running == prev_running - 1)
-					{
-						// Try to let another thread slip in and take over execution 
-						thread_ctrl::wait_for(300);
-					}
-				}
-			}
 		}
 
 		spu_function_logger logger(*this, "MFC Events read");
