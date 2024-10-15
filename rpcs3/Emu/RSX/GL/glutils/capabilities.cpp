@@ -33,7 +33,7 @@ namespace gl
 
 	void capabilities::initialize()
 	{
-		int find_count = 16;
+		int find_count = 17;
 		int ext_count = 0;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -161,6 +161,13 @@ namespace gl
 			if (check(ext_name, "GL_NV_fragment_shader_barycentric"))
 			{
 				NV_fragment_shader_barycentric_supported = true;
+				find_count--;
+				continue;
+			}
+
+			if (check(ext_name, "GL_AMD_pinned_memory"))
+			{
+				AMD_pinned_memory = true;
 				find_count--;
 				continue;
 			}

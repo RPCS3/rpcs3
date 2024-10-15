@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
+    <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
@@ -88,6 +89,7 @@
   <ItemGroup>
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />

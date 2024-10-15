@@ -6,7 +6,7 @@ namespace gl
 	void buffer::allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
 	{
 		if (const auto& caps = get_driver_caps();
-			caps.ARB_buffer_storage_supported)
+			m_target != target::userptr && caps.ARB_buffer_storage_supported)
 		{
 			GLenum flags = 0;
 			if (type == memory_type::host_visible)

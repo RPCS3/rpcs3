@@ -47,6 +47,7 @@
     <ClCompile Include="Emu\RSX\GL\upscalers\fsr1\fsr_pass.cpp">
       <Filter>upscalers\fsr1</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -118,6 +119,7 @@
     <ClInclude Include="Emu\RSX\GL\upscalers\fsr_pass.h">
       <Filter>upscalers</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">

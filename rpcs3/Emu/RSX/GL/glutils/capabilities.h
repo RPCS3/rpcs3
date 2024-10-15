@@ -25,6 +25,7 @@ namespace gl
 
 		bool EXT_dsa_supported = false;
 		bool EXT_depth_bounds_test = false;
+		bool AMD_pinned_memory = false;
 		bool ARB_dsa_supported = false;
 		bool ARB_bindless_texture_supported = false;
 		bool ARB_buffer_storage_supported = false;
