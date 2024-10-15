@@ -562,6 +562,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
+	if (spu_num >= std::size(decltype(lv2_spu_group::threads_map){}))
+	{
+		return CELL_EINVAL;
+	}
+
 	if (!attr)
 	{
 		return CELL_EFAULT;
@@ -598,7 +603,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	{
 	case SYS_SPU_IMAGE_TYPE_KERNEL:
 	{
-		const auto handle = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
+		const auto handle = idm::get<lv2_obj, lv2_spu_image>(image.entry_point);
 
 		if (!handle)
 		{
@@ -701,11 +706,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	if (!group)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (spu_num >= group->threads_map.size())
-	{
-		return CELL_EINVAL;
 	}
 
 	std::unique_lock lock(group->mutex);
@@ -1831,16 +1831,16 @@ error_code sys_spu_thread_write_snr(ppu_thread& ppu, u32 id, u32 number, u32 val
 
 	sys_spu.trace("sys_spu_thread_write_snr(id=0x%x, number=%d, value=0x%x)", id, number, value);
 
+	if (number > 1)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto [thread, group] = lv2_spu_group::get_thread(id);
 
 	if (!thread) [[unlikely]]
 	{
 		return CELL_ESRCH;
-	}
-
-	if (number > 1)
-	{
-		return CELL_EINVAL;
 	}
 
 	thread->push_snr(number, value);
@@ -1919,17 +1919,15 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 	if (!ep)
 	{
 		sys_spu.error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
-		return CELL_EINVAL;
+		return CELL_OK;
 	}
+
+	// No error checking is performed
 
 	std::lock_guard lock(group->mutex);
 
-	if (!lv2_obj::check(*ep))
-	{
-		return CELL_EINVAL;
-	}
-
 	ep->reset();
+
 	return CELL_OK;
 }
 
@@ -2092,17 +2090,17 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 
 	sys_spu.warning("sys_spu_thread_group_connect_event_all_threads(id=0x%x, eq=0x%x, req=0x%llx, spup=*0x%x)", id, eq, req, spup);
 
+	if (!req)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto group = idm::get<lv2_spu_group>(id);
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
 
 	if (!group || !queue)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (!req)
-	{
-		return CELL_EINVAL;
 	}
 
 	std::unique_lock lock(group->mutex);
@@ -2174,16 +2172,16 @@ error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread& ppu, u3
 
 	sys_spu.warning("sys_spu_thread_group_disconnect_event_all_threads(id=0x%x, spup=%d)", id, spup);
 
+	if (spup > 63)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (spup > 63)
-	{
-		return CELL_EINVAL;
 	}
 
 	std::lock_guard lock(group->mutex);
