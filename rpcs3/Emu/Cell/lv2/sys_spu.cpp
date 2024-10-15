@@ -562,6 +562,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	sys_spu.warning("sys_spu_thread_initialize(thread=*0x%x, group=0x%x, spu_num=%d, img=*0x%x, attr=*0x%x, arg=*0x%x)", thread, group_id, spu_num, img, attr, arg);
 
+	if (spu_num >= std::size(decltype(lv2_spu_group::threads_map){}))
+	{
+		return CELL_EINVAL;
+	}
+
 	if (!attr)
 	{
 		return CELL_EFAULT;
@@ -598,7 +603,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	{
 	case SYS_SPU_IMAGE_TYPE_KERNEL:
 	{
-		const auto handle = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
+		const auto handle = idm::get<lv2_obj, lv2_spu_image>(image.entry_point);
 
 		if (!handle)
 		{
@@ -701,11 +706,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	if (!group)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (spu_num >= group->threads_map.size())
-	{
-		return CELL_EINVAL;
 	}
 
 	std::unique_lock lock(group->mutex);
