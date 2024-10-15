@@ -127,17 +127,25 @@ Start **Visual Studio**, click on `Open a project or solution` and select the `r
 
 **NOTE:** The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
-You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z) and extract them to `3rdparty\llvm\`,
-as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation
-time (unoptimised/debug libs are currently not available precompiled).
+To speed up the compilation time, you may want to download and install some of the following precompiled libs:
+- [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z): extract them to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64`
+  (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created)
+- [additional libs](https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z): extract them to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64\glslang`
+  (e.g. `c:\rpcs3\build\lib_ext\Release-x64\glslang`; the path needs to be created)
+
+**NOTES:**
+- `<$(Configuration)>` can assume values `Release` or `Debug`.
+- Unoptimised/debug libs are currently not available precompiled for both **LLVM** and **glslang**. Trying to use them when building the **RPCS3** application in `Debug` mode will provide a `cannot open file` error.
 
 If you're not using the precompiled libs, those dependency libs need to be compiled first. From the `Solution Explorer` panel:
 1) expand `__BUILD_BEFORE`
 2) from the `Solution Configurations` drop-down menu, select `Release` (select `Debug` if you want to build in `Debug` mode)
 3) one after another, right-click on the following projects and then click on `Build` to build the selected lib:
    - `glslang`
-   - either `llvm_build`
-   - or `llvm_build_clang_cl` (if you installed **clang** on VS)
+   - `llvm_build`
+   - or `llvm_build_clang_cl` (if you have also the **clang** compiler installed on VS)
+
+**NOTE:** Compiled dependency libs have priority over precompiled libs, if installed. It means that they will always be referenced and linked in case the precompiled libs are also available.
 
 In order to build the **RPCS3** application:
 1) from the `Solution Configurations` drop-down menu, select `Release` (select `Debug` if you want to build in `Debug` mode)
