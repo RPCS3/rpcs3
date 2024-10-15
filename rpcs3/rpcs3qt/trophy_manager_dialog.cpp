@@ -522,6 +522,13 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 		//m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
+	if (restore_layout)
+	{
+		// Make sure the actions and the headers are synced
+		m_game_table->sync_header_actions(m_game_column_acts, [this](int col) { return m_gui_settings->GetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col)); });
+		m_trophy_table->sync_header_actions(m_trophy_column_acts, [this](int col) { return m_gui_settings->GetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col)); });
+	}
+
 	ApplyFilter();
 
 	// Show dialog and then paint gui in order to adjust headers correctly
@@ -542,6 +549,10 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 	m_splitter->restoreState(splitter_state);
 	m_game_table->horizontalHeader()->restoreState(game_table_state);
 	m_trophy_table->horizontalHeader()->restoreState(trophy_table_state);
+
+	// Make sure the actions and the headers are synced
+	m_game_table->sync_header_actions(m_game_column_acts, [this](int col) { return m_gui_settings->GetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col)); });
+	m_trophy_table->sync_header_actions(m_trophy_column_acts, [this](int col) { return m_gui_settings->GetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col)); });
 
 	resize(window_size);
 }
