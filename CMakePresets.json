@@ -7,12 +7,12 @@
       "binaryDir": "build-gcc",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
         "USE_FAUDIO": "OFF",
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_LIBPNG": "OFF",
-        "USE_NATIVE_INSTRUCTIONS": "ON",
-        "USE_PRECOMPILED_HEADERS": "ON",
         "BUILD_LLVM": "OFF",
         "STATIC_LINK_LLVM": "ON"
       }
@@ -23,13 +23,13 @@
       "binaryDir": "build-clang64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
         "USE_FAUDIO": "OFF",
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_LIBPNG": "OFF",
         "LLVM_ENABLE_LIBCXX": "ON",
-        "USE_NATIVE_INSTRUCTIONS": "ON",
-        "USE_PRECOMPILED_HEADERS": "ON",
         "BUILD_LLVM": "OFF",
         "STATIC_LINK_LLVM": "ON"
       },
@@ -48,11 +48,14 @@
         "strategy": "external"
       },
       "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
         "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "USE_FAUDIO": "OFF",
-        "USE_PRECOMPILED_HEADERS": "ON",
-        "USE_SYSTEM_ZLIB": "OFF",
         "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_OPENAL": "OFF",
         "BUILD_LLVM": "ON",
         "STATIC_LINK_LLVM": "ON"
       },
@@ -63,6 +66,18 @@
           ]
         }
       }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-debug",
+      "configurePreset": "msvc",
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc",
+      "configuration": "Release"
     }
   ]
 }
