@@ -1919,17 +1919,15 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 	if (!ep)
 	{
 		sys_spu.error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
-		return CELL_EINVAL;
+		return CELL_OK;
 	}
+
+	// No error checking is performed
 
 	std::lock_guard lock(group->mutex);
 
-	if (!lv2_obj::check(*ep))
-	{
-		return CELL_EINVAL;
-	}
-
 	ep->reset();
+
 	return CELL_OK;
 }
 
