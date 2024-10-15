@@ -9,15 +9,15 @@ brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
-arch -x86_64 /usr/local/bin/brew install -f --overwrite python@3.12 || arch -x86_64 /usr/local/bin/brew link --overwrite python@3.12
+arch -x86_64 /usr/local/bin/brew install -f --overwrite python || arch -x86_64 /usr/local/bin/brew link --overwrite python
 arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg@5
 arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetype
 arch -x86_64 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl2 vulkan-headers coreutils
 arch -x86_64 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5
 
-# moltenvk based on commit for 1.2.10 release
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/0d9f25fbd1658e975d00bd0e8cccd20a0c2cb74b/Formula/m/molten-vk.rb
+# moltenvk based on commit for 1.2.11 release
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/6bfc8950c696d1f952425e8af2a6248603dc0df9/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 export CXX=clang++
 export CC=clang

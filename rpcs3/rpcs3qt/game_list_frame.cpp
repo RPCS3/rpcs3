@@ -230,12 +230,7 @@ void game_list_frame::LoadSettings()
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
 
-	for (int col = 0; col < m_columnActs.count(); ++col)
-	{
-		const bool vis = m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col));
-		m_columnActs[col]->setChecked(vis);
-		m_game_list->setColumnHidden(col, !vis);
-	}
+	m_game_list->sync_header_actions(m_columnActs, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
 }
 
 game_list_frame::~game_list_frame()
@@ -915,6 +910,7 @@ void game_list_frame::OnRefreshFinished()
 	if (!std::exchange(m_initial_refresh_done, true))
 	{
 		m_game_list->restore_layout(m_gui_settings->GetValue(gui::gl_state).toByteArray());
+		m_game_list->sync_header_actions(m_columnActs, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
 	}
 
 	// Emit signal and remove slots
