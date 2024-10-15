@@ -314,11 +314,6 @@ void keyboard_pad_handler::release_all_keys()
 
 		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
-			if (i >= max_sticks)
-			{
-				input_log.fatal("Too many sticks (%d vs %d)", pad.m_sticks.size(), max_sticks);
-				break;
-			}
 			m_stick_min[i] = 0;
 			m_stick_max[i] = 128;
 			m_stick_val[i] = 128;
@@ -1067,18 +1062,18 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
 	}
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_keys(cfg->ls_left), find_keys(cfg->ls_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_keys(cfg->ls_up),   find_keys(cfg->ls_down));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_keys(cfg->rs_left), find_keys(cfg->rs_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_keys(cfg->rs_up),   find_keys(cfg->rs_down));
+	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_keys(cfg->ls_left), find_keys(cfg->ls_right));
+	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_keys(cfg->ls_up),   find_keys(cfg->ls_down));
+	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_keys(cfg->rs_left), find_keys(cfg->rs_right));
+	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_keys(cfg->rs_up),   find_keys(cfg->rs_down));
 
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
+	pad->m_sensors[0] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
+	pad->m_sensors[1] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
+	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
+	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors.emplace_back(true, 0);
-	pad->m_vibrateMotors.emplace_back(false, 0);
+	pad->m_vibrateMotors[0] = VibrateMotor(true, 0);
+	pad->m_vibrateMotors[1] = VibrateMotor(false, 0);
 
 	m_bindings.emplace_back(pad, nullptr, nullptr);
 	m_pads_internal.push_back(*pad);
@@ -1258,7 +1253,7 @@ void keyboard_pad_handler::process()
 
 		// Normalize and apply pad squircling
 		// Copy sticks first. We don't want to modify the raw internal values
-		std::vector<AnalogStick> squircled_sticks = pad_internal.m_sticks;
+		std::array<AnalogStick, 4> squircled_sticks = pad_internal.m_sticks;
 
 		// Apply squircling
 		if (cfg->lpadsquircling != 0)
@@ -1278,6 +1273,6 @@ void keyboard_pad_handler::process()
 		}
 
 		pad->m_buttons = pad_internal.m_buttons;
-		pad->m_sticks = std::move(squircled_sticks);
+		pad->m_sticks = squircled_sticks; // Don't use std::move here. We assign values lockless, so std::move can lead to segfaults.
 	}
 }
