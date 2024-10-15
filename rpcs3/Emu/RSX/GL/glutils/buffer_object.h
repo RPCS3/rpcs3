@@ -15,7 +15,8 @@ namespace gl
 			element_array = GL_ELEMENT_ARRAY_BUFFER,
 			uniform = GL_UNIFORM_BUFFER,
 			texture = GL_TEXTURE_BUFFER,
-			ssbo = GL_SHADER_STORAGE_BUFFER
+			ssbo = GL_SHADER_STORAGE_BUFFER,
+			userptr = GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD
 		};
 
 		enum class access
