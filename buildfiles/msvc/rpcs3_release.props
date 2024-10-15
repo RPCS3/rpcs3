@@ -15,7 +15,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='Release'">%(AdditionalLibraryDirectories);..\3rdparty\llvm\llvm_build\Release\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='Release'">%(AdditionalLibraryDirectories);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\lib;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\$(Configuration)\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);
         LLVMAggressiveInstCombine.lib;
         LLVMAnalysis.lib;

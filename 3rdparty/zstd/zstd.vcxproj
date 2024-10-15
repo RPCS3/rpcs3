@@ -106,8 +106,8 @@
     <Keyword>Win32Proj</Keyword>
     <ProjectName>zstd</ProjectName>
     <RootNamespace>zstd</RootNamespace>
-    <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
-    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <InstructionSet>NotSet</InstructionSet>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
