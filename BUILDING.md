@@ -127,11 +127,9 @@ Start **Visual Studio**, click on `Open a project or solution` and select the `r
 
 **NOTE:** The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
-To speed up the compilation time, you may want to download and install some of the following precompiled libs:
-- [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z): extract them to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64`
-  (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created)
-- [additional libs](https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z): extract them to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64\glslang`
-  (e.g. `c:\rpcs3\build\lib_ext\Release-x64\glslang`; the path needs to be created)
+To speed up the compilation time, you may want to download and extract to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64` (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created) some of the following precompiled libs:
+- [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z)
+- [additional libs](https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z)
 
 **NOTES:**
 - `<$(Configuration)>` can assume values `Release` or `Debug`.
