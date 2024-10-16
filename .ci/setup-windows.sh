@@ -68,7 +68,7 @@ download_and_verify()
 }
 
 # Some dependencies install here
-[ -d "./build/lib_ext/Release-x64" ] || mkdir "./build/lib_ext/Release-x64"
+[ -d "./build/lib_ext/Release-x64" ] || mkdir -p "./build/lib_ext/Release-x64"
 
 for url in $DEP_URLS; do
     # Get the filename from the URL and remove query strings (?arg=something).
