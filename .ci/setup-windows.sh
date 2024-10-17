@@ -68,7 +68,7 @@ download_and_verify()
 }
 
 # Some dependencies install here
-[ -d "./lib" ] || mkdir "./lib"
+[ -d "./build/lib_ext/Release-x64" ] || mkdir -p "./build/lib_ext/Release-x64"
 
 for url in $DEP_URLS; do
     # Get the filename from the URL and remove query strings (?arg=something).
@@ -78,8 +78,8 @@ for url in $DEP_URLS; do
     # shellcheck disable=SC1003
     case "$url" in
     *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
-    *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./3rdparty/llvm" ;;
-    *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
+    *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
+    *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait
