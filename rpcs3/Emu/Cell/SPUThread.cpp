@@ -3898,7 +3898,23 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	{
 		if (raddr)
 		{
-			vm::reservation_notifier_notify(addr);
+			if (raddr != spurs_addr || pc != 0x11e4)
+			{
+				vm::reservation_notifier_notify(addr);
+			}
+			else
+			{
+				const u32 thread_bit_mask = (1u << index);
+				constexpr usz SPU_IDLE = 0x73;
+
+				const bool switched_from_running_to_idle = (static_cast<u8>(rdata[SPU_IDLE]) & thread_bit_mask) == 0 && (_ref<u8>(0x100 + SPU_IDLE) & thread_bit_mask) != 0;
+
+				if (switched_from_running_to_idle)
+				{
+					vm::reservation_notifier_notify(addr);
+				}
+			}
+
 			raddr = 0;
 		}
 
