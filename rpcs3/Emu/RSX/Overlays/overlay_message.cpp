@@ -117,12 +117,12 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void message_item::update(usz index, u64 timestamp_us, s16 y_offset)
+		void message_item::update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset)
 		{
 			if (m_cur_pos != index)
 			{
 				m_cur_pos = index;
-				set_pos(10, y_offset);
+				set_pos(x_offset, y_offset);
 			}
 
 			if (!m_processed)
@@ -198,18 +198,29 @@ namespace rsx
 			// Render reversed list. Oldest entries are furthest from the border
 			constexpr u16 spacing = 4;
 			s16 y_offset = 8;
+			s16 x_offset = 10;
 			usz index = 0;
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
 				if (origin == message_pin_location::top) [[ likely ]]
 				{
-					it->update(index, cur_time, y_offset);
+					it->update(index, cur_time, x_offset, y_offset);
 					y_offset += (spacing + it->h);
 				}
-				else
+				else if (origin == message_pin_location::bottom)
 				{
 					y_offset += (spacing + it->h);
-					it->update(index, cur_time, virtual_height - y_offset);
+					it->update(index, cur_time, x_offset, virtual_height - y_offset);
+				}
+				else if (origin == message_pin_location::top_right)
+				{
+					it->update(index, cur_time, virtual_width - x_offset - it->w, y_offset);
+					y_offset += (spacing + it->h);
+				}
+				else if (origin == message_pin_location::bottom_right)
+				{
+					y_offset += (spacing + it->h);
+					it->update(index, cur_time, virtual_width - x_offset - it->w, virtual_height - y_offset);
 				}
 			}
 		}
@@ -225,8 +236,11 @@ namespace rsx
 
 			update_queue(m_visible_items_top, m_ready_queue_top, message_pin_location::top);
 			update_queue(m_visible_items_bottom, m_ready_queue_bottom, message_pin_location::bottom);
+			update_queue(m_visible_items_top_right, m_ready_queue_top_right, message_pin_location::top_right);
+			update_queue(m_visible_items_bottom_right, m_ready_queue_bottom_right, message_pin_location::bottom_right);
 
-			visible = !m_visible_items_top.empty() || !m_visible_items_bottom.empty();
+			visible = !m_visible_items_top.empty() || !m_visible_items_bottom.empty() ||
+			          !m_visible_items_top_right.empty() || !m_visible_items_bottom_right.empty();
 		}
 
 		compiled_resource message::get_compiled()
@@ -246,6 +260,16 @@ namespace rsx
 			}
 
 			for (auto& item : m_visible_items_bottom)
+			{
+				cr.add(item.get_compiled());
+			}
+
+			for (auto& item : m_visible_items_top_right)
+			{
+				cr.add(item.get_compiled());
+			}
+
+			for (auto& item : m_visible_items_bottom_right)
 			{
 				cr.add(item.get_compiled());
 			}
@@ -287,6 +311,10 @@ namespace rsx
 				return check_list(m_ready_queue_top) || check_list(m_visible_items_top);
 			case message_pin_location::bottom:
 				return check_list(m_ready_queue_bottom) || check_list(m_visible_items_bottom);
+			case message_pin_location::top_right:
+				return check_list(m_ready_queue_top_right) || check_list(m_visible_items_top_right);
+			case message_pin_location::bottom_right:
+				return check_list(m_ready_queue_bottom_right) || check_list(m_visible_items_bottom_right);
 			}
 
 			return false;

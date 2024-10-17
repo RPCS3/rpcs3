@@ -12,7 +12,9 @@ namespace rsx
 		enum class message_pin_location
 		{
 			top,
-			bottom
+			bottom,
+			top_right,
+			bottom_right
 		};
 
 		class message_item : public rounded_rect
@@ -20,7 +22,7 @@ namespace rsx
 		public:
 			template <typename T>
 			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
-			void update(usz index, u64 timestamp_us, s16 y_offset);
+			void update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset);
 			void set_pos(s16 _x, s16 _y) override;
 
 			void reset_expiration();
@@ -61,9 +63,23 @@ namespace rsx
 			{
 				std::lock_guard lock(m_mutex_queue);
 
-				auto& queue = location == message_pin_location::top
-					? m_ready_queue_top
-					: m_ready_queue_bottom;
+				auto* queue = &m_ready_queue_top;
+
+				switch (location)
+				{
+				case message_pin_location::top:
+					queue = &m_ready_queue_top;
+					break;
+				case message_pin_location::bottom:
+					queue = &m_ready_queue_bottom;
+					break;
+				case message_pin_location::top_right:
+					queue = &m_ready_queue_top_right;
+					break;
+				case message_pin_location::bottom_right:
+					queue = &m_ready_queue_bottom_right;
+					break;
+				}
 
 				if constexpr (std::is_same_v<T, std::initializer_list<localized_string_id>>)
 				{
@@ -71,13 +87,13 @@ namespace rsx
 					{
 						if (!message_exists(location, id, allow_refresh))
 						{
-							queue.emplace_back(id, expiration, refs, icon);
+							queue->emplace_back(id, expiration, refs, icon);
 						}
 					}
 				}
 				else if (!message_exists(location, msg_id, allow_refresh))
 				{
-					queue.emplace_back(msg_id, expiration, std::move(refs), icon);
+					queue->emplace_back(msg_id, expiration, std::move(refs), icon);
 				}
 
 				visible = true;
@@ -91,10 +107,14 @@ namespace rsx
 			// Top and bottom enqueued sets
 			std::deque<message_item> m_ready_queue_top;
 			std::deque<message_item> m_ready_queue_bottom;
+			std::deque<message_item> m_ready_queue_top_right;
+			std::deque<message_item> m_ready_queue_bottom_right;
 
 			// Top and bottom visible sets
 			std::deque<message_item> m_visible_items_top;
 			std::deque<message_item> m_visible_items_bottom;
+			std::deque<message_item> m_visible_items_top_right;
+			std::deque<message_item> m_visible_items_bottom_right;
 
 			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
 
