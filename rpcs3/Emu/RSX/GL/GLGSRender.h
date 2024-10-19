@@ -128,7 +128,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	GLProgramBuffer m_prog_buffer;
 
-	//buffer
+	// Draw Buffers
 	gl::fbo* m_draw_fbo = nullptr;
 	std::list<gl::framebuffer_holder> m_framebuffer_cache;
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
@@ -137,7 +137,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 
-	//vaos are mandatory for core profile
+	// VAOs are mandatory for core profile
 	gl::vao m_vao;
 
 	shared_mutex m_sampler_mutex;
@@ -149,6 +149,9 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
 	GLenum m_occlusion_type = GL_ANY_SAMPLES_PASSED;
+
+	// Host context for GPU-driven work
+	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
 
 public:
 	u64 get_cycles() final;

@@ -1300,6 +1300,9 @@
     <ClCompile Include="Emu\RSX\gcm_enums.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2619,6 +2622,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\color_utils.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Host\RSXDMAWriter.h">
+      <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

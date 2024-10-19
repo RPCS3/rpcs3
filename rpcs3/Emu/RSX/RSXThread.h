@@ -35,6 +35,8 @@
 
 #include "NV47/FW/GRAPH_backend.h"
 
+#include "Host/RSXDMAWriter.h"
+
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 extern rsx::frame_trace_data frame_debug;
@@ -211,6 +213,9 @@ namespace rsx
 
 		// Context
 		context* m_ctx = nullptr;
+
+		// Host DMA
+		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
 	public:
 		atomic_t<u64> new_get_put = u64{umax};
