@@ -1785,7 +1785,7 @@ void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 
 std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data() const
 {
-	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value};
+	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value };
 }
 
 bool VKGSRender::release_GCM_label(u32 address, u32 args)
