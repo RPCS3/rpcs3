@@ -3,6 +3,7 @@
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
 #include "GLCompute.h"
+#include "GLDMA.h"
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -178,6 +179,20 @@ void GLGSRender::on_init_thread()
 	{
 		// NVIDIA's attribute interpolation requires some workarounds
 		backend_config.supports_normalized_barycentrics = false;
+	}
+
+	if (gl_caps.AMD_pinned_memory)
+	{
+		backend_config.supports_host_gpu_labels = true;
+
+		if (g_cfg.video.host_label_synchronization)
+		{
+			m_host_gpu_context_data = std::make_unique<gl::buffer>();
+			m_host_gpu_context_data->create(gl::buffer::target::array, 4096);
+
+			auto host_context_ptr = reinterpret_cast<rsx::host_gpu_context_t*>(m_host_gpu_context_data->map(0, 4096, gl::buffer::access::read));
+			m_host_dma_ctrl = std::make_unique<rsx::RSXDMAWriter>(host_context_ptr);
+		}
 	}
 
 	// Use industry standard resource alignment values as defaults
@@ -397,6 +412,7 @@ void GLGSRender::on_exit()
 	// TODO: Move these
 	gl::destroy_compute_tasks();
 	gl::destroy_overlay_passes();
+	gl::clear_dma_resources();
 
 	gl::destroy_global_texture_resources();
 
@@ -406,6 +422,9 @@ void GLGSRender::on_exit()
 
 	m_prog_buffer.clear();
 	m_rtts.destroy();
+
+	m_host_dma_ctrl.reset();
+	m_host_gpu_context_data.reset();
 
 	for (auto &fbo : m_framebuffer_cache)
 	{

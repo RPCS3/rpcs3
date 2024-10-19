@@ -1162,6 +1162,7 @@ namespace rsx
 
 				// Update other sub-units
 				zcull_ctrl->update(this);
+				m_host_dma_ctrl->update();
 			}
 
 			// Execute FIFO queue

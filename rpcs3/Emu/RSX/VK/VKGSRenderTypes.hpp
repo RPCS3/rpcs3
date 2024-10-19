@@ -6,6 +6,7 @@
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/rsx_cache.h"
 #include "Utilities/mutex.h"
 #include "util/asm.hpp"
 
