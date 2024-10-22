@@ -6,6 +6,8 @@
 namespace gl
 {
 	static constexpr u32 s_dma_block_size = 0x10000;
+	static constexpr u32 s_dma_block_mask = ~(s_dma_block_size - 1);
+
 	std::unordered_map<u32, std::unique_ptr<dma_block>> g_dma_pool;
 
 	void dma_block::allocate(u32 base_address, u32 block_size)
@@ -72,8 +74,8 @@ namespace gl
 
 	utils::address_range to_dma_block_range(u32 start, u32 length)
 	{
-		const auto start_block_address = start & -s_dma_block_size;
-		const auto end_block_address = (start + length + s_dma_block_size - 1) & -s_dma_block_size;
+		const auto start_block_address = start & s_dma_block_mask;
+		const auto end_block_address = (start + length + s_dma_block_size - 1) & s_dma_block_mask;
 		return utils::address_range::start_end(start_block_address, end_block_address);
 	}
 
@@ -99,7 +101,7 @@ namespace gl
 		const auto search_end = (block_range.end + 1);
 
 		// 1. Resize to new length
-		ensure((new_length & -s_dma_block_size) == new_length);
+		ensure((new_length & ~s_dma_block_mask) == 0);
 		auto new_owner = std::make_unique<dma_block>();
 		new_owner->allocate(owner->base_addr(), new_length);
 
