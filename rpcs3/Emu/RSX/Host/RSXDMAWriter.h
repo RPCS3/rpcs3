@@ -27,7 +27,7 @@ namespace rsx
 
 		inline bool in_flight_commands_completed() const volatile
 		{
-			return last_label_release2_event == commands_complete_event;
+			return last_label_release2_event <= commands_complete_event;
 		}
 
 		inline bool texture_loads_completed() const volatile

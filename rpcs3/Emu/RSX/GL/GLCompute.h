@@ -300,7 +300,7 @@ namespace gl
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
 
-			param_buffer.create(gl::buffer::target::uniform, 32, nullptr, gl::buffer::memory_type::local, GL_DYNAMIC_COPY);
+			param_buffer.create(gl::buffer::target::uniform, 32, nullptr, gl::buffer::memory_type::local, gl::buffer::usage::dynamic_update);
 		}
 
 		~cs_deswizzle_3d()

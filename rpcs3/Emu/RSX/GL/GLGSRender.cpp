@@ -181,18 +181,18 @@ void GLGSRender::on_init_thread()
 		backend_config.supports_normalized_barycentrics = false;
 	}
 
-	if (gl_caps.AMD_pinned_memory)
+	if (gl_caps.AMD_pinned_memory && g_cfg.video.host_label_synchronization)
 	{
 		backend_config.supports_host_gpu_labels = true;
 
-		if (g_cfg.video.host_label_synchronization)
-		{
-			m_host_gpu_context_data = std::make_unique<gl::buffer>();
-			m_host_gpu_context_data->create(gl::buffer::target::array, 4096);
+		m_host_gpu_context_data = std::make_unique<gl::buffer>();
+		m_host_gpu_context_data->create(gl::buffer::target::array, 4096, nullptr, gl::buffer::memory_type::host_visible,
+			gl::buffer::usage::host_read | gl::buffer::usage::host_write | gl::buffer::usage::persistent_map);
 
-			auto host_context_ptr = reinterpret_cast<rsx::host_gpu_context_t*>(m_host_gpu_context_data->map(0, 4096, gl::buffer::access::read));
-			m_host_dma_ctrl = std::make_unique<rsx::RSXDMAWriter>(host_context_ptr);
-		}
+		auto host_context_ptr = reinterpret_cast<rsx::host_gpu_context_t*>(m_host_gpu_context_data->map(0, 4096, gl::buffer::access::persistent_rw));
+		m_host_dma_ctrl = std::make_unique<rsx::RSXDMAWriter>(host_context_ptr);
+		m_enqueued_host_write_buffer = std::make_unique<gl::scratch_ring_buffer>();
+		m_enqueued_host_write_buffer->create(gl::buffer::target::array, 64 * 0x100000, gl::buffer::usage::dynamic_update);
 	}
 
 	// Use industry standard resource alignment values as defaults
@@ -425,6 +425,7 @@ void GLGSRender::on_exit()
 
 	m_host_dma_ctrl.reset();
 	m_host_gpu_context_data.reset();
+	m_enqueued_host_write_buffer.reset();
 
 	for (auto &fbo : m_framebuffer_cache)
 	{
@@ -1220,6 +1221,66 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 		std::lock_guard lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
 	}
+}
+
+bool GLGSRender::release_GCM_label(u32 address, u32 args)
+{
+	if (!backend_config.supports_host_gpu_labels)
+	{
+		return false;
+	}
+
+	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
+
+	if (host_ctx->texture_loads_completed())
+	{
+		// We're about to poll waiting for GPU state, ensure the context is still valid.
+		gl::check_state();
+
+		// All texture loads already seen by the host GPU
+		// Wait for all previously submitted labels to be flushed
+		m_host_dma_ctrl->drain_label_queue();
+		return false;
+	}
+
+	const auto mapping = gl::map_dma(address, 4);
+	const auto write_data = std::bit_cast<u32, be_t<u32>>(args);
+	const auto release_event_id = host_ctx->on_label_acquire();
+
+	// We don't have async texture loads yet, so just release both the label and the commands complete
+	u64 write_buf[2] = { write_data, release_event_id };
+	const auto host_read_offset = m_enqueued_host_write_buffer->alloc(16, 16);
+	m_enqueued_host_write_buffer->get().sub_data(host_read_offset, 16, write_buf);
+
+	// Now write to DMA and then to host context
+	m_enqueued_host_write_buffer->get().copy_to(mapping.second, host_read_offset, mapping.first, 4);
+	m_enqueued_host_write_buffer->get().copy_to(m_host_gpu_context_data.get(), host_read_offset + 8, ::offset32(&rsx::host_gpu_context_t::commands_complete_event), 8);
+	m_enqueued_host_write_buffer->push_barrier(host_read_offset, 16);
+
+	host_ctx->on_label_release();
+	return true;
+}
+
+void GLGSRender::enqueue_host_context_write(u32 offset, u32 size, const void* data)
+{
+	ensure(size <= 8);
+	const u32 host_read_offset = m_enqueued_host_write_buffer->alloc(8, 16);
+	m_enqueued_host_write_buffer->get().sub_data(host_read_offset, size, data);
+	m_enqueued_host_write_buffer->get().copy_to(m_host_gpu_context_data.get(), host_read_offset, offset, size);
+	m_enqueued_host_write_buffer->push_barrier(host_read_offset, 16);
+}
+
+void GLGSRender::on_guest_texture_read()
+{
+	if (!backend_config.supports_host_gpu_labels)
+	{
+		return;
+	}
+
+	// Tag the read as being in progress
+	u64 event_id = m_host_dma_ctrl->host_ctx()->inc_counter();
+	m_host_dma_ctrl->host_ctx()->texture_load_request_event = event_id;
+	enqueue_host_context_write(::offset32(&rsx::host_gpu_context_t::texture_load_complete_event), 8, &event_id);
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
