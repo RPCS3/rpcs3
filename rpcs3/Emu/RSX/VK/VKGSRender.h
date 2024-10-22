@@ -280,6 +280,7 @@ public:
 
 	// Host sync object
 	std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() const;
+	void on_guest_texture_read(const vk::command_buffer& cmd);
 
 	// GRAPH backend
 	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;

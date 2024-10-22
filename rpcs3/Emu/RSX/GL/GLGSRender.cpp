@@ -7,6 +7,7 @@
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
 [[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true);

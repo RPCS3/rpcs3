@@ -15,6 +15,7 @@
 #include "vkutils/scratch.h"
 
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -1844,6 +1845,19 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	}
 
 	return true;
+}
+
+void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
+{
+	if (!backend_config.supports_host_gpu_labels)
+	{
+		return;
+	}
+
+	// Queue a sync update on the CB doing the load
+	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
+	const auto event_id = host_ctx->on_texture_load_acquire();
+	vkCmdUpdateBuffer(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 }
 
 void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
