@@ -11,6 +11,7 @@
 #include "util/asm.hpp"
 
 #include <optional>
+#include <thread>
 
 // Initial heap allocation values. The heaps are growable and will automatically increase in size to accomodate demands
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 64

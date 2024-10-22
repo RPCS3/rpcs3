@@ -36,7 +36,7 @@ namespace gl
 
 	void dma_block::resize(u32 new_length)
 	{
-		if (new_length < length())
+		if (new_length <= length())
 		{
 			return;
 		}

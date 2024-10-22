@@ -1,10 +1,6 @@
 #include "stdafx.h"
 #include "RSXThread.h"
 
-#include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/timers.hpp"
-
 #include "Capture/rsx_capture.h"
 #include "Common/BufferUtils.h"
 #include "Common/buffer_stream.hpp"
@@ -13,9 +9,17 @@
 #include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
+#include "Host/RSXDMAWriter.h"
+#include "NV47/HW/context.h"
+#include "Program/GLSLCommon.h"
 #include "rsx_methods.h"
+
 #include "gcm_printing.h"
 #include "RSXDisAsm.h"
+
+#include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
@@ -23,11 +27,10 @@
 #include "Overlays/overlay_perf_metrics.h"
 #include "Overlays/overlay_debug_overlay.h"
 #include "Overlays/overlay_message.h"
-#include "Program/GLSLCommon.h"
+
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/unzip.h"
-#include "NV47/HW/context.h"
 
 #include "util/asm.hpp"
 
