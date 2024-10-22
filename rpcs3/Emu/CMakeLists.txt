@@ -478,6 +478,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/gcm_printing.cpp
     RSX/GL/GLCommonDecompiler.cpp
     RSX/GL/GLCompute.cpp
+    RSX/GL/GLDMA.cpp
     RSX/GL/GLDraw.cpp
     RSX/GL/GLFragmentProgram.cpp
     RSX/GL/GLGSRender.cpp
@@ -503,6 +504,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/OpenGL.cpp
     RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GSRender.cpp
+    RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
     RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
