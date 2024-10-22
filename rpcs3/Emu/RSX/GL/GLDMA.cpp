@@ -19,8 +19,11 @@ namespace gl
 		void* userptr = vm::get_super_ptr(base_address);
 
 		m_data = std::make_unique<gl::buffer>();
-		m_data->create(buffer::target::userptr, block_size, userptr);
+		m_data->create(buffer::target::array, block_size, userptr, buffer::memory_type::userptr, 0);
 		m_base_address = base_address;
+
+		// Some drivers may reject userptr input for whatever reason. Check that the state is still valid.
+		gl::check_state();
 	}
 
 	void* dma_block::map(const utils::address_range& range) const
@@ -69,8 +72,8 @@ namespace gl
 
 	utils::address_range to_dma_block_range(u32 start, u32 length)
 	{
-		const auto start_block_address = start & ~s_dma_block_size;
-		const auto end_block_address = (start + length - 1) & ~s_dma_block_size;
+		const auto start_block_address = start & -s_dma_block_size;
+		const auto end_block_address = (start + length + s_dma_block_size - 1) & -s_dma_block_size;
 		return utils::address_range::start_end(start_block_address, end_block_address);
 	}
 
@@ -81,7 +84,7 @@ namespace gl
 		if (!block)
 		{
 			block = std::make_unique<dma_block>();
-			block->allocate(block_range.start, length);
+			block->allocate(block_range.start, block_range.length());
 			return *block;
 		}
 
@@ -96,6 +99,7 @@ namespace gl
 		const auto search_end = (block_range.end + 1);
 
 		// 1. Resize to new length
+		ensure((new_length & -s_dma_block_size) == new_length);
 		auto new_owner = std::make_unique<dma_block>();
 		new_owner->allocate(owner->base_addr(), new_length);
 

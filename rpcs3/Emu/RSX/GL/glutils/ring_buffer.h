@@ -103,7 +103,7 @@ namespace gl
 		scratch_ring_buffer(const scratch_ring_buffer&) = delete;
 		~scratch_ring_buffer();
 
-		void create(buffer::target _target, u64 size);
+		void create(buffer::target _target, u64 size, u32 usage_flags = 0);
 		void remove();
 
 		u32 alloc(u32 size, u32 alignment);

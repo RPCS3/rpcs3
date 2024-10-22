@@ -59,7 +59,7 @@ namespace gl
 				pbo.remove();
 			}
 
-			pbo.create(buffer::target::pixel_pack, buffer_size, nullptr, buffer::memory_type::host_visible, GL_STREAM_READ);
+			pbo.create(buffer::target::pixel_pack, buffer_size, nullptr, buffer::memory_type::host_visible, buffer::usage::host_read);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 		}
 

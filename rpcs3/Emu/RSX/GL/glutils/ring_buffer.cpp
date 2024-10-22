@@ -242,14 +242,14 @@ namespace gl
 		}
 	}
 
-	void scratch_ring_buffer::create(buffer::target target_, u64 size)
+	void scratch_ring_buffer::create(buffer::target target_, u64 size, u32 usage_flags)
 	{
 		if (m_storage)
 		{
 			remove();
 		}
 
-		m_storage.create(target_, size, nullptr, gl::buffer::memory_type::local, GL_STATIC_COPY);
+		m_storage.create(target_, size, nullptr, gl::buffer::memory_type::local, usage_flags);
 	}
 
 	void scratch_ring_buffer::remove()

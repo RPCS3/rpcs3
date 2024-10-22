@@ -80,7 +80,7 @@ namespace gl
 			if (!m_ubo)
 			{
 				ensure(compiled);
-				m_ubo.create(gl::buffer::target::uniform, push_buffer_size, nullptr, gl::buffer::memory_type::local, GL_DYNAMIC_COPY);
+				m_ubo.create(gl::buffer::target::uniform, push_buffer_size, nullptr, gl::buffer::memory_type::local, gl::buffer::usage::dynamic_update);
 
 				// Statically bind the image sources
 				m_program.uniforms["InputTexture"] = GL_TEMP_IMAGE_SLOT(0);

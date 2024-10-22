@@ -152,6 +152,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	// Host context for GPU-driven work
 	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
+	std::unique_ptr<gl::scratch_ring_buffer> m_enqueued_host_write_buffer;
 
 public:
 	u64 get_cycles() final;
@@ -195,6 +196,11 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+
+	// DMA
+	bool release_GCM_label(u32 address, u32 data) override;
+	void enqueue_host_context_write(u32 offset, u32 size, const void* data);
+	void on_guest_texture_read();
 
 	// GRAPH backend
 	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;
