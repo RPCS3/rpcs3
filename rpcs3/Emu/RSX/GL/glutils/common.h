@@ -81,7 +81,7 @@ namespace gl
 	}
 
 	// Checks if GL state is still valid
-	void check_state()
+	static inline void check_state()
 	{
 		// GL_OUT_OF_MEMORY invalidates the OpenGL context and is actually the GL version of DEVICE_LOST.
 		// This spec workaround allows it to be abused by ISVs to indicate a broken GL context.
