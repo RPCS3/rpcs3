@@ -881,6 +881,10 @@ namespace np
 
 			presence_self.pr_com_id = *context;
 			presence_self.pr_title = fmt::truncate(Emu.GetTitle(), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
+			if (!Emu.GetTitleID().empty())
+			{
+				presence_self.pr_title_id = Emu.GetTitleID();
+			}
 		}
 
 		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn || !is_psn_active)

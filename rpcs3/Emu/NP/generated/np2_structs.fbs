@@ -478,6 +478,7 @@ table TusDeleteMultiSlotDataRequest {
 
 table SetPresenceRequest {
 	title:string;
+	title_id:string;
 	status:string;
 	comment:string;
 	data:[uint8];

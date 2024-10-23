@@ -515,7 +515,7 @@ namespace rpcn
 		bool tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser);
 		bool tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
 		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
-		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
+		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_title_id, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
 		bool createjoin_room_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingAttr* attr_list);
 		bool join_room_gui(u32 req_id, const SceNpRoomId& room_id);
 		bool leave_room_gui(u32 req_id, const SceNpRoomId& room_id);

@@ -2205,10 +2205,10 @@ namespace rpcn
 		return forge_request_with_com_id(builder, communication_id, CommandType::TusDeleteMultiSlotData, req_id);
 	}
 
-	bool rpcn_client::send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data)
+	bool rpcn_client::send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_title_id, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data)
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateSetPresenceRequest(builder, builder.CreateString(pr_title), builder.CreateString(pr_status), builder.CreateString(pr_comment), builder.CreateVector(pr_data));
+		auto req_finished = CreateSetPresenceRequest(builder, builder.CreateString(pr_title), builder.CreateString(pr_title_id), builder.CreateString(pr_status), builder.CreateString(pr_comment), builder.CreateVector(pr_data));
 		builder.Finish(req_finished);
 
 		return forge_request_with_com_id(builder, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));

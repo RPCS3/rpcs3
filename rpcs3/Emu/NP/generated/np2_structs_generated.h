@@ -6102,12 +6102,16 @@ struct SetPresenceRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table
   typedef SetPresenceRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TITLE = 4,
-    VT_STATUS = 6,
-    VT_COMMENT = 8,
-    VT_DATA = 10
+    VT_TITLE_ID = 6,
+    VT_STATUS = 8,
+    VT_COMMENT = 10,
+    VT_DATA = 12
   };
   const ::flatbuffers::String *title() const {
     return GetPointer<const ::flatbuffers::String *>(VT_TITLE);
+  }
+  const ::flatbuffers::String *title_id() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_TITLE_ID);
   }
   const ::flatbuffers::String *status() const {
     return GetPointer<const ::flatbuffers::String *>(VT_STATUS);
@@ -6122,6 +6126,8 @@ struct SetPresenceRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_TITLE) &&
            verifier.VerifyString(title()) &&
+           VerifyOffset(verifier, VT_TITLE_ID) &&
+           verifier.VerifyString(title_id()) &&
            VerifyOffset(verifier, VT_STATUS) &&
            verifier.VerifyString(status()) &&
            VerifyOffset(verifier, VT_COMMENT) &&
@@ -6138,6 +6144,9 @@ struct SetPresenceRequestBuilder {
   ::flatbuffers::uoffset_t start_;
   void add_title(::flatbuffers::Offset<::flatbuffers::String> title) {
     fbb_.AddOffset(SetPresenceRequest::VT_TITLE, title);
+  }
+  void add_title_id(::flatbuffers::Offset<::flatbuffers::String> title_id) {
+    fbb_.AddOffset(SetPresenceRequest::VT_TITLE_ID, title_id);
   }
   void add_status(::flatbuffers::Offset<::flatbuffers::String> status) {
     fbb_.AddOffset(SetPresenceRequest::VT_STATUS, status);
@@ -6162,6 +6171,7 @@ struct SetPresenceRequestBuilder {
 inline ::flatbuffers::Offset<SetPresenceRequest> CreateSetPresenceRequest(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     ::flatbuffers::Offset<::flatbuffers::String> title = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> title_id = 0,
     ::flatbuffers::Offset<::flatbuffers::String> status = 0,
     ::flatbuffers::Offset<::flatbuffers::String> comment = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> data = 0) {
@@ -6169,6 +6179,7 @@ inline ::flatbuffers::Offset<SetPresenceRequest> CreateSetPresenceRequest(
   builder_.add_data(data);
   builder_.add_comment(comment);
   builder_.add_status(status);
+  builder_.add_title_id(title_id);
   builder_.add_title(title);
   return builder_.Finish();
 }
@@ -6176,16 +6187,19 @@ inline ::flatbuffers::Offset<SetPresenceRequest> CreateSetPresenceRequest(
 inline ::flatbuffers::Offset<SetPresenceRequest> CreateSetPresenceRequestDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *title = nullptr,
+    const char *title_id = nullptr,
     const char *status = nullptr,
     const char *comment = nullptr,
     const std::vector<uint8_t> *data = nullptr) {
   auto title__ = title ? _fbb.CreateString(title) : 0;
+  auto title_id__ = title_id ? _fbb.CreateString(title_id) : 0;
   auto status__ = status ? _fbb.CreateString(status) : 0;
   auto comment__ = comment ? _fbb.CreateString(comment) : 0;
   auto data__ = data ? _fbb.CreateVector<uint8_t>(*data) : 0;
   return CreateSetPresenceRequest(
       _fbb,
       title__,
+      title_id__,
       status__,
       comment__,
       data__);
