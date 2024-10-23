@@ -509,7 +509,7 @@ namespace np
 		{
 			SceNpCommunicationId pr_com_id;
 			std::string pr_title;
-			std::string pr_title_id;
+			std::string pr_title_id = "vsh.idle";
 			std::string pr_status;
 			std::string pr_comment;
 			std::vector<u8> pr_data;

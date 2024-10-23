@@ -1532,7 +1532,7 @@ namespace np
 				return;
 			}
 
-			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
+			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_title_id, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
 		}
 	}
 
