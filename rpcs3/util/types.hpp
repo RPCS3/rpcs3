@@ -250,6 +250,8 @@ using __m128 = float __attribute__((vector_size(16)));
 #ifndef _MSC_VER
 using u128 = __uint128_t;
 using s128 = __int128_t;
+
+static constexpr bool is_u128_emulated = false;
 #else
 
 extern "C"
@@ -564,7 +566,25 @@ struct s128 : u128
 		return *this;
 	}
 };
+
+static constexpr bool is_u128_emulated = true;
 #endif
+
+// Optimization for u64*u64=u128
+constexpr u128 u128_from_mul(u64 a, u64 b)
+{
+#ifdef _MSC_VER
+	if (!std::is_constant_evaluated())
+	{
+		u64 hi;
+		u128 result = _umul128(a, b, &hi);
+		result.hi = hi;
+		return result;
+	}
+#endif
+
+	return u128{a} * b;
+}
 
 template <>
 struct get_int_impl<16>
