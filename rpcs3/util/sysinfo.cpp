@@ -739,7 +739,12 @@ static constexpr ullong round_tsc(ullong val)
 	return utils::rounded_div(val, 1'000'000) * 1'000'000;
 }
 
-ullong utils::get_tsc_freq()
+namespace utils
+{
+	u64 s_tsc_freq = 0;
+}
+
+named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSX Evaluate Thread", []()
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
@@ -749,7 +754,7 @@ ullong utils::get_tsc_freq()
 		return r;
 #endif
 
-		if (!has_invariant_tsc())
+		if (!utils::has_invariant_tsc())
 			return 0;
 
 #ifdef _WIN32
@@ -766,7 +771,7 @@ ullong utils::get_tsc_freq()
 #endif
 
 		// Calibrate TSC
-		constexpr int samples = 40;
+		constexpr int samples = 60;
 		ullong rdtsc_data[samples];
 		ullong timer_data[samples];
 		[[maybe_unused]] ullong error_data[samples];
@@ -784,14 +789,14 @@ ullong utils::get_tsc_freq()
 		for (int i = 0; i < samples; i++)
 		{
 #ifdef _WIN32
-			Sleep(1);
+			Sleep(2);
 			error_data[i] = (utils::lfence(), utils::get_tsc());
 			LARGE_INTEGER ctr;
 			QueryPerformanceCounter(&ctr);
 			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
 			timer_data[i] = ctr.QuadPart;
 #else
-			usleep(200);
+			usleep(500);
 			error_data[i] = (utils::lfence(), utils::get_tsc());
 			struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -814,7 +819,13 @@ ullong utils::get_tsc_freq()
 		return round_tsc(acc / (samples - 1));
 	}();
 
-	return cal_tsc;
+	atomic_storage<u64>::release(utils::s_tsc_freq, cal_tsc);
+});
+
+void utils::ensure_tsc_freq_init()
+{
+	// Join thread
+	s_thread_evaluate_tsc_freq();
 }
 
 u64 utils::get_total_memory()

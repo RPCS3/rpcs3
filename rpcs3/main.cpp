@@ -554,7 +554,7 @@ int main(int argc, char** argv)
 	ensure(thread_ctrl::is_main(), "Not main thread");
 
 	// Initialize TSC freq (in case it isn't)
-	static_cast<void>(utils::get_tsc_freq());
+	static_cast<void>(utils::ensure_tsc_freq_init());
 
 	// Initialize thread pool finalizer (on first use)
 	static_cast<void>(named_thread("", [](int) {}));
