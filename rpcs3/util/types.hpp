@@ -250,8 +250,6 @@ using __m128 = float __attribute__((vector_size(16)));
 #ifndef _MSC_VER
 using u128 = __uint128_t;
 using s128 = __int128_t;
-
-static constexpr bool is_u128_emulated = false;
 #else
 
 extern "C"
@@ -566,8 +564,6 @@ struct s128 : u128
 		return *this;
 	}
 };
-
-static constexpr bool is_u128_emulated = true;
 #endif
 
 // Optimization for u64*u64=u128
