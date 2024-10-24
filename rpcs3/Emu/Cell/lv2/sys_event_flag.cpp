@@ -357,11 +357,13 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 			}
 		}
 
+		u32 count = 0;
+
 		// Process all waiters in single atomic op
-		const u32 count = flag->pattern.atomic_op([&](u64& value)
+		for (u32 pattern = flag->pattern, to_write = pattern, dependant_mask = 0;; to_write = pattern, dependant_mask = 0)
 		{
-			value |= bitptn;
-			u32 count = 0;
+			count = 0;
+			to_write |= bitptn;
 
 			if (!flag->sq)
 			{
@@ -405,7 +407,11 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 				const u64 pattern = ppu.gpr[4];
 				const u64 mode = ppu.gpr[5];
 
-				if (lv2_event_flag::check_pattern(value, pattern, mode, &ppu.gpr[6]))
+				// If it's OR mode, set bits must have waken up the thread therefore no
+				// dependency on old value
+				dependant_mask |= ((mode & 0xf) == SYS_EVENT_FLAG_WAIT_OR || (bitptn & pattern) == pattern ? 0 : pattern);
+
+				if (lv2_event_flag::check_pattern(to_write, pattern, mode, &ppu.gpr[6]))
 				{
 					ppu.gpr[3] = CELL_OK;
 					count++;
@@ -416,8 +422,27 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 				}
 			}
 
-			return count;
-		});
+			auto [new_val, ok] = flag->pattern.fetch_op([&](u64 x)
+			{
+				if ((x ^ pattern) & dependant_mask)
+				{
+					return false;
+				}
+
+				x |= bitptn;
+
+				// Clear the bit-wise difference
+				x &= ~(pattern ^ to_write);
+				return true;
+			});
+
+			if (ok)
+			{
+				break;
+			}
+
+			pattern = new_val;
+		}
 
 		if (!count)
 		{
