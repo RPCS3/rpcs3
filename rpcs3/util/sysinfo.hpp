@@ -73,8 +73,6 @@ namespace utils
 
 	bool get_low_power_mode();
 
-	ullong get_tsc_freq();
-
 	u64 get_total_memory();
 
 	u32 get_thread_count();
@@ -89,4 +87,13 @@ namespace utils
 	u64 _get_main_tid();
 
 	inline const u64 main_tid = _get_main_tid();
+
+	extern u64 s_tsc_freq;
+
+	inline ullong get_tsc_freq()
+	{
+		return s_tsc_freq;
+	}
+
+	void ensure_tsc_freq_init();
 }
