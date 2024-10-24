@@ -736,7 +736,7 @@ bool utils::get_low_power_mode()
 
 static constexpr ullong round_tsc(ullong val)
 {
-	return utils::rounded_div(val, 1'000'000) * 1'000'000;
+	return utils::rounded_div(val, 100'000) * 100'000;
 }
 
 namespace utils
@@ -744,7 +744,7 @@ namespace utils
 	u64 s_tsc_freq = 0;
 }
 
-named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSX Evaluate Thread", []()
+named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thread", []()
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
@@ -767,56 +767,83 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSX Evaluate Thr
 
 		const ullong timer_freq = freq.QuadPart;
 #else
-		const ullong timer_freq = 1'000'000'000;
+		constexpr ullong timer_freq = 1'000'000'000;
 #endif
 
-		// Calibrate TSC
-		constexpr int samples = 60;
-		ullong rdtsc_data[samples];
-		ullong timer_data[samples];
-		[[maybe_unused]] ullong error_data[samples];
+		constexpr u64 retry_count = 1000;
 
-		// Narrow thread affinity to a single core
-		const u64 old_aff = thread_ctrl::get_thread_affinity_mask();
-		thread_ctrl::set_thread_affinity_mask(old_aff & (0 - old_aff));
+		// First is entry is for the onset measurements, last is for the end measurements
+		constexpr usz sample_count = 2;
+		std::array<u64, sample_count> rdtsc_data{};
+		std::array<u64, sample_count> rdtsc_diff{};
+		std::array<u64, sample_count> timer_data{};
 
-#ifndef _WIN32
+#ifdef _WIN32
+		LARGE_INTEGER ctr0;
+		QueryPerformanceCounter(&ctr0);
+		const ullong time_base = ctr0.QuadPart;
+#else
 		struct timespec ts0;
 		clock_gettime(CLOCK_MONOTONIC, &ts0);
-		ullong sec_base = ts0.tv_sec;
+		const ullong sec_base = ts0.tv_sec;
 #endif
 
-		for (int i = 0; i < samples; i++)
+		for (usz sample = 0; sample < sample_count; sample++)
 		{
+			for (usz i = 0; i < retry_count; i++)
+			{
+				const u64 rdtsc_read = (utils::lfence(), utils::get_tsc());
 #ifdef _WIN32
-			Sleep(2);
-			error_data[i] = (utils::lfence(), utils::get_tsc());
-			LARGE_INTEGER ctr;
-			QueryPerformanceCounter(&ctr);
-			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
-			timer_data[i] = ctr.QuadPart;
+				LARGE_INTEGER ctr;
+				QueryPerformanceCounter(&ctr);
 #else
-			usleep(500);
-			error_data[i] = (utils::lfence(), utils::get_tsc());
-			struct timespec ts;
-			clock_gettime(CLOCK_MONOTONIC, &ts);
-			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
-			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
+				struct timespec ts;
+				clock_gettime(CLOCK_MONOTONIC, &ts);
 #endif
+				const u64 rdtsc_read2 = (utils::lfence(), utils::get_tsc());
+
+#ifdef _WIN32
+				const u64 timer_read = ctr.QuadPart - time_base;
+#else
+				const u64 timer_read = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
+#endif
+
+				if (i == 0 || (rdtsc_read2 >= rdtsc_read && rdtsc_read2 - rdtsc_read < rdtsc_diff[sample]))
+				{
+					rdtsc_data[sample] = rdtsc_read; // Note: rdtsc_read2 can also be written here because of the assumption of accuracy
+					timer_data[sample] = timer_read;
+					rdtsc_diff[sample] = rdtsc_read2 >= rdtsc_read ? rdtsc_read2 - rdtsc_read : u64{umax};
+				}
+
+				if (rdtsc_read2 - rdtsc_read < std::min<usz>(i, 300) && rdtsc_read2 >= rdtsc_read)
+				{
+					break;
+				}
+			}
+
+			if (sample < sample_count - 1)
+			{
+				// Sleep 20ms between first and last sample
+#ifdef _WIN32
+				Sleep(20);
+#else
+				usleep(20'000);
+#endif
+			}
 		}
 
-		// Restore main thread affinity
-		thread_ctrl::set_thread_affinity_mask(old_aff);
-
-		// Compute average TSC
-		ullong acc = 0;
-		for (int i = 0; i < samples - 1; i++)
+		if (timer_data[1] == timer_data[0])
 		{
-			acc += (rdtsc_data[i + 1] - rdtsc_data[i]) * timer_freq / (timer_data[i + 1] - timer_data[i]);
+			// Division by zero
+			return 0;
 		}
+
+		const u128 data = u128_from_mul(rdtsc_data[1] - rdtsc_data[0], timer_freq);
+
+		const u64 res = utils::udiv128(static_cast<u64>(data >> 64), static_cast<u64>(data), (timer_data[1] - timer_data[0]));
 
 		// Rounding
-		return round_tsc(acc / (samples - 1));
+		return round_tsc(res);
 	}();
 
 	atomic_storage<u64>::release(utils::s_tsc_freq, cal_tsc);
