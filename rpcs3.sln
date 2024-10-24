@@ -12,7 +12,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "emucore", "rpcs3\emucore.vc
 		{939FE206-1182-ABC3-1234-FEAB88E98404} = {939FE206-1182-ABC3-1234-FEAB88E98404}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "llvm_build", "3rdparty\llvm\llvm_build\llvm_build.vcxproj", "{8BC303AB-25BE-4276-8E57-73F171B2D672}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "llvm_build", "3rdparty\llvm\llvm_build.vcxproj", "{8BC303AB-25BE-4276-8E57-73F171B2D672}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GLGSRender", "rpcs3\GLGSRender.vcxproj", "{3384223A-6D97-4799-9862-359F85312892}"
 EndProject
@@ -78,7 +78,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcurl", "3rdparty\curl\li
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdParty", "3rdParty", "{6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "llvm_build_clang_cl", "3rdparty\llvm\llvm_build\llvm_build_clang_cl.vcxproj", "{A37E4273-85DB-4217-B775-CE971B87D9DF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "llvm_build_clang_cl", "3rdparty\llvm\llvm_build_clang_cl.vcxproj", "{A37E4273-85DB-4217-B775-CE971B87D9DF}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Cubeb", "rpcs3\Cubeb.vcxproj", "{9610627D-20FE-4B07-8CE3-9FF68A5F1EC2}"
 EndProject
