@@ -7,6 +7,7 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "util/asm.hpp"
+#include "util/sysinfo.hpp"
 
 static u64 timebase_offset;
 static u64 systemtime_offset;
@@ -146,6 +147,18 @@ u64 convert_to_timebased_time(u64 time)
 
 u64 get_timebased_time()
 {
+	if (u64 freq = utils::get_tsc_freq())
+	{
+		const u64 tsc = utils::get_tsc();
+
+#if is_u128_emulated
+		const u64 result = static_cast<u64>(u128_from_mul(tsc, g_timebase_freq) / freq) * g_cfg.core.clocks_scale / 100u;
+#else
+		const u64 result = (tsc / freq * g_timebase_freq + tsc % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
+#endif
+		return result - timebase_offset;
+	}
+
 	while (true)
 	{
 #ifdef _WIN32
@@ -194,6 +207,18 @@ void initialize_timebased_time(u64 timebased_init, bool reset)
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
+	if (u64 freq = utils::get_tsc_freq())
+	{
+		const u64 tsc = utils::get_tsc();
+
+#if is_u128_emulated
+		const u64 result = static_cast<u64>(u128_from_mul(tsc, 1000000ull) / freq) * g_cfg.core.clocks_scale / 100u;
+#else
+		const u64 result = (tsc / freq * 1000000ull + tsc % freq * 1000000ull / freq) * g_cfg.core.clocks_scale / 100u;
+#endif
+		return result;
+	}
+
 	while (true)
 	{
 #ifdef _WIN32
