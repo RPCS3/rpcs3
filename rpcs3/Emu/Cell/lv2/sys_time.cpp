@@ -155,7 +155,11 @@ u64 get_timebased_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
+#if is_u128_emulated
+		const u64 result = static_cast<u64>(u128_from_mul(time * g_cfg.core.clocks_scale, g_timebase_freq) / freq / 100u);
+#else
 		const u64 result = (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
+#endif
 #else
 		struct timespec ts;
 		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
@@ -199,7 +203,11 @@ u64 get_system_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
+#if is_u128_emulated
+		const u64 result = static_cast<u64>(u128_from_mul(time, 1000000ull) / freq);
+#else
 		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
+#endif
 #else
 		struct timespec ts;
 		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
