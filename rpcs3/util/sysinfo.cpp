@@ -744,7 +744,7 @@ namespace utils
 	u64 s_tsc_freq = 0;
 }
 
-named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSX Evaluate Thread", []()
+named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thread", []()
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
@@ -767,56 +767,69 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSX Evaluate Thr
 
 		const ullong timer_freq = freq.QuadPart;
 #else
-		const ullong timer_freq = 1'000'000'000;
+		constexpr ullong timer_freq = 1'000'000'000;
 #endif
-
-		// Calibrate TSC
-		constexpr int samples = 60;
-		ullong rdtsc_data[samples];
-		ullong timer_data[samples];
-		[[maybe_unused]] ullong error_data[samples];
 
 		// Narrow thread affinity to a single core
 		const u64 old_aff = thread_ctrl::get_thread_affinity_mask();
 		thread_ctrl::set_thread_affinity_mask(old_aff & (0 - old_aff));
 
-#ifndef _WIN32
-		struct timespec ts0;
-		clock_gettime(CLOCK_MONOTONIC, &ts0);
-		ullong sec_base = ts0.tv_sec;
-#endif
+		constexpr u64 retry_count = 100;
 
-		for (int i = 0; i < samples; i++)
+		// First is entry is for the onset measurements, last is for the end measurements
+		constexpr usz sample_count = 2;
+		ullong rdtsc_data[sample_count]{};
+		ullong rdtsc_diff[sample_count]{};
+		ullong timer_data[sample_count]{};
+
+		for (usz sample = 0; sample < sample_count; sample++)
 		{
+			for (usz i = 0; i < retry_count; i++)
+			{
+				const u64 rdtsc_read = (utils::lfence(), utils::get_tsc());
+	#ifdef _WIN32
+				LARGE_INTEGER ctr;
+				QueryPerformanceCounter(&ctr);
+				const u64 timer_read = ctr.QuadPart;
+	#else
+				struct timespec ts;
+				clock_gettime(CLOCK_MONOTONIC, &ts);
+				const u64 timer_read = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
+	#endif
+				const u64 rdtsc_read2 = (utils::lfence(), utils::get_tsc());
+
+				if (i == 0 || (rdtsc_read2 >= rdtsc_read && rdtsc_read2 - rdtsc_read < rdtsc_diff[sample]))
+				{
+					rdtsc_data[sample] = rdtsc_read; // Note: rdtsc_read2 can also be written here because of the assumption of accuracy
+					timer_data[sample] = timer_read;
+					rdtsc_diff[sample] = rdtsc_read2 - rdtsc_read;
+				}
+			}
+
+			if (sample < sample_count - 1)
+			{
+				// Sleep 20ms between first and last sample
 #ifdef _WIN32
-			Sleep(2);
-			error_data[i] = (utils::lfence(), utils::get_tsc());
-			LARGE_INTEGER ctr;
-			QueryPerformanceCounter(&ctr);
-			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
-			timer_data[i] = ctr.QuadPart;
+				Sleep(20);
 #else
-			usleep(500);
-			error_data[i] = (utils::lfence(), utils::get_tsc());
-			struct timespec ts;
-			clock_gettime(CLOCK_MONOTONIC, &ts);
-			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
-			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
+				usleep(20'000);
 #endif
+			}
 		}
+
+		if (timer_data[1] == timer_data[0])
+		{
+			// Division by zero
+			return 0;
+		}
+
+		const u64 res = static_cast<u64>(u128_from_mul(rdtsc_data[1] - rdtsc_data[0], timer_freq) / (timer_data[1] - timer_data[0]));
 
 		// Restore main thread affinity
 		thread_ctrl::set_thread_affinity_mask(old_aff);
 
-		// Compute average TSC
-		ullong acc = 0;
-		for (int i = 0; i < samples - 1; i++)
-		{
-			acc += (rdtsc_data[i + 1] - rdtsc_data[i]) * timer_freq / (timer_data[i + 1] - timer_data[i]);
-		}
-
 		// Rounding
-		return round_tsc(acc / (samples - 1));
+		return round_tsc(res);
 	}();
 
 	atomic_storage<u64>::release(utils::s_tsc_freq, cal_tsc);
