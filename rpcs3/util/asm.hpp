@@ -466,3 +466,7 @@ namespace utils
 } // namespace utils
 
 using utils::busy_wait;
+
+#ifdef _MSC_VER
+using utils::operator/;
+#endif
