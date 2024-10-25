@@ -4790,7 +4790,7 @@ bool spu_thread::process_mfc_cmd()
 		getllar_spin_count = 0;
 		getllar_busy_waiting_switch = umax;
 
-		u64 ntime;
+		u64 ntime = 0;
 		rsx::reservation_lock rsx_lock(addr, 128);
 
 		for (u64 i = 0; i != umax; [&]()
@@ -4896,7 +4896,7 @@ bool spu_thread::process_mfc_cmd()
 		// Avoid logging useless commands if there is no reservation
 		const bool dump = g_cfg.core.mfc_debug && raddr;
 
-		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr != -0x80u;
+		const bool is_spurs_task_wait = pc == 0x11e4 && spurs_addr != 0u - 0x80u;
 
 		if (!is_spurs_task_wait || spurs_addr != raddr || spurs_waited)
 		{
@@ -5570,6 +5570,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			thread_ctrl::wait_on(state, old);
 		}
+
+		fmt::throw_exception("Unreachable"); // Fix unannotated fallthrough warning
 	}
 
 	case MFC_RdTagStat:

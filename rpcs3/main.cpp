@@ -252,11 +252,12 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 struct fatal_error_listener final : logs::listener
 {
+public:
 	~fatal_error_listener() override = default;
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
-		if (msg <= logs::level::fatal)
+		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
 			std::string _msg = "RPCS3: ";
 
@@ -276,10 +277,17 @@ struct fatal_error_listener final : logs::listener
 			_msg += '\n';
 
 			// If launched from CMD
-			utils::attach_console(utils::console_stream::std_err, false);
+			utils::attach_console(msg == logs::level::fatal ? utils::console_stream::std_err : utils::console_stream::std_out, false);
 
 			// Output to error stream as is
-			utils::output_stderr(_msg);
+			if (msg == logs::level::fatal)
+			{
+				utils::output_stderr(_msg);
+			}
+			else
+			{
+				std::cout << _msg;
+			}
 
 #ifdef _WIN32
 			if (IsDebuggerPresent())
@@ -295,6 +303,14 @@ struct fatal_error_listener final : logs::listener
 			}
 		}
 	}
+
+	void log_always(bool enabled)
+	{
+		m_log_always = enabled;
+	}
+
+private:
+	bool m_log_always = false;
 };
 
 // Arguments that force a headless application (need to be checked in create_application)
@@ -572,7 +588,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<logs::listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	static std::unique_ptr<fatal_error_listener> fatal_listener = std::make_unique<fatal_error_listener>();
 	logs::listener::add(fatal_listener.get());
 
 	{
@@ -999,6 +1015,10 @@ int main(int argc, char** argv)
 
 		return 0;
 	}
+
+	// Enable console output of "always" log messages.
+	// Do this after parsing any Qt cli args that might open a window.
+	fatal_listener->log_always(true);
 
 	// Log unique ID
 	gui::utils::log_uuid();
