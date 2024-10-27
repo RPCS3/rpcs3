@@ -2475,7 +2475,6 @@ bool fs::pending_file::commit(bool overwrite)
 	{
 		file.sync();
 	}
-
 #endif
 
 #ifdef _WIN32
@@ -2486,16 +2485,87 @@ bool fs::pending_file::commit(bool overwrite)
 		disp.DeleteFileW = false;
 		ensure(SetFileInformationByHandle(file.get_handle(), FileDispositionInfo, &disp, sizeof(disp)));
 	}
+
+	std::vector<std::wstring> hardlink_paths;
+
+	const auto ws1 = to_wchar(m_path);
+
+	const HANDLE file_handle = CreateFileW(ws1.get(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+
+	while (file_handle != INVALID_HANDLE_VALUE)
+	{
+		// Get file ID (used to check for hardlinks)
+		BY_HANDLE_FILE_INFORMATION file_info;
+
+		if (!GetFileInformationByHandle(file_handle, &file_info) || file_info.nNumberOfLinks == 1)
+		{	
+			CloseHandle(file_handle);
+			break;
+		}
+
+		// Buffer for holding link name
+		std::wstring link_name_buffer(MAX_PATH, wchar_t{});
+		DWORD buffer_size{};
+		HANDLE find_handle = INVALID_HANDLE_VALUE;
+
+		while (true)
+		{
+			buffer_size = static_cast<DWORD>(link_name_buffer.size() - 1);
+			find_handle = FindFirstFileNameW(ws1.get(), 0, &buffer_size, link_name_buffer.data());
+
+			if (find_handle != INVALID_HANDLE_VALUE || GetLastError() != ERROR_MORE_DATA)
+			{
+				break;
+			}
+
+			link_name_buffer.resize(buffer_size + 1);
+		}
+
+		if (find_handle != INVALID_HANDLE_VALUE)
+		{
+			const std::wstring_view ws1_sv = ws1.get();
+
+			while (true)
+			{
+				if (link_name_buffer.c_str() != ws1_sv)
+				{
+					// Note: link_name_buffer is a buffer which may contain zeroes so truncate it
+					hardlink_paths.push_back(link_name_buffer.c_str());
+				}
+
+				buffer_size = static_cast<DWORD>(link_name_buffer.size() - 1);
+				if (!FindNextFileNameW(find_handle, &buffer_size, link_name_buffer.data()))
+				{
+					if (GetLastError() != ERROR_MORE_DATA)
+					{
+						break;
+					}
+
+					link_name_buffer.resize(buffer_size + 1);
+				}
+			}
+		}
+
+		// Clean up
+		FindClose(find_handle);
+		CloseHandle(file_handle);
+		break;
+	}
 #endif
 
 	file.close();
 
 #ifdef _WIN32
-	const auto ws1 = to_wchar(m_path);
 	const auto ws2 = to_wchar(m_dest);
 
 	if (MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH : MOVEFILE_WRITE_THROUGH))
 	{
+		for (auto&& path : hardlink_paths)
+		{
+			// Recreate hard links
+			CreateHardLinkW(path.c_str(), ws2.get(), NULL);
+		}
+
 		// Disable the destructor
 		m_path.clear();
 		return true;
