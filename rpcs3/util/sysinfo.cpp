@@ -734,9 +734,24 @@ bool utils::get_low_power_mode()
 #endif
 }
 
-static constexpr ullong round_tsc(ullong val)
+static constexpr ullong round_tsc(ullong val, ullong known_error)
 {
-	return utils::rounded_div(val, 100'000) * 100'000;
+	if (known_error >= 500'000)
+	{
+		// Do not accept large errors
+		return 0;
+	}
+
+	ullong by = 1000;
+	known_error /= 1000;
+
+	while (known_error && by < 100'000)
+	{
+		by *= 10;
+		known_error /= 10;
+	}
+
+	return utils::rounded_div(val, by) * by;
 }
 
 namespace utils
@@ -744,7 +759,7 @@ namespace utils
 	u64 s_tsc_freq = 0;
 }
 
-named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thread", []()
+static const bool s_tsc_freq_evaluated = []() -> bool
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
@@ -763,7 +778,7 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thr
 			return 0;
 
 		if (freq.QuadPart <= 9'999'999)
-			return round_tsc(freq.QuadPart * 1024);
+			return 0;
 
 		const ullong timer_freq = freq.QuadPart;
 #else
@@ -787,6 +802,8 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thr
 		clock_gettime(CLOCK_MONOTONIC, &ts0);
 		const ullong sec_base = ts0.tv_sec;
 #endif
+
+		constexpr usz sleep_time_ms = 20;
 
 		for (usz sample = 0; sample < sample_count; sample++)
 		{
@@ -823,11 +840,11 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thr
 
 			if (sample < sample_count - 1)
 			{
-				// Sleep 20ms between first and last sample
+				// Sleep between first and last sample
 #ifdef _WIN32
-				Sleep(20);
+				Sleep(sleep_time_ms);
 #else
-				usleep(20'000);
+				usleep(sleep_time_ms * 1000);
 #endif
 			}
 		}
@@ -843,17 +860,12 @@ named_thread<std::function<void()>> s_thread_evaluate_tsc_freq("TSC Evaluate Thr
 		const u64 res = utils::udiv128(static_cast<u64>(data >> 64), static_cast<u64>(data), (timer_data[1] - timer_data[0]));
 
 		// Rounding
-		return round_tsc(res);
+		return round_tsc(res, utils::mul_saturate<u64>(utils::add_saturate<u64>(rdtsc_diff[0], rdtsc_diff[1]), utils::aligned_div(timer_freq, timer_data[1] - timer_data[0])));
 	}();
 
 	atomic_storage<u64>::release(utils::s_tsc_freq, cal_tsc);
-});
-
-void utils::ensure_tsc_freq_init()
-{
-	// Join thread
-	s_thread_evaluate_tsc_freq();
-}
+	return true;
+}();
 
 u64 utils::get_total_memory()
 {

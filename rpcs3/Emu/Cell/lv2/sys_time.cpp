@@ -212,9 +212,9 @@ u64 get_system_time()
 		const u64 tsc = utils::get_tsc();
 
 #if _MSC_VER
-		const u64 result = static_cast<u64>(u128_from_mul(tsc, 1000000ull) / freq) * g_cfg.core.clocks_scale / 100u;
+		const u64 result = static_cast<u64>(u128_from_mul(tsc, 1000000ull) / freq);
 #else
-		const u64 result = (tsc / freq * 1000000ull + tsc % freq * 1000000ull / freq) * g_cfg.core.clocks_scale / 100u;
+		const u64 result = (tsc / freq * 1000000ull + tsc % freq * 1000000ull / freq);
 #endif
 		return result;
 	}
