@@ -1024,7 +1024,7 @@ namespace rsx
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
 
-		last_guest_flip_timestamp = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = get_system_time() - 1000000;
 
 		vblank_count = 0;
 
@@ -1104,7 +1104,7 @@ namespace rsx
 				if (Emu.IsPaused())
 				{
 					// Save the difference before pause
-					start_time = rsx::uclock() - start_time;
+					start_time = get_system_time() - start_time;
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
@@ -1112,7 +1112,7 @@ namespace rsx
 					}
 
 					// Restore difference
-					start_time = rsx::uclock() - start_time;
+					start_time = get_system_time() - start_time;
 				}
 			}
 		})));
@@ -3057,7 +3057,7 @@ namespace rsx
 			}
 		}
 
-		last_host_flip_timestamp = rsx::uclock();
+		last_host_flip_timestamp = get_system_time();
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -3299,7 +3299,7 @@ namespace rsx
 	{
 		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
-		const u64 current_time = rsx::uclock();
+		const u64 current_time = get_system_time();
 
 		if (recovered_fifo_cmds_history.size() == 20u)
 		{
@@ -3381,7 +3381,7 @@ namespace rsx
 
 		// Some cases do not need full delay
 		remaining = utils::aligned_div(remaining, div);
-		const u64 until = rsx::uclock() + remaining;
+		const u64 until = get_system_time() + remaining;
 
 		while (true)
 		{
@@ -3412,7 +3412,7 @@ namespace rsx
 				busy_wait(100);
 			}
 
-			const u64 current = rsx::uclock();
+			const u64 current = get_system_time();
 
 			if (current >= until)
 			{
@@ -3654,7 +3654,7 @@ namespace rsx
 		//Average load over around 30 frames
 		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
 		{
-			const auto timestamp = rsx::uclock();
+			const auto timestamp = get_system_time();
 			const auto idle = performance_counters.idle_time.load();
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
@@ -3938,7 +3938,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_guest_flip_timestamp = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 

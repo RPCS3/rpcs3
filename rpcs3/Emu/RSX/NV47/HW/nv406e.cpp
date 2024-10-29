@@ -44,7 +44,7 @@ namespace rsx
 				RSX(ctx)->flush_fifo();
 			}
 
-			u64 start = rsx::uclock();
+			u64 start = get_system_time();
 			u64 last_check_val = start;
 
 			while (sema != arg)
@@ -57,7 +57,7 @@ namespace rsx
 
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
-					const u64 current = rsx::uclock();
+					const u64 current = get_system_time();
 
 					if (current - last_check_val > 20'000)
 					{
@@ -81,7 +81,7 @@ namespace rsx
 			}
 
 			RSX(ctx)->fifo_wake_delay();
-			RSX(ctx)->performance_counters.idle_time += (rsx::uclock() - start);
+			RSX(ctx)->performance_counters.idle_time += (get_system_time() - start);
 		}
 
 		void semaphore_release(context* ctx, u32 /*reg*/, u32 arg)

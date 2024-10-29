@@ -25,11 +25,11 @@ namespace rsx
 		{
 			if (m_last_update_timestamp_us == 0)
 			{
-				m_last_update_timestamp_us = rsx::uclock();
+				m_last_update_timestamp_us = get_system_time();
 			}
 			else
 			{
-				const auto now = rsx::uclock();
+				const auto now = get_system_time();
 				m_current_frame_duration_us += (now - m_last_update_timestamp_us);
 				m_last_update_timestamp_us = now;
 			}
