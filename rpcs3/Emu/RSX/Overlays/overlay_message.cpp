@@ -13,7 +13,7 @@ namespace rsx
 				return duration;
 			}
 
-			return rsx::uclock() + duration;
+			return get_system_time() + duration;
 		}
 
 		template <typename T>
@@ -168,7 +168,7 @@ namespace rsx
 
 		void message::update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin)
 		{
-			const u64 cur_time = rsx::uclock();
+			const u64 cur_time = get_system_time();
 
 			for (auto it = vis_set.begin(); it != vis_set.end();)
 			{
