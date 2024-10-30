@@ -22,6 +22,8 @@
 #endif
 #endif
 
+#include <thread>
+
 #include "util/asm.hpp"
 #include "util/fence.hpp"
 
@@ -785,7 +787,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		constexpr ullong timer_freq = 1'000'000'000;
 #endif
 
-		constexpr u64 retry_count = 1000;
+		constexpr u64 retry_count = 1024;
 
 		// First is entry is for the onset measurements, last is for the end measurements
 		constexpr usz sample_count = 2;
@@ -803,7 +805,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		const ullong sec_base = ts0.tv_sec;
 #endif
 
-		constexpr usz sleep_time_ms = 20;
+		constexpr usz sleep_time_ms = 40;
 
 		for (usz sample = 0; sample < sample_count; sample++)
 		{
@@ -832,9 +834,24 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 					rdtsc_diff[sample] = rdtsc_read2 >= rdtsc_read ? rdtsc_read2 - rdtsc_read : u64{umax};
 				}
 
-				if (rdtsc_read2 - rdtsc_read < std::min<usz>(i, 300) && rdtsc_read2 >= rdtsc_read)
+				// 80 results in an error range of 4000 hertz (0.00025% of 4GHz CPU, quite acceptable)
+				// Error of 2.5 seconds per month
+				if (rdtsc_read2 - rdtsc_read < 80 && rdtsc_read2 >= rdtsc_read)
 				{
 					break;
+				}
+
+				// 8 yields seems to reduce significantly thread contention, improving accuracy
+				// Even 3 seem to do the job though, but just in case
+				if (i % 128 == 64)
+				{
+					std::this_thread::yield();
+				}
+
+				// Take 50% more yields with the last sample because it helps accuracy additionally the more time that passes
+				if (sample == sample_count - 1 && i % 256 == 128)
+				{
+					std::this_thread::yield();
 				}
 			}
 
