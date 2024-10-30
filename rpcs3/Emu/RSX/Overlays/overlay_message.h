@@ -11,10 +11,10 @@ namespace rsx
 	{
 		enum class message_pin_location
 		{
-			top,
-			bottom,
+			bottom_right,
+			bottom_left,
 			top_right,
-			bottom_right
+			top_left
 		};
 
 		class message_item : public rounded_rect
@@ -57,27 +57,27 @@ namespace rsx
 				T msg_id,
 				u64 expiration,
 				std::shared_ptr<atomic_t<u32>> refs,
-				message_pin_location location = message_pin_location::top,
+				message_pin_location location = message_pin_location::top_left,
 				std::shared_ptr<overlay_element> icon = {},
 				bool allow_refresh = false)
 			{
 				std::lock_guard lock(m_mutex_queue);
 
-				auto* queue = &m_ready_queue_top;
+				auto* queue = &m_ready_queue_top_left;
 
 				switch (location)
 				{
-				case message_pin_location::top:
-					queue = &m_ready_queue_top;
+				case message_pin_location::bottom_right:
+					queue = &m_ready_queue_bottom_right;
 					break;
-				case message_pin_location::bottom:
-					queue = &m_ready_queue_bottom;
+				case message_pin_location::bottom_left:
+					queue = &m_ready_queue_bottom_left;
 					break;
 				case message_pin_location::top_right:
 					queue = &m_ready_queue_top_right;
 					break;
-				case message_pin_location::bottom_right:
-					queue = &m_ready_queue_bottom_right;
+				case message_pin_location::top_left:
+					queue = &m_ready_queue_top_left;
 					break;
 				}
 
@@ -105,16 +105,16 @@ namespace rsx
 			shared_mutex m_mutex_queue;
 
 			// Top and bottom enqueued sets
-			std::deque<message_item> m_ready_queue_top;
-			std::deque<message_item> m_ready_queue_bottom;
-			std::deque<message_item> m_ready_queue_top_right;
 			std::deque<message_item> m_ready_queue_bottom_right;
+			std::deque<message_item> m_ready_queue_bottom_left;
+			std::deque<message_item> m_ready_queue_top_right;
+			std::deque<message_item> m_ready_queue_top_left;
 
 			// Top and bottom visible sets
-			std::deque<message_item> m_visible_items_top;
-			std::deque<message_item> m_visible_items_bottom;
-			std::deque<message_item> m_visible_items_top_right;
 			std::deque<message_item> m_visible_items_bottom_right;
+			std::deque<message_item> m_visible_items_bottom_left;
+			std::deque<message_item> m_visible_items_top_right;
+			std::deque<message_item> m_visible_items_top_left;
 
 			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
 
@@ -129,7 +129,7 @@ namespace rsx
 			T msg_id,
 			u64 expiration = 5'000'000,
 			std::shared_ptr<atomic_t<u32>> refs = {},
-			message_pin_location location = message_pin_location::top,
+			message_pin_location location = message_pin_location::top_left,
 			std::shared_ptr<overlay_element> icon = {},
 			bool allow_refresh = false)
 		{

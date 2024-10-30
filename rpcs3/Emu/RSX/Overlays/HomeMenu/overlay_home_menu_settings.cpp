@@ -97,6 +97,7 @@ namespace rsx
 			add_checkbox(&g_cfg.misc.show_rpcn_popups, "Show RPCN Popups");
 			add_checkbox(&g_cfg.misc.show_shader_compilation_hint, "Show Shader Compilation Hint");
 			add_checkbox(&g_cfg.misc.show_ppu_compilation_hint, "Show PPU Compilation Hint");
+			add_checkbox(&g_cfg.misc.show_autosave_autoload_hint, "Show Autosave/Autoload Hint");
 
 			apply_layout();
 		}
