@@ -119,8 +119,13 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 
 extern void resume_spu_thread_group_from_waiting(spu_thread& spu);
 
-CellError lv2_event_queue::send(lv2_event event)
+CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_event_port* port)
 {
+	if (notified_thread)
+	{
+		*notified_thread = false;
+	}
+
 	std::lock_guard lock(mutex);
 
 	if (!exists)
@@ -138,6 +143,18 @@ CellError lv2_event_queue::send(lv2_event event)
 		}
 
 		return CELL_EBUSY;
+	}
+
+	if (port)
+	{
+		// Block event port disconnection for the time being of sending events
+		port->is_busy++;
+		ensure(notified_thread);
+	}
+
+	if (notified_thread)
+	{
+		*notified_thread = true;
 	}
 
 	if (type == SYS_PPU_QUEUE)
@@ -709,7 +726,10 @@ error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 		return CELL_ENOTCONN;
 	}
 
-	// TODO: return CELL_EBUSY if necessary (can't detect the condition)
+	if (port->is_busy)
+	{
+		return CELL_EBUSY;
+	}
 
 	port->queue.reset();
 
@@ -718,20 +738,32 @@ error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 
 error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
-	if (auto cpu = get_current_cpu_thread())
+	const auto cpu = cpu_thread::get_current();
+	const auto ppu = cpu ? cpu->try_get<ppu_thread>() : nullptr;
+
+	if (cpu)
 	{
 		cpu->state += cpu_flag::wait;
 	}
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
+	bool notified_thread = false;
+
 	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_port& port) -> CellError
 	{
+		if (ppu && ppu->loaded_from_savestate)
+		{
+			port.is_busy++;
+			notified_thread = true;
+			return {};
+		}
+
 		if (lv2_obj::check(port.queue))
 		{
 			const u64 source = port.name ? port.name : (u64{process_getpid() + 0u} << 32) | u64{eport_id};
 
-			return port.queue->send(source, data1, data2, data3);
+			return port.queue->send(source, data1, data2, data3, &notified_thread, ppu ? &port : nullptr);
 		}
 
 		return CELL_ENOTCONN;
@@ -740,6 +772,19 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	if (!port)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (ppu && notified_thread)
+	{
+		// Wait to be requeued
+		if (ppu->test_stopped())
+		{
+			// Wait again on savestate load
+			ppu->state += cpu_flag::again;
+		}
+
+		port->is_busy--;
+		return CELL_OK;
 	}
 
 	if (port.ret)
