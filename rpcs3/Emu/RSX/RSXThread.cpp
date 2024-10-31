@@ -3508,7 +3508,40 @@ namespace rsx
 		}
 	}
 
-	void thread::on_notify_memory_unmapped(u32 address, u32 size)
+	void thread::on_notify_pre_memory_unmapped(u32 address, u32 size)
+	{
+		if (rsx_thread_running && address < rsx::constants::local_mem_base)
+		{
+			// Pause RSX thread momentarily to handle unmapping
+			eng_lock elock(this);
+
+			// Queue up memory invalidation
+			std::lock_guard lock(m_mtx_task);
+			const bool existing_range_valid = m_invalidated_memory_range.valid();
+			const auto unmap_range = address_range::start_length(address, size);
+
+			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
+			{
+				// Merge range-to-invalidate in case of consecutive unmaps
+				m_invalidated_memory_range.set_min_max(unmap_range);
+			}
+			else
+			{
+				if (existing_range_valid)
+				{
+					// We can only delay consecutive unmaps.
+					// Otherwise, to avoid VirtualProtect failures, we need to do the invalidation here
+					handle_invalidated_memory_range();
+				}
+
+				m_invalidated_memory_range = unmap_range;
+			}
+
+			m_eng_interrupt_mask |= rsx::memory_config_interrupt;
+		}
+	}
+
+	void thread::on_notify_post_memory_unmapped(u32 address, u32 size)
 	{
 		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
@@ -3559,33 +3592,6 @@ namespace rsx
 					}
 				}
 			}
-
-			// Pause RSX thread momentarily to handle unmapping
-			eng_lock elock(this);
-
-			// Queue up memory invalidation
-			std::lock_guard lock(m_mtx_task);
-			const bool existing_range_valid = m_invalidated_memory_range.valid();
-			const auto unmap_range = address_range::start_length(address, size);
-
-			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
-			{
-				// Merge range-to-invalidate in case of consecutive unmaps
-				m_invalidated_memory_range.set_min_max(unmap_range);
-			}
-			else
-			{
-				if (existing_range_valid)
-				{
-					// We can only delay consecutive unmaps.
-					// Otherwise, to avoid VirtualProtect failures, we need to do the invalidation here
-					handle_invalidated_memory_range();
-				}
-
-				m_invalidated_memory_range = unmap_range;
-			}
-
-			m_eng_interrupt_mask |= rsx::memory_config_interrupt;
 		}
 	}
 

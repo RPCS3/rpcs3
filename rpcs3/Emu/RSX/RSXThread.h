@@ -500,10 +500,16 @@ namespace rsx
 		void on_notify_memory_mapped(u32 address_base, u32 size);
 
 		/**
+		 * Notify that a section of memory is to be unmapped
+		 * Any data held in the defined range is discarded
+		 */
+		void on_notify_pre_memory_unmapped(u32 address_base, u32 size);
+
+		/**
 		 * Notify that a section of memory has been unmapped
 		 * Any data held in the defined range is discarded
 		 */
-		void on_notify_memory_unmapped(u32 address_base, u32 size);
+		void on_notify_post_memory_unmapped(u32 address_base, u32 size);
 
 		/**
 		 * Notify to check internal state during semaphore wait
