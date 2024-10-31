@@ -145,18 +145,6 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		return CELL_EBUSY;
 	}
 
-	if (port)
-	{
-		// Block event port disconnection for the time being of sending events
-		port->is_busy++;
-		ensure(notified_thread);
-	}
-
-	if (notified_thread)
-	{
-		*notified_thread = true;
-	}
-
 	if (type == SYS_PPU_QUEUE)
 	{
 		// Store event in registers
@@ -179,6 +167,15 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
 		awake(&ppu);
+
+		if (port && ppu.prio.load().prio < ensure(cpu_thread::get_current<ppu_thread>())->prio.load().prio)
+		{
+			// Block event port disconnection for the time being of sending events
+			// PPU -> lower prio PPU is the only case that can cause thread blocking 
+			port->is_busy++;
+			ensure(notified_thread);
+			*notified_thread = true;
+		}
 	}
 	else
 	{
@@ -763,7 +760,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		{
 			const u64 source = port.name ? port.name : (u64{process_getpid() + 0u} << 32) | u64{eport_id};
 
-			return port.queue->send(source, data1, data2, data3, &notified_thread, ppu ? &port : nullptr);
+			return port.queue->send(source, data1, data2, data3, &notified_thread, ppu && port.queue->type == SYS_PPU_QUEUE ? &port : nullptr);
 		}
 
 		return CELL_ENOTCONN;
@@ -774,7 +771,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		return CELL_ESRCH;
 	}
 
-	if (ppu && notified_thread)
+	if (ppu && port->queue->type == SYS_PPU_QUEUE && notified_thread)
 	{
 		// Wait to be requeued
 		if (ppu->test_stopped())
