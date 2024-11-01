@@ -3508,10 +3508,69 @@ namespace rsx
 		}
 	}
 
-	void thread::on_notify_pre_memory_unmapped(u32 address, u32 size)
+	void thread::on_notify_pre_memory_unmapped(u32 address, u32 size, std::vector<std::pair<u64, u64>>& event_data)
 	{
 		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
+			// Each bit represents io entry to be unmapped
+			u64 unmap_status[512 / 64]{};
+
+			for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
+			{
+				const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
+
+				if (io + 1)
+				{
+					unmap_status[io / 64] |= 1ull << (io & 63);
+					iomap_table.io[ea].release(-1);
+					iomap_table.ea[io].release(-1);
+				}
+			}
+
+			auto& cfg = g_fxo->get<gcm_config>();
+
+			std::unique_lock<shared_mutex> hle_lock;
+
+			for (u32 i = 0; i < std::size(unmap_status); i++)
+			{
+				// TODO: Check order when sending multiple events
+				if (u64 to_unmap = unmap_status[i])
+				{
+					if (isHLE)
+					{
+						if (!hle_lock)
+						{
+							hle_lock = std::unique_lock{cfg.gcmio_mutex};
+						}
+
+						while (to_unmap)
+						{
+							const int bit = (std::countr_zero<u64>(utils::rol64(to_unmap, 0 - bit)) + bit);
+							to_unmap &= ~(1ull << bit);
+
+							constexpr u16 null_entry = 0xFFFF;
+							const u32 ea = std::exchange(cfg.offsetTable.eaAddress[(i * 64 + bit)], null_entry);
+
+							if (ea < (rsx::constants::local_mem_base >> 20))
+							{
+								cfg.offsetTable.eaAddress[ea] = null_entry;
+							}
+						}
+
+						continue;
+					}
+
+					// Each 64 entries are grouped by a bit
+					const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
+					event_data.emplace_back(io_event, to_unmap);
+				}
+			}
+
+			if (hle_lock)
+			{
+				hle_lock.unlock();
+			}
+
 			// Pause RSX thread momentarily to handle unmapping
 			eng_lock elock(this);
 
@@ -3541,57 +3600,11 @@ namespace rsx
 		}
 	}
 
-	void thread::on_notify_post_memory_unmapped(u32 address, u32 size)
+	void thread::on_notify_post_memory_unmapped(u64 event_data1, u64 event_data2)
 	{
-		if (rsx_thread_running && address < rsx::constants::local_mem_base)
+		if (!isHLE)
 		{
-			if (!isHLE)
-			{
-				// Each bit represents io entry to be unmapped
-				u64 unmap_status[512 / 64]{};
-
-				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
-				{
-					const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
-
-					if (io + 1)
-					{
-						unmap_status[io / 64] |= 1ull << (io & 63);
-						iomap_table.ea[io].release(-1);
-						iomap_table.io[ea].release(-1);
-					}
-				}
-
-				for (u32 i = 0; i < std::size(unmap_status); i++)
-				{
-					// TODO: Check order when sending multiple events
-					if (u64 to_unmap = unmap_status[i])
-					{
-						// Each 64 entries are grouped by a bit
-						const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
-						send_event(0, io_event, to_unmap);
-					}
-				}
-			}
-			else
-			{
-				// TODO: Fix this
-				u32 ea = address >> 20, io = iomap_table.io[ea];
-
-				if (io + 1)
-				{
-					io >>= 20;
-
-					auto& cfg = g_fxo->get<gcm_config>();
-					std::lock_guard lock(cfg.gcmio_mutex);
-
-					for (const u32 end = ea + (size >> 20); ea < end;)
-					{
-						cfg.offsetTable.ioAddress[ea++] = 0xFFFF;
-						cfg.offsetTable.eaAddress[io++] = 0xFFFF;
-					}
-				}
-			}
+			send_event(0, event_data1, event_data2);
 		}
 	}
 

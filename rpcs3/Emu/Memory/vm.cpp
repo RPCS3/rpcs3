@@ -945,7 +945,7 @@ namespace vm
 		return true;
 	}
 
-	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm)
+	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm, std::vector<std::pair<u64, u64>>& unmap_events)
 	{
 		perf_meter<"PAGE_UNm"_u64> perf0;
 
@@ -1009,7 +1009,7 @@ namespace vm
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
 		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_pre_memory_unmapped(addr, size);
+			rsxthr->on_notify_pre_memory_unmapped(addr, size, unmap_events);
 		}
 
 		// Deregister PPU related data
@@ -1309,7 +1309,7 @@ namespace vm
 		}
 	}
 
-	bool block_t::unmap(std::vector<std::pair<u32, u32>>* unmapped)
+	bool block_t::unmap(std::vector<std::pair<u64, u64>>* unmapped)
 	{
 		auto& m_map = (m.*block_map)();
 
@@ -1320,12 +1320,9 @@ namespace vm
 			{
 				const auto next = std::next(it);
 				const auto size = it->second.first;
-				auto unmap = std::make_pair(it->first, _page_unmap(it->first, size, this->flags, it->second.second.get()));
 
-				if (unmapped)
-				{
-					unmapped->emplace_back(unmap);
-				}
+				std::vector<std::pair<u64, u64>> event_data;
+				ensure(size == _page_unmap(it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data));
 
 				it = next;
 			}
@@ -1488,14 +1485,16 @@ namespace vm
 		{
 			struct notify_t
 			{
-				u32 addr{};
-				u32 size{};
+				std::vector<std::pair<u64, u64>> event_data;
 
 				~notify_t() noexcept
 				{
-					if (auto rsxthr = g_fxo->try_get<rsx::thread>(); rsxthr && size)
+					if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 					{
-						rsxthr->on_notify_post_memory_unmapped(addr, size);
+						for (const auto [event_data1, event_data2] : event_data)
+						{
+							rsxthr->on_notify_post_memory_unmapped(event_data1, event_data2);
+						}
 					}
 				}
 			} unmap_notification;
@@ -1525,7 +1524,7 @@ namespace vm
 			}
 
 			// Unmap "real" memory pages
-			ensure(size == _page_unmap(addr, size, this->flags, found->second.second.get()));
+			ensure(size == _page_unmap(addr, size, this->flags, found->second.second.get(), unmap_notification.event_data));
 
 			// Clear stack guards
 			if (flags & stack_guarded)
@@ -1537,8 +1536,6 @@ namespace vm
 			// Remove entry
 			m_map.erase(found);
 
-			unmap_notification.size = size;
-			unmap_notification.addr = addr;
 			return size;
 		}
 	}
@@ -1837,7 +1834,7 @@ namespace vm
 		}
 	}
 
-	bool _unmap_block(const std::shared_ptr<block_t>& block, std::vector<std::pair<u32, u32>>* unmapped = nullptr)
+	bool _unmap_block(const std::shared_ptr<block_t>& block, std::vector<std::pair<u64, u64>>* unmapped = nullptr)
 	{
 		return block->unmap(unmapped);
 	}
@@ -1988,15 +1985,15 @@ namespace vm
 
 		struct notify_t
 		{
-			std::vector<std::pair<u32, u32>> addr_size_pairs;
+			std::vector<std::pair<u64, u64>> unmap_data;
 
 			~notify_t() noexcept
 			{
-				for (const auto [addr, size] : addr_size_pairs)
+				if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 				{
-					if (auto rsxthr = g_fxo->try_get<rsx::thread>())
+					for (const auto [event_data1, event_data2] : unmap_data)
 					{
-						rsxthr->on_notify_post_memory_unmapped(addr, size);
+						rsxthr->on_notify_post_memory_unmapped(event_data1, event_data2);
 					}
 				}
 			}
@@ -2031,7 +2028,7 @@ namespace vm
 
 				result.first = std::move(*it);
 				g_locations.erase(it);
-				ensure(_unmap_block(result.first, &unmap_notifications.addr_size_pairs));
+				ensure(_unmap_block(result.first, &unmap_notifications.unmap_data));
 				result.second = true;
 				return result;
 			}
