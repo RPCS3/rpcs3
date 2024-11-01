@@ -133,8 +133,8 @@ namespace vm
 		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&) const;
 
 		// Unmap block
-		bool unmap();
-		friend bool _unmap_block(const std::shared_ptr<block_t>&);
+		bool unmap(std::vector<std::pair<u32, u32>>* unmapped = nullptr);
+		friend bool _unmap_block(const std::shared_ptr<block_t>&, std::vector<std::pair<u32, u32>>* unmapped);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);

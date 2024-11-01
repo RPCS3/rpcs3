@@ -94,6 +94,4 @@ namespace utils
 	{
 		return s_tsc_freq;
 	}
-
-	void ensure_tsc_freq_init();
 }

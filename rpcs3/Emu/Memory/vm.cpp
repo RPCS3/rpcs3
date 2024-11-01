@@ -1009,7 +1009,7 @@ namespace vm
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
 		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_memory_unmapped(addr, size);
+			rsxthr->on_notify_pre_memory_unmapped(addr, size);
 		}
 
 		// Deregister PPU related data
@@ -1309,7 +1309,7 @@ namespace vm
 		}
 	}
 
-	bool block_t::unmap()
+	bool block_t::unmap(std::vector<std::pair<u32, u32>>* unmapped)
 	{
 		auto& m_map = (m.*block_map)();
 
@@ -1320,7 +1320,13 @@ namespace vm
 			{
 				const auto next = std::next(it);
 				const auto size = it->second.first;
-				_page_unmap(it->first, size, this->flags, it->second.second.get());
+				auto unmap = std::make_pair(it->first, _page_unmap(it->first, size, this->flags, it->second.second.get()));
+
+				if (unmapped)
+				{
+					unmapped->emplace_back(unmap);
+				}
+
 				it = next;
 			}
 
@@ -1480,6 +1486,20 @@ namespace vm
 	{
 		auto& m_map = (m.*block_map)();
 		{
+			struct notify_t
+			{
+				u32 addr{};
+				u32 size{};
+
+				~notify_t() noexcept
+				{
+					if (auto rsxthr = g_fxo->try_get<rsx::thread>(); rsxthr && size)
+					{
+						rsxthr->on_notify_post_memory_unmapped(addr, size);
+					}
+				}
+			} unmap_notification;
+
 			vm::writer_lock lock;
 
 			const auto found = m_map.find(addr - (flags & stack_guarded ? 0x1000 : 0));
@@ -1517,6 +1537,8 @@ namespace vm
 			// Remove entry
 			m_map.erase(found);
 
+			unmap_notification.size = size;
+			unmap_notification.addr = addr;
 			return size;
 		}
 	}
@@ -1815,9 +1837,9 @@ namespace vm
 		}
 	}
 
-	bool _unmap_block(const std::shared_ptr<block_t>& block)
+	bool _unmap_block(const std::shared_ptr<block_t>& block, std::vector<std::pair<u32, u32>>* unmapped = nullptr)
 	{
-		return block->unmap();
+		return block->unmap(unmapped);
 	}
 
 	static bool _test_map(u32 addr, u32 size)
@@ -1964,6 +1986,22 @@ namespace vm
 
 		std::pair<std::shared_ptr<block_t>, bool> result{};
 
+		struct notify_t
+		{
+			std::vector<std::pair<u32, u32>> addr_size_pairs;
+
+			~notify_t() noexcept
+			{
+				for (const auto [addr, size] : addr_size_pairs)
+				{
+					if (auto rsxthr = g_fxo->try_get<rsx::thread>())
+					{
+						rsxthr->on_notify_post_memory_unmapped(addr, size);
+					}
+				}
+			}
+		} unmap_notifications;
+
 		vm::writer_lock lock;
 
 		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
@@ -1993,7 +2031,7 @@ namespace vm
 
 				result.first = std::move(*it);
 				g_locations.erase(it);
-				ensure(_unmap_block(result.first));
+				ensure(_unmap_block(result.first, &unmap_notifications.addr_size_pairs));
 				result.second = true;
 				return result;
 			}

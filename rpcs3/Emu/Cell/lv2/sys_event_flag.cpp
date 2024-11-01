@@ -424,6 +424,8 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 				}
 			}
 
+			dependant_mask &= ~bitptn;
+
 			auto [new_val, ok] = flag->pattern.fetch_op([&](u64& x)
 			{
 				if ((x ^ pattern) & dependant_mask)

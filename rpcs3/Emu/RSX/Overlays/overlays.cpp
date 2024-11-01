@@ -499,7 +499,7 @@ namespace rsx
 			}
 
 			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
-				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < rsx::uclock())
+				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < get_system_time())
 			{
 				rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 			}

@@ -19,7 +19,7 @@ The following tools are required to build RPCS3 on Windows 10 or later:
     with standalone **CMake** tool.
 
 - [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
-- [Qt 6.7.3](https://www.qt.io/download-qt-installer)
+- [Qt 6.7.3](https://www.qt.io/download-qt-installer) In case you can't download from the official installer, you can use [Another Qt installer](https://github.com/miurahr/aqtinstall) (In that case you will need to manually add the "qtmultimedia" module when installing Qt)
 - [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (see "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
 
 The `sln` solution available only on **Visual Studio** is the preferred building solution. It easily allows to build the **RPCS3** application in `Release` and `Debug` mode.

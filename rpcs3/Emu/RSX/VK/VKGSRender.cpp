@@ -1257,7 +1257,7 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	if (false)
 	{
 		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_memory_unmapped(addr, tiles[tile].size);
+		on_notify_pre_memory_unmapped(addr, tiles[tile].size);
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 
@@ -1892,7 +1892,7 @@ void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hi
 		// OK, cell will be accessing the results, probably.
 		// Try to avoid flush spam, it is more costly to flush the CB than it is to just upload the vertex data
 		// This is supposed to be an optimization afterall.
-		const auto now = rsx::uclock();
+		const auto now = get_system_time();
 		if ((now - m_last_cond_render_eval_hint) > 50)
 		{
 			// Schedule a sync on the next loop iteration
