@@ -3543,9 +3543,11 @@ namespace rsx
 							hle_lock = std::unique_lock{cfg.gcmio_mutex};
 						}
 
+						int bit = 0;
+
 						while (to_unmap)
 						{
-							const int bit = (std::countr_zero<u64>(utils::rol64(to_unmap, 0 - bit)) + bit);
+							bit = (std::countr_zero<u64>(utils::rol64(to_unmap, 0 - bit)) + bit);
 							to_unmap &= ~(1ull << bit);
 
 							constexpr u16 null_entry = 0xFFFF;
