@@ -674,19 +674,28 @@ u64 utils::get_unique_tsc()
 {
 	const u64 stamp0 = utils::get_tsc();
 
-	return s_min_tsc.atomic_op([&](u64& tsc)
+	if (!s_min_tsc.fetch_op([=](u64& tsc)
 	{
-		if (stamp0 <= s_min_tsc)
+		if (stamp0 <= tsc)
 		{
 			// Add 1 if new stamp is too old
-			return ++tsc;
+			return false;
 		}
 		else
 		{
 			// Update last tsc with new stamp otherwise
-			return ((tsc = stamp0));
+			tsc = stamp0;
+			return true;
 		}
-	});
+	}).second)
+	{
+		// Add 1 if new stamp is too old
+		// Avoid doing it in the atomic operaion because, if it gets here it means there is already much cntention
+		// So break the race (at least on x86)
+		return s_min_tsc.add_fetch(1);
+	}
+
+	return stamp0;
 }
 
 atomic_t<u16>* root_info::slot_alloc(uptr ptr) noexcept
