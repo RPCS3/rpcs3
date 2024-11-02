@@ -472,7 +472,7 @@ error_code cellSyncQueuePush(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_push_begin(ctrl, depth, &position);
 	}))
@@ -509,7 +509,7 @@ error_code cellSyncQueueTryPush(vm::ptr<CellSyncQueue> queue, vm::cptr<void> buf
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_push_begin(ctrl, depth, &position);
 	}))
@@ -543,7 +543,7 @@ error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::p
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
 	}))
@@ -580,7 +580,7 @@ error_code cellSyncQueueTryPop(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buffe
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
 	}))
@@ -614,7 +614,7 @@ error_code cellSyncQueuePeek(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
 	}))
@@ -651,7 +651,7 @@ error_code cellSyncQueueTryPeek(vm::ptr<CellSyncQueue> queue, vm::ptr<void> buff
 
 	u32 position;
 
-	while (!queue->ctrl.atomic_op([&](auto& ctrl)
+	while (!queue->ctrl.atomic_op([&](CellSyncQueue::ctrl_t& ctrl)
 	{
 		return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
 	}))

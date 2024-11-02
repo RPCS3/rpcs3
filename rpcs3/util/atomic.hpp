@@ -1233,6 +1233,7 @@ public:
 
 	// Atomic operation; returns old value, or pair of old value and return value (cancel op if evaluates to false)
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
+		requires (!std::is_invocable_v<F, const T> && !std::is_invocable_v<F, volatile T>)
 	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
@@ -1264,6 +1265,7 @@ public:
 
 	// Atomic operation; returns function result value, function is the lambda
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
+		requires (!std::is_invocable_v<F, const T> && !std::is_invocable_v<F, volatile T>)
 	RT atomic_op(F func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
@@ -1798,3 +1800,31 @@ struct std::common_type<T, atomic_t<T2, Align2>> : std::common_type<std::common_
 #pragma GCC diagnostic pop
 #pragma GCC diagnostic pop
 #endif
+
+namespace utils
+{
+	template <typename F>
+	struct aofn_helper
+	{
+		F f;
+
+		aofn_helper(F&& f) noexcept
+			: f(std::forward<F>(f))
+		{
+		}
+
+		template <typename Arg> requires (std::is_same_v<std::remove_reference_t<Arg>, std::remove_cvref_t<Arg>> && !std::is_rvalue_reference_v<Arg>)
+		auto operator()(Arg& arg) const noexcept
+		{
+			return f(std::forward<Arg&>(arg));
+		}
+	};
+
+	template <typename F>
+	aofn_helper(F&& f) -> aofn_helper<F>;
+}
+
+// Shorter lambda for non-cv qualified L-values
+// For use with atomic operations
+#define AOFN(...) \
+	::utils::aofn_helper([&](auto& x) { return (__VA_ARGS__); })

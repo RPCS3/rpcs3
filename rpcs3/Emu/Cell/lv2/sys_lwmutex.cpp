@@ -142,7 +142,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwmutex& mutex)
 	{
-		if (s32 signal = mutex.lv2_control.fetch_op([](auto& data)
+		if (s32 signal = mutex.lv2_control.fetch_op([](lv2_lwmutex::control_data_t& data)
 		{
 			if (data.signaled)
 			{
@@ -297,7 +297,7 @@ error_code _sys_lwmutex_trylock(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		auto [_, ok] = mutex.lv2_control.fetch_op([](auto& data)
+		auto [_, ok] = mutex.lv2_control.fetch_op([](lv2_lwmutex::control_data_t& data)
 		{
 			if (data.signaled & 1)
 			{
