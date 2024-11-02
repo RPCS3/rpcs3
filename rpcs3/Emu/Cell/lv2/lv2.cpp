@@ -1852,7 +1852,7 @@ void lv2_obj::schedule_all(u64 current_time)
 
 				target->start_time = 0;
 
-				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, x-= remove_yield, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
+				if ((target->state.fetch_op(AOFN(x += cpu_flag::signal, x -= cpu_flag::suspend, x-= remove_yield, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
 				{
 					continue;
 				}
