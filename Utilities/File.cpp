@@ -2639,6 +2639,17 @@ void fmt_class_string<fs::seek_mode>::format(std::string& out, u64 arg)
 template<>
 void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 {
+	if (arg == static_cast<u64>(fs::error::unknown))
+	{
+		// Note: may not be the correct error code because it only prints the last
+#ifdef _WIN32
+		fmt::append(out, "Unknown error [errno=%d]", GetLastError());
+#else
+		fmt::append(out, "Unknown error [errno=%d]", errno);
+#endif
+		return;
+	}
+
 	format_enum(out, arg, [](auto arg)
 	{
 		switch (arg)
