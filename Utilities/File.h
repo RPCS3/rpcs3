@@ -601,6 +601,8 @@ namespace fs
 	// Temporary directory
 	const std::string& get_temp_dir();
 
+	std::string generate_neighboring_path(std::string_view source, u64 seed);
+
 	// Unique pending file creation destined to be renamed to the destination file
 	struct pending_file
 	{
