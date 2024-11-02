@@ -502,14 +502,15 @@ namespace rsx
 		/**
 		 * Notify that a section of memory is to be unmapped
 		 * Any data held in the defined range is discarded
+		 * Sets optional unmap event data
 		 */
-		void on_notify_pre_memory_unmapped(u32 address_base, u32 size);
+		void on_notify_pre_memory_unmapped(u32 address_base, u32 size, std::vector<std::pair<u64, u64>>& event_data);
 
 		/**
 		 * Notify that a section of memory has been unmapped
 		 * Any data held in the defined range is discarded
 		 */
-		void on_notify_post_memory_unmapped(u32 address_base, u32 size);
+		void on_notify_post_memory_unmapped(u64 event_data1, u64 event_data2);
 
 		/**
 		 * Notify to check internal state during semaphore wait

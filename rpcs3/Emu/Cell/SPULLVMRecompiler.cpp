@@ -543,9 +543,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T = u8>
 	llvm::Value* _ptr(llvm::Value* base, llvm::Value* offset)
 	{
-		const auto off = m_ir->CreateGEP(get_type<u8>(), base, offset);
-		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
-		return ptr;
+		return m_ir->CreateGEP(get_type<u8>(), base, offset);
 	}
 
 	template <typename T, typename... Args>

@@ -771,7 +771,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 		return CELL_ESRCH;
 	}
 
-	if (ppu && port->queue->type == SYS_PPU_QUEUE && notified_thread)
+	if (ppu && notified_thread)
 	{
 		// Wait to be requeued
 		if (ppu->test_stopped())

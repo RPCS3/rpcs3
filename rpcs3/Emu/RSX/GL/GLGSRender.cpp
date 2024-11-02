@@ -1214,7 +1214,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	if (false)
 	{
 		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_pre_memory_unmapped(addr, tiles[tile].size);
+		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 

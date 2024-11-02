@@ -2698,7 +2698,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 					bool ok = false;
 
-					std::tie(old, ok) = bits->fetch_op([&](auto& v)
+					std::tie(old, ok) = bits->fetch_op([&](u128& v)
 					{
 						if (v & wmask)
 						{
@@ -2796,7 +2796,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				res += 127;
 
 				// Release bits and notify
-				bits->atomic_op([&](auto& v)
+				bits->atomic_op([&](u128& v)
 				{
 					v &= ~wmask;
 				});

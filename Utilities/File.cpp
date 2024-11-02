@@ -2412,6 +2412,13 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	return result;
 }
 
+std::string fs::generate_neighboring_path(std::string_view source, [[maybe_unused]] u64 seed)
+{
+	// Seed is currently not used
+
+	return fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(source), source.substr(source.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+}
+
 bool fs::pending_file::open(std::string_view path)
 {
 	file.close();
@@ -2430,7 +2437,7 @@ bool fs::pending_file::open(std::string_view path)
 
 	do
 	{
-		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), path.substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+		m_path = fs::generate_neighboring_path(path, 0);
 
 		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
 		{
@@ -2563,21 +2570,52 @@ bool fs::pending_file::commit(bool overwrite)
 	file.close();
 
 #ifdef _WIN32
-	const auto ws2 = to_wchar(m_dest);
+	const auto wdest = to_wchar(m_dest);
 
 	bool ok = false;
 
 	if (hardlink_paths.empty())
 	{
-		ok = MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH : MOVEFILE_WRITE_THROUGH);
+		ok = MoveFileExW(ws1.get(), wdest.get(), overwrite ? MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH : MOVEFILE_WRITE_THROUGH);
 	}
 	else
 	{
-		ok = ReplaceFileW(ws1.get(), ws2.get(), nullptr, 0, nullptr, nullptr);
+		ok = ReplaceFileW(ws1.get(), wdest.get(), nullptr, 0, nullptr, nullptr);
 	}
 
 	if (ok)
 	{
+		for (const std::wstring& link_name : hardlink_paths)
+		{
+			std::unique_ptr<wchar_t[]> write_temp_path;
+
+			do
+			{
+				write_temp_path = to_wchar(fs::generate_neighboring_path(m_dest, 0));
+
+				// Generate a temporary hard linke
+				if (CreateHardLinkW(wdest.get(), write_temp_path.get(), nullptr))
+				{
+					if (MoveFileExW(write_temp_path.get(), link_name.data(), MOVEFILE_REPLACE_EXISTING))
+					{
+						// Success
+						write_temp_path.reset();
+						break;
+					}
+
+					break;
+				}
+			}
+			while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+
+			if (write_temp_path)
+			{
+				// Failure
+				g_tls_error = to_error(GetLastError());
+				return false;
+			}
+		}
+
 		// Disable the destructor
 		m_path.clear();
 		return true;
@@ -2639,6 +2677,17 @@ void fmt_class_string<fs::seek_mode>::format(std::string& out, u64 arg)
 template<>
 void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 {
+	if (arg == static_cast<u64>(fs::error::unknown))
+	{
+		// Note: may not be the correct error code because it only prints the last
+#ifdef _WIN32
+		fmt::append(out, "Unknown error [errno=%d]", GetLastError());
+#else
+		fmt::append(out, "Unknown error [errno=%d]", errno);
+#endif
+		return;
+	}
+
 	format_enum(out, arg, [](auto arg)
 	{
 		switch (arg)
