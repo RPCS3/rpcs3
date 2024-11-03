@@ -34,85 +34,132 @@ namespace rsx
 		flush_once = 1
 	};
 
-	struct invalidation_cause
+	class invalidation_cause
 	{
-		enum enum_type
+	public:
+		enum class enum_type
 		{
 			invalid = 0,
 			read,
 			deferred_read,
 			write,
 			deferred_write,
-			unmap, // fault range is being unmapped
-			reprotect, // we are going to reprotect the fault range
+			unmap,             // fault range is being unmapped
+			reprotect,         // we are going to reprotect the fault range
 			superseded_by_fbo, // used by texture_cache::locked_memory_region
 			committed_as_fbo   // same as superseded_by_fbo but without locking or preserving page flags
-		} cause;
+		};
+
+		enum flags : u32
+		{
+			cause_is_valid    = (1 << 0),
+			cause_is_read     = (1 << 1),
+			cause_is_write    = (1 << 2),
+			cause_is_deferred = (1 << 3),
+			cause_skips_fbos  = (1 << 4),
+			cause_skips_flush = (1 << 5),
+			cause_keeps_fault_range_protection = (1 << 6),
+			cause_uses_strict_data_bounds      = (1 << 7),
+		};
+
+		using enum enum_type;
 
 		constexpr bool valid() const
 		{
-			return cause != invalid;
+			return m_flag_bits & flags::cause_is_valid;
 		}
 
 		constexpr bool is_read() const
 		{
 			AUDIT(valid());
-			return (cause == read || cause == deferred_read);
+			return m_flag_bits & flags::cause_is_read;
 		}
 
 		constexpr bool deferred_flush() const
 		{
 			AUDIT(valid());
-			return (cause == deferred_read || cause == deferred_write);
-		}
-
-		constexpr bool destroy_fault_range() const
-		{
-			AUDIT(valid());
-			return (cause == unmap);
+			return m_flag_bits & flags::cause_is_deferred;
 		}
 
 		constexpr bool keep_fault_range_protection() const
 		{
 			AUDIT(valid());
-			return (cause == unmap || cause == reprotect || cause == superseded_by_fbo);
+			return m_flag_bits & flags::cause_keeps_fault_range_protection;
 		}
 
 		constexpr bool skip_fbos() const
 		{
 			AUDIT(valid());
-			return (cause == superseded_by_fbo || cause == committed_as_fbo);
+			return m_flag_bits & flags::cause_skips_fbos;
 		}
 
 		constexpr bool skip_flush() const
 		{
 			AUDIT(valid());
-			return (cause == unmap) || (!g_cfg.video.strict_texture_flushing && cause == superseded_by_fbo);
+			return m_flag_bits & flags::cause_skips_flush;
 		}
 
-		constexpr invalidation_cause undefer() const
+		constexpr bool use_strict_data_bounds() const
 		{
-			AUDIT(deferred_flush());
-			if (cause == deferred_read)
-				return read;
-			if (cause == deferred_write)
-				return write;
-			fmt::throw_exception("Unreachable");
+			AUDIT(valid());
+			return m_flag_bits & flags::cause_uses_strict_data_bounds;
 		}
 
-		constexpr invalidation_cause defer() const
+		inline invalidation_cause undefer() const
 		{
-			AUDIT(!deferred_flush());
-			if (cause == read)
-				return deferred_read;
-			if (cause == write)
-				return deferred_write;
-			fmt::throw_exception("Unreachable");
+			ensure(m_flag_bits & cause_is_deferred);
+			return invalidation_cause(m_flag_bits & ~cause_is_deferred);
 		}
 
-		constexpr invalidation_cause() : cause(invalid) {}
-		constexpr invalidation_cause(enum_type _cause) : cause(_cause) {}
-		operator enum_type&() { return cause; }
-		constexpr operator enum_type() const { return cause; }
+		inline invalidation_cause defer() const
+		{
+			ensure(!(m_flag_bits & cause_is_deferred));
+			return invalidation_cause(m_flag_bits | cause_is_deferred);
+		}
+
+		inline bool operator == (const invalidation_cause& other) const
+		{
+			return m_flag_bits == other.m_flag_bits;
+		}
+
+		invalidation_cause() = default;
+		invalidation_cause(enum_type cause) { flag_bits_from_cause(cause); }
+		invalidation_cause(u32 flag_bits)
+			: m_flag_bits(flag_bits | flags::cause_is_valid) // FIXME: Actual validation
+		{}
+
+	private:
+		u32 m_flag_bits = 0;
+
+		void flag_bits_from_cause(enum_type cause)
+		{
+			constexpr std::array s_lookup_table
+			{
+				std::make_pair<enum_type, u32>(enum_type::read, flags::cause_is_read),
+				std::make_pair<enum_type, u32>(enum_type::deferred_read, flags::cause_is_read | flags::cause_is_deferred),
+				std::make_pair<enum_type, u32>(enum_type::write, flags::cause_is_write),
+				std::make_pair<enum_type, u32>(enum_type::deferred_write, flags::cause_is_write | flags::cause_is_deferred),
+				std::make_pair<enum_type, u32>(enum_type::unmap, flags::cause_keeps_fault_range_protection | flags::cause_skips_flush),
+				std::make_pair<enum_type, u32>(enum_type::reprotect, flags::cause_keeps_fault_range_protection),
+				std::make_pair<enum_type, u32>(enum_type::superseded_by_fbo, flags::cause_keeps_fault_range_protection | flags::cause_skips_fbos | flags::cause_skips_flush),
+				std::make_pair<enum_type, u32>(enum_type::committed_as_fbo, flags::cause_skips_fbos),
+			};
+
+			m_flag_bits = 0;
+			for (const auto& entry : s_lookup_table)
+			{
+				if (entry.first == cause)
+				{
+					m_flag_bits = entry.second | flags::cause_is_valid;
+					break;
+				}
+			}
+
+			if (cause == enum_type::superseded_by_fbo &&
+				g_cfg.video.strict_texture_flushing) [[ unlikely ]]
+			{
+				m_flag_bits &= ~flags::cause_skips_flush;
+			}
+		}
 	};
 }
