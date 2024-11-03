@@ -382,22 +382,26 @@ namespace rsx
 			return false;
 		}
 
-		void filter(std::predicate<const Ty&> auto predicate)
+		bool erase_if(std::predicate<const Ty&> auto predicate)
 		{
 			if (!_size)
 			{
-				return;
+				return false;
 			}
 
+			bool ret = false;
 			for (auto ptr = _data, last = _data + _size - 1; ptr < last; ptr++)
 			{
-				if (!predicate(*ptr))
+				if (predicate(*ptr))
 				{
 					// Move item to the end of the list and shrink by 1
 					std::memcpy(ptr, last, sizeof(Ty));
 					last = _data + (--_size);
+					ret = true;
 				}
 			}
+
+			return ret;
 		}
 
 		void sort(std::predicate<const Ty&, const Ty&> auto predicate)
