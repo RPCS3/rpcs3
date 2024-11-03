@@ -724,6 +724,7 @@ void dimensions_dialog::move_figure(u8 pad, u8 index)
 {
 	ensure(index < figure_slots.size());
 	minifig_move_dialog move_dlg(this, index);
+	g_dimensionstoypad.temp_remove(index);
 	if (move_dlg.exec() == Accepted)
 	{
 		g_dimensionstoypad.move_figure(move_dlg.get_new_pad(), move_dlg.get_new_index(), pad, index);
@@ -734,6 +735,10 @@ void dimensions_dialog::move_figure(u8 pad, u8 index)
 			figure_slots[index] = std::nullopt;
 			m_edit_figures[index]->setText(tr("None"));
 		}
+	}
+	else
+	{
+		g_dimensionstoypad.cancel_remove(index);
 	}
 }
 
