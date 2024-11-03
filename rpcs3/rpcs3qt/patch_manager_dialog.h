@@ -50,7 +50,7 @@ private Q_SLOTS:
 	void handle_item_changed(QTreeWidgetItem* item, int column);
 	void handle_config_value_changed(double value);
 	void handle_custom_context_menu_requested(const QPoint& pos);
-	void handle_show_owned_games_only(int state);
+	void handle_show_owned_games_only(Qt::CheckState state);
 
 private:
 	void refresh(bool restore_layout = false);

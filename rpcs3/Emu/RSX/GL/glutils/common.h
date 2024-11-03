@@ -79,4 +79,12 @@ namespace gl
 	{
 		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
 	}
+
+	// Checks if GL state is still valid
+	static inline void check_state()
+	{
+		// GL_OUT_OF_MEMORY invalidates the OpenGL context and is actually the GL version of DEVICE_LOST.
+		// This spec workaround allows it to be abused by ISVs to indicate a broken GL context.
+		ensure(glGetError() != GL_OUT_OF_MEMORY);
+	}
 }

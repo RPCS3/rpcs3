@@ -7,20 +7,30 @@
 
 inline void try_start(spu_thread& spu)
 {
-	reader_lock lock(spu.run_ctrl_mtx);
+	bool notify = false;
 
-	if (spu.status_npc.fetch_op([](spu_thread::status_npc_sync_var& value)
+	if (~spu.status_npc.load().status & SPU_STATUS_RUNNING)
 	{
-		if (value.status & SPU_STATUS_RUNNING)
+		reader_lock lock(spu.run_ctrl_mtx);
+
+		if (spu.status_npc.fetch_op([](spu_thread::status_npc_sync_var& value)
 		{
-			return false;
-		}
+			if (value.status & SPU_STATUS_RUNNING)
+			{
+				return false;
+			}
 
-		value.status = SPU_STATUS_RUNNING | (value.status & SPU_STATUS_IS_ISOLATED);
-		return true;
-	}).second)
+			value.status = SPU_STATUS_RUNNING | (value.status & SPU_STATUS_IS_ISOLATED);
+			return true;
+		}).second)
+		{
+			spu.state -= cpu_flag::stop;
+			notify = true;
+		}
+	}
+
+	if (notify)
 	{
-		spu.state -= cpu_flag::stop;
 		spu.state.notify_one();
 	}
 };

@@ -42,6 +42,7 @@ cmake ..                                               \
     -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \
     -DUSE_SDL=ON                                       \
+    -DUSE_SYSTEM_SDL=ON                                \
     -DUSE_SYSTEM_FFMPEG=OFF                            \
     -DUSE_DISCORD_RPC=ON                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
@@ -61,5 +62,5 @@ shellcheck .ci/*.sh
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
-    .ci/deploy-linux-legacy.sh "x86_64"
+    .ci/deploy-linux.sh "x86_64"
 fi

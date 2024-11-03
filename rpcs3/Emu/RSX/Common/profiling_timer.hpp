@@ -16,7 +16,7 @@ namespace rsx
 		{
 			if (enabled) [[unlikely]]
 			{
-				last = rsx::uclock();
+				last = get_system_time();
 			}
 		}
 
@@ -28,7 +28,7 @@ namespace rsx
 			}
 
 			auto old = last;
-			last = rsx::uclock();
+			last = get_system_time();
 			return static_cast<s64>(last - old);
 		}
 	};

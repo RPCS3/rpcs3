@@ -410,10 +410,12 @@ namespace utils
 			return static_cast<T>(value * u64{numerator} / u64{denominator});
 		}
 
+#if is_u128_emulated
 		if constexpr (sizeof(T) <= sizeof(u128) / 2)
 		{
-			return static_cast<T>(value * u128{numerator} / u64{denominator});
+			return static_cast<T>(u128_from_mul(value, numerator) / u64{denominator});
 		}
+#endif
 
 		return static_cast<T>(value / denominator * numerator + (value % denominator) * numerator / denominator);
 	}
@@ -464,3 +466,7 @@ namespace utils
 } // namespace utils
 
 using utils::busy_wait;
+
+#ifdef _MSC_VER
+using utils::operator/;
+#endif

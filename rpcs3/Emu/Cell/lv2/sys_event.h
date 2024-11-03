@@ -79,6 +79,8 @@ struct sys_event_t
 // Source, data1, data2, data3
 using lv2_event = std::tuple<u64, u64, u64, u64>;
 
+struct lv2_event_port;
+
 struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
@@ -103,11 +105,11 @@ struct lv2_event_queue final : public lv2_obj
 	static void save_ptr(utils::serial&, lv2_event_queue*);
 	static std::shared_ptr<lv2_event_queue> load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue, std::string_view msg = {});
 
-	CellError send(lv2_event event);
+	CellError send(lv2_event event, bool* notified_thread = nullptr, lv2_event_port* port = nullptr);
 
-	CellError send(u64 source, u64 d1, u64 d2, u64 d3)
+	CellError send(u64 source, u64 d1, u64 d2, u64 d3, bool* notified_thread = nullptr, lv2_event_port* port = nullptr)
 	{
-		return send(std::make_tuple(source, d1, d2, d3));
+		return send(std::make_tuple(source, d1, d2, d3), notified_thread, port);
 	}
 
 	// Get event queue by its global key
@@ -121,6 +123,7 @@ struct lv2_event_port final : lv2_obj
 	const s32 type; // Port type, either IPC or local
 	const u64 name; // Event source (generated from id and process id if not set)
 
+	atomic_t<usz> is_busy = 0; // Counts threads waiting on event sending
 	std::shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)

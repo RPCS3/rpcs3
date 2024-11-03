@@ -1,10 +1,6 @@
 #include "stdafx.h"
 #include "RSXThread.h"
 
-#include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/timers.hpp"
-
 #include "Capture/rsx_capture.h"
 #include "Common/BufferUtils.h"
 #include "Common/buffer_stream.hpp"
@@ -13,9 +9,17 @@
 #include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
+#include "Host/RSXDMAWriter.h"
+#include "NV47/HW/context.h"
+#include "Program/GLSLCommon.h"
 #include "rsx_methods.h"
+
 #include "gcm_printing.h"
 #include "RSXDisAsm.h"
+
+#include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
@@ -23,11 +27,10 @@
 #include "Overlays/overlay_perf_metrics.h"
 #include "Overlays/overlay_debug_overlay.h"
 #include "Overlays/overlay_message.h"
-#include "Program/GLSLCommon.h"
+
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/unzip.h"
-#include "NV47/HW/context.h"
 
 #include "util/asm.hpp"
 
@@ -1021,7 +1024,7 @@ namespace rsx
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
 
-		last_guest_flip_timestamp = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = get_system_time() - 1000000;
 
 		vblank_count = 0;
 
@@ -1101,7 +1104,7 @@ namespace rsx
 				if (Emu.IsPaused())
 				{
 					// Save the difference before pause
-					start_time = rsx::uclock() - start_time;
+					start_time = get_system_time() - start_time;
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
@@ -1109,7 +1112,7 @@ namespace rsx
 					}
 
 					// Restore difference
-					start_time = rsx::uclock() - start_time;
+					start_time = get_system_time() - start_time;
 				}
 			}
 		})));
@@ -1162,6 +1165,11 @@ namespace rsx
 
 				// Update other sub-units
 				zcull_ctrl->update(this);
+
+				if (m_host_dma_ctrl)
+				{
+					m_host_dma_ctrl->update();
+				}
 			}
 
 			// Execute FIFO queue
@@ -3049,7 +3057,7 @@ namespace rsx
 			}
 		}
 
-		last_host_flip_timestamp = rsx::uclock();
+		last_host_flip_timestamp = get_system_time();
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -3291,7 +3299,7 @@ namespace rsx
 	{
 		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
-		const u64 current_time = rsx::uclock();
+		const u64 current_time = get_system_time();
 
 		if (recovered_fifo_cmds_history.size() == 20u)
 		{
@@ -3373,7 +3381,7 @@ namespace rsx
 
 		// Some cases do not need full delay
 		remaining = utils::aligned_div(remaining, div);
-		const u64 until = rsx::uclock() + remaining;
+		const u64 until = get_system_time() + remaining;
 
 		while (true)
 		{
@@ -3404,7 +3412,7 @@ namespace rsx
 				busy_wait(100);
 			}
 
-			const u64 current = rsx::uclock();
+			const u64 current = get_system_time();
 
 			if (current >= until)
 			{
@@ -3500,56 +3508,69 @@ namespace rsx
 		}
 	}
 
-	void thread::on_notify_memory_unmapped(u32 address, u32 size)
+	void thread::on_notify_pre_memory_unmapped(u32 address, u32 size, std::vector<std::pair<u64, u64>>& event_data)
 	{
 		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
-			if (!isHLE)
+			// Each bit represents io entry to be unmapped
+			u64 unmap_status[512 / 64]{};
+
+			for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 			{
-				// Each bit represents io entry to be unmapped
-				u64 unmap_status[512 / 64]{};
-
-				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
-				{
-					const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
-
-					if (io + 1)
-					{
-						unmap_status[io / 64] |= 1ull << (io & 63);
-						iomap_table.ea[io].release(-1);
-						iomap_table.io[ea].release(-1);
-					}
-				}
-
-				for (u32 i = 0; i < std::size(unmap_status); i++)
-				{
-					// TODO: Check order when sending multiple events
-					if (u64 to_unmap = unmap_status[i])
-					{
-						// Each 64 entries are grouped by a bit
-						const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
-						send_event(0, io_event, to_unmap);
-					}
-				}
-			}
-			else
-			{
-				// TODO: Fix this
-				u32 ea = address >> 20, io = iomap_table.io[ea];
+				const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
 
 				if (io + 1)
 				{
-					io >>= 20;
-
-					auto& cfg = g_fxo->get<gcm_config>();
-					std::lock_guard lock(cfg.gcmio_mutex);
-
-					for (const u32 end = ea + (size >> 20); ea < end;)
-					{
-						cfg.offsetTable.ioAddress[ea++] = 0xFFFF;
-						cfg.offsetTable.eaAddress[io++] = 0xFFFF;
-					}
+					unmap_status[io / 64] |= 1ull << (io & 63);
+					iomap_table.io[ea].release(-1);
+					iomap_table.ea[io].release(-1);
 				}
+			}
+
+			auto& cfg = g_fxo->get<gcm_config>();
+
+			std::unique_lock<shared_mutex> hle_lock;
+
+			for (u32 i = 0; i < std::size(unmap_status); i++)
+			{
+				// TODO: Check order when sending multiple events
+				if (u64 to_unmap = unmap_status[i])
+				{
+					if (isHLE)
+					{
+						if (!hle_lock)
+						{
+							hle_lock = std::unique_lock{cfg.gcmio_mutex};
+						}
+
+						int bit = 0;
+
+						while (to_unmap)
+						{
+							bit = (std::countr_zero<u64>(utils::rol64(to_unmap, 0 - bit)) + bit);
+							to_unmap &= ~(1ull << bit);
+
+							constexpr u16 null_entry = 0xFFFF;
+							const u32 ea = std::exchange(cfg.offsetTable.eaAddress[(i * 64 + bit)], null_entry);
+
+							if (ea < (rsx::constants::local_mem_base >> 20))
+							{
+								cfg.offsetTable.eaAddress[ea] = null_entry;
+							}
+						}
+
+						continue;
+					}
+
+					// Each 64 entries are grouped by a bit
+					const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
+					event_data.emplace_back(io_event, to_unmap);
+				}
+			}
+
+			if (hle_lock)
+			{
+				hle_lock.unlock();
 			}
 
 			// Pause RSX thread momentarily to handle unmapping
@@ -3578,6 +3599,14 @@ namespace rsx
 			}
 
 			m_eng_interrupt_mask |= rsx::memory_config_interrupt;
+		}
+	}
+
+	void thread::on_notify_post_memory_unmapped(u64 event_data1, u64 event_data2)
+	{
+		if (!isHLE)
+		{
+			send_event(0, event_data1, event_data2);
 		}
 	}
 
@@ -3646,7 +3675,7 @@ namespace rsx
 		//Average load over around 30 frames
 		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
 		{
-			const auto timestamp = rsx::uclock();
+			const auto timestamp = get_system_time();
 			const auto idle = performance_counters.idle_time.load();
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
@@ -3930,7 +3959,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_guest_flip_timestamp = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 

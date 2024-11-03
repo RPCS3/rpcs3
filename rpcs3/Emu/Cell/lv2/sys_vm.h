@@ -58,11 +58,11 @@ struct sys_vm_t
 class ppu_thread;
 
 // SysCalls
-error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
-error_code sys_vm_memory_map_different(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
+error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
+error_code sys_vm_memory_map_different(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr);
 error_code sys_vm_unmap(ppu_thread& ppu, u32 addr);
-error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size);
-error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size);
+error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u64 size);
+error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u64 size);
 error_code sys_vm_lock(ppu_thread& ppu, u32 addr, u32 size);
 error_code sys_vm_unlock(ppu_thread& ppu, u32 addr, u32 size);
 error_code sys_vm_touch(ppu_thread& ppu, u32 addr, u32 size);

@@ -15,6 +15,7 @@
 #include "vkutils/scratch.h"
 
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -867,8 +868,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
 				VMM_ALLOCATION_POOL_SYSTEM);
 
-			m_host_data_ptr = new (m_host_object_data->map(0, 0x100000)) vk::host_data_t();
-			ensure(m_host_data_ptr->magic == 0xCAFEBABE);
+			m_host_dma_ctrl = std::make_unique<rsx::RSXDMAWriter>(m_host_object_data->map(0, 0x10000));
 		}
 		else
 		{
@@ -1257,7 +1257,7 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	if (false)
 	{
 		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_memory_unmapped(addr, tiles[tile].size);
+		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 
@@ -1784,6 +1784,11 @@ void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 	m_current_command_buffer->begin();
 }
 
+std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data() const
+{
+	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value };
+}
+
 bool VKGSRender::release_GCM_label(u32 address, u32 args)
 {
 	if (!backend_config.supports_host_gpu_labels)
@@ -1791,25 +1796,13 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		return false;
 	}
 
-	auto drain_label_queue = [this]()
-	{
-		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
-		{
-			utils::pause();
+	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 
-			if (thread_ctrl::state() == thread_state::aborting)
-			{
-				break;
-			}
-		}
-	};
-
-	ensure(m_host_data_ptr);
-	if (m_host_data_ptr->texture_load_complete_event == m_host_data_ptr->texture_load_request_event)
+	if (host_ctx->texture_loads_completed())
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
-		drain_label_queue();
+		m_host_dma_ctrl->drain_label_queue();
 		return false;
 	}
 
@@ -1821,13 +1814,13 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		// NVIDIA GPUs can disappoint when DMA blocks straddle VirtualAlloc boundaries.
 		// Take the L and try the fallback.
 		rsx_log.warning("Host label update at 0x%x was not possible.", address);
-		drain_label_queue();
+		m_host_dma_ctrl->drain_label_queue();
 		return false;
 	}
 
-	m_host_data_ptr->last_label_release_event = m_host_data_ptr->inc_counter();
+	const auto release_event_id = host_ctx->on_label_acquire();
 
-	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
+	if (host_ctx->has_unflushed_texture_loads())
 	{
 		if (vk::is_renderpass_open(*m_current_command_buffer))
 		{
@@ -1842,15 +1835,29 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		auto cmd = m_secondary_cb_list.next();
 		cmd->begin();
 		vkCmdUpdateBuffer(*cmd, mapping.second->value, mapping.first, 4, &write_data);
-		vkCmdUpdateBuffer(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, const_cast<u64*>(&m_host_data_ptr->last_label_release_event));
+		vkCmdUpdateBuffer(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
 		cmd->end();
 
 		vk::queue_submit_t submit_info = { m_device->get_graphics_queue(), nullptr };
 		cmd->submit(submit_info);
 
-		m_host_data_ptr->last_label_submit_event = m_host_data_ptr->last_label_release_event;
+		host_ctx->on_label_release();
 	}
+
 	return true;
+}
+
+void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
+{
+	if (!backend_config.supports_host_gpu_labels)
+	{
+		return;
+	}
+
+	// Queue a sync update on the CB doing the load
+	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
+	const auto event_id = host_ctx->on_texture_load_acquire();
+	vkCmdUpdateBuffer(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 }
 
 void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
@@ -1885,7 +1892,7 @@ void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hi
 		// OK, cell will be accessing the results, probably.
 		// Try to avoid flush spam, it is more costly to flush the CB than it is to just upload the vertex data
 		// This is supposed to be an optimization afterall.
-		const auto now = rsx::uclock();
+		const auto now = get_system_time();
 		if ((now - m_last_cond_render_eval_hint) > 50)
 		{
 			// Schedule a sync on the next loop iteration
@@ -2516,15 +2523,15 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
-	if (m_host_data_ptr && m_host_data_ptr->last_label_release_event > m_host_data_ptr->last_label_submit_event)
+	if (m_host_dma_ctrl && m_host_dma_ctrl->host_ctx()->needs_label_release())
 	{
 		vkCmdUpdateBuffer(*m_current_command_buffer,
 			m_host_object_data->value,
 			::offset32(&vk::host_data_t::commands_complete_event),
 			sizeof(u64),
-			const_cast<u64*>(&m_host_data_ptr->last_label_release_event));
+			const_cast<u64*>(&m_host_dma_ctrl->host_ctx()->last_label_acquire_event));
 
-		m_host_data_ptr->last_label_submit_event = m_host_data_ptr->last_label_release_event;
+		m_host_dma_ctrl->host_ctx()->on_label_release();
 	}
 
 	m_current_command_buffer->end();

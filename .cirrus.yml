@@ -132,7 +132,7 @@ linux_aarch64_task:
   matrix:
     - name: Cirrus Linux AArch64 Clang
       arm_container:
-        image: 'docker.io/kd117/rpcs3-ci-aarch64:latest'
+        image: 'docker.io/rpcs3/rpcs3-ci-focal-aarch64:1.0'
         cpu: 8
         memory: 8G
       clang_script:

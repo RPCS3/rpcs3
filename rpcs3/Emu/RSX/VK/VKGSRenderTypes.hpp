@@ -6,10 +6,12 @@
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/rsx_cache.h"
 #include "Utilities/mutex.h"
 #include "util/asm.hpp"
 
 #include <optional>
+#include <thread>
 
 // Initial heap allocation values. The heaps are growable and will automatically increase in size to accomodate demands
 #define VK_ATTRIB_RING_BUFFER_SIZE_M 64

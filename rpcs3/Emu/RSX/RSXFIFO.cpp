@@ -173,10 +173,10 @@ namespace rsx
 							break;
 						}
 
-						start_time = rsx::uclock();
+						start_time = get_system_time();
 					}
 
-					auto now = rsx::uclock();
+					auto now = get_system_time();
 					if (now - start_time >= 50u)
 					{
 						if (m_thread->is_stopped())
@@ -186,7 +186,7 @@ namespace rsx
 
 						m_thread->cpu_wait({});
 
-						const auto then = std::exchange(now, rsx::uclock());
+						const auto then = std::exchange(now, get_system_time());
 						start_time = now;
 						m_thread->performance_counters.idle_time += now - then;
 					}
@@ -623,7 +623,7 @@ namespace rsx
 			{
 				if (performance_counters.state == FIFO::state::running)
 				{
-					performance_counters.FIFO_idle_timestamp = rsx::uclock();
+					performance_counters.FIFO_idle_timestamp = get_system_time();
 					performance_counters.state = FIFO::state::nop;
 				}
 
@@ -633,7 +633,7 @@ namespace rsx
 			{
 				if (performance_counters.state == FIFO::state::running)
 				{
-					performance_counters.FIFO_idle_timestamp = rsx::uclock();
+					performance_counters.FIFO_idle_timestamp = get_system_time();
 					performance_counters.state = FIFO::state::empty;
 				}
 				else
@@ -668,7 +668,7 @@ namespace rsx
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO::state::running)
 					{
-						performance_counters.FIFO_idle_timestamp = rsx::uclock();
+						performance_counters.FIFO_idle_timestamp = get_system_time();
 						sync_point_request.release(true);
 					}
 
@@ -749,7 +749,7 @@ namespace rsx
 			}
 
 			// Update performance counters with time spent in idle mode
-			performance_counters.idle_time += (rsx::uclock() - performance_counters.FIFO_idle_timestamp);
+			performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
 		}
 
 		do

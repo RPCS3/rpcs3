@@ -1,6 +1,4 @@
 #pragma once
-#include "Emu/RSX/GSRender.h"
-#include "Emu/Cell/timers.hpp"
 
 #include "upscalers/upscaling.h"
 
@@ -19,14 +17,22 @@
 #include "VKFramebuffer.h"
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
-#include "../GCM.h"
 #include "util/asm.hpp"
+
+#include "Emu/RSX/GCM.h"
+#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Host/RSXDMAWriter.h"
 
 #include <thread>
 #include <optional>
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
+
+namespace vk
+{
+	using host_data_t = rsx::host_gpu_context_t;
+}
 
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
@@ -118,7 +124,6 @@ private:
 	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 
-	volatile vk::host_data_t* m_host_data_ptr = nullptr;
 	std::unique_ptr<vk::buffer> m_host_object_data;
 
 	vk::descriptor_pool m_descriptor_pool;
@@ -274,7 +279,8 @@ public:
 	void end_conditional_rendering() override;
 
 	// Host sync object
-	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
+	std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() const;
+	void on_guest_texture_read(const vk::command_buffer& cmd);
 
 	// GRAPH backend
 	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;

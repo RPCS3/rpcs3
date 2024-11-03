@@ -1433,7 +1433,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (game)
 		ui->gb_DiskCacheClearing->setDisabled(true);
 	else
-		connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
+		connect(ui->enableCacheClearing, &QCheckBox::checkStateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
 
 	// Date Time Edit Box
 	m_emu_settings->EnhanceDateTimeEdit(ui->console_time_edit, emu_settings_type::ConsoleTimeOffset, tr("dd MMM yyyy HH:mm"), true, true, 15000);
@@ -1580,7 +1580,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
-	connect(ui->mfcDelayCommand, &QCheckBox::stateChanged, [&](int val)
+	connect(ui->mfcDelayCommand, &QCheckBox::checkStateChanged, [&](Qt::CheckState val)
 	{
 		const std::string str = val != Qt::Unchecked ? "1" : "0";
 		m_emu_settings->SetSetting(emu_settings_type::MFCCommandsShuffling, str);

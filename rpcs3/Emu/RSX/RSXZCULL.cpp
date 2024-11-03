@@ -542,7 +542,7 @@ namespace rsx
 					}
 				}
 
-				if (m_tsc = rsx::uclock(); m_tsc < m_next_tsc)
+				if (m_tsc = get_system_time(); m_tsc < m_next_tsc)
 				{
 					return;
 				}

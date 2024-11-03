@@ -93,7 +93,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
-	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
+	connect(ui->cb_owned_games_only, &QCheckBox::checkStateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
 	connect(ui->configurable_selector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
 		if (index >= 0)
@@ -1087,7 +1087,7 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 	}
 }
 
-void patch_manager_dialog::handle_show_owned_games_only(int state)
+void patch_manager_dialog::handle_show_owned_games_only(Qt::CheckState state)
 {
 	m_show_owned_games_only = state == Qt::CheckState::Checked;
 	m_gui_settings->SetValue(gui::pm_show_owned, m_show_owned_games_only);

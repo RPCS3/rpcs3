@@ -3,6 +3,7 @@
 #include "GLCompute.h"
 #include "GLRenderTargets.h"
 #include "GLOverlays.h"
+#include "GLGSRender.h"
 
 #include "glutils/blitter.h"
 #include "glutils/ring_buffer.h"
@@ -285,7 +286,7 @@ namespace gl
 			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
 			{
 				if (*dst) dst->remove();
-				dst->create(buffer::target::ssbo, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+				dst->create(buffer::target::ssbo, max_mem, nullptr, buffer::memory_type::local, 0);
 			}
 
 			if (auto as_vi = dynamic_cast<const gl::viewable_image*>(src);
@@ -400,7 +401,7 @@ namespace gl
 				return;
 			}
 
-			scratch_mem.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+			scratch_mem.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, 0);
 
 			glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 			src->copy_to(&scratch_mem, in_offset, 0, mem_info->image_size_in_bytes);
@@ -835,6 +836,10 @@ namespace gl
 		const GLenum gl_format = std::get<0>(format_type);
 		const GLenum gl_type = std::get<1>(format_type);
 		fill_texture(cmd, dst, gcm_format, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
+
+		// Notify the renderer of the upload
+		auto renderer = static_cast<GLGSRender*>(rsx::get_current_renderer());
+		renderer->on_guest_texture_read();
 	}
 
 	u32 get_format_texel_width(GLenum format)

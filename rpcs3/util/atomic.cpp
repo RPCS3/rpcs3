@@ -434,7 +434,7 @@ static u32 cond_alloc(uptr iptr, u32 tls_slot = -1)
 		});
 
 		// Set lowest clear bit
-		const u64 bits = s_cond_bits[level3].fetch_op(FN(x |= x + 1, void()));
+		const u64 bits = s_cond_bits[level3].fetch_op(AOFN(x |= x + 1, void()));
 
 		// Find lowest clear bit (before it was set in fetch_op)
 		const u32 id = level3 * 64 + std::countr_one(bits);
@@ -503,9 +503,9 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	// Release the semaphore tree in the reverse order
 	s_cond_bits[cond_id / 64] &= ~(1ull << (cond_id % 64));
 
-	s_cond_sem3[level2].atomic_op(FN(x -= u128{1} << (level3 * 7)));
-	s_cond_sem2[level1].atomic_op(FN(x -= u128{1} << (level2 * 11)));
-	s_cond_sem1.atomic_op(FN(x -= u128{1} << (level1 * 14)));
+	s_cond_sem3[level2].atomic_op(AOFN(x -= u128{1} << (level3 * 7)));
+	s_cond_sem2[level1].atomic_op(AOFN(x -= u128{1} << (level2 * 11)));
+	s_cond_sem1.atomic_op(AOFN(x -= u128{1} << (level1 * 14)));
 }
 
 static cond_handle* cond_id_lock(u32 cond_id, uptr iptr = 0)
@@ -674,19 +674,28 @@ u64 utils::get_unique_tsc()
 {
 	const u64 stamp0 = utils::get_tsc();
 
-	return s_min_tsc.atomic_op([&](u64& tsc)
+	if (!s_min_tsc.fetch_op([=](u64& tsc)
 	{
-		if (stamp0 <= s_min_tsc)
+		if (stamp0 <= tsc)
 		{
 			// Add 1 if new stamp is too old
-			return ++tsc;
+			return false;
 		}
 		else
 		{
 			// Update last tsc with new stamp otherwise
-			return ((tsc = stamp0));
+			tsc = stamp0;
+			return true;
 		}
-	});
+	}).second)
+	{
+		// Add 1 if new stamp is too old
+		// Avoid doing it in the atomic operaion because, if it gets here it means there is already much cntention
+		// So break the race (at least on x86)
+		return s_min_tsc.add_fetch(1);
+	}
+
+	return stamp0;
 }
 
 atomic_t<u16>* root_info::slot_alloc(uptr ptr) noexcept

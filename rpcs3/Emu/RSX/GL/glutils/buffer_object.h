@@ -22,20 +22,30 @@ namespace gl
 		{
 			read = GL_MAP_READ_BIT,
 			write = GL_MAP_WRITE_BIT,
-			read_write = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT
+			rw = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT,
+			persistent_rw = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT
 		};
 
 		enum class memory_type
 		{
 			undefined = 0,
 			local = 1,
-			host_visible = 2
+			host_visible = 2,
+			userptr = 4
+		};
+
+		enum usage
+		{
+			host_write     = (1 << 0),
+			host_read      = (1 << 1),
+			persistent_map = (1 << 2),
+			dynamic_update = (1 << 3),
 		};
 
 		class save_binding_state
 		{
-			GLint m_last_binding;
-			GLenum m_target;
+			GLint m_last_binding = GL_ZERO;
+			GLenum m_target = GL_NONE;
 
 		public:
 			save_binding_state(target target_, const buffer& new_state) : save_binding_state(target_)
@@ -64,6 +74,11 @@ namespace gl
 
 			~save_binding_state()
 			{
+				if (!m_target)
+				{
+					return;
+				}
+
 				glBindBuffer(m_target, m_last_binding);
 			}
 		};
@@ -77,7 +92,7 @@ namespace gl
 		// Metadata
 		mutable std::pair<u32, u32> m_bound_range{};
 
-		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage);
+		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLuint usage_bits);
 
 	public:
 		buffer() = default;
@@ -88,8 +103,8 @@ namespace gl
 		void recreate(GLsizeiptr size, const void* data = nullptr);
 
 		void create();
-		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW);
-		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW);
+		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLuint usage_bits = 0);
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLuint usage_bits = 0);
 
 		void remove();
 
@@ -97,7 +112,7 @@ namespace gl
 		void bind() const { bind(current_target()); }
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW);
-		void sub_data(GLsizeiptr offset, GLsizeiptr length, GLvoid* data);
+		void sub_data(GLsizeiptr offset, GLsizeiptr length, const GLvoid* data);
 
 		GLubyte* map(GLsizeiptr offset, GLsizeiptr length, access access_);
 		void unmap();

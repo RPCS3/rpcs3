@@ -3,38 +3,35 @@
 
 namespace gl
 {
-	void buffer::allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
+	void buffer::allocate(GLsizeiptr size, const void* data_, memory_type type, GLuint usage_flags)
 	{
+		m_memory_type = type;
+
 		if (const auto& caps = get_driver_caps();
-			caps.ARB_buffer_storage_supported)
+			type != memory_type::userptr && caps.ARB_buffer_storage_supported)
 		{
 			GLenum flags = 0;
-			if (type == memory_type::host_visible)
+			if (usage_flags & usage::host_write)
 			{
-				switch (usage)
-				{
-				case GL_STREAM_DRAW:
-				case GL_STATIC_DRAW:
-				case GL_DYNAMIC_DRAW:
-					flags |= GL_MAP_WRITE_BIT;
-					break;
-				case GL_STREAM_READ:
-				case GL_STATIC_READ:
-				case GL_DYNAMIC_READ:
-					flags |= GL_MAP_READ_BIT;
-					break;
-				default:
-					fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
-				}
+				flags |= GL_MAP_WRITE_BIT;
 			}
-			else
+			if (usage_flags & usage::host_read)
 			{
-				// Local memory hints
-				if (usage == GL_DYNAMIC_COPY)
-				{
-					flags |= GL_DYNAMIC_STORAGE_BIT;
-				}
+				flags |= GL_MAP_READ_BIT;
 			}
+			if (usage_flags & usage::persistent_map)
+			{
+				flags |= GL_MAP_PERSISTENT_BIT;
+			}
+			if (usage_flags & usage::dynamic_update)
+			{
+				flags |= GL_DYNAMIC_STORAGE_BIT;
+			}
+
+			ensure((flags & (GL_MAP_PERSISTENT_BIT | GL_DYNAMIC_STORAGE_BIT)) != (GL_MAP_PERSISTENT_BIT | GL_DYNAMIC_STORAGE_BIT),
+				"Mutually exclusive usage flags set!");
+
+			ensure(type == memory_type::local || flags != 0, "Host-visible memory must have usage flags set!");
 
 			if ((flags & GL_MAP_READ_BIT) && !caps.vendor_AMD)
 			{
@@ -51,10 +48,8 @@ namespace gl
 		}
 		else
 		{
-			data(size, data_, usage);
+			data(size, data_, GL_STREAM_COPY);
 		}
-
-		m_memory_type = type;
 	}
 
 	buffer::~buffer()
@@ -89,18 +84,18 @@ namespace gl
 		save_binding_state save(current_target(), *this);
 	}
 
-	void buffer::create(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
+	void buffer::create(GLsizeiptr size, const void* data_, memory_type type, GLuint usage_bits)
 	{
 		create();
-		allocate(size, data_, type, usage);
+		allocate(size, data_, type, usage_bits);
 	}
 
-	void buffer::create(target target_, GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
+	void buffer::create(target target_, GLsizeiptr size, const void* data_, memory_type type, GLuint usage_bits)
 	{
 		m_target = target_;
 
 		create();
-		allocate(size, data_, type, usage);
+		allocate(size, data_, type, usage_bits);
 	}
 
 	void buffer::remove()
@@ -117,11 +112,19 @@ namespace gl
 	{
 		ensure(m_memory_type != memory_type::local);
 
-		DSA_CALL2(NamedBufferData, m_id, size, data_, usage);
 		m_size = size;
+
+		if (m_memory_type == memory_type::userptr)
+		{
+			glBindBuffer(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, m_id);
+			glBufferData(GL_EXTERNAL_VIRTUAL_MEMORY_BUFFER_AMD, size, data_, usage);
+			return;
+		}
+
+		DSA_CALL2(NamedBufferData, m_id, size, data_, usage);
 	}
 
-	void buffer::sub_data(GLsizeiptr offset, GLsizeiptr length, GLvoid* data)
+	void buffer::sub_data(GLsizeiptr offset, GLsizeiptr length, const GLvoid* data)
 	{
 		ensure(m_memory_type == memory_type::local);
 		DSA_CALL2(NamedBufferSubData, m_id, offset, length, data);

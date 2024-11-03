@@ -188,10 +188,10 @@ struct spu_channel_op_state
 struct alignas(16) spu_channel
 {
 	// Low 32 bits contain value
-	atomic_t<u64> data;
+	atomic_t<u64> data{};
 
 	// Pending value to be inserted when it is possible in pop() or pop_wait()
-	atomic_t<u64> jostling_value;
+	atomic_t<u64> jostling_value{};
 
 public:
 	static constexpr u32 off_wait  = 32;
@@ -667,11 +667,11 @@ public:
 	u8* reserv_base_addr = vm::g_reservations;
 
 	// General-Purpose Registers
-	std::array<v128, 128> gpr;
-	SPU_FPSCR fpscr;
+	std::array<v128, 128> gpr{};
+	SPU_FPSCR fpscr{};
 
 	// MFC command data
-	spu_mfc_cmd ch_mfc_cmd;
+	spu_mfc_cmd ch_mfc_cmd{};
 
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
@@ -683,9 +683,9 @@ public:
 	u64 mfc_last_timestamp = 0;
 
 	// MFC proxy command data
-	spu_mfc_cmd mfc_prxy_cmd;
+	spu_mfc_cmd mfc_prxy_cmd{};
 	shared_mutex mfc_prxy_mtx;
-	atomic_t<u32> mfc_prxy_mask;
+	atomic_t<u32> mfc_prxy_mask = 0;
 
 	// Tracks writes to MFC proxy command data
 	union
@@ -707,11 +707,11 @@ public:
 	// Range Lock pointer
 	atomic_t<u64, 64>* range_lock{};
 
-	u32 srr0;
-	u32 ch_tag_upd;
-	u32 ch_tag_mask;
+	u32 srr0 = 0;
+	u32 ch_tag_upd = 0;
+	u32 ch_tag_mask = 0;
 	spu_channel ch_tag_stat;
-	u32 ch_stall_mask;
+	u32 ch_stall_mask = 0;
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
@@ -736,14 +736,14 @@ public:
 	};
 
 	atomic_t<ch_events_t> ch_events;
-	bool interrupts_enabled;
+	bool interrupts_enabled = false;
 
-	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
-	u32 ch_dec_value; // written decrementer value
+	u64 ch_dec_start_timestamp = 0; // timestamp of writing decrementer value
+	u32 ch_dec_value = 0; // written decrementer value
 	bool is_dec_frozen = false;
 	std::pair<u32, u32> read_dec() const; // Read decrementer
 
-	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
+	atomic_t<u32> run_ctrl = 0; // SPU Run Control register (only provided to get latest data written)
 	shared_mutex run_ctrl_mtx;
 
 	struct alignas(8) status_npc_sync_var
@@ -752,10 +752,10 @@ public:
 		u32 npc; // SPU Next Program Counter register
 	};
 
-	atomic_t<status_npc_sync_var> status_npc;
-	std::array<spu_int_ctrl_t, 3> int_ctrl; // SPU Class 0, 1, 2 Interrupt Management
+	atomic_t<status_npc_sync_var> status_npc{};
+	std::array<spu_int_ctrl_t, 3> int_ctrl{}; // SPU Class 0, 1, 2 Interrupt Management
 
-	std::array<std::pair<u32, std::shared_ptr<lv2_event_queue>>, 32> spuq; // Event Queue Keys for SPU Thread
+	std::array<std::pair<u32, std::shared_ptr<lv2_event_queue>>, 32> spuq{}; // Event Queue Keys for SPU Thread
 	std::shared_ptr<lv2_event_queue> spup[64]; // SPU Ports
 	spu_channel exit_status{}; // Threaded SPU exit status (not a channel, but the interface fits)
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
@@ -769,7 +769,6 @@ public:
 	u32 spurs_addr = 0;
 	bool spurs_waited = false;
 	bool spurs_entered_wait = false;
-	bool spurs_read_events = false;
 	u64 spurs_wait_duration_last = 0;
 	u64 spurs_average_task_duration = 0;
 	u64 spurs_last_task_timestamp = 0;

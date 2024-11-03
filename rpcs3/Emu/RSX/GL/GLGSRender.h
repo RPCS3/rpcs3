@@ -128,7 +128,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	GLProgramBuffer m_prog_buffer;
 
-	//buffer
+	// Draw Buffers
 	gl::fbo* m_draw_fbo = nullptr;
 	std::list<gl::framebuffer_holder> m_framebuffer_cache;
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
@@ -137,7 +137,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 
-	//vaos are mandatory for core profile
+	// VAOs are mandatory for core profile
 	gl::vao m_vao;
 
 	shared_mutex m_sampler_mutex;
@@ -149,6 +149,10 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
 	GLenum m_occlusion_type = GL_ANY_SAMPLES_PASSED;
+
+	// Host context for GPU-driven work
+	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
+	std::unique_ptr<gl::scratch_ring_buffer> m_enqueued_host_write_buffer;
 
 public:
 	u64 get_cycles() final;
@@ -192,6 +196,11 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+
+	// DMA
+	bool release_GCM_label(u32 address, u32 data) override;
+	void enqueue_host_context_write(u32 offset, u32 size, const void* data);
+	void on_guest_texture_read();
 
 	// GRAPH backend
 	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;

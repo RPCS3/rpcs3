@@ -42,6 +42,8 @@ extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
+	class RSXDMAWriter;
+
 	struct context;
 
 	namespace overlays
@@ -211,6 +213,9 @@ namespace rsx
 
 		// Context
 		context* m_ctx = nullptr;
+
+		// Host DMA
+		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
 	public:
 		atomic_t<u64> new_get_put = u64{umax};
@@ -495,10 +500,17 @@ namespace rsx
 		void on_notify_memory_mapped(u32 address_base, u32 size);
 
 		/**
+		 * Notify that a section of memory is to be unmapped
+		 * Any data held in the defined range is discarded
+		 * Sets optional unmap event data
+		 */
+		void on_notify_pre_memory_unmapped(u32 address_base, u32 size, std::vector<std::pair<u64, u64>>& event_data);
+
+		/**
 		 * Notify that a section of memory has been unmapped
 		 * Any data held in the defined range is discarded
 		 */
-		void on_notify_memory_unmapped(u32 address_base, u32 size);
+		void on_notify_post_memory_unmapped(u64 event_data1, u64 event_data2);
 
 		/**
 		 * Notify to check internal state during semaphore wait
