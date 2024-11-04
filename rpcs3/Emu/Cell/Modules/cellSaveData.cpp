@@ -10,6 +10,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/system_config.h"
 
 #include "cellSaveData.h"
 #include "cellMsgDialog.h"
@@ -1750,6 +1752,50 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	fileGet->excSize = 0;
 
+	// show indicator for automatic save or auto load interactions if the game requests it (statSet->indicator)
+	const bool show_auto_indicator = operation <= SAVEDATA_OP_LIST_AUTO_LOAD && statSet && statSet->indicator && g_cfg.misc.show_autosave_autoload_hint;
+
+	if (show_auto_indicator)
+	{
+		auto msg_text = localized_string_id::INVALID;
+
+		if (operation == SAVEDATA_OP_AUTO_SAVE || operation == SAVEDATA_OP_LIST_AUTO_SAVE)
+		{
+			msg_text = localized_string_id::CELL_SAVEDATA_AUTOSAVE;
+		}
+		else if (operation == SAVEDATA_OP_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_LOAD)
+		{
+			msg_text = localized_string_id::CELL_SAVEDATA_AUTOLOAD;
+		}
+
+		auto msg_location = rsx::overlays::message_pin_location::top_left;
+
+		switch (statSet->indicator->dispPosition & 0x0F)
+		{
+		case CELL_SAVEDATA_INDICATORPOS_LOWER_RIGHT:
+			msg_location = rsx::overlays::message_pin_location::bottom_right;
+			break;
+		case CELL_SAVEDATA_INDICATORPOS_LOWER_LEFT:
+			msg_location = rsx::overlays::message_pin_location::bottom_left;
+			break;
+		case CELL_SAVEDATA_INDICATORPOS_UPPER_RIGHT:
+			msg_location = rsx::overlays::message_pin_location::top_right;
+			break;
+		case CELL_SAVEDATA_INDICATORPOS_UPPER_LEFT:
+		case CELL_SAVEDATA_INDICATORPOS_CENTER:
+		default:
+			msg_location = rsx::overlays::message_pin_location::top_left;
+			break;
+		}
+
+		// TODO: Blinking variants
+
+		// RPCS3 saves basically instantaneously so there's not much point in showing auto indicator
+		// WHILE saving is in progress. Instead we show the indicator for 3 seconds to let the user
+		// know when the game autosaves.
+		rsx::overlays::queue_message(msg_text, 3'000'000, {}, msg_location);
+	}
+
 	error_code savedata_result = CELL_OK;
 
 	u64 delay_save_until = 0;
@@ -2096,6 +2142,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Remove backup again (TODO: may be changed to persistent backup implementation)
 		fs::remove_all(old_path);
+	}
+
+	if (show_auto_indicator)
+	{
+		// auto indicator should be hidden here if save/load throttling is added
 	}
 
 	if (savedata_result + 0u == CELL_SAVEDATA_ERROR_CBRESULT)

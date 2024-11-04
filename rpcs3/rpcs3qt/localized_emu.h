@@ -165,6 +165,8 @@ private:
 		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_AUTOSAVE: return tr("Saving");
+		case localized_string_id::CELL_SAVEDATA_AUTOLOAD: return tr("Loading");
 		case localized_string_id::CELL_CROSS_CONTROLLER_MSG: return tr("Start [%0] on the PS Vita system.\nIf you have not installed [%0], go to [Remote Play] on the PS Vita system and start [Cross-Controller] from the LiveArea™ screen.", "Cross-Controller message").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_CROSS_CONTROLLER_FW_MSG: return tr("If your system software version on the PS Vita system is earlier than 1.80, you must update the system software to the latest version.", "Cross-Controller firmware message");
 		case localized_string_id::CELL_NP_RECVMESSAGE_DIALOG_TITLE: return tr("Select Message", "RECVMESSAGE_DIALOG");

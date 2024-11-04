@@ -3008,6 +3008,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
+                 <property name="text">
+                  <string>Show autosave/autoload hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="startGameFullscreen">
                  <property name="text">
                   <string>Start games in fullscreen mode</string>

@@ -117,12 +117,12 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void message_item::update(usz index, u64 timestamp_us, s16 y_offset)
+		void message_item::update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset)
 		{
 			if (m_cur_pos != index)
 			{
 				m_cur_pos = index;
-				set_pos(10, y_offset);
+				set_pos(x_offset, y_offset);
 			}
 
 			if (!m_processed)
@@ -197,19 +197,30 @@ namespace rsx
 
 			// Render reversed list. Oldest entries are furthest from the border
 			constexpr u16 spacing = 4;
+			s16 x_offset = 10;
 			s16 y_offset = 8;
 			usz index = 0;
+
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
-				if (origin == message_pin_location::top) [[ likely ]]
+				switch (origin)
 				{
-					it->update(index, cur_time, y_offset);
+				case message_pin_location::bottom_right:
 					y_offset += (spacing + it->h);
-				}
-				else
-				{
+					it->update(index, cur_time, virtual_width - x_offset - it->w, virtual_height - y_offset);
+					break;
+				case message_pin_location::bottom_left:
 					y_offset += (spacing + it->h);
-					it->update(index, cur_time, virtual_height - y_offset);
+					it->update(index, cur_time, x_offset, virtual_height - y_offset);
+					break;
+				case message_pin_location::top_right:
+					it->update(index, cur_time, virtual_width - x_offset - it->w, y_offset);
+					y_offset += (spacing + it->h);
+					break;
+				case message_pin_location::top_left:
+					it->update(index, cur_time, x_offset, y_offset);
+					y_offset += (spacing + it->h);
+					break;
 				}
 			}
 		}
@@ -223,10 +234,13 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex_queue);
 
-			update_queue(m_visible_items_top, m_ready_queue_top, message_pin_location::top);
-			update_queue(m_visible_items_bottom, m_ready_queue_bottom, message_pin_location::bottom);
+			update_queue(m_visible_items_bottom_right, m_ready_queue_bottom_right, message_pin_location::bottom_right);
+			update_queue(m_visible_items_bottom_left, m_ready_queue_bottom_left, message_pin_location::bottom_left);
+			update_queue(m_visible_items_top_right, m_ready_queue_top_right, message_pin_location::top_right);
+			update_queue(m_visible_items_top_left, m_ready_queue_top_left, message_pin_location::top_left);
 
-			visible = !m_visible_items_top.empty() || !m_visible_items_bottom.empty();
+			visible = !m_visible_items_bottom_right.empty() || !m_visible_items_bottom_left.empty() ||
+			          !m_visible_items_top_right.empty() || !m_visible_items_top_left.empty();
 		}
 
 		compiled_resource message::get_compiled()
@@ -240,12 +254,22 @@ namespace rsx
 
 			compiled_resource cr{};
 
-			for (auto& item : m_visible_items_top)
+			for (auto& item : m_visible_items_bottom_right)
 			{
 				cr.add(item.get_compiled());
 			}
 
-			for (auto& item : m_visible_items_bottom)
+			for (auto& item : m_visible_items_bottom_left)
+			{
+				cr.add(item.get_compiled());
+			}
+
+			for (auto& item : m_visible_items_top_right)
+			{
+				cr.add(item.get_compiled());
+			}
+
+			for (auto& item : m_visible_items_top_left)
 			{
 				cr.add(item.get_compiled());
 			}
@@ -283,10 +307,14 @@ namespace rsx
 
 			switch (location)
 			{
-			case message_pin_location::top:
-				return check_list(m_ready_queue_top) || check_list(m_visible_items_top);
-			case message_pin_location::bottom:
-				return check_list(m_ready_queue_bottom) || check_list(m_visible_items_bottom);
+			case message_pin_location::bottom_right:
+				return check_list(m_ready_queue_bottom_right) || check_list(m_visible_items_bottom_right);
+			case message_pin_location::bottom_left:
+				return check_list(m_ready_queue_bottom_left) || check_list(m_visible_items_bottom_left);
+			case message_pin_location::top_right:
+				return check_list(m_ready_queue_top_right) || check_list(m_visible_items_top_right);
+			case message_pin_location::top_left:
+				return check_list(m_ready_queue_top_left) || check_list(m_visible_items_top_left);
 			}
 
 			return false;
