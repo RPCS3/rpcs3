@@ -739,18 +739,23 @@ std::string Emulator::GetBackgroundPicturePath() const
 		disc_dir.clear();
 	}
 
+	constexpr auto search_barrier = "barrier";
+
 	std::initializer_list<std::string> testees =
 	{
-		m_sfo_dir + "/ICON0.PNG",
 		m_sfo_dir + "/PIC0.PNG",
 		m_sfo_dir + "/PIC1.PNG",
 		m_sfo_dir + "/PIC2.PNG",
 		m_sfo_dir + "/PIC3.PNG",
-		disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
-		disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
-		disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
-		disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
-		disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
+		search_barrier,
+		!disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
+		search_barrier,
+		m_sfo_dir + "/ICON0.PNG",
+		search_barrier,
+		!disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
 	};
 
 	// Try to return the picture with the highest resultion
@@ -764,7 +769,18 @@ std::string Emulator::GetBackgroundPicturePath() const
 
 		fs::stat_t file_stat{};
 
-		if (path.empty() || !fs::get_stat(path, file_stat))
+		if (path == search_barrier)
+		{
+			if (index_of_largest_file != umax)
+			{
+				// Found a file in the preferred image group
+				break;
+			}
+
+			continue;
+		}
+
+		if (path.empty() || !fs::get_stat(path, file_stat) || file_stat.is_directory)
 		{
 			continue;
 		}
