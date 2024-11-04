@@ -397,8 +397,8 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	g_tls_log_control(fmt, 0);
 
 	// Get text, extract va_args
-	/*constinit thread_local*/ std::string text;
-	/*constinit thread_local*/ std::basic_string<u64> args;
+	constinit thread_local std::string text;
+	constinit thread_local std::vector<u64> args;
 
 	static constexpr fmt_type_info empty_sup{};
 
