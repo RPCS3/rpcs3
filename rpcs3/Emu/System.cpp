@@ -732,37 +732,56 @@ std::string Emulator::GetBackgroundPicturePath() const
 		return path;
 	}
 
-	path = m_sfo_dir + "/PIC1.PNG";
+	std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
-	if (!fs::is_file(path))
+	if (m_sfo_dir == disc_dir)
 	{
-		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+		disc_dir.clear();
+	}
 
-		if (disc_dir.empty())
+	std::initializer_list<std::string> testees =
+	{
+		m_sfo_dir + "/ICON0.PNG",
+		m_sfo_dir + "/PIC0.PNG",
+		m_sfo_dir + "/PIC1.PNG",
+		m_sfo_dir + "/PIC2.PNG",
+		m_sfo_dir + "/PIC3.PNG",
+		disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
+		disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
+		disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
+		disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
+		disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
+	};
+
+	// Try to return the picture with the highest resultion
+	// Be naive and assume that its the one that spans over the most bytes
+	usz max_file_size = 0;
+	usz index_of_largest_file = umax;
+
+	for (usz index = 0; index < testees.size(); index++)
+	{
+		const std::string& path = testees.begin()[index];
+
+		fs::stat_t file_stat{};
+
+		if (path.empty() || !fs::get_stat(path, file_stat))
 		{
-			// Fallback to ICON0.PNG
-			path = m_sfo_dir + "/ICON0.PNG";
+			continue;
 		}
-		else
+
+		if (max_file_size < file_stat.size)
 		{
-			// Fallback to PIC1.PNG in disc dir
-			path = disc_dir + "/PIC1.PNG";
-
-			if (!fs::is_file(path))
-			{
-				// Fallback to ICON0.PNG in update dir
-				path = m_sfo_dir + "/ICON0.PNG";
-
-				if (!fs::is_file(path))
-				{
-					// Fallback to ICON0.PNG in disc dir
-					path = disc_dir + "/ICON0.PNG";
-				}
-			}
+			max_file_size = file_stat.size;
+			index_of_largest_file = index;
 		}
 	}
 
-	return path;
+	if (index_of_largest_file == umax)
+	{
+		return {};
+	}
+
+	return testees.begin()[index_of_largest_file];
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)
