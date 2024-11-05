@@ -123,7 +123,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 				filename += name;
 
 				// Save header and offset
-				m_map.insert_or_assign(filename, std::make_pair(offset, header));
+				m_map.insert_or_assign(filename, std::make_pair(offset, std::move(header)));
 
 				if (new_file_path)
 				{
@@ -132,10 +132,8 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 
 				return { size, std::move(filename) };
 			}
-			else
-			{
-				tar_log.error("tar_object::get_file() failed to convert header.size=%s, filesize=0x%x", size_sv, max_size);
-			}
+
+			tar_log.error("tar_object::get_file() failed to convert header.size=%s, filesize=0x%x", size_sv, max_size);
 		}
 		else
 		{
@@ -200,7 +198,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 	return m_out;
 }
 
-bool tar_object::extract(std::string prefix_path, bool is_vfs)
+bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 {
 	std::vector<u8> filedata_buffer(0x80'0000);
 	std::span<u8> filedata_span{filedata_buffer.data(), filedata_buffer.size()};

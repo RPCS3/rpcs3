@@ -166,8 +166,8 @@ private:
 	Qt::SortOrder m_col_sort_order{};
 	int m_sort_column{};
 	bool m_initial_refresh_done = false;
-	QMap<QString, QString> m_notes;
-	QMap<QString, QString> m_titles;
+	std::map<QString, QString> m_notes;
+	std::map<QString, QString> m_titles;
 
 	// Categories
 	QStringList m_category_filters;

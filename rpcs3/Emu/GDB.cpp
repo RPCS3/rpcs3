@@ -463,7 +463,7 @@ std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 	}
 }
 
-bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
+bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, const std::string& value)
 {
 	switch (rid)
 	{
@@ -492,7 +492,7 @@ bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 		if (rid > 70) return false;
 		if (rid > 31)
 		{
-			u64 val = hex_to_u64(value);
+			const u64 val = hex_to_u64(value);
 			thread->fpr[rid - 32] = std::bit_cast<f64>(val);
 		}
 		else

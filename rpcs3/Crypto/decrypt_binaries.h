@@ -12,7 +12,7 @@ public:
     {
     }
 
-    usz decrypt(std::string klic_input = {});
+    usz decrypt(std::string_view klic_input = {});
 
     bool done() const
     {

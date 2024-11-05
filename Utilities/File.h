@@ -837,5 +837,5 @@ namespace fs
 
 	file make_gather(std::vector<file>);
 
-	stx::generator<dir_entry&> list_dir_recursively(std::string path);
+	stx::generator<dir_entry&> list_dir_recursively(const std::string& path);
 }

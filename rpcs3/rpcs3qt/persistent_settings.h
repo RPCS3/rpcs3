@@ -45,6 +45,6 @@ public Q_SLOTS:
 	void SetLastPlayed(const QString& serial, const QString& date, bool sync);
 	QString GetLastPlayed(const QString& serial);
 private:
-	QMap<QString, quint64> m_playtime;
-	QMap<QString, QString> m_last_played;
+	std::map<QString, quint64> m_playtime;
+	std::map<QString, QString> m_last_played;
 };

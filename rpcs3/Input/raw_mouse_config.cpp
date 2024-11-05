@@ -70,7 +70,7 @@ bool raw_mice_config::load()
 
 	if (fs::file cfg_file{ cfg_name, fs::read })
 	{
-		if (std::string content = cfg_file.to_string(); !content.empty())
+		if (const std::string content = cfg_file.to_string(); !content.empty())
 		{
 			result = from_string(content);
 		}
