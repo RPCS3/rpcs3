@@ -1182,6 +1182,8 @@ namespace np
 		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
 		vm::ptr<SceNpScoreRankData_deprecated> rankArray_deprecated = vm::static_ptr_cast<SceNpScoreRankData_deprecated>(tdata->rankArray);
 
+		u32 num_scores_registered = 0;
+
 		for (flatbuffers::uoffset_t i = 0; i < fb_rankarray->size(); i++)
 		{
 			const auto* fb_rankdata = fb_rankarray->Get(i);
@@ -1189,6 +1191,8 @@ namespace np
 
 			if (fb_rankdata->recordDate() == 0)
 				continue;
+
+			num_scores_registered++;
 
 			if (tdata->player_rank_data)
 			{
@@ -1262,7 +1266,7 @@ namespace np
 		tdata->lastSortDate->tick = resp->lastSortDate();
 		*tdata->totalRecord = resp->totalRecord();
 
-		if (fb_rankarray->size())
+		if (num_scores_registered)
 			score_trans->result = simple_result ? CELL_OK : not_an_error(fb_rankarray->size());
 		else
 			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
