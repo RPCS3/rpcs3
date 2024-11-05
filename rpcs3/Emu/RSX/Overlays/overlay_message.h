@@ -21,7 +21,7 @@ namespace rsx
 		{
 		public:
 			template <typename T>
-			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
+			message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
 			void update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset);
 			void set_pos(s16 _x, s16 _y) override;
 

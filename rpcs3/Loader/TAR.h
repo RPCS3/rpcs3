@@ -55,7 +55,7 @@ public:
 
 	// Extract all files in archive to destination (as VFS if is_vfs is true)
 	// Allow to optionally specify explicit mount point (which may be directory meant for extraction)
-	bool extract(std::string prefix_path = {}, bool is_vfs = false);
+	bool extract(const std::string& prefix_path = {}, bool is_vfs = false);
 
 	static void save_directory(const std::string& src_dir, utils::serial& ar, const process_func& func = {}, std::vector<fs::dir_entry>&& = std::vector<fs::dir_entry>{}, bool has_evaluated_results = false, usz src_dir_pos = umax);
 };

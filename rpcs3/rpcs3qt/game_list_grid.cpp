@@ -42,8 +42,8 @@ void game_list_grid::clear_list()
 
 void game_list_grid::populate(
 	const std::vector<game_info>& game_data,
-	const QMap<QString, QString>& notes_map,
-	const QMap<QString, QString>& title_map,
+	const std::map<QString, QString>& notes_map,
+	const std::map<QString, QString>& title_map,
 	const std::string& selected_item_id,
 	bool play_hover_movies)
 {
@@ -54,11 +54,20 @@ void game_list_grid::populate(
 
 	blockSignals(true);
 
+	const auto get_title = [&title_map](const QString& serial, const std::string& name) -> QString
+	{
+		if (const auto it = title_map.find(serial); it != title_map.cend())
+		{
+			return it->second.simplified();
+		}
+
+		return QString::fromStdString(name).simplified();
+	};
+
 	for (const auto& game : game_data)
 	{
 		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = title_map.value(serial, QString::fromStdString(game->info.name)).simplified();
-		const QString notes = notes_map.value(serial);
+		const QString title = get_title(serial, game->info.name);
 
 		game_list_grid_item* item = new game_list_grid_item(this, game, title);
 		item->installEventFilter(this);
@@ -66,13 +75,13 @@ void game_list_grid::populate(
 
 		game->item = item;
 
-		if (notes.isEmpty())
+		if (const auto it = notes_map.find(serial); it != notes_map.cend() && !it->second.isEmpty())
 		{
-			item->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
+			item->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(it->second));
 		}
 		else
 		{
-			item->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
+			item->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
 		}
 
 		item->set_icon_func([this, item, game](const QVideoFrame& frame)

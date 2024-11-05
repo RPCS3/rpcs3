@@ -65,13 +65,12 @@ namespace cfg_adapter
 
 	bool get_is_dynamic(emu_settings_type type)
 	{
-		const cfg_location loc = settings_location[type];
-		return get_is_dynamic(loc);
+		return get_is_dynamic(::at32(settings_location, type));
 	}
 
 	std::string get_setting_name(emu_settings_type type)
 	{
-		const cfg_location loc = settings_location[type];
-		return loc[loc.size() - 1];
+		const cfg_location& loc = ::at32(settings_location, type);
+		return ::at32(loc, loc.size() - 1);
 	}
 }

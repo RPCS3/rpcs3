@@ -2634,7 +2634,7 @@ bool fs::pending_file::commit(bool overwrite)
 	return false;
 }
 
-stx::generator<fs::dir_entry&> fs::list_dir_recursively(std::string path)
+stx::generator<fs::dir_entry&> fs::list_dir_recursively(const std::string& path)
 {
 	for (auto& entry : fs::dir(path))
 	{

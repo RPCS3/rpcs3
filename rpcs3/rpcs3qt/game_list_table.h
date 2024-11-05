@@ -26,8 +26,8 @@ public:
 
 	void populate(
 		const std::vector<game_info>& game_data,
-		const QMap<QString, QString>& notes_map,
-		const QMap<QString, QString>& title_map,
+		const std::map<QString, QString>& notes_map,
+		const std::map<QString, QString>& title_map,
 		const std::string& selected_item_id,
 		bool play_hover_movies) override;
 

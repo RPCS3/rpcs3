@@ -34,8 +34,8 @@ public:
 	virtual void clear_list(){};
 	virtual void populate(
 		[[maybe_unused]] const std::vector<game_info>& game_data,
-		[[maybe_unused]] const QMap<QString, QString>& notes_map,
-		[[maybe_unused]] const QMap<QString, QString>& title_map,
+		[[maybe_unused]] const std::map<QString, QString>& notes_map,
+		[[maybe_unused]] const std::map<QString, QString>& title_map,
 		[[maybe_unused]] const std::string& selected_item_id,
 		[[maybe_unused]] bool play_hover_movies){};
 

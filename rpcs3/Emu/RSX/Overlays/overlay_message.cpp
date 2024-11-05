@@ -17,7 +17,7 @@ namespace rsx
 		}
 
 		template <typename T>
-		message_item::message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon)
+		message_item::message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon)
 		{
 			m_visible_duration = expiration;
 			m_refs = std::move(refs);
@@ -52,8 +52,8 @@ namespace rsx
 				set_size(m_text.w + m_margin + m_margin, m_text.h + m_margin + m_margin);
 			}
 		}
-		template message_item::message_item(std::string msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
-		template message_item::message_item(localized_string_id msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
+		template message_item::message_item(const std::string& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
+		template message_item::message_item(const localized_string_id& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
 
 		void message_item::reset_expiration()
 		{

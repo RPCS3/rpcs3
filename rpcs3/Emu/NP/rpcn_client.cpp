@@ -2614,7 +2614,7 @@ namespace rpcn
 		NotificationType ntype = static_cast<NotificationType>(command);
 		vec_stream vdata(data);
 
-		auto call_callbacks = [&](NotificationType ntype, std::string username, bool status)
+		const auto call_callbacks = [&](NotificationType ntype, const std::string& username, bool status)
 		{
 			for (auto& friend_cb : friend_cbs)
 			{

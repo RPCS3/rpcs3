@@ -1175,7 +1175,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), paths);
+				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
 			});
 		}
 
@@ -1554,7 +1554,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	if (std::string installed = utils::get_firmware_version(); !installed.empty())
+	if (const std::string installed = utils::get_firmware_version(); !installed.empty())
 	{
 		gui_log.warning("Reinstalling firmware: old=%s, new=%s", installed, version_string);
 
@@ -3793,7 +3793,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 				{
 					if (Emu.IsPathInsideDir(game->info.path, sstr(dir_path)))
 					{
-						// Try to claim operaion on directory path
+						// Try to claim operation on directory path
 
 						std::string resolved_path = Emu.GetCallbacks().resolve_path(game->info.path);
 
@@ -3815,7 +3815,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		}
 		else
 		{
-			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), paths_added);
+			ShowOptionalGamePreparations(tr("Success!"), tr("Successfully added software to game list from path(s)!"), std::move(paths_added));
 		}
 	});
 

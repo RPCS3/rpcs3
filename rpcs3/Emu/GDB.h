@@ -58,7 +58,7 @@ class gdb_thread
 	//returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
 	static std::string get_reg(ppu_thread* thread, u32 rid);
 	//sets register value to hex string by register id (in gdb), in case of wrong id returns false
-	static bool set_reg(ppu_thread* thread, u32 rid, std::string value);
+	static bool set_reg(ppu_thread* thread, u32 rid, const std::string& value);
 	//returns size of register with id rid in bytes, zero if invalid rid is provided
 	static u32 get_reg_size(ppu_thread* thread, u32 rid);
 	//send reason of stop, returns false if sending response failed

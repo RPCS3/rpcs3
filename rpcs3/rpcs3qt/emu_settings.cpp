@@ -145,7 +145,7 @@ void emu_settings::LoadSettings(const std::string& title_id, bool create_config_
 
 		if (std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id); fs::is_file(config_path))
 		{
-			custom_config_path = config_path;
+			custom_config_path = std::move(config_path);
 		}
 
 		if (!custom_config_path.empty())
@@ -837,12 +837,12 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type)
 {
-	return cfg_adapter::get_options(const_cast<cfg_location&&>(settings_location[type]));
+	return cfg_adapter::get_options(::at32(settings_location, type));
 }
 
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
-	if (const auto node = cfg_adapter::get_node(m_default_settings, settings_location[type]); node && node.IsScalar())
+	if (const auto node = cfg_adapter::get_node(m_default_settings, ::at32(settings_location, type)); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -853,7 +853,7 @@ std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 
 std::string emu_settings::GetSetting(emu_settings_type type) const
 {
-	if (const auto node = cfg_adapter::get_node(m_current_settings, settings_location[type]); node && node.IsScalar())
+	if (const auto node = cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -864,7 +864,7 @@ std::string emu_settings::GetSetting(emu_settings_type type) const
 
 void emu_settings::SetSetting(emu_settings_type type, const std::string& val) const
 {
-	cfg_adapter::get_node(m_current_settings, settings_location[type]) = val;
+	cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)) = val;
 }
 
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
@@ -1355,9 +1355,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	if (strict)
 	{
 		std::string type_string;
-		if (settings_location.contains(type))
+		if (const auto it = settings_location.find(type); it != settings_location.cend())
 		{
-			for (const char* loc : settings_location.value(type))
+			for (const char* loc : it->second)
 			{
 				if (!type_string.empty()) type_string += ": ";
 				type_string += loc;

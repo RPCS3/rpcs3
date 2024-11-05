@@ -672,8 +672,6 @@ void game_list_frame::OnParsingFinished()
 		m_games_mutex.lock();
 
 		// Read persistent_settings values
-		const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
-		const QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
 		const QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
 		const quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
@@ -689,14 +687,14 @@ void game_list_frame::OnParsingFinished()
 
 		m_serials.insert(serial);
 
-		if (!note.isEmpty())
+		if (QString note = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString(); !note.isEmpty())
 		{
-			m_notes.insert(serial, note);
+			m_notes.insert_or_assign(serial, std::move(note));
 		}
 
-		if (!title.isEmpty())
+		if (QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified(); !title.isEmpty())
 		{
-			m_titles.insert(serial, title);
+			m_titles.insert_or_assign(serial, std::move(title));
 		}
 
 		m_games_mutex.unlock();
@@ -893,8 +891,10 @@ void game_list_frame::OnRefreshFinished()
 	// Sort by name at the very least.
 	std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
 	{
-		const QString title1 = m_titles.value(qstr(game1->info.serial), qstr(game1->info.name));
-		const QString title2 = m_titles.value(qstr(game2->info.serial), qstr(game2->info.name));
+		const QString serial1 = QString::fromStdString(game1->info.serial);
+		const QString serial2 = QString::fromStdString(game2->info.serial);
+		const QString& title1 = m_titles.contains(serial1) ? m_titles.at(serial1) : QString::fromStdString(game1->info.name);
+		const QString& title2 = m_titles.contains(serial2) ? m_titles.at(serial2) : QString::fromStdString(game2->info.name);
 		return title1.toLower() < title2.toLower();
 	});
 
@@ -1185,7 +1185,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		connect(boot_manual, &QAction::triggered, [this, gameinfo]
 		{
-			if (std::string file_path = QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)")).toStdString(); !file_path.empty())
+			if (const std::string file_path = QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)")).toStdString(); !file_path.empty())
 			{
 				sys_log.notice("Booting from gamelist per context menu...");
 				Q_EMIT RequestBoot(gameinfo, cfg_mode::custom_selection, file_path);
@@ -1912,12 +1912,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 			if (new_title.isEmpty() || new_title == name)
 			{
-				m_titles.remove(serial);
+				m_titles.erase(serial);
 				m_persistent_settings->RemoveValue(gui::persistent::titles, serial);
 			}
 			else
 			{
-				m_titles.insert(serial, new_title);
+				m_titles.insert_or_assign(serial, new_title);
 				m_persistent_settings->SetValue(gui::persistent::titles, serial, new_title);
 			}
 			Refresh(true); // full refresh in order to reliably sort the list
@@ -1933,12 +1933,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (new_notes.simplified().isEmpty())
 			{
-				m_notes.remove(serial);
+				m_notes.erase(serial);
 				m_persistent_settings->RemoveValue(gui::persistent::notes, serial);
 			}
 			else
 			{
-				m_notes.insert(serial, new_notes);
+				m_notes.insert_or_assign(serial, new_notes);
 				m_persistent_settings->SetValue(gui::persistent::notes, serial, new_notes);
 			}
 			Refresh();
@@ -2831,7 +2831,16 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 	if (!m_search_text.isEmpty())
 	{
 		QString search_text = m_search_text.toLower();
-		QString title_name = m_titles.value(serial, name).toLower();
+		QString title_name;
+
+		if (const auto it = m_titles.find(serial); it != m_titles.cend())
+		{
+			title_name = it->second.toLower();
+		}
+		else
+		{
+			title_name = name.toLower();
+		}
 
 		// Ignore trademarks when no search results have been yielded by unmodified search
 		static const QRegularExpression s_ignored_on_fallback(reinterpret_cast<const char*>(u8"[:\\-®©™]+"));
