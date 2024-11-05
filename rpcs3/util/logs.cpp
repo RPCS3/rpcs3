@@ -412,7 +412,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
-	text.reserve(50000);
+	text.clear();
 	args.resize(args_count);
 
 	va_list c_args;
