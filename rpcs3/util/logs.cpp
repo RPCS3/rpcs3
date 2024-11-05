@@ -397,8 +397,14 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	g_tls_log_control(fmt, 0);
 
 	// Get text, extract va_args
-	constinit thread_local std::string text;
-	constinit thread_local std::vector<u64> args;
+	constinit thread_local std::unique_ptr<std::string> text_;
+	constinit thread_local std::unique_ptr<std::vector<u64>> args_;
+	if (!text_)
+		text_ = std::make_unique<std::string>();
+	if (!args_)
+		args_ = std::make_unique<std::vector<u64>>();
+	auto& text = *text_.get();
+	auto& args = *args_.get();
 
 	static constexpr fmt_type_info empty_sup{};
 
