@@ -6049,6 +6049,8 @@ public:
 				final_result = eval(insert(final_result, i, r_fraction));
 			}
 
+			//final_result = eval(select(final_result != (0), final_result, bitcast<u32[4]>(pshufb(splat<u8[16]>(0), bitcast<u8[16]>(final_result)))));
+
 			return bitcast<f32[4]>(bitcast<u32[4]>(final_result | bitcast<u32[4]>(fix_exponent) | a_sign));
 		});
 
