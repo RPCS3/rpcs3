@@ -144,8 +144,12 @@ elseif(UNIX)
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
     if(MSVC)
-        add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/3rdparty/OpenAL/openal-soft/$<CONFIG>/OpenAL32.dll $<TARGET_FILE_DIR:rpcs3>)
+        cmake_policy(SET CMP0026 OLD)
+        get_target_property(OpenAL_LIB_PATH OpenAL::OpenAL LOCATION)
+        if (OpenAL_LIB_PATH)
+            add_custom_command(TARGET rpcs3 POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${OpenAL_LIB_PATH} $<TARGET_FILE_DIR:rpcs3>)
+        endif()
     endif()
     add_custom_command(TARGET rpcs3 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
