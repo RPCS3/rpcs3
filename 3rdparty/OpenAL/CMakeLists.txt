@@ -1,6 +1,10 @@
 # OpenAL
 if(USE_SYSTEM_OPENAL)
-    find_package(OpenAL CONFIG REQUIRED)
+    if(WIN32)
+      find_package(OpenAL CONFIG REQUIRED)
+    else()
+      find_package(OpenAL REQUIRED)
+    endif()
     add_library(3rdparty_openal INTERFACE)
     target_link_libraries(3rdparty_openal INTERFACE OpenAL::OpenAL)
     set_target_properties(OpenAL::OpenAL PROPERTIES IMPORTED_GLOBAL ON)
