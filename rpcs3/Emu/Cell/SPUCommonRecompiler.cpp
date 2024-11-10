@@ -34,18 +34,12 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 
-template <typename T>
-bool operator<(const std::span<T>& this_, const std::span<T>& that)
-{
-	return std::lexicographical_compare(this_.begin(), this_.end(), that.begin(), that.end());
-}
-
 template<typename T>
 struct span_less
 {
 	bool operator()(const std::span<T>& this_, const std::span<T>& that) const
 	{
-		return this_ < that;
+		return std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes())) < 0;
 	}
 };
 
@@ -1270,7 +1264,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	// Select range for comparison
 	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
 	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
-	const auto cmp0 = std::lexicographical_compare_three_way(lhs_data.begin(), lhs_data.end(), rhs_data.begin(), rhs_data.end());
+	const auto cmp0 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
 
 	if (cmp0 < 0)
 		return true;
@@ -1280,7 +1274,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	// Compare from address 0 to the point before the entry point (TODO: undesirable)
 	lhs_data = {data.data(), lhs_offs};
 	rhs_data = {rhs.data.data(), rhs_offs};
-	const auto cmp1 = std::lexicographical_compare_three_way(lhs_data.begin(), lhs_data.end(), rhs_data.begin(), rhs_data.end());
+	const auto cmp1 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
 
 	if (cmp1 < 0)
 		return true;
@@ -1375,7 +1369,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(std::lexicographical_compare(x.first.begin(), x.first.end(), y.first.begin(), y.first.end())));
+	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(std::memcmp(x.first.data(), y.first.data(), std::min(x.first.size_bytes(), y.first.size_bytes())) < 0));
 
 	struct work
 	{
@@ -1573,7 +1567,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 						lhs = lhs.subspan(w.level);
 						rhs = rhs.subspan(w.level);
 
-						return lhs < rhs;
+						return std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size_bytes(), rhs.size_bytes())) < 0;
 					});
 
 					continue;
