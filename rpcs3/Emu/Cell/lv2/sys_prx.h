@@ -195,8 +195,8 @@ struct lv2_prx final : lv2_obj, ppu_module
 	u32 exports_start = umax;
 	u32 exports_end = 0;
 
-	std::basic_string<bool> m_loaded_flags;
-	std::basic_string<bool> m_external_loaded_flags;
+	std::basic_string<char> m_loaded_flags;
+	std::basic_string<char> m_external_loaded_flags;
 
 	void load_exports(); // (Re)load exports
 	void restore_exports(); // For savestates

@@ -51,6 +51,7 @@
 #include "sys_uart.h"
 #include "sys_crypto_engine.h"
 
+#include <algorithm>
 #include <optional>
 #include <deque>
 #include "util/tsc.hpp"
@@ -1338,15 +1339,14 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 			{
 				// Ignore outdated notification request
 			}
-			else if (usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
-				notify_later_idx != umax)
+			else if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
-				g_to_notify[notify_later_idx] = vm::reservation_notifier_notify(addr, true);
+				*it = vm::reservation_notifier_notify(addr, true);
 
-				if (notify_later_idx < std::size(g_to_notify) - 1)
+				if (it < std::end(g_to_notify) - 1)
 				{
 					// Null-terminate the list if it ends before last slot
-					g_to_notify[notify_later_idx + 1] = nullptr;
+					*(it + 1) = nullptr;
 				}
 			}
 			else
@@ -1392,15 +1392,14 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 			{
 				// Ignore outdated notification request
 			}
-			else if (usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
-				notify_later_idx != umax)
+			else if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
-				g_to_notify[notify_later_idx] = vm::reservation_notifier_notify(addr, true);
+				*it = vm::reservation_notifier_notify(addr, true);
 
-				if (notify_later_idx < std::size(g_to_notify) - 1)
+				if (it < std::end(g_to_notify) - 1)
 				{
 					// Null-terminate the list if it ends before last slot
-					g_to_notify[notify_later_idx + 1] = nullptr;
+					*(it + 1) = nullptr;
 				}
 			}
 			else
@@ -1834,7 +1833,7 @@ void lv2_obj::cleanup()
 
 void lv2_obj::schedule_all(u64 current_time)
 {
-	usz notify_later_idx = std::basic_string_view<const void*>{g_to_notify, std::size(g_to_notify)}.find_first_of(std::add_pointer_t<const void>{});
+	auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{});
 
 	if (!g_pending && g_scheduler_ready)
 	{
@@ -1857,14 +1856,14 @@ void lv2_obj::schedule_all(u64 current_time)
 					continue;
 				}
 
-				if (notify_later_idx >= std::size(g_to_notify))
+				if (it == std::end(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one();
 				}
 				else
 				{
-					g_to_notify[notify_later_idx++] = &target->state;
+					*it++ = &target->state;
 				}
 			}
 		}
@@ -1891,14 +1890,14 @@ void lv2_obj::schedule_all(u64 current_time)
 				ensure(!target->state.test_and_set(cpu_flag::notify));
 
 				// Otherwise notify it to wake itself
-				if (notify_later_idx >= std::size(g_to_notify))
+				if (it == std::end(g_to_notify))
 				{
 					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one();
 				}
 				else
 				{
-					g_to_notify[notify_later_idx++] = &target->state;
+					*it++ = &target->state;
 				}
 			}
 		}
@@ -1909,10 +1908,10 @@ void lv2_obj::schedule_all(u64 current_time)
 		}
 	}
 
-	if (notify_later_idx - 1 < std::size(g_to_notify) - 1)
+	if (it < std::end(g_to_notify) - 1)
 	{
 		// Null-terminate the list if it ends before last slot
-		g_to_notify[notify_later_idx] = nullptr;
+		*(it + 1) = nullptr;
 	}
 
 	if (const u64 freq = s_yield_frequency)

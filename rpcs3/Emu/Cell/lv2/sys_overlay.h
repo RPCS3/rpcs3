@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "sys_sync.h"
+#include <vector>
 
 struct lv2_overlay final : lv2_obj, ppu_module
 {
@@ -9,7 +11,7 @@ struct lv2_overlay final : lv2_obj, ppu_module
 
 	u32 entry{};
 	u32 seg0_code_end{};
-	std::basic_string<u32> applied_patches;
+	std::vector<u32> applied_patches;
 
 	lv2_overlay() = default;
 	lv2_overlay(utils::serial&){}

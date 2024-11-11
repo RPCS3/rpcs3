@@ -109,7 +109,7 @@ struct ppu_module
 		addr_to_seg_index = info.addr_to_seg_index;
 	}
 
-	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied, const std::vector<u32>& exported_funcs = std::vector<u32>{}, std::function<bool()> check_aborted = {});
+	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs = std::vector<u32>{}, std::function<bool()> check_aborted = {});
 	void validate(u32 reloc);
 
 	template <typename T>
@@ -181,7 +181,7 @@ struct main_ppu_module : public ppu_module
 {
 	u32 elf_entry{};
 	u32 seg0_code_end{};
-	std::basic_string<u32> applied_patches;
+	std::vector<u32> applied_patches;
 };
 
 // Aux

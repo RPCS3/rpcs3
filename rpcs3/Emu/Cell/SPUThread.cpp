@@ -1412,7 +1412,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			std::vector<bool> passed(_pc / 4);
 
 			// Start with PC
-			std::basic_string<u32> start_points{_pc};
+			std::vector<u32> start_points{_pc};
 
 			bool is_ok = false;
 			bool all_failed = false;

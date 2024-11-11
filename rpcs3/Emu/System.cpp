@@ -1260,8 +1260,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				if (game_data.find_first_of('\0') != umax || !sysutil_check_name_string(game_data.c_str(), 1, CELL_GAME_DIRNAME_SIZE))
 				{
-					const std::basic_string_view<u8> dirname{reinterpret_cast<const u8*>(game_data.data()), game_data.size()};
-					fmt::throw_exception("HDD0 deserialization failed: Invalid directory name: %s, ar=%s", dirname.substr(0, CELL_GAME_DIRNAME_SIZE + 1), *m_ar);
+					const std::span<const u8> dirname{reinterpret_cast<const u8*>(game_data.data()), game_data.size()};
+					fmt::throw_exception("HDD0 deserialization failed: Invalid directory name: %s, ar=%s", dirname.subspan(0, CELL_GAME_DIRNAME_SIZE + 1), *m_ar);
 				}
 
 				load_tar(hdd0_game + game_data, "");
