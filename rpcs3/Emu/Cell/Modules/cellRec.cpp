@@ -894,7 +894,7 @@ void rec_info::stop_video_provider(bool flush)
 	}
 }
 
-bool create_path(std::string& out, std::string dir_name, std::string file_name)
+bool create_path(std::string& out, std::string dir_name, const std::string& file_name)
 {
 	out.clear();
 
@@ -903,7 +903,7 @@ bool create_path(std::string& out, std::string dir_name, std::string file_name)
 		return false;
 	}
 
-	out = dir_name;
+	out = std::move(dir_name);
 
 	if (!out.empty() && out.back() != '/')
 	{

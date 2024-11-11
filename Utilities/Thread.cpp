@@ -2731,7 +2731,7 @@ void thread_base::exec()
 
 [[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)
 {
-	if (std::string info = dump_useful_thread_info(); !info.empty())
+	if (const std::string info = dump_useful_thread_info(); !info.empty())
 	{
 		sys_log.notice("\n%s", info);
 	}

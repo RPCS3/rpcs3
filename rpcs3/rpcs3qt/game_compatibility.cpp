@@ -186,7 +186,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		}
 
 		// Add status to map
-		m_compat_database.emplace(std::pair<std::string, compat::status>(key.toStdString(), status));
+		m_compat_database.emplace(key.toStdString(), std::move(status));
 	}
 
 	return true;

@@ -11,7 +11,7 @@
 
 LOG_CHANNEL(dec_log, "DECRYPT");
 
-usz decrypt_binaries_t::decrypt(std::string klic_input)
+usz decrypt_binaries_t::decrypt(std::string_view klic_input)
 {
 	if (m_index >= m_modules.size())
 	{
@@ -41,7 +41,7 @@ usz decrypt_binaries_t::decrypt(std::string klic_input)
 		m_klics.insert(m_klics.end(), Emu.klic.begin(), Emu.klic.end());
 	}
 
-	if (std::string_view text = std::string_view{klic_input}.substr(klic_input.find_first_of('x') + 1); text.size() == 32)
+	if (std::string_view text = klic_input.substr(klic_input.find_first_of('x') + 1); text.size() == 32)
 	{
 		// Allowed to fail (would simply repeat the operation if fails again)
 		u64 lo = 0;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QMap>
+#include <map>
 #include <vector>
 
 // Node location
@@ -178,6 +178,7 @@ enum class emu_settings_type
 	ShowPressureIntensityToggleHint,
 	ShowAnalogLimiterToggleHint,
 	ShowMouseAndKeyboardToggleHint,
+	ShowAutosaveAutoloadHint,
 	WindowTitleFormat,
 	PauseDuringHomeMenu,
 
@@ -202,7 +203,7 @@ enum class emu_settings_type
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
-inline static const QMap<emu_settings_type, cfg_location> settings_location =
+inline static const std::map<emu_settings_type, cfg_location> settings_location =
 {
 	// Core Tab
 	{ emu_settings_type::PPUDecoder,               { "Core", "PPU Decoder"}},
@@ -375,6 +376,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::SilenceAllLogs,                  { "Miscellaneous", "Silence All Logs" }},
 	{ emu_settings_type::WindowTitleFormat,               { "Miscellaneous", "Window Title Format" }},
 	{ emu_settings_type::PauseDuringHomeMenu,             { "Miscellaneous", "Pause Emulation During Home Menu" }},
+	{ emu_settings_type::ShowAutosaveAutoloadHint,        { "Miscellaneous", "Show autosave/autoload hint" }},
 
 	// Networking
 	{ emu_settings_type::InternetStatus, { "Net", "Internet enabled"}},

@@ -203,8 +203,8 @@ void game_list_table::set_custom_config_icon(const game_info& game)
 
 void game_list_table::populate(
 	const std::vector<game_info>& game_data,
-	const QMap<QString, QString>& notes_map,
-	const QMap<QString, QString>& title_map,
+	const std::map<QString, QString>& notes_map,
+	const std::map<QString, QString>& title_map,
 	const std::string& selected_item_id,
 	bool play_hover_movies)
 {
@@ -223,13 +223,22 @@ void game_list_table::populate(
 	int index = -1;
 	int selected_row = -1;
 
+	const auto get_title = [&title_map](const QString& serial, const std::string& name) -> QString
+	{
+		if (const auto it = title_map.find(serial); it != title_map.cend())
+		{
+			return it->second;
+		}
+
+		return QString::fromStdString(name);
+	};
+
 	for (const auto& game : game_data)
 	{
 		index++;
 
 		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = title_map.value(serial, QString::fromStdString(game->info.name));
-		const QString notes = notes_map.value(serial);
+		const QString title = get_title(serial, game->info.name);
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
@@ -302,9 +311,9 @@ void game_list_table::populate(
 		// Serial
 		custom_table_widget_item* serial_item = new custom_table_widget_item(game->info.serial);
 
-		if (!notes.isEmpty())
+		if (const auto it = notes_map.find(serial); it != notes_map.cend() && !it->second.isEmpty())
 		{
-			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes);
+			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(it->second);
 			title_item->setToolTip(tool_tip);
 			serial_item->setToolTip(tool_tip);
 		}

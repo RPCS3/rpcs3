@@ -22,7 +22,7 @@ namespace rsx
 				localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS,
 				5'000'000,
 				{},
-				message_pin_location::bottom,
+				message_pin_location::bottom_left,
 				s_shader_loading_icon24,
 				true);
 		}
@@ -41,7 +41,7 @@ namespace rsx
 				localized_string_id::RSX_OVERLAYS_COMPILING_PPU_MODULES,
 				20'000'000,
 				refs,
-				message_pin_location::bottom,
+				message_pin_location::bottom_left,
 				s_ppu_loading_icon24,
 				true);
 

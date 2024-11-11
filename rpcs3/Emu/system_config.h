@@ -345,6 +345,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_pressure_intensity_toggle_hint{ this, "Show pressure intensity toggle hint", true, true };
 		cfg::_bool show_analog_limiter_toggle_hint{ this, "Show analog limiter toggle hint", true, true };
 		cfg::_bool show_mouse_and_keyboard_toggle_hint{ this, "Show mouse and keyboard toggle hint", true, true };
+		cfg::_bool show_autosave_autoload_hint{ this, "Show autosave/autoload hint", false, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };

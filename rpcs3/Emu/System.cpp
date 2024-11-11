@@ -581,7 +581,7 @@ void Emulator::Init()
 			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
 
 #ifdef _WIN32
-			if (std::string rpcs3_shortcuts = games_common_dir + "/shortcuts"; make_path_verbose(rpcs3_shortcuts, false))
+			if (const std::string rpcs3_shortcuts = games_common_dir + "/shortcuts"; make_path_verbose(rpcs3_shortcuts, false))
 			{
 				fs::write_file(rpcs3_shortcuts + "/Copyable Shortcuts For Installed Games Would Be Added Here.txt", fs::create + fs::excl + fs::write, ""s);
 			}
@@ -732,37 +732,72 @@ std::string Emulator::GetBackgroundPicturePath() const
 		return path;
 	}
 
-	path = m_sfo_dir + "/PIC1.PNG";
+	std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
-	if (!fs::is_file(path))
+	if (m_sfo_dir == disc_dir)
 	{
-		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+		disc_dir.clear();
+	}
 
-		if (disc_dir.empty())
-		{
-			// Fallback to ICON0.PNG
-			path = m_sfo_dir + "/ICON0.PNG";
-		}
-		else
-		{
-			// Fallback to PIC1.PNG in disc dir
-			path = disc_dir + "/PIC1.PNG";
+	constexpr auto search_barrier = "barrier";
 
-			if (!fs::is_file(path))
+	std::initializer_list<std::string> testees =
+	{
+		m_sfo_dir + "/PIC0.PNG",
+		m_sfo_dir + "/PIC1.PNG",
+		m_sfo_dir + "/PIC2.PNG",
+		m_sfo_dir + "/PIC3.PNG",
+		search_barrier,
+		!disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
+		!disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
+		search_barrier,
+		m_sfo_dir + "/ICON0.PNG",
+		search_barrier,
+		!disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
+	};
+
+	// Try to return the picture with the highest resultion
+	// Be naive and assume that its the one that spans over the most bytes
+	usz max_file_size = 0;
+	usz index_of_largest_file = umax;
+
+	for (usz index = 0; index < testees.size(); index++)
+	{
+		const std::string& path = testees.begin()[index];
+
+		fs::stat_t file_stat{};
+
+		if (path == search_barrier)
+		{
+			if (index_of_largest_file != umax)
 			{
-				// Fallback to ICON0.PNG in update dir
-				path = m_sfo_dir + "/ICON0.PNG";
-
-				if (!fs::is_file(path))
-				{
-					// Fallback to ICON0.PNG in disc dir
-					path = disc_dir + "/ICON0.PNG";
-				}
+				// Found a file in the preferred image group
+				break;
 			}
+
+			continue;
+		}
+
+		if (path.empty() || !fs::get_stat(path, file_stat) || file_stat.is_directory)
+		{
+			continue;
+		}
+
+		if (max_file_size < file_stat.size)
+		{
+			max_file_size = file_stat.size;
+			index_of_largest_file = index;
 		}
 	}
 
-	return path;
+	if (index_of_largest_file == umax)
+	{
+		return {};
+	}
+
+	return testees.begin()[index_of_largest_file];
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)

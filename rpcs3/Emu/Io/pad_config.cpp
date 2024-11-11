@@ -68,7 +68,7 @@ bool cfg_input::load(const std::string& title_id, const std::string& config_file
 	{
 		input_log.notice("Loading input configuration: '%s'", cfg_name);
 
-		if (std::string content = cfg_file.to_string(); !content.empty())
+		if (const std::string content = cfg_file.to_string(); !content.empty())
 		{
 			return from_string(content);
 		}
