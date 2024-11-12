@@ -323,24 +323,29 @@ void patch_manager_dialog::populate_tree()
 						const QString q_description = QString::fromStdString(description);
 						QString visible_description = q_description;
 
-						const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
-							<< QPair<int, QVariant>(description_role, q_description)
-							<< QPair<int, QVariant>(persistance_role, true);
+						const std::vector<std::pair<int, QVariant>> match_criteria =
+						{
+							std::pair<int, QVariant>(description_role, q_description),
+							std::pair<int, QVariant>(persistance_role, true)
+						};
 
 						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
-						if (const auto matches = gui::utils::find_children_by_data(serial_level_item, match_criteria, false); matches.count() > 0)
+						std::vector<QTreeWidgetItem*> matches;
+						gui::utils::find_children_by_data(serial_level_item, matches, match_criteria, false);
+
+						if (!matches.empty())
 						{
-							if (auto only_match = matches.count() == 1 ? matches[0] : nullptr)
+							if (auto only_match = matches.size() == 1 ? matches[0] : nullptr)
 							{
 								only_match->setText(0, q_description + QStringLiteral(" (01)"));
 							}
-							const int counter = matches.count() + 1;
+							const usz counter = matches.size() + 1;
 							visible_description += QStringLiteral(" (");
 							if (counter < 10) visible_description += '0';
 							visible_description += QString::number(counter) + ')';
 						}
 
-						QMap<QString, QVariant> q_config_values;
+						QVariantMap q_config_values;
 
 						for (const auto& [key, default_config_value] : patch.default_config_values)
 						{
@@ -375,8 +380,10 @@ void patch_manager_dialog::populate_tree()
 		}
 	}
 
-	const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
-		<< QPair<int, QVariant>(persistance_role, true);
+	const std::vector<std::pair<int, QVariant>> match_criteria =
+	{
+		std::pair<int, QVariant>(persistance_role, true)
+	};
 
 	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
@@ -578,7 +585,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->configurable_double_spin_box->setVisible(false);
 
 	// Fetch the config values of this item
-	const QVariant& variant = info.config_values.value(key);
+	const QVariant& variant = ::at32(info.config_values, key);
 	ensure(variant.canConvert<patch_engine::patch_config_value>());
 
 	const patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
@@ -662,7 +669,7 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeW
 				info.notes = QString::fromStdString(found_info.notes);
 				info.description = QString::fromStdString(found_info.description);
 				info.patch_version = QString::fromStdString(found_info.patch_version);
-				info.config_values = current->data(0, config_values_role).toMap();
+				info.config_values = current->data(0, config_values_role).toMap().toStdMap();
 				info.config_value_key = current->data(0, config_key_role).toString();
 
 				if (current != previous)
@@ -670,11 +677,9 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeW
 					// Update the config value combo box with the new config keys
 					ui->configurable_selector->blockSignals(true);
 					ui->configurable_selector->clear();
-					for (const QString& key : info.config_values.keys())
+					for (const auto& [key, variant] : info.config_values)
 					{
-						const QVariant& variant = info.config_values.value(key);
 						ensure(variant.canConvert<patch_engine::patch_config_value>());
-						const patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
 						ui->configurable_selector->addItem(key, key);
 					}
 					if (ui->configurable_selector->count() > 0)

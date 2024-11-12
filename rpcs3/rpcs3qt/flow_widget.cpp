@@ -34,7 +34,7 @@ void flow_widget::add_widget(flow_widget_item* widget)
 {
 	if (widget)
 	{
-		m_widgets << widget;
+		m_widgets.push_back(widget);
 		m_flow_layout->addWidget(widget);
 
 		connect(widget, &flow_widget_item::navigate, this, &flow_widget::on_navigate);
@@ -48,24 +48,14 @@ void flow_widget::clear()
 	m_flow_layout->clear();
 }
 
-QList<flow_widget_item*>& flow_widget::items()
-{
-	return m_widgets;
-}
-
 flow_widget_item* flow_widget::selected_item() const
 {
-	if (m_selected_index >= 0 && m_selected_index < m_widgets.size())
+	if (m_selected_index >= 0 && static_cast<usz>(m_selected_index) < m_widgets.size())
 	{
 		return ::at32(m_widgets, m_selected_index);
 	}
 
 	return nullptr;
-}
-
-QScrollArea* flow_widget::scroll_area() const
-{
-	return m_scroll_area;
 }
 
 void flow_widget::paintEvent(QPaintEvent* /*event*/)
@@ -77,7 +67,7 @@ void flow_widget::paintEvent(QPaintEvent* /*event*/)
 	style()->drawPrimitive(QStyle::PE_Widget, &option, &painter, this);
 }
 
-int flow_widget::find_item(const flow_layout::position& pos)
+s64 flow_widget::find_item(const flow_layout::position& pos)
 {
 	if (pos.row < 0 || pos.col < 0)
 	{
@@ -86,7 +76,7 @@ int flow_widget::find_item(const flow_layout::position& pos)
 
 	const auto& positions = m_flow_layout->positions();
 
-	for (int i = 0; i < positions.size(); i++)
+	for (s64 i = 0; i < positions.size(); i++)
 	{
 		if (const auto& other = ::at32(positions, i); other.row == pos.row && other.col == pos.col)
 		{
@@ -97,7 +87,7 @@ int flow_widget::find_item(const flow_layout::position& pos)
 	return -1;
 }
 
- flow_layout::position flow_widget::find_item(flow_widget_item* item)
+flow_layout::position flow_widget::find_item(flow_widget_item* item)
 {
 	if (item)
 	{
@@ -105,7 +95,7 @@ int flow_widget::find_item(const flow_layout::position& pos)
 		const auto& positions = m_flow_layout->positions();
 		ensure(item_list.size() == positions.size());
 
-		for (int i = 0; i < item_list.size(); i++)
+		for (s64 i = 0; i < item_list.size(); i++)
 		{
 			if (const auto& layout_item = ::at32(item_list, i); layout_item && layout_item->widget() == item)
 			{
@@ -196,9 +186,9 @@ flow_layout::position flow_widget::find_next_item(flow_layout::position current_
 void flow_widget::select_item(flow_widget_item* item)
 {
 	const flow_layout::position selected_pos = find_item(item);
-	const int selected_index = find_item(selected_pos);
+	const s64 selected_index = find_item(selected_pos);
 
-	if (selected_index < 0 || selected_index >= items().size())
+	if (selected_index < 0 || static_cast<usz>(selected_index) >= items().size())
 	{
 		m_selected_index = -1;
 		return;
@@ -207,12 +197,12 @@ void flow_widget::select_item(flow_widget_item* item)
 	m_selected_index = selected_index;
 	Q_EMIT ItemSelectionChanged(m_selected_index);
 
-	for (int i = 0; i < items().size(); i++)
+	for (usz i = 0; i < items().size(); i++)
 	{
 		if (flow_widget_item* item = items().at(i))
 		{
 			// We need to polish the widgets in order to re-apply any stylesheet changes for the selected property.
-			item->selected = i == m_selected_index;
+			item->selected = m_selected_index >= 0 && i == static_cast<usz>(m_selected_index);
 			item->polish_style();
 		}
 	}
@@ -229,8 +219,8 @@ void flow_widget::on_item_focus()
 void flow_widget::on_navigate(flow_navigation value)
 {
 	const flow_layout::position selected_pos = find_next_item(find_item(static_cast<flow_widget_item*>(QObject::sender())), value);
-	const int selected_index = find_item(selected_pos);
-	if (selected_index < 0 || selected_index >= items().size())
+	const s64 selected_index = find_item(selected_pos);
+	if (selected_index < 0 || static_cast<usz>(selected_index) >= items().size())
 	{
 		return;
 	}

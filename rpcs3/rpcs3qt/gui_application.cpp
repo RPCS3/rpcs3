@@ -974,23 +974,23 @@ void gui_application::OnChangeStyleSheetRequest()
 	{
 		QString stylesheet_path;
 		QString stylesheet_dir;
-		QList<QDir> locs;
-		locs << m_gui_settings->GetSettingsDir();
+		std::vector<QDir> locs;
+		locs.push_back(m_gui_settings->GetSettingsDir());
 
 #if !defined(_WIN32)
 #ifdef __APPLE__
-		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+		locs.push_back(QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/");
 #else
 #ifdef DATADIR
 		const QString data_dir = (DATADIR);
-		locs << data_dir + "/GuiConfigs/";
+		locs.push_back(data_dir + "/GuiConfigs/");
 #endif
-		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+		locs.push_back(QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/");
 #endif
-		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
+		locs.push_back(QCoreApplication::applicationDirPath() + "/GuiConfigs/");
 #endif
 
-		for (auto&& loc : locs)
+		for (QDir& loc : locs)
 		{
 			QFileInfo file_info(loc.absoluteFilePath(stylesheet_name + QStringLiteral(".qss")));
 			if (file_info.exists())

@@ -58,14 +58,14 @@ public:
 
 	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
 
-	const QList<game_info>& GetGameInfo() const;
+	const std::vector<game_info>& GetGameInfo() const;
 
 	void CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations);
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
-	void BatchCreateCPUCaches(const QList<game_info>& game_data = QList<game_info>{});
+	void BatchCreateCPUCaches(const std::vector<game_info>& game_data = {});
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
@@ -181,7 +181,7 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
-	QList<game_info> m_game_data;
+	std::vector<game_info> m_game_data;
 	struct path_entry
 	{
 		std::string path;
