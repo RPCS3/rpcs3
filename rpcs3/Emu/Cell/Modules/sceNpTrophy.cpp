@@ -17,9 +17,10 @@
 #include "Utilities/StrUtil.h"
 
 #include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 
+#include <algorithm>
+#include <functional>
 #include <shared_mutex>
 #include "util/asm.hpp"
 
@@ -479,7 +480,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;
 	}
 
-	if (std::basic_string_view<u8>(&commSign_data.data[6], 6).find_first_not_of('\0') != umax)
+	if (std::any_of(&commSign_data.data[6], &commSign_data.data[6] + 6, FN(x != '\0')))
 	{
 		// 6 padding bytes - must be 0
 		return SCE_NP_TROPHY_ERROR_INVALID_NP_COMM_ID;

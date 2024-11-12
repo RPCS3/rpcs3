@@ -4,6 +4,7 @@
 #include "StrUtil.h"
 #include "Crypto/sha1.h"
 
+#include <span>
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
@@ -293,7 +294,7 @@ namespace fs
 		struct id_view
 		{
 			std::string_view type_view;
-			std::basic_string_view<u8> data_view;
+			std::span<const u8> data_view;
 		};
 
 		id_view _rhs{rhs.type, {rhs.data.data(), rhs.data.size()}};
@@ -311,7 +312,7 @@ namespace fs
 			}
 
 			// Remove offsets data
-			id.data_view.remove_suffix(sizeof(u64) * offset_count);
+			id.data_view = id.data_view.subspan(sizeof(u64) * offset_count);
 
 			// Get last category identifier
 			if (usz sep = id.type_view.rfind(": "); sep != umax)
@@ -329,7 +330,7 @@ namespace fs
 			return false;
 		}
 
-		return _rhs.type_view == _lhs.type_view && _rhs.data_view == _lhs.data_view;
+		return _rhs.type_view == _lhs.type_view && std::equal(_rhs.data_view.begin(), _rhs.data_view.end(), _lhs.data_view.begin(), _lhs.data_view.end());
 	}
 
 	dir_base::~dir_base()

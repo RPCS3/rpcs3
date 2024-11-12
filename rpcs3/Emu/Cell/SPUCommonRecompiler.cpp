@@ -20,6 +20,7 @@
 #include "SPUInterpreter.h"
 #include "SPUDisAsm.h"
 #include <algorithm>
+#include <cstring>
 #include <optional>
 #include <unordered_set>
 
@@ -32,6 +33,15 @@ const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
+
+template<typename T>
+struct span_less
+{
+	bool operator()(const std::span<T>& this_, const std::span<T>& that) const
+	{
+		return std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes())) < 0;
+	}
+};
 
 // Move 4 args for calling native function from a GHC calling convention function
 #if defined(ARCH_X64)
@@ -533,7 +543,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	std::basic_string<u32> data(size / 4, 0);
+	std::vector<u32> data(size / 4, 0);
 	std::memcpy(data.data(), ls_data_vaddr, size);
 
 	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
@@ -926,7 +936,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			u32 next_func = 0;
 			u32 sec_addr = umax;
 			u32 sec_idx = 0;
-			std::basic_string_view<u32> inst_data;
+			std::vector<u32> inst_data;
 
 			// Try to get the data this index points to
 			for (auto& sec : data_list)
@@ -976,7 +986,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			u32 block_addr = func_addr;
 
-			std::map<u32, std::basic_string<u32>> targets;
+			std::map<u32, std::vector<u32>> targets;
 
 			// Call analyser
 			spu_program func2 = compiler->analyse(ls.data(), block_addr, &targets);
@@ -1135,12 +1145,12 @@ void spu_cache::initialize(bool build_existing_cache)
 			std::string dump;
 			dump.reserve(10'000'000);
 
-			std::map<std::basic_string_view<u8>, spu_program*> sorted;
+			std::map<std::span<u8>, spu_program*, span_less<u8>> sorted;
 
 			for (auto&& f : func_list)
 			{
 				// Interpret as a byte string
-				std::basic_string_view<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
+				std::span<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
 
 				sorted[data] = &f;
 			}
@@ -1252,9 +1262,9 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	const u32 rhs_offs = (rhs.entry_point - rhs.lower_bound) / 4;
 
 	// Select range for comparison
-	std::basic_string_view<u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
-	std::basic_string_view<u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
-	const auto cmp0 = lhs_data.compare(rhs_data);
+	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
+	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
+	const auto cmp0 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
 
 	if (cmp0 < 0)
 		return true;
@@ -1264,7 +1274,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	// Compare from address 0 to the point before the entry point (TODO: undesirable)
 	lhs_data = {data.data(), lhs_offs};
 	rhs_data = {rhs.data.data(), rhs_offs};
-	const auto cmp1 = lhs_data.compare(rhs_data);
+	const auto cmp1 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
 
 	if (cmp1 < 0)
 		return true;
@@ -1330,7 +1340,7 @@ spu_item* spu_runtime::add_empty(spu_program&& data)
 spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 {
 	// Prepare sorted list
-	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
+	static thread_local std::vector<std::pair<std::span<const u32>, spu_function_t>> m_flat_list;
 
 	// Remember top position
 	auto stuff_it = ::at32(m_stuff, id_inst >> 12).begin();
@@ -1347,8 +1357,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		{
 			if (const auto ptr = it->compiled.load())
 			{
-				std::basic_string_view<u32> range{it->data.data.data(), it->data.data.size()};
-				range.remove_prefix((it->data.entry_point - it->data.lower_bound) / 4);
+				std::span<const u32> range{it->data.data.data(), it->data.data.size()};
+				range = range.subspan((it->data.entry_point - it->data.lower_bound) / 4);
 				m_flat_list.emplace_back(range, ptr);
 			}
 			else
@@ -1359,7 +1369,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(x.first < y.first));
+	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(std::memcmp(x.first.data(), y.first.data(), std::min(x.first.size_bytes(), y.first.size_bytes())) < 0));
 
 	struct work
 	{
@@ -1551,13 +1561,13 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					// Resort subrange starting from the new level
 					std::stable_sort(w.beg, w.end, [&](const auto& a, const auto& b)
 					{
-						std::basic_string_view<u32> lhs = a.first;
-						std::basic_string_view<u32> rhs = b.first;
+						std::span<const u32> lhs = a.first;
+						std::span<const u32> rhs = b.first;
 
-						lhs.remove_prefix(w.level);
-						rhs.remove_prefix(w.level);
+						lhs = lhs.subspan(w.level);
+						rhs = rhs.subspan(w.level);
 
-						return lhs < rhs;
+						return std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size_bytes(), rhs.size_bytes())) < 0;
 					});
 
 					continue;
@@ -1919,15 +1929,15 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 	{
 		if (const auto ptr = item.compiled.load())
 		{
-			std::basic_string_view<u32> range{item.data.data.data(), item.data.data.size()};
-			range.remove_prefix((item.data.entry_point - item.data.lower_bound) / 4);
+			std::span<const u32> range{item.data.data.data(), item.data.data.size()};
+			range = range.subspan((item.data.entry_point - item.data.lower_bound) / 4);
 
 			if (addr / 4 + range.size() > 0x10000)
 			{
 				continue;
 			}
 
-			if (range.compare(0, range.size(), ls + addr / 4, range.size()) == 0)
+			if (std::equal(range.begin(), range.end(), ls + addr / 4))
 			{
 				return ptr;
 			}
@@ -2836,7 +2846,7 @@ struct block_reg_info
 	}
 };
 
-spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::basic_string<u32>>* out_target_list)
+spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, std::map<u32, std::vector<u32>>* out_target_list)
 {
 	// Result: addr + raw instruction data
 	spu_program result;
@@ -2920,7 +2930,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 
 				// Add predecessor
-				if (m_preds[target].find_first_of(pos) + 1 == 0)
+				if (std::find(m_preds[target].begin(), m_preds[target].end(), pos) == m_preds[target].end())
 				{
 					m_preds[target].push_back(pos);
 				}
@@ -3077,8 +3087,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			else if (type == spu_itype::BI && g_cfg.core.spu_block_size != spu_block_size_type::safe && !op.d && !op.e && !sync)
 			{
 				// Analyse jump table (TODO)
-				std::basic_string<u32> jt_abs;
-				std::basic_string<u32> jt_rel;
+				std::vector<u32> jt_abs;
+				std::vector<u32> jt_rel;
 				const u32 start = pos + 4;
 				u64 dabs = 0;
 				u64 drel = 0;
@@ -3585,7 +3595,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// All (direct and indirect) predecessors to check
-			std::basic_string<u32> workload;
+			std::vector<u32> workload;
 
 			// Bit array used to deduplicate workload list
 			workload.push_back(pair.first);
@@ -4028,7 +4038,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		workload.push_back(entry_point);
 		ensure(m_bbs.count(entry_point));
 
-		std::basic_string<u32> new_entries;
+		std::vector<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
@@ -4707,7 +4717,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				if (target < bb.func || target >= flim || (bb.terminator == term_type::call && target == bb.func))
 				{
-					if (func.calls.find_first_of(target) + 1 == 0)
+					if (std::find(func.calls.begin(), func.calls.end(), target) == func.calls.end())
 					{
 						func.calls.push_back(target);
 					}
@@ -4861,7 +4871,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		reg_state_t ch_state{+vf::is_null}; // Channel stat, example: RCNCNT ch_state, MFC_Cmd
 		reg_state_t ch_product{+vf::is_null}; // Optional comparison state for channl state, example: CEQI ch_product, ch_state, 1
 		bool product_test_negate = false; // Compare the opposite way, such as: CEQI ch_product, ch_state, 0 which turns 0 t -1 and 1 to 0
-		std::basic_string<u32> origins;
+		std::vector<u32> origins;
 		u32 branch_pc = SPU_LS_SIZE; // Where the loop branch is located
 		u32 branch_target = SPU_LS_SIZE; // The target of the loop branch
 
@@ -5216,7 +5226,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				u32 stackframe_pc = SPU_LS_SIZE;
 				usz entry_index = umax;
 
-				auto get_block_targets = [&](u32 pc) -> std::basic_string_view<u32>
+				auto get_block_targets = [&](u32 pc) -> std::span<u32>
 				{
 					if (m_block_info[pc / 4] && m_bbs.count(pc))
 					{
@@ -5658,7 +5668,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (rchcnt_loop->active)
 		{
-			if (rchcnt_loop->origins.find_first_of(pos) != umax)
+			if (std::find(rchcnt_loop->origins.begin(), rchcnt_loop->origins.end(), pos) != rchcnt_loop->origins.end())
 			{
 				rchcnt_loop->failed = true;
 				rchcnt_loop->active = false;
@@ -7032,7 +7042,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if (rchcnt_loop->active)
 				{
-					if (rchcnt_loop->origins.find_first_of(vregs[op_rt].origin) == umax)
+					if (std::find(rchcnt_loop->origins.begin(), rchcnt_loop->origins.end(), vregs[op_rt].origin) == rchcnt_loop->origins.end())
 					{
 						rchcnt_loop->origins.push_back(vregs[op_rt].origin);
 					}
@@ -8002,7 +8012,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 	if (!has_true_state)
 	{
 		std::array<reg_state_t, s_reg_max> temp;
-		std::basic_string<u32> been_there;
+		std::vector<u32> been_there;
 
 		struct iterator_info
 		{

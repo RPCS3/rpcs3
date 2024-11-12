@@ -13,10 +13,8 @@
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
-#include "SPUDisAsm.h"
 #include <algorithm>
 #include <thread>
-#include <unordered_set>
 
 #include "util/v128.hpp"
 #include "util/simd.hpp"
@@ -406,7 +404,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::BasicBlock* add_block(u32 target, bool absolute = false)
 	{
 		// Check the predecessor
-		const bool pred_found = m_block_info[target / 4] && m_preds[target].find_first_of(m_pos) + 1;
+		const bool pred_found = m_block_info[target / 4] && std::find(m_preds[target].begin(), m_preds[target].end(), m_pos) != m_preds[target].end();
 
 		if (m_blocks.empty())
 		{
@@ -2053,7 +2051,7 @@ public:
 						{
 							const auto tfound = m_targets.find(m_pos);
 
-							if (tfound == m_targets.end() || tfound->second.find_first_of(target) + 1 == 0)
+							if (tfound == m_targets.end() || std::find(tfound->second.begin(), tfound->second.end(), target) == tfound->second.end())
 							{
 								spu_log.error("[%s] Unregistered fallthrough to 0x%x (chunk=0x%x, entry=0x%x)", m_hash, target, m_entry, m_function_queue[0]);
 							}

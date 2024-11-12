@@ -9,11 +9,11 @@
 #include "Emu/VFS.h"
 
 #include "util/types.hpp"
-#include "util/endian.hpp"
 #include "util/asm.hpp"
 
 #include <charconv>
 #include <regex>
+#include <vector>
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -907,7 +907,7 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 }
 
 // Returns old 'applied' size
-static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
+static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_info& patch, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	const usz old_applied_size = applied.size();
 
@@ -1447,14 +1447,13 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 	return old_applied_size;
 }
 
-std::basic_string<u32> patch_engine::apply(const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
+void patch_engine::apply(std::vector<u32>& applied_total, const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
 	if (!m_map.contains(name))
 	{
-		return {};
+		return;
 	}
 
-	std::basic_string<u32> applied_total;
 	const patch_container& container = ::at32(m_map, name);
 	const std::string& serial = Emu.GetTitleID();
 	const std::string& app_version = Emu.GetAppVersion();
@@ -1598,8 +1597,6 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, std::functio
 			}
 		}
 	}
-
-	return applied_total;
 }
 
 void patch_engine::unload(const std::string& name)
