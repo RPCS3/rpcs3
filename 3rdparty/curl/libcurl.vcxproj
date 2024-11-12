@@ -87,7 +87,6 @@
     <ClCompile Include="curl\lib\curl_memrchr.c" />
     <ClCompile Include="curl\lib\curl_multibyte.c" />
     <ClCompile Include="curl\lib\curl_ntlm_core.c" />
-    <ClCompile Include="curl\lib\curl_path.c" />
     <ClCompile Include="curl\lib\curl_range.c" />
     <ClCompile Include="curl\lib\curl_rtmp.c" />
     <ClCompile Include="curl\lib\curl_sasl.c" />
@@ -209,6 +208,7 @@
     <ClCompile Include="curl\lib\vauth\spnego_sspi.c" />
     <ClCompile Include="curl\lib\vauth\vauth.c" />
     <ClCompile Include="curl\lib\vquic\vquic.c" />
+    <ClCompile Include="curl\lib\vssh\curl_path.c" />
     <ClCompile Include="curl\lib\vssh\libssh.c" />
     <ClCompile Include="curl\lib\vssh\libssh2.c" />
     <ClCompile Include="curl\lib\vssh\wolfssh.c" />
@@ -279,7 +279,6 @@
     <ClInclude Include="curl\lib\curl_memrchr.h" />
     <ClInclude Include="curl\lib\curl_multibyte.h" />
     <ClInclude Include="curl\lib\curl_ntlm_core.h" />
-    <ClInclude Include="curl\lib\curl_path.h" />
     <ClInclude Include="curl\lib\curl_printf.h" />
     <ClInclude Include="curl\lib\curl_range.h" />
     <ClInclude Include="curl\lib\curl_rtmp.h" />
@@ -388,6 +387,7 @@
     <ClInclude Include="curl\lib\vauth\ntlm.h" />
     <ClInclude Include="curl\lib\vauth\vauth.h" />
     <ClInclude Include="curl\lib\vquic\vquic.h" />
+    <ClInclude Include="curl\lib\vssh\curl_path.h" />
     <ClInclude Include="curl\lib\vssh\ssh.h" />
     <ClInclude Include="curl\lib\vtls\bearssl.h" />
     <ClInclude Include="curl\lib\vtls\gtls.h" />
