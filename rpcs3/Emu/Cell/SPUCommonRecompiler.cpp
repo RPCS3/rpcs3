@@ -37,11 +37,26 @@ constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 template<typename T>
 struct span_less
 {
-	bool operator()(const std::span<T>& this_, const std::span<T>& that) const
+	static int compare(const std::span<T>& this_, const std::span<T>& that) noexcept
 	{
-		return std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes())) < 0;
+		int res = std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes()));
+
+		if (res == 0 && this_.size() != that.size())
+		{
+			res = this_.size() < that.size() ? -1 : 1;
+		}
+
+		return res;
+	}
+
+	bool operator()(const std::span<T>& this_, const std::span<T>& that) const noexcept
+	{
+		return compare(this_, that) < 0;
 	}
 };
+
+template <typename T>
+inline constexpr span_less<T> s_span_less{};
 
 // Move 4 args for calling native function from a GHC calling convention function
 #if defined(ARCH_X64)
@@ -1264,7 +1279,8 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	// Select range for comparison
 	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
 	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
-	const auto cmp0 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
+
+	const int cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp0 < 0)
 		return true;
@@ -1274,7 +1290,8 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	// Compare from address 0 to the point before the entry point (TODO: undesirable)
 	lhs_data = {data.data(), lhs_offs};
 	rhs_data = {rhs.data.data(), rhs_offs};
-	const auto cmp1 = std::memcmp(lhs_data.data(), rhs_data.data(), std::min(lhs_data.size_bytes(), rhs_data.size_bytes()));
+
+	const int cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp1 < 0)
 		return true;
@@ -1369,7 +1386,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(std::memcmp(x.first.data(), y.first.data(), std::min(x.first.size_bytes(), y.first.size_bytes())) < 0));
+	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(s_span_less<const u32>(x.first, y.first)));
 
 	struct work
 	{
@@ -1567,7 +1584,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 						lhs = lhs.subspan(w.level);
 						rhs = rhs.subspan(w.level);
 
-						return std::memcmp(lhs.data(), rhs.data(), std::min(lhs.size_bytes(), rhs.size_bytes())) < 0;
+						return s_span_less<const u32>(lhs, rhs);
 					});
 
 					continue;
