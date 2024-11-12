@@ -143,11 +143,8 @@ elseif(UNIX)
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
-    if(MSVC)
-        add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/3rdparty/OpenAL/openal-soft/$<CONFIG>/OpenAL32.dll $<TARGET_FILE_DIR:rpcs3>)
-    endif()
     add_custom_command(TARGET rpcs3 POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenAL::OpenAL> $<TARGET_FILE_DIR:rpcs3>
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git
