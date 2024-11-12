@@ -479,21 +479,21 @@ void log_frame::LoadSettings()
 void log_frame::RepaintTextColors()
 {
 	// Backup old colors
-	QList<QColor> old_colors = m_color;
+	std::vector<QColor> old_colors = m_color;
 	QColor old_stack_color = m_color_stack;
 
 	const QColor color = gui::utils::get_foreground_color();
 
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
-	m_color.append(gui::utils::get_label_color("log_level_always", Qt::darkCyan, Qt::cyan));
-	m_color.append(gui::utils::get_label_color("log_level_fatal", Qt::darkMagenta, Qt::magenta));
-	m_color.append(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red));
-	m_color.append(gui::utils::get_label_color("log_level_todo", Qt::darkYellow, Qt::darkYellow));
-	m_color.append(gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green));
-	m_color.append(gui::utils::get_label_color("log_level_warning", Qt::darkYellow, Qt::darkYellow));
-	m_color.append(gui::utils::get_label_color("log_level_notice", color, color));
-	m_color.append(gui::utils::get_label_color("log_level_trace", color, color));
+	m_color.push_back(gui::utils::get_label_color("log_level_always", Qt::darkCyan, Qt::cyan));
+	m_color.push_back(gui::utils::get_label_color("log_level_fatal", Qt::darkMagenta, Qt::magenta));
+	m_color.push_back(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red));
+	m_color.push_back(gui::utils::get_label_color("log_level_todo", Qt::darkYellow, Qt::darkYellow));
+	m_color.push_back(gui::utils::get_label_color("log_level_success", Qt::darkGreen, Qt::green));
+	m_color.push_back(gui::utils::get_label_color("log_level_warning", Qt::darkYellow, Qt::darkYellow));
+	m_color.push_back(gui::utils::get_label_color("log_level_notice", color, color));
+	m_color.push_back(gui::utils::get_label_color("log_level_trace", color, color));
 
 	m_color_stack = gui::utils::get_label_color("log_stack", color, color);
 

@@ -2399,7 +2399,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			locations.insert(gui::utils::shortcut_location::applications);
 		}
 
-		QList<game_info> game_data;
+		std::vector<game_info> game_data;
 
 		for (const auto& [boot_path, title_id] : paths)
 		{
@@ -2422,7 +2422,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			}
 		}
 
-		if (!game_data.isEmpty())
+		if (!game_data.empty())
 		{
 			m_game_list_frame->BatchCreateCPUCaches(game_data);
 		}

@@ -20,7 +20,7 @@ public:
 
 	void adjust_icon_column();
 
-	void sort(int game_count, int sort_column, Qt::SortOrder col_sort_order);
+	void sort(usz game_count, int sort_column, Qt::SortOrder col_sort_order);
 
 	void set_custom_config_icon(const game_info& game);
 
@@ -31,7 +31,7 @@ public:
 		const std::string& selected_item_id,
 		bool play_hover_movies) override;
 
-	void repaint_icons(QList<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
+	void repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
 
 Q_SIGNALS:
 	void size_on_disk_ready(const game_info& game);

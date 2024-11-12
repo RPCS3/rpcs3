@@ -131,7 +131,7 @@ namespace gui
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text);
 
 		// Finds all children of a QTreeWidgetItem that match the given criteria
-		QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive);
+		void find_children_by_data(QTreeWidgetItem* parent, std::vector<QTreeWidgetItem*>& children, const std::vector<std::pair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive);
 
 		// Constructs and adds a child to a QTreeWidgetItem
 		QTreeWidgetItem* add_child(QTreeWidgetItem* parent, const QString& text, int column = 0);
@@ -140,7 +140,7 @@ namespace gui
 		void remove_children(QTreeWidgetItem* parent);
 
 		// Removes all children of a QTreeWidgetItem that don't match the given criteria
-		void remove_children(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive);
+		void remove_children(QTreeWidgetItem* parent, const std::vector<std::pair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive);
 
 		// Sort a QTreeWidget (currently only column 0)
 		void sort_tree(QTreeWidget* tree, Qt::SortOrder sort_order, bool recursive);

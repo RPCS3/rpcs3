@@ -31,7 +31,7 @@ class patch_manager_dialog : public QDialog
 		QString description;
 		QString patch_version;
 		QString config_value_key;
-		QMap<QString, QVariant> config_values;
+		std::map<QString, QVariant> config_values;
 	};
 
 	const QString tr_all_titles   = tr("All titles - Warning: These patches apply to all games!");

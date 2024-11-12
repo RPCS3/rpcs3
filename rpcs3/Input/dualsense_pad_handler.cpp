@@ -489,7 +489,7 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dev) const
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (size_t i = 0; i < dev->calib_data.size(); i++)
+	for (usz i = 0; i < dev->calib_data.size(); i++)
 	{
 		CalibData& data = dev->calib_data[i];
 

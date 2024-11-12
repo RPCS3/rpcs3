@@ -113,11 +113,11 @@ void game_list_table::adjust_icon_column()
 	resizeColumnToContents(static_cast<int>(gui::game_list_columns::count) - 1);
 }
 
-void game_list_table::sort(int game_count, int sort_column, Qt::SortOrder col_sort_order)
+void game_list_table::sort(usz game_count, int sort_column, Qt::SortOrder col_sort_order)
 {
 	// Back-up old header sizes to handle unwanted column resize in case of zero search results
 	const int old_row_count = rowCount();
-	const int old_game_count = game_count;
+	const usz old_game_count = game_count;
 
 	std::vector<int> column_widths(columnCount());
 	for (int i = 0; i < columnCount(); i++)
@@ -395,7 +395,7 @@ void game_list_table::populate(
 	selectRow(selected_row);
 }
 
-void game_list_table::repaint_icons(QList<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)
+void game_list_table::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)
 {
 	game_list_base::repaint_icons(game_data, icon_color, icon_size, device_pixel_ratio);
 	adjust_icon_column();
