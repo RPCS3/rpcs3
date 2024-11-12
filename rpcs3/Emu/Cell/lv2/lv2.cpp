@@ -1341,12 +1341,12 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 			}
 			else if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
-				*it = vm::reservation_notifier_notify(addr, true);
+				*it++ = vm::reservation_notifier_notify(addr, true);
 
-				if (it < std::end(g_to_notify) - 1)
+				if (it < std::end(g_to_notify))
 				{
 					// Null-terminate the list if it ends before last slot
-					*(it + 1) = nullptr;
+					*it = nullptr;
 				}
 			}
 			else
@@ -1394,12 +1394,12 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 			}
 			else if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
-				*it = vm::reservation_notifier_notify(addr, true);
+				*it++ = vm::reservation_notifier_notify(addr, true);
 
-				if (it < std::end(g_to_notify) - 1)
+				if (it < std::end(g_to_notify))
 				{
 					// Null-terminate the list if it ends before last slot
-					*(it + 1) = nullptr;
+					*it = nullptr;
 				}
 			}
 			else
@@ -1908,10 +1908,10 @@ void lv2_obj::schedule_all(u64 current_time)
 		}
 	}
 
-	if (it < std::end(g_to_notify) - 1)
+	if (it < std::end(g_to_notify))
 	{
 		// Null-terminate the list if it ends before last slot
-		*(it + 1) = nullptr;
+		*it = nullptr;
 	}
 
 	if (const u64 freq = s_yield_frequency)
