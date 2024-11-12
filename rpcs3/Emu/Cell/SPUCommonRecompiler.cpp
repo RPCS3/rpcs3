@@ -558,7 +558,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	std::vector<u32> data(size / 4, 0);
+	std::vector<u32> data(size / 4);
 	std::memcpy(data.data(), ls_data_vaddr, size);
 
 	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
@@ -951,7 +951,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			u32 next_func = 0;
 			u32 sec_addr = umax;
 			u32 sec_idx = 0;
-			std::vector<u32> inst_data;
+			std::span<const u32> inst_data;
 
 			// Try to get the data this index points to
 			for (auto& sec : data_list)
@@ -961,7 +961,7 @@ void spu_cache::initialize(bool build_existing_cache)
 					const usz func_idx = func_i - passed_count;
 					sec_addr = sec.vaddr;
 					func_addr = ::at32(sec.funcs, func_idx);
-					inst_data = sec.inst_data;
+					inst_data = { sec.inst_data.data(), sec.inst_data.size() };
 					next_func = sec.funcs.size() >= func_idx ? ::narrow<u32>(sec_addr + inst_data.size() * 4) : sec.funcs[func_idx];
 					break;
 				}
