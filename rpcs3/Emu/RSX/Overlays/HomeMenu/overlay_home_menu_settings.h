@@ -21,21 +21,21 @@ namespace rsx
 		{
 			using home_menu_page::home_menu_page;
 
-			void add_checkbox(cfg::_bool* setting, const std::string& text, localized_string_id loc_id)
+			void add_checkbox(cfg::_bool* setting, localized_string_id loc_id)
 			{
 				ensure(setting && setting->get_is_dynamic());
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_checkbox>(setting, localized_text);
 
-				add_item(elem, [this, setting, _text = text](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
 					if (setting)
 					{
 						const bool value = !setting->get();
-						rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", _text, title, setting->get_name(), value);
+						rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 						setting->set(value);
 						Emu.GetCallbacks().update_emu_settings();
 						if (m_config_changed) *m_config_changed = true;
@@ -47,14 +47,14 @@ namespace rsx
 			}
 
 			template <typename T>
-			void add_dropdown(cfg::_enum<T>* setting, const std::string& text, localized_string_id loc_id)
+			void add_dropdown(cfg::_enum<T>* setting, localized_string_id loc_id)
 			{
 				ensure(setting && setting->get_is_dynamic());
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_dropdown<T>>(setting, localized_text);
 
-				add_item(elem, [this, setting, _text = text](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -76,11 +76,11 @@ namespace rsx
 						}
 						if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
 						{
-							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %s", _text, title, setting->get_name(), next_value);
+							rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
 						}
 						else
 						{
-							rsx_log.error("Can't toggle '%s' in '%s'. Setting '%s' to '%s' failed", _text, title, setting->get_name(), next_value);
+							rsx_log.error("Can't toggle dropdown in '%s'. Setting '%s' to '%s' failed", title, setting->get_name(), next_value);
 						}
 						Emu.GetCallbacks().update_emu_settings();
 						if (m_config_changed) *m_config_changed = true;
@@ -92,14 +92,14 @@ namespace rsx
 			}
 
 			template <s64 Min, s64 Max>
-			void add_signed_slider(cfg::_int<Min, Max>* setting, const std::string& text, localized_string_id loc_id, const std::string& suffix, s64 step_size, std::map<s64, std::string> special_labels = {}, s64 minimum = Min, s64 maximum = Max)
+			void add_signed_slider(cfg::_int<Min, Max>* setting, localized_string_id loc_id, const std::string& suffix, s64 step_size, std::map<s64, std::string> special_labels = {}, s64 minimum = Min, s64 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
-				add_item(elem, [this, setting, _text = text, step_size, minimum, maximum](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
 					if (setting)
 					{
@@ -120,7 +120,7 @@ namespace rsx
 
 						if (value != setting->get())
 						{
-							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", _text, title, setting->get_name(), value);
+							rsx_log.notice("User toggled signed slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
@@ -133,7 +133,7 @@ namespace rsx
 			}
 
 			template <u64 Min, u64 Max>
-			void add_unsigned_slider(cfg::uint<Min, Max>* setting, const std::string& text, localized_string_id loc_id, const std::string& suffix, u64 step_size, std::map<u64, std::string> special_labels = {}, const std::set<u64>& exceptions = {}, u64 minimum = Min, u64 maximum = Max)
+			void add_unsigned_slider(cfg::uint<Min, Max>* setting, localized_string_id loc_id, const std::string& suffix, u64 step_size, std::map<u64, std::string> special_labels = {}, const std::set<u64>& exceptions = {}, u64 minimum = Min, u64 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
 				ensure(!exceptions.contains(minimum) && !exceptions.contains(maximum));
@@ -141,7 +141,7 @@ namespace rsx
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
-				add_item(elem, [this, setting, _text = text, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
 				{
 					if (setting)
 					{
@@ -170,7 +170,7 @@ namespace rsx
 
 						if (value != setting->get())
 						{
-							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", _text, title, setting->get_name(), value);
+							rsx_log.notice("User toggled unsigned slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
@@ -183,14 +183,14 @@ namespace rsx
 			}
 
 			template <s32 Min, s32 Max>
-			void add_float_slider(cfg::_float<Min, Max>* setting, const std::string& text, localized_string_id loc_id, const std::string& suffix, f32 step_size, std::map<f64, std::string> special_labels = {}, s32 minimum = Min, s32 maximum = Max)
+			void add_float_slider(cfg::_float<Min, Max>* setting, localized_string_id loc_id, const std::string& suffix, f32 step_size, std::map<f64, std::string> special_labels = {}, s32 minimum = Min, s32 maximum = Max)
 			{
 				ensure(setting && setting->get_is_dynamic());
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
 
-				add_item(elem, [this, setting, _text = text, step_size, minimum, maximum](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
 					if (setting)
 					{
@@ -211,7 +211,7 @@ namespace rsx
 
 						if (value != setting->get())
 						{
-							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %.2f", _text, title, setting->get_name(), value);
+							rsx_log.notice("User toggled slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
