@@ -189,7 +189,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 
 		for (const auto& yml_entry : yml_node)
 		{
-			const std::string key = yml_entry.first.Scalar();
+			const std::string& key = yml_entry.first.Scalar();
 			cfg::_base* cfg_node = nullptr;
 
 			keys.resize(next_level);
@@ -253,13 +253,13 @@ bool emu_settings::ValidateSettings(bool cleanup)
 		}
 	};
 
-	cfg_root root;
+	std::unique_ptr<cfg_root> root = std::make_unique<cfg_root>();
 	std::vector<std::string> keys;
 
 	do
 	{
 		is_clean = true;
-		search_level(0, m_current_settings, keys, &root);
+		search_level(0, m_current_settings, keys, root.get());
 	}
 	while (cleanup && !is_clean);
 
@@ -885,6 +885,64 @@ void emu_settings::SetSetting(emu_settings_type type, const std::string& val) co
 	cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)) = val;
 }
 
+emu_settings_type emu_settings::FindSettingsType(const cfg::_base* node) const
+{
+	// Add key and value to static map on first use
+	static std::map<u32, emu_settings_type> id_to_type;
+	static std::mutex mtx;
+	std::lock_guard lock(mtx);
+
+	if (!node) [[unlikely]]
+	{
+		// Provoke error. Don't use ensure or we will get a nullptr deref warning in VS
+		return ::at32(id_to_type, umax);
+	}
+
+	std::vector<std::string> node_location;
+	if (!id_to_type.contains(node->get_id()))
+	{
+		for (const cfg::_base* n = node; n; n = n->get_parent())
+		{
+			if (!n->get_name().empty())
+			{
+				node_location.push_back(n->get_name());
+			}
+		}
+
+		std::reverse(node_location.begin(), node_location.end());
+
+		for (const auto& [type, loc]: settings_location)
+		{
+			if (node_location.size() != loc.size())
+			{
+				continue;
+			}
+
+			bool is_match = true;
+			for (usz i = 0; i < node_location.size(); i++)
+			{
+				if (node_location[i] != loc[i])
+				{
+					is_match = false;
+					break;
+				}
+			}
+
+			if (is_match && !id_to_type.try_emplace(node->get_id(), type).second)
+			{
+				cfg_log.error("'%s' already exists", loc.back());
+			}
+		}
+	}
+
+	if (!id_to_type.contains(node->get_id()))
+	{
+		fmt::throw_exception("Node '%s' not represented in emu_settings_type", node->get_name());
+	}
+
+	return ::at32(id_to_type, node->get_id());
+}
+
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
 {
 	if (!m_broken_types.empty() && QMessageBox::question(parent, tr("Fix invalid settings?"),
@@ -1166,6 +1224,16 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case detail_level::high: return tr("High", "Detail Level");
 		}
 		break;
+	case emu_settings_type::PerfOverlayFramerateDetailLevel:
+	case emu_settings_type::PerfOverlayFrametimeDetailLevel:
+		switch (static_cast<perf_graph_detail_level>(index))
+		{
+		case perf_graph_detail_level::minimal: return tr("Minimal", "Perf Graph Detail Level");
+		case perf_graph_detail_level::show_min_max: return tr("Show Min And Max", "Perf Graph Detail Level");
+		case perf_graph_detail_level::show_one_percent_avg: return tr("Show 1% Low And Average", "Perf Graph Detail Level");
+		case perf_graph_detail_level::show_all: return tr("Show All", "Perf Graph Detail Level");
+		}
+		break;
 	case emu_settings_type::PerfOverlayPosition:
 		switch (static_cast<screen_quadrant>(index))
 		{
@@ -1385,4 +1453,16 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	}
 
 	return original;
+}
+
+std::string emu_settings::GetLocalizedSetting(const std::string& original, emu_settings_type type, int index, bool strict) const
+{
+	return GetLocalizedSetting(QString::fromStdString(original), type, index, strict).toStdString();
+}
+
+std::string emu_settings::GetLocalizedSetting(const cfg::_base* node, u32 index) const
+{
+	const emu_settings_type type = FindSettingsType(node);
+	const std::vector<std::string> settings = GetSettingOptions(type);
+	return GetLocalizedSetting(::at32(settings, index), type, index, true);
 }

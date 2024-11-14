@@ -161,6 +161,7 @@ void headless_application::InitializeCallbacks()
 
 	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
 	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
+	callbacks.get_localized_setting   = [](const cfg::_base*, u32) -> std::string { return {}; };
 
 	callbacks.play_sound = [](const std::string&){};
 	callbacks.add_breakpoint = [](u32 /*addr*/){};

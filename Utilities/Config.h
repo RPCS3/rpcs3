@@ -51,8 +51,12 @@ namespace cfg
 		const type m_type{};
 
 	protected:
+		_base* m_parent = nullptr;
 		bool m_dynamic = true;
 		const std::string m_name{};
+
+		static u32 id_counter;
+		u32 m_id = 0;
 
 		// Ownerless entry constructor
 		_base(type _type);
@@ -67,9 +71,16 @@ namespace cfg
 
 		virtual ~_base() = default;
 
+		// Get unique ID
+		u32 get_id() const { return m_id; }
+
+		// Get parent
+		_base* get_parent() const { return m_parent; }
+
 		// Get type
 		type get_type() const { return m_type; }
 
+		// Get name
 		const std::string& get_name() const { return m_name; }
 
 		// Get dynamic property for reloading configs during games

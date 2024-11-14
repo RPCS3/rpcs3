@@ -448,9 +448,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	r_creator->update_names(
 	{
-		m_emu_settings->GetLocalizedSetting("Vulkan", emu_settings_type::Renderer, static_cast<int>(video_renderer::vulkan), true),
-		m_emu_settings->GetLocalizedSetting("OpenGl", emu_settings_type::Renderer, static_cast<int>(video_renderer::opengl), true),
-		m_emu_settings->GetLocalizedSetting("Null", emu_settings_type::Renderer, static_cast<int>(video_renderer::null), true)
+		m_emu_settings->GetLocalizedSetting(QString("Vulkan"), emu_settings_type::Renderer, static_cast<int>(video_renderer::vulkan), true),
+		m_emu_settings->GetLocalizedSetting(QString("OpenGl"), emu_settings_type::Renderer, static_cast<int>(video_renderer::opengl), true),
+		m_emu_settings->GetLocalizedSetting(QString("Null"), emu_settings_type::Renderer, static_cast<int>(video_renderer::null), true)
 	});
 
 	// Comboboxes
@@ -1098,7 +1098,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 	for (const audio_format_flag& audio_fmt : audio_formats)
 	{
-		const QString audio_format_name = m_emu_settings->GetLocalizedSetting("", emu_settings_type::AudioFormats, static_cast<int>(audio_fmt), true);
+		const QString audio_format_name = m_emu_settings->GetLocalizedSetting(QString(), emu_settings_type::AudioFormats, static_cast<int>(audio_fmt), true);
 		QListWidgetItem* item = new QListWidgetItem(audio_format_name, ui->list_audio_formats);
 		item->setData(Qt::UserRole, static_cast<u32>(audio_fmt));
 		if (audio_fmt == audio_format_flag::lpcm_2_48khz)

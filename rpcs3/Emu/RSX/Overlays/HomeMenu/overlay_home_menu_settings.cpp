@@ -3,8 +3,6 @@
 #include "overlay_home_menu_components.h"
 #include "Emu/system_config.h"
 
-// TODO: Localization of the dropdown values
-
 namespace rsx
 {
 	namespace overlays

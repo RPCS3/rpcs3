@@ -61,7 +61,7 @@ namespace rsx
 					if (setting)
 					{
 						usz new_index = 0;
-						T value = setting->get();
+						const T value = setting->get();
 						const std::string val = fmt::format("%s", value);
 						const std::vector<std::string> list = setting->to_list();
 

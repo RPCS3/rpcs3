@@ -606,6 +606,12 @@ void gui_application::InitializeCallbacks()
 		return localized_emu::get_u32string(id, args);
 	};
 
+	callbacks.get_localized_setting = [this](const cfg::_base* node, u32 enum_index) -> std::string
+	{
+		ensure(!!m_emu_settings);
+		return m_emu_settings->GetLocalizedSetting(node, enum_index);
+	};
+
 	callbacks.play_sound = [this](const std::string& path)
 	{
 		Emu.CallFromMainThread([this, path]()

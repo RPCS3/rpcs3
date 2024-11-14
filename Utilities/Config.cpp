@@ -15,8 +15,10 @@ void fmt_class_string<cfg::node>::format(std::string& out, u64 arg)
 
 namespace cfg
 {
+	u32 _base::id_counter = 0;
+
 	_base::_base(type _type)
-		: m_type(_type)
+		: m_type(_type), m_id(id_counter++)
 	{
 		if (_type != type::node)
 		{
@@ -25,7 +27,7 @@ namespace cfg
 	}
 
 	_base::_base(type _type, node* owner, std::string name, bool dynamic)
-		: m_type(_type), m_dynamic(dynamic), m_name(std::move(name))
+		: m_type(_type), m_parent(owner), m_dynamic(dynamic), m_name(std::move(name)), m_id(id_counter++)
 	{
 		for (const auto& node : owner->m_nodes)
 		{
