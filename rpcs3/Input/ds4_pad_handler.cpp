@@ -538,7 +538,7 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (size_t i = 0; i < ds4Dev->calib_data.size(); i++)
+	for (usz i = 0; i < ds4Dev->calib_data.size(); i++)
 	{
 		CalibData& data = ds4Dev->calib_data[i];
 

@@ -49,7 +49,7 @@ private:
 
 	QTimer* m_timer = nullptr;
 
-	QList<QColor> m_color;
+	std::vector<QColor> m_color;
 	QColor m_color_stack;
 	QPlainTextEdit* m_log = nullptr;
 	std::string m_old_log_text;

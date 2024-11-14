@@ -14,7 +14,7 @@ game_list_base::game_list_base()
 {
 }
 
-void game_list_base::repaint_icons(QList<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)
+void game_list_base::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)
 {
 	m_icon_size = icon_size;
 	m_icon_color = icon_color;

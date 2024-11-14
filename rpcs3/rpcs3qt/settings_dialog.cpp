@@ -2644,7 +2644,7 @@ int settings_dialog::exec()
 void settings_dialog::SubscribeDescription(QLabel* description)
 {
 	description->setFixedHeight(description->sizeHint().height());
-	m_description_labels.append(QPair<QLabel*, QString>(description, description->text()));
+	m_description_labels.push_back(std::pair<QLabel*, QString>(description, description->text()));
 }
 
 void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
@@ -2677,11 +2677,9 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 	{
 		const int i = ui->tab_widget_settings->currentIndex();
 
-		if (i < m_description_labels.size())
+		if (i >= 0 && static_cast<usz>(i) < m_description_labels.size())
 		{
-			QLabel* label = m_description_labels[i].first;
-
-			if (label)
+			if (QLabel* label = m_description_labels[i].first)
 			{
 				if (event->type() == QEvent::Enter)
 				{
@@ -2689,8 +2687,7 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 				}
 				else if (event->type() == QEvent::Leave)
 				{
-					const QString description = m_description_labels[i].second;
-					label->setText(description);
+					label->setText(m_description_labels[i].second);
 				}
 			}
 		}

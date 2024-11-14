@@ -62,7 +62,7 @@ private:
 	QString m_discord_state;
 
 	// Descriptions
-	QList<QPair<QLabel*, QString>> m_description_labels;
+	std::vector<std::pair<QLabel*, QString>> m_description_labels;
 	QHash<QObject*, QString> m_descriptions;
 	void SubscribeDescription(QLabel* description);
 	void SubscribeTooltip(QObject* object, const QString& tooltip);

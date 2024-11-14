@@ -258,7 +258,7 @@ void game_list_frame::OnColClicked(int col)
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder, false);
 	m_gui_settings->SetValue(gui::gl_sortCol, col, true);
 
-	m_game_list->sort(m_game_data.count(), m_sort_column, m_col_sort_order);
+	m_game_list->sort(m_game_data.size(), m_sort_column, m_col_sort_order);
 }
 
 // Get visibility of entries
@@ -546,7 +546,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->clear_list();
 		const int scroll_position = m_game_list->verticalScrollBar()->value();
 		m_game_list->populate(matching_apps, m_notes, m_titles, selected_item, m_play_hover_movies);
-		m_game_list->sort(m_game_data.count(), m_sort_column, m_col_sort_order);
+		m_game_list->sort(m_game_data.size(), m_sort_column, m_col_sort_order);
 		RepaintIcons();
 
 		if (scroll_after)
@@ -2277,11 +2277,11 @@ void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::st
 		game_list_log.fatal("Only %d/%d HDD1 cache directories could be removed in %s (%s)", dirs_removed, dirs_total, base_dir, title_id);
 }
 
-void game_list_frame::BatchCreateCPUCaches(const QList<game_info>& game_data)
+void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_data)
 {
 	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
-	const bool vsh_exists = game_data.isEmpty() && fs::is_file(vsh_path + "vsh.self");
-	const u32 total = !game_data.isEmpty() ? game_data.size() : (m_game_data.size() + (vsh_exists ? 1 : 0));
+	const bool vsh_exists = game_data.empty() && fs::is_file(vsh_path + "vsh.self");
+	const usz total = !game_data.empty() ? game_data.size() : (m_game_data.size() + (vsh_exists ? 1 : 0));
 
 	if (total == 0)
 	{
@@ -2296,7 +2296,7 @@ void game_list_frame::BatchCreateCPUCaches(const QList<game_info>& game_data)
 
 	const QString main_label = tr("Creating all LLVM caches");
 
-	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, total, false, this);
+	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, ::narrow<s32>(total), false, this);
 	pdlg->setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
@@ -2329,7 +2329,7 @@ void game_list_frame::BatchCreateCPUCaches(const QList<game_info>& game_data)
 		}
 	}
 
-	for (const auto& game : (game_data.isEmpty() ? m_game_data : game_data))
+	for (const auto& game : (game_data.empty() ? m_game_data : game_data))
 	{
 		if (pdlg->wasCanceled() || g_system_progress_canceled)
 		{
@@ -2995,7 +2995,7 @@ void game_list_frame::SetPlayHoverGifs(bool play)
 	}
 }
 
-const QList<game_info>& game_list_frame::GetGameInfo() const
+const std::vector<game_info>& game_list_frame::GetGameInfo() const
 {
 	return m_game_data;
 }

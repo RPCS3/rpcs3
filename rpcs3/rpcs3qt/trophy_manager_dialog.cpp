@@ -569,11 +569,8 @@ void trophy_manager_dialog::ResizeGameIcons()
 	placeholder.fill(Qt::transparent);
 
 	qRegisterMetaType<QVector<int>>("QVector<int>");
-	QList<int> indices;
 	for (int i = 0; i < m_game_table->rowCount(); ++i)
 	{
-		indices.append(i);
-
 		if (QTableWidgetItem* icon_item = m_game_table->item(i, static_cast<int>(gui::trophy_game_list_columns::icon)))
 		{
 			icon_item->setData(Qt::DecorationRole, placeholder);

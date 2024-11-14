@@ -501,10 +501,8 @@ namespace gui
 			return nullptr;
 		}
 
-		QList<QTreeWidgetItem*> find_children_by_data(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
+		void find_children_by_data(QTreeWidgetItem* parent, std::vector<QTreeWidgetItem*>& children, const std::vector<std::pair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
 		{
-			QList<QTreeWidgetItem*> list;
-
 			if (parent)
 			{
 				for (int i = 0; i < parent->childCount(); i++)
@@ -524,18 +522,16 @@ namespace gui
 
 						if (match)
 						{
-							list << item;
+							children.push_back(item);
 						}
 
 						if (recursive)
 						{
-							list << find_children_by_data(item, criteria, recursive);
+							find_children_by_data(item, children, criteria, recursive);
 						}
 					}
 				}
 			}
-
-			return list;
 		}
 
 		QTreeWidgetItem* add_child(QTreeWidgetItem *parent, const QString& text, int column)
@@ -561,7 +557,7 @@ namespace gui
 			}
 		}
 
-		void remove_children(QTreeWidgetItem* parent, const QList<QPair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
+		void remove_children(QTreeWidgetItem* parent, const std::vector<std::pair<int /*role*/, QVariant /*data*/>>& criteria, bool recursive)
 		{
 			if (parent)
 			{

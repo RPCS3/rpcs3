@@ -1491,7 +1491,7 @@ namespace vm
 				{
 					if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 					{
-						for (const auto [event_data1, event_data2] : event_data)
+						for (const auto& [event_data1, event_data2] : event_data)
 						{
 							rsxthr->on_notify_post_memory_unmapped(event_data1, event_data2);
 						}
@@ -1991,7 +1991,7 @@ namespace vm
 			{
 				if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 				{
-					for (const auto [event_data1, event_data2] : unmap_data)
+					for (const auto& [event_data1, event_data2] : unmap_data)
 					{
 						rsxthr->on_notify_post_memory_unmapped(event_data1, event_data2);
 					}
