@@ -37,21 +37,31 @@ constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 template<typename T>
 struct span_less
 {
-	static int compare(const std::span<T>& this_, const std::span<T>& that) noexcept
+	static int compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
 	{
-		int res = std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes()));
-
-		if (res == 0 && this_.size() != that.size())
+		// TODO: Replace with std::lexicographical_compare_three_way when it becomes available to all compilers
+		for (usz i = 0, last = std::min(lhs.size(), rhs.size()); i != last; i++)
 		{
-			res = this_.size() < that.size() ? -1 : 1;
+			const T vl = lhs[i];
+			const T vr = rhs[i];
+
+			if (vl != vr)
+			{
+				return vl < vr ? -1 : 1;
+			}
 		}
 
-		return res;
+		if (lhs.size() != rhs.size())
+		{
+			return lhs.size() < rhs.size() ? -1 : 1;
+		}
+
+		return 0;
 	}
 
-	bool operator()(const std::span<T>& this_, const std::span<T>& that) const noexcept
+	bool operator()(const std::span<T>& lhs, const std::span<T>& rhs) const noexcept
 	{
-		return compare(this_, that) < 0;
+		return compare(lhs, rhs) < 0;
 	}
 };
 
