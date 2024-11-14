@@ -37,21 +37,31 @@ constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 template<typename T>
 struct span_less
 {
-	static int compare(const std::span<T>& this_, const std::span<T>& that) noexcept
+	static int compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
 	{
-		int res = std::memcmp(this_.data(), that.data(), std::min(this_.size_bytes(), that.size_bytes()));
-
-		if (res == 0 && this_.size() != that.size())
+		// TODO: Replace with std::lexicographical_compare_three_way when it becomes available to all compilers
+		for (usz i = 0, last = std::min(lhs.size(), rhs.size()); i != last; i++)
 		{
-			res = this_.size() < that.size() ? -1 : 1;
+			const T vl = lhs[i];
+			const T vr = rhs[i];
+
+			if (vl != vr)
+			{
+				return vl < vr ? -1 : 1;
+			}
 		}
 
-		return res;
+		if (lhs.size() != rhs.size())
+		{
+			return lhs.size() < rhs.size() ? -1 : 1;
+		}
+
+		return 0;
 	}
 
-	bool operator()(const std::span<T>& this_, const std::span<T>& that) const noexcept
+	bool operator()(const std::span<T>& lhs, const std::span<T>& rhs) const noexcept
 	{
-		return compare(this_, that) < 0;
+		return compare(lhs, rhs) < 0;
 	}
 };
 
@@ -558,7 +568,7 @@ extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 s
 		return;
 	}
 
-	std::vector<u32> data(size / 4, 0);
+	std::vector<u32> data(size / 4);
 	std::memcpy(data.data(), ls_data_vaddr, size);
 
 	spu_cache::precompile_data_t obj{vaddr, std::move(data)};
@@ -951,7 +961,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			u32 next_func = 0;
 			u32 sec_addr = umax;
 			u32 sec_idx = 0;
-			std::vector<u32> inst_data;
+			std::span<const u32> inst_data;
 
 			// Try to get the data this index points to
 			for (auto& sec : data_list)
@@ -961,7 +971,7 @@ void spu_cache::initialize(bool build_existing_cache)
 					const usz func_idx = func_i - passed_count;
 					sec_addr = sec.vaddr;
 					func_addr = ::at32(sec.funcs, func_idx);
-					inst_data = sec.inst_data;
+					inst_data = { sec.inst_data.data(), sec.inst_data.size() };
 					next_func = sec.funcs.size() >= func_idx ? ::narrow<u32>(sec_addr + inst_data.size() * 4) : sec.funcs[func_idx];
 					break;
 				}
