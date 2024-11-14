@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/RSX/Overlays/overlays.h"
+#include "Emu/System.h"
 #include "Utilities/Config.h"
 
 namespace rsx
@@ -102,7 +103,8 @@ namespace rsx
 
 				if (!this->is_compiled)
 				{
-					m_dropdown.set_text(fmt::format("%s", this->m_last_value));
+					const std::string value_text = Emu.GetCallbacks().get_localized_setting(home_menu_setting<T, cfg::_enum<T>>::m_setting, static_cast<u32>(this->m_last_value));
+					m_dropdown.set_text(value_text);
 					m_dropdown.set_pos(m_dropdown.x, this->y + (this->h - m_dropdown.h) / 2);
 
 					this->compiled_resources = horizontal_layout::get_compiled();
