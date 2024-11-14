@@ -211,7 +211,7 @@ namespace rsx
 
 						if (value != setting->get())
 						{
-							rsx_log.notice("User toggled slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
+							rsx_log.notice("User toggled float slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
