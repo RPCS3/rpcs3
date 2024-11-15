@@ -6,6 +6,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Loader/mself.hpp"
+#include "Emu/localized_string.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
@@ -3862,7 +3863,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 		return;
 	}
 
-	std::optional<scoped_progress_dialog> progr(std::in_place, "Scanning PPU Executable...");
+	std::optional<scoped_progress_dialog> progress_dialog(std::in_place, get_localized_string(localized_string_id::PROGRESS_DIALOG_SCANNING_PPU_EXECUTABLE));
 
 	// Make sure we only have one '/' at the end and remove duplicates.
 	for (std::string& dir : dir_queue)
@@ -4063,7 +4064,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	g_progr_ftotal_bits += total_files_size;
 
-	*progr = "Compiling PPU Modules...";
+	*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
 	atomic_t<usz> fnext = 0;
 
@@ -4380,7 +4381,7 @@ extern void ppu_initialize()
 
 	auto& _main = g_fxo->get<main_ppu_module>();
 
-	std::optional<scoped_progress_dialog> progr(std::in_place, "Analyzing PPU Executable...");
+	std::optional<scoped_progress_dialog> progress_dialog(std::in_place, get_localized_string(localized_string_id::PROGRESS_DIALOG_ANALYZING_PPU_EXECUTABLE));
 
 	// Analyse executable
 	if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
@@ -4391,7 +4392,7 @@ extern void ppu_initialize()
 	// Validate analyser results (not required)
 	_main.validate(0);
 
-	*progr = "Scanning PPU Modules...";
+	*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_SCANNING_PPU_MODULES);
 
 	bool compile_main = false;
 
@@ -4479,7 +4480,7 @@ extern void ppu_initialize()
 		dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
 	}
 
-	progr.reset();
+	progress_dialog.reset();
 
 	ppu_precompile(dir_queue, &module_list);
 
@@ -4612,12 +4613,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	}
 
 #ifdef LLVM_AVAILABLE
-	std::optional<scoped_progress_dialog> progr;
+	std::optional<scoped_progress_dialog> progress_dialog;
 
 	if (!check_only)
 	{
 		// Initialize progress dialog
-		progr.emplace("Loading PPU Modules...");
+		progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_LOADING_PPU_MODULES));
 	}
 
 	// Permanently loaded compiled PPU modules (name -> data)
@@ -4983,7 +4984,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
-		*progr = "Compiling PPU Modules...";
+		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
 		u32 thread_count = rpcs3::utils::get_max_threads();
 
@@ -5096,7 +5097,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		if (workload.size() < link_workload.size())
 		{
 			// Only show this message if this task is relevant
-			*progr = "Linking PPU Modules...";
+			*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_LINKING_PPU_MODULES);
 		}
 
 		for (const auto& [obj_name, is_compiled] : link_workload)
@@ -5142,9 +5143,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
 	ppu_intrp_func_t BLR_func = nullptr;
 
-	const bool showing_only_apply_stage = !g_progr.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
+	const bool showing_only_apply_stage = !g_progr_text.load() && !g_progr_ptotal && !g_progr_ftotal && g_progr_ptotal.compare_and_swap_test(0, 1);
 
-	progr = "Applying PPU Code...";
+	progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_APPLYING_PPU_CODE);
 
 	if (!jit)
 	{
