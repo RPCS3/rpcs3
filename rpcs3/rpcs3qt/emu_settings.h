@@ -18,8 +18,6 @@
 #include <string>
 #include <vector>
 
-constexpr auto qstr = QString::fromStdString;
-
 class emu_settings : public QObject
 {
 	/** A settings class for Emulator specific settings.  This class is a refactored version of the wx version.  It is much nicer
@@ -64,7 +62,10 @@ public:
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
 
 	/** Returns the valid options for a given setting.*/
-	static QStringList GetSettingOptions(emu_settings_type type);
+	static std::vector<std::string> GetSettingOptions(emu_settings_type type);
+
+	/** Returns the valid options for a given setting.*/
+	static QStringList GetQStringSettingOptions(emu_settings_type type);
 
 	/** Returns the default value of the setting type.*/
 	std::string GetSettingDefault(emu_settings_type type) const;

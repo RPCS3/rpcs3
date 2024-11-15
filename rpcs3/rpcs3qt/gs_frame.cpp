@@ -67,8 +67,6 @@ bool is_input_allowed()
 	return g_game_window_focused || g_cfg.io.background_input_enabled;
 }
 
-constexpr auto qstr = QString::fromStdString;
-
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
 	: QWindow()
 	, m_initial_geometry(geometry)
@@ -118,7 +116,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setMinimumHeight(90);
 	setScreen(screen);
 	setGeometry(geometry);
-	setTitle(qstr(m_window_title));
+	setTitle(QString::fromStdString(m_window_title));
 
 	if (g_cfg.video.renderer != video_renderer::opengl)
 	{
@@ -752,7 +750,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 			Emu.CallFromMainThread([this, title = std::move(new_title)]()
 			{
-				setTitle(qstr(title));
+				setTitle(QString::fromStdString(title));
 			});
 		}
 
@@ -941,7 +939,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_
 
 					QImage overlay_img;
 
-					if (!overlay_img.load(qstr(cell_sshot_overlay_path)))
+					if (!overlay_img.load(QString::fromStdString(cell_sshot_overlay_path)))
 					{
 						screenshot_log.error("Failed to read cell screenshot overlay '%s' : %s", cell_sshot_overlay_path, fs::g_tls_error);
 						return;

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <QStringList>
-
 #include "emu_settings_type.h"
 #include "util/yaml.hpp"
 
@@ -14,7 +12,7 @@ namespace cfg_adapter
 	YAML::Node get_node(const YAML::Node& node, const cfg_location& location);
 
 	/** Returns possible options for values for some particular setting.*/
-	QStringList get_options(const cfg_location& location);
+	std::vector<std::string> get_options(const cfg_location& location);
 
 	/** Returns dynamic property for some particular setting.*/
 	bool get_is_dynamic(emu_settings_type type);

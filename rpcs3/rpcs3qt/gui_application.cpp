@@ -111,9 +111,9 @@ bool gui_application::Init()
 		}
 	}
 
-	m_emu_settings.reset(new emu_settings());
-	m_gui_settings.reset(new gui_settings());
-	m_persistent_settings.reset(new persistent_settings());
+	m_emu_settings = std::make_shared<emu_settings>();
+	m_gui_settings = std::make_shared<gui_settings>();
+	m_persistent_settings = std::make_shared<persistent_settings>();
 
 	if (!m_emu_settings->Init())
 	{
@@ -620,7 +620,7 @@ void gui_application::InitializeCallbacks()
 
 				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
 				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
-				sound_effect->setSource(QUrl::fromLocalFile(qstr(path)));
+				sound_effect->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
 				sound_effect->setVolume(g_cfg.audio.volume * 0.01f);
 				sound_effect->play();
 
@@ -783,7 +783,7 @@ void gui_application::InitializeCallbacks()
 
 				old_written = bytes_written;
 
-				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(qstr(verbose_message)));
+				pdlg->setLabelText(text_base.arg(gui::utils::format_byte_size(bytes_written)).arg(*half_seconds / 2).arg(QString::fromStdString(verbose_message)));
 
 				// 300MB -> 50%, 600MB -> 75%, 1200MB -> 87.5% etc
 				const int percent = std::clamp(static_cast<int>(100. - 100. / std::pow(2., std::fmax(0.01, bytes_written * 1. / (300 * 1024 * 1024)))), 2, 100);
@@ -820,7 +820,7 @@ void gui_application::StartPlaytime(bool start_playtime = true)
 		return;
 	}
 
-	const QString serial = qstr(Emu.GetTitleID());
+	const QString serial = QString::fromStdString(Emu.GetTitleID());
 	if (serial.isEmpty())
 	{
 		return;
@@ -839,7 +839,7 @@ void gui_application::UpdatePlaytime()
 		return;
 	}
 
-	const QString serial = qstr(Emu.GetTitleID());
+	const QString serial = QString::fromStdString(Emu.GetTitleID());
 	if (serial.isEmpty())
 	{
 		m_timer_playtime.invalidate();
@@ -858,7 +858,7 @@ void gui_application::StopPlaytime()
 	if (!m_timer_playtime.isValid())
 		return;
 
-	const QString serial = qstr(Emu.GetTitleID());
+	const QString serial = QString::fromStdString(Emu.GetTitleID());
 	if (serial.isEmpty())
 	{
 		m_timer_playtime.invalidate();
@@ -1004,10 +1004,10 @@ void gui_application::OnChangeStyleSheetRequest()
 
 		if (QFile file(stylesheet_path); !stylesheet_path.isEmpty() && file.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
-			const QString config_dir = qstr(fs::get_config_dir());
+			const QString config_dir = QString::fromStdString(fs::get_config_dir());
 
 			// Add PS3 fonts
-			QDirIterator ps3_font_it(qstr(g_cfg_vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			QDirIterator ps3_font_it(QString::fromStdString(g_cfg_vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 			while (ps3_font_it.hasNext())
 				QFontDatabase::addApplicationFont(ps3_font_it.next());
 
