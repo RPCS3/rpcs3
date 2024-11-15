@@ -108,7 +108,7 @@ namespace gui
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
-	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent));
+	m_settings = std::make_unique<QSettings>(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
 }
 
 QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const

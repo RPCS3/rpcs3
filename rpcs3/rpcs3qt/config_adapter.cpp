@@ -48,14 +48,9 @@ namespace cfg_adapter
 		return get_node(node, location.cbegin(), location.cend());
 	}
 
-	QStringList get_options(const cfg_location& location)
+	std::vector<std::string> get_options(const cfg_location& location)
 	{
-		QStringList values;
-		for (const std::string& value : cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list())
-		{
-			values.append(QString::fromStdString(value));
-		}
-		return values;
+		return cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list();
 	}
 
 	static bool get_is_dynamic(const cfg_location& location)
