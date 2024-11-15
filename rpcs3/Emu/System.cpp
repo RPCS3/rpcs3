@@ -3111,7 +3111,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	{
 		// Show visual feedback to the user in case that stopping takes a while.
 		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
-		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr_text.load())
+		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr_text.operator bool())
 		{
 			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
 			g_system_progress_stopping = true;

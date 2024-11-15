@@ -4,12 +4,13 @@
 #include "util/atomic.hpp"
 #include "util/bless.hpp"
 
-//! Simple unshrinkable array base for concurrent access. Only growths automatically.
-//! There is no way to know the current size. The smaller index is, the faster it's accessed.
-//!
-//! T is the type of elements. Currently, default constructor of T shall be constexpr.
-//! N is initial element count, available without any memory allocation and only stored contiguously.
-template <typename T, usz N>
+// Simple unshrinkable array base for concurrent access. Only growths automatically.
+// There is no way to know the current size. The smaller index is, the faster it's accessed.
+//
+// T is the type of elements. Currently, default constructor of T shall be constexpr.
+// N is initial element count, available without any memory allocation and only stored contiguously.
+// Let's have around 256 bytes or less worth of preallocated elements
+template <typename T, usz N = std::max<usz>(256 / sizeof(T), 1)>
 class lf_array
 {
 	// Data (default-initialized)
@@ -137,9 +138,9 @@ public:
 	}
 };
 
-//! Simple lock-free FIFO queue base. Based on lf_array<T, N> itself. Currently uses 32-bit counters.
-//! There is no "push_end" or "pop_begin" provided, the queue element must signal its state on its own.
-template<typename T, usz N>
+// Simple lock-free FIFO queue base. Based on lf_array<T, N> itself. Currently uses 32-bit counters.
+// There is no "push_end" or "pop_begin" provided, the queue element must signal its state on its own.
+template<typename T, usz N = std::max<usz>(256 / sizeof(T), 1)>
 class lf_fifo : public lf_array<T, N>
 {
 	// LSB 32-bit: push, MSB 32-bit: pop
