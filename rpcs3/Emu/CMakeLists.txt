@@ -4,6 +4,7 @@ add_library(rpcs3_emu STATIC
     IdManager.cpp
     localized_string.cpp
     savestate_utils.cpp
+    scoped_progress_dialog.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp

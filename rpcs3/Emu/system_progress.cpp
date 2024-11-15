@@ -13,7 +13,8 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 // Progress display server synchronization variables
-atomic_t<progress_dialog_string_t> g_progr_text{};
+lf_array<atomic_ptr<std::string>> g_progr_text_queue;
+progress_dialog_string_t g_progr_text{};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u64> g_progr_ftotal_bits{0};
@@ -43,11 +44,11 @@ void progress_dialog_server::operator()()
 
 	const auto get_state = []()
 	{
-		auto whole_state = std::make_tuple(+g_progr_text.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
+		auto whole_state = std::make_tuple(g_progr_text.operator std::string(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
 
 		while (true)
 		{
-			auto new_state = std::make_tuple(+g_progr_text.load(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
+			auto new_state = std::make_tuple(g_progr_text.operator std::string(), +g_progr_ftotal, +g_progr_fdone, +g_progr_ftotal_bits, +g_progr_fknown_bits, +g_progr_ptotal, +g_progr_pdone);
 
 			if (new_state == whole_state)
 			{
@@ -64,9 +65,9 @@ void progress_dialog_server::operator()()
 	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Wait for the start condition
-		const char* text0 = g_progr_text.load();
+		std::string text0 = g_progr_text;
 
-		while (!text0)
+		while (text0.empty())
 		{
 			if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
 			{
@@ -75,9 +76,9 @@ void progress_dialog_server::operator()()
 
 			if (g_progr_ftotal || g_progr_fdone || g_progr_ptotal || g_progr_pdone)
 			{
-				const auto& [text_new, ftotal, fdone, ftotal_bits, fknown_bits, ptotal, pdone] = get_state();
+				const auto [text_new, ftotal, fdone, ftotal_bits, fknown_bits, ptotal, pdone] = get_state();
 
-				if (text_new)
+				if (!text_new.empty())
 				{
 					text0 = text_new;
 					break;
@@ -97,7 +98,7 @@ void progress_dialog_server::operator()()
 			}
 
 			thread_ctrl::wait_for(5000);
-			text0 = g_progr_text.load();
+			text0 = g_progr_text;
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
@@ -164,7 +165,7 @@ void progress_dialog_server::operator()()
 		u64 ftotal_bits = 0;
 		u32 ptotal = 0;
 		u32 pdone = 0;
-		const char* text1 = nullptr;
+		std::string text1;
 
 		const u64 start_time = get_system_time();
 		u64 wait_no_update_count = 0;
@@ -179,7 +180,7 @@ void progress_dialog_server::operator()()
 			!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting;
 			thread_ctrl::wait_until(&sleep_until, std::exchange(sleep_for, 500)))
 		{
-			const auto& [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
+			const auto [text_new, ftotal_new, fdone_new, ftotal_bits_new, fknown_bits_new, ptotal_new, pdone_new] = get_state();
 
 			// Force-update every 20 seconds to update remaining time
 			if (wait_no_update_count == 100u * 20 || ftotal != ftotal_new || fdone != fdone_new || fknown_bits != fknown_bits_new
@@ -193,14 +194,14 @@ void progress_dialog_server::operator()()
 				ptotal = ptotal_new;
 				pdone  = pdone_new;
 
-				const bool text_changed = text_new && text_new != text1;
+				const bool text_changed = !text_new.empty() && text_new != text1;
 
-				if (text_new)
+				if (!text_new.empty())
 				{
 					text1 = text_new;
 				}
 
-				if (!text1)
+				if (text1.empty())
 				{
 					// Cannot do anything
 					continue;
@@ -363,7 +364,7 @@ void progress_dialog_server::operator()()
 			}
 
 			// Leave only if total count is equal to done count
-			if (ftotal == fdone && ptotal == pdone && !text_new)
+			if (ftotal == fdone && ptotal == pdone && text_new.empty())
 			{
 				// Complete state, empty message: close dialog
 				break;
@@ -429,5 +430,5 @@ progress_dialog_server::~progress_dialog_server()
 	g_progr_fknown_bits.release(0);
 	g_progr_ptotal.release(0);
 	g_progr_pdone.release(0);
-	g_progr_text.release(progress_dialog_string_t{});
+	g_progr_text.data.release(std::common_type_t<progress_dialog_string_t::data_t>{});
 }

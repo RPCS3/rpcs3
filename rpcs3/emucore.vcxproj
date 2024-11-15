@@ -141,6 +141,7 @@
     <ClCompile Include="Emu\RSX\RSXZCULL.cpp" />
     <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp" />
     <ClCompile Include="Emu\savestate_utils.cpp" />
+    <ClCompile Include="Emu\scoped_progress_dialog.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\perf_meter.cpp" />
     <ClCompile Include="Emu\system_progress.cpp" />

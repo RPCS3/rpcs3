@@ -568,7 +568,7 @@ void gs_frame::hide_on_close()
 	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? Visibility::AutomaticVisibility : current_visibility, false);
 	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
-	if (!g_progr_text.load())
+	if (!g_progr_text)
 	{
 		// Hide the dialog before stopping if no progress bar is being shown.
 		// Otherwise users might think that the game softlocked if stopping takes too long.

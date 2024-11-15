@@ -938,7 +938,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			if (is_first_thread && !showing_progress)
 			{
-				if (!g_progr_text.load() && !g_progr_ptotal && !g_progr_ftotal)
+				if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
 				{
 					showing_progress = true;
 					g_progr_pdone += pending_progress.exchange(0);
@@ -1115,7 +1115,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			if (is_first_thread && !showing_progress)
 			{
-				if (!g_progr_text.load() && !g_progr_ptotal && !g_progr_ftotal)
+				if (!g_progr_text && !g_progr_ptotal && !g_progr_ftotal)
 				{
 					showing_progress = true;
 					g_progr_pdone += pending_progress.exchange(0);
