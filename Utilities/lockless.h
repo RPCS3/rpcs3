@@ -31,22 +31,45 @@ public:
 
 	T& operator [](usz index)
 	{
-		if (index < N) [[likely]]
+		lf_array* _this = this;
+
+		T* result{};
+		bool installed = false;
+
+		for (usz i = 0;; i += N)
 		{
-			return m_data[index];
-		}
-		else if (!m_next) [[unlikely]]
-		{
-			// Create new array block. It's not a full-fledged once-synchronization, unlikely needed.
-			for (auto _new = new lf_array, ptr = this; ptr;)
+			if (index - i < N)
 			{
-				// Install the pointer. If failed, go deeper.
-				ptr = ptr->m_next.compare_and_swap(nullptr, _new);
+				result = std::addressof(m_data[index - i]);
+				break;
 			}
+
+			lf_array* next = m_next;
+
+			if (!next)
+			{
+				// Do not allow access beyond one element more at a time 
+				ensure(!installed && index - i == N);
+
+				installed = true;
+
+				for (auto _new = new lf_array, ptr = _this; ptr;)
+				{
+					// Install the pointer. If failed, go deeper.
+					ptr = ptr->m_next.compare_and_swap(nullptr, _new);
+
+					if (!next)
+					{
+						// Determine the next pointer (if null then the new memory has been installed)
+						next = ptr ? ptr : _new;
+					}
+				}
+			}
+
+			_this = next;
 		}
 
-		// Access recursively
-		return (*m_next)[index - N];
+		return *result;
 	}
 
 	u64 size() const
