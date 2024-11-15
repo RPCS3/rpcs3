@@ -139,7 +139,7 @@ namespace utils
 
 		const u64 map_size = s_is_mapping.size();
 
-		for (u64 i = map_size; i != umax; i--)
+		for (u64 i = map_size - 1; i != umax; i--)
 		{
 			auto& info = s_is_mapping[i];
 
