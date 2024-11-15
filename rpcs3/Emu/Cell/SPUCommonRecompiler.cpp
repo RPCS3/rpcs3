@@ -7,6 +7,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/cache_utils.hpp"
 #include "Emu/IdManager.h"
+#include "Emu/localized_string.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
@@ -804,7 +805,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 	u32 worker_count = 0;
 
-	std::optional<scoped_progress_dialog> progr;
+	std::optional<scoped_progress_dialog> progress_dialog;
 
 	u32 total_funcs = 0;
 
@@ -827,7 +828,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	{
 		g_progr_ptotal += total_funcs;
 		showing_progress.release(true);
-		progr.emplace("Building SPU cache...");
+		progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
@@ -937,12 +938,12 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			if (is_first_thread && !showing_progress)
 			{
-				if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
+				if (!g_progr_text.load() && !g_progr_ptotal && !g_progr_ftotal)
 				{
 					showing_progress = true;
 					g_progr_pdone += pending_progress.exchange(0);
 					g_progr_ptotal += total_funcs;
-					progr.emplace("Building SPU cache...");
+					progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
 				}
 			}
 			else if (showing_progress && pending_progress)
@@ -1114,12 +1115,13 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			if (is_first_thread && !showing_progress)
 			{
-				if (!g_progr.load() && !g_progr_ptotal && !g_progr_ftotal)
+				if (!g_progr_text.load() && !g_progr_ptotal && !g_progr_ftotal)
 				{
 					showing_progress = true;
 					g_progr_pdone += pending_progress.exchange(0);
 					g_progr_ptotal += total_funcs;
-					progr.emplace("Building SPU cache...");
+
+					progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_BUILDING_SPU_CACHE));
 				}
 			}
 			else if (showing_progress && pending_progress)

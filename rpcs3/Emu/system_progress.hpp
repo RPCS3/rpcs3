@@ -15,7 +15,7 @@ struct alignas(16) progress_dialog_string_t
 	}
 };
 
-extern atomic_t<progress_dialog_string_t> g_progr;
+extern atomic_t<progress_dialog_string_t> g_progr_text;
 extern atomic_t<u32> g_progr_ftotal;
 extern atomic_t<u32> g_progr_fdone;
 extern atomic_t<u64> g_progr_ftotal_bits;
@@ -28,23 +28,27 @@ extern atomic_t<bool> g_system_progress_stopping;
 // Initialize progress dialog (can be recursive)
 class scoped_progress_dialog final
 {
-	// Saved previous value
-	const char* m_prev;
+private:
+	std::string m_text; // Saved current value
+	std::string m_prev; // Saved previous value
 	u32 m_prev_id;
 	u32 m_id;
 
 public:
-	scoped_progress_dialog(const char* text) noexcept
+	scoped_progress_dialog(const std::string& text) noexcept
 	{
-		std::tie(m_prev, m_prev_id, m_id) = g_progr.atomic_op([text = ensure(text)](progress_dialog_string_t& progr)
+		ensure(!text.empty());
+		m_text = text;
+
+		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this](progress_dialog_string_t& progr)
 		{
-			const char* old = progr.m_text;
+			std::string old = progr.m_text ? progr.m_text : std::string();
 			progr.m_user_count++;
 			progr.m_update_id++;
-			progr.m_text = text;
+			progr.m_text = m_text.c_str();
 
-			ensure(progr.m_user_count > 1 || !old); // Ensure it was nullptr before first use
-			return std::make_tuple(old, progr.m_update_id - 1, progr.m_update_id);
+			ensure(progr.m_user_count > 1 || old.empty()); // Ensure it was empty before first use
+			return std::make_tuple(std::move(old), progr.m_update_id - 1, progr.m_update_id);
 		});
 	}
 
@@ -52,23 +56,26 @@ public:
 
 	scoped_progress_dialog& operator=(const scoped_progress_dialog&) = delete;
 
-	scoped_progress_dialog& operator=(const char* text) noexcept
+	scoped_progress_dialog& operator=(const std::string& text) noexcept
 	{
+		ensure(!text.empty());
+		m_text = text;
+
 		// This method is destroying the previous value and replacing it with a new one
-		std::tie(m_prev, m_prev_id, m_id) = g_progr.atomic_op([this, text = ensure(text)](progress_dialog_string_t& progr)
+		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this](progress_dialog_string_t& progr)
 		{
 			if (m_id == progr.m_update_id)
 			{
 				progr.m_update_id = m_prev_id;
-				progr.m_text = m_prev;
+				progr.m_text = m_prev.c_str();
 			}
 
-			const char* old = progr.m_text;
-			progr.m_text = text;
+			std::string old = progr.m_text ? progr.m_text : std::string();
+			progr.m_text = m_text.c_str();
 			progr.m_update_id++;
 
 			ensure(progr.m_user_count > 0);
-			return std::make_tuple(old, progr.m_update_id - 1, progr.m_update_id);
+			return std::make_tuple(std::move(old), progr.m_update_id - 1, progr.m_update_id);
 		});
 
 		return *this;
@@ -76,7 +83,7 @@ public:
 
 	~scoped_progress_dialog() noexcept
 	{
-		g_progr.atomic_op([this](progress_dialog_string_t& progr)
+		g_progr_text.atomic_op([this](progress_dialog_string_t& progr)
 		{
 			if (progr.m_user_count-- == 1)
 			{
@@ -87,7 +94,7 @@ public:
 			else if (m_id == progr.m_update_id)
 			{
 				// Restore text only if no other updates were made by other threads
-				progr.m_text = ensure(m_prev);
+				progr.m_text = m_prev.c_str();
 				progr.m_update_id = m_prev_id;
 			}
 		});
