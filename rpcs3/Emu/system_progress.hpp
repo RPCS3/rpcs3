@@ -38,10 +38,11 @@ public:
 	scoped_progress_dialog(const std::string& text) noexcept
 	{
 		ensure(!text.empty());
-		m_text = text;
 
-		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this](progress_dialog_string_t& progr)
+		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this, text](progress_dialog_string_t& progr)
 		{
+			m_text = text;
+
 			std::string old = progr.m_text ? progr.m_text : std::string();
 			progr.m_user_count++;
 			progr.m_update_id++;
@@ -59,11 +60,12 @@ public:
 	scoped_progress_dialog& operator=(const std::string& text) noexcept
 	{
 		ensure(!text.empty());
-		m_text = text;
 
 		// This method is destroying the previous value and replacing it with a new one
-		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this](progress_dialog_string_t& progr)
+		std::tie(m_prev, m_prev_id, m_id) = g_progr_text.atomic_op([this, text](progress_dialog_string_t& progr)
 		{
+			m_text = text;
+
 			if (m_id == progr.m_update_id)
 			{
 				progr.m_update_id = m_prev_id;
