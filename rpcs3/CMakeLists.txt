@@ -98,9 +98,19 @@ set_target_properties(rpcs3
         AUTOMOC ON
         AUTOUIC ON)
 
-target_link_libraries(rpcs3 PRIVATE rpcs3_emu rpcs3_ui)
-target_link_libraries(rpcs3 PRIVATE 3rdparty::discordRPC 3rdparty::qt6 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl 3rdparty::libcurl 3rdparty::zlib)
-target_link_libraries(rpcs3 PRIVATE ${ADDITIONAL_LIBS})
+target_link_libraries(rpcs3
+    PRIVATE
+        rpcs3_emu
+        rpcs3_ui
+        3rdparty::discordRPC
+        3rdparty::qt6
+        3rdparty::hidapi
+        3rdparty::libusb
+        3rdparty::wolfssl
+        3rdparty::libcurl
+        3rdparty::zlib
+        3rdparty::opencv
+        ${ADDITIONAL_LIBS})
 
 # Unix display manager
 if(X11_FOUND)
