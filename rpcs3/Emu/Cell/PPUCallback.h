@@ -92,21 +92,21 @@ namespace ppu_cb_detail
 	template<u32 g_count, u32 f_count, u32 v_count, typename T1, typename... T>
 	FORCE_INLINE static bool _bind_func_args(ppu_thread& CPU, T1 arg1, T... args)
 	{
-		const bool is_float = std::is_floating_point_v<T1>;
-		const bool is_vector = std::is_same_v<std::decay_t<T1>, v128>;
-		const bool is_context = std::is_same_v<std::decay_t<T1>, ppu_thread>;
-		const bool is_general = !is_float && !is_vector && !is_context;
+		constexpr bool is_float = std::is_floating_point_v<T1>;
+		constexpr bool is_vector = std::is_same_v<std::decay_t<T1>, v128>;
+		constexpr bool is_context = std::is_same_v<std::decay_t<T1>, ppu_thread>;
+		constexpr bool is_general = !is_float && !is_vector && !is_context;
 
-		const _func_arg_type t =
+		constexpr _func_arg_type t =
 			is_general ? (g_count >= 8 ? ARG_STACK : ARG_GENERAL) :
 			is_float ? (f_count >= 13 ? ARG_STACK : ARG_FLOAT) :
 			is_vector ? (v_count >= 12 ? ARG_STACK : ARG_VECTOR) :
 			is_context ? ARG_CONTEXT :
 			ARG_UNKNOWN;
 
-		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
-		const u32 f = f_count + is_float;
-		const u32 v = v_count + is_vector;
+		constexpr u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
+		constexpr u32 f = f_count + is_float;
+		constexpr u32 v = v_count + is_vector;
 
 		_func_arg<T1, t, g, f, v>::set_value(CPU, arg1);
 
@@ -157,9 +157,9 @@ namespace ppu_cb_detail
 
 			static_assert(!std::is_pointer_v<RT>, "Invalid callback result type (pointer)");
 			static_assert(!std::is_reference_v<RT>, "Invalid callback result type (reference)");
-			const bool is_float = std::is_floating_point_v<RT>;
-			const bool is_vector = std::is_same_v<std::decay_t<RT>, v128>;
-			const _func_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+			constexpr bool is_float = std::is_floating_point_v<RT>;
+			constexpr bool is_vector = std::is_same_v<std::decay_t<RT>, v128>;
+			constexpr _func_arg_type t = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 
 			return _func_res<RT, t>::get_value(CPU);
 		}

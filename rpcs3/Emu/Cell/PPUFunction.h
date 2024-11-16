@@ -192,13 +192,13 @@ namespace ppu_func_detail
 		const u32 v_count = (info.last_value >> 24);
 
 		// TODO: check calculations
-		const bool is_float = std::is_floating_point_v<T>;
-		const bool is_vector = std::is_same_v<std::decay_t<T>, v128>;
-		const bool is_context = std::is_base_of_v<std::decay_t<T>, ppu_thread>;
-		const bool is_variadic = std::is_same_v<std::decay_t<T>, ppu_va_args_t>;
-		const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
+		constexpr bool is_float = std::is_floating_point_v<T>;
+		constexpr bool is_vector = std::is_same_v<std::decay_t<T>, v128>;
+		constexpr bool is_context = std::is_base_of_v<std::decay_t<T>, ppu_thread>;
+		constexpr bool is_variadic = std::is_same_v<std::decay_t<T>, ppu_va_args_t>;
+		constexpr bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 
-		const arg_class t =
+		constexpr arg_class t =
 			is_general ? (g_count >= 8 ? ARG_STACK : ARG_GENERAL) :
 			is_float ? (f_count >= 13 ? ARG_STACK : ARG_FLOAT) :
 			is_vector ? (v_count >= 12 ? ARG_STACK : ARG_VECTOR) :
@@ -206,9 +206,9 @@ namespace ppu_func_detail
 			is_variadic ? ARG_VARIADIC :
 			ARG_UNKNOWN;
 
-		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
-		const u32 f = f_count + is_float;
-		const u32 v = v_count + is_vector;
+		constexpr u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
+		constexpr u32 f = f_count + is_float;
+		constexpr u32 v = v_count + is_vector;
 
 		return call<Types...>(ppu, func, arg_info_pack_t<Info..., t | (g << 8) | (f << 16) | (v << 24)>{});
 	}
@@ -218,9 +218,9 @@ namespace ppu_func_detail
 	{
 		static_assert(!std::is_pointer_v<RT>, "Invalid function result type (pointer)");
 		static_assert(!std::is_reference_v<RT>, "Invalid function result type (reference)");
-		static const bool is_float = std::is_floating_point_v<RT>;
-		static const bool is_vector = std::is_same_v<std::decay_t<RT>, v128>;
-		static const arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
+		static constexpr bool is_float = std::is_floating_point_v<RT>;
+		static constexpr bool is_vector = std::is_same_v<std::decay_t<RT>, v128>;
+		static constexpr arg_class value = is_float ? ARG_FLOAT : (is_vector ? ARG_VECTOR : ARG_GENERAL);
 	};
 
 	template<typename RT, typename... T> struct func_binder;
