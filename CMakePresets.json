@@ -13,6 +13,7 @@
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_LIBPNG": "OFF",
+        "USE_SYSTEM_OPENCV": "ON",
         "BUILD_LLVM": "OFF",
         "STATIC_LINK_LLVM": "ON"
       }
@@ -29,6 +30,7 @@
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_LIBPNG": "OFF",
+        "USE_SYSTEM_OPENCV": "ON",
         "LLVM_ENABLE_LIBCXX": "ON",
         "BUILD_LLVM": "OFF",
         "STATIC_LINK_LLVM": "ON"
@@ -56,6 +58,7 @@
         "USE_SYSTEM_CURL": "OFF",
         "USE_SYSTEM_ZLIB": "OFF",
         "USE_SYSTEM_OPENAL": "OFF",
+        "USE_SYSTEM_OPENCV": "OFF",
         "BUILD_LLVM": "ON",
         "STATIC_LINK_LLVM": "ON"
       },

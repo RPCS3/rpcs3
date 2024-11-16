@@ -145,11 +145,13 @@ target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
-        3rdparty::qt6 3rdparty::yaml-cpp
+        3rdparty::qt6
+        3rdparty::yaml-cpp
 
     PRIVATE
         rpcs3_emu
-        3rdparty::zlib 3rdparty::pugixml
+        3rdparty::zlib
+        3rdparty::pugixml
         3rdparty::discordRPC
         3rdparty::hidapi
         3rdparty::libusb
@@ -157,4 +159,5 @@ target_link_libraries(rpcs3_ui
         3rdparty::7zip
         3rdparty::wolfssl
         3rdparty::libcurl
+        3rdparty::opencv
         3rdparty::rtmidi)

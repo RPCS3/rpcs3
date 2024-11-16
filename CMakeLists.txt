@@ -29,6 +29,7 @@ option(USE_SYSTEM_SDL "Prefer system SDL instead of the builtin one" ON)
 option(USE_SYSTEM_FFMPEG "Prefer system ffmpeg instead of the prebuild one" OFF)
 option(USE_SYSTEM_OPENAL "Prefer system OpenAL instead of the prebuild one" ON)
 option(USE_SYSTEM_CURL "Prefer system Curl instead of the prebuild one" ON)
+option(USE_SYSTEM_OPENCV "Prefer system OpenCV instead of the builtin one" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
 
