@@ -120,22 +120,6 @@ CMakeLists.txt.user
 # yaml-cpp
 yaml-cpp.pc
 
-# libusb
-/3rdparty/libusb_cmake/config.h
-/3rdparty/libusb_cmake/libusb-1.0.pc
-
-# miniupnp
-/3rdparty/miniupnp/x64/*
-
-# llvm
-/3rdparty/llvm/llvm_build
-
-# legacy llvm
-/llvm_build
-
-# ssl certificate
-cacert.pem
-
 _ReSharper.*/
 CMakeUserPresets.json
 
