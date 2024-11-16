@@ -71,7 +71,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -90,7 +90,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv410\build\x64\lib;$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\lib;$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -114,7 +114,7 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
-        xcopy /y /d "..\3rdparty\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
+        xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -124,7 +124,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -142,7 +142,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;OGLCompilerd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv410\build\x64\lib;$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\lib;$(SolutionDir)3rdparty\openal\openal-soft\build;$(SolutionDir)3rdparty\glslang\build\hlsl\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\SPIRV\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\OGLCompilersDLL\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\OSDependent\Windows\$(CONFIGURATION);$(SolutionDir)3rdparty\glslang\build\glslang\$(CONFIGURATION);$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"  /VERBOSE %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
@@ -167,7 +167,7 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
-        xcopy /y /d "..\3rdparty\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
+        xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
