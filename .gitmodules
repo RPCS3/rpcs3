@@ -96,7 +96,7 @@
 	path = 3rdparty/stblib/stb
 	url = ../../nothings/stb.git
 	ignore = dirty
-[submodule "3rdparty/opencv"]
-	path = 3rdparty/opencv
+[submodule "3rdparty/opencv/opencv"]
+	path = 3rdparty/opencv/opencv
 	url = ../../Megamouse/opencv_minimal.git
 	ignore = dirty
