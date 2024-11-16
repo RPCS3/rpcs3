@@ -80,7 +80,7 @@ public:
 
 		using return_t = decltype(func(std::declval<T&>()));
 
-		for (usz i = 0; _this; i += N)
+		while (_this)
 		{
 			for (usz j = 0; j < N; j++)
 			{
@@ -101,17 +101,20 @@ public:
 
 			lf_array* next = m_next;
 
-			if (!next && !std::is_void_v<return_t> && !is_finite)
+			if constexpr (!std::is_void_v<return_t>)
 			{
-				for (auto _new = new lf_array, ptr = _this; ptr;)
+				if (!next && !is_finite)
 				{
-					// Install the pointer. If failed, go deeper.
-					ptr = ptr->m_next.compare_and_swap(nullptr, _new);
-
-					if (!next)
+					for (auto _new = new lf_array, ptr = _this; ptr;)
 					{
-						// Determine the next pointer (if null then the new memory has been installed)
-						next = ptr ? ptr : _new;
+						// Install the pointer. If failed, go deeper.
+						ptr = ptr->m_next.compare_and_swap(nullptr, _new);
+
+						if (!next)
+						{
+							// Determine the next pointer (if null then the new memory has been installed)
+							next = ptr ? ptr : _new;
+						}
 					}
 				}
 			}
