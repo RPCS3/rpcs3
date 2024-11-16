@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef HAVE_OPENCV
+	constexpr bool g_ps_move_tracking_supported = true;
+#else
+	constexpr bool g_ps_move_tracking_supported = false;
+#endif
+
 struct ps_move_info
 {
 	bool valid = false;

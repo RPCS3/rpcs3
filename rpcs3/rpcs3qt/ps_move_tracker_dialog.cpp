@@ -13,6 +13,7 @@
 #include <QPainter>
 #include <QPushButton>
 #include <QSlider>
+#include <QMessageBox>
 
 LOG_CHANNEL(ps_move);
 
@@ -241,6 +242,14 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	update_saturation_threshold(true);
 	update_min_radius(true);
 	update_max_radius(true);
+
+	if constexpr (!g_ps_move_tracking_supported)
+	{
+		QTimer::singleShot(1000, this, [this]()
+		{
+			QMessageBox::warning(this, QObject::tr("Tracking not supported!"), QObject::tr("The PS Move tracking is not yet supported on this operating system."));
+		});
+	}
 }
 
 ps_move_tracker_dialog::~ps_move_tracker_dialog()
