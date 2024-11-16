@@ -112,12 +112,8 @@ namespace utils
 			return false;
 		}
 
-		const u64 map_size = s_is_mapping.size();
-
-		for (u64 i = map_size - 1; i != umax; i--)
+		return s_is_mapping.for_each([addr](const map_info_t& info)
 		{
-			const auto& info = s_is_mapping[i];
-
 			if (info.state == 1)
 			{
 				if (addr >= info.addr && addr < info.addr + info.size)
@@ -125,24 +121,20 @@ namespace utils
 					return true;
 				}
 			}
-		}
 
-		return false;
+			return false;
+		}).second;
 	}
 
 	u64 unmap_mappping_memory(u64 addr, u64 size)
 	{
 		if (!addr || !size)
 		{
-			return false;
+			return 0;
 		}
 
-		const u64 map_size = s_is_mapping.size();
-
-		for (u64 i = map_size - 1; i != umax; i--)
+		return s_is_mapping.for_each([addr, size](map_info_t& info) -> u64
 		{
-			auto& info = s_is_mapping[i];
-
 			if (info.state == 1)
 			{
 				if (addr == info.addr && size == info.size)
@@ -153,9 +145,9 @@ namespace utils
 					}
 				}
 			}
-		}
 
-		return false;
+			return 0;
+		}).second;
 	}
 
 	bool map_mappping_memory(u64 addr, u64 size)
@@ -165,10 +157,8 @@ namespace utils
 			return false;
 		}
 
-		for (u64 i = 0;; i++)
+		ensure(s_is_mapping.for_each([addr, size](map_info_t& info)
 		{
-			auto& info = s_is_mapping[i];
-
 			if (!info.addr && info.state.compare_and_swap_test(0, 2))
 			{
 				info.addr = addr;
@@ -176,7 +166,11 @@ namespace utils
 				info.state = 1;
 				return true;
 			}
-		}
+
+			return false;
+		}, true).second);
+
+		return true;
 	}
 
 	bool is_memory_mappping_memory(const void* addr)

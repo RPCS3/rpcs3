@@ -72,6 +72,58 @@ public:
 		return *result;
 	}
 
+	template <typename F> requires (std::is_invocable_v<F, T&>)
+	auto for_each(F&& func, bool is_finite = true)
+	{
+		lf_array* _this = this;
+
+		using return_t = decltype(func(std::declval<T&>()));
+
+		for (usz i = 0; _this; i += N)
+		{
+			for (usz j = 0; j < N; j++)
+			{
+				if constexpr (std::is_void_v<return_t>)
+				{
+					std::invoke(func, _this->m_data[j]);
+				}
+				else
+				{
+					auto ret = std::invoke(func, _this->m_data[j]);
+
+					if (ret)
+					{
+						return std::make_pair(std::addressof(_this->m_data[j]), std::move(ret));
+					}
+				}
+			}
+
+			lf_array* next = m_next;
+
+			if (!next && !std::is_void_v<return_t> && !is_finite)
+			{
+				for (auto _new = new lf_array, ptr = _this; ptr;)
+				{
+					// Install the pointer. If failed, go deeper.
+					ptr = ptr->m_next.compare_and_swap(nullptr, _new);
+
+					if (!next)
+					{
+						// Determine the next pointer (if null then the new memory has been installed)
+						next = ptr ? ptr : _new;
+					}
+				}
+			}
+
+			_this = next;
+		}
+
+		if constexpr (!std::is_void_v<return_t>)
+		{
+			return std::make_pair(std::add_pointer_t<T>{}, return_t());
+		}
+	}
+
 	u64 size() const
 	{
 		u64 size_n = 0;
