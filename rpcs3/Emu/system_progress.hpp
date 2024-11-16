@@ -12,7 +12,8 @@ struct alignas(16) progress_dialog_string_t
 	struct alignas(16) data_t
 	{
 		usz update_id = 0;
-		usz text_index = umax;
+		u32 text_index = umax;
+		u32 text_count = 0;
 	};
 
 	atomic_t<data_t> data{};
@@ -31,7 +32,7 @@ struct alignas(16) progress_dialog_string_t
 
 	explicit operator bool() const noexcept
 	{
-		return get_string_ptr().operator bool();
+		return data.load().text_count != 0;
 	}
 };
 
@@ -49,7 +50,7 @@ extern atomic_t<bool> g_system_progress_stopping;
 class scoped_progress_dialog final
 {
 private:
-	usz m_text_index = 0;
+	u32 m_text_index = 0;
 
 public:
 	scoped_progress_dialog(std::string text) noexcept;
