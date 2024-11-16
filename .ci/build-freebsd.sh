@@ -1,9 +1,9 @@
 #!/bin/sh -ex
 
-# Pull all the submodules except llvm
+# Pull all the submodules except llvm and opencv
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
 
 # Prefer newer Clang than in base system (see also .ci/install-freebsd.sh)
 # libc++ isn't in llvm* packages, so download manually
