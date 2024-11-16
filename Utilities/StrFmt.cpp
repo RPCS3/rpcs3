@@ -689,7 +689,7 @@ struct fmt::cfmt_src
 		TYPE(llong);
 		TYPE(schar);
 		TYPE(short);
-		if (std::is_signed_v<char>) TYPE(char);
+		if constexpr (std::is_signed_v<char>) TYPE(char);
 		TYPE(long);
 		TYPE(s128);
 

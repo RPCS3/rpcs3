@@ -568,7 +568,7 @@ namespace
 		*/
 
 		// <= 128 so fits in u8
-		u8 block_size_in_bytes = sizeof(SRC_TYPE);
+		constexpr u8 block_size_in_bytes = sizeof(SRC_TYPE);
 
 		std::vector<rsx::subresource_layout> result;
 		usz offset_in_src = 0;

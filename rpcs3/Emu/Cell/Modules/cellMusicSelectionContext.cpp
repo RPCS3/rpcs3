@@ -16,7 +16,7 @@ bool music_selection_context::set(const CellMusicSelectionContext& in)
 		return false;
 	}
 
-	u32 pos = sizeof(magic);
+	constexpr u32 pos = sizeof(magic);
 	hash = &in.data[pos];
 
 	return load_playlist();
