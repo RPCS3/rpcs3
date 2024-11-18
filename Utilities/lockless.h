@@ -49,8 +49,8 @@ public:
 
 			if (!next)
 			{
-				// Do not allow access beyond one element more at a time 
-				ensure(!installed && index - i == N);
+				// Do not allow access beyond many element more at a time 
+				ensure(!installed && index - i < N * 2);
 
 				installed = true;
 
@@ -78,7 +78,7 @@ public:
 	{
 		lf_array* _this = this;
 
-		using return_t = decltype(func(std::declval<T&>()));
+		using return_t = std::invoke_result_t<F, T&>;
 
 		while (_this)
 		{
