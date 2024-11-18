@@ -45,7 +45,7 @@ public:
 				break;
 			}
 
-			lf_array* next = m_next;
+			lf_array* next = _this->m_next;
 
 			if (!next)
 			{
@@ -99,7 +99,7 @@ public:
 				}
 			}
 
-			lf_array* next = m_next;
+			lf_array* next = _this->m_next;
 
 			if constexpr (!std::is_void_v<return_t>)
 			{
