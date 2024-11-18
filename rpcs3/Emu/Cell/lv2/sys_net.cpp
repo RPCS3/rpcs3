@@ -54,7 +54,7 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
 		{
-			switch (s32 _error = error)
+			switch (static_cast<s32>(error))
 			{
 #define SYS_NET_ERROR_CASE(x) \
 	case -x: return "-" #x;   \
