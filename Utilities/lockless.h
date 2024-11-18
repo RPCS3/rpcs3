@@ -41,7 +41,7 @@ public:
 		{
 			if (index - i < N)
 			{
-				result = std::addressof(m_data[index - i]);
+				result = std::addressof(_this->m_data[index - i]);
 				break;
 			}
 
