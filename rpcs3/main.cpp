@@ -1097,6 +1097,7 @@ int main(int argc, char** argv)
 		// Check temporary directories
 		for (const QString& path : QStandardPaths::standardLocations(QStandardPaths::StandardLocation::TempLocation))
 		{
+			if (Emu.IsPathInsideDir(emu_dir, path.toStdString()))
         	{
             	report_fatal_error(fmt::format(
                 	QObject::tr("RPCS3 should never be run from a temporary location!\n"
