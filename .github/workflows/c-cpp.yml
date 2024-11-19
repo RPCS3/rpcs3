@@ -8,16 +8,24 @@ on:
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     - uses: actions/checkout@v4
+    - name: Set up MSYS2 (for Unix-like build environment on Windows)
+      run: |
+        choco install msys2
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "pacman -Syu"
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "pacman -S base-devel gcc"
     - name: configure
-      run: ./configure
+      run: |
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "./configure"
     - name: make
-      run: make
+      run: |
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "make"
     - name: make check
-      run: make check
+      run: |
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "make check"
     - name: make distcheck
-      run: make distcheck
+      run: |
+        C:\tools\msys64\usr\bin\bash.exe --login -i -c "make distcheck"
