@@ -1112,14 +1112,10 @@ int main(int argc, char** argv)
 		{
 			if (emu_dir.find(expr) != umax)
 			{
-				report_fatal_error(fmt::format(
-			{
 				report_fatal_error(QObject::tr(
 					"RPCS3 should never be run from an archive!\n"
 					"Please install RPCS3 in a persistent location.\n"
 					"Current location:\n%0").arg(QString::fromStdString(emu_dir)).toStdString());
-				return 1;
-			}
 				return 1;
 			}
 		}
