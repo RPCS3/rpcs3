@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cellPamf.h" // CellCodecTimeStamp
+#include "../lv2/sys_mutex.h"
 
 // Error Codes
 enum CellAdecError : u32
@@ -498,7 +499,7 @@ class AdecOutputQueue
 		vm::bptr<CellAdecPcmItem> pcm_item = vm::null;
 		be_t<s32> pcm_handle = -1;
 	}
-	entries[4];
+	entries[4]{ {0}, {1}, {2}, {3} };
 
 	be_t<s32> front = 0;
 	be_t<s32> back = 0;
@@ -508,8 +509,6 @@ class AdecOutputQueue
 	be_t<u32> cond{};   // sys_cond_t, unused
 
 public:
-	AdecOutputQueue() : entries{ {0}, {1}, {2}, {3} } {}
-
 	error_code push(vm::ptr<CellAdecPcmItem> pcm_item, s32 pcm_handle)
 	{
 		std::lock_guard lock{mutex};
@@ -591,16 +590,16 @@ struct AdecContext // CellAdecHandle = AdecContext*
 
 	const be_t<u32> bitstream_info_size;
 
-	u64 mutex_attribute[5]{}; // sys_mutex_attribute_t
-	shared_mutex mutex;       // sys_mutex_t
+	sys_mutex_attribute_t mutex_attribute{ 2, 0x20, 0x200, 0x2000, 0, 0, 0, { "_adem03"_u64 } };
+	be_t<u32> mutex; // sys_mutex_t
 
 	AdecOutputQueue pcm_queue;      // Output queue for cellAdecGetPcm()
 	AdecOutputQueue pcm_item_queue; // Output queue for cellAdecGetPcmItem()
 
 	u8 reserved2[1028];
 
-	AdecContext(vm::bptr<AdecContext> _this, u32 this_size, const CellAdecType& type, const CellAdecResource& res, const CellAdecCb& callback, vm::bptr<void> core_handle, vm::bcptr<CellAdecCoreOps> core_ops,
-		s32 frames_num, vm::bptr<AdecFrame> frames, u32 bitstream_info_size, u32 bitstream_infos_addr)
+	AdecContext(ppu_thread& ppu, vm::bptr<AdecContext> _this, u32 this_size, const CellAdecType& type, const CellAdecResource& res, const CellAdecCb& callback, vm::bptr<void> core_handle,
+		vm::bcptr<CellAdecCoreOps> core_ops, s32 frames_num, vm::bptr<AdecFrame> frames, u32 bitstream_info_size, u32 bitstream_infos_addr)
 		: _this(_this), this_size(this_size), type(type), res(res), callback(callback), core_handle(core_handle), core_ops(core_ops), frames_num(frames_num), frames(frames), bitstream_info_size(bitstream_info_size)
 	{
 		ensure(this == _this.get_ptr());
@@ -609,6 +608,8 @@ struct AdecContext // CellAdecHandle = AdecContext*
 		{
 			new (&frames[i]) AdecFrame(i, bitstream_infos_addr + bitstream_info_size * i);
 		}
+
+		ensure(sys_mutex_create(ppu, _this.ptr(&AdecContext::mutex), _this.ptr(&AdecContext::mutex_attribute)) == CELL_OK); // Error code isn't checked on LLE
 	}
 
 	[[nodiscard]] error_code get_new_pcm_handle(vm::ptr<CellAdecAuInfo> au_info) const;
@@ -617,8 +618,8 @@ struct AdecContext // CellAdecHandle = AdecContext*
 	void set_state(s32 pcm_handle, u32 state) const;
 	error_code get_pcm_item(s32 pcm_handle, vm::ptr<CellAdecPcmItem>& pcm_item) const;
 	error_code set_pcm_item(s32 pcm_handle, vm::ptr<void> pcm_addr, u32 pcm_size, vm::cpptr<void> bitstream_info) const;
-	error_code link_frame(s32 pcm_handle);
-	error_code unlink_frame(s32 pcm_handle);
+	error_code link_frame(ppu_thread& ppu, s32 pcm_handle);
+	error_code unlink_frame(ppu_thread& ppu, s32 pcm_handle);
 	void reset_frame(s32 pcm_handle) const;
 	error_code correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 correct_pts_type);
 };
