@@ -8,6 +8,8 @@
 #include <mutex>
 #include "util/asm.hpp"
 
+LOG_CHANNEL(cellAdec);
+
 // These need to be defined somewhere to access the LLE functions
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_ac3;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_atrac3;
@@ -31,26 +33,24 @@ vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_truehd;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_wma;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaLsl;
 vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaPro;
-[[noreturn]] error_code _SceAdecCorrectPtsValue_Celp8(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_Celp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_Ddp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_DtsCore(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_DtsHd_Core(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_DtsHd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_DtsLbr(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_mpmc(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_M4Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_M4Aac2ch(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_M4Aac2chmod(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_Mp3s(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_mpmcl1(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_truehd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_wma(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_WmaLsl(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-[[noreturn]] error_code _SceAdecCorrectPtsValue_WmaPro(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ fmt::throw_exception("Unreachable"); }
-
-LOG_CHANNEL(cellAdec);
+error_code _SceAdecCorrectPtsValue_Celp8(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Celp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Ddp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsCore(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsHd_Core(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsHd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsLbr(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_mpmc(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac2ch(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac2chmod(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Mp3s(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_mpmcl1(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_truehd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_wma(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_WmaLsl(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_WmaPro(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
 
 template <>
 void fmt_class_string<CellAdecError>::format(std::string& out, u64 arg)
@@ -394,12 +394,13 @@ error_code AdecContext::set_pcm_item(s32 pcm_handle, vm::ptr<void> pcm_addr, u32
 	return CELL_OK;
 }
 
-error_code AdecContext::link_frame(s32 pcm_handle)
+error_code AdecContext::link_frame(ppu_thread& ppu, s32 pcm_handle)
 {
-	std::lock_guard lock{mutex};
+	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
@@ -419,23 +420,27 @@ error_code AdecContext::link_frame(s32 pcm_handle)
 	}
 	else
 	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
+	ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 	return CELL_OK;
 }
 
-error_code AdecContext::unlink_frame(s32 pcm_handle)
+error_code AdecContext::unlink_frame(ppu_thread& ppu, s32 pcm_handle)
 {
-	std::lock_guard lock{mutex};
+	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
 	if (frames_head == -1 || frames_tail == -1)
 	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
@@ -446,6 +451,7 @@ error_code AdecContext::unlink_frame(s32 pcm_handle)
 	{
 		if (pcm_handle != frames_tail)
 		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return CELL_ADEC_ERROR_FATAL;
 		}
 
@@ -470,6 +476,7 @@ error_code AdecContext::unlink_frame(s32 pcm_handle)
 		frames[prev].next = next;
 	}
 
+	ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 	return CELL_OK;
 }
 
@@ -493,31 +500,31 @@ error_code AdecContext::correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 co
 
 	switch (correct_pts_type)
 	{
-	case ADEC_CORRECT_PTS_VALUE_TYPE_EAC3:    if (ppu_execute<&_SceAdecCorrectPtsValue_Ddp>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD:   if (ppu_execute<&_SceAdecCorrectPtsValue_DtsHd>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP:    if (ppu_execute<&_SceAdecCorrectPtsValue_Celp>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC:   if (ppu_execute<&_SceAdecCorrectPtsValue_Aac>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L2: if (ppu_execute<&_SceAdecCorrectPtsValue_mpmc>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD:  if (ppu_execute<&_SceAdecCorrectPtsValue_truehd>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTS:     if (ppu_execute<&_SceAdecCorrectPtsValue_DtsCore>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
+	case ADEC_CORRECT_PTS_VALUE_TYPE_EAC3:    return ppu_execute<&_SceAdecCorrectPtsValue_Ddp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD:   return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP:    return ppu_execute<&_SceAdecCorrectPtsValue_Celp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC:   return ppu_execute<&_SceAdecCorrectPtsValue_Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L2: return ppu_execute<&_SceAdecCorrectPtsValue_mpmc>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD:  return ppu_execute<&_SceAdecCorrectPtsValue_truehd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTS:     return ppu_execute<&_SceAdecCorrectPtsValue_DtsCore>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	case ADEC_CORRECT_PTS_VALUE_TYPE_M4AAC:
 		switch (type.audioCodecType)
 		{
-		case CELL_ADEC_TYPE_M4AAC:         if (ppu_execute<&_SceAdecCorrectPtsValue_M4Aac>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-		case CELL_ADEC_TYPE_M4AAC_2CH:     if (ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2ch>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-		case CELL_ADEC_TYPE_M4AAC_2CH_MOD: if (ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2chmod>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
+		case CELL_ADEC_TYPE_M4AAC:         return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC_2CH:     return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2ch>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC_2CH_MOD: return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2chmod>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 		default:                           return CELL_OK;
 		}
 
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMA:            if (ppu_execute<&_SceAdecCorrectPtsValue_wma>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR:         if (ppu_execute<&_SceAdecCorrectPtsValue_DtsLbr>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1:        if (ppu_execute<&_SceAdecCorrectPtsValue_mpmcl1>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_MP3S:           if (ppu_execute<&_SceAdecCorrectPtsValue_Mp3s>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP8:          if (ppu_execute<&_SceAdecCorrectPtsValue_Celp8>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO:         if (ppu_execute<&_SceAdecCorrectPtsValue_WmaPro>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
-	case ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL:         if (ppu_execute<&_SceAdecCorrectPtsValue_WmaLsl>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMA:            return ppu_execute<&_SceAdecCorrectPtsValue_wma>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR:         return ppu_execute<&_SceAdecCorrectPtsValue_DtsLbr>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1:        return ppu_execute<&_SceAdecCorrectPtsValue_mpmcl1>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MP3S:           return ppu_execute<&_SceAdecCorrectPtsValue_Mp3s>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP8:          return ppu_execute<&_SceAdecCorrectPtsValue_Celp8>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaPro>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaLsl>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK1: // Same as below
-	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK2: if (ppu_execute<&_SceAdecCorrectPtsValue_DtsHd_Core>(ppu, +core_handle, au_pts) != CELL_OK) { return CELL_ADEC_ERROR_FATAL; } else { return CELL_OK; }
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK2: return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd_Core>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
 	}
 
 	// If the user didn't set a PTS, we need to interpolate from the previous PTS
@@ -670,7 +677,7 @@ error_code adecNotifyPcmOut(ppu_thread& ppu, s32 pcmHandle, vm::ptr<void> pcmAdd
 		return ret;
 	}
 
-	if (handle->link_frame(pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	if (handle->link_frame(ppu, pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
 		return CELL_ADEC_ERROR_FATAL;
 	}
@@ -682,7 +689,7 @@ error_code adecNotifyPcmOut(ppu_thread& ppu, s32 pcmHandle, vm::ptr<void> pcmAdd
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	vm::ptr<CellAdecPcmItem> pcm_item;
+	vm::ptr<CellAdecPcmItem> pcm_item{};
 
 	if (handle->get_pcm_item(pcmHandle, pcm_item) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
@@ -811,7 +818,7 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 		// TODO
 	}
 
-	new (_this.get_ptr()) AdecContext(_this, this_size, *type, *res, *cb, core_handle, core_ops, pcm_handle_num, frames, bitstream_info_size, bitstream_infos_addr);
+	new (_this.get_ptr()) AdecContext(ppu, _this, this_size, *type, *res, *cb, core_handle, core_ops, pcm_handle_num, frames, bitstream_info_size, bitstream_infos_addr);
 
 	*handle = _this;
 
@@ -888,6 +895,12 @@ error_code cellAdecClose(ppu_thread& ppu, vm::ptr<AdecContext> handle)
 	{
 		return ret;
 	}
+
+	if (error_code ret = sys_mutex_destroy(ppu, handle->mutex); ret != CELL_OK)
+	{
+		return ret;
+	}
+
 
 	handle->_this = vm::null;
 	handle->sequence_state = AdecSequenceState::closed;
@@ -1060,7 +1073,7 @@ error_code cellAdecGetPcm(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<
 		return ret;
 	}
 
-	if (handle->unlink_frame(pcm_item->pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	if (handle->unlink_frame(ppu, pcm_item->pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
 		return CELL_ADEC_ERROR_FATAL;
 	}
