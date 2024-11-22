@@ -76,7 +76,7 @@ scoped_progress_dialog::scoped_progress_dialog(std::string text) noexcept
 
 		if (!info && info.compare_and_swap_test(c_null_ptr, installed_ptr))
 		{
-			m_text_index = new_text_index;
+			m_text_index = ::narrow<u32>(new_text_index);
 			break;
 		}
 	}
@@ -105,7 +105,7 @@ scoped_progress_dialog::~scoped_progress_dialog() noexcept
 
 	while (true)
 	{
-		u32 restored_text_index = umax;
+		u64 restored_text_index = umax;
 
 		if (progr.text_index == m_text_index && !g_progr_text_queue[m_text_index])
 		{
@@ -148,7 +148,7 @@ scoped_progress_dialog::~scoped_progress_dialog() noexcept
 					return true;
 				}
 
-				progr0.text_index = restored_text_index;
+				progr0.text_index = ::narrow<u32>(restored_text_index);
 				progr0.update_id++;
 			}
 
