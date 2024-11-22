@@ -285,7 +285,8 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
-		case localized_string_id::HOME_MENU_SAVESTATE: return tr("Save Emulation State");
+		case localized_string_id::HOME_MENU_SAVESTATE: return tr("SaveState");
+		case localized_string_id::HOME_MENU_SAVESTATE_SAVE: return tr("Save Emulation State");
 		case localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT: return tr("Save Emulation State And Exit");
 		case localized_string_id::HOME_MENU_RELOAD_SAVESTATE: return tr("Reload Last Emulation State");
 		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");

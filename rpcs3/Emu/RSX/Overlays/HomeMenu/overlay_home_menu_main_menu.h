@@ -2,6 +2,7 @@
 
 #include "overlay_home_menu_page.h"
 #include "overlay_home_menu_settings.h"
+#include "overlay_home_menu_savestate.h"
 
 namespace rsx
 {
