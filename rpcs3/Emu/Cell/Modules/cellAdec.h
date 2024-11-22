@@ -2,6 +2,7 @@
 
 #include "cellPamf.h" // CellCodecTimeStamp
 #include "../lv2/sys_mutex.h"
+#include "../lv2/sys_cond.h"
 
 // Error Codes
 enum CellAdecError : u32
@@ -461,31 +462,25 @@ struct AdecCmdQueue
 
 struct AdecFrame
 {
-	b8 in_use = false; // True after issuing a decode command until the frame is consumed
+	b8 in_use; // True after issuing a decode command until the frame is consumed
 
-	const be_t<s32> this_index; // Set when initialized in cellAdecOpen(), unused afterward
+	be_t<s32> this_index; // Set when initialized in cellAdecOpen(), unused afterward
 
 	// Set when the corresponding callback is received, unused afterward
-	b8 au_done = false;
-	const b8 unk1 = false;
-	b8 pcm_out = false;
-	const b8 unk2 = false;
+	b8 au_done;
+	b8 unk1;
+	b8 pcm_out;
+	b8 unk2;
 
 	CellAdecAuInfo au_info;
 	CellAdecPcmItem pcm_item;
 
-	const u32 reserved1 = 0;
-	const u32 reserved2 = 0;
+	u32 reserved1;
+	u32 reserved2;
 
 	// Frames that are ready to be consumed form a linked list. However, this list is not used (AdecOutputQueue is used instead)
-	be_t<s32> next = 0; // Index of the next frame that can be consumed
-	be_t<s32> prev = 0; // Index of the previous frame that can be consumed
-
-	AdecFrame(s32 index, u32 bitstream_info_addr)
-		: this_index(index)
-	{
-		pcm_item.pcmAttr.bsiInfo.set(bitstream_info_addr);
-	}
+	be_t<s32> next; // Index of the next frame that can be consumed
+	be_t<s32> prev; // Index of the previous frame that can be consumed
 };
 
 CHECK_SIZE(AdecFrame, 0x68);
@@ -494,27 +489,61 @@ class AdecOutputQueue
 {
 	struct entry
 	{
-		const be_t<s32> this_index; // Unused
-		be_t<s32> state = 0xff; // 0xff = empty, 0x10 = filled
-		vm::bptr<CellAdecPcmItem> pcm_item = vm::null;
-		be_t<s32> pcm_handle = -1;
+		be_t<s32> this_index; // Unused
+		be_t<s32> state; // 0xff = empty, 0x10 = filled
+		vm::bptr<CellAdecPcmItem> pcm_item;
+		be_t<s32> pcm_handle;
 	}
-	entries[4]{ {0}, {1}, {2}, {3} };
+	entries[4];
 
-	be_t<s32> front = 0;
-	be_t<s32> back = 0;
-	be_t<s32> size = 0;
+	be_t<s32> front;
+	be_t<s32> back;
+	be_t<s32> size;
 
-	shared_mutex mutex; // sys_mutex_t
-	be_t<u32> cond{};   // sys_cond_t, unused
+	be_t<u32> mutex; // sys_mutex_t
+	be_t<u32> cond;  // sys_cond_t, unused
 
 public:
-	error_code push(vm::ptr<CellAdecPcmItem> pcm_item, s32 pcm_handle)
+	void init(ppu_thread& ppu, vm::ptr<AdecOutputQueue> _this)
 	{
-		std::lock_guard lock{mutex};
+		this->front = 0;
+		this->back = 0;
+		this->size = 0;
+
+		const vm::var<sys_mutex_attribute_t> mutex_attr = {{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem07"_u64 } }};
+		ensure(sys_mutex_create(ppu, _this.ptr(&AdecOutputQueue::mutex), mutex_attr) == CELL_OK); // Error code isn't checked on LLE
+
+		const vm::var<sys_cond_attribute_t> cond_attr = {{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec05"_u64 } }};
+		ensure(sys_cond_create(ppu, _this.ptr(&AdecOutputQueue::cond), mutex, cond_attr) == CELL_OK); // Error code isn't checked on LLE
+
+		for (s32 i = 0; i < 4; i++)
+		{
+			entries[i] = { i, 0xff, vm::null, -1 };
+		}
+	}
+
+	error_code finalize(ppu_thread& ppu) const
+	{
+		if (error_code ret = sys_cond_destroy(ppu, cond); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		if (error_code ret = sys_mutex_destroy(ppu, mutex); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		return CELL_OK;
+	}
+
+	error_code push(ppu_thread& ppu, vm::ptr<CellAdecPcmItem> pcm_item, s32 pcm_handle)
+	{
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 		if (entries[back].state != 0xff)
 		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return true; // LLE returns the result of the comparison above
 		}
 
@@ -525,15 +554,17 @@ public:
 		back = (back + 1) & 3;
 		size++;
 
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_OK;
 	}
 
-	const entry* pop()
+	const entry* pop(ppu_thread& ppu)
 	{
-		std::lock_guard lock{mutex};
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 		if (entries[front].state == 0xff)
 		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return nullptr;
 		}
 
@@ -545,13 +576,16 @@ public:
 		front = (front + 1) & 3;
 		size--;
 
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
 	}
 
-	const entry& peek()
+	const entry& peek(ppu_thread& ppu) const
 	{
-		std::lock_guard lock{mutex};
-		return entries[front];
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		const entry& ret = entries[front];
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return ret;
 	}
 };
 
@@ -567,50 +601,36 @@ enum class AdecSequenceState : u32
 struct AdecContext // CellAdecHandle = AdecContext*
 {
 	vm::bptr<AdecContext> _this;
-	const be_t<u32> this_size; // Size of this struct + AdecFrames + bitstream info structs
+	be_t<u32> this_size; // Size of this struct + AdecFrames + bitstream info structs
 
-	const u32 unk = 0; // Unused
+	u32 unk; // Unused
 
-	be_t<AdecSequenceState> sequence_state = AdecSequenceState::dormant;
+	be_t<AdecSequenceState> sequence_state;
 
-	const CellAdecType type;
-	const CellAdecResource res;
-	const CellAdecCb callback;
+	CellAdecType type;
+	CellAdecResource res;
+	CellAdecCb callback;
 
-	const vm::bptr<void> core_handle;
-	const vm::bcptr<CellAdecCoreOps> core_ops;
+	vm::bptr<void> core_handle;
+	vm::bcptr<CellAdecCoreOps> core_ops;
 
-	CellCodecTimeStamp previous_pts{ CODEC_TS_INVALID, CODEC_TS_INVALID };
+	CellCodecTimeStamp previous_pts;
 
-	const be_t<s32> frames_num;
-	const u32 reserved1 = 0;
-	be_t<s32> frames_head = -1;       // Index of the oldest frame that can be consumed
-	be_t<s32> frames_tail = -1;       // Index of the most recent frame that can be consumed
-	const vm::bptr<AdecFrame> frames; // Array of AdecFrames, number of elements is return value of CellAdecCoreOps::getPcmHandleNum
+	be_t<s32> frames_num;
+	u32 reserved1;
+	be_t<s32> frames_head;      // Index of the oldest frame that can be consumed
+	be_t<s32> frames_tail;      // Index of the most recent frame that can be consumed
+	vm::bptr<AdecFrame> frames; // Array of AdecFrames, number of elements is return value of CellAdecCoreOps::getPcmHandleNum
 
-	const be_t<u32> bitstream_info_size;
+	be_t<u32> bitstream_info_size;
 
-	sys_mutex_attribute_t mutex_attribute{ 2, 0x20, 0x200, 0x2000, 0, 0, 0, { "_adem03"_u64 } };
+	sys_mutex_attribute_t mutex_attribute;
 	be_t<u32> mutex; // sys_mutex_t
 
 	AdecOutputQueue pcm_queue;      // Output queue for cellAdecGetPcm()
 	AdecOutputQueue pcm_item_queue; // Output queue for cellAdecGetPcmItem()
 
 	u8 reserved2[1028];
-
-	AdecContext(ppu_thread& ppu, vm::bptr<AdecContext> _this, u32 this_size, const CellAdecType& type, const CellAdecResource& res, const CellAdecCb& callback, vm::bptr<void> core_handle,
-		vm::bcptr<CellAdecCoreOps> core_ops, s32 frames_num, vm::bptr<AdecFrame> frames, u32 bitstream_info_size, u32 bitstream_infos_addr)
-		: _this(_this), this_size(this_size), type(type), res(res), callback(callback), core_handle(core_handle), core_ops(core_ops), frames_num(frames_num), frames(frames), bitstream_info_size(bitstream_info_size)
-	{
-		ensure(this == _this.get_ptr());
-
-		for (s32 i = 0; i < frames_num; i++)
-		{
-			new (&frames[i]) AdecFrame(i, bitstream_infos_addr + bitstream_info_size * i);
-		}
-
-		ensure(sys_mutex_create(ppu, _this.ptr(&AdecContext::mutex), _this.ptr(&AdecContext::mutex_attribute)) == CELL_OK); // Error code isn't checked on LLE
-	}
 
 	[[nodiscard]] error_code get_new_pcm_handle(vm::ptr<CellAdecAuInfo> au_info) const;
 	error_code verify_pcm_handle(s32 pcm_handle) const;
@@ -624,7 +644,7 @@ struct AdecContext // CellAdecHandle = AdecContext*
 	error_code correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 correct_pts_type);
 };
 
-static_assert(std::is_standard_layout_v<AdecContext>);
+static_assert(std::is_standard_layout_v<AdecContext> && std::is_trivial_v<AdecContext>);
 CHECK_SIZE_ALIGN(AdecContext, 0x530, 8);
 
 
