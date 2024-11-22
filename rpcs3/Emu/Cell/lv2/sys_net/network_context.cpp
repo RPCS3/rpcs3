@@ -85,8 +85,32 @@ namespace np
 	void init_np_handler_dependencies();
 }
 
+void base_network_thread::add_ppu_to_awake(ppu_thread* ppu)
+{
+	std::lock_guard lock(mutex_ppu_to_awake);
+	ppu_to_awake.emplace_back(ppu);
+}
+
+void base_network_thread::del_ppu_to_awake(ppu_thread* ppu)
+{
+	std::lock_guard lock(mutex_ppu_to_awake);
+
+	for (auto it = ppu_to_awake.begin(); it != ppu_to_awake.end();)
+	{
+		if (*it == ppu)
+		{
+			it = ppu_to_awake.erase(it);
+			continue;
+		}
+
+		it++;
+	}
+}
+
 void base_network_thread::wake_threads()
 {
+	std::lock_guard lock(mutex_ppu_to_awake);
+
 	ppu_to_awake.erase(std::unique(ppu_to_awake.begin(), ppu_to_awake.end()), ppu_to_awake.end());
 	for (ppu_thread* ppu : ppu_to_awake)
 	{
@@ -117,7 +141,10 @@ void network_thread::operator()()
 	std::vector<std::shared_ptr<lv2_socket>> socklist;
 	socklist.reserve(lv2_socket::id_count);
 
-	ppu_to_awake.clear();
+	{
+		std::lock_guard lock(mutex_ppu_to_awake);
+		ppu_to_awake.clear();
+	}
 
 	std::vector<::pollfd> fds(lv2_socket::id_count);
 #ifdef _WIN32
