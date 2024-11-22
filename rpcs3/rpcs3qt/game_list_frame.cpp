@@ -2297,7 +2297,6 @@ void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_da
 	const QString main_label = tr("Creating all LLVM caches");
 
 	progress_dialog* pdlg = new progress_dialog(tr("LLVM Cache Batch Creation"), main_label, tr("Cancel"), 0, ::narrow<s32>(total), false, this);
-	pdlg->setWindowFlags(Qt::Window | Qt::WindowMinimizeButtonHint);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
