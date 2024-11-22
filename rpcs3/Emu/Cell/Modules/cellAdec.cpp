@@ -696,12 +696,12 @@ error_code adecNotifyPcmOut(ppu_thread& ppu, s32 pcmHandle, vm::ptr<void> pcmAdd
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (handle->pcm_queue.push(pcm_item, pcmHandle) != CELL_OK)
+	if (handle->pcm_queue.push(ppu, pcm_item, pcmHandle) != CELL_OK)
 	{
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (handle->pcm_item_queue.push(pcm_item, pcmHandle) != CELL_OK)
+	if (handle->pcm_item_queue.push(ppu, pcm_item, pcmHandle) != CELL_OK)
 	{
 		return CELL_ADEC_ERROR_FATAL;
 	}
@@ -804,7 +804,6 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 	const u32 bitstream_info_size = core_ops->getBsiInfoSize(ppu);
 
 	const auto _this = vm::ptr<AdecContext>::make(utils::align(+res->startAddr, 0x80));
-	const u32 this_size = sizeof(AdecContext) + (bitstream_info_size + sizeof(AdecFrame)) * pcm_handle_num;
 	const auto frames = vm::ptr<AdecFrame>::make(_this.addr() + sizeof(AdecContext));
 	const u32 bitstream_infos_addr = frames.addr() + pcm_handle_num * sizeof(AdecFrame);
 	const auto core_handle = vm::ptr<void>::make(utils::align(bitstream_infos_addr + bitstream_info_size * pcm_handle_num, 0x80));
@@ -818,7 +817,43 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 		// TODO
 	}
 
-	new (_this.get_ptr()) AdecContext(ppu, _this, this_size, *type, *res, *cb, core_handle, core_ops, pcm_handle_num, frames, bitstream_info_size, bitstream_infos_addr);
+	_this->_this = _this;
+	_this->this_size = sizeof(AdecContext) + (bitstream_info_size + sizeof(AdecFrame)) * pcm_handle_num;
+	_this->unk = 0;
+	_this->sequence_state = AdecSequenceState::dormant;
+	_this->type = *type;
+	_this->res = *res;
+	_this->callback = *cb;
+	_this->core_handle = core_handle;
+	_this->core_ops = core_ops;
+	_this->previous_pts = { CODEC_TS_INVALID, CODEC_TS_INVALID };
+	_this->frames_num = pcm_handle_num;
+	_this->reserved1 = 0;
+	_this->frames_head = -1;
+	_this->frames_tail = -1;
+	_this->frames = frames;
+	_this->bitstream_info_size = bitstream_info_size;
+	_this->mutex_attribute = { SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem03"_u64 } };
+
+	_this->pcm_queue.init(ppu, _this.ptr(&AdecContext::pcm_queue));
+	_this->pcm_item_queue.init(ppu, _this.ptr(&AdecContext::pcm_item_queue));
+
+	for (s32 i = 0; i < pcm_handle_num; i++)
+	{
+		frames[i].in_use = false;
+		frames[i].this_index = i;
+		frames[i].au_done = false;
+		frames[i].unk1 = false;
+		frames[i].pcm_out = false;
+		frames[i].unk2 = false;
+		frames[i].pcm_item.pcmAttr.bsiInfo.set(bitstream_infos_addr + bitstream_info_size * i);
+		frames[i].reserved1 = 0;
+		frames[i].reserved2 = 0;
+		frames[i].next = 0;
+		frames[i].prev = 0;
+	}
+
+	ensure(sys_mutex_create(ppu, _this.ptr(&AdecContext::mutex), _this.ptr(&AdecContext::mutex_attribute)) == CELL_OK); // Error code isn't checked on LLE
 
 	*handle = _this;
 
@@ -897,6 +932,16 @@ error_code cellAdecClose(ppu_thread& ppu, vm::ptr<AdecContext> handle)
 	}
 
 	if (error_code ret = sys_mutex_destroy(ppu, handle->mutex); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = handle->pcm_queue.finalize(ppu); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = handle->pcm_item_queue.finalize(ppu); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -1038,12 +1083,12 @@ error_code cellAdecGetPcm(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<
 	}
 
 	// If the pcm_handles are equal, then cellAdecGetPcmItem() was not called before cellAdecGetPcm(). We need to pop pcm_item_queue as well
-	if (handle->pcm_item_queue.peek().pcm_handle == handle->pcm_queue.peek().pcm_handle)
+	if (handle->pcm_item_queue.peek(ppu).pcm_handle == handle->pcm_queue.peek(ppu).pcm_handle)
 	{
-		handle->pcm_item_queue.pop();
+		handle->pcm_item_queue.pop(ppu);
 	}
 
-	const auto pcm_queue_entry = handle->pcm_queue.pop();
+	const auto pcm_queue_entry = handle->pcm_queue.pop(ppu);
 
 	if (!pcm_queue_entry)
 	{
@@ -1082,7 +1127,7 @@ error_code cellAdecGetPcm(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<
 	return CELL_OK;
 }
 
-error_code cellAdecGetPcmItem(vm::ptr<AdecContext> handle, vm::pptr<CellAdecPcmItem> pcmItem)
+error_code cellAdecGetPcmItem(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::pptr<CellAdecPcmItem> pcmItem)
 {
 	cellAdec.trace("cellAdecGetPcmItem(handle=*0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
@@ -1096,7 +1141,12 @@ error_code cellAdecGetPcmItem(vm::ptr<AdecContext> handle, vm::pptr<CellAdecPcmI
 		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	const auto pcm_item_entry = handle->pcm_item_queue.pop();
+	const auto pcm_item_entry = handle->pcm_item_queue.pop(ppu);
+
+	if (ppu.state & cpu_flag::again) // Savestate was created while waiting on the queue mutex
+	{
+		return {};
+	}
 
 	if (!pcm_item_entry)
 	{
