@@ -901,7 +901,6 @@ error_code cellAdecClose(ppu_thread& ppu, vm::ptr<AdecContext> handle)
 		return ret;
 	}
 
-
 	handle->_this = vm::null;
 	handle->sequence_state = AdecSequenceState::closed;
 
