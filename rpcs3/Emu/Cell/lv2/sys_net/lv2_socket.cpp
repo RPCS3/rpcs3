@@ -165,11 +165,11 @@ void lv2_socket::queue_wake(ppu_thread* ppu)
 	{
 	case SYS_NET_SOCK_STREAM:
 	case SYS_NET_SOCK_DGRAM:
-		g_fxo->get<network_context>().ppu_to_awake.emplace_back(ppu);
+		g_fxo->get<network_context>().add_ppu_to_awake(ppu);
 		break;
 	case SYS_NET_SOCK_DGRAM_P2P:
 	case SYS_NET_SOCK_STREAM_P2P:
-		g_fxo->get<p2p_context>().ppu_to_awake.emplace_back(ppu);
+		g_fxo->get<p2p_context>().add_ppu_to_awake(ppu);
 		break;
 	default:
 		break;

@@ -6,6 +6,8 @@
 #include "lv2_socket.h"
 #include "sys_net_helpers.h"
 
+#include "network_context.h"
+
 LOG_CHANNEL(sys_net);
 
 int get_native_error()
@@ -192,6 +194,12 @@ u32 network_clear_queue(ppu_thread& ppu)
 	});
 
 	return cleared;
+}
+
+void clear_ppu_to_awake(ppu_thread& ppu)
+{
+	g_fxo->get<network_context>().del_ppu_to_awake(&ppu);
+	g_fxo->get<p2p_context>().del_ppu_to_awake(&ppu);
 }
 
 #ifdef _WIN32
