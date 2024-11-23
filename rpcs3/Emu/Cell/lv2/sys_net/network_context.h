@@ -9,6 +9,10 @@
 
 struct base_network_thread
 {
+	void add_ppu_to_awake(ppu_thread* ppu);
+	void del_ppu_to_awake(ppu_thread* ppu);
+
+	shared_mutex mutex_ppu_to_awake;
 	std::vector<ppu_thread*> ppu_to_awake;
 
 	void wake_threads();

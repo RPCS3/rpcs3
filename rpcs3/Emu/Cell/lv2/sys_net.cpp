@@ -54,7 +54,7 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
 		{
-			switch (s32 _error = error)
+			switch (static_cast<s32>(error))
 			{
 #define SYS_NET_ERROR_CASE(x) \
 	case -x: return "-" #x;   \
@@ -1413,6 +1413,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				}
 
 				has_timedout = network_clear_queue(ppu);
+				clear_ppu_to_awake(ppu);
 				ppu.state -= cpu_flag::signal;
 				break;
 			}
@@ -1646,6 +1647,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 				}
 
 				has_timedout = network_clear_queue(ppu);
+				clear_ppu_to_awake(ppu);
 				ppu.state -= cpu_flag::signal;
 				break;
 			}
@@ -1730,6 +1732,10 @@ error_code lv2_socket::abort_socket(s32 flags)
 	{
 		if (!ppu)
 			continue;
+
+		// Avoid possible double signaling
+		network_clear_queue(*ppu);
+		clear_ppu_to_awake(*ppu);
 
 		sys_net.warning("lv2_socket::abort_socket(): waking up \"%s\": (func: %s, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x)", ppu->get_name(), ppu->current_function, ppu->gpr[3], ppu->gpr[4], ppu->gpr[5], ppu->gpr[6]);
 		ppu->gpr[3] = static_cast<u64>(-SYS_NET_EINTR);

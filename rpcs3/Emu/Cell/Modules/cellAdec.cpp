@@ -1,41 +1,56 @@
 #include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
-#include "util/media_utils.h"
+#include "Emu/savestate_utils.hpp"
 
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-extern "C"
-{
-#include "libavcodec/avcodec.h"
-#include "libavformat/avformat.h"
-#ifndef AV_INPUT_BUFFER_PADDING_SIZE
-#define AV_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
-#endif
-}
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
-
-#include "cellPamf.h"
-#include "cellAtracXdec.h"
 #include "cellAdec.h"
 
 #include <mutex>
-
-extern std::mutex g_mutex_avcodec_open2;
+#include "util/asm.hpp"
 
 LOG_CHANNEL(cellAdec);
+
+// These need to be defined somewhere to access the LLE functions
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_ac3;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_atrac3;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_atrac3multi;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Celp8;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Celp;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Ddp;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_DtsCore;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_DtsHd_Core;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_DtsHd;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_DtsLbr;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Aac;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_mpmc;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_M4Aac;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_M4Aac2ch;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_M4Aac2chmod;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Mp3;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_Mp3s;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_mpmcl1;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_truehd;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_wma;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaLsl;
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_WmaPro;
+error_code _SceAdecCorrectPtsValue_Celp8(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Celp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Ddp(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsCore(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsHd_Core(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsHd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_DtsLbr(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_mpmc(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac2ch(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_M4Aac2chmod(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_Mp3s(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_mpmcl1(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_truehd(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_wma(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_WmaLsl(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
+error_code _SceAdecCorrectPtsValue_WmaPro(ppu_thread&, vm::ptr<void>, vm::ptr<CellCodecTimeStamp>){ UNIMPLEMENTED_FUNC(cellAdec); return CELL_OK; }
 
 template <>
 void fmt_class_string<CellAdecError>::format(std::string& out, u64 arg)
@@ -205,885 +220,946 @@ void fmt_class_string<CellAdecError>::format(std::string& out, u64 arg)
 	});
 }
 
-class AudioDecoder : public ppu_thread
+
+// LPCM decoder (included in cellAdec/libadec.sprx)
+
+vm::gvar<CellAdecCoreOps> g_cell_adec_core_ops_lpcm;
+
+error_code _CellAdecCoreOpGetMemSize_lpcm(vm::ptr<CellAdecAttr> attr)
 {
-public:
-	squeue_t<AdecTask> job;
-	volatile bool is_closed = false;
-	volatile bool is_finished = false;
-	bool just_started = false;
-	bool just_finished = false;
+	cellAdec.todo("_CellAdecCoreOpGetMemSize_lpcm(attr=*0x%x)", attr);
 
-	const AVCodec* codec = nullptr;
-#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 0)
-	const AVInputFormat* input_format = nullptr;
-#else
-	AVInputFormat* input_format = nullptr;
-#endif
-	AVCodecContext* ctx = nullptr;
-	AVFormatContext* fmt = nullptr;
-	u8* io_buf = nullptr;
-
-	struct AudioReader
-	{
-		u32 addr{};
-		u32 size{};
-		bool init{};
-		bool has_ats{};
-
-	} reader;
-
-	squeue_t<AdecFrame> frames;
-
-	const s32 type;
-	const u32 memAddr;
-	const u32 memSize;
-	const vm::ptr<CellAdecCbMsg> cbFunc;
-	const u32 cbArg;
-	u32 memBias = 0;
-
-	AdecTask task;
-	u64 last_pts{};
-	u64 first_pts{};
-
-	u32 ch_out{};
-	u32 ch_cfg{};
-	u32 frame_size{};
-	u32 sample_rate{};
-	bool use_ats_headers{};
-
-	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
-		: ppu_thread({}, "", 0)
-		, type(type)
-		, memAddr(addr)
-		, memSize(size)
-		, cbFunc(func)
-		, cbArg(arg)
-	{
-		switch (type)
-		{
-		case CELL_ADEC_TYPE_ATRACX:
-		case CELL_ADEC_TYPE_ATRACX_2CH:
-		case CELL_ADEC_TYPE_ATRACX_6CH:
-		case CELL_ADEC_TYPE_ATRACX_8CH:
-		{
-			codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
-			input_format = av_find_input_format("oma");
-			break;
-		}
-		case CELL_ADEC_TYPE_MP3:
-		{
-			codec = avcodec_find_decoder(AV_CODEC_ID_MP3);
-			input_format = av_find_input_format("mp3");
-			break;
-		}
-		default:
-		{
-			fmt::throw_exception("Unknown type (0x%x)", type);
-		}
-		}
-
-		if (!codec)
-		{
-			fmt::throw_exception("avcodec_find_decoder() failed");
-		}
-		if (!input_format)
-		{
-			fmt::throw_exception("av_find_input_format() failed");
-		}
-		fmt = avformat_alloc_context();
-		if (!fmt)
-		{
-			fmt::throw_exception("avformat_alloc_context() failed");
-		}
-		io_buf = static_cast<u8*>(av_malloc(4096));
-		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, nullptr, nullptr);
-		if (!fmt->pb)
-		{
-			fmt::throw_exception("avio_alloc_context() failed");
-		}
-	}
-
-	~AudioDecoder()
-	{
-		// TODO: check finalization
-		AdecFrame af;
-		while (frames.try_pop(af))
-		{
-			av_frame_unref(af.data);
-			av_frame_free(&af.data);
-		}
-		if (ctx)
-		{
-			avcodec_free_context(&ctx);
-		}
-		if (io_buf)
-		{
-			av_freep(&io_buf);
-		}
-		if (fmt)
-		{
-			if (fmt->pb) av_freep(&fmt->pb);
-			avformat_close_input(&fmt);
-		}
-	}
-
-	void non_task()
-	{
-		while (true)
-		{
-			if (Emu.IsStopped() || is_closed)
-			{
-				break;
-			}
-
-			if (!job.pop(task, &is_closed))
-			{
-				break;
-			}
-
-			switch (task.type)
-			{
-			case adecStartSeq:
-			{
-				// TODO: reset data
-				cellAdec.warning("adecStartSeq:");
-
-				reader.addr = 0;
-				reader.size = 0;
-				reader.init = false;
-				reader.has_ats = false;
-				just_started = true;
-
-				if (adecIsAtracX(type))
-				{
-					ch_cfg = task.at3p.channel_config;
-					ch_out = task.at3p.channels;
-					frame_size = task.at3p.frame_size;
-					sample_rate = task.at3p.sample_rate;
-					use_ats_headers = task.at3p.ats_header == 1;
-				}
-				break;
-			}
-
-			case adecEndSeq:
-			{
-				// TODO: finalize
-				cellAdec.warning("adecEndSeq:");
-				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, cbArg);
-				lv2_obj::sleep(*this);
-
-				just_finished = true;
-				break;
-			}
-
-			case adecDecodeAu:
-			{
-				int err = 0;
-
-				reader.addr = task.au.addr;
-				reader.size = task.au.size;
-				reader.has_ats = use_ats_headers;
-				//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
-
-				if (just_started)
-				{
-					first_pts = task.au.pts;
-					last_pts = task.au.pts;
-					if (adecIsAtracX(type)) last_pts -= 0x10000; // hack
-				}
-
-				AVPacket* packet = av_packet_alloc();
-				std::unique_ptr<AVPacket, decltype([](AVPacket* p)
-				{
-					av_packet_unref(p);
-					av_packet_free(&p);
-				})> packet_(packet);
-
-				if (just_started && just_finished)
-				{
-					avcodec_flush_buffers(ctx);
-
-					reader.init = true; // wrong
-					just_finished = false;
-					just_started = false;
-				}
-				else if (just_started) // deferred initialization
-				{
-					AVDictionary* opts = nullptr;
-					err = av_dict_set(&opts, "probesize", "96", 0);
-					if (err < 0)
-					{
-						fmt::throw_exception("av_dict_set(probesize, 96) failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-					}
-					err = avformat_open_input(&fmt, nullptr, input_format, &opts);
-					if (err || opts)
-					{
-						std::string dict_content;
-						if (opts)
-						{
-							AVDictionaryEntry* tag = nullptr;
-							while ((tag = av_dict_get(opts, "", tag, AV_DICT_IGNORE_SUFFIX)))
-							{
-								fmt::append(dict_content, "['%s': '%s']", tag->key, tag->value);
-							}
-						}
-						fmt::throw_exception("avformat_open_input() failed (err=0x%x='%s', opts=%s)", err, utils::av_error_to_string(err), dict_content);
-					}
-					//err = avformat_find_stream_info(fmt, NULL);
-					//if (err || !fmt->nb_streams)
-					//{
-					//	fmt::throw_exception("avformat_find_stream_info() failed (err=0x%x='%s', nb_streams=%d)", err, utils::av_error_to_string(err), fmt->nb_streams);
-					//}
-					if (!avformat_new_stream(fmt, codec))
-					{
-						fmt::throw_exception("avformat_new_stream() failed");
-					}
-					//ctx = fmt->streams[0]->codec; // TODO: check data
-
-					opts = nullptr;
-
-					{
-						std::lock_guard lock(g_mutex_avcodec_open2);
-						// not multithread-safe (???)
-						err = avcodec_open2(ctx, codec, &opts);
-					}
-
-					if (err || opts)
-					{
-						std::string dict_content;
-						if (opts)
-						{
-							AVDictionaryEntry* tag = nullptr;
-							while ((tag = av_dict_get(opts, "", tag, AV_DICT_IGNORE_SUFFIX)))
-							{
-								fmt::append(dict_content, "['%s': '%s']", tag->key, tag->value);
-							}
-						}
-						fmt::throw_exception("avcodec_open2() failed (err=0x%x='%s', opts=%s)", err, utils::av_error_to_string(err), dict_content);
-					}
-					just_started = false;
-				}
-
-				while (true)
-				{
-					if (Emu.IsStopped() || is_closed)
-					{
-						if (Emu.IsStopped()) cellAdec.warning("adecDecodeAu: aborted");
-						break;
-					}
-
-					av_read_frame(fmt, packet);
-
-					struct AdecFrameHolder : AdecFrame
-					{
-						AdecFrameHolder()
-						{
-							data = av_frame_alloc();
-						}
-
-						~AdecFrameHolder()
-						{
-							if (data)
-							{
-								av_frame_unref(data);
-								av_frame_free(&data);
-							}
-						}
-
-					} frame;
-
-					if (!frame.data)
-					{
-						fmt::throw_exception("av_frame_alloc() failed");
-					}
-
-					int got_frame = 0;
-
-					int decode = 0; //avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
-
-					if (decode <= 0)
-					{
-						if (decode < 0)
-						{
-							cellAdec.error("adecDecodeAu: AU decoding error(0x%x)", decode);
-						}
-						if (!got_frame && reader.size == 0) break;
-					}
-
-					if (got_frame)
-					{
-						//u64 ts = av_frame_get_best_effort_timestamp(frame.data);
-						//if (ts != AV_NOPTS_VALUE)
-						//{
-						//	frame.pts = ts/* - first_pts*/;
-						//	last_pts = frame.pts;
-						//}
-						last_pts += frame.data->nb_samples * 90000ull / frame.data->sample_rate;
-						frame.pts = last_pts;
-
-						s32 nbps = av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame.data->format));
-						switch (frame.data->format)
-						{
-						case AV_SAMPLE_FMT_FLTP: break;
-						case AV_SAMPLE_FMT_S16P: break;
-						default:
-						{
-							fmt::throw_exception("Unsupported frame format(%d)", frame.data->format);
-						}
-						}
-						frame.auAddr = task.au.addr;
-						frame.auSize = task.au.size;
-						frame.userdata = task.au.userdata;
-						frame.size = frame.data->nb_samples * frame.data->ch_layout.nb_channels * nbps;
-
-						//cellAdec.notice("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
-							//frame.pts, frame.data->nb_samples, frame.data->ch_layout.nb_channels, frame.data->sample_rate, nbps);
-
-						if (frames.push(frame, &is_closed))
-						{
-							frame.data = nullptr; // to prevent destruction
-							cbFunc(*this, id, CELL_ADEC_MSG_TYPE_PCMOUT, CELL_OK, cbArg);
-							lv2_obj::sleep(*this);
-						}
-					}
-				}
-
-				cbFunc(*this, id, CELL_ADEC_MSG_TYPE_AUDONE, task.au.auInfo_addr, cbArg);
-				lv2_obj::sleep(*this);
-				break;
-			}
-
-			case adecClose:
-			{
-				break;
-			}
-
-			default:
-			{
-				fmt::throw_exception("Unknown task(%d)", +task.type);
-			}
-			}
-		}
-
-		is_finished = true;
-	}
-};
-
-int adecRead(void* opaque, u8* buf, int buf_size)
-{
-	AudioDecoder& adec = *static_cast<AudioDecoder*>(opaque);
-
-	int res = 0;
-
-next:
-	if (adecIsAtracX(adec.type) && adec.reader.has_ats)
-	{
-		u8 code1 = vm::read8(adec.reader.addr + 2);
-		u8 code2 = vm::read8(adec.reader.addr + 3);
-		adec.ch_cfg = (code1 >> 2) & 0x7;
-		adec.frame_size = (((u32{code1} & 0x3) << 8) | code2) * 8 + 8;
-		adec.sample_rate = at3freq[code1 >> 5];
-
-		adec.reader.size -= 8;
-		adec.reader.addr += 8;
-		adec.reader.has_ats = false;
-	}
-
-	if (adecIsAtracX(adec.type) && !adec.reader.init)
-	{
-		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
-		if (buf_size + 0u < sizeof(oma))
-		{
-			cellAdec.fatal("adecRead(): OMAHeader writing failed");
-			return 0;
-		}
-
-		memcpy(buf, &oma, sizeof(oma));
-		buf += sizeof(oma);
-		buf_size -= sizeof(oma);
-		res += sizeof(oma);
-
-		adec.reader.init = true;
-	}
-
-	if (adec.reader.size < static_cast<u32>(buf_size) /*&& !adec.just_started*/)
-	{
-		AdecTask task;
-		if (!adec.job.peek(task, 0, &adec.is_closed))
-		{
-			if (Emu.IsStopped()) cellAdec.warning("adecRawRead() aborted");
-			return 0;
-		}
-
-		switch (task.type)
-		{
-		case adecEndSeq:
-		case adecClose:
-		{
-			buf_size = adec.reader.size;
-			break;
-		}
-		case adecDecodeAu:
-		{
-			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
-
-			buf += adec.reader.size;
-			buf_size -= adec.reader.size;
-			res += adec.reader.size;
-
-			adec.cbFunc(adec, adec.id, CELL_ADEC_MSG_TYPE_AUDONE, adec.task.au.auInfo_addr, adec.cbArg);
-
-			adec.job.pop(adec.task);
-
-			adec.reader.addr = adec.task.au.addr;
-			adec.reader.size = adec.task.au.size;
-			adec.reader.has_ats = adec.use_ats_headers;
-			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
-			break;
-		}
-		case adecStartSeq: // TODO ?
-		default:
-		{
-			cellAdec.fatal("adecRawRead(): unknown task (%d)", +task.type);
-			return -1;
-		}
-		}
-
-		goto next;
-	}
-	else if (adec.reader.size < static_cast<u32>(buf_size) && 0)
-	{
-		buf_size = adec.reader.size;
-	}
-
-	if (!buf_size)
-	{
-		return res;
-	}
-
-	std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
-
-	adec.reader.addr += buf_size;
-	adec.reader.size -= buf_size;
-	return res + buf_size;
+	return CELL_OK;
 }
 
-bool adecCheckType(s32 type)
+[[noreturn]] error_code _CellAdecCoreOpOpenExt_lpcm(vm::ptr<void> handle, vm::ptr<AdecNotifyAuDone> notifyAuDone, vm::ptr<void> notifyAuDoneArg, vm::ptr<AdecNotifyPcmOut> notifyPcmOut, vm::ptr<void> notifyPcmOutArg,
+	vm::ptr<AdecNotifyError> notifyError, vm::ptr<void> notifyErrorArg, vm::ptr<AdecNotifySeqDone> notifySeqDone, vm::ptr<void> notifySeqDoneArg, vm::cptr<CellAdecResource> res, vm::cptr<CellAdecResourceSpurs> spursRes)
+{
+	cellAdec.todo("_CellAdecCoreOpOpenExt_lpcm(handle=*0x%x, notifyAuDone=*0x%x, notifyAuDoneArg=0x%x, notifyPcmOut=*0x%x, notifyPcmOutArg=0x%x, notifyError=*0x%x, notifyErrorArg=0x%x, notifySeqDone=*0x%x, notifySeqDoneArg=0x%x, res=*0x%x, spursRes=*0x%x)",
+		handle, notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg, res, spursRes);
+
+	fmt::throw_exception("LPCM decoder not implemented, please disable HLE libadec.sprx");
+}
+
+[[noreturn]] error_code _CellAdecCoreOpOpen_lpcm(vm::ptr<void> handle, vm::ptr<AdecNotifyAuDone> notifyAuDone, vm::ptr<void> notifyAuDoneArg, vm::ptr<AdecNotifyPcmOut> notifyPcmOut, vm::ptr<void> notifyPcmOutArg,
+	vm::ptr<AdecNotifyError> notifyError, vm::ptr<void> notifyErrorArg, vm::ptr<AdecNotifySeqDone> notifySeqDone, vm::ptr<void> notifySeqDoneArg, vm::cptr<CellAdecResource> res)
+{
+	cellAdec.todo("_CellAdecCoreOpOpen_lpcm(handle=*0x%x, notifyAuDone=*0x%x, notifyAuDoneArg=*0x%x, notifyPcmOut=*0x%x, notifyPcmOutArg=*0x%x, notifyError=*0x%x, notifyErrorArg=*0x%x, notifySeqDone=*0x%x, notifySeqDoneArg=*0x%x, res=*0x%x)",
+		handle, notifyAuDone, notifyAuDoneArg, notifyPcmOut, notifyPcmOutArg, notifyError, notifyErrorArg, notifySeqDone, notifySeqDoneArg, res);
+
+	fmt::throw_exception("LPCM decoder not implemented, please disable HLE libadec.sprx");
+}
+
+error_code _CellAdecCoreOpClose_lpcm(vm::ptr<void> handle)
+{
+	cellAdec.todo("_CellAdecCoreOpClose_lpcm(handle=*0x%x)", handle);
+
+	return CELL_OK;
+}
+
+error_code _CellAdecCoreOpStartSeq_lpcm(vm::ptr<void> handle, vm::ptr<CellAdecParamLpcm> lpcmParam)
+{
+	cellAdec.todo("_CellAdecCoreOpStartSeq_lpcm(handle=*0x%x, lpcmParam=*0x%x)", handle, lpcmParam);
+
+	return CELL_OK;
+}
+
+error_code _CellAdecCoreOpEndSeq_lpcm(vm::ptr<void> handle)
+{
+	cellAdec.todo("_CellAdecCoreOpEndSeq_lpcm(handle=*0x%x)", handle);
+
+	return CELL_OK;
+}
+
+error_code _CellAdecCoreOpDecodeAu_lpcm(vm::ptr<void> handle, s32 pcmHandle, vm::ptr<CellAdecAuInfo> auInfo)
+{
+	cellAdec.todo("_CellAdecCoreOpDecodeAu_lpcm(handle=*0x%x, pcmHandle=%d, auInfo=*0x%x)", handle, pcmHandle, auInfo);
+
+	return CELL_OK;
+}
+
+void _CellAdecCoreOpGetVersion_lpcm(vm::ptr<be_t<u32, 1>> version)
+{
+	cellAdec.notice("_CellAdecCoreOpGetVersion_lpcm(version=*0x%x)", version);
+
+	*version = 0x20070323;
+}
+
+error_code _CellAdecCoreOpRealign_lpcm(vm::ptr<void> handle, vm::ptr<void> outBuffer, vm::cptr<void> pcmStartAddr)
+{
+	cellAdec.todo("_CellAdecCoreOpRealign_lpcm(handle=*0x%x, outBuffer=*0x%x, pcmStartAddr=*0x%x)", handle, outBuffer, pcmStartAddr);
+
+	return CELL_OK;
+}
+
+error_code _CellAdecCoreOpReleasePcm_lpcm(vm::ptr<void> handle, s32 pcmHandle, vm::ptr<void> outBuffer)
+{
+	cellAdec.todo("_CellAdecCoreOpReleasePcm_lpcm(handle=*0x%x, pcmHandle=%d, outBuffer=*0x%x)", handle, pcmHandle, outBuffer);
+
+	return CELL_OK;
+}
+
+s32 _CellAdecCoreOpGetPcmHandleNum_lpcm()
+{
+	cellAdec.notice("_CellAdecCoreOpGetPcmHandleNum_lpcm()");
+
+	return 8;
+}
+
+u32 _CellAdecCoreOpGetBsiInfoSize_lpcm()
+{
+	cellAdec.notice("_CellAdecCoreOpGetBsiInfoSize_lpcm()");
+
+	return sizeof(CellAdecLpcmInfo);
+}
+
+
+// cellAdec abstraction layer, operates the individual decoders
+
+error_code AdecContext::get_new_pcm_handle(vm::ptr<CellAdecAuInfo> au_info) const
+{
+	for (s32 i = 0; i < frames_num; i++)
+	{
+		if (!frames[i].in_use)
+		{
+			frames[i].in_use = true;
+			frames[i].au_info = *au_info;
+			return not_an_error(i);
+		}
+	}
+
+	return CELL_ADEC_ERROR_BUSY;
+}
+
+error_code AdecContext::verify_pcm_handle(s32 pcm_handle) const
+{
+	ensure(pcm_handle >= 0 && pcm_handle < frames_num); // Not properly checked on LLE, see below
+
+	if ((pcm_handle < 0 && /* LLE uses && instead of || */ pcm_handle >= frames_num) || !frames[pcm_handle].in_use)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	return CELL_OK;
+}
+
+vm::ptr<CellAdecAuInfo> AdecContext::get_au_info(s32 pcm_handle) const
+{
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return vm::null;
+	}
+
+	return (frames + pcm_handle).ptr(&AdecFrame::au_info);
+}
+
+void AdecContext::set_state(s32 pcm_handle, u32 state) const
+{
+	if (state == 1u << 9)
+	{
+		frames[pcm_handle].au_done = true;
+	}
+	else if (state == 1u << 11)
+	{
+		frames[pcm_handle].pcm_out = true;
+	}
+}
+
+error_code AdecContext::get_pcm_item(s32 pcm_handle, vm::ptr<CellAdecPcmItem>& pcm_item) const
+{
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	pcm_item = (frames + pcm_handle).ptr(&AdecFrame::pcm_item);
+
+	return CELL_OK;
+}
+
+error_code AdecContext::set_pcm_item(s32 pcm_handle, vm::ptr<void> pcm_addr, u32 pcm_size, vm::cpptr<void> bitstream_info) const
+{
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	frames[pcm_handle].pcm_item.pcmHandle = pcm_handle;
+	frames[pcm_handle].pcm_item.status = CELL_OK;
+	frames[pcm_handle].pcm_item.startAddr = pcm_addr;
+	frames[pcm_handle].pcm_item.size = pcm_size;
+	frames[pcm_handle].pcm_item.auInfo = frames[pcm_handle].au_info;
+	std::memcpy(frames[pcm_handle].pcm_item.pcmAttr.bsiInfo.get_ptr(), bitstream_info->get_ptr(), bitstream_info_size);
+
+	return CELL_OK;
+}
+
+error_code AdecContext::link_frame(ppu_thread& ppu, s32 pcm_handle)
+{
+	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	if (frames_tail == -1 && frames_head == -1)
+	{
+		frames[pcm_handle].next = pcm_handle;
+		frames[pcm_handle].prev = pcm_handle;
+		frames_head = pcm_handle;
+		frames_tail = pcm_handle;
+	}
+	else if (frames_tail != -1 && frames_head != -1)
+	{
+		frames[pcm_handle].next = pcm_handle;
+		frames[pcm_handle].prev = frames_tail;
+		frames[frames_tail].next = pcm_handle;
+		frames_tail = pcm_handle;
+	}
+	else
+	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+	return CELL_OK;
+}
+
+error_code AdecContext::unlink_frame(ppu_thread& ppu, s32 pcm_handle)
+{
+	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	if (frames_head == -1 || frames_tail == -1)
+	{
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	const s32 next = frames[pcm_handle].next;
+	const s32 prev = frames[pcm_handle].prev;
+
+	if (frames_head == frames_tail)
+	{
+		if (pcm_handle != frames_tail)
+		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+			return CELL_ADEC_ERROR_FATAL;
+		}
+
+		frames_head = -1;
+		frames_tail = -1;
+		frames[pcm_handle].next = -1;
+		frames[pcm_handle].prev = -1;
+	}
+	else if (pcm_handle == frames_head)
+	{
+		frames_head = next;
+		frames[prev].next = next;
+	}
+	else if (pcm_handle == frames_tail)
+	{
+		frames_tail = prev;
+		frames[next].prev = prev;
+	}
+	else
+	{
+		frames[next].prev = prev;
+		frames[prev].next = next;
+	}
+
+	ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+	return CELL_OK;
+}
+
+void AdecContext::reset_frame(s32 pcm_handle) const
+{
+	frames[pcm_handle].in_use = false;
+	frames[pcm_handle].au_done = false;
+	frames[pcm_handle].pcm_out = false;
+	frames[pcm_handle].next = -1;
+	frames[pcm_handle].prev = -1;
+}
+
+error_code AdecContext::correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 correct_pts_type)
+{
+	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	const vm::ptr<CellCodecTimeStamp> au_pts = (frames + pcm_handle).ptr(&AdecFrame::au_info).ptr(&CellAdecAuInfo::pts);
+
+	switch (correct_pts_type)
+	{
+	case ADEC_CORRECT_PTS_VALUE_TYPE_EAC3:    return ppu_execute<&_SceAdecCorrectPtsValue_Ddp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD:   return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP:    return ppu_execute<&_SceAdecCorrectPtsValue_Celp>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC:   return ppu_execute<&_SceAdecCorrectPtsValue_Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L2: return ppu_execute<&_SceAdecCorrectPtsValue_mpmc>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD:  return ppu_execute<&_SceAdecCorrectPtsValue_truehd>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTS:     return ppu_execute<&_SceAdecCorrectPtsValue_DtsCore>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_M4AAC:
+		switch (type.audioCodecType)
+		{
+		case CELL_ADEC_TYPE_M4AAC:         return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC_2CH:     return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2ch>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		case CELL_ADEC_TYPE_M4AAC_2CH_MOD: return ppu_execute<&_SceAdecCorrectPtsValue_M4Aac2chmod>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+		default:                           return CELL_OK;
+		}
+
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMA:            return ppu_execute<&_SceAdecCorrectPtsValue_wma>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR:         return ppu_execute<&_SceAdecCorrectPtsValue_DtsLbr>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1:        return ppu_execute<&_SceAdecCorrectPtsValue_mpmcl1>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_MP3S:           return ppu_execute<&_SceAdecCorrectPtsValue_Mp3s>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_CELP8:          return ppu_execute<&_SceAdecCorrectPtsValue_Celp8>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaPro>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL:         return ppu_execute<&_SceAdecCorrectPtsValue_WmaLsl>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK1: // Same as below
+	case ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK2: return ppu_execute<&_SceAdecCorrectPtsValue_DtsHd_Core>(ppu, +core_handle, au_pts) != CELL_OK ? static_cast<error_code>(CELL_ADEC_ERROR_FATAL) : static_cast<error_code>(CELL_OK);
+	}
+
+	// If the user didn't set a PTS, we need to interpolate from the previous PTS
+	if (au_pts->upper == CODEC_TS_INVALID)
+	{
+		if (au_pts->lower != CODEC_TS_INVALID)
+		{
+			return CELL_ADEC_ERROR_FATAL;
+		}
+
+		if (previous_pts.upper == CODEC_TS_INVALID && previous_pts.lower == CODEC_TS_INVALID)
+		{
+			return CELL_OK;
+		}
+
+		const u32 pts_adjust = [&]
+		{
+			switch (correct_pts_type)
+			{
+			case ADEC_CORRECT_PTS_VALUE_TYPE_LPCM:           return 450;
+			case 1:                                          return 150;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz: return 3840;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz: return 4180;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz: return 5760;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_AC3:            return 2880;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3:         return 4180;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_48000Hz:    return 2160;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_44100Hz:    return 2351;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_MP3_32000Hz:    return 3240;
+			case ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3MULTI:    return 3840;
+			default:                                         return 0;
+			}
+		}();
+
+		au_pts->upper = previous_pts.upper;
+		au_pts->lower = previous_pts.lower + pts_adjust;
+
+		if (au_pts->lower < previous_pts.lower) // overflow
+		{
+			au_pts->upper = (au_pts->upper + 1) & 1;
+		}
+
+		if (au_pts->upper == CODEC_TS_INVALID)
+		{
+			return CELL_ADEC_ERROR_FATAL;
+		}
+	}
+
+	if (au_pts->lower == CODEC_TS_INVALID)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	previous_pts = *au_pts;
+
+	return CELL_OK;
+}
+
+static vm::cptr<CellAdecCoreOps> get_core_ops(s32 type)
 {
 	switch (type)
 	{
-	case CELL_ADEC_TYPE_ATRACX: cellAdec.notice("adecCheckType(): ATRAC3plus"); break;
-	case CELL_ADEC_TYPE_ATRACX_2CH: cellAdec.notice("adecCheckType(): ATRAC3plus 2ch"); break;
-	case CELL_ADEC_TYPE_ATRACX_6CH: cellAdec.notice("adecCheckType(): ATRAC3plus 6ch"); break;
-	case CELL_ADEC_TYPE_ATRACX_8CH: cellAdec.notice("adecCheckType(): ATRAC3plus 8ch"); break;
-	case CELL_ADEC_TYPE_MP3: cellAdec.notice("adecCheckType(): MP3"); break;
-
-	case CELL_ADEC_TYPE_LPCM_PAMF:
-	case CELL_ADEC_TYPE_AC3:
-	case CELL_ADEC_TYPE_ATRAC3:
-	case CELL_ADEC_TYPE_MPEG_L2:
-	case CELL_ADEC_TYPE_CELP:
-	case CELL_ADEC_TYPE_M4AAC:
-	case CELL_ADEC_TYPE_CELP8:
-	{
-		cellAdec.fatal("Unimplemented audio codec type (%d)", type);
-		break;
+	case CELL_ADEC_TYPE_INVALID1:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID1");
+	case CELL_ADEC_TYPE_LPCM_PAMF:     return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_AC3:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cell_libac3dec.variables.find(0xc58bb170)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x4944af9a)->second.export_addr);
+	case CELL_ADEC_TYPE_MP3:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3dec.variables.find(0x84276a23)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRAC3:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3dec.variables.find(0x60487d65)->second.export_addr);
+	case CELL_ADEC_TYPE_MPEG_L2:       return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2BCdec.variables.find(0x300afe4d)->second.export_addr);
+	case CELL_ADEC_TYPE_M2AAC:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM2AACdec.variables.find(0xac2f0831)->second.export_addr);
+	case CELL_ADEC_TYPE_EAC3:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDDPdec.variables.find(0xf5e9c15c)->second.export_addr);
+	case CELL_ADEC_TYPE_TRUEHD:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellTRHDdec.variables.find(0xe88e381b)->second.export_addr);
+	case CELL_ADEC_TYPE_DTS:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSdec.variables.find(0x15248ec5)->second.export_addr);
+	case CELL_ADEC_TYPE_CELP:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelpDec.variables.find(0xffe42c22)->second.export_addr);
+	case CELL_ADEC_TYPE_LPCM_BLURAY:   return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_ATRACX_2CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x076b33ab)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX_6CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0x1d210eaa)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRACX_8CH:    return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtracXdec.variables.find(0xe9a86e54)->second.export_addr);
+	case CELL_ADEC_TYPE_M4AAC:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec.variables.find(0xab61278d)->second.export_addr);
+	case CELL_ADEC_TYPE_LPCM_DVD:      return g_cell_adec_core_ops_lpcm;
+	case CELL_ADEC_TYPE_WMA:           return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellWMAdec.variables.find(0x88320b10)->second.export_addr);
+	case CELL_ADEC_TYPE_DTSLBR:        return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSLBRdec.variables.find(0x8c50af52)->second.export_addr);
+	case CELL_ADEC_TYPE_M4AAC_2CH:     return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec2ch.variables.find(0xe996c664)->second.export_addr);
+	case CELL_ADEC_TYPE_DTSHD:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDdec.variables.find(0x51ac2b6c)->second.export_addr);
+	case CELL_ADEC_TYPE_MPEG_L1:       return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMPL1dec.variables.find(0xbbc70551)->second.export_addr);
+	case CELL_ADEC_TYPE_MP3S:          return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellMP3Sdec.variables.find(0x292cdf0a)->second.export_addr);
+	case CELL_ADEC_TYPE_M4AAC_2CH_MOD: return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellM4AacDec2chmod.variables.find(0xdbd26836)->second.export_addr);
+	case CELL_ADEC_TYPE_CELP8:         return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellCelp8Dec.variables.find(0xf0190c6c)->second.export_addr);
+	case CELL_ADEC_TYPE_INVALID2:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID2");
+	case CELL_ADEC_TYPE_INVALID3:      fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_INVALID3");
+	case CELL_ADEC_TYPE_RESERVED22:    fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED22");
+	case CELL_ADEC_TYPE_RESERVED23:    fmt::throw_exception("Invalid audio codec: CELL_ADEC_TYPE_RESERVED23");
+	case CELL_ADEC_TYPE_DTSHDCORE:     return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellDTSHDCOREdec.variables.find(0x6c8f4f1c)->second.export_addr);
+	case CELL_ADEC_TYPE_ATRAC3MULTI:   return vm::cptr<CellAdecCoreOps>::make(*ppu_module_manager::cellAtrac3multidec.variables.find(0xc20c6bd7)->second.export_addr);
+	default:                           fmt::throw_exception("Invalid audio codec: %d", type);
 	}
-	default: return false;
-	}
-
-	return true;
 }
 
-error_code cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
+error_code adecNotifyAuDone(ppu_thread& ppu, s32 pcmHandle, vm::ptr<AdecContext> handle)
 {
-	cellAdec.warning("cellAdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
+	// Block savestate creation during callbacks
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
 
-	if (!adecCheckType(type->audioCodecType))
+	if (!savestate_lock.owns_lock())
 	{
-		return CELL_ADEC_ERROR_ARG;
+		ppu.state += cpu_flag::again;
+		return {};
 	}
 
-	// TODO: check values
-	attr->adecVerLower = 0x280000; // from dmux
-	attr->adecVerUpper = 0x260000;
-	attr->workMemSize = 256 * 1024; // 256 KB
+	cellAdec.trace("adecNotifyAuDone(pcmHandle=%d, handle=*0x%x)", pcmHandle, handle);
+
+	ensure(!!handle); // Not checked on LLE
+
+	const auto au_info = handle->get_au_info(pcmHandle);
+
+	if (!au_info)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	handle->set_state(pcmHandle, 1u << 9);
+
+	handle->callback.cbFunc(ppu, handle, CELL_ADEC_MSG_TYPE_AUDONE, static_cast<s32>(au_info.addr()), handle->callback.cbArg);
 
 	return CELL_OK;
 }
 
-error_code cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
+error_code adecNotifyPcmOut(ppu_thread& ppu, s32 pcmHandle, vm::ptr<void> pcmAddr, u32 pcmSize, vm::ptr<AdecContext> handle, vm::cpptr<void> bsiInfo, s8 correctPtsValueType, s32 errorCode)
 {
-	cellAdec.warning("cellAdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+	// Block savestate creation during callbacks
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
 
-	if (!adecCheckType(type->audioCodecType))
+	if (!savestate_lock.owns_lock())
 	{
-		return CELL_ADEC_ERROR_ARG;
+		ppu.state += cpu_flag::again;
+		return {};
 	}
 
-	fmt::throw_exception("cellAdec disabled, use LLE.");
-}
+	cellAdec.trace("adecNotifyPcmOut(pcmHandle=%d, pcmAddr=*0x%x, pcmSize=0x%x, handle=*0x%x, bsiInfo=**0x%x, correctPtsValueType=%d, errorCode=0x%x)", pcmHandle, pcmAddr, pcmSize, handle, bsiInfo, correctPtsValueType, errorCode);
 
-error_code cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
-{
-	cellAdec.warning("cellAdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+	ensure(!!handle && !!bsiInfo && !!*bsiInfo); // Not checked on LLE
 
-	if (!adecCheckType(type->audioCodecType))
+	if (!handle->get_au_info(pcmHandle))
 	{
-		return CELL_ADEC_ERROR_ARG;
+		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	fmt::throw_exception("cellAdec disabled, use LLE.");
-}
-
-error_code cellAdecOpenExt(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
-{
-	cellAdec.warning("cellAdecOpenExt(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
-
-	return cellAdecOpenEx(type, res, cb, handle);
-}
-
-error_code cellAdecClose(u32 handle)
-{
-	cellAdec.warning("cellAdecClose(handle=0x%x)", handle);
-
-	const auto adec = idm::get<AudioDecoder>(handle);
-
-	if (!adec)
+	if (error_code ret = handle->correct_pts_value(ppu, pcmHandle, correctPtsValueType); ret != CELL_OK)
 	{
-		return CELL_ADEC_ERROR_ARG;
+		return ret;
 	}
 
-	adec->is_closed = true;
-	adec->job.try_push(AdecTask(adecClose));
-
-	while (!adec->is_finished)
+	if (handle->link_frame(ppu, pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
-		thread_ctrl::wait_for(1000); // hack
+		return CELL_ADEC_ERROR_FATAL;
 	}
 
-	if (!idm::remove_verify<ppu_thread>(handle, std::move(adec)))
+	handle->set_state(pcmHandle, 1u << 11);
+
+	if (handle->set_pcm_item(pcmHandle, pcmAddr, pcmSize, bsiInfo) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
-		// Removed by other thread beforehead
-		return CELL_ADEC_ERROR_ARG;
+		return CELL_ADEC_ERROR_FATAL;
 	}
+
+	vm::ptr<CellAdecPcmItem> pcm_item{};
+
+	if (handle->get_pcm_item(pcmHandle, pcm_item) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	if (handle->pcm_queue.push(ppu, pcm_item, pcmHandle) != CELL_OK)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	if (handle->pcm_item_queue.push(ppu, pcm_item, pcmHandle) != CELL_OK)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	handle->callback.cbFunc(ppu, handle, CELL_ADEC_MSG_TYPE_PCMOUT, errorCode, handle->callback.cbArg);
 
 	return CELL_OK;
 }
 
-error_code cellAdecStartSeq(u32 handle, u32 param)
+error_code adecNotifyError(ppu_thread& ppu, s32 errorCode, vm::ptr<AdecContext> handle)
 {
-	cellAdec.warning("cellAdecStartSeq(handle=0x%x, param=*0x%x)", handle, param);
+	// Block savestate creation during callbacks
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
 
-	const auto adec = idm::get<AudioDecoder>(handle);
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
 
-	if (!adec)
+	cellAdec.error("adecNotifyError(errorCode=0x%x, handle=*0x%x)", errorCode, handle);
+
+	ensure(!!handle); // Not checked on LLE
+
+	handle->callback.cbFunc(ppu, handle, CELL_ADEC_MSG_TYPE_ERROR, errorCode, handle->callback.cbArg);
+
+	return CELL_OK;
+}
+
+error_code adecNotifySeqDone(ppu_thread& ppu, vm::ptr<AdecContext> handle)
+{
+	// Block savestate creation during callbacks
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.notice("adecNotifySeqDone(handle=*0x%x)", handle);
+
+	ensure(!!handle); // Not checked on LLE
+
+	handle->callback.cbFunc(ppu, handle, CELL_ADEC_MSG_TYPE_SEQDONE, CELL_OK, handle->callback.cbArg);
+
+	return CELL_OK;
+}
+
+error_code cellAdecQueryAttr(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
+{
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.notice("cellAdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
+
+	if (!type || type->audioCodecType >= 32 || type->audioCodecType == CELL_ADEC_TYPE_INVALID1 || type->audioCodecType == CELL_ADEC_TYPE_INVALID2 || type->audioCodecType == CELL_ADEC_TYPE_INVALID3 || !attr)
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	AdecTask task(adecStartSeq);
+	const auto core_ops = get_core_ops(type->audioCodecType);
 
-	switch (adec->type)
-	{
-	case CELL_ADEC_TYPE_ATRACX:
-	case CELL_ADEC_TYPE_ATRACX_2CH:
-	case CELL_ADEC_TYPE_ATRACX_6CH:
-	case CELL_ADEC_TYPE_ATRACX_8CH:
-	{
-		const auto atx = vm::cptr<CellAdecParamAtracX>::make(param);
+	core_ops->getMemSize(ppu, attr);
 
-		task.at3p.sample_rate = atx->sampling_freq;
-		task.at3p.channel_config = atx->ch_config_idx;
-		task.at3p.channels = atx->nch_out;
-		task.at3p.frame_size = atx->nbytes;
-		task.at3p.extra_config = atx->extra_config_data;
-		task.at3p.output = atx->bw_pcm;
-		task.at3p.downmix = atx->downmix_flag;
-		task.at3p.ats_header = atx->au_includes_ats_hdr_flg;
-		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=%u:%u:%u:%u, output=%d, downmix=%d, ats_header=%d",
-			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size,
-			task.at3p.extra_config[0], task.at3p.extra_config[1], task.at3p.extra_config[2], task.at3p.extra_config[3],
-			task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
-		break;
-	}
-	case CELL_ADEC_TYPE_MP3:
-	{
-		const auto mp3 = vm::cptr<CellAdecParamMP3>::make(param);
+	const s32 pcm_handle_num = core_ops->getPcmHandleNum(ppu);
+	const u32 bitstream_info_size = core_ops->getBsiInfoSize(ppu);
+	attr->workMemSize += static_cast<u32>((bitstream_info_size + sizeof(AdecFrame)) * pcm_handle_num + sizeof(AdecContext) + 0x7f);
 
-		cellAdec.todo("*** CellAdecParamMP3: bw_pcm=%d", mp3->bw_pcm);
-		break;
-	}
-	default:
-	{
-		cellAdec.fatal("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
-		return CELL_OK;
-	}
-	}
+	const vm::var<be_t<u32, 1>> ver_lower;
+	core_ops->getVersion(ppu, ver_lower);
 
-	adec->job.push(task, &adec->is_closed);
+	attr->adecVerUpper = 0x491000;
+	attr->adecVerLower = *ver_lower;
+
 	return CELL_OK;
 }
 
-error_code cellAdecEndSeq(u32 handle)
+error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAdecResource> res, vm::cptr<CellAdecCb> cb, vm::pptr<AdecContext> handle, vm::cptr<CellAdecResourceSpurs> spursRes)
 {
-	cellAdec.warning("cellAdecEndSeq(handle=0x%x)", handle);
-
-	const auto adec = idm::get<AudioDecoder>(handle);
-
-	if (!adec)
+	if (!type || type->audioCodecType >= 32 || !res || !res->startAddr || res->ppuThreadPriority >= 0xa00 || res->spuThreadPriority >= 0x100 || res->ppuThreadStackSize < 0x1000 || !cb || !cb->cbFunc || !handle)
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	adec->job.push(AdecTask(adecEndSeq), &adec->is_closed);
-	return CELL_OK;
+	if (vm::var<CellAdecAttr> attr; cellAdecQueryAttr(ppu, type, attr), res->totalMemSize < attr->workMemSize)
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	const auto core_ops = get_core_ops(type->audioCodecType);
+
+	const s32 pcm_handle_num = core_ops->getPcmHandleNum(ppu);
+	const u32 bitstream_info_size = core_ops->getBsiInfoSize(ppu);
+
+	const auto _this = vm::ptr<AdecContext>::make(utils::align(+res->startAddr, 0x80));
+	const auto frames = vm::ptr<AdecFrame>::make(_this.addr() + sizeof(AdecContext));
+	const u32 bitstream_infos_addr = frames.addr() + pcm_handle_num * sizeof(AdecFrame);
+	const auto core_handle = vm::ptr<void>::make(utils::align(bitstream_infos_addr + bitstream_info_size * pcm_handle_num, 0x80));
+
+	if (type->audioCodecType == CELL_ADEC_TYPE_LPCM_DVD)
+	{
+		// TODO
+	}
+	else if (type->audioCodecType == CELL_ADEC_TYPE_LPCM_PAMF || type->audioCodecType == CELL_ADEC_TYPE_LPCM_BLURAY)
+	{
+		// TODO
+	}
+
+	_this->_this = _this;
+	_this->this_size = sizeof(AdecContext) + (bitstream_info_size + sizeof(AdecFrame)) * pcm_handle_num;
+	_this->unk = 0;
+	_this->sequence_state = AdecSequenceState::dormant;
+	_this->type = *type;
+	_this->res = *res;
+	_this->callback = *cb;
+	_this->core_handle = core_handle;
+	_this->core_ops = core_ops;
+	_this->previous_pts = { CODEC_TS_INVALID, CODEC_TS_INVALID };
+	_this->frames_num = pcm_handle_num;
+	_this->reserved1 = 0;
+	_this->frames_head = -1;
+	_this->frames_tail = -1;
+	_this->frames = frames;
+	_this->bitstream_info_size = bitstream_info_size;
+	_this->mutex_attribute = { SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem03"_u64 } };
+
+	_this->pcm_queue.init(ppu, _this.ptr(&AdecContext::pcm_queue));
+	_this->pcm_item_queue.init(ppu, _this.ptr(&AdecContext::pcm_item_queue));
+
+	for (s32 i = 0; i < pcm_handle_num; i++)
+	{
+		frames[i].in_use = false;
+		frames[i].this_index = i;
+		frames[i].au_done = false;
+		frames[i].unk1 = false;
+		frames[i].pcm_out = false;
+		frames[i].unk2 = false;
+		frames[i].pcm_item.pcmAttr.bsiInfo.set(bitstream_infos_addr + bitstream_info_size * i);
+		frames[i].reserved1 = 0;
+		frames[i].reserved2 = 0;
+		frames[i].next = 0;
+		frames[i].prev = 0;
+	}
+
+	ensure(sys_mutex_create(ppu, _this.ptr(&AdecContext::mutex), _this.ptr(&AdecContext::mutex_attribute)) == CELL_OK); // Error code isn't checked on LLE
+
+	*handle = _this;
+
+	const auto notifyAuDone = vm::ptr<AdecNotifyAuDone>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifyAuDone)));
+	const auto notifyPcmOut = vm::ptr<AdecNotifyPcmOut>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifyPcmOut)));
+	const auto notifyError = vm::ptr<AdecNotifyError>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifyError)));
+	const auto notifySeqDone = vm::ptr<AdecNotifySeqDone>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifySeqDone)));
+
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	if (spursRes)
+	{
+		return core_ops->openExt(ppu, _this->core_handle, notifyAuDone, _this, notifyPcmOut, _this, notifyError, _this, notifySeqDone, _this, res, spursRes);
+	}
+
+	return core_ops->open(ppu, _this->core_handle, notifyAuDone, _this, notifyPcmOut, _this, notifyError, _this, notifySeqDone, _this, res);
 }
 
-error_code cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
+error_code cellAdecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::pptr<AdecContext> handle)
 {
-	cellAdec.trace("cellAdecDecodeAu(handle=0x%x, auInfo=*0x%x)", handle, auInfo);
+	cellAdec.notice("cellAdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
-	const auto adec = idm::get<AudioDecoder>(handle);
+	return adecOpen(ppu, type, res, cb, handle, vm::null);
+}
 
-	if (!adec)
+error_code cellAdecOpenExt(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::pptr<AdecContext> handle)
+{
+	cellAdec.notice("cellAdecOpenExt(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+
+	if (!res)
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	AdecTask task(adecDecodeAu);
-	task.au.auInfo_addr = auInfo.addr();
-	task.au.addr = auInfo->startAddr.addr();
-	task.au.size = auInfo->size;
-	task.au.pts = (u64{auInfo->pts.upper} << 32) | u64{auInfo->pts.lower};
-	task.au.userdata = auInfo->userData;
+	const vm::var<CellAdecResource> _res{{ res->totalMemSize, res->startAddr, res->ppuThreadPriority, 0, res->ppuThreadStackSize }};
+	const vm::var<CellAdecResourceSpurs> spursRes{{ res->spurs_addr, res->priority, res->maxContention }};
 
-	//cellAdec.notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
-	adec->job.push(task, &adec->is_closed);
+	return adecOpen(ppu, type, _res, cb, handle, spursRes);
+}
+
+error_code cellAdecOpenEx(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::pptr<AdecContext> handle)
+{
+	cellAdec.notice("cellAdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
+
+	return cellAdecOpenExt(ppu, type, res, cb, handle);
+}
+
+error_code cellAdecClose(ppu_thread& ppu, vm::ptr<AdecContext> handle)
+{
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.notice("cellAdecClose(handle=*0x%x)", handle);
+
+	if (!handle || handle->_this != handle)
+	{
+		return CELL_ADEC_ERROR_ARG;
+	}
+
+	if (error_code ret = handle->core_ops->close(ppu, handle->core_handle); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = sys_mutex_destroy(ppu, handle->mutex); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = handle->pcm_queue.finalize(ppu); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = handle->pcm_item_queue.finalize(ppu); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	handle->_this = vm::null;
+	handle->sequence_state = AdecSequenceState::closed;
+
 	return CELL_OK;
 }
 
-error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
+error_code cellAdecStartSeq(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<void> param)
 {
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.notice("cellAdecStartSeq(handle=*0x%x, param=*0x%x)", handle, param);
+
+	if (!handle || !param)
+	{
+		return CELL_ADEC_ERROR_ARG;
+	}
+
+	if (handle->sequence_state != AdecSequenceState::dormant && handle->sequence_state != AdecSequenceState::ready)
+	{
+		return CELL_ADEC_ERROR_SEQ;
+	}
+
+	if (error_code ret = handle->core_ops->startSeq(ppu, handle->core_handle, param); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	handle->sequence_state = AdecSequenceState::ready;
+
+	return CELL_OK;
+}
+
+error_code cellAdecEndSeq(ppu_thread& ppu, vm::ptr<AdecContext> handle)
+{
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.notice("cellAdecEndSeq(handle=*0x%x)", handle);
+
+	if (!handle || handle->_this != handle)
+	{
+		return CELL_ADEC_ERROR_ARG;
+	}
+
+	if (handle->sequence_state != AdecSequenceState::ready)
+	{
+		return CELL_ADEC_ERROR_SEQ;
+	}
+
+	// LLE does not set the sequence state to dormant
+
+	return handle->core_ops->endSeq(ppu, handle->core_handle);
+}
+
+error_code cellAdecDecodeAu(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<CellAdecAuInfo> auInfo)
+{
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	cellAdec.trace("cellAdecDecodeAu(handle=*0x%x, auInfo=*0x%x)", handle, auInfo);
+
+	if (!handle || !auInfo || !auInfo->size)
+	{
+		return CELL_ADEC_ERROR_ARG;
+	}
+
+	cellAdec.trace("cellAdecDecodeAu(): startAddr=*0x%x, size=0x%x, pts=0x%llx, userData=0x%llx", auInfo->startAddr, auInfo->size, std::bit_cast<be_t<u64>>(auInfo->pts), auInfo->userData);
+
+	if (handle->sequence_state != AdecSequenceState::ready)
+	{
+		return CELL_ADEC_ERROR_SEQ;
+	}
+
+	if (!auInfo->startAddr)
+	{
+		return CELL_ADEC_ERROR_ARG;
+	}
+
+	const error_code pcmHandle = handle->get_new_pcm_handle(auInfo);
+
+	if (pcmHandle == static_cast<s32>(CELL_ADEC_ERROR_BUSY))
+	{
+		return CELL_ADEC_ERROR_BUSY;
+	}
+
+	if (handle->type.audioCodecType == CELL_ADEC_TYPE_LPCM_BLURAY)
+	{
+		// TODO
+	}
+	else if (handle->type.audioCodecType == CELL_ADEC_TYPE_LPCM_DVD)
+	{
+		// TODO
+	}
+
+	return handle->core_ops->decodeAu(ppu, handle->core_handle, pcmHandle, auInfo);
+}
+
+error_code cellAdecGetPcm(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::ptr<float> outBuffer)
+{
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	ppu.state += cpu_flag::wait;
+
 	cellAdec.trace("cellAdecGetPcm(handle=0x%x, outBuffer=*0x%x)", handle, outBuffer);
 
-	const auto adec = idm::get<AudioDecoder>(handle);
-
-	if (!adec)
+	if (!handle)
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	AdecFrame af;
-	if (!adec->frames.try_pop(af))
+	// If the pcm_handles are equal, then cellAdecGetPcmItem() was not called before cellAdecGetPcm(). We need to pop pcm_item_queue as well
+	if (handle->pcm_item_queue.peek(ppu).pcm_handle == handle->pcm_queue.peek(ppu).pcm_handle)
 	{
-		//std::this_thread::sleep_for(1ms); // hack
+		handle->pcm_item_queue.pop(ppu);
+	}
+
+	const auto pcm_queue_entry = handle->pcm_queue.pop(ppu);
+
+	if (!pcm_queue_entry)
+	{
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	std::unique_ptr<AVFrame, void(*)(AVFrame*)> frame(af.data, [](AVFrame* frame)
-	{
-		av_frame_unref(frame);
-		av_frame_free(&frame);
-	});
+	const auto pcm_item = pcm_queue_entry->pcm_item;
 
-	if (outBuffer)
+	if (handle->verify_pcm_handle(pcm_item->pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
-		// reverse byte order:
-		if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 1)
-		{
-			float* in_f = reinterpret_cast<float*>(frame->extended_data[0]);
-			for (u32 i = 0; i < af.size / 4; i++)
-			{
-				outBuffer[i] = in_f[i];
-			}
-		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 2)
-		{
-			float* in_f[2];
-			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
-			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
-			for (u32 i = 0; i < af.size / 8; i++)
-			{
-				outBuffer[i * 2 + 0] = in_f[0][i];
-				outBuffer[i * 2 + 1] = in_f[1][i];
-			}
-		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 6)
-		{
-			float* in_f[6];
-			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
-			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
-			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
-			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
-			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
-			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
-			for (u32 i = 0; i < af.size / 24; i++)
-			{
-				outBuffer[i * 6 + 0] = in_f[0][i];
-				outBuffer[i * 6 + 1] = in_f[1][i];
-				outBuffer[i * 6 + 2] = in_f[2][i];
-				outBuffer[i * 6 + 3] = in_f[3][i];
-				outBuffer[i * 6 + 4] = in_f[4][i];
-				outBuffer[i * 6 + 5] = in_f[5][i];
-			}
-		}
-		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->ch_layout.nb_channels == 8)
-		{
-			float* in_f[8];
-			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
-			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
-			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
-			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
-			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
-			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
-			in_f[6] = reinterpret_cast<float*>(frame->extended_data[6]);
-			in_f[7] = reinterpret_cast<float*>(frame->extended_data[7]);
-			for (u32 i = 0; i < af.size / 24; i++)
-			{
-				outBuffer[i * 8 + 0] = in_f[0][i];
-				outBuffer[i * 8 + 1] = in_f[1][i];
-				outBuffer[i * 8 + 2] = in_f[2][i];
-				outBuffer[i * 8 + 3] = in_f[3][i];
-				outBuffer[i * 8 + 4] = in_f[4][i];
-				outBuffer[i * 8 + 5] = in_f[5][i];
-				outBuffer[i * 8 + 6] = in_f[6][i];
-				outBuffer[i * 8 + 7] = in_f[7][i];
-			}
-		}
-		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->ch_layout.nb_channels == 1)
-		{
-			s16* in_i = reinterpret_cast<s16*>(frame->extended_data[0]);
-			for (u32 i = 0; i < af.size / 2; i++)
-			{
-				outBuffer[i] = in_i[i] / 32768.f;
-			}
-		}
-		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->ch_layout.nb_channels == 2)
-		{
-			s16* in_i[2];
-			in_i[0] = reinterpret_cast<s16*>(frame->extended_data[0]);
-			in_i[1] = reinterpret_cast<s16*>(frame->extended_data[1]);
-			for (u32 i = 0; i < af.size / 4; i++)
-			{
-				outBuffer[i * 2 + 0] = in_i[0][i] / 32768.f;
-				outBuffer[i * 2 + 1] = in_i[1][i] / 32768.f;
-			}
-		}
-		else
-		{
-			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)", frame->ch_layout.nb_channels, frame->format);
-		}
+		return CELL_ADEC_ERROR_FATAL;
 	}
+
+	if (handle->type.audioCodecType == CELL_ADEC_TYPE_LPCM_PAMF || handle->type.audioCodecType == CELL_ADEC_TYPE_LPCM_BLURAY || handle->type.audioCodecType == CELL_ADEC_TYPE_LPCM_DVD)
+	{
+		// TODO
+	}
+
+	if (error_code ret = handle->core_ops->realign(ppu, handle->core_handle, outBuffer, pcm_queue_entry->pcm_item->startAddr); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (error_code ret = handle->core_ops->releasePcm(ppu, handle->core_handle, pcm_item->pcmHandle, outBuffer); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	if (handle->unlink_frame(ppu, pcm_item->pcmHandle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
+	{
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	handle->reset_frame(pcm_item->pcmHandle);
 
 	return CELL_OK;
 }
 
-error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
+error_code cellAdecGetPcmItem(ppu_thread& ppu, vm::ptr<AdecContext> handle, vm::pptr<CellAdecPcmItem> pcmItem)
 {
-	cellAdec.trace("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
+	cellAdec.trace("cellAdecGetPcmItem(handle=*0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
-	const auto adec = idm::get<AudioDecoder>(handle);
-
-	if (!adec)
+	if (!handle)
 	{
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	AdecFrame af;
-	if (!adec->frames.try_peek(af))
+	if (!pcmItem)
 	{
-		//std::this_thread::sleep_for(1ms); // hack
+		return CELL_ADEC_ERROR_FATAL;
+	}
+
+	const auto pcm_item_entry = handle->pcm_item_queue.pop(ppu);
+
+	if (ppu.state & cpu_flag::again) // Savestate was created while waiting on the queue mutex
+	{
+		return {};
+	}
+
+	if (!pcm_item_entry)
+	{
 		return CELL_ADEC_ERROR_EMPTY;
 	}
 
-	AVFrame* frame = af.data;
+	*pcmItem = pcm_item_entry->pcm_item;
 
-	const auto pcm = vm::ptr<CellAdecPcmItem>::make(adec->memAddr + adec->memBias);
-
-	adec->memBias += 512;
-	if (adec->memBias + 512 > adec->memSize)
-	{
-		adec->memBias = 0;
-	}
-
-	pcm->pcmHandle = 0; // ???
-	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + u32{sizeof(CellAdecPcmItem)};
-	pcm->startAddr = 0x00000312; // invalid address (no output)
-	pcm->size = af.size;
-	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = static_cast<u32>(af.pts);
-	pcm->auInfo.pts.upper = static_cast<u32>(af.pts >> 32);
-	pcm->auInfo.size = af.auSize;
-	pcm->auInfo.startAddr.set(af.auAddr);
-	pcm->auInfo.userData = af.userdata;
-
-	if (adecIsAtracX(adec->type))
-	{
-		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + u32{sizeof(CellAdecPcmItem)});
-
-		atx->samplingFreq = frame->sample_rate;
-		atx->nbytes = frame->nb_samples * u32{sizeof(float)};
-
-		switch (frame->ch_layout.nb_channels)
-		{
-		case 1:
-		case 2:
-		case 6:
-		{
-			atx->channelConfigIndex = frame->ch_layout.nb_channels;
-			break;
-		}
-		case 8:
-		{
-			atx->channelConfigIndex = 7;
-			break;
-		}
-		default:
-		{
-			cellAdec.fatal("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->ch_layout.nb_channels);
-			break;
-		}
-		}
-	}
-	else if (adec->type == CELL_ADEC_TYPE_MP3)
-	{
-		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + u32{sizeof(CellAdecPcmItem)});
-
-		// TODO
-		memset(mp3.get_ptr(), 0, sizeof(CellAdecMP3Info));
-	}
-
-	*pcmItem = pcm;
 	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellAdec)("cellAdec", []()
 {
-	static ppu_static_module cell_libac3dec("cell_libac3dec");
-	static ppu_static_module cellAtrac3dec("cellAtrac3dec");
-	static ppu_static_module cellCelpDec("cellCelpDec");
-	static ppu_static_module cellDTSdec("cellDTSdec");
-	static ppu_static_module cellM2AACdec("cellM2AACdec");
-	static ppu_static_module cellM2BCdec("cellM2BCdec");
-	static ppu_static_module cellM4AacDec("cellM4AacDec");
-	static ppu_static_module cellMP3dec("cellMP3dec");
-	static ppu_static_module cellTRHDdec("cellTRHDdec");
-	static ppu_static_module cellWMAdec("cellWMAdec");
-	static ppu_static_module cellDTSLBRdec("cellDTSLBRdec");
-	static ppu_static_module cellDDPdec("cellDDPdec");
-	static ppu_static_module cellM4AacDec2ch("cellM4AacDec2ch");
-	static ppu_static_module cellDTSHDdec("cellDTSHDdec");
-	static ppu_static_module cellMPL1dec("cellMPL1dec");
-	static ppu_static_module cellMP3Sdec("cellMP3Sdec");
-	static ppu_static_module cellM4AacDec2chmod("cellM4AacDec2chmod");
-	static ppu_static_module cellCelp8Dec("cellCelp8Dec");
-	static ppu_static_module cellWMAPROdec("cellWMAPROdec");
-	static ppu_static_module cellWMALSLdec("cellWMALSLdec");
-	static ppu_static_module cellDTSHDCOREdec("cellDTSHDCOREdec");
-	static ppu_static_module cellAtrac3multidec("cellAtrac3multidec");
-
 	REG_FUNC(cellAdec, cellAdecQueryAttr);
 	REG_FUNC(cellAdec, cellAdecOpen);
 	REG_FUNC(cellAdec, cellAdecOpenEx);
@@ -1094,4 +1170,168 @@ DECLARE(ppu_module_manager::cellAdec)("cellAdec", []()
 	REG_FUNC(cellAdec, cellAdecDecodeAu);
 	REG_FUNC(cellAdec, cellAdecGetPcm);
 	REG_FUNC(cellAdec, cellAdecGetPcmItem);
+
+	REG_HIDDEN_FUNC(adecNotifyAuDone);
+	REG_HIDDEN_FUNC(adecNotifyPcmOut);
+	REG_HIDDEN_FUNC(adecNotifyError);
+	REG_HIDDEN_FUNC(adecNotifySeqDone);
+
+	ppu_static_variable& lpcm_gvar = REG_VAR(cellAdec, g_cell_adec_core_ops_lpcm);
+	lpcm_gvar.flags = MFF_HIDDEN;
+	lpcm_gvar.init = []
+	{
+		g_cell_adec_core_ops_lpcm->getMemSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetMemSize_lpcm)));
+		g_cell_adec_core_ops_lpcm->open.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpen_lpcm)));
+		g_cell_adec_core_ops_lpcm->close.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpClose_lpcm)));
+		g_cell_adec_core_ops_lpcm->startSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpStartSeq_lpcm)));
+		g_cell_adec_core_ops_lpcm->endSeq.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpEndSeq_lpcm)));
+		g_cell_adec_core_ops_lpcm->decodeAu.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpDecodeAu_lpcm)));
+		g_cell_adec_core_ops_lpcm->getVersion.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetVersion_lpcm)));
+		g_cell_adec_core_ops_lpcm->realign.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpRealign_lpcm)));
+		g_cell_adec_core_ops_lpcm->releasePcm.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpReleasePcm_lpcm)));
+		g_cell_adec_core_ops_lpcm->getPcmHandleNum.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm)));
+		g_cell_adec_core_ops_lpcm->getBsiInfoSize.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm)));
+		g_cell_adec_core_ops_lpcm->openExt.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(_CellAdecCoreOpOpenExt_lpcm)));
+	};
+
+	REG_HIDDEN_FUNC(_CellAdecCoreOpGetMemSize_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpOpen_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpClose_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpStartSeq_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpEndSeq_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpDecodeAu_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpGetVersion_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpRealign_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpReleasePcm_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpGetPcmHandleNum_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpGetBsiInfoSize_lpcm);
+	REG_HIDDEN_FUNC(_CellAdecCoreOpOpenExt_lpcm);
+});
+
+DECLARE(ppu_module_manager::cell_libac3dec)("cell_libac3dec", []
+{
+	REG_VNID(cell_libac3dec, 0xc58bb170, g_cell_adec_core_ops_ac3);
+});
+
+DECLARE(ppu_module_manager::cellAtrac3dec)("cellAtrac3dec", []
+{
+	REG_VNID(cellAtrac3dec, 0x60487d65, g_cell_adec_core_ops_atrac3);
+});
+
+DECLARE(ppu_module_manager::cellAtrac3multidec)("cellAtrac3multidec", []
+{
+	REG_VNID(cellAtrac3multidec, 0xc20c6bd7, g_cell_adec_core_ops_atrac3multi);
+});
+
+DECLARE(ppu_module_manager::cellCelp8Dec)("cellCelp8Dec", []
+{
+	REG_VNID(cellCelp8Dec, 0xf0190c6c, g_cell_adec_core_ops_Celp8);
+	REG_FUNC(cellCelp8Dec, _SceAdecCorrectPtsValue_Celp8);
+});
+
+DECLARE(ppu_module_manager::cellCelpDec)("cellCelpDec", []
+{
+	REG_VNID(cellCelpDec, 0xffe42c22, g_cell_adec_core_ops_Celp);
+	REG_FUNC(cellCelpDec, _SceAdecCorrectPtsValue_Celp);
+});
+
+DECLARE(ppu_module_manager::cellDDPdec)("cellDDPdec", []
+{
+	REG_VNID(cellDDPdec, 0xf5e9c15c, g_cell_adec_core_ops_Ddp);
+	REG_FUNC(cellDDPdec, _SceAdecCorrectPtsValue_Ddp);
+});
+
+DECLARE(ppu_module_manager::cellDTSdec)("cellDTSdec", []
+{
+	REG_VNID(cellDTSdec, 0x15248ec5, g_cell_adec_core_ops_DtsCore);
+	REG_FUNC(cellDTSdec, _SceAdecCorrectPtsValue_DtsCore);
+});
+
+DECLARE(ppu_module_manager::cellDTSHDCOREdec)("cellDTSHDCOREdec", []
+{
+	REG_VNID(cellDTSHDCOREdec, 0x6c8f4f1c, g_cell_adec_core_ops_DtsHd_Core);
+	REG_FUNC(cellDTSHDCOREdec, _SceAdecCorrectPtsValue_DtsHd_Core);
+});
+
+DECLARE(ppu_module_manager::cellDTSHDdec)("cellDTSHDdec", []
+{
+	REG_VNID(cellDTSHDdec, 0x51ac2b6c, g_cell_adec_core_ops_DtsHd);
+	REG_FUNC(cellDTSHDdec, _SceAdecCorrectPtsValue_DtsHd);
+});
+
+DECLARE(ppu_module_manager::cellDTSLBRdec)("cellDTSLBRdec", []
+{
+	REG_VNID(cellDTSLBRdec, 0x8c50af52, g_cell_adec_core_ops_DtsLbr);
+	REG_FUNC(cellDTSLBRdec, _SceAdecCorrectPtsValue_DtsLbr);
+});
+
+DECLARE(ppu_module_manager::cellM2AACdec)("cellM2AACdec", []
+{
+	REG_VNID(cellM2AACdec, 0xac2f0831, g_cell_adec_core_ops_Aac);
+	REG_FUNC(cellM2AACdec, _SceAdecCorrectPtsValue_Aac);
+});
+
+DECLARE(ppu_module_manager::cellM2BCdec)("cellM2BCdec", []
+{
+	REG_VNID(cellM2BCdec, 0x300afe4d, g_cell_adec_core_ops_mpmc);
+	REG_FUNC(cellM2BCdec, _SceAdecCorrectPtsValue_mpmc);
+});
+
+DECLARE(ppu_module_manager::cellM4AacDec)("cellM4AacDec", []
+{
+	REG_VNID(cellM4AacDec, 0xab61278d, g_cell_adec_core_ops_M4Aac);
+	REG_FUNC(cellM4AacDec, _SceAdecCorrectPtsValue_M4Aac);
+});
+
+DECLARE(ppu_module_manager::cellM4AacDec2ch)("cellM4AacDec2ch", []
+{
+	REG_VNID(cellM4AacDec2ch, 0xe996c664, g_cell_adec_core_ops_M4Aac2ch);
+	REG_FUNC(cellM4AacDec2ch, _SceAdecCorrectPtsValue_M4Aac2ch);
+});
+
+DECLARE(ppu_module_manager::cellM4AacDec2chmod)("cellM4AacDec2chmod", []
+{
+	REG_VNID(cellM4AacDec2chmod, 0xdbd26836, g_cell_adec_core_ops_M4Aac2chmod);
+	REG_FUNC(cellM4AacDec2chmod, _SceAdecCorrectPtsValue_M4Aac2chmod);
+});
+
+DECLARE(ppu_module_manager::cellMP3dec)("cellMP3dec", []
+{
+	REG_VNID(cellMP3dec, 0x84276a23, g_cell_adec_core_ops_Mp3);
+});
+
+DECLARE(ppu_module_manager::cellMP3Sdec)("cellMP3Sdec", []
+{
+	REG_VNID(cellMP3Sdec, 0x292cdf0a, g_cell_adec_core_ops_Mp3s);
+	REG_FUNC(cellMP3Sdec, _SceAdecCorrectPtsValue_Mp3s);
+});
+
+DECLARE(ppu_module_manager::cellMPL1dec)("cellMPL1dec", []
+{
+	REG_VNID(cellMPL1dec, 0xbbc70551, g_cell_adec_core_ops_mpmcl1);
+	REG_FUNC(cellMPL1dec, _SceAdecCorrectPtsValue_mpmcl1);
+});
+
+DECLARE(ppu_module_manager::cellTRHDdec)("cellTRHDdec", []
+{
+	REG_VNID(cellTRHDdec, 0xe88e381b, g_cell_adec_core_ops_truehd);
+	REG_FUNC(cellTRHDdec, _SceAdecCorrectPtsValue_truehd);
+});
+
+DECLARE(ppu_module_manager::cellWMAdec)("cellWMAdec", []
+{
+	REG_VNID(cellWMAdec, 0x88320b10, g_cell_adec_core_ops_wma);
+	REG_FUNC(cellWMAdec, _SceAdecCorrectPtsValue_wma);
+});
+
+DECLARE(ppu_module_manager::cellWMALSLdec)("cellWMALSLdec", []
+{
+	REG_VNID(cellWMALSLdec, 0x602aab16, g_cell_adec_core_ops_WmaLsl);
+	REG_FUNC(cellWMALSLdec, _SceAdecCorrectPtsValue_WmaLsl);
+});
+
+DECLARE(ppu_module_manager::cellWMAPROdec)("cellWMAPROdec", []
+{
+	REG_VNID(cellWMAPROdec, 0xa8bac670, g_cell_adec_core_ops_WmaPro);
+	REG_FUNC(cellWMAPROdec, _SceAdecCorrectPtsValue_WmaPro);
 });
