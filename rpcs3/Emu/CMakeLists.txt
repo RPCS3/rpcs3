@@ -252,6 +252,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellCrossController.cpp
     Cell/Modules/cellDaisy.cpp
     Cell/Modules/cellDmux.cpp
+    Cell/Modules/cellDmuxPamf.cpp
     Cell/Modules/cellDtcpIpUtility.cpp
     Cell/Modules/cellFiber.cpp
     Cell/Modules/cellFont.cpp

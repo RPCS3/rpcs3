@@ -167,6 +167,8 @@ public:
 
 	static const ppu_static_module cellAdec;
 	static const ppu_static_module cellAtrac;
+	static const ppu_static_module cellAtrac3dec;
+	static const ppu_static_module cellAtrac3multidec;
 	static const ppu_static_module cellAtracMulti;
 	static const ppu_static_module cellAtracXdec;
 	static const ppu_static_module cellAudio;
@@ -174,12 +176,20 @@ public:
 	static const ppu_static_module cellAuthDialogUtility;
 	static const ppu_static_module cellBGDL;
 	static const ppu_static_module cellCamera;
+	static const ppu_static_module cellCelp8Dec;
 	static const ppu_static_module cellCelp8Enc;
+	static const ppu_static_module cellCelpDec;
 	static const ppu_static_module cellCelpEnc;
 	static const ppu_static_module cellCrossController;
 	static const ppu_static_module cellDaisy;
+	static const ppu_static_module cellDDPdec;
 	static const ppu_static_module cellDmux;
+	static const ppu_static_module cellDmuxPamf;
 	static const ppu_static_module cellDtcpIpUtility;
+	static const ppu_static_module cellDTSdec;
+	static const ppu_static_module cellDTSHDCOREdec;
+	static const ppu_static_module cellDTSHDdec;
+	static const ppu_static_module cellDTSLBRdec;
 	static const ppu_static_module cellFiber;
 	static const ppu_static_module cellFont;
 	static const ppu_static_module cellFontFT;
@@ -198,8 +208,17 @@ public:
 	static const ppu_static_module cellJpgEnc;
 	static const ppu_static_module cellKey2char;
 	static const ppu_static_module cellL10n;
+	static const ppu_static_module cell_libac3dec;
 	static const ppu_static_module cellLibprof;
+	static const ppu_static_module cellM2AACdec;
+	static const ppu_static_module cellM2BCdec;
+	static const ppu_static_module cellM4AacDec;
+	static const ppu_static_module cellM4AacDec2ch;
+	static const ppu_static_module cellM4AacDec2chmod;
 	static const ppu_static_module cellMic;
+	static const ppu_static_module cellMP3dec;
+	static const ppu_static_module cellMP3Sdec;
+	static const ppu_static_module cellMPL1dec;
 	static const ppu_static_module cellMusic;
 	static const ppu_static_module cellMusicDecode;
 	static const ppu_static_module cellMusicExport;
@@ -243,6 +262,7 @@ public:
 	static const ppu_static_module cellSysutilAvcExt;
 	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
+	static const ppu_static_module cellTRHDdec;
 	static const ppu_static_module cellUsbd;
 	static const ppu_static_module cellUsbPspcm;
 	static const ppu_static_module cellUserInfo;
@@ -252,6 +272,9 @@ public:
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;
+	static const ppu_static_module cellWMAdec;
+	static const ppu_static_module cellWMALSLdec;
+	static const ppu_static_module cellWMAPROdec;
 	static const ppu_static_module libad_async;
 	static const ppu_static_module libad_core;
 	static const ppu_static_module libfs_utility_init;

@@ -66,9 +66,9 @@ namespace ppu_cb_detail
 
 		static inline void set_value(ppu_thread& CPU, const T& arg)
 		{
-			const s64 stack_pos = (g_count - 1) * 0x8 + 0x30 - FIXED_STACK_FRAME_SIZE;
+			const s64 stack_pos = (static_cast<s64>(g_count) - 1) * 0x8 + 0x30 - FIXED_STACK_FRAME_SIZE;
 			static_assert(stack_pos < 0, "TODO: Increase FIXED_STACK_FRAME_SIZE (arg count limit broken)");
-			vm::write64(CPU.gpr[1] + stack_pos, ppu_gpr_cast(arg)); // TODO
+			vm::write64(static_cast<u32>(CPU.gpr[1] + stack_pos), ppu_gpr_cast(arg)); // TODO
 		}
 	};
 

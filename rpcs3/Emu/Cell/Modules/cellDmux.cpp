@@ -1175,7 +1175,7 @@ error_code cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId
 
 	const auto es = idm::make_ptr<ElementaryStream>(dmux.get(), esResourceInfo->memAddr, esResourceInfo->memSize,
 		esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2,
-		esCb->cbEsMsgFunc, esCb->cbArg, esSpecificInfo);
+		esCb->cbFunc, esCb->cbArg, esSpecificInfo);
 
 	*esHandle = es->id;
 
@@ -1359,8 +1359,6 @@ error_code cellDmuxFlushEs(u32 esHandle)
 
 DECLARE(ppu_module_manager::cellDmux)("cellDmux", []()
 {
-	static ppu_static_module cellDmuxPamf("cellDmuxPamf");
-
 	REG_FUNC(cellDmux, cellDmuxQueryAttr);
 	REG_FUNC(cellDmux, cellDmuxQueryAttr2);
 	REG_FUNC(cellDmux, cellDmuxOpen);

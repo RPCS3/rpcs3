@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Emu/Memory/vm_ptr.h"
+#include "cellPamf.h" // CellCodecTimeStamp
+#include "../lv2/sys_mutex.h"
+#include "../lv2/sys_cond.h"
 
 // Error Codes
 enum CellAdecError : u32
@@ -222,14 +224,6 @@ enum AudioCodecType : s32
 	CELL_ADEC_TYPE_ATRAC3MULTI,
 };
 
-inline bool adecIsAtracX(s32 type)
-{
-	return type == CELL_ADEC_TYPE_ATRACX
-		|| type == CELL_ADEC_TYPE_ATRACX_2CH
-		|| type == CELL_ADEC_TYPE_ATRACX_6CH
-		|| type == CELL_ADEC_TYPE_ATRACX_8CH;
-}
-
 // Output Channel Number
 enum CellAdecChannel : s32
 {
@@ -295,14 +289,14 @@ struct CellAdecResourceEx
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> ppuThreadStackSize;
 	be_t<u32> spurs_addr;
-	u8 priority[8];
+	be_t<u64, 1> priority;
 	be_t<u32> maxContention;
 };
 
 struct CellAdecResourceSpurs
 {
 	be_t<u32> spurs_addr; // CellSpurs*
-	u8 priority[8];
+	be_t<u64, 1> priority;
 	be_t<u32> maxContention;
 };
 
@@ -315,7 +309,7 @@ enum CellAdecMsgType : s32
 	CELL_ADEC_MSG_TYPE_SEQDONE,
 };
 
-using CellAdecCbMsg = s32(u32 handle, CellAdecMsgType msgType, s32 msgData, u32 cbArg);
+using CellAdecCbMsg = s32(vm::ptr<void> handle, CellAdecMsgType msgType, s32 msgData, vm::ptr<void> cbArg);
 
 // Used for internal callbacks as well
 template <typename F>
@@ -339,14 +333,14 @@ struct CellAdecAuInfo
 // BSI Info
 struct CellAdecPcmAttr
 {
-	be_t<u32> bsiInfo_addr;
+	vm::bptr<void> bsiInfo;
 };
 
 struct CellAdecPcmItem
 {
-	be_t<u32> pcmHandle;
+	be_t<s32> pcmHandle;
 	be_t<u32> status;
-	be_t<u32> startAddr;
+	vm::bcptr<void> startAddr;
 	be_t<u32> size;
 	CellAdecPcmAttr	pcmAttr;
 	CellAdecAuInfo auInfo;
@@ -363,36 +357,31 @@ enum AdecCorrectPtsValueType : s8
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz = 2,
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz = 3,
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz = 4,
-	// 5: Dolby Digital
-	// 6: ATRAC3
-	// 7: MP3
-	// 8: MP3
-	// 9: MP3
-	// 39: ATRAC3 multi-track
+	ADEC_CORRECT_PTS_VALUE_TYPE_AC3 = 5,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3 = 6,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MP3_48000Hz = 7,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MP3_44100Hz = 8,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MP3_32000Hz = 9,
+	ADEC_CORRECT_PTS_VALUE_TYPE_ATRAC3MULTI = 39,
 
 	// Calls a decoder function (_SceAdecCorrectPtsValue_codec())
-	// 17: Dolby Digital Plus
-	// 18
-	// 19
-	// 20
-	// 21: DTS HD
-	// 22
-	// 23
-	// 24: CELP
-	// 25: MPEG-2 AAC
-	// 26: MPEG-2 BC
-	// 27: Dolby TrueHD
-	// 28: DTS
-	// 29: MPEG-4 AAC
-	// 30: Windows Media Audio
-	// 31: DTS Express
-	// 32: MP1
-	// 33: MP3 Surround
-	// 34: CELP8
-	// 35: Windows Media Audio Professional
-	// 36: Windows Media Audio Lossless
-	// 37: DTS HD Core
-	// 38: DTS HD Core
+	ADEC_CORRECT_PTS_VALUE_TYPE_EAC3 = 17,
+	ADEC_CORRECT_PTS_VALUE_TYPE_DTSHD = 21,
+	ADEC_CORRECT_PTS_VALUE_TYPE_CELP = 24,
+	ADEC_CORRECT_PTS_VALUE_TYPE_M2AAC = 25,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L2 = 26,
+	ADEC_CORRECT_PTS_VALUE_TYPE_TRUEHD = 27,
+	ADEC_CORRECT_PTS_VALUE_TYPE_DTS = 28,
+	ADEC_CORRECT_PTS_VALUE_TYPE_M4AAC = 29,
+	ADEC_CORRECT_PTS_VALUE_TYPE_WMA = 30,
+	ADEC_CORRECT_PTS_VALUE_TYPE_DTSLBR = 31,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MPEG_L1 = 32,
+	ADEC_CORRECT_PTS_VALUE_TYPE_MP3S = 33,
+	ADEC_CORRECT_PTS_VALUE_TYPE_CELP8 = 34,
+	ADEC_CORRECT_PTS_VALUE_TYPE_WMAPRO = 35,
+	ADEC_CORRECT_PTS_VALUE_TYPE_WMALSL = 36,
+	ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK1 = 37,
+	ADEC_CORRECT_PTS_VALUE_TYPE_DTSHDCORE_UNK2 = 38,
 };
 
 // Internal callbacks
@@ -470,6 +459,194 @@ struct AdecCmdQueue
 	bool empty() const { return size == 0; }
 	bool full() const { return size >= 4; }
 };
+
+struct AdecFrame
+{
+	b8 in_use; // True after issuing a decode command until the frame is consumed
+
+	be_t<s32> this_index; // Set when initialized in cellAdecOpen(), unused afterward
+
+	// Set when the corresponding callback is received, unused afterward
+	b8 au_done;
+	b8 unk1;
+	b8 pcm_out;
+	b8 unk2;
+
+	CellAdecAuInfo au_info;
+	CellAdecPcmItem pcm_item;
+
+	u32 reserved1;
+	u32 reserved2;
+
+	// Frames that are ready to be consumed form a linked list. However, this list is not used (AdecOutputQueue is used instead)
+	be_t<s32> next; // Index of the next frame that can be consumed
+	be_t<s32> prev; // Index of the previous frame that can be consumed
+};
+
+CHECK_SIZE(AdecFrame, 0x68);
+
+class AdecOutputQueue
+{
+	struct entry
+	{
+		be_t<s32> this_index; // Unused
+		be_t<s32> state; // 0xff = empty, 0x10 = filled
+		vm::bptr<CellAdecPcmItem> pcm_item;
+		be_t<s32> pcm_handle;
+	}
+	entries[4];
+
+	be_t<s32> front;
+	be_t<s32> back;
+	be_t<s32> size;
+
+	be_t<u32> mutex; // sys_mutex_t
+	be_t<u32> cond;  // sys_cond_t, unused
+
+public:
+	void init(ppu_thread& ppu, vm::ptr<AdecOutputQueue> _this)
+	{
+		this->front = 0;
+		this->back = 0;
+		this->size = 0;
+
+		const vm::var<sys_mutex_attribute_t> mutex_attr = {{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem07"_u64 } }};
+		ensure(sys_mutex_create(ppu, _this.ptr(&AdecOutputQueue::mutex), mutex_attr) == CELL_OK); // Error code isn't checked on LLE
+
+		const vm::var<sys_cond_attribute_t> cond_attr = {{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec05"_u64 } }};
+		ensure(sys_cond_create(ppu, _this.ptr(&AdecOutputQueue::cond), mutex, cond_attr) == CELL_OK); // Error code isn't checked on LLE
+
+		for (s32 i = 0; i < 4; i++)
+		{
+			entries[i] = { i, 0xff, vm::null, -1 };
+		}
+	}
+
+	error_code finalize(ppu_thread& ppu) const
+	{
+		if (error_code ret = sys_cond_destroy(ppu, cond); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		if (error_code ret = sys_mutex_destroy(ppu, mutex); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		return CELL_OK;
+	}
+
+	error_code push(ppu_thread& ppu, vm::ptr<CellAdecPcmItem> pcm_item, s32 pcm_handle)
+	{
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+
+		if (entries[back].state != 0xff)
+		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+			return true; // LLE returns the result of the comparison above
+		}
+
+		entries[back].state = 0x10;
+		entries[back].pcm_item = pcm_item;
+		entries[back].pcm_handle = pcm_handle;
+
+		back = (back + 1) & 3;
+		size++;
+
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return CELL_OK;
+	}
+
+	const entry* pop(ppu_thread& ppu)
+	{
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+
+		if (entries[front].state == 0xff)
+		{
+			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+			return nullptr;
+		}
+
+		const entry* const ret = &entries[front];
+
+		entries[front].state = 0xff;
+		entries[front].pcm_handle = -1;
+
+		front = (front + 1) & 3;
+		size--;
+
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return ret;
+	}
+
+	const entry& peek(ppu_thread& ppu) const
+	{
+		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		const entry& ret = entries[front];
+		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		return ret;
+	}
+};
+
+CHECK_SIZE(AdecOutputQueue, 0x54);
+
+enum class AdecSequenceState : u32
+{
+	dormant = 0x100,
+	ready = 0x200,
+	closed = 0xa00,
+};
+
+struct AdecContext // CellAdecHandle = AdecContext*
+{
+	vm::bptr<AdecContext> _this;
+	be_t<u32> this_size; // Size of this struct + AdecFrames + bitstream info structs
+
+	u32 unk; // Unused
+
+	be_t<AdecSequenceState> sequence_state;
+
+	CellAdecType type;
+	CellAdecResource res;
+	CellAdecCb callback;
+
+	vm::bptr<void> core_handle;
+	vm::bcptr<CellAdecCoreOps> core_ops;
+
+	CellCodecTimeStamp previous_pts;
+
+	be_t<s32> frames_num;
+	u32 reserved1;
+	be_t<s32> frames_head;      // Index of the oldest frame that can be consumed
+	be_t<s32> frames_tail;      // Index of the most recent frame that can be consumed
+	vm::bptr<AdecFrame> frames; // Array of AdecFrames, number of elements is return value of CellAdecCoreOps::getPcmHandleNum
+
+	be_t<u32> bitstream_info_size;
+
+	sys_mutex_attribute_t mutex_attribute;
+	be_t<u32> mutex; // sys_mutex_t
+
+	AdecOutputQueue pcm_queue;      // Output queue for cellAdecGetPcm()
+	AdecOutputQueue pcm_item_queue; // Output queue for cellAdecGetPcmItem()
+
+	u8 reserved2[1028];
+
+	[[nodiscard]] error_code get_new_pcm_handle(vm::ptr<CellAdecAuInfo> au_info) const;
+	error_code verify_pcm_handle(s32 pcm_handle) const;
+	vm::ptr<CellAdecAuInfo> get_au_info(s32 pcm_handle) const;
+	void set_state(s32 pcm_handle, u32 state) const;
+	error_code get_pcm_item(s32 pcm_handle, vm::ptr<CellAdecPcmItem>& pcm_item) const;
+	error_code set_pcm_item(s32 pcm_handle, vm::ptr<void> pcm_addr, u32 pcm_size, vm::cpptr<void> bitstream_info) const;
+	error_code link_frame(ppu_thread& ppu, s32 pcm_handle);
+	error_code unlink_frame(ppu_thread& ppu, s32 pcm_handle);
+	void reset_frame(s32 pcm_handle) const;
+	error_code correct_pts_value(ppu_thread& ppu, s32 pcm_handle, s8 correct_pts_type);
+};
+
+static_assert(std::is_standard_layout_v<AdecContext> && std::is_trivial_v<AdecContext>);
+CHECK_SIZE_ALIGN(AdecContext, 0x530, 8);
+
 
 struct CellAdecParamLpcm
 {
@@ -1024,106 +1201,3 @@ struct CellAdecMpmcInfo
 	be_t<u32> lfePresent;
 	be_t<u32> channelCoufiguration;
 };
-
-/* Audio Decoder Thread Classes */
-
-enum AdecJobType : u32
-{
-	adecStartSeq,
-	adecEndSeq,
-	adecDecodeAu,
-	adecClose,
-};
-
-struct AdecTask
-{
-	AdecJobType type;
-	union
-	{
-		struct
-		{
-			u32 auInfo_addr;
-			u32 addr;
-			u32 size;
-			u64 pts;
-			u64 userdata;
-		} au;
-
-		struct
-		{
-			s32 sample_rate;
-			s32 channel_config;
-			s32 channels;
-			s32 frame_size;
-			std::array<u8, 4> extra_config;
-			s32 output;
-			u8 downmix;
-			u8 ats_header;
-		} at3p;
-	};
-
-	AdecTask(AdecJobType type)
-		: type(type)
-	{
-	}
-
-	AdecTask()
-	{
-	}
-};
-
-struct AdecFrame
-{
-	struct AVFrame* data;
-	u64 pts;
-	u64 userdata;
-	u32 auAddr;
-	u32 auSize;
-	u32 size;
-};
-
-int adecRead(void* opaque, u8* buf, int buf_size);
-
-static const u32 at3freq[8] = { 32000, 44100, 48000, 88200, 96000, 0, 0, 0 };
-
-struct OMAHeader // OMA Header
-{
-	u32 magic; // 0x01334145
-	u16 size; // 96 << 8
-	u16 unk0; // 0xffff
-	u64 unk1; // 0x00500f0100000000ULL
-	u64 unk2; // 0xcef5000000000400ULL
-	u64 unk3; // 0x1c458024329192d2ULL
-	u8 codecId; // 1 for ATRAC3P
-	u8 code0; // 0
-	u8 code1;
-	u8 code2;
-	u32 reserved[15]; // 0
-
-	OMAHeader(u8 codec_id, u32 freq, u8 channel_count, u32 frame_size)
-		: magic(0x01334145)
-		, size(96 << 8)
-		, unk0(0xffff)
-		, unk1(0x00500f0100000000ULL)
-		, unk2(0xcef5000000000400ULL)
-		, unk3(0x1c458024329192d2ULL)
-		, codecId(codec_id)
-		, code0(0)
-	{
-		memset(reserved, 0, sizeof(reserved));
-
-		u8 freq_code;
-		for (freq_code = 0; freq_code < 5; freq_code++)
-		{
-			if (at3freq[freq_code] == freq)
-			{
-				break;
-			}
-		}
-		u32 prepared_frame_size = (frame_size - 8) / 8;
-		code1 = ((prepared_frame_size >> 8) & 0x3) | ((channel_count & 0x7) << 2) | (freq_code << 5);
-		code2 = prepared_frame_size & 0xff;
-	}
-};
-
-CHECK_SIZE(OMAHeader, 96);
