@@ -195,6 +195,13 @@ struct CellDmuxResourceEx
 	be_t<u32> maxContention;
 };
 
+struct CellDmuxResourceSpurs
+{
+	vm::bptr<void> spurs; // CellSpurs*
+	be_t<u64, 1> priority;
+	be_t<u32> maxContention;
+};
+
 /*
 struct CellDmuxResource2Ex
 {
@@ -221,19 +228,19 @@ struct CellDmuxResource2
 
 using CellDmuxCbMsg = u32(u32 demuxerHandle, vm::ptr<CellDmuxMsg> demuxerMsg, u32 cbArg);
 
-struct CellDmuxCb
-{
-	vm::bptr<CellDmuxCbMsg> cbMsgFunc;
-	be_t<u32> cbArg;
-};
-
 using CellDmuxCbEsMsg = u32(u32 demuxerHandle, u32 esHandle, vm::ptr<CellDmuxEsMsg> esMsg, u32 cbArg);
 
-struct CellDmuxEsCb
+// Used for internal callbacks as well
+template <typename F>
+struct DmuxCb
 {
-	vm::bptr<CellDmuxCbEsMsg> cbEsMsgFunc;
+	vm::bptr<F> cbFunc;
 	be_t<u32> cbArg;
 };
+
+using CellDmuxCb = DmuxCb<CellDmuxCbMsg>;
+
+using CellDmuxEsCb = DmuxCb<CellDmuxCbEsMsg>;
 
 struct CellDmuxAttr
 {
@@ -274,4 +281,47 @@ struct CellDmuxAuInfoEx
 	be_t<u64> userData;
 	CellCodecTimeStamp pts;
 	CellCodecTimeStamp dts;
+};
+
+struct CellDmuxPamfAttr;
+struct CellDmuxPamfEsAttr;
+
+using DmuxNotifyDemuxDone = error_code(vm::ptr<void>, u32, vm::ptr<void>);
+using DmuxNotifyFatalErr = error_code(vm::ptr<void>, u32, vm::ptr<void>);
+using DmuxNotifyProgEndCode = error_code(vm::ptr<void>, vm::ptr<void>);
+
+using DmuxEsNotifyAuFound = error_code(vm::ptr<void>, vm::cptr<void>, vm::ptr<void>);
+using DmuxEsNotifyFlushDone = error_code(vm::ptr<void>, vm::ptr<void>);
+
+using CellDmuxCoreOpQueryAttr = error_code(vm::cptr<void>, vm::ptr<CellDmuxPamfAttr>);
+using CellDmuxCoreOpOpen = error_code(vm::cptr<void>, vm::cptr<CellDmuxResource>, vm::cptr<CellDmuxResourceSpurs>, vm::cptr<DmuxCb<DmuxNotifyDemuxDone>>, vm::cptr<DmuxCb<DmuxNotifyProgEndCode>>, vm::cptr<DmuxCb<DmuxNotifyFatalErr>>, vm::pptr<void>);
+using CellDmuxCoreOpClose = error_code(vm::ptr<void>);
+using CellDmuxCoreOpResetStream = error_code(vm::ptr<void>);
+using CellDmuxCoreOpCreateThread = error_code(vm::ptr<void>);
+using CellDmuxCoreOpJoinThread = error_code(vm::ptr<void>);
+using CellDmuxCoreOpSetStream = error_code(vm::ptr<void>, vm::cptr<void>, u32, b8, u64);
+using CellDmuxCoreOpFreeMemory = error_code(vm::ptr<void>, vm::ptr<void>, u32);
+using CellDmuxCoreOpQueryEsAttr = error_code(vm::cptr<void>, vm::cptr<void>, vm::ptr<CellDmuxPamfEsAttr>);
+using CellDmuxCoreOpEnableEs = error_code(vm::ptr<void>, vm::cptr<void>, vm::cptr<CellDmuxEsResource>, vm::cptr<DmuxCb<DmuxEsNotifyAuFound>>, vm::cptr<DmuxCb<DmuxEsNotifyFlushDone>>, vm::cptr<void>, vm::pptr<void>);
+using CellDmuxCoreOpDisableEs = u32(vm::ptr<void>);
+using CellDmuxCoreOpFlushEs = u32(vm::ptr<void>);
+using CellDmuxCoreOpResetEs = u32(vm::ptr<void>);
+using CellDmuxCoreOpResetStreamAndWaitDone = u32(vm::ptr<void>);
+
+struct CellDmuxCoreOps
+{
+	vm::bptr<CellDmuxCoreOpQueryAttr> queryAttr;
+	vm::bptr<CellDmuxCoreOpOpen> open;
+	vm::bptr<CellDmuxCoreOpClose> close;
+	vm::bptr<CellDmuxCoreOpResetStream> resetStream;
+	vm::bptr<CellDmuxCoreOpCreateThread> createThread;
+	vm::bptr<CellDmuxCoreOpJoinThread> joinThread;
+	vm::bptr<CellDmuxCoreOpSetStream> setStream;
+	vm::bptr<CellDmuxCoreOpFreeMemory> freeMemory;
+	vm::bptr<CellDmuxCoreOpQueryEsAttr> queryEsAttr;
+	vm::bptr<CellDmuxCoreOpEnableEs> enableEs;
+	vm::bptr<CellDmuxCoreOpDisableEs> disableEs;
+	vm::bptr<CellDmuxCoreOpFlushEs> flushEs;
+	vm::bptr<CellDmuxCoreOpResetEs> resetEs;
+	vm::bptr<CellDmuxCoreOpResetStreamAndWaitDone> resetStreamAndWaitDone;
 };

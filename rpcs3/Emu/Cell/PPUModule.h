@@ -184,6 +184,7 @@ public:
 	static const ppu_static_module cellDaisy;
 	static const ppu_static_module cellDDPdec;
 	static const ppu_static_module cellDmux;
+	static const ppu_static_module cellDmuxPamf;
 	static const ppu_static_module cellDtcpIpUtility;
 	static const ppu_static_module cellDTSdec;
 	static const ppu_static_module cellDTSHDCOREdec;

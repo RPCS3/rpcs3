@@ -300,6 +300,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellDmuxPamf.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDtcpIpUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
@@ -820,6 +821,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellBgdl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCamera.h" />
     <ClInclude Include="Emu\Cell\Modules\cellDmux.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellDmuxPamf.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFiber.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFont.h" />
     <ClInclude Include="Emu\Cell\Modules\cellFontFT.h" />
