@@ -8,6 +8,7 @@
 
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
+
 namespace rsx
 {
 	namespace overlays
