@@ -1,7 +1,6 @@
 #pragma once
 
 #include "overlay_home_menu_page.h"
-#include "overlay_home_menu_settings.h"
 
 namespace rsx
 {
