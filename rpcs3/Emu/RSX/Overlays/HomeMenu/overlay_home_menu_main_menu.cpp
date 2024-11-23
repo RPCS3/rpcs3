@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "overlay_home_menu_main_menu.h"
 #include "overlay_home_menu_components.h"
+#include "overlay_home_menu_settings.h"
+#include "overlay_home_menu_savestate.h"
 #include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
