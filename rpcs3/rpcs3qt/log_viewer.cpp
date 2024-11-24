@@ -187,7 +187,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(config, &QAction::triggered, this, [this]()
 	{
 		config_checker* dlg = new config_checker(this, m_full_log, true);
-		dlg->exec();
+		dlg->open();
 	});
 
 	connect(filter, &QAction::triggered, this, [this]()

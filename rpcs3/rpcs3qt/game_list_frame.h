@@ -141,6 +141,7 @@ private:
 	static u32 RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc);
 	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
 	static std::vector<std::string> GetDirListBySerial(const std::string& base_dir, const std::string& serial);
+	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials, QString progressLabel, std::function<bool(const std::string&)> action, std::function<void(u32, u32)> cancel_log, bool refresh_on_finish, bool can_be_concurrent = false, std::function<bool()> should_wait_cb = {});
 	static std::string GetCacheDirBySerial(const std::string& serial);
 	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();
