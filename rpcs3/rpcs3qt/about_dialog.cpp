@@ -11,6 +11,7 @@
 about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_dialog)
 {
 	ui->setupUi(this);
+	setAttribute(Qt::WA_DeleteOnClose);
 
 	ui->close->setDefault(true);
 	ui->icon->load(QStringLiteral(":/rpcs3.svg"));
