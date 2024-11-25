@@ -2490,7 +2490,7 @@ namespace rsx
 
 			// Invalidate
 			const address_range tex_range = address_range::start_length(attributes.address, tex_size);
-			invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, {}, std::forward<Args>(extras)...);
+			invalidate_range_impl_base(cmd, tex_range, invalidation_cause::cause_is_read | invalidation_cause::cause_uses_strict_data_bounds, {}, std::forward<Args>(extras)...);
 
 			// Upload from CPU. Note that sRGB conversion is handled in the FS
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,

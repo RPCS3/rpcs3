@@ -9,7 +9,8 @@ namespace vk
 	enum // callback commands
 	{
 		rctrl_queue_submit = 0x80000000,
-		rctrl_run_gc       = 0x80000001
+		rctrl_run_gc       = 0x80000001,
+		rctrl_mem_protect  = 0x80000002,
 	};
 
 	struct submit_packet
