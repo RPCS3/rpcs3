@@ -2604,10 +2604,14 @@ namespace rsx
 						rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
-				else if (!backend_config.supports_hw_renormalization &&
+				else if (!backend_config.supports_hw_renormalization /* &&
 					tex.min_filter() == rsx::texture_minify_filter::nearest &&
-					tex.mag_filter() == rsx::texture_magnify_filter::nearest)
+					tex.mag_filter() == rsx::texture_magnify_filter::nearest*/)
 				{
+					// FIXME: This check should only apply to point-sampled textures. However, it severely regresses some games (id tech 5).
+					// This is because even when filtering is active, the error from the PS3 texture expansion still applies.
+					// A proper fix is to expand these formats into BGRA8 when high texture precision is required. That requires different GUI settings and inflation shaders, so it will be handled separately.
+
 					switch (format)
 					{
 					case CELL_GCM_TEXTURE_A1R5G5B5:
