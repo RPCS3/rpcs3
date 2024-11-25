@@ -2604,7 +2604,9 @@ namespace rsx
 						rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
-				else if (!backend_config.supports_hw_renormalization)
+				else if (!backend_config.supports_hw_renormalization &&
+					tex.min_filter() == rsx::texture_minify_filter::nearest &&
+					tex.mag_filter() == rsx::texture_magnify_filter::nearest)
 				{
 					switch (format)
 					{
@@ -3639,7 +3641,7 @@ namespace rsx
 	{
 		switch (request_code)
 		{
-		case rsx::mm_backend_ctrl::mm_flush:
+		case rsx::mm_backend_ctrl::cmd_mm_flush:
 			rsx::mm_flush();
 			break;
 		default:
