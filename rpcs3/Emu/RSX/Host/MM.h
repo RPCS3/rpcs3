@@ -30,7 +30,7 @@ namespace rsx
 
 	enum mm_backend_ctrl : u32
 	{
-		mm_flush = 0x81000000,
+		cmd_mm_flush = 0x81000000,
 	};
 
 	void mm_protect(void* start, u64 length, utils::protection prot);
