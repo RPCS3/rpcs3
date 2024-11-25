@@ -98,6 +98,12 @@ namespace rsx
 			return;
 		}
 
+		std::lock_guard lock(g_mprotect_queue_lock);
+		if (g_deferred_mprotect_queue.empty())
+		{
+			return;
+		}
+
 		auto& rsxdma = g_fxo->get<rsx::dma_manager>();
 		rsxdma.backend_ctrl(mm_backend_ctrl::cmd_mm_flush, nullptr);
 	}
