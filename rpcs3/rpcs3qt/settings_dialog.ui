@@ -2695,6 +2695,13 @@
                  </property>
                 </widget>
                </item>
+               <item>
+                <widget class="QCheckBox" name="disableAsyncHostMM">
+                 <property name="text">
+                  <string>Disable Asynchronous Memory Manager</string>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
