@@ -7,6 +7,7 @@
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
@@ -1082,6 +1083,8 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
+	rsx::mm_flush(address);
+
 	const bool can_flush = is_current_thread();
 	const rsx::invalidation_cause cause = is_writing
 		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
