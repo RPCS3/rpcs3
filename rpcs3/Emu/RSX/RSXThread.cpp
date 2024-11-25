@@ -9,6 +9,7 @@
 #include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
+#include "Host/MM.h"
 #include "Host/RSXDMAWriter.h"
 #include "NV47/HW/context.h"
 #include "Program/GLSLCommon.h"
@@ -3627,8 +3628,23 @@ namespace rsx
 			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
 		}
 
+		// Host sync
+		rsx::mm_flush();
+
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
+	}
+
+	void thread::renderctl(u32 request_code, void* args)
+	{
+		switch (request_code)
+		{
+		case rsx::mm_backend_ctrl::mm_flush:
+			rsx::mm_flush();
+			break;
+		default:
+			fmt::throw_exception("Unknown backend request: 0x%x", request_code);
+		}
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!

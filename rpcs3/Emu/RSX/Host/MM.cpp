@@ -99,6 +99,6 @@ namespace rsx
 		}
 
 		auto& rsxdma = g_fxo->get<rsx::dma_manager>();
-		rsxdma.backend_ctrl(static_cast<u32>(mm_backend_ctrl::mm_flush), nullptr);
+		rsxdma.backend_ctrl(mm_backend_ctrl::mm_flush, nullptr);
 	}
 }

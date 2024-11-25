@@ -28,9 +28,9 @@ namespace rsx
 		}
 	};
 
-	enum class mm_backend_ctrl : u32
+	enum mm_backend_ctrl : u32
 	{
-		mm_flush = 0x80000002
+		mm_flush = 0x81000000,
 	};
 
 	void mm_protect(void* start, u64 length, utils::protection prot);

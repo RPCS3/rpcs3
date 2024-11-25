@@ -2829,13 +2829,8 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 		vk::on_event_completed(eid, true);
 		break;
 	}
-	case vk::rctrl_mem_protect:
-	{
-		rsx::mm_flush();
-		break;
-	}
 	default:
-		fmt::throw_exception("Unhandled request code 0x%x", request_code);
+		rsx::thread::renderctl(request_code, args);
 	}
 }
 
