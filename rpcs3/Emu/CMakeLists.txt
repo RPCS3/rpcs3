@@ -506,6 +506,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/OpenGL.cpp
     RSX/GL/upscalers/fsr1/fsr_pass.cpp
     RSX/GSRender.cpp
+    RSX/Host/MM.cpp
     RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
     RSX/NV47/FW/draw_call.cpp
