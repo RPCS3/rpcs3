@@ -33,7 +33,7 @@ namespace rsx
 
 	void mm_protect(void* ptr, u64 length, utils::protection prot)
 	{
-		if (!g_cfg.video.async_host_memory_manager)
+		if (g_cfg.video.disable_async_host_memory_manager)
 		{
 			utils::memory_protect(ptr, length, prot);
 			return;
