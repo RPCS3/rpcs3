@@ -195,13 +195,17 @@ void gui_settings::ShowInfoBox(const QString& title, const QString& text, const 
 
 bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
 {
-	auto info = Emu.GetEmulationIdentifier();
+	// Ensure no game has booted inbetween
+	const auto guard = Emu.MakeEmulationStateGuard();
+
+	const auto info = Emu.GetEmulationIdentifier();
+	const auto old_status = Emu.GetStatus(false);
 
 	qt_events_aware_op(16, [&]()
 	{
 		if (Emu.GetStatus(false) != system_state::stopping)
 		{
-			ensure(info == Emu.GetEmulationIdentifier());
+			ensure(info == Emu.GetEmulationIdentifier(old_status == system_state::stopping ? true : false));
 			return true;
 		}
 

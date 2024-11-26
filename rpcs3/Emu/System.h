@@ -57,6 +57,7 @@ enum class game_boot_result : u32
 	savestate_version_unsupported,
 	still_running,
 	already_added,
+	currently_restricted,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -123,6 +124,7 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 	atomic_t<u64> m_stop_ctr{1}; // Increments when emulation is stopped
 	atomic_t<bool> m_emu_state_close_pending = false;
+	atomic_t<u64> m_restrict_emu_state_change{0};
 
 	games_config m_games_config;
 
@@ -206,8 +208,13 @@ public:
 	enum class stop_counter_t : u64{};
 
 	// Returns a different value each time we start a new emulation.
-	stop_counter_t GetEmulationIdentifier() const
+	stop_counter_t GetEmulationIdentifier(bool subtract_one = false) const
 	{
+		if (subtract_one)
+		{
+			return stop_counter_t{m_stop_ctr - 1};
+		}
+
 		return stop_counter_t{+m_stop_ctr};
 	}
 
@@ -338,6 +345,41 @@ public:
 		return m_config_mode == cfg_mode::continuous;
 	}
 
+	class emulation_state_guard_t
+	{
+		class Emulator* _this = nullptr;
+		bool active = true;
+
+	public:
+		explicit emulation_state_guard_t(Emulator* this0) noexcept
+			: _this(this0)
+		{
+			_this->m_restrict_emu_state_change++;
+		}
+
+		~emulation_state_guard_t() noexcept
+		{
+			if (active)
+			{
+				_this->m_restrict_emu_state_change--;
+			}
+		}
+
+		emulation_state_guard_t(emulation_state_guard_t&& rhs) noexcept
+		{
+			_this = rhs._this;
+			active = std::exchange(rhs.active, false);
+		}
+
+		emulation_state_guard_t& operator=(const emulation_state_guard_t&) = delete;
+		emulation_state_guard_t(const emulation_state_guard_t&) = delete;
+	};
+
+	emulation_state_guard_t MakeEmulationStateGuard()
+	{
+		return emulation_state_guard_t{this};
+	}
+
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
@@ -348,6 +390,11 @@ public:
 	void RunPPU();
 	void FixGuestTime();
 	void FinalizeRunRequest();
+
+	bool IsBootingRestricted() const
+	{
+		return m_restrict_emu_state_change != 0;
+	}
 
 private:
 	struct savestate_stage
