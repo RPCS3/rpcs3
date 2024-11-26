@@ -82,6 +82,9 @@
 
 #include "ui_main_window.h"
 
+#include <QEventLoop>
+#include <QTimer>
+
 #if QT_CONFIG(permissions)
 #include <QGuiApplication>
 #include <QPermissions>
@@ -96,15 +99,63 @@ std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-extern void process_qt_events()
+extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op)
 {
+	ensure(wrapped_op);
+
 	if (thread_ctrl::is_main())
 	{
 		// NOTE:
 		// I noticed that calling this from an Emu callback can cause the
 		// caller to get stuck for a while during newly opened Qt dialogs.
 		// Adding a timeout here doesn't seem to do anything in that case.
-		QApplication::processEvents();
+		QEventLoop* event_loop = nullptr;
+
+		std::shared_ptr<std::function<void()>> check_iteration;
+		check_iteration = std::make_shared<std::function<void()>>([&]()
+		{
+			if (wrapped_op())
+			{
+				event_loop->exit(0);
+			}
+			else
+			{
+				QTimer::singleShot(repeat_duration_ms, *check_iteration);
+			}
+		});
+
+		while (!wrapped_op())
+		{
+			// Init event loop
+			event_loop = new QEventLoop();
+
+			// Queue event initially
+			QTimer::singleShot(0, *check_iteration);
+
+			// Event loop
+			event_loop->exec();
+
+			// Cleanup
+			event_loop->deleteLater();
+		}
+	}
+	else
+	{
+		while (!wrapped_op())
+		{
+			if (repeat_duration_ms == 0)
+			{
+				std::this_thread::yield();
+			}
+			else if (thread_ctrl::get_current())
+			{
+				thread_ctrl::wait_for(repeat_duration_ms * 1000);
+			}
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(repeat_duration_ms));
+			}
+		}
 	}
 }
 
@@ -1066,9 +1117,16 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	pdlg.show();
 
 	// Wait for the completion
-	for (usz i = 0, set_text = umax; i < readers.size() && result.error == package_install_result::error_type::no_error;)
+	int reader_it = 0;
+	int set_text = -1;
+
+	qt_events_aware_op(5, [&, readers_size = ::narrow<int>(readers.size())]()
 	{
-		std::this_thread::sleep_for(5ms);
+		if (reader_it == readers_size || result.error != package_install_result::error_type::no_error)
+		{
+			// Exit loop
+			return true;
+		}
 
 		if (pdlg.wasCanceled())
 		{
@@ -1079,26 +1137,28 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 				reader.abort_extract();
 			}
 
-			break;
+			// Exit loop
+			return true;
 		}
 
 		// Update progress window
-		const int progress = readers[i].get_progress(pdlg.maximum());
+		const int progress = readers[reader_it].get_progress(pdlg.maximum());
 		pdlg.SetValue(progress);
 
-		if (set_text != i)
+		if (set_text != reader_it)
 		{
-			pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(readers.size()).arg(get_app_info(packages[i])));
-			set_text = i;
+			pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(reader_it + 1).arg(readers_size).arg(get_app_info(packages[reader_it])));
+			set_text = reader_it;
 		}
-
-		QCoreApplication::processEvents();
 
 		if (progress == pdlg.maximum())
 		{
-			i++;
+			reader_it++;
 		}
-	}
+
+		// Process events
+		return false;
+	});
 
 	const bool success = worker();
 
@@ -1350,12 +1410,18 @@ void main_window::ExtractTar()
 
 	QString error;
 
-	for (const QString& file : files)
+	auto files_it = files.begin();
+	int pdlg_progress = 0;
+
+	qt_events_aware_op(0, [&]()
 	{
-		if (pdlg.wasCanceled())
+		if (pdlg.wasCanceled() || files_it == files.end())
 		{
-			break;
+			// Exit loop
+			return true;
 		}
+
+		const QString& file = *files_it;
 
 		// Do not abort on failure here, in case the user selected a wrong file in multi-selection while the rest are valid
 		if (!extract_tar(sstr(file), sstr(dir) + '/'))
@@ -1369,9 +1435,12 @@ void main_window::ExtractTar()
 			error += file;
 		}
 
-		pdlg.SetValue(pdlg.value() + 1);
-		QApplication::processEvents();
-	}
+		pdlg_progress++;
+		pdlg.SetValue(pdlg_progress);
+
+		files_it++;
+		return false;
+	});
 
 	if (!error.isEmpty())
 	{
@@ -1629,18 +1698,25 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		});
 
 		// Wait for the completion
-		for (uint value = progress.load(); value < update_filenames.size(); std::this_thread::sleep_for(5ms), value = progress)
+		qt_events_aware_op(5, [&]()
 		{
+			const uint value = progress.load();
+
+			if (value >= update_filenames.size())
+			{
+				return true;
+			}
+
 			if (pdlg.wasCanceled())
 			{
 				progress = -1;
-				break;
+				return true;
 			}
 
 			// Update progress window
 			pdlg.SetValue(static_cast<int>(value));
-			QCoreApplication::processEvents();
-		}
+			return false;
+		});
 
 		// Join thread
 		worker();

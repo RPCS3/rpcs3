@@ -577,12 +577,10 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.on_missing_fw = [this]()
 	{
-		if (!m_main_window)
+		if (m_main_window)
 		{
-			return;
+			m_main_window->OnMissingFw();
 		}
-
-		m_main_window->OnMissingFw();
 	};
 
 	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
