@@ -2840,18 +2840,32 @@ void Emulator::Resume()
 
 u64 get_sysutil_cb_manager_read_count();
 
-void process_qt_events();
+void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
 void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate)
 {
-	const auto old_state = m_state.load();
+	// Ensure no game has booted inbetween
+	const auto guard = Emu.MakeEmulationStateGuard();
+
+	stop_counter_t old_emu_id{};
+	system_state old_state{};
+
+	// Perform atomic load of both
+	do
+	{
+		old_emu_id = GetEmulationIdentifier();
+		old_state = m_state.load();
+	}
+	while (old_emu_id != GetEmulationIdentifier() || old_state != m_state.load());
 
 	if (old_state == system_state::stopped || old_state == system_state::stopping)
 	{
-		while (!async_op && m_state != system_state::stopped)
+		if (!async_op && old_state == system_state::stopping)
 		{
-			process_qt_events();
-			std::this_thread::sleep_for(16ms);
+			qt_events_aware_op(5, [&]()
+			{
+				return old_emu_id != GetEmulationIdentifier() || m_state != system_state::stopping;
+			});
 		}
 
 		return;
@@ -2859,10 +2873,12 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	if (!savestate && m_emu_state_close_pending)
 	{
-		while (!async_op && m_state != system_state::stopped)
+		if (!async_op)
 		{
-			process_qt_events();
-			std::this_thread::sleep_for(16ms);
+			qt_events_aware_op(5, [&]()
+			{
+				return old_emu_id != GetEmulationIdentifier() || m_state != system_state::stopping;
+			});
 		}
 
 		return;
@@ -2880,10 +2896,12 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		// The callback has been rudely ignored, we have no other option but to force termination
 		Kill(allow_autoexit && !savestate, savestate);
 
-		while (!async_op && m_state != system_state::stopped)
+		if (!async_op)
 		{
-			process_qt_events();
-			std::this_thread::sleep_for(16ms);
+			qt_events_aware_op(5, [&]()
+			{
+				return (old_emu_id != GetEmulationIdentifier() || m_state == system_state::stopped);
+			});
 		}
 
 		return;
@@ -2893,17 +2911,20 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	{
 		bool read_sysutil_signal = false;
 
-		for (u32 i = 100; i < 140; i++)
+		u32 i = 100;
+
+		qt_events_aware_op(50, [&]()
 		{
-			std::this_thread::sleep_for(50ms);
+			if (i >= 140)
+			{
+				return true;
+			}
 
 			// TODO: Prevent pausing by other threads while in this loop
 			CallFromMainThread([this]()
 			{
 				Resume();
 			}, nullptr, true, read_counter);
-
-			process_qt_events(); // Is nullified when performed on non-main thread
 
 			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
 			{
@@ -2913,9 +2934,13 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 			if (static_cast<u64>(info) != m_stop_ctr)
 			{
-				return;
+				return true;
 			}
-		}
+
+			// Process events
+			i++;
+			return false;
+		});
 
 		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
 		CallFromMainThread([allow_autoexit, this]()
@@ -2932,11 +2957,10 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	{
 		perform_kill();
 
-		while (m_state != system_state::stopped)
+		qt_events_aware_op(5, [&]()
 		{
-			process_qt_events();
-			std::this_thread::sleep_for(16ms);
-		}
+			return (old_emu_id != GetEmulationIdentifier() || m_state == system_state::stopped);
+		});
 	}
 }
 
@@ -3932,25 +3956,37 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 		games_added++;
 	}
 
-	process_qt_events();
+	fs::dir fs_dir{path};
 
-	// search direct subdirectories, that way we can drop one folder containing all games
-	for (auto&& dir_entry : fs::dir(path))
+	auto path_it = fs_dir.begin();
+
+	qt_events_aware_op(0, [&]()
 	{
-		if (!dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+		// search direct subdirectories, that way we can drop one folder containing all games
+		for (; path_it != fs_dir.end(); ++path_it)
 		{
-			continue;
+			auto dir_entry = std::move(*path_it);
+
+			if (!dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+			{
+				continue;
+			}
+
+			const std::string dir_path = path + '/' + dir_entry.name;
+
+			if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
+			{
+				games_added++;
+			}
+
+			// Process events
+			++path_it;
+			return false;
 		}
 
-		const std::string dir_path = path + '/' + dir_entry.name;
-
-		if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
-		{
-			games_added++;
-		}
-
-		process_qt_events();
-	}
+		// Exit loop
+		return true;
+	});
 
 	m_games_config.set_save_on_dirty(true);
 

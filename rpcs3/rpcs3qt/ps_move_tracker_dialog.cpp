@@ -24,6 +24,8 @@ static constexpr int radius_range = 1000;
 static const constexpr f64 min_radius_conversion = radius_range / g_cfg_move.min_radius.max;
 static const constexpr f64 max_radius_conversion = radius_range / g_cfg_move.max_radius.max;
 
+extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
+
 ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	: QDialog(parent)
 	, ui(new Ui::ps_move_tracker_dialog)
@@ -232,7 +234,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	reset_camera();
 
 	m_input_thread = std::make_unique<named_thread<pad_thread>>(thread(), window(), "");
-	while (!pad::g_started) QApplication::processEvents();
+	qt_events_aware_op(0, [](){ return !!pad::g_started; });
 
 	adjustSize();
 

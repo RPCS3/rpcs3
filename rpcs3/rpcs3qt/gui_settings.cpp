@@ -13,6 +13,8 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
+
 namespace gui
 {
 	QString stylesheet;
@@ -193,11 +195,18 @@ void gui_settings::ShowInfoBox(const QString& title, const QString& text, const 
 
 bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
 {
-	while (Emu.GetStatus(false) == system_state::stopping)
+	auto info = Emu.GetEmulationIdentifier();
+
+	qt_events_aware_op(16, [&]()
 	{
-		QCoreApplication::processEvents();
-		std::this_thread::sleep_for(16ms);
-	}
+		if (Emu.GetStatus(false) != system_state::stopping)
+		{
+			ensure(info == Emu.GetEmulationIdentifier());
+			return true;
+		}
+
+		return false;
+	});
 
 	if (!Emu.IsStopped())
 	{

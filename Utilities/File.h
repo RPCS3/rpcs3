@@ -475,7 +475,7 @@ namespace fs
 		dir() = default;
 
 		// Open dir handle
-		explicit dir(const std::string& path)
+		explicit dir(const std::string& path) noexcept
 		{
 			open(path);
 		}
@@ -484,7 +484,7 @@ namespace fs
 		bool open(const std::string& path);
 
 		// Check whether the handle is valid (opened directory)
-		explicit operator bool() const
+		explicit operator bool() const noexcept
 		{
 			return m_dir.operator bool();
 		}
@@ -531,7 +531,7 @@ namespace fs
 				from_current
 			};
 
-			iterator(const dir* parent, mode mode_ = mode::from_first)
+			iterator(const dir* parent, mode mode_ = mode::from_first) noexcept
 				: m_parent(parent)
 			{
 				if (!m_parent)
@@ -567,6 +567,13 @@ namespace fs
 			{
 				*this = {m_parent, mode::from_current};
 				return *this;
+			}
+
+			iterator operator++(int)
+			{
+				iterator old = *this;
+				*this = {m_parent, mode::from_current};
+				return old;
 			}
 
 			bool operator !=(const iterator& rhs) const
