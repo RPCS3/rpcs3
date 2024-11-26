@@ -562,6 +562,7 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::already_added: // Handled elsewhere
+	case game_boot_result::currently_restricted:
 	case game_boot_result::no_errors:
 		return;
 	case game_boot_result::generic_error:
@@ -576,12 +577,18 @@ void main_window::show_boot_error(game_boot_result status)
 	msg->setTextFormat(Qt::RichText);
 	msg->setStandardButtons(QMessageBox::Ok);
 	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
+	msg->setParent(this);
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
 }
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
 {
+	if (Emu.IsBootingRestricted())
+	{
+		return;
+	}
+
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
 		return;
@@ -3776,6 +3783,11 @@ void main_window::RemoveFirmwareCache()
 
 void main_window::CreateFirmwareCache()
 {
+	if (Emu.IsBootingRestricted())
+	{
+		return;
+	}
+
 	if (!m_gui_settings->GetBootConfirmation(this))
 	{
 		return;
@@ -4092,6 +4104,11 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
 	{
+		if (Emu.IsBootingRestricted())
+		{
+			return;
+		}
+
 		if (!m_gui_settings->GetBootConfirmation(this))
 		{
 			return;

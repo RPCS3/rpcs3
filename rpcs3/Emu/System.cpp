@@ -142,6 +142,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build.\nTry to use an older or newer RPCS3 build.\nEspecially if you know the build that created the savestate.";
 		case game_boot_result::still_running: return "Game is still running";
 		case game_boot_result::already_added: return "Game was already added";
+		case game_boot_result::currently_restricted: return "Booting is restricted at the time being";
 		}
 		return unknown;
 	});
@@ -802,7 +803,7 @@ std::string Emulator::GetBackgroundPicturePath() const
 
 bool Emulator::BootRsxCapture(const std::string& path)
 {
-	if (m_state != system_state::stopped)
+	if (m_state != system_state::stopped || m_restrict_emu_state_change)
 	{
 		return false;
 	}
@@ -928,6 +929,11 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
 {
+	if (m_restrict_emu_state_change)
+	{
+		return game_boot_result::currently_restricted;
+	}
+
 	auto save_args = std::make_tuple(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
 
 	auto restore_on_no_boot = [&](game_boot_result result)
@@ -978,10 +984,17 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
+	if (m_restrict_emu_state_change)
+	{
+		return game_boot_result::currently_restricted;
+	}
+
 	if (m_state != system_state::stopped)
 	{
 		return game_boot_result::still_running;
 	}
+
+	const auto guard = MakeEmulationStateGuard();
 
 	// Enable logging
 	rpcs3::utils::configure_logs(true);
