@@ -808,10 +808,13 @@ bool Emulator::BootRsxCapture(const std::string& path)
 		return false;
 	}
 
+	m_state = system_state::loading;
+
 	fs::file in_file(path);
 
 	if (!in_file)
 	{
+		m_state = system_state::stopped;
 		return false;
 	}
 
@@ -838,6 +841,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 		if (load.data.empty())
 		{
+			m_state = system_state::stopped;
 			sys_log.error("Failed to unzip rsx capture file!");
 			return false;
 		}
@@ -851,18 +855,22 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	if (frame->magic != rsx::c_fc_magic)
 	{
+		m_state = system_state::stopped;
 		sys_log.error("Invalid rsx capture file!");
 		return false;
 	}
 
 	if (frame->version != rsx::c_fc_version)
 	{
+		m_state = system_state::stopped;
 		sys_log.error("Rsx capture file version not supported! Expected %d, found %d", +rsx::c_fc_version, frame->version);
 		return false;
 	}
 
 	if (frame->LE_format != u32{std::endian::little == std::endian::native})
 	{
+		m_state = system_state::stopped;
+
 		static constexpr std::string_view machines[2]{"Big-Endian", "Little-Endian"};
 
 		sys_log.error("Rsx capture byte endianness not supported! Expected %s format, found %s format"
@@ -994,6 +1002,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		return game_boot_result::still_running;
 	}
 
+	struct cleanup_t
+	{
+		Emulator* _this;
+		bool cleanup = true;
+
+		~cleanup_t() noexcept
+		{
+			_this->m_state.compare_and_swap_test(system_state::loading, system_state::stopped);
+
+			if (cleanup && _this->IsStopped())
+			{
+				_this->Kill(false);
+			}
+		}
+	} cleanup{this};
+
+	ensure(m_state.compare_and_swap_test(system_state::stopped, system_state::loading));
+
 	const auto guard = MakeEmulationStateGuard();
 
 	// Enable logging
@@ -1075,20 +1101,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 	sys_log.notice("Selected config: mode=%s, path=\"%s\"", m_config_mode, m_config_path);
 	sys_log.notice("Path: %s", m_path);
-
-	struct cleanup_t
-	{
-		Emulator* _this;
-		bool cleanup = true;
-
-		~cleanup_t()
-		{
-			if (cleanup && _this->IsStopped())
-			{
-				_this->Kill(false);
-			}
-		}
-	} cleanup{this};
 
 	std::string inherited_ps3_game_path;
 

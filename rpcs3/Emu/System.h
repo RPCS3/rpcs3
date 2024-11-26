@@ -32,6 +32,7 @@ namespace cfg
 enum class system_state : u32
 {
 	stopped,
+	loading,
 	stopping,
 	running,
 	paused,
