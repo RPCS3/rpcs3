@@ -1098,7 +1098,7 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 		}
 	}
 	else
-		ensure(g_fxo->init<ppu_function_manager>());
+		g_fxo->init<ppu_function_manager>();
 
 	if (full)
 	{
