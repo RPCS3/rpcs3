@@ -642,18 +642,18 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 		gyro_z -= zero_shift;
 	}
 
-	pad->m_sensors[0].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_x / MOVE_ONE_G) * -1.0f));
-	pad->m_sensors[1].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_z / MOVE_ONE_G) * -1.0f));
-	pad->m_sensors[2].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_y / MOVE_ONE_G)));
-	pad->m_sensors[3].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (gyro_z / MOVE_ONE_G) * -1.0f));
-
-	pad->move_data.accelerometer_x = accel_x;
-	pad->move_data.accelerometer_y = accel_y;
-	pad->move_data.accelerometer_z = accel_z;
-	pad->move_data.gyro_x = gyro_x;
-	pad->move_data.gyro_y = gyro_y;
-	pad->move_data.gyro_z = gyro_z;
+	pad->move_data.accelerometer_x = accel_x / MOVE_ONE_G;
+	pad->move_data.accelerometer_y = accel_y / MOVE_ONE_G;
+	pad->move_data.accelerometer_z = accel_z / MOVE_ONE_G;
+	pad->move_data.gyro_x = accel_x / MOVE_ONE_G;
+	pad->move_data.gyro_y = accel_y / MOVE_ONE_G;
+	pad->move_data.gyro_z = accel_z / MOVE_ONE_G;
 	pad->move_data.temperature = ((input.temperature << 4) | ((input.magnetometer_x & 0xF0) >> 4));
+
+	pad->m_sensors[0].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_x * -1.0f));
+	pad->m_sensors[1].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_y * -1.0f));
+	pad->m_sensors[2].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_z));
+	pad->m_sensors[3].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.gyro_z * -1.0f));
 
 	handle_external_device(binding);
 }
