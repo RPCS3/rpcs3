@@ -946,9 +946,24 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 	auto restore_on_no_boot = [&](game_boot_result result)
 	{
-		if (IsStopped() || result != game_boot_result::no_errors)
+		if (m_state == system_state::stopped || result != game_boot_result::no_errors)
 		{
-			std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+			ensure(IsStopped());
+
+			if (m_state == system_state::stopped)
+			{
+				std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+			}
+			else
+			{
+				ensure(m_state == system_state::stopping);
+
+				// Execute after Kill() is done
+				Emu.after_kill_callback = [save_args = std::move(save_args), this]() mutable
+				{
+					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+				};
+			}
 		}
 
 		return result;
