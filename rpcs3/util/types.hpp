@@ -976,85 +976,33 @@ constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), 
 	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
-// narrow() function details
-template <typename From, typename To = void, typename = void>
-struct narrow_impl
-{
-	// Temporarily (diagnostic)
-	static_assert(std::is_void_v<To>, "narrow_impl<> specialization not found");
-
-	// Returns true if value cannot be represented in type To
-	static constexpr bool test(const From&)
-	{
-		// Unspecialized cases (including cast to void) always considered narrowing
-		return true;
-	}
-};
-
-// Unsigned to unsigned narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned_v<From> && std::is_unsigned_v<To>>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
-	}
-};
-
-// Signed to signed narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_signed_v<To>>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
-	}
-};
-
-// Unsigned to signed narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned_v<From> && std::is_signed_v<To>>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) <= sizeof(From) && value > (static_cast<std::make_unsigned_t<To>>(-1) >> 1);
-	}
-};
-
-// Signed to unsigned narrowing (I)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_unsigned_v<To> && sizeof(To) >= sizeof(From)>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return value < static_cast<From>(0);
-	}
-};
-
-// Signed to unsigned narrowing (II)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed_v<From> && std::is_unsigned_v<To> && sizeof(To) < sizeof(From)>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return static_cast<std::make_unsigned_t<From>>(value) > static_cast<To>(-1);
-	}
-};
-
-// Simple type enabled (TODO: allow for To as well)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<!std::is_same_v<std::common_type_t<From>, From>>>
-	: narrow_impl<std::common_type_t<From>, To>
-{
-};
-
-template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
+template <typename To, typename From> requires (std::is_integral_v<decltype(std::declval<To>() + std::declval<From>())>)
 [[nodiscard]] constexpr To narrow(const From& value, std::source_location src_loc = std::source_location::current())
 {
 	// Narrow check
-	if (narrow_impl<From, To>::test(value)) [[unlikely]]
+	using CommonFrom = std::common_type_t<From>;
+	using CommonTo = std::common_type_t<To>;
+
+	using UnFrom = std::make_unsigned_t<CommonFrom>;
+	using UnTo = std::make_unsigned_t<CommonTo>;
+
+	constexpr bool is_from_signed = std::is_signed_v<CommonFrom>;
+	constexpr bool is_to_signed = std::is_signed_v<CommonTo>;
+
+	constexpr auto from_mask = is_from_signed > is_to_signed ? UnFrom{umax} >> 1 : UnFrom{umax};
+	constexpr auto to_mask = is_to_signed > is_from_signed ? UnTo{umax} >> 1 : UnTo{umax};
+
+	constexpr auto mask = ~(from_mask & to_mask);
+
+	// Signed to unsigned always require test
+	// Otherwise, this is bit-wise narrowing or conversion between types of different signedness of the same size
+	if constexpr (is_from_signed > is_to_signed || to_mask < from_mask)
 	{
-		fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
+		// Try to optimize test if both are of the same signedness
+		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonTo>(value) != value) [[unlikely]]
+		{
+			fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
+		}
 	}
 
 	return static_cast<To>(value);

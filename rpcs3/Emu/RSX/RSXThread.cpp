@@ -493,7 +493,7 @@ namespace rsx
 		default:
 			break;
 		}
-		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!", static_cast<u8>(type));
+		fmt::throw_exception("Bad vertex data type (%d)!", static_cast<u8>(type));
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
@@ -552,7 +552,7 @@ namespace rsx
 			}
 			break;
 		default:
-			::narrow(tile->comp);
+			fmt::throw_exception("Bad tile compression type (%d)!", tile->comp);
 		}
 	}
 
@@ -603,7 +603,7 @@ namespace rsx
 			}
 			break;
 		default:
-			::narrow(tile->comp);
+			fmt::throw_exception("Bad tile compression type (%d)!", tile->comp);
 		}
 	}
 
