@@ -1646,7 +1646,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			g_fxo->init<main_ppu_module>();
+			ensure(g_fxo->init<main_ppu_module>());
 			vm::init();
 			m_force_boot = false;
 
@@ -2345,7 +2345,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			const auto _main = g_fxo->init<main_ppu_module>();
+			const auto _main = ensure(g_fxo->init<main_ppu_module>());
 
 			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
