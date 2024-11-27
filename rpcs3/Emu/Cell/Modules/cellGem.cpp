@@ -1109,6 +1109,11 @@ static void ps_move_pos_to_gem_state(u32 gem_num, const gem_config::gem_controll
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
+		gem_state->temperature = pad->move_data.temperature;
+		gem_state->accel[0] = pad->move_data.accelerometer_x * 1000; // linear velocity in mm/s²
+		gem_state->accel[1] = pad->move_data.accelerometer_y * 1000; // linear velocity in mm/s²
+		gem_state->accel[2] = pad->move_data.accelerometer_z * 1000; // linear velocity in mm/s²
+
 		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
@@ -1866,7 +1871,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		{
 		case move_handler::real:
 		{
-			// Get temperature
+			// Get temperature and sensor data
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1876,6 +1881,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				if (pad && pad->m_pad_handler == pad_handler::move && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 				{
 					inertial_state->temperature = pad->move_data.temperature;
+					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
+					inertial_state->accelerometer[1] = pad->move_data.accelerometer_y;
+					inertial_state->accelerometer[2] = pad->move_data.accelerometer_z;
+					inertial_state->gyro[0] = pad->move_data.gyro_x;
+					inertial_state->gyro[1] = pad->move_data.gyro_y;
+					inertial_state->gyro[2] = pad->move_data.gyro_z;
 				}
 			}
 

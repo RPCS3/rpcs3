@@ -466,12 +466,12 @@ struct ps_move_data
 	bool external_device_read_requested = false;
 	bool external_device_write_requested = false;
 
-	s16 accelerometer_x = 0;
-	s16 accelerometer_y = 0;
-	s16 accelerometer_z = 0;
-	s16 gyro_x = 0;
-	s16 gyro_y = 0;
-	s16 gyro_z = 0;
+	f32 accelerometer_x = 0; // linear velocity in m/s²
+	f32 accelerometer_y = 0; // linear velocity in m/s²
+	f32 accelerometer_z = 0; // linear velocity in m/s²
+	f32 gyro_x = 0; // linear velocity in m/s²
+	f32 gyro_y = 0; // linear velocity in m/s²
+	f32 gyro_z = 0; // linear velocity in m/s²
 	s16 temperature = 0;
 };
 
