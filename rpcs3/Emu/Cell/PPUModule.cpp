@@ -430,11 +430,11 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 
 	if (ar)
 	{
-		g_fxo->init<hle_vars_save>(*ar);
+		ensure(g_fxo->init<hle_vars_save>(*ar));
 	}
 	else
 	{
-		g_fxo->init<hle_vars_save>();
+		ensure(g_fxo->init<hle_vars_save>());
 	}
 
 	for (auto& pair : ppu_module_manager::get())
@@ -1090,7 +1090,7 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 
 	if (ar)
 	{
-		const u32 addr = g_fxo->init<ppu_function_manager>(*ar)->addr;
+		const u32 addr = ensure(g_fxo->init<ppu_function_manager>(*ar))->addr;
 
 		if (addr % 0x1000 || !vm::check_addr(addr))
 		{
@@ -1098,7 +1098,7 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 		}
 	}
 	else
-		g_fxo->init<ppu_function_manager>();
+		ensure(g_fxo->init<ppu_function_manager>());
 
 	if (full)
 	{
@@ -2279,7 +2279,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	// Static HLE patching
 	if (g_cfg.core.hook_functions && !virtual_load)
 	{
-		auto shle = g_fxo->init<statichle_handler>(0);
+		auto shle = ensure(g_fxo->init<statichle_handler>(0));
 
 		for (u32 i = _main.segs[0].addr; i < (_main.segs[0].addr + _main.segs[0].size); i += 4)
 		{
@@ -2531,11 +2531,14 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			// Make init_mem_containers empty before call
 			const auto callback = std::move(Emu.init_mem_containers);
 			callback(mem_size);
+
+			ensure(g_fxo->is_init<id_manager::id_map<lv2_memory_container>>());
+			ensure(g_fxo->is_init<lv2_memory_container>());
 		}
 		else if (!ar)
 		{
-			g_fxo->init<id_manager::id_map<lv2_memory_container>>();
-			g_fxo->init<lv2_memory_container>(mem_size);
+			ensure(g_fxo->init<id_manager::id_map<lv2_memory_container>>());
+			ensure(g_fxo->init<lv2_memory_container>(mem_size));
 		}
 
 		void init_fxo_for_exec(utils::serial* ar, bool full);

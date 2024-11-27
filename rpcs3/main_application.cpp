@@ -125,7 +125,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case keyboard_handler::null:
 		{
-			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>(Emu.DeserialManager());
+			ensure(g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>(Emu.DeserialManager()));
 			break;
 		}
 		case keyboard_handler::basic:
@@ -162,7 +162,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case mouse_handler::null:
 		{
-			g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
+			ensure(g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager()));
 			break;
 		}
 		case mouse_handler::basic:
@@ -175,7 +175,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 		case mouse_handler::raw:
 		{
-			g_fxo->init<MouseHandlerBase, raw_mouse_handler>(Emu.DeserialManager());
+			ensure(g_fxo->init<MouseHandlerBase, raw_mouse_handler>(Emu.DeserialManager()));
 			break;
 		}
 		}
