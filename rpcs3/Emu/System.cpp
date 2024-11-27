@@ -1007,12 +1007,12 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
-	if (m_restrict_emu_state_change)
+	if (recursion_count == 0 && m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
 	}
 
-	if (m_state != system_state::stopped)
+	if (recursion_count == 0 && m_state != system_state::stopped)
 	{
 		return game_boot_result::still_running;
 	}
@@ -1020,20 +1020,25 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 	struct cleanup_t
 	{
 		Emulator* _this;
-		bool cleanup = true;
+		usz recursion_count;
 
 		~cleanup_t() noexcept
 		{
+			if (recursion_count != 0)
+			{
+				return;
+			}
+
 			_this->m_state.compare_and_swap_test(system_state::loading, system_state::stopped);
 
-			if (cleanup && _this->IsStopped())
+			if (_this->IsStopped())
 			{
 				_this->Kill(false);
 			}
 		}
-	} cleanup{this};
+	} cleanup{this, recursion_count};
 
-	ensure(m_state.compare_and_swap_test(system_state::stopped, system_state::loading));
+	ensure(recursion_count != 0 || m_state.compare_and_swap_test(system_state::stopped, system_state::loading));
 
 	const auto guard = MakeEmulationStateGuard();
 
