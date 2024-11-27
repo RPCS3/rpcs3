@@ -1789,6 +1789,8 @@ fs::file_id fs::file::get_id() const
 
 bool fs::dir::open(const std::string& path)
 {
+	m_dir.reset();
+
 	if (path.empty())
 	{
 		// Don't allow opening empty path (TODO)
