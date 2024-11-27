@@ -4001,14 +4001,20 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 		games_added++;
 	}
 
-	fs::dir fs_dir{path};
+	std::vector<fs::dir_entry> entries;
 
-	auto path_it = fs_dir.begin();
+	for (auto&& dir_entry : fs::dir(path))
+	{
+		// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
+		entries.emplace_back(std::move(dir_entry));
+	}
+
+	auto path_it = entries.begin();
 
 	qt_events_aware_op(0, [&]()
 	{
 		// search direct subdirectories, that way we can drop one folder containing all games
-		for (; path_it != fs_dir.end(); ++path_it)
+		for (; path_it != entries.end(); ++path_it)
 		{
 			auto dir_entry = std::move(*path_it);
 
