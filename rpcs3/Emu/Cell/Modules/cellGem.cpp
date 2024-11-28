@@ -2644,6 +2644,7 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 		{
 			gem.controllers[i].enabled_tracking = true;
 			gem.controllers[i].enabled_LED = true;
+			gem.controllers[i].hue_set = true;
 
 			// TODO: set hue based on tracker data
 
@@ -2673,6 +2674,7 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 		{
 			gem.controllers[i].enabled_tracking = false;
 			gem.controllers[i].enabled_LED = false;
+			gem.controllers[i].hue_set = false;
 
 			if (res_hues)
 			{
@@ -2688,6 +2690,7 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 			gem.controllers[i].enabled_tracking = true;
 			gem.controllers[i].enabled_LED = true;
+			gem.controllers[i].hue_set = true;
 			gem.controllers[i].hue = req_hues[i];
 
 			// TODO: set hue of tracker
@@ -2697,8 +2700,6 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 				res_hues[i] = gem.controllers[i].hue;
 			}
 		}
-
-		gem.controllers[i].hue_set = true;
 	}
 
 	return CELL_OK;
