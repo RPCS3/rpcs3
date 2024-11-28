@@ -1187,11 +1187,26 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 
 	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 
+	std::vector<v128> gpr_saved(128);
+	be_t<u32> rdata_saved[32]{};
+	u32 saved_pc = umax;
+
+	// Load PC, GPRs and reservation data atomically
+	// We may not load the entire context atomically, but there is importance their state being intact for debugging
+	do
+	{
+		saved_pc = pc;
+		std::memcpy(gpr_saved.data(), gpr.data(), sizeof(v128) * gpr.size());
+		std::memcpy(rdata_saved, rdata, sizeof(rdata));
+		atomic_fence_acquire();
+	}
+	while (saved_pc != pc || std::memcmp(rdata_saved, rdata, sizeof(rdata)) != 0 || std::memcmp(gpr_saved.data(), gpr.data(), sizeof(v128) * gpr.size()) != 0);
+
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
-		const auto r = gpr[i];
+		const auto r = gpr_saved[i];
 
-		auto [is_const, const_value] = dis_asm.try_get_const_value(i, pc);
+		auto [is_const, const_value] = dis_asm.try_get_const_value(i, saved_pc & ~3);
 
 		if (const_value != r)
 		{
@@ -1353,13 +1368,10 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 
 	fmt::append(ret, "Reservation Data:\n");
 
-	be_t<u32> data[32]{};
-	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop
-
-	for (usz i = 0; i < std::size(data); i += 4)
+	for (usz i = 0; i < std::size(rdata_saved); i += 4)
 	{
-		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(data[0])
-			, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(rdata_saved[0])
+			, rdata_saved[i + 0], rdata_saved[i + 1], rdata_saved[i + 2], rdata_saved[i + 3]);
 	}
 }
 
@@ -7417,7 +7429,22 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 	u32 vals[4]{};
 	const uint count = ch.try_read(vals);
 
-	fmt::append(out, "count = %d, data:\n", count);
+	if (count == 0u)
+	{
+		out += "empty\n\n";
+		return;
+	}
+
+	fmt::append(out, "data:");
+
+	if (count > 1u)
+	{
+		out += '\n';
+	}
+	else
+	{
+		out += ' ';
+	}
 
 	out += "{ ";
 
@@ -7432,6 +7459,12 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 	}
 
 	out += " }\n";
+
+	if (count <= 1u)
+	{
+		// Keep the amount of lines consistent
+		out += '\n';
+	}
 }
 
 DECLARE(spu_thread::g_raw_spu_ctr){};

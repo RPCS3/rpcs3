@@ -109,13 +109,15 @@ extern thread_local std::string(*g_tls_log_prefix)();
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
+enum cpu_threads_emulation_info_dump_t : u32 {};
+
 std::string dump_useful_thread_info()
 {
 	std::string result;
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		cpu->dump_all(result);
+		fmt::append(result, "%s", cpu_threads_emulation_info_dump_t{cpu->id});
 	}
 
 	return result;
