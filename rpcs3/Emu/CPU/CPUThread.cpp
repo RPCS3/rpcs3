@@ -8,6 +8,7 @@
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/RSX/RSXThread.h"
@@ -17,6 +18,7 @@
 #include <thread>
 #include <unordered_map>
 #include <map>
+#include <shared_mutex>
 
 #if defined(ARCH_X64)
 #include <emmintrin.h>
@@ -73,6 +75,87 @@ template<>
 void fmt_class_string<bs_t<cpu_flag>>::format(std::string& out, u64 arg)
 {
 	format_bitset(out, arg, "[", "|", "]", &fmt_class_string<cpu_flag>::format);
+}
+
+enum cpu_threads_emulation_info_dump_t : u32 {};
+
+template<>
+void fmt_class_string<cpu_threads_emulation_info_dump_t>::format(std::string& out, u64 arg)
+{
+	// Do not dump all threads, only select few
+	// Aided by thread ID for filtering
+	const u32 must_have_cpu_id = static_cast<u32>(arg);
+
+	// Dump main_thread
+	const auto main_ppu = idm::get<named_thread<ppu_thread>>(ppu_thread::id_base);
+
+	if (main_ppu)
+	{
+		fmt::append(out, "\n%s's thread context:\n", main_ppu->get_name());
+		main_ppu->dump_all(out);
+	}
+
+	if (must_have_cpu_id >> 24 == ppu_thread::id_base >> 24)
+	{
+		if (must_have_cpu_id != ppu_thread::id_base)
+		{
+			const auto selected_ppu = idm::get<named_thread<ppu_thread>>(must_have_cpu_id);
+
+			if (selected_ppu)
+			{
+				fmt::append(out, "\n%s's thread context:\n", selected_ppu->get_name());
+				selected_ppu->dump_all(out);
+			}
+		}
+	}
+	else if (must_have_cpu_id >> 24 == spu_thread::id_base >> 24)
+	{
+		const auto selected_spu = idm::get<named_thread<spu_thread>>(must_have_cpu_id);
+
+		if (selected_spu)
+		{
+			if (selected_spu->get_type() == spu_type::threaded && selected_spu->group->max_num > 1u)
+			{
+				// Dump the information of the entire group
+				// Do not block because it is a potentially sensitive context
+				std::shared_lock rlock(selected_spu->group->mutex, std::defer_lock);
+
+				for (u32 i = 0; !rlock.try_lock() && i < 100; i++)
+				{
+					busy_wait();
+				}
+
+				if (rlock)
+				{
+					for (const auto& spu : selected_spu->group->threads)
+					{
+						if (spu && spu != selected_spu)
+						{
+							fmt::append(out, "\n%s's thread context:\n", spu->get_name());
+							spu->dump_all(out);
+						}
+					}
+				}
+				else
+				{
+					fmt::append(out, "\nFailed to dump SPU thread group's thread's information!");
+				}
+
+				// Print the specified SPU thread last
+			}
+
+			fmt::append(out, "\n%s's thread context:\n", selected_spu->get_name());
+			selected_spu->dump_all(out);
+		}
+	}
+	else if (must_have_cpu_id >> 24 == rsx::thread::id_base >> 24)
+	{
+		if (auto rsx = rsx::get_current_renderer())
+		{
+			fmt::append(out, "\n%s's thread context:\n", rsx->get_name());
+			rsx->dump_all(out);
+		}
+	}
 }
 
 // CPU profiler thread
