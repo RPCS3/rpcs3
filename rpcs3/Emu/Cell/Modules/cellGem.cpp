@@ -232,7 +232,7 @@ public:
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
-		f32 distance{1500.0f};                             // Distance from the camera in mm
+		f32 distance_mm{1500.0f};                          // Distance from the camera in mm
 		f32 radius{10.0f};                                 // Radius of the sphere in camera pixels
 		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
 
@@ -817,7 +817,7 @@ public:
 					{
 						// Only set new radius and distance if the radius is valid
 						controller.radius = info.radius;
-						controller.distance = info.distance;
+						controller.distance_mm = info.distance_mm;
 					}
 				}
 			}
@@ -894,8 +894,8 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	gem_image_state->v = image_y;
 
 	// Projected camera coordinates in mm
-	gem_image_state->projectionx = camera_x / controller.distance;
-	gem_image_state->projectiony = camera_y / controller.distance;
+	gem_image_state->projectionx = camera_x / controller.distance_mm;
+	gem_image_state->projectiony = camera_y / controller.distance_mm;
 
 	if (g_cfg.io.show_move_cursor)
 	{
@@ -929,7 +929,7 @@ static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controlle
 	// World coordinates in mm
 	gem_state->pos[0] = camera_x;
 	gem_state->pos[1] = camera_y;
-	gem_state->pos[2] = static_cast<f32>(controller.distance);
+	gem_state->pos[2] = controller.distance_mm;
 	gem_state->pos[3] = 0.f;
 
 	gem_state->quat[0] = 320.f - image_x;
@@ -939,7 +939,7 @@ static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controlle
 	// TODO: calculate handle position based on our world coordinate and the angles
 	gem_state->handle_pos[0] = camera_x;
 	gem_state->handle_pos[1] = camera_y;
-	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
+	gem_state->handle_pos[2] = controller.distance_mm + 10.0f;
 	gem_state->handle_pos[3] = 0.f;
 
 	if (g_cfg.io.show_move_cursor)
@@ -1800,7 +1800,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
 		gem_image_state->r = controller.radius; // Radius in camera pixels
-		gem_image_state->distance = controller.distance; // 1.5 meters away from camera
+		gem_image_state->distance = controller.distance_mm;
 		gem_image_state->visible = gem.is_controller_ready(gem_num);
 		gem_image_state->r_valid = controller.radius_valid;
 

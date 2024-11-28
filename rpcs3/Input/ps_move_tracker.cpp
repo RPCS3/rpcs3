@@ -408,9 +408,18 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	if (best_index == umax)
 		return;
 
+	// Calculate distance from sphere to camera
+	const f32 sphere_radius_pixels = radii[best_index];
+	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
+	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
+	const f32 image_width_pixels = static_cast<float>(width);
+	const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
+	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
+
+	// Set results
 	info.valid = true;
-	info.distance = 1500.0f;
-	info.radius = radii[best_index];
+	info.distance_mm = distance_mm;
+	info.radius = sphere_radius_pixels;
 	info.x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
 	info.y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
 
