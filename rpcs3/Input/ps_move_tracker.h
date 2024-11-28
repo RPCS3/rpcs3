@@ -8,13 +8,13 @@
 
 struct ps_move_info
 {
-	bool valid = false;
-	f32 radius = 0.0f;
-	f32 distance = 0.0f;
-	u32 x_pos = 0;
-	u32 y_pos = 0;
-	u32 x_max = 0;
-	u32 y_max = 0;
+	bool valid = false;     // The tracking result
+	f32 radius = 0.0f;      // Radius of the sphere in pixels
+	f32 distance_mm = 0.0f; // Distance from sphere to camera in mm
+	u32 x_pos = 0;          // X position in pixels
+	u32 y_pos = 0;          // Y position in pixels
+	u32 x_max = 0;          // Maximum X position in pixels
+	u32 y_max = 0;          // Maximum Y position in pixels
 };
 
 template <bool DiagnosticsEnabled = false>
