@@ -466,12 +466,13 @@ struct ps_move_data
 	bool external_device_read_requested = false;
 	bool external_device_write_requested = false;
 
+	std::array<f32, 4> quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
 	f32 accelerometer_x = 0; // linear velocity in m/s²
 	f32 accelerometer_y = 0; // linear velocity in m/s²
 	f32 accelerometer_z = 0; // linear velocity in m/s²
-	f32 gyro_x = 0; // linear velocity in m/s²
-	f32 gyro_y = 0; // linear velocity in m/s²
-	f32 gyro_z = 0; // linear velocity in m/s²
+	f32 gyro_x = 0; // angular velocity in rad/s
+	f32 gyro_y = 0; // angular velocity in rad/s
+	f32 gyro_z = 0; // angular velocity in rad/s
 	s16 temperature = 0;
 };
 
