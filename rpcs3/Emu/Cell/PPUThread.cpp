@@ -2297,6 +2297,27 @@ void ppu_thread::cpu_on_stop()
 	}
 }
 
+void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
+{
+	// Meanwhile while waiting, notify SPU waiters
+	if (u32 addr = res_notify)
+	{
+		res_notify = 0;
+
+		if (res_notify_time == vm::reservation_notifier_count_index(addr).second)
+		{
+			vm::reservation_notifier_notify(addr);
+		}
+	}
+
+	if (old != state)
+	{
+		return;
+	}
+
+	state.wait(old);
+}
+
 void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
