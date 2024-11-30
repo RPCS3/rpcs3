@@ -562,6 +562,11 @@ public:
 	{
 		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
+		if (ppu.state & cpu_flag::again) // Savestate was created while waiting on the mutex
+		{
+			return {};
+		}
+
 		if (entries[front].state == 0xff)
 		{
 			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE

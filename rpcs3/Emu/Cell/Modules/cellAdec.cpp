@@ -800,6 +800,15 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 
 	const auto core_ops = get_core_ops(type->audioCodecType);
 
+	// Block savestate creation during ppu_thread::fast_call()
+	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
+
+	if (!savestate_lock.owns_lock())
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	const s32 pcm_handle_num = core_ops->getPcmHandleNum(ppu);
 	const u32 bitstream_info_size = core_ops->getBsiInfoSize(ppu);
 
@@ -861,15 +870,6 @@ error_code adecOpen(ppu_thread& ppu, vm::ptr<CellAdecType> type, vm::cptr<CellAd
 	const auto notifyPcmOut = vm::ptr<AdecNotifyPcmOut>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifyPcmOut)));
 	const auto notifyError = vm::ptr<AdecNotifyError>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifyError)));
 	const auto notifySeqDone = vm::ptr<AdecNotifySeqDone>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(adecNotifySeqDone)));
-
-	// Block savestate creation during ppu_thread::fast_call()
-	std::unique_lock savestate_lock{g_fxo->get<hle_locks_t>(), std::try_to_lock};
-
-	if (!savestate_lock.owns_lock())
-	{
-		ppu.state += cpu_flag::again;
-		return {};
-	}
 
 	if (spursRes)
 	{
