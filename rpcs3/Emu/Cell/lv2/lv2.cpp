@@ -1335,7 +1335,7 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 		{
 			static_cast<ppu_thread&>(cpu).res_notify = 0;
 
-			if (static_cast<ppu_thread&>(cpu).res_notify_time != (vm::reservation_acquire(addr) & -128))
+			if (static_cast<ppu_thread&>(cpu).res_notify_time != vm::reservation_notifier_count_index(addr).second)
 			{
 				// Ignore outdated notification request
 			}
@@ -1388,7 +1388,7 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 		{
 			ppu->res_notify = 0;
 
-			if (ppu->res_notify_time != (vm::reservation_acquire(addr) & -128))
+			if (ppu->res_notify_time != vm::reservation_notifier_count_index(addr).second)
 			{
 				// Ignore outdated notification request
 			}
