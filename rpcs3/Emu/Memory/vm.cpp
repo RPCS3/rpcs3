@@ -387,6 +387,9 @@ namespace vm
 			ok = false;
 		}
 
+		// Do some CPU work
+		cpu.cpu_wait(+cpu_flag::exit);
+
 		if (!ok || cpu.state & cpu_flag::memory)
 		{
 			for (u64 i = 0;; i++)
