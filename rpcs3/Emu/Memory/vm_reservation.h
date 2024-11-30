@@ -45,14 +45,24 @@ namespace vm
 
 	static inline std::pair<atomic_t<reservation_waiter_t>*, atomic_t<reservation_waiter_t>*> reservation_notifier(u32 raddr)
 	{
-		extern std::array<atomic_t<reservation_waiter_t>, 512> g_resrv_waiters_count;
+		extern std::array<atomic_t<reservation_waiter_t>, 1024> g_resrv_waiters_count;
 
 		// Storage efficient method to distinguish different nearby addresses (which are likely)
-		const usz index = std::popcount(raddr & -512) + ((raddr / 128) % 4) * 32;
-		auto& waiter = g_resrv_waiters_count[index * 4];
-		return { &g_resrv_waiters_count[index * 4 + waiter.load().waiters_index % 4], &waiter };
+		constexpr u32 wait_vars_for_each = 8;
+		constexpr u32 unique_address_bit_mask = 0b11;
+		const usz index = std::popcount(raddr & -1024) + ((raddr / 128) & unique_address_bit_mask) * 32;
+		auto& waiter = g_resrv_waiters_count[index * wait_vars_for_each];
+		return { &g_resrv_waiters_count[index * wait_vars_for_each + waiter.load().waiters_index % wait_vars_for_each], &waiter };
 	}
 
+	// Returns waiter count and index
+	static inline std::pair<u32, u32> reservation_notifier_count_index(u32 raddr)
+	{
+		const auto notifiers = reservation_notifier(raddr);
+		return { notifiers.first->load().waiters_count, static_cast<u32>(notifiers.first - notifiers.second) };
+	}
+
+	// Returns waiter count
 	static inline u32 reservation_notifier_count(u32 raddr)
 	{
 		return reservation_notifier(raddr).first->load().waiters_count;
