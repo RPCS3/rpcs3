@@ -516,9 +516,14 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
-	if (!render->dma_address || context_id != 0x55555555)
+	if (!render->dma_address)
 	{
-		return CELL_EINVAL;
+		return { CELL_EINVAL, "dma_address is 0" };
+	}
+
+	if (context_id != 0x55555555)
+	{
+		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(render->driver_info);
@@ -534,7 +539,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		set_rsx_dmactl(render, get_put);
 		break;
 	}
-
 	case 0x100: // Display mode set
 		break;
 	case 0x101: // Display sync set, cellGcmSetFlipMode
@@ -594,9 +598,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			return {};
 		}
+		break;
 	}
-	break;
-
 	case 0x103: // Display Queue
 	{
 		// NOTE: There currently seem to only be 2 active heads on PS3
@@ -615,9 +618,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			render->post_vblank_event(get_system_time());
 		}
+		break;
 	}
-	break;
-
 	case 0x104: // Display buffer
 	{
 		const u8 id = a3 & 0xFF;
@@ -641,9 +643,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		render->display_buffers[id].offset = offset;
 
 		render->display_buffers_count = std::max<u32>(id + 1, render->display_buffers_count);
+		break;
 	}
-	break;
-
 	case 0x105: // destroy buffer?
 		break;
 
@@ -684,9 +685,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			flipStatus = (flipStatus & static_cast<u32>(a4)) | static_cast<u32>(a5);
 		});
+		break;
 	}
-	break;
-
 	case 0x10D: // Called by cellGcmInitCursor
 		break;
 
@@ -721,7 +721,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			if (!size || !pitch)
 			{
-				return CELL_EINVAL;
+				return { CELL_EINVAL, "size or pitch are 0 (size=%d, pitch=%d)", size, pitch };
 			}
 
 			u32 limit = -1;
@@ -735,7 +735,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			if (!range.valid() || range.end >= limit)
 			{
-				return CELL_EINVAL;
+				return { CELL_EINVAL, "range invalid (valid=%d, end=%d, limit=%d)", range.valid(), range.end, limit };
 			}
 
 			// Hardcoded value in gcm
@@ -757,7 +757,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			{
 				if (render->iomap_table.ea[io] == umax)
 				{
-					return CELL_EINVAL;
+					return { CELL_EINVAL, "iomap_table ea is umax" };
 				}
 			}
 		}
@@ -770,9 +770,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		tile.base = base;
 		tile.bank = base;
 		tile.bound = bound;
+		break;
 	}
-	break;
-
 	case 0x301: // Depth-buffer (Z-cull)
 	{
 		//a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
@@ -806,7 +805,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			// width and height are not allowed to be zero (checked by range.valid())
 			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= render->local_mem_size)
 			{
-				return CELL_EINVAL;
+				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, render->local_mem_size };
 			}
 
 			if (a5 & 0xF0000000)
@@ -835,8 +834,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		zcull.sRef = ((a6 >> 32) >> 16) & 0xFF;
 		zcull.sMask = ((a6 >> 32) >> 24) & 0xFF;
 		zcull.bound = bound;
+		break;
 	}
-	break;
 
 	case 0x302: // something with zcull
 		break;
@@ -867,13 +866,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
 	}
-
 	case 0xFED: // hack: vblank command
 	{
 		if (cpu_thread::get_current<ppu_thread>())
 		{
 			// VBLANK/RSX thread only
-			return CELL_EINVAL;
+			return { CELL_EINVAL, "wrong thread" };
 		}
 
 		// NOTE: There currently seem to only be 2 active heads on PS3
@@ -916,7 +914,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 
 	default:
-		return CELL_EINVAL;
+		return { CELL_EINVAL, "unsupported package id %d", package_id };
 	}
 
 	return CELL_OK;
