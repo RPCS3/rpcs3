@@ -39,13 +39,14 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   git clone https://github.com/engnr/qt-downloader.git
   cd qt-downloader
   git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
-  # nested Qt 6.8.0 URL workaround
+  # nested Qt 6.8.1 URL workaround
   sed -i '' "s/'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/'qt{0}_{0}{1}{2}'.format(major, minor, patch), 'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/g" qt-downloader
   sed -i '' "s/'{}\/{}\/qt{}_{}\/'/'{0}\/{1}\/qt{2}_{3}\/qt{2}_{3}\/'/g" qt-downloader
   cd "/tmp/Qt"
   "$BREW_X64_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
-  "$BREW_X64_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats
+  sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader" # Qt 6.8.1 workaround
+  "$BREW_X64_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats -o "$QT_VER/clang_64"
 fi
 
 cd "$WORKDIR"
