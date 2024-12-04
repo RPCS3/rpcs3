@@ -163,16 +163,17 @@ bool gui_application::Init()
 
 		bool use_dark_theme = false;
 
-		connect(welcome, &QDialog::accepted, this, [&]()
+		connect(welcome, &QDialog::finished, this, [&]()
 		{
-			use_dark_theme = welcome->does_user_want_dark_theme();
+			use_dark_theme = welcome->use_dark_theme();
 		});
 
+		// welcome dialog is auto-flagged (in its constructor) as WA_DeleteOnClose, so its pointer is no more usable after welcome->exec()
 		welcome->exec();
 
 		if (use_dark_theme)
 		{
-			m_gui_settings->SetValue(gui::m_currentStylesheet, "Darker Style by TheMitoSan");
+			m_gui_settings->SetValue(gui::m_currentStylesheet, gui::DarkStylesheet);
 		}
 	}
 

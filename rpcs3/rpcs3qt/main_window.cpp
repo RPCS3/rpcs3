@@ -3275,6 +3275,8 @@ void main_window::CreateConnects()
 	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
+
+		// welcome dialog is auto-flagged (in its constructor) as WA_DeleteOnClose, so its pointer is no more usable after welcome->open()
 		welcome->open();
 	});
 
