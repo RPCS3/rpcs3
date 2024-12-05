@@ -161,15 +161,6 @@ bool gui_application::Init()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 
-		connect(welcome, &QDialog::finished, this, [&]()
-		{
-			if (welcome->use_dark_theme())
-			{
-				m_gui_settings->SetValue(gui::m_currentStylesheet, gui::DarkStylesheet);
-			}
-		});
-
-		// welcome dialog is auto-flagged (in its constructor) as WA_DeleteOnClose, so its pointer is no more usable after welcome->exec()
 		welcome->exec();
 	}
 
