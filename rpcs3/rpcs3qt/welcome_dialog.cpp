@@ -15,6 +15,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	: QDialog(parent)
 	, ui(new Ui::welcome_dialog)
 	, m_gui_settings(std::move(gui_settings))
+	, m_use_dark_theme(gui::utils::dark_mode_active())
 {
 	ui->setupUi(this);
 
@@ -27,7 +28,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->do_not_show->setEnabled(!is_manual_show);
 	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 	ui->use_dark_theme->setEnabled(!is_manual_show);
-	ui->use_dark_theme->setChecked(gui::utils::dark_mode_active());
+	ui->use_dark_theme->setChecked(m_use_dark_theme);
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 	ui->label_3->setText(tr(
 		R"(

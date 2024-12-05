@@ -24,5 +24,5 @@ public:
 private:
 	std::unique_ptr<Ui::welcome_dialog> ui;
 	std::shared_ptr<gui_settings> m_gui_settings;
-	bool m_use_dark_theme = false;
+	bool m_use_dark_theme;
 };
