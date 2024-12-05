@@ -27,20 +27,66 @@ namespace utils
 
 #include "Utilities/sync.h"
 #include "Utilities/StrFmt.h"
+#include <sys/utsname.h>
 
 #ifdef __linux__
-static bool has_waitv()
-{
-	static const bool s_has_waitv = []
-	{
-		syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
-		if (errno == ENOSYS)
-			return false;
-		return true;
-	}();
 
-	return s_has_waitv;
+bool is_kernel_at_least(int required_major, int required_minor, int required_patch)
+    {
+    struct utsname buf {};
+    if (uname(&buf) == -1) {
+        return false;
+    }
+
+    int major = 0, minor = 0, patch = 0;
+    const char* end = buf.release + sizeof(buf.release);
+    auto result = std::from_chars(buf.release, end, major, 10);
+    if (result.ec != std::errc{}) {
+        return false;
+    }
+
+    result = std::from_chars(result.ptr + 1, end, minor, 10);
+    if (result.ec != std::errc{}) {
+        return false;
+    }
+
+    result = std::from_chars(result.ptr + 1, end, patch, 10);
+    if (result.ec != std::errc{}) {
+        return false;
+    }
+
+    if (major > required_major || (major == required_major && (minor > required_minor || (minor == required_minor && patch >= required_patch)))) {
+        return true;
+    } else {
+        return false;
+    }
 }
+
+static bool has_waitv() {
+
+#ifdef RESTRICTED_SELINUX
+
+return false;
+
+#endif
+
+    static const  bool s_has_waitv = [] {
+        if (is_kernel_at_least(5, 15, 0)) {
+            // Kernel >= 5.15
+            printf("kernel >= 5.16");
+            syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
+            return errno != ENOSYS;
+        } else {
+            // Kernel < 5.15
+            printf("kernel <= 5.16");
+            syscall(SYS_futex, 0, FUTEX_WAIT, 0, nullptr, nullptr, 0);
+            return errno != ENOSYS;
+        }
+    }();
+
+    return s_has_waitv;
+}
+
 #endif
 
 #include <utility>

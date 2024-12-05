@@ -14,6 +14,7 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 endif()
 
+option(USE_RESTRICTED_SELINUX "compatibility mode for selinux restricted" OFF)
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
 option(BUILD_LLVM "Build LLVM from git submodule" OFF)
@@ -135,6 +136,10 @@ endif()
 
 if(NOT WIN32)
     add_compile_options(-pthread)
+endif()
+
+if(USE_RESTRICTED_KELINUX)
+    add_compile_definitions(RESTRICTED_SELINUX)
 endif()
 
 # TODO: do real installation, including copying directory structure
