@@ -22,10 +22,11 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	setWindowFlag(Qt::WindowCloseButtonHint, is_manual_show);
 
 	ui->okay->setEnabled(is_manual_show);
-	ui->i_have_read->setChecked(is_manual_show);
 	ui->i_have_read->setEnabled(!is_manual_show);
+	ui->i_have_read->setChecked(is_manual_show);
 	ui->do_not_show->setEnabled(!is_manual_show);
 	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
+	ui->use_dark_theme->setEnabled(!is_manual_show);
 	ui->use_dark_theme->setChecked(gui::utils::dark_mode_active());
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 	ui->label_3->setText(tr(
@@ -76,7 +77,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-	connect(this, &QDialog::finished, this, [this]()
+	connect(this, &QDialog::accepted, this, [this]()
 	{
 		if (ui->create_desktop_shortcut->isChecked())
 		{
@@ -88,7 +89,10 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 			gui::utils::create_shortcut("RPCS3", "", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
 		}
 
-		m_user_wants_dark_theme = ui->use_dark_theme->isChecked();
+		if (ui->use_dark_theme->isChecked() && ui->use_dark_theme->isEnabled()) // if checked and also on initial welcome dialog
+		{
+			m_gui_settings->SetValue(gui::m_currentStylesheet, gui::DarkStylesheet);
+		}
 	});
 }
 

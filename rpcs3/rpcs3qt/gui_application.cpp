@@ -161,19 +161,7 @@ bool gui_application::Init()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 
-		bool use_dark_theme = false;
-
-		connect(welcome, &QDialog::accepted, this, [&]()
-		{
-			use_dark_theme = welcome->does_user_want_dark_theme();
-		});
-
 		welcome->exec();
-
-		if (use_dark_theme)
-		{
-			m_gui_settings->SetValue(gui::m_currentStylesheet, "Darker Style by TheMitoSan");
-		}
 	}
 
 	// Check maxfiles
