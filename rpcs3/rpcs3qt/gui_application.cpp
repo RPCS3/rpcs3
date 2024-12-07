@@ -161,7 +161,11 @@ bool gui_application::Init()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 
-		welcome->exec();
+		if (welcome->exec() == QDialog::Rejected)
+		{
+			// if the agreement on RPCS3's usage conditions was not accecped by the user, ask the main window to softly terminate
+			return false;
+		}
 	}
 
 	// Check maxfiles
