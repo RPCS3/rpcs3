@@ -163,7 +163,7 @@ bool gui_application::Init()
 
 		if (welcome->exec() == QDialog::Rejected)
 		{
-			// If the agreement on RPCS3's usage conditions was not accecpted by the user, ask the main window to gracefully terminate
+			// If the agreement on RPCS3's usage conditions was not accepted by the user, ask the main window to gracefully terminate
 			return false;
 		}
 	}

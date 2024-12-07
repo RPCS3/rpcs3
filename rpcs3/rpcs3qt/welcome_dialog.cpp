@@ -103,7 +103,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	connect(this, &QDialog::rejected, this, [this]() // "reject" signal's event handler
 	{
-		// if the agreement on RPCS3's usage conditions was not accecpted by the user, always display the initial welcome dialog at next startup
+		// if the agreement on RPCS3's usage conditions was not accepted by the user, always display the initial welcome dialog at next startup
 		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(true));
 	});
 }
