@@ -1855,18 +1855,18 @@ void main_window::SaveWindowState() const
 	// to initialize some modules leaving other modules uninitialized (NULL pointed).
 	// So, the following checks on NULL pointer are provided before accessing the related module's object
 
-	if (m_mw != nullptr)
+	if (m_mw)
 	{
 		m_gui_settings->SetValue(gui::mw_mwState, m_mw->saveState(), true);
 	}
 
-	if (m_game_list_frame != nullptr)
+	if (m_game_list_frame)
 	{
 		// Save column settings
 		m_game_list_frame->SaveSettings();
 	}
 
-	if (m_debugger_frame != nullptr)
+	if (m_debugger_frame)
 	{
 		// Save splitter state
 		m_debugger_frame->SaveSettings();

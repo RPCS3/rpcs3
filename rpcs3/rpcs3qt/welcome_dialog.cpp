@@ -51,9 +51,9 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->use_dark_theme->setVisible(false);
 	ui->use_dark_theme->setEnabled(false);
 #else
-	#ifndef _WIN32
-		ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
-	#endif
+#ifndef _WIN32
+	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
+#endif
 
 	ui->use_dark_theme->setVisible(!is_manual_show);
 	ui->use_dark_theme->setEnabled(!is_manual_show);
@@ -103,7 +103,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	connect(this, &QDialog::rejected, this, [this]() // "reject" signal's event handler
 	{
-		// if the agreement on RPCS3's usage conditions was not accecped by the user, always display the initial welcome dialog at next startup
+		// if the agreement on RPCS3's usage conditions was not accecpted by the user, always display the initial welcome dialog at next startup
 		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(true));
 	});
 }
