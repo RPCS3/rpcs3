@@ -19,17 +19,12 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->setupUi(this);
 
 	setAttribute(Qt::WA_DeleteOnClose);
-	setWindowFlag(Qt::WindowCloseButtonHint, is_manual_show);
+	setWindowFlag(Qt::WindowCloseButtonHint, false); // disable the close button shown on the dialog's top right corner
+	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
-	ui->okay->setEnabled(is_manual_show);
-	ui->i_have_read->setEnabled(!is_manual_show);
-	ui->i_have_read->setChecked(is_manual_show);
-	ui->do_not_show->setEnabled(!is_manual_show);
-	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
-	ui->use_dark_theme->setEnabled(!is_manual_show);
-	ui->use_dark_theme->setChecked(gui::utils::dark_mode_active());
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
-	ui->label_3->setText(tr(
+
+	ui->label_desc->setText(tr(
 		R"(
 			<p style="white-space: nowrap;">
 				RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.<br>
@@ -51,33 +46,44 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 		)"
 	).arg(gui::utils::get_link_style()));
 
+#ifdef __APPLE__
+	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
+	ui->use_dark_theme->setVisible(false);
+	ui->use_dark_theme->setEnabled(false);
+#else
+#ifndef _WIN32
+	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
+#endif
+
+	ui->use_dark_theme->setVisible(!is_manual_show);
+	ui->use_dark_theme->setEnabled(!is_manual_show);
+	ui->use_dark_theme->setChecked(gui::utils::dark_mode_active());
+#endif
+
+	ui->accept->setEnabled(is_manual_show);
+	ui->reject->setVisible(!is_manual_show);
+	ui->i_have_read->setVisible(!is_manual_show);
+	ui->i_have_read->setChecked(is_manual_show);
+	ui->show_at_startup->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
+
 	if (!is_manual_show)
 	{
 		connect(ui->i_have_read, &QCheckBox::clicked, this, [this](bool checked)
 		{
-			ui->okay->setEnabled(checked);
-		});
-
-		connect(ui->do_not_show, &QCheckBox::clicked, this, [this](bool checked)
-		{
-			m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
+			ui->accept->setEnabled(checked);
+			ui->reject->setEnabled(!checked);
 		});
 	}
 
-	connect(ui->okay, &QPushButton::clicked, this, &QDialog::accept);
+	connect(ui->show_at_startup, &QCheckBox::clicked, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(checked));
+	});
 
-#ifdef _WIN32
-	ui->create_applications_menu_shortcut->setText(tr("&Create Start Menu shortcut"));
-#elif defined(__APPLE__)
-	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
-	ui->use_dark_theme->setVisible(false);
-#else
-	ui->create_applications_menu_shortcut->setText(tr("&Create Application Menu shortcut"));
-#endif
+	connect(ui->accept, &QPushButton::clicked, this, &QDialog::accept); // trigger "accept" signal (setting also dialog's result code to QDialog::Accepted)
+	connect(ui->reject, &QPushButton::clicked, this, &QDialog::reject); // trigger "reject" signal (setting also dialog's result code to QDialog::Rejected)
 
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-	connect(this, &QDialog::accepted, this, [this]()
+	connect(this, &QDialog::accepted, this, [this]() // "accept" signal's event handler
 	{
 		if (ui->create_desktop_shortcut->isChecked())
 		{
@@ -93,6 +99,12 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 		{
 			m_gui_settings->SetValue(gui::m_currentStylesheet, gui::DarkStylesheet);
 		}
+	});
+
+	connect(this, &QDialog::rejected, this, [this]() // "reject" signal's event handler
+	{
+		// if the agreement on RPCS3's usage conditions was not accepted by the user, always display the initial welcome dialog at next startup
+		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(true));
 	});
 }
 
