@@ -286,9 +286,9 @@
         </spacer>
        </item>
        <item alignment="Qt::AlignLeft">
-        <widget class="QCheckBox" name="do_not_show">
+        <widget class="QCheckBox" name="show_at_startup">
          <property name="text">
-          <string>Do not show again</string>
+          <string>Show at startup</string>
          </property>
         </widget>
        </item>

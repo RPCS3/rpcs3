@@ -64,8 +64,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	ui->reject->setVisible(!is_manual_show);
 	ui->i_have_read->setVisible(!is_manual_show);
 	ui->i_have_read->setChecked(is_manual_show);
-	ui->do_not_show->setVisible(!is_manual_show);
-	ui->do_not_show->setChecked(!m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
+	ui->show_at_startup->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 
 	if (!is_manual_show)
 	{
@@ -74,12 +73,12 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 			ui->accept->setEnabled(checked);
 			ui->reject->setEnabled(!checked);
 		});
-
-		connect(ui->do_not_show, &QCheckBox::clicked, this, [this](bool checked)
-		{
-			m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
-		});
 	}
+
+	connect(ui->show_at_startup, &QCheckBox::clicked, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::ib_show_welcome, QVariant(checked));
+	});
 
 	connect(ui->accept, &QPushButton::clicked, this, &QDialog::accept); // trigger "accept" signal (setting also dialog's result code to QDialog::Accepted)
 	connect(ui->reject, &QPushButton::clicked, this, &QDialog::reject); // trigger "reject" signal (setting also dialog's result code to QDialog::Rejected)
