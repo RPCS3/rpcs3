@@ -657,8 +657,15 @@ namespace utils
 #else
 
 #ifdef __linux__
+
+#ifdef RESTRICTED_SELINUX
+                //When trying to read low access files, the program breaks, so let's just use a default value.
+                if (const char c = '1'; c == '0' || c == '1')
+                {
+#else
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
+#endif
 			// Simply use memfd for overcommit memory
 			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 			ensure(::ftruncate(m_file, m_size) >= 0);
