@@ -138,8 +138,9 @@ if(NOT WIN32)
     add_compile_options(-pthread)
 endif()
 
-if(USE_RESTRICTED_KELINUX)
+if(USE_RESTRICTED_SELINUX)
     add_compile_definitions(RESTRICTED_SELINUX)
+    message(STATUS "compiling for restricted selinux")
 endif()
 
 # TODO: do real installation, including copying directory structure
