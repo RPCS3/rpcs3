@@ -253,7 +253,7 @@ enum CellAdecSampleRate : s32
 	CELL_ADEC_FS_8kHz,
 };
 
-enum CellAdecBitLength : s32
+enum CellAdecBitLength : u32
 {
 	CELL_ADEC_BIT_LENGTH_RESERVED1,
 	CELL_ADEC_BIT_LENGTH_16,
@@ -762,7 +762,7 @@ public:
 			return {};
 		}
 
-		if (value == 0)
+		if (value == 0u)
 		{
 			savestate = lpcm_dec_state::waiting_for_cmd_cond_wait;
 			cond_wait:

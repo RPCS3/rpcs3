@@ -403,8 +403,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						const v128 f32_1 = gv_mulfs(gv_cvts32_tofs(s32_1), 1.f / static_cast<f32>(0x80000000u));
 						const v128 f32_2 = gv_mulfs(gv_cvts32_tofs(s32_2), 1.f / static_cast<f32>(0x80000000u));
 
-						*reinterpret_cast<v128*>(&_output[i]) = gv_to_be32(f32_1);
-						*reinterpret_cast<v128*>(&_output[i + 4]) = gv_to_be32(f32_2);
+						v128::storeu(gv_to_be32(f32_1), &_output[i]);
+						v128::storeu(gv_to_be32(f32_2), &_output[i + 4]);
 					}
 
 					for (; i < au_size_s16; i++)
@@ -425,7 +425,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
 
-						*reinterpret_cast<v128*>(&_output[i]) = gv_to_be32(_f32);
+						v128::storeu(gv_to_be32(_f32), &_output[i]);
 					}
 
 					for (; i * 3 <= au_size_u8 - 3; i++)
@@ -452,9 +452,9 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_MONO:
 					for (s32 i = 0; i < sample_num / 2; i += 4)
 					{
-						const v128 tmp1 = *reinterpret_cast<v128*>(&_output[i * 2]);
-						const v128 tmp2 = *reinterpret_cast<v128*>(&_output[i * 2 + 4]);
-						*reinterpret_cast<v128*>(&_output[i]) = gv_shufflefs<0 << 0 | 2 << 2 | 0 << 4 | 2 << 6>(tmp1, tmp2); // Remove every other sample
+						const v128 tmp1 = v128::loadu(&_output[i * 2]);
+						const v128 tmp2 = v128::loadu(&_output[i * 2 + 4]);
+						v128::storeu(gv_shufflefs<0, 2, 0, 2>(tmp1, tmp2), &_output[i]); // Remove every other sample
 					}
 					break;
 
@@ -466,7 +466,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_0:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 4, i_out += 3)
 					{
-						const v128 tmp = gv_shuffle32<0 << 0 | 2 << 2 | 1 << 4 | 3 << 6>(*reinterpret_cast<v128*>(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
 						v128::storeu(tmp, &_output[i_out]);
 					}
 					break;
@@ -474,7 +474,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_2_1:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 4, i_out += 3)
 					{
-						v128::storeu(*reinterpret_cast<v128*>(&_output[i_in]), &_output[i_out]);
+						v128::storeu(v128::loadu(&_output[i_in]), &_output[i_out]);
 					}
 					break;
 
@@ -490,7 +490,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_2:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 6, i_out += 5)
 					{
-						const v128 tmp = gv_shuffle32<0 << 0 | 2 << 2 | 1 << 4 | 3 << 6>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
 						v128::storeu(tmp, &_output[i_out]);
 						_output[i_out + 4] = _output[i_in + 4];
 					}
@@ -499,8 +499,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_4:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 8, i_out += 7)
 					{
-						const v128 tmp1 = gv_shuffle32<0 << 0 | 2 << 2 | 1 << 4 | 3 << 6>(*reinterpret_cast<v128*>(&_output[i_in])); // Swap Front Right and Center
-						const v128 tmp2 = gv_shuffle32<2 << 0 | 0 << 2 | 1 << 4 | 3 << 6>(*reinterpret_cast<v128*>(&_output[i_in + 4])); // Reorder Rear Left, Rear Right, Side Right -> Side Right, Rear Left, Rear Right
+						const v128 tmp1 = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp2 = gv_shuffle32<2, 0, 1, 3>(v128::loadu(&_output[i_in + 4])); // Reorder Rear Left, Rear Right, Side Right -> Side Right, Rear Left, Rear Right
 						v128::storeu(tmp1, &_output[i_out]);
 						v128::storeu(tmp2, &_output[i_out + 4]);
 					}
@@ -509,8 +509,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_4_LFE:
 					for (s32 i = 0; i < sample_num; i += 8)
 					{
-						const v128 tmp1 = gv_shuffle32<3 << 0 | 2 << 2 | 0 << 4 | 1 << 6>(*reinterpret_cast<v128*>(&_output[i + 4])); // Reorder Rear Left, Rear Right, Side Right, LFE -> LFE, Side Right, Rear Left, Rear Right
-						*reinterpret_cast<v128*>(&_output[i + 4]) = tmp1;
+						const v128 tmp1 = gv_shuffle32<3, 2, 0, 1>(v128::loadu(&_output[i + 4])); // Reorder Rear Left, Rear Right, Side Right, LFE -> LFE, Side Right, Rear Left, Rear Right
+						v128::storeu(tmp1, &_output[i + 4]);
 						const u64 tmp2 = std::rotl(read_from_ptr<u64>(&_output[i + 3]), 0x20); // Swap Side Left and LFE
 						std::memcpy(&_output[i + 3], &tmp2, sizeof(u64));
 					}
@@ -569,7 +569,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
 
-						*reinterpret_cast<v128*>(&_output[i_out]) = gv_to_be32(_f32);
+						v128::storeu(gv_to_be32(_f32), &_output[i_out]);
 					}
 
 					for (; i_in <= au_size_s16 - 2; i_in += channel_num, i_out += 2)
@@ -602,7 +602,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						? v128::normal_array_t<s8>{ -1, 8, 1, 0, -1, 8, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6 }
 						: v128::normal_array_t<s8>{ 0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 10, -1, 6, 7, 11, -1 };
 
-					const v128 shuffle_ctrl = channel_num & 1 ? shuffle_ctrl_different_offset : shuffle_ctrl_same_offset;
+					const v128 shuffle_ctrl = channel_num & 1 ? v128::loadu(&shuffle_ctrl_different_offset) : v128::loadu(&shuffle_ctrl_same_offset);
 
 					alignas(alignof(v128)) static constexpr auto low_bits_mask_same_offset = std::endian::native == std::endian::little
 						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff }
@@ -612,7 +612,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff }
 						: v128::normal_array_t<u8>{ 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00 };
 
-					const v128 low_bits_mask = channel_num & 1 ? low_bits_mask_different_offset : low_bits_mask_same_offset;
+					const v128 low_bits_mask = channel_num & 1 ? v128::loadu(&low_bits_mask_different_offset) : v128::loadu(&low_bits_mask_same_offset);
 
 					for (s64 i_in = 0, i_out = 0; i_in <= au_size_u8 - low_bits_3_4_offset - (channel_num & 1); i_in += next_samples_offset, i_out += 4)
 					{
@@ -634,7 +634,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
 
-						*reinterpret_cast<v128*>(&_output[i_out]) = gv_to_be32(_f32);
+						v128::storeu(gv_to_be32(_f32), &_output[i_out]);
 					}
 					break;
 				}
@@ -662,7 +662,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						// Convert to float and divide by INT32_MAX + 1
 						const v128 _f32 = gv_mulfs(gv_cvts32_tofs(_s32), 1.f / static_cast<f32>(0x80000000u));
 
-						*reinterpret_cast<v128*>(&_output[i_out]) = gv_to_be32(_f32);
+						v128::storeu(gv_to_be32(_f32), &_output[i_out]);
 					}
 				}
 				}
@@ -820,16 +820,18 @@ error_code _CellAdecCoreOpOpenExt_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> 
 	const vm::var<sys_mutex_attribute_t> queue_mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem06"_u64 } }};
 	const vm::var<sys_cond_attribute_t> cond_attr{{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec03"_u64 } }};
 
-	if (error_code ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::queue_size_mutex), mutex_attr); ret != CELL_OK
-		|| (ret = sys_cond_create(ppu, handle.ptr(&LpcmDecContext::queue_size_cond), handle->queue_size_mutex, cond_attr)) != CELL_OK
-		|| (ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::unk_mutex), mutex_attr)) != CELL_OK
-		|| (ret = sys_cond_create(ppu, handle.ptr(&LpcmDecContext::unk_cond), handle->unk_mutex, cond_attr)) != CELL_OK
-		|| (ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::output_mutex), output_mutex_attr)) != CELL_OK
-		|| (ret = sys_cond_create(ppu, handle.ptr(&LpcmDecContext::output_consumed), handle->output_mutex, cond_attr)) != CELL_OK
-		|| (ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::queue_mutex), queue_mutex_attr)) != CELL_OK
-		|| (ret = handle->release_output(ppu)) != CELL_OK
-		|| (ret = handle->cmd_available.init(ppu, handle.ptr(&LpcmDecContext::cmd_available), 0)) != CELL_OK
-		|| (ret = handle->reserved2.init(ppu, handle.ptr(&LpcmDecContext::reserved2), 0)) != CELL_OK)
+	error_code ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::queue_size_mutex), mutex_attr);
+	ret = ret ? ret : sys_cond_create(ppu, handle.ptr(&LpcmDecContext::queue_size_cond), handle->queue_size_mutex, cond_attr);
+	ret = ret ? ret : sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::unk_mutex), mutex_attr);
+	ret = ret ? ret : sys_cond_create(ppu, handle.ptr(&LpcmDecContext::unk_cond), handle->unk_mutex, cond_attr);
+	ret = ret ? ret : sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::output_mutex), output_mutex_attr);
+	ret = ret ? ret : sys_cond_create(ppu, handle.ptr(&LpcmDecContext::output_consumed), handle->output_mutex, cond_attr);
+	ret = ret ? ret : sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::queue_mutex), queue_mutex_attr);
+	ret = ret ? ret : handle->release_output(ppu);
+	ret = ret ? ret : handle->cmd_available.init(ppu, handle.ptr(&LpcmDecContext::cmd_available), 0);
+	ret = ret ? ret : handle->reserved2.init(ppu, handle.ptr(&LpcmDecContext::reserved2), 0);
+
+	if (ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -841,14 +843,11 @@ error_code _CellAdecCoreOpOpenExt_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> 
 	const vm::var<char[]> _name = vm::make_str("HLE LPCM decoder");
 	const auto entry = g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(lpcmDecEntry));
 
-	if (error_code ret = ppu_execute<&sys_ppu_thread_create>(ppu, handle.ptr(&LpcmDecContext::thread_id), entry, handle.addr(), +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_JOINABLE, +_name); ret != CELL_OK
-		|| (ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::spurs_queue_pop_mutex), mutex_attr)) != CELL_OK
-		|| (ret = sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::spurs_queue_push_mutex), mutex_attr)) != CELL_OK)
-	{
-		return ret;
-	}
+	ret = ppu_execute<&sys_ppu_thread_create>(ppu, handle.ptr(&LpcmDecContext::thread_id), entry, handle.addr(), +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_JOINABLE, +_name);
+	ret = ret ? ret : sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::spurs_queue_pop_mutex), mutex_attr);
+	ret = ret ? ret : sys_mutex_create(ppu, handle.ptr(&LpcmDecContext::spurs_queue_push_mutex), mutex_attr);
 
-	return CELL_OK;
+	return ret;
 }
 
 error_code _CellAdecCoreOpOpen_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> handle, vm::ptr<AdecNotifyAuDone> notifyAuDone, vm::ptr<void> notifyAuDoneArg, vm::ptr<AdecNotifyPcmOut> notifyPcmOut, vm::ptr<void> notifyPcmOutArg,
@@ -900,27 +899,25 @@ error_code _CellAdecCoreOpClose_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> ha
 		}
 	}
 
+	error_code ret = sys_mutex_unlock(ppu, handle->queue_size_mutex);
+	ret = ret ? ret : handle->release_output(ppu);
+
 	vm::var<u64> thread_ret;
+	ret = ret ? ret : sys_ppu_thread_join(ppu, static_cast<u32>(handle->thread_id), +thread_ret);
 
-	if (error_code ret = sys_mutex_unlock(ppu, handle->queue_size_mutex); ret != CELL_OK
-		|| (ret = handle->release_output(ppu)) != CELL_OK
-		|| (ret = sys_ppu_thread_join(ppu, static_cast<u32>(handle->thread_id), +thread_ret)) != CELL_OK
-		|| (ret = sys_cond_destroy(ppu, handle->queue_size_cond)) != CELL_OK
-		|| (ret = sys_cond_destroy(ppu, handle->unk_cond)) != CELL_OK
-		|| (ret = sys_cond_destroy(ppu, handle->output_consumed)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->queue_mutex)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->queue_size_mutex)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->unk_mutex)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->output_mutex)) != CELL_OK
-		|| (ret = handle->cmd_available.finalize(ppu)) != CELL_OK
-		|| (ret = handle->reserved2.finalize(ppu)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->spurs_queue_pop_mutex)) != CELL_OK
-		|| (ret = sys_mutex_destroy(ppu, handle->spurs_queue_push_mutex)) != CELL_OK)
-	{
-		return ret;
-	}
+	ret = ret ? ret : sys_cond_destroy(ppu, handle->queue_size_cond);
+	ret = ret ? ret : sys_cond_destroy(ppu, handle->unk_cond);
+	ret = ret ? ret : sys_cond_destroy(ppu, handle->output_consumed);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->queue_mutex);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->queue_size_mutex);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->unk_mutex);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->output_mutex);
+	ret = ret ? ret : handle->cmd_available.finalize(ppu);
+	ret = ret ? ret : handle->reserved2.finalize(ppu);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->spurs_queue_pop_mutex);
+	ret = ret ? ret : sys_mutex_destroy(ppu, handle->spurs_queue_push_mutex);
 
-	return CELL_OK;
+	return ret;
 }
 
 error_code _CellAdecCoreOpStartSeq_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> handle, vm::ptr<CellAdecParamLpcm> lpcmParam)
