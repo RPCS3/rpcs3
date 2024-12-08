@@ -103,7 +103,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label_3">
+           <widget class="QLabel" name="label_desc">
             <property name="font">
              <font>
               <family>Arial</family>
@@ -201,7 +201,7 @@
      <item>
       <widget class="QCheckBox" name="use_dark_theme">
        <property name="text">
-        <string>Use Dark Theme (Can Be Configured Later)</string>
+        <string>Use Dark Theme (can be configured later)</string>
        </property>
       </widget>
      </item>
@@ -233,9 +233,19 @@
         <number>0</number>
        </property>
        <item alignment="Qt::AlignLeft">
-        <widget class="QPushButton" name="okay">
+        <widget class="QPushButton" name="accept">
          <property name="text">
           <string>Continue</string>
+         </property>
+         <property name="autoDefault">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item alignment="Qt::AlignLeft">
+        <widget class="QPushButton" name="reject">
+         <property name="text">
+          <string>Exit</string>
          </property>
          <property name="autoDefault">
           <bool>true</bool>
@@ -276,9 +286,9 @@
         </spacer>
        </item>
        <item alignment="Qt::AlignLeft">
-        <widget class="QCheckBox" name="do_not_show">
+        <widget class="QCheckBox" name="show_at_startup">
          <property name="text">
-          <string>Do not show again</string>
+          <string>Show at startup</string>
          </property>
         </widget>
        </item>
