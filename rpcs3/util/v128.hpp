@@ -65,6 +65,9 @@ union alignas(16) v128
 
 	constexpr v128(const v128&) noexcept = default;
 
+	constexpr v128(const normal_array_t<u8>& _u8) noexcept : _u8(_u8){}
+	constexpr v128(const normal_array_t<s8>& _s8) noexcept : _s8(_s8){}
+
 	template <Vector128 T>
 	constexpr v128(const T& rhs) noexcept
 		: v128(std::bit_cast<v128>(rhs))

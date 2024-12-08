@@ -3192,6 +3192,24 @@ inline v128 gv_shuffle32(const v128& vec)
 #endif
 }
 
+// For each index, r = vec[index & 3]
+template <u8 Index0, u8 Index1, u8 Index2, u8 Index3>
+inline v128 gv_shuffle32(const v128& vec)
+{
+#if defined(ARCH_X64)
+	return _mm_shuffle_epi32(vec, (Index0 & 3) | (Index1 & 3) << 2 | (Index2 & 3) << 4 | (Index3 & 3) << 6);
+#elif defined(ARCH_ARM64)
+	constexpr u8 idx0 = (Index0 & 3) * sizeof(s32);
+	constexpr u8 idx1 = (Index1 & 3) * sizeof(s32);
+	constexpr u8 idx2 = (Index2 & 3) * sizeof(s32);
+	constexpr u8 idx3 = (Index3 & 3) * sizeof(s32);
+
+	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+
+	return vqtbl1q_s8(vec, idx_vec);
+#endif
+}
+
 // For the first two 2-bit indices in Control, r = a[index],
 // for the last two indices, r = b[index]
 template <u8 Control>
@@ -3204,6 +3222,25 @@ inline v128 gv_shufflefs(const v128& a, const v128& b)
 	constexpr u8 idx1 = (Control >> 2 & 3) * sizeof(s32);
 	constexpr u8 idx2 = (Control >> 4 & 3) * sizeof(s32) + sizeof(v128);
 	constexpr u8 idx3 = (Control >> 6 & 3) * sizeof(s32) + sizeof(v128);
+
+	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
+
+	return vqtbl2q_s8({ a, b }, idx_vec);
+#endif
+}
+
+// For the first two indices, r = a[index & 3],
+// for the last two indices, r = b[index & 3]
+template <u8 Index0, u8 Index1, u8 Index2, u8 Index3>
+inline v128 gv_shufflefs(const v128& a, const v128& b)
+{
+#if defined(ARCH_X64)
+	return _mm_shuffle_ps(a, b, (Index0 & 3) | (Index1 & 3) << 2 | (Index2 & 3) << 4 | (Index3 & 3) << 6);
+#elif defined(ARCH_ARM64)
+	constexpr u8 idx0 = (Index0 & 3) * sizeof(s32);
+	constexpr u8 idx1 = (Index1 & 3) * sizeof(s32);
+	constexpr u8 idx2 = (Index2 & 3) * sizeof(s32) + sizeof(v128);
+	constexpr u8 idx3 = (Index3 & 3) * sizeof(s32) + sizeof(v128);
 
 	constexpr uint8x16_t idx_vec = { idx0, idx0 + 1, idx0 + 2, idx0 + 3, idx1, idx1 + 1, idx1 + 2, idx1 + 3, idx2, idx2 + 1, idx2 + 2, idx2 + 3, idx3, idx3 + 1, idx3 + 2, idx3 + 3 };
 
