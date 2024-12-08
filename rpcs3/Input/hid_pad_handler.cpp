@@ -209,7 +209,8 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		hid_free_enumeration(head);
 	}
-	hid_log.notice("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
+	
+	(device_paths.empty() ? hid_log.trace : hid_log.notice)("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
 
 	std::lock_guard lock(m_enumeration_mutex);
 	m_new_enumerated_devices = device_paths;
