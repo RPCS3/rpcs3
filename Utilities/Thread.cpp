@@ -15,6 +15,10 @@
 #include "Emu/CPU/Backends/AArch64/AArch64Signal.h"
 #endif
 
+#if defined(ARCH_ARM64) && !defined(__APPLE__)
+#include <fstream>
+#endif
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
@@ -2868,6 +2872,65 @@ void thread_ctrl::detect_cpu_layout()
 	}
 }
 
+#if defined(ARCH_ARM64) && !defined(__APPLE__)
+
+void detect_big_little_topology(std::vector<int>& big_cores, std::vector<int>& little_cores, std::vector<int>& prime_cores)
+{
+    big_cores.clear();
+    little_cores.clear();
+    prime_cores.clear();
+
+    const std::string base_path = "/sys/devices/system/cpu/";
+
+    for (unsigned int i = 0; i < 8; ++i)
+    {
+        std::ifstream infile(base_path + "cpu" + std::to_string(i) + "/cpufreq/cpuinfo_max_freq");
+        if (infile)
+        {
+            int freq;
+            infile >> freq;
+
+            if(freq < 2400000)
+               little_cores.push_back(i);
+            if (freq > 2400000 && freq < 2800000)
+                big_cores.push_back(i);
+            if (freq > 2800000)
+                prime_cores.push_back(i);
+        }
+    }
+}
+
+u64 thread_ctrl::get_affinity_mask(thread_class group)
+{
+    std::vector<int> prime_cores, big_cores, little_cores;
+
+    detect_big_little_topology(big_cores, little_cores, prime_cores);
+
+    u64 prime_mask = 0, big_mask = 0, little_mask = 0;
+
+    for (int core : big_cores)
+        big_mask |= (1UL << core);
+    for (int core : little_cores)
+        little_mask |= (1UL << core);
+    for (int core : prime_cores)
+        prime_mask |= (1UL << core);
+
+    switch (group)
+    {
+        default:
+        case thread_class::general:
+            return big_mask | little_mask | prime_mask;
+        case thread_class::rsx:
+            return big_mask;
+        case thread_class::ppu:
+            return big_mask | prime_mask;
+        case thread_class::spu:
+            return little_mask;
+    }
+}
+
+#else
+
 u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
@@ -3076,6 +3139,8 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 
 	return -1;
 }
+
+#endif
 
 void thread_ctrl::set_native_priority(int priority)
 {
