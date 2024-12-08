@@ -15,6 +15,7 @@
 #include "vkutils/scratch.h"
 
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
@@ -1010,6 +1011,8 @@ VKGSRender::~VKGSRender()
 
 bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
+	rsx::mm_flush(address);
+
 	vk::texture_cache::thrashed_set result;
 	{
 		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
@@ -2460,6 +2463,9 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 {
 	ensure(!m_queue_status.test_and_set(flush_queue_state::flushing));
 
+	// Host MM sync before executing anything on the GPU
+	rsx::mm_flush();
+
 	// Workaround for deadlock occuring during RSX offloader fault
 	// TODO: Restructure command submission infrastructure to avoid this condition
 	const bool sync_success = g_fxo->get<rsx::dma_manager>().sync();
@@ -2824,7 +2830,7 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 		break;
 	}
 	default:
-		fmt::throw_exception("Unhandled request code 0x%x", request_code);
+		rsx::thread::renderctl(request_code, args);
 	}
 }
 
