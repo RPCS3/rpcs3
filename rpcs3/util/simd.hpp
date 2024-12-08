@@ -3135,6 +3135,26 @@ inline auto gv_shuffle_right(A&& a)
 	FOR_X64(unary_op, kIdPsrldq, kIdVpsrldq, std::forward<A>(a), Count);
 }
 
+// Load 16 bytes of aligned integer data
+inline v128 gv_load(const void* ptr)
+{
+#if defined(ARCH_X64)
+	return _mm_load_si128(static_cast<const __m128i*>(ptr));
+#elif defined(ARCH_ARM64)
+	return vld1q_s32(static_cast<const s32*>(ptr));
+#endif
+}
+
+// Load 16 bytes of aligned floating point data
+inline v128 gv_loadfs(const void* ptr)
+{
+#if defined(ARCH_X64)
+	return _mm_load_ps(static_cast<const f32*>(ptr));
+#elif defined(ARCH_ARM64)
+	return vld1q_f32(static_cast<const f32*>(ptr));
+#endif
+}
+
 // Load 32-bit integer into the first element of a new vector, set other elements to zero
 inline v128 gv_loadu32(const void* ptr)
 {

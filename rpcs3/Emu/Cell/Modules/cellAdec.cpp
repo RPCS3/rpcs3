@@ -452,8 +452,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_MONO:
 					for (s32 i = 0; i < sample_num / 2; i += 4)
 					{
-						const v128 tmp1 = v128::loadu(&_output[i * 2]);
-						const v128 tmp2 = v128::loadu(&_output[i * 2 + 4]);
+						const v128 tmp1 = gv_loadfs(&_output[i * 2]);
+						const v128 tmp2 = gv_loadfs(&_output[i * 2 + 4]);
 						v128::storeu(gv_shufflefs<0, 2, 0, 2>(tmp1, tmp2), &_output[i]); // Remove every other sample
 					}
 					break;
@@ -466,7 +466,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_0:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 4, i_out += 3)
 					{
-						const v128 tmp = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp = gv_shuffle32<0, 2, 1, 3>(gv_load(&_output[i_in])); // Swap Front Right and Center
 						v128::storeu(tmp, &_output[i_out]);
 					}
 					break;
@@ -474,7 +474,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_2_1:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 4, i_out += 3)
 					{
-						v128::storeu(v128::loadu(&_output[i_in]), &_output[i_out]);
+						v128::storeu(gv_load(&_output[i_in]), &_output[i_out]);
 					}
 					break;
 
@@ -499,8 +499,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_4:
 					for (s32 i_in = 0, i_out = 0; i_in < sample_num; i_in += 8, i_out += 7)
 					{
-						const v128 tmp1 = gv_shuffle32<0, 2, 1, 3>(v128::loadu(&_output[i_in])); // Swap Front Right and Center
-						const v128 tmp2 = gv_shuffle32<2, 0, 1, 3>(v128::loadu(&_output[i_in + 4])); // Reorder Rear Left, Rear Right, Side Right -> Side Right, Rear Left, Rear Right
+						const v128 tmp1 = gv_shuffle32<0, 2, 1, 3>(gv_load(&_output[i_in])); // Swap Front Right and Center
+						const v128 tmp2 = gv_shuffle32<2, 0, 1, 3>(gv_load(&_output[i_in + 4])); // Reorder Rear Left, Rear Right, Side Right -> Side Right, Rear Left, Rear Right
 						v128::storeu(tmp1, &_output[i_out]);
 						v128::storeu(tmp2, &_output[i_out + 4]);
 					}
@@ -509,7 +509,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_4_LFE:
 					for (s32 i = 0; i < sample_num; i += 8)
 					{
-						const v128 tmp1 = gv_shuffle32<3, 2, 0, 1>(v128::loadu(&_output[i + 4])); // Reorder Rear Left, Rear Right, Side Right, LFE -> LFE, Side Right, Rear Left, Rear Right
+						const v128 tmp1 = gv_shuffle32<3, 2, 0, 1>(gv_load(&_output[i + 4])); // Reorder Rear Left, Rear Right, Side Right, LFE -> LFE, Side Right, Rear Left, Rear Right
 						v128::storeu(tmp1, &_output[i + 4]);
 						const u64 tmp2 = std::rotl(read_from_ptr<u64>(&_output[i + 3]), 0x20); // Swap Side Left and LFE
 						std::memcpy(&_output[i + 3], &tmp2, sizeof(u64));
@@ -602,7 +602,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						? v128::normal_array_t<s8>{ -1, 8, 1, 0, -1, 8, 3, 2, -1, 10, 5, 4, -1, 11, 7, 6 }
 						: v128::normal_array_t<s8>{ 0, 1, 8, -1, 2, 3, 8, -1, 4, 5, 10, -1, 6, 7, 11, -1 };
 
-					const v128 shuffle_ctrl = channel_num & 1 ? shuffle_ctrl_different_offset : shuffle_ctrl_same_offset;
+					const v128 shuffle_ctrl = channel_num & 1 ? gv_load(&shuffle_ctrl_different_offset) : gv_load(&shuffle_ctrl_same_offset);
 
 					static constexpr v128 low_bits_mask_same_offset = std::endian::native == std::endian::little
 						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff }
@@ -612,7 +612,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						? v128::normal_array_t<u8>{ 0x00, 0xf0, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0x0f, 0xff, 0xff, 0x00, 0xf0, 0xff, 0xff }
 						: v128::normal_array_t<u8>{ 0xff, 0xff, 0xf0, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0x0f, 0x00, 0xff, 0xff, 0xf0, 0x00 };
 
-					const v128 low_bits_mask = channel_num & 1 ? low_bits_mask_different_offset : low_bits_mask_same_offset;
+					const v128 low_bits_mask = channel_num & 1 ? gv_load(&low_bits_mask_different_offset) : gv_load(&low_bits_mask_same_offset);
 
 					for (s64 i_in = 0, i_out = 0; i_in <= au_size_u8 - low_bits_3_4_offset - (channel_num & 1); i_in += next_samples_offset, i_out += 4)
 					{
