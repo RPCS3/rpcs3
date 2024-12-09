@@ -27,9 +27,10 @@ namespace utils
 
 #include "Utilities/sync.h"
 #include "Utilities/StrFmt.h"
-#include <sys/utsname.h>
 
 #ifdef __linux__
+
+#include <sys/utsname.h>
 
 bool is_kernel_at_least(int required_major, int required_minor, int required_patch)
     {

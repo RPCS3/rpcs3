@@ -87,10 +87,11 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
-	const QString Settings = "CurrentSettings";
+	const QString Settings          = "CurrentSettings";
 	const QString DefaultStylesheet = "default";
-	const QString NoStylesheet = "none";
-	const QString NativeStylesheet = "native";
+	const QString NoStylesheet      = "none";
+	const QString NativeStylesheet  = "native";
+	const QString DarkStylesheet    = "Darker Style by TheMitoSan";
 
 	const QString main_window  = "main_window";
 	const QString game_list    = "GameList";
