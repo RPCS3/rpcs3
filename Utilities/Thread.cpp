@@ -2882,7 +2882,7 @@ void detect_big_little_topology(std::vector<int>& big_cores, std::vector<int>& l
 
     const std::string base_path = "/sys/devices/system/cpu/";
 
-    for (unsigned int i = 0; i < 8; ++i)
+    for (unsigned int i = 0; i < 256; ++i)
     {
         std::ifstream infile(base_path + "cpu" + std::to_string(i) + "/cpufreq/cpuinfo_max_freq");
         if (infile)
@@ -2909,11 +2909,11 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
     u64 prime_mask = 0, big_mask = 0, little_mask = 0;
 
     for (int core : big_cores)
-        big_mask |= (1UL << core);
+        big_mask |= (1ULL << core);
     for (int core : little_cores)
-        little_mask |= (1UL << core);
+        little_mask |= (1ULL << core);
     for (int core : prime_cores)
-        prime_mask |= (1UL << core);
+        prime_mask |= (1ULL << core);
 
     switch (group)
     {
