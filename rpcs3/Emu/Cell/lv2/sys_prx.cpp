@@ -35,7 +35,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libaacenc_spurs.sprx", 0 },
 	{ "libac3dec.sprx", 0 },
 	{ "libac3dec2.sprx", 0 },
-	{ "libadec.sprx", 0 },
+	{ "libadec.sprx", 1 },
 	{ "libadec2.sprx", 0 },
 	{ "libadec_internal.sprx", 0 },
 	{ "libad_async.sprx", 0 },
