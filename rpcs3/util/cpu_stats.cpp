@@ -212,8 +212,7 @@ namespace utils
 			}
 		}
 
-#elif __linux__
-
+#elif __linux__ && !RESTRICTED_SELINUX
 		m_previous_idle_times_per_cpu.resize(utils::get_thread_count(), 0.0);
 		m_previous_total_times_per_cpu.resize(utils::get_thread_count(), 0.0);
 
