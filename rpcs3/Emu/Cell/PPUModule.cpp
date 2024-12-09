@@ -774,7 +774,7 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 			continue;
 		}
 
-		ppu_loader.notice("** Exported module '%s' (vnids=0x%x, vstubs=0x%x, version=0x%x, attributes=0x%x, unk4=0x%x, unk5=0x%x)", module_name, lib.vnids, lib.vstubs, lib.version, lib.attributes, lib.unk4, lib.unk5);
+		ppu_loader.notice("** Exported module '%s' (vnids=0x%x, vstubs=0x%x, fnids=0x%x, faddrs=0x%x, version=0x%x, attributes=0x%x, unk4=0x%x, unk5=0x%x)", module_name, lib.vnids, lib.vstubs, lib.nids, lib.addrs, lib.version, lib.attributes, lib.unk4, lib.unk5);
 
 		if (lib.num_tlsvar)
 		{
@@ -803,12 +803,35 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
 
+		u32 previous_rtoc = umax;
+
 		// Get functions
 		for (u32 i = 0, end = lib.num_func; i < end; i++)
 		{
 			const u32 fnid = _module.get_ref<u32>(fnids, i);
 			const u32 faddr = _module.get_ref<u32>(faddrs, i);
-			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, _module.get_ref<u32>(faddr));
+
+			if (ppu_func_opd_t* fptr = _module.get_ptr<ppu_func_opd_t>(faddr), fdata = fptr ? *fptr : ppu_func_opd_t{};
+				fdata.addr % 4 == 0u && _module.get_ptr<u32>(fdata.addr))
+			{
+				if (previous_rtoc == fdata.rtoc)
+				{
+					ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x] rtoc=same", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr);
+				}
+				else
+				{
+					previous_rtoc = fdata.rtoc;
+					ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x] rtoc=0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr, fdata.rtoc);
+				}
+			}
+			else if (fptr)
+			{
+				ppu_loader.error("**** %s export: [%s] (0x%08x) at 0x%x [Invalid Function Address: 0x%x!]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr);
+			}
+			else
+			{
+				ppu_loader.warning("**** %s export: [%s] (0x%08x) at 0x%x [Illegal Descriptor Address!]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr);
+			}
 
 			if (funcs)
 			{

@@ -150,11 +150,13 @@ namespace gui
 
 		static inline Qt::ColorScheme color_scheme()
 		{
+			// use the QGuiApplication's properties to report the default GUI color scheme
 			return QGuiApplication::styleHints()->colorScheme();
 		}
 
 		static inline bool dark_mode_active()
 		{
+			// "true" if the default GUI color scheme is dark. "false" otherwise
 			return color_scheme() == Qt::ColorScheme::Dark;
 		}
 
