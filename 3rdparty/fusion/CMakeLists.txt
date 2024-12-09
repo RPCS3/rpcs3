@@ -1,0 +1,2 @@
+add_library(3rdparty_fusion INTERFACE)
+target_include_directories(3rdparty_fusion INTERFACE fusion)
