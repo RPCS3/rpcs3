@@ -2921,11 +2921,11 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
         case thread_class::general:
             return big_mask | little_mask | prime_mask;
         case thread_class::rsx:
-            return big_mask;
+            return big_mask | little_mask | prime_mask;
         case thread_class::ppu:
-            return big_mask | prime_mask;
+            return big_mask | little_mask | prime_mask;
         case thread_class::spu:
-            return little_mask;
+            return big_mask | little_mask | prime_mask;
     }
 }
 
