@@ -26,13 +26,13 @@ void perf_stat_base::print(const char* name) const noexcept
 {
 	if (u64 num_total = m_log[0].load())
 	{
-		perf_log.notice(u8"Perf stats for %s: total events: %u (total time %.4fs, avg %.4fµs)", name, num_total, m_log[65].load() / 1000'000'000., m_log[65].load() / 1000. / num_total);
+		perf_log.notice(u8"Perf stats for %s: total events: %u (total time %.4fs, avg %.4fus)", name, num_total, m_log[65].load() / 1000'000'000., m_log[65].load() / 1000. / num_total);
 
 		for (u32 i = 0; i < 13; i++)
 		{
 			if (u64 count = m_log[i + 1].load())
 			{
-				perf_log.notice(u8"Perf stats for %s: events < %.3fµs: %u", name, std::pow(2., i) / 1000., count);
+				perf_log.notice(u8"Perf stats for %s: events < %.3fus: %u", name, std::pow(2., i) / 1000., count);
 			}
 		}
 
@@ -84,7 +84,7 @@ SAFE_BUFFERS(void) perf_stat_base::push(u64 data[66], u64 start_time, const char
 	// Print in microseconds
 	if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
 	{
-		perf_log.notice(u8"%s: %.3fµs", name, diff * 1000'000.);
+		perf_log.notice(u8"%s: %.3fus", name, diff * 1000'000.);
 	}
 
 	data[0] += ns != 0;

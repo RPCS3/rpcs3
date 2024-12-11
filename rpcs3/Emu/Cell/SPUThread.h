@@ -453,7 +453,7 @@ struct spu_int_ctrl_t
 	atomic_t<u64> mask;
 	atomic_t<u64> stat;
 
-	std::shared_ptr<struct lv2_int_tag> tag;
+	shared_ptr<struct lv2_int_tag> tag;
 
 	void set(u64 ints);
 
@@ -755,8 +755,8 @@ public:
 	atomic_t<status_npc_sync_var> status_npc{};
 	std::array<spu_int_ctrl_t, 3> int_ctrl{}; // SPU Class 0, 1, 2 Interrupt Management
 
-	std::array<std::pair<u32, std::shared_ptr<lv2_event_queue>>, 32> spuq{}; // Event Queue Keys for SPU Thread
-	std::shared_ptr<lv2_event_queue> spup[64]; // SPU Ports
+	std::array<std::pair<u32, shared_ptr<lv2_event_queue>>, 32> spuq{}; // Event Queue Keys for SPU Thread
+	shared_ptr<lv2_event_queue> spup[64]; // SPU Ports
 	spu_channel exit_status{}; // Threaded SPU exit status (not a channel, but the interface fits)
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 	lv2_spu_group* const group; // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)

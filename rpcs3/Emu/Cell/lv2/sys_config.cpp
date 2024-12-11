@@ -101,10 +101,10 @@ void lv2_config::initialize()
 	lv2_config_service::create(SYS_CONFIG_SERVICE_PADMANAGER2, 0, 1, 0, hid_info, 0x1a)->notify();
 }
 
-void lv2_config::add_service_event(const std::shared_ptr<lv2_config_service_event>& event)
+void lv2_config::add_service_event(shared_ptr<lv2_config_service_event> event)
 {
 	std::lock_guard lock(m_mutex);
-	events.emplace(event->id, event);
+	events.emplace(event->id, std::move(event));
 }
 
 void lv2_config::remove_service_event(u32 id)
@@ -140,13 +140,13 @@ bool lv2_config_service_listener::check_service(const lv2_config_service& servic
 	return true;
 }
 
-bool lv2_config_service_listener::notify(const std::shared_ptr<lv2_config_service_event>& event)
+bool lv2_config_service_listener::notify(const shared_ptr<lv2_config_service_event>& event)
 {
 	service_events.emplace_back(event);
 	return event->notify();
 }
 
-bool lv2_config_service_listener::notify(const std::shared_ptr<lv2_config_service>& service)
+bool lv2_config_service_listener::notify(const shared_ptr<lv2_config_service>& service)
 {
 	if (!check_service(*service))
 		return false;
@@ -158,7 +158,7 @@ bool lv2_config_service_listener::notify(const std::shared_ptr<lv2_config_servic
 
 void lv2_config_service_listener::notify_all()
 {
-	std::vector<std::shared_ptr<lv2_config_service>> services;
+	std::vector<shared_ptr<lv2_config_service>> services;
 
 	// Grab all events
 	idm::select<lv2_config_service>([&](u32 /*id*/, lv2_config_service& service)
@@ -170,7 +170,7 @@ void lv2_config_service_listener::notify_all()
 	});
 
 	// Sort services by timestamp
-	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2)
+	sort(services.begin(), services.end(), [](const shared_ptr<lv2_config_service>& s1, const shared_ptr<lv2_config_service>& s2)
 	{
 		return s1->timestamp < s2->timestamp;
 	});
@@ -198,9 +198,9 @@ void lv2_config_service::unregister()
 
 void lv2_config_service::notify() const
 {
-	std::vector<std::shared_ptr<lv2_config_service_listener>> listeners;
+	std::vector<shared_ptr<lv2_config_service_listener>> listeners;
 
-	auto sptr = wkptr.lock();
+	const shared_ptr<lv2_config_service> sptr = get_shared_ptr();
 
 	idm::select<lv2_config_service_listener>([&](u32 /*id*/, lv2_config_service_listener& listener)
 	{
@@ -210,13 +210,14 @@ void lv2_config_service::notify() const
 
 	for (auto& listener : listeners)
 	{
-		listener->notify(this->get_shared_ptr());
+		listener->notify(sptr);
 	}
 }
 
 bool lv2_config_service_event::notify() const
 {
-	const auto _handle = handle.lock();
+	const auto _handle = handle;
+
 	if (!_handle)
 	{
 		return false;
@@ -259,7 +260,7 @@ error_code sys_config_open(u32 equeue_hdl, vm::ptr<u32> out_config_hdl)
 	sys_config.trace("sys_config_open(equeue_hdl=0x%x, out_config_hdl=*0x%x)", equeue_hdl, out_config_hdl);
 
 	// Find queue with the given ID
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_hdl);
+	const auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_hdl);
 	if (!queue)
 	{
 		return CELL_ESRCH;
@@ -303,7 +304,7 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 	sys_config.trace("sys_config_get_service_event(config_hdl=0x%x, event_id=0x%llx, dst=*0x%llx, size=0x%llx)", config_hdl, event_id, dst, size);
 
 	// Find sys_config handle object with the given ID
-	const auto cfg = idm::get<lv2_config_handle>(config_hdl);
+	const auto cfg = idm::get_unlocked<lv2_config_handle>(config_hdl);
 	if (!cfg)
 	{
 		return CELL_ESRCH;
@@ -335,7 +336,7 @@ error_code sys_config_add_service_listener(u32 config_hdl, sys_config_service_id
 	sys_config.trace("sys_config_add_service_listener(config_hdl=0x%x, service_id=0x%llx, min_verbosity=0x%llx, in=*0x%x, size=%lld, type=0x%llx, out_listener_hdl=*0x%x)", config_hdl, service_id, min_verbosity, in, size, type, out_listener_hdl);
 
 	// Find sys_config handle object with the given ID
-	auto cfg = idm::get<lv2_config_handle>(config_hdl);
+	auto cfg = idm::get_unlocked<lv2_config_handle>(config_hdl);
 	if (!cfg)
 	{
 		return CELL_ESRCH;
@@ -383,7 +384,7 @@ error_code sys_config_register_service(u32 config_hdl, sys_config_service_id ser
 	sys_config.trace("sys_config_register_service(config_hdl=0x%x, service_id=0x%llx, user_id=0x%llx, verbosity=0x%llx, data_but=*0x%llx, size=%lld, out_service_hdl=*0x%llx)", config_hdl, service_id, user_id, verbosity, data_buf, size, out_service_hdl);
 
 	// Find sys_config handle object with the given ID
-	const auto cfg = idm::get<lv2_config_handle>(config_hdl);
+	const auto cfg = idm::get_unlocked<lv2_config_handle>(config_hdl);
 	if (!cfg)
 	{
 		return CELL_ESRCH;

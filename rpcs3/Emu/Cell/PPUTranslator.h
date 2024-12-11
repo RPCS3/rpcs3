@@ -11,7 +11,7 @@
 class PPUTranslator final : public cpu_translator
 {
 	// PPU Module
-	const ppu_module& m_info;
+	const ppu_module<lv2_obj>& m_info;
 
 	// Relevant relocations
 	std::map<u64, const ppu_reloc*> m_relocs;
@@ -331,7 +331,7 @@ public:
 	// Handle compilation errors
 	void CompilationError(const std::string& error);
 
-	PPUTranslator(llvm::LLVMContext& context, llvm::Module* _module, const ppu_module& info, llvm::ExecutionEngine& engine);
+	PPUTranslator(llvm::LLVMContext& context, llvm::Module* _module, const ppu_module<lv2_obj>& info, llvm::ExecutionEngine& engine);
 	~PPUTranslator();
 
 	// Get thread context struct type
@@ -339,7 +339,7 @@ public:
 
 	// Parses PPU opcodes and translate them into LLVM IR
 	llvm::Function* Translate(const ppu_function& info);
-	llvm::Function* GetSymbolResolver(const ppu_module& info);
+	llvm::Function* GetSymbolResolver(const ppu_module<lv2_obj>& info);
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);

@@ -56,7 +56,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 	sys_lwmutex.trace("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
 
-	std::shared_ptr<lv2_lwmutex> _mutex;
+	shared_ptr<lv2_lwmutex> _mutex;
 
 	while (true)
 	{
