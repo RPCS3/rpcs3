@@ -13,10 +13,10 @@
 #include "sys_overlay.h"
 #include "sys_fs.h"
 
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
+extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar = nullptr);
 
-extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
-extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
+extern bool ppu_initialize(const ppu_module<lv2_obj>&, bool check_only = false, u64 file_size = 0);
+extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release = false);
 
 LOG_CHANNEL(sys_overlay);
 
@@ -68,7 +68,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	ppu_initialize(*ovlm);
 
-	sys_overlay.success(u8"Loaded overlay: “%s” (id=0x%x)", vpath, idm::last_id());
+	sys_overlay.success("Loaded overlay: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
 	*ovlmid = idm::last_id();
 	*entry  = ovlm->entry;
@@ -78,7 +78,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 fs::file make_file_view(fs::file&& file, u64 offset, u64 size);
 
-std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
+std::function<void(void*)> lv2_overlay::load(utils::serial& ar)
 {
 	const std::string vpath = ar.pop<std::string>();
 	const std::string path = vfs::get(vpath);
@@ -86,7 +86,7 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 
 	sys_overlay.success("lv2_overlay::load(): vpath='%s', path='%s', offset=0x%x", vpath, path, offset);
 
-	std::shared_ptr<lv2_overlay> ovlm;
+	shared_ptr<lv2_overlay> ovlm;
 
 	fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
 
@@ -110,7 +110,10 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 		sys_overlay.error("lv2_overlay::load(): Failed to find file. (vpath='%s', offset=0x%x)", vpath, offset);
 	}
 
-	return ovlm;
+	return [ovlm](void* storage)
+	{
+		*static_cast<shared_ptr<lv2_obj>*>(storage) = ovlm;
+	};
 }
 
 void lv2_overlay::save(utils::serial& ar)
@@ -156,7 +159,7 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 		return CELL_EINVAL;
 	}
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{

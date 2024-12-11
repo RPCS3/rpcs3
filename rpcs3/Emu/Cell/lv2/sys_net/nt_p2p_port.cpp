@@ -135,11 +135,11 @@ bool nt_p2p_port::handle_connected(s32 sock_id, p2ps_encapsulated_tcp* tcp_heade
 
 bool nt_p2p_port::handle_listening(s32 sock_id, p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
 {
-	auto sock = idm::get<lv2_socket>(sock_id);
+	auto sock = idm::get_unlocked<lv2_socket>(sock_id);
 	if (!sock)
 		return false;
 
-	auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(*sock.get());
+	auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(*sock);
 	return sock_p2ps.handle_listening(tcp_header, data, op_addr);
 }
 

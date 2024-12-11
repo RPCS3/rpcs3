@@ -9,6 +9,7 @@ LOG_CHANNEL(sceNp2);
 
 generic_async_transaction_context::generic_async_transaction_context(const SceNpCommunicationId& communicationId, const SceNpCommunicationPassphrase& passphrase, u64 timeout)
 	: communicationId(communicationId), passphrase(passphrase), timeout(timeout)
+	, idm_id(idm::last_id())
 {
 }
 
@@ -73,12 +74,12 @@ bool destroy_tus_context(s32 ctx_id)
 	return idm::remove<tus_ctx>(static_cast<u32>(ctx_id));
 }
 
-tus_transaction_ctx::tus_transaction_ctx(const std::shared_ptr<tus_ctx>& tus)
+tus_transaction_ctx::tus_transaction_ctx(const shared_ptr<tus_ctx>& tus)
 	: generic_async_transaction_context(tus->communicationId, tus->passphrase, tus->timeout)
 {
 }
 
-s32 create_tus_transaction_context(const std::shared_ptr<tus_ctx>& tus)
+s32 create_tus_transaction_context(const shared_ptr<tus_ctx>& tus)
 {
 	s32 tus_id = idm::make<tus_transaction_ctx>(tus);
 
@@ -116,13 +117,13 @@ bool destroy_score_context(s32 ctx_id)
 	return idm::remove<score_ctx>(static_cast<u32>(ctx_id));
 }
 
-score_transaction_ctx::score_transaction_ctx(const std::shared_ptr<score_ctx>& score)
+score_transaction_ctx::score_transaction_ctx(const shared_ptr<score_ctx>& score)
 	: generic_async_transaction_context(score->communicationId, score->passphrase, score->timeout)
 {
 	pcId = score->pcId;
 }
 
-s32 create_score_transaction_context(const std::shared_ptr<score_ctx>& score)
+s32 create_score_transaction_context(const shared_ptr<score_ctx>& score)
 {
 	s32 trans_id = idm::make<score_transaction_ctx>(score);
 
@@ -158,11 +159,11 @@ bool destroy_match2_context(u16 ctx_id)
 }
 bool check_match2_context(u16 ctx_id)
 {
-	return (idm::check<match2_ctx>(ctx_id) != nullptr);
+	return (idm::check_unlocked<match2_ctx>(ctx_id) != nullptr);
 }
-std::shared_ptr<match2_ctx> get_match2_context(u16 ctx_id)
+shared_ptr<match2_ctx> get_match2_context(u16 ctx_id)
 {
-	return idm::get<match2_ctx>(ctx_id);
+	return idm::get_unlocked<match2_ctx>(ctx_id);
 }
 
 lookup_title_ctx::lookup_title_ctx(vm::cptr<SceNpCommunicationId> communicationId)
@@ -207,9 +208,9 @@ bool destroy_commerce2_context(u32 ctx_id)
 {
 	return idm::remove<commerce2_ctx>(static_cast<u32>(ctx_id));
 }
-std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id)
+shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id)
 {
-	return idm::get<commerce2_ctx>(ctx_id);
+	return idm::get_unlocked<commerce2_ctx>(ctx_id);
 }
 
 signaling_ctx::signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
@@ -226,9 +227,9 @@ bool destroy_signaling_context(u32 ctx_id)
 {
 	return idm::remove<signaling_ctx>(static_cast<u32>(ctx_id));
 }
-std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id)
+shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id)
 {
-	return idm::get<signaling_ctx>(ctx_id);
+	return idm::get_unlocked<signaling_ctx>(ctx_id);
 }
 
 matching_ctx::matching_ctx(vm::ptr<SceNpId> npId, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg)
@@ -266,9 +267,9 @@ s32 create_matching_context(vm::ptr<SceNpId> npId, vm::ptr<SceNpMatchingHandler>
 	ctx->ctx_id = ctx_id;
 	return static_cast<s32>(ctx_id);
 }
-std::shared_ptr<matching_ctx> get_matching_context(u32 ctx_id)
+shared_ptr<matching_ctx> get_matching_context(u32 ctx_id)
 {
-	return idm::get<matching_ctx>(ctx_id);
+	return idm::get_unlocked<matching_ctx>(ctx_id);
 }
 bool destroy_matching_context(u32 ctx_id)
 {

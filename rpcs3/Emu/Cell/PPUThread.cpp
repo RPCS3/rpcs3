@@ -174,13 +174,13 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 }
 
 extern void ppu_initialize();
-extern void ppu_finalize(const ppu_module& info, bool force_mem_release = false);
-extern bool ppu_initialize(const ppu_module& info, bool check_only = false, u64 file_size = 0);
-static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module);
+extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release = false);
+extern bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only = false, u64 file_size = 0);
+static void ppu_initialize2(class jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module<lv2_obj>& whole_module);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
+extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
+extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
@@ -550,7 +550,7 @@ u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
 	if (eal >= RAW_SPU_BASE_ADDR)
 	{
 		// RawSPU MMIO
-		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+		auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 		if (!thread)
 		{
@@ -578,7 +578,7 @@ void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
 	if (eal >= RAW_SPU_BASE_ADDR)
 	{
 		// RawSPU MMIO
-		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+		auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 		if (!thread)
 		{
@@ -3450,7 +3450,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 					if (count > 20000 && g_cfg.core.perf_report) [[unlikely]]
 					{
-						perf_log.warning(u8"STCX: took too long: %.3fµs (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
+						perf_log.warning("STCX: took too long: %.3fus (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
 					}
 
 					break;
@@ -3837,7 +3837,7 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset, u64 max_size = umax
 	return file;
 }
 
-extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
+extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release)
 {
 	if (info.segs.empty())
 	{
@@ -3885,7 +3885,7 @@ extern void ppu_finalize(const ppu_module& info, bool force_mem_release)
 #endif
 }
 
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_modules)
+extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_modules)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
@@ -3978,7 +3978,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 				if (loaded_modules)
 				{
-					if (std::any_of(loaded_modules->begin(), loaded_modules->end(), [&](ppu_module* obj)
+					if (std::any_of(loaded_modules->begin(), loaded_modules->end(), [&](ppu_module<lv2_obj>* obj)
 					{
 						return obj->name == entry.name;
 					}))
@@ -4311,7 +4311,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 		auto slice = possible_exec_file_paths.pop_all();
 
-		auto main_module = std::move(g_fxo->get<main_ppu_module>());
+		auto main_module = std::move(g_fxo->get<main_ppu_module<lv2_obj>>());
 
 		for (; slice; slice.pop_front(), g_progr_fdone++)
 		{
@@ -4348,7 +4348,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			{
 				while (exec_err == elf_error::ok)
 				{
-					main_ppu_module& _main = g_fxo->get<main_ppu_module>();
+					main_ppu_module<lv2_obj>& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
 					_main = {};
 
 					auto current_cache = std::move(g_fxo->get<spu_cache>());
@@ -4393,7 +4393,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
 		}
 
-		g_fxo->get<main_ppu_module>() = std::move(main_module);
+		g_fxo->get<main_ppu_module<lv2_obj>>() = std::move(main_module);
 		g_fxo->get<spu_cache>().collect_funcs_to_precompile = true;
 		Emu.ConfigurePPUCache();
 	});
@@ -4403,7 +4403,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 extern void ppu_initialize()
 {
-	if (!g_fxo->is_init<main_ppu_module>())
+	if (!g_fxo->is_init<main_ppu_module<lv2_obj>>())
 	{
 		return;
 	}
@@ -4413,7 +4413,7 @@ extern void ppu_initialize()
 		return;
 	}
 
-	auto& _main = g_fxo->get<main_ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
 
 	std::optional<scoped_progress_dialog> progress_dialog(std::in_place, get_localized_string(localized_string_id::PROGRESS_DIALOG_ANALYZING_PPU_EXECUTABLE));
 
@@ -4436,7 +4436,7 @@ extern void ppu_initialize()
 		compile_main = ppu_initialize(_main, true);
 	}
 
-	std::vector<ppu_module*> module_list;
+	std::vector<ppu_module<lv2_obj>*> module_list;
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
@@ -4541,7 +4541,7 @@ extern void ppu_initialize()
 	}
 }
 
-bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
+bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
@@ -4668,7 +4668,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 	const u32 reloc = info.relocs.empty() ? 0 : ::at32(info.segs, 0).addr;
 
 	// Info sent to threads
-	std::vector<std::pair<std::string, ppu_module>> workload;
+	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
 
 	// Info to load to main JIT instance (true - compiled)
 	std::vector<std::pair<std::string, bool>> link_workload;
@@ -4733,7 +4733,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		}
 
 		// Copy module information (TODO: optimize)
-		ppu_module part;
+		ppu_module<lv2_obj> part;
 		part.copy_part(info);
 		part.funcs.reserve(16000);
 
@@ -5035,15 +5035,15 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 		struct thread_op
 		{
 			atomic_t<u32>& work_cv;
-			std::vector<std::pair<std::string, ppu_module>>& workload;
-			const ppu_module& main_module;
+			std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload;
+			const ppu_module<lv2_obj>& main_module;
 			const std::string& cache_path;
 			const cpu_thread* cpu;
 
 			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
 
-			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module>>& workload
-				, const cpu_thread* cpu, const ppu_module& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
+			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
+				, const cpu_thread* cpu, const ppu_module<lv2_obj>& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
 
 				: work_cv(work_cv)
 				, workload(workload)
@@ -5257,7 +5257,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only, u64 file_size)
 #endif
 }
 
-static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module& whole_module)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module<lv2_obj>& whole_module)
 {
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;

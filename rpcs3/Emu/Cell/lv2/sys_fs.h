@@ -360,7 +360,7 @@ struct lv2_file final : lv2_fs_object
 	struct file_view;
 
 	// Make file view from lv2_file object (for MSELF support)
-	static fs::file make_view(const std::shared_ptr<lv2_file>& _file, u64 offset);
+	static fs::file make_view(const shared_ptr<lv2_file>& _file, u64 offset);
 };
 
 struct lv2_dir final : lv2_fs_object

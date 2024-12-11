@@ -3,6 +3,9 @@
 #include <map>
 #include <list>
 
+#include "util/atomic.hpp"
+#include "util/shared_ptr.hpp"
+
 
 /*
  * sys_config is a "subscription-based data storage API"
@@ -133,30 +136,30 @@ class lv2_config
 	shared_mutex m_mutex;
 
 	// Map of LV2 Service Events
-	std::unordered_map<u32, std::weak_ptr<lv2_config_service_event>> events;
+	std::unordered_map<u32, shared_ptr<lv2_config_service_event>> events;
 
 public:
 	void initialize();
 
 	// Service Events
-	void add_service_event(const std::shared_ptr<lv2_config_service_event>& event);
+	void add_service_event(shared_ptr<lv2_config_service_event> event);
 	void remove_service_event(u32 id);
 
-	std::shared_ptr<lv2_config_service_event> find_event(u32 id)
+	shared_ptr<lv2_config_service_event> find_event(u32 id)
 	{
 		reader_lock lock(m_mutex);
 
 		const auto it = events.find(id);
 
 		if (it == events.cend())
-			return nullptr;
+			return null_ptr;
 
-		if (auto event = it->second.lock())
+		if (it->second)
 		{
-			return event;
+			return it->second;
 		}
 
-		return nullptr;
+		return null_ptr;
 	}
 };
 
@@ -175,33 +178,35 @@ private:
 	u32 idm_id;
 
 	// queue for service/io event notifications
-	const std::weak_ptr<lv2_event_queue> queue;
+	const shared_ptr<lv2_event_queue> queue;
 
 	bool send_queue_event(u64 source, u64 d1, u64 d2, u64 d3) const
 	{
-		if (auto sptr = queue.lock())
+		if (auto sptr = queue)
 		{
 			return sptr->send(source, d1, d2, d3) == 0;
 		}
+
 		return false;
 	}
 
 public:
 	// Constructors (should not be used directly)
-	lv2_config_handle(std::weak_ptr<lv2_event_queue>&& _queue)
+	lv2_config_handle(shared_ptr<lv2_event_queue> _queue) noexcept
 		: queue(std::move(_queue))
-	{}
+	{
+	}
 
 	// Factory
 	template <typename... Args>
-	static std::shared_ptr<lv2_config_handle> create(Args&&... args)
+	static shared_ptr<lv2_config_handle> create(Args&&... args)
 	{
 		if (auto cfg = idm::make_ptr<lv2_config_handle>(std::forward<Args>(args)...))
 		{
 			cfg->idm_id = idm::last_id();
 			return cfg;
 		}
-		return nullptr;
+		return null_ptr;
 	}
 
 	// Notify event queue for this handle
@@ -225,7 +230,6 @@ public:
 private:
 	// IDM data
 	u32 idm_id;
-	std::weak_ptr<lv2_config_service> wkptr;
 
 	// Whether this service is currently registered or not
 	bool registered = true;
@@ -240,27 +244,27 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], usz size)
+	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8* _data, usz size) noexcept
 		: timestamp(get_system_time())
 		, id(_id)
 		, user_id(_user_id)
 		, verbosity(_verbosity)
 		, padding(_padding)
 		, data(&_data[0], &_data[size])
-	{}
+	{
+	}
 
 	// Factory
 	template <typename... Args>
-	static std::shared_ptr<lv2_config_service> create(Args&&... args)
+	static shared_ptr<lv2_config_service> create(Args&&... args)
 	{
 		if (auto service = idm::make_ptr<lv2_config_service>(std::forward<Args>(args)...))
 		{
-			service->wkptr = service;
 			service->idm_id = idm::last_id();
 			return service;
 		}
 
-		return nullptr;
+		return null_ptr;
 	}
 
 	// Registration
@@ -272,7 +276,7 @@ public:
 
 	// Utilities
 	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
-	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); }
+	shared_ptr<lv2_config_service> get_shared_ptr () const { return idm::get_unlocked<lv2_config_service>(idm_id); }
 	u32 get_id() const { return idm_id; }
 };
 
@@ -290,14 +294,13 @@ public:
 private:
 	// IDM data
 	u32 idm_id;
-	std::weak_ptr<lv2_config_service_listener> wkptr;
 
 	// The service listener owns the service events - service events will not be freed as long as their corresponding listener exists
 	// This has been confirmed to be the case in realhw
-	std::vector<std::shared_ptr<lv2_config_service_event>> service_events;
-	std::weak_ptr<lv2_config_handle> handle;
+	std::vector<shared_ptr<lv2_config_service_event>> service_events;
+	shared_ptr<lv2_config_handle> handle;
 
-	bool notify(const std::shared_ptr<lv2_config_service_event>& event);
+	bool notify(const shared_ptr<lv2_config_service_event>& event);
 
 public:
 	const sys_config_service_id service_id;
@@ -307,8 +310,8 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], usz size)
-		: handle(_handle)
+	lv2_config_service_listener(shared_ptr<lv2_config_handle> _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8* _data, usz size) noexcept
+		: handle(std::move(_handle))
 		, service_id(_service_id)
 		, min_verbosity(_min_verbosity)
 		, type(_type)
@@ -317,30 +320,29 @@ public:
 
 	// Factory
 	template <typename... Args>
-	static std::shared_ptr<lv2_config_service_listener> create(Args&&... args)
+	static shared_ptr<lv2_config_service_listener> create(Args&&... args)
 	{
 		if (auto listener = idm::make_ptr<lv2_config_service_listener>(std::forward<Args>(args)...))
 		{
-			listener->wkptr = listener;
 			listener->idm_id = idm::last_id();
 			return listener;
 		}
 
-		return nullptr;
+		return null_ptr;
 	}
 
 	// Check whether service matches
 	bool check_service(const lv2_config_service& service) const;
 
 	// Register new event, and notify queue
-	bool notify(const std::shared_ptr<lv2_config_service>& service);
+	bool notify(const shared_ptr<lv2_config_service>& service);
 
 	// (Re-)notify about all still-registered past events
 	void notify_all();
 
 	// Utilities
 	u32 get_id() const { return idm_id; }
-	std::shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return wkptr.lock(); }
+	shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return idm::get_unlocked<lv2_config_service_listener>(idm_id); }
 };
 
 /*
@@ -363,30 +365,24 @@ public:
 
 	// Note: Events hold a shared_ptr to their corresponding service - services only get freed once there are no more pending service events
 	// This has been confirmed to be the case in realhw
-	const std::weak_ptr<lv2_config_handle> handle;
-	const std::shared_ptr<lv2_config_service> service;
+	const shared_ptr<lv2_config_handle> handle;
+	const shared_ptr<lv2_config_service> service;
 	const lv2_config_service_listener& listener;
 
 	// Constructors (should not be used directly)
-	lv2_config_service_event(const std::weak_ptr<lv2_config_handle>& _handle, const std::shared_ptr<lv2_config_service>& _service, const lv2_config_service_listener& _listener)
-		: id(get_next_id())
-		, handle(_handle)
-		, service(_service)
-		, listener(_listener)
-	{}
-
-	lv2_config_service_event(const std::weak_ptr<lv2_config_handle>&& _handle, const std::shared_ptr<lv2_config_service>&& _service, const lv2_config_service_listener& _listener)
+	lv2_config_service_event(shared_ptr<lv2_config_handle> _handle, shared_ptr<lv2_config_service> _service, const lv2_config_service_listener& _listener) noexcept
 		: id(get_next_id())
 		, handle(std::move(_handle))
 		, service(std::move(_service))
 		, listener(_listener)
-	{}
+	{
+	}
 
 	// Factory
 	template <typename... Args>
-	static std::shared_ptr<lv2_config_service_event> create(Args&&... args)
+	static shared_ptr<lv2_config_service_event> create(Args&&... args)
 	{
-		auto ev = std::make_shared<lv2_config_service_event>(std::forward<Args>(args)...);
+		auto ev = make_shared<lv2_config_service_event>(std::forward<Args>(args)...);
 
 		g_fxo->get<lv2_config>().add_service_event(ev);
 
@@ -394,7 +390,7 @@ public:
 	}
 
 	// Destructor
-	~lv2_config_service_event()
+	~lv2_config_service_event() noexcept
 	{
 		if (auto global = g_fxo->try_get<lv2_config>())
 		{

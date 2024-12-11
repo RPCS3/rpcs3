@@ -139,7 +139,7 @@ error_code sceNpSnsFbAbortHandle(u32 handle)
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+	const auto sfh = idm::get_unlocked<sns_fb_handle_t>(handle);
 
 	if (!sfh)
 	{
@@ -172,7 +172,7 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+	const auto sfh = idm::get_unlocked<sns_fb_handle_t>(handle);
 
 	if (!sfh)
 	{
@@ -200,7 +200,7 @@ s32 sceNpSnsFbStreamPublish(u32 handle) // add more arguments
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+	const auto sfh = idm::get_unlocked<sns_fb_handle_t>(handle);
 
 	if (!sfh)
 	{
@@ -258,7 +258,7 @@ s32 sceNpSnsFbLoadThrottle(u32 handle)
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+	const auto sfh = idm::get_unlocked<sns_fb_handle_t>(handle);
 
 	if (!sfh)
 	{
@@ -299,7 +299,7 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto sfh = idm::get<sns_fb_handle_t>(handle);
+	const auto sfh = idm::get_unlocked<sns_fb_handle_t>(handle);
 
 	if (!sfh)
 	{

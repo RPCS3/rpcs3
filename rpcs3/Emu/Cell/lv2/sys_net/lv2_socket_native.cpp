@@ -106,7 +106,7 @@ void lv2_socket_native::set_socket(socket_type socket, lv2_socket_family family,
 	set_non_blocking();
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -127,7 +127,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 
 	if (native_socket != invalid_socket)
 	{
-		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
+		auto newsock = make_single<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
 
 		// Sockets inherit non blocking behaviour from their parent
@@ -274,7 +274,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 #ifdef _WIN32
 			connecting = true;
 #endif
-			this->poll_queue(nullptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
+			this->poll_queue(null_ptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::write)
 					{

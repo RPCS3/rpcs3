@@ -12,7 +12,7 @@
 
 LOG_CHANNEL(recvmessage_dlg_log, "recvmessage dlg");
 
-void recvmessage_callback(void* param, std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
+void recvmessage_callback(void* param, shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 {
 	auto* dlg = static_cast<recvmessage_dialog_frame*>(param);
 	dlg->callback_handler(std::move(new_msg), msg_id);
@@ -132,7 +132,7 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 	return result;
 }
 
-void recvmessage_dialog_frame::add_message(const std::shared_ptr<std::pair<std::string, message_data>>& msg, u64 msg_id)
+void recvmessage_dialog_frame::add_message(const shared_ptr<std::pair<std::string, message_data>>& msg, u64 msg_id)
 {
 	ensure(msg);
 	auto new_item = new QListWidgetItem(QString::fromStdString(msg->first));
@@ -145,7 +145,7 @@ void recvmessage_dialog_frame::slot_new_message(recvmessage_signal_struct msg_an
 	add_message(msg_and_id.msg, msg_and_id.msg_id);
 }
 
-void recvmessage_dialog_frame::callback_handler(std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
+void recvmessage_dialog_frame::callback_handler(shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 {
 	recvmessage_signal_struct signal_struct = {
 		.msg    = new_msg,

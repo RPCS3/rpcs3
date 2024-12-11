@@ -79,7 +79,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
 
-	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
+	fmt::append(out, u8"%s, â€œ%sâ€, Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
 }
 
 template<>
@@ -87,7 +87,7 @@ void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 {
 	const auto& dir = get_object(arg);
 
-	fmt::append(out, u8"Directory, “%s”, Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
+	fmt::append(out, u8"Directory, â€œ%sâ€, Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
 }
 
 bool has_fs_write_rights(std::string_view vpath)
@@ -615,11 +615,11 @@ void loaded_npdrm_keys::save(utils::serial& ar)
 
 struct lv2_file::file_view : fs::file_base
 {
-	const std::shared_ptr<lv2_file> m_file;
+	const shared_ptr<lv2_file> m_file;
 	const u64 m_off;
 	u64 m_pos;
 
-	explicit file_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+	explicit file_view(const shared_ptr<lv2_file>& _file, u64 offset)
 		: m_file(_file)
 		, m_off(offset)
 		, m_pos(0)
@@ -699,7 +699,7 @@ struct lv2_file::file_view : fs::file_base
 	}
 };
 
-fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
+fs::file lv2_file::make_view(const shared_ptr<lv2_file>& _file, u64 offset)
 {
 	fs::file result;
 	result.reset(std::make_unique<lv2_file::file_view>(_file, offset));
@@ -745,7 +745,7 @@ error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 a
 		return CELL_EFAULT;
 	}
 
-	const auto file = idm::get<lv2_fs_object>(*arg3);
+	const auto file = idm::get_unlocked<lv2_fs_object>(*arg3);
 
 	if (!file)
 	{
@@ -1059,16 +1059,16 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		return {g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath) == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, error, path};
 	}
 
-	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
+	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> shared_ptr<lv2_file>
 	{
-		std::shared_ptr<lv2_file> result;
+		shared_ptr<lv2_file> result;
 
 		if (type >= lv2_file_type::sdata && !g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 		{
 			return result;
 		}
 
-		result = std::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
+		result = stx::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
 		sys_fs.warning("sys_fs_open(): fd=%u, %s", idm::last_id(), *result);
 		return result;
 	}))
@@ -1100,7 +1100,7 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EFAULT;
 	}
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || (nbytes && file->flags & CELL_FS_O_WRONLY))
 	{
@@ -1169,7 +1169,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		return CELL_EFAULT;
 	}
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || (nbytes && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
@@ -1239,7 +1239,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 	ppu.state += cpu_flag::wait;
 	lv2_obj::sleep(ppu);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -1279,7 +1279,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 			auto& default_container = g_fxo->get<default_sys_fs_container>();
 			std::lock_guard lock(default_container.mutex);
 
-			if (auto ct = idm::get<lv2_memory_container>(file->ct_id))
+			if (auto ct = idm::get_unlocked<lv2_memory_container>(file->ct_id))
 			{
 				ct->free(file->ct_used);
 				if (default_container.id == file->ct_id)
@@ -1442,7 +1442,7 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 		return CELL_EFAULT;
 	}
 
-	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
+	const auto directory = idm::get_unlocked<lv2_fs_object, lv2_dir>(fd);
 
 	if (!directory)
 	{
@@ -1614,7 +1614,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	sys_fs.warning("sys_fs_fstat(fd=%d, sb=*0x%x)", fd, sb);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -1960,7 +1960,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EINVAL;
 		}
 
-		const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 		if (!file)
 		{
@@ -2056,7 +2056,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EINVAL;
 		}
 
-		const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 		if (!file)
 		{
@@ -2081,14 +2081,14 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		fs::file stream;
 		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> std::shared_ptr<lv2_file>
+		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> shared_ptr<lv2_file>
 		{
 			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 			{
-				return nullptr;
+				return null_ptr;
 			}
 
-			return std::make_shared<lv2_file>(file, std::move(stream), file.mode, CELL_FS_O_RDONLY, file.real_path, lv2_file_type::sdata);
+			return stx::make_shared<lv2_file>(file, std::move(stream), file.mode, CELL_FS_O_RDONLY, file.real_path, lv2_file_type::sdata);
 		}))
 		{
 			arg->out_code = CELL_OK;
@@ -2198,13 +2198,13 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_OK;
 		}
 
-		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		if (!file)
 		{
 			return CELL_EBADF;
 		}
 
-		if (auto ct = idm::get<lv2_memory_container>(file->ct_id))
+		if (auto ct = idm::get_unlocked<lv2_memory_container>(file->ct_id))
 		{
 			ct->free(file->ct_used);
 			if (default_container.id == file->ct_id)
@@ -2427,7 +2427,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EINVAL;
 		}
 
-		const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
+		const auto directory = idm::get_unlocked<lv2_fs_object, lv2_dir>(fd);
 
 		if (!directory)
 		{
@@ -2566,14 +2566,14 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return result.error;
 		}
 
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> std::shared_ptr<lv2_file>
+		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> shared_ptr<lv2_file>
 		{
 			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 			{
-				return nullptr;
+				return null_ptr;
 			}
 
-			return std::make_shared<lv2_file>(result.ppath, std::move(result.file), 0,  0, std::move(result.real_path), lv2_file_type::sdata);
+			return stx::make_shared<lv2_file>(result.ppath, std::move(result.file), 0,  0, std::move(result.real_path), lv2_file_type::sdata);
 		}))
 		{
 			arg->out_code = CELL_OK;
@@ -2597,7 +2597,7 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 	sys_fs.trace("sys_fs_lseek(fd=%d, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -2643,7 +2643,7 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 
 	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -2668,7 +2668,7 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 
 	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -2692,7 +2692,7 @@ error_code sys_fs_fget_block_size(ppu_thread& ppu, u32 fd, vm::ptr<u64> sector_s
 
 	sys_fs.warning("sys_fs_fget_block_size(fd=%d, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x, out_flags=*0x%x)", fd, sector_size, block_size, arg4, out_flags);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -2819,7 +2819,7 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 
 	sys_fs.warning("sys_fs_ftruncate(fd=%d, size=0x%llx)", fd, size);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
 	{
@@ -3089,7 +3089,7 @@ error_code sys_fs_lsn_get_cda_size(ppu_thread&, u32 fd, vm::ptr<u64> ptr)
 {
 	sys_fs.warning("sys_fs_lsn_get_cda_size(fd=%d, ptr=*0x%x)", fd, ptr);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -3112,7 +3112,7 @@ error_code sys_fs_lsn_lock(ppu_thread&, u32 fd)
 {
 	sys_fs.trace("sys_fs_lsn_lock(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
@@ -3134,7 +3134,7 @@ error_code sys_fs_lsn_unlock(ppu_thread&, u32 fd)
 {
 	sys_fs.trace("sys_fs_lsn_unlock(fd=%d)", fd);
 
-	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{

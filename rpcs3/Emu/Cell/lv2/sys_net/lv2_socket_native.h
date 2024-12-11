@@ -30,13 +30,15 @@
 class lv2_socket_native final : public lv2_socket
 {
 public:
+	static constexpr u32 id_type = 1;
+
 	lv2_socket_native(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	lv2_socket_native(utils::serial& ar, lv2_socket_type type);
 	void save(utils::serial& ar);
 	~lv2_socket_native();
 	s32 create_socket();
 
-	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
 	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;

@@ -510,7 +510,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 
 	libmixer.warning("*** surMixer created (ch1=%d, ch2=%d, ch6=%d, ch8=%d)", config->chStrips1, config->chStrips2, config->chStrips6, config->chStrips8);
 
-	//auto thread = idm::make_ptr<ppu_thread>("Surmixer Thread");
+	//auto thread = idm::make_ptr<named_thread<ppu_thread>>("Surmixer Thread");
 
 	return CELL_OK;
 }

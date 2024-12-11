@@ -14,7 +14,7 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 namespace np
 {
-	std::pair<error_code, std::shared_ptr<matching_ctx>> gui_prelude(u32 ctx_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+	std::pair<error_code, shared_ptr<matching_ctx>> gui_prelude(u32 ctx_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 	{
 		auto ctx = get_matching_context(ctx_id);
 
@@ -33,7 +33,7 @@ namespace np
 		return {CELL_OK, ctx};
 	}
 
-	void gui_epilog(const std::shared_ptr<matching_ctx>& ctx)
+	void gui_epilog(const shared_ptr<matching_ctx>& ctx)
 	{
 		ensure(ctx->busy.compare_and_swap_test(1, 0), "Matching context wasn't busy in gui_epilog");
 		ctx->queue_gui_callback(SCE_NP_MATCHING_GUI_EVENT_COMMON_UNLOAD, 0);
@@ -662,7 +662,7 @@ namespace np
 				if (ctx->wakey == 0)
 				{
 					// Verify that the context is still valid
-					if (!idm::check<matching_ctx>(ctx->ctx_id))
+					if (!idm::check_unlocked<matching_ctx>(ctx->ctx_id))
 						return;
 
 					rpcn_log.notice("QuickMatch timeout");

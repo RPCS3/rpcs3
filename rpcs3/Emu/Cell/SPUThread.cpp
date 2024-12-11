@@ -2415,7 +2415,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		if (eal < SYS_SPU_THREAD_BASE_LOW)
 		{
 			// RawSPU MMIO
-			auto thread = idm::get<named_thread<spu_thread>>(find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+			auto thread = idm::get_unlocked<named_thread<spu_thread>>(find_raw_spu((eal - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 			if (!thread)
 			{
@@ -3837,7 +3837,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 				if (count2 > 20000 && g_cfg.core.perf_report) [[unlikely]]
 				{
-					perf_log.warning(u8"PUTLLC: took too long: %.3fµs (%u c) (addr=0x%x) (S)", count2 / (utils::get_tsc_freq() / 1000'000.), count2, addr);
+					perf_log.warning("PUTLLC: took too long: %.3fus (%u c) (addr=0x%x) (S)", count2 / (utils::get_tsc_freq() / 1000'000.), count2, addr);
 				}
 
 				if (ok)
@@ -3872,7 +3872,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			{
 				if (count > 20000 && g_cfg.core.perf_report) [[unlikely]]
 				{
-					perf_log.warning(u8"PUTLLC: took too long: %.3fµs (%u c) (addr = 0x%x)", count / (utils::get_tsc_freq() / 1000'000.), count, addr);
+					perf_log.warning("PUTLLC: took too long: %.3fus (%u c) (addr = 0x%x)", count / (utils::get_tsc_freq() / 1000'000.), count, addr);
 				}
 
 				break;
@@ -4087,7 +4087,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		if (result > 20000 && g_cfg.core.perf_report) [[unlikely]]
 		{
-			perf_log.warning(u8"STORE128: took too long: %.3fµs (%u c) (addr=0x%x)", result / (utils::get_tsc_freq() / 1000'000.), result, addr);
+			perf_log.warning("STORE128: took too long: %.3fus (%u c) (addr=0x%x)", result / (utils::get_tsc_freq() / 1000'000.), result, addr);
 		}
 
 		static_cast<void>(cpu->test_stopped());
@@ -6007,7 +6007,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_function_logger logger(*this, "sys_spu_thread_send_event");
 
-				std::shared_ptr<lv2_event_queue> queue;
+				shared_ptr<lv2_event_queue> queue;
 				{
 					std::lock_guard lock(group->mutex);
 
@@ -6059,7 +6059,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_function_logger logger(*this, "sys_spu_thread_throw_event");
 
-				std::shared_ptr<lv2_event_queue> queue;
+				shared_ptr<lv2_event_queue> queue;
 				{
 					std::lock_guard lock{group->mutex};
 					queue = this->spup[spup];
@@ -6447,7 +6447,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
-	auto get_queue = [this](u32 spuq) -> const std::shared_ptr<lv2_event_queue>&
+	auto get_queue = [this](u32 spuq) -> const shared_ptr<lv2_event_queue>&
 	{
 		for (auto& v : this->spuq)
 		{
@@ -6460,7 +6460,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		static const std::shared_ptr<lv2_event_queue> empty;
+		static const shared_ptr<lv2_event_queue> empty;
 		return empty;
 	};
 
@@ -6523,7 +6523,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
-		std::shared_ptr<lv2_event_queue> queue;
+		shared_ptr<lv2_event_queue> queue;
 
 		while (true)
 		{
@@ -6665,7 +6665,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_tryreceive_event(spuq=0x%x)", spuq);
 
-		std::shared_ptr<lv2_event_queue> queue;
+		shared_ptr<lv2_event_queue> queue;
 
 		reader_lock{group->mutex}, queue = get_queue(spuq);
 

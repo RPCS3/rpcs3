@@ -54,7 +54,7 @@ struct lv2_event_flag final : lv2_obj
 	}
 
 	lv2_event_flag(utils::serial& ar);
-	static std::shared_ptr<void> load(utils::serial& ar);
+	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
 
 	// Check mode arg
