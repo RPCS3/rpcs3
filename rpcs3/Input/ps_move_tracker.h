@@ -93,6 +93,7 @@ private:
 	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_hue_filtered{};
 	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_binary{};
 	std::array<u32, CELL_GEM_MAX_NUM> m_fail_count{};
+	std::array<u32, CELL_GEM_MAX_NUM> m_shape_fail_count{};
 
 	std::array<u32, 360> m_hues{};
 	std::array<ps_move_info, CELL_GEM_MAX_NUM> m_info{};
