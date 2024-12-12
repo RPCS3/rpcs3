@@ -362,6 +362,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	// Initialize Fusion
 	FusionAhrsInitialise(&device->ahrs);
 	device->ahrs.settings.convention = FusionConvention::FusionConventionEnu;
+	device->ahrs.settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
 	FusionAhrsSetSettings(&device->ahrs, &device->ahrs.settings);
 	FusionAhrsReset(&device->ahrs);
 
