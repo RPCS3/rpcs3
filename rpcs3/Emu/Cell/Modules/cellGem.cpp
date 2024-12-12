@@ -232,8 +232,8 @@ public:
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
-		f32 distance_mm{1500.0f};                          // Distance from the camera in mm
-		f32 radius{10.0f};                                 // Radius of the sphere in camera pixels
+		f32 distance_mm{3000.0f};                          // Distance from the camera in mm
+		f32 radius{5.0f};                                  // Radius of the sphere in camera pixels
 		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
@@ -919,9 +919,13 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
 	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
 
+	// Half of the camera image
+	const f32 half_width = shared_data.width / 2.f;
+	const f32 half_height = shared_data.height / 2.f;
+
 	// Centered image coordinates in pixels
-	const f32 centered_x = image_x - (shared_data.width / 2.f);
-	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
+	const f32 centered_x = image_x - half_width;
+	const f32 centered_y = half_height - image_y; // Image coordinates increase downwards, so we have to invert this
 
 	// Camera coordinates in mm (centered, so it's the same as world coordinates)
 	const f32 camera_x = centered_x * mmPerPixel;
@@ -949,10 +953,29 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	}
 	else
 	{
-		gem_state->quat[0] = 320.f - image_x;
-		gem_state->quat[1] = (y_pos / scaling_width) - 180.f;
-		gem_state->quat[2] = 1200.f;
-		gem_state->quat[3] = 1.f;
+		static constexpr f32 PI = 3.14159265f;
+		const auto degree_to_rad = [](f32 degree) -> f32 { return degree * PI / 180.0f; };
+
+		static constexpr f32 CONE = 10.0f / 2.0f;
+		const f32 roll = -degree_to_rad((image_y - half_height) / half_height * CONE); // This is actually the pitch
+		const f32 pitch = -degree_to_rad((image_x - half_width) / half_width * CONE); // This is actually the yaw
+		const f32 yaw = degree_to_rad(0.0f);
+		const f32 cr = std::cos(roll * 0.5f);
+		const f32 sr = std::sin(roll * 0.5f);
+		const f32 cp = std::cos(pitch * 0.5f);
+		const f32 sp = std::sin(pitch * 0.5f);
+		const f32 cy = std::cos(yaw * 0.5f);
+		const f32 sy = std::sin(yaw * 0.5f);
+
+		const f32 q_x = sr * cp * cy - cr * sp * sy;
+		const f32 q_y = cr * sp * cy + sr * cp * sy;
+		const f32 q_z = cr * cp * sy - sr * sp * cy;
+		const f32 q_w = cr * cp * cy + sr * sp * sy;
+
+		gem_state->quat[0] = q_x;
+		gem_state->quat[1] = q_y;
+		gem_state->quat[2] = q_z;
+		gem_state->quat[3] = q_w;
 	}
 
 	if (g_cfg.io.show_move_cursor)
