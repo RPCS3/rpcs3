@@ -716,8 +716,9 @@ public:
 		return hue < m_hues.size() && m_hues[hue] < 20; // potentially true if less than 20 pixels have the hue
 	}
 
-	ps_move_info& get_info(u32 gem_num)
+	ps_move_info get_info(u32 gem_num)
 	{
+		std::lock_guard lock(mutex);
 		return ::at32(m_info, gem_num);
 	}
 
@@ -1116,8 +1117,8 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 		return;
 	}
 
-	auto& tracker = g_fxo->get<named_thread<gem_tracker>>(); // Let's not lock the mutex. This not really important here
-	const ps_move_info& info = tracker.get_info(gem_num);
+	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
+	const ps_move_info info = tracker.get_info(gem_num);
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
@@ -2147,8 +2148,8 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		{
 		case move_handler::real:
 		{
-			auto& tracker = g_fxo->get<named_thread<gem_tracker>>(); // Let's not lock the mutex. This not really important here
-			const ps_move_info& info = tracker.get_info(gem_num);
+			auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
+			const ps_move_info info = tracker.get_info(gem_num);
 
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			ps_move_pos_to_gem_state(gem_num, controller, gem_state);
