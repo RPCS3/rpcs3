@@ -49,58 +49,60 @@ static void psmove_dump_calibration(const reports::ps_move_calibration_blob& cal
 
 	const u8* data = calibration.data.data();
 
+	std::string msg;
+
 	switch (device.model)
 	{
 	case ps_move_model::ZCM1:
 		t = psmove_calibration_decode_12bits(data, 0x02);
-		move_log.error("Temperature: 0x%04X", t);
+		fmt::append(msg, "Temperature: 0x%04X\n", t);
 		for (int orientation = 0; orientation < 6; orientation++)
 		{
 			x = psmove_calibration_decode_16bit_unsigned(data, 0x04 + 6 * orientation);
 			y = psmove_calibration_decode_16bit_unsigned(data, 0x04 + 6 * orientation + 2);
 			z = psmove_calibration_decode_16bit_unsigned(data, 0x04 + 6 * orientation + 4);
-			move_log.error("Orientation #%d:      (%5d | %5d | %5d)", orientation, x, y, z);
+			fmt::append(msg, "Orientation #%d:      (%5d | %5d | %5d)\n", orientation, x, y, z);
 		}
 
 		t = psmove_calibration_decode_12bits(data, 0x42);
-		move_log.error("Temperature: 0x%04X", t);
+		fmt::append(msg, "Temperature: 0x%04X\n", t);
 		for (int orientation = 0; orientation < 3; orientation++)
 		{
 			x = psmove_calibration_decode_16bit_unsigned(data, 0x46 + 8 * orientation);
 			y = psmove_calibration_decode_16bit_unsigned(data, 0x46 + 8 * orientation + 2);
 			z = psmove_calibration_decode_16bit_unsigned(data, 0x46 + 8 * orientation + 4);
-			move_log.error("Gyro %c, 80 rpm:      (%5d | %5d | %5d)", "XYZ"[orientation], x, y, z);
+			fmt::append(msg, "Gyro %c, 80 rpm:      (%5d | %5d | %5d)\n", "XYZ"[orientation], x, y, z);
 		}
 
 		t = psmove_calibration_decode_12bits(data, 0x28);
 		x = psmove_calibration_decode_16bit_unsigned(data, 0x2a);
 		y = psmove_calibration_decode_16bit_unsigned(data, 0x2a + 2);
 		z = psmove_calibration_decode_16bit_unsigned(data, 0x2a + 4);
-		move_log.error("Temperature: 0x%04X", t);
-		move_log.error("Gyro, 0 rpm (@0x2a): (%5d | %5d | %5d)", x, y, z);
+		fmt::append(msg, "Temperature: 0x%04X\n", t);
+		fmt::append(msg, "Gyro, 0 rpm (@0x2a): (%5d | %5d | %5d)\n", x, y, z);
 
 		t = psmove_calibration_decode_12bits(data, 0x30);
 		x = psmove_calibration_decode_16bit_unsigned(data, 0x32);
 		y = psmove_calibration_decode_16bit_unsigned(data, 0x32 + 2);
 		z = psmove_calibration_decode_16bit_unsigned(data, 0x32 + 4);
-		move_log.error("Temperature: 0x%04X", t);
-		move_log.error("Gyro, 0 rpm (@0x32): (%5d | %5d | %5d)", x, y, z);
+		fmt::append(msg, "Temperature: 0x%04X\n", t);
+		fmt::append(msg, "Gyro, 0 rpm (@0x32): (%5d | %5d | %5d)\n", x, y, z);
 
 		t = psmove_calibration_decode_12bits(data, 0x5c);
 		fx = psmove_calibration_decode_float(data, 0x5e);
 		fy = psmove_calibration_decode_float(data, 0x5e + 4);
 		fz = psmove_calibration_decode_float(data, 0x5e + 8);
-		move_log.error("Temperature: 0x%04X", t);
-		move_log.error("Vector @0x5e: (%f | %f | %f)", fx, fy, fz);
+		fmt::append(msg, "Temperature: 0x%04X\n", t);
+		fmt::append(msg, "Vector @0x5e: (%f | %f | %f)\n", fx, fy, fz);
 
 		fx = psmove_calibration_decode_float(data, 0x6a);
 		fy = psmove_calibration_decode_float(data, 0x6a + 4);
 		fz = psmove_calibration_decode_float(data, 0x6a + 8);
-		move_log.error("Vector @0x6a: (%f | %f | %f)", fx, fy, fz);
+		fmt::append(msg, "Vector @0x6a: (%f | %f | %f)\n", fx, fy, fz);
 
-		move_log.error("byte @0x3f:  0x%02x", static_cast<u8>(data[0x3f]));
-		move_log.error("float @0x76: %f", psmove_calibration_decode_float(data, 0x76));
-		move_log.error("float @0x7a: %f", psmove_calibration_decode_float(data, 0x7a));
+		fmt::append(msg, "byte @0x3f:  0x%02x\n", static_cast<u8>(data[0x3f]));
+		fmt::append(msg, "float @0x76: %f\n", psmove_calibration_decode_float(data, 0x76));
+		fmt::append(msg, "float @0x7a: %f\n", psmove_calibration_decode_float(data, 0x7a));
 		break;
 	case ps_move_model::ZCM2:
 		for (int orientation = 0; orientation < 6; orientation++)
@@ -108,23 +110,25 @@ static void psmove_dump_calibration(const reports::ps_move_calibration_blob& cal
 			x = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation);
 			y = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation + 2);
 			z = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation + 4);
-			move_log.error("Orientation #%d:      (%5d | %5d | %5d)", orientation, x, y, z);
+			fmt::append(msg, "Orientation #%d:      (%5d | %5d | %5d)\n", orientation, x, y, z);
 		}
 
 		x = psmove_calibration_decode_16bit_signed(data, 0x26);
 		y = psmove_calibration_decode_16bit_signed(data, 0x26 + 2);
 		z = psmove_calibration_decode_16bit_signed(data, 0x26 + 4);
-		move_log.error("Gyro Bias?, 0 rpm (@0x26): (%5d | %5d | %5d)", x, y, z);
+		fmt::append(msg, "Gyro Bias?, 0 rpm (@0x26): (%5d | %5d | %5d)\n", x, y, z);
 
 		for (int orientation = 0; orientation < 6; orientation++)
 		{
 			x = psmove_calibration_decode_16bit_signed(data, 0x30 + 6 * orientation);
 			y = psmove_calibration_decode_16bit_signed(data, 0x30 + 6 * orientation + 2);
 			z = psmove_calibration_decode_16bit_signed(data, 0x30 + 6 * orientation + 4);
-			move_log.error("Gyro %c, 90 rpm:      (%5d | %5d | %5d)", "XYZXYZ"[orientation], x, y, z);
+			fmt::append(msg, "Gyro %c, 90 rpm:      (%5d | %5d | %5d)\n", "XYZXYZ"[orientation], x, y, z);
 		}
 		break;
 	}
+
+	move_log.notice("Calibration:\n%s", msg);
 }
 
 void psmove_calibration_get_usb_accel_values(const reports::ps_move_calibration_blob& calibration, ps_move_device& device)
