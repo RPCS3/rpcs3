@@ -7,6 +7,9 @@
 
 namespace rsx
 {
+	void mm_flush_lazy();
+	void mm_flush();
+
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
@@ -35,6 +38,12 @@ namespace rsx
 					// Manually flush the pipeline.
 					// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.
 					RSX(ctx)->sync();
+				}
+
+				if constexpr (FlushDMA || FlushPipe)
+				{
+					// Kick MM flush without waiting. Technically we should do this before the sync in case of MTRSX, but doing it later improves CPU performance.
+					rsx::mm_flush_lazy();
 				}
 
 				if (handled)

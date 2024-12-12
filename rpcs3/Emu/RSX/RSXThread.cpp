@@ -9,6 +9,7 @@
 #include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
+#include "Host/MM.h"
 #include "Host/RSXDMAWriter.h"
 #include "NV47/HW/context.h"
 #include "Program/GLSLCommon.h"
@@ -2603,8 +2604,14 @@ namespace rsx
 						rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
 					}
 				}
-				else if (!backend_config.supports_hw_renormalization)
+				else if (!backend_config.supports_hw_renormalization /* &&
+					tex.min_filter() == rsx::texture_minify_filter::nearest &&
+					tex.mag_filter() == rsx::texture_magnify_filter::nearest*/)
 				{
+					// FIXME: This check should only apply to point-sampled textures. However, it severely regresses some games (id tech 5).
+					// This is because even when filtering is active, the error from the PS3 texture expansion still applies.
+					// A proper fix is to expand these formats into BGRA8 when high texture precision is required. That requires different GUI settings and inflation shaders, so it will be handled separately.
+
 					switch (format)
 					{
 					case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -3627,8 +3634,23 @@ namespace rsx
 			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
 		}
 
+		// Host sync
+		rsx::mm_flush();
+
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
+	}
+
+	void thread::renderctl(u32 request_code, void* args)
+	{
+		switch (request_code)
+		{
+		case rsx::mm_backend_ctrl::cmd_mm_flush:
+			rsx::mm_flush();
+			break;
+		default:
+			fmt::throw_exception("Unknown backend request: 0x%x", request_code);
+		}
 	}
 
 	//Pause/cont wrappers for FIFO ctrl. Never call this from rsx thread itself!
