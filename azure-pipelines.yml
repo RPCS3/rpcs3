@@ -132,7 +132,7 @@ jobs:
     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     ARTDIR: $(Build.ArtifactStagingDirectory)
-    QT_VER: '6.8.1'
+    QT_VER: '6.7.3'
     QT_VER_MAIN: '6'
     LLVM_COMPILER_VER: '16'
 
@@ -147,7 +147,7 @@ jobs:
         restoreKeys: |
           ccache | "$(Agent.OS)"
       displayName: Ccache cache
-    
+
     - task: Cache@2
       inputs:
         key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)" 
@@ -193,7 +193,7 @@ jobs:
     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-mac-arm64"
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
     ARTDIR: $(Build.ArtifactStagingDirectory)
-    QT_VER: '6.8.1'
+    QT_VER: '6.7.3'
     QT_VER_MAIN: '6'
     LLVM_COMPILER_VER: '16'
 
@@ -208,7 +208,7 @@ jobs:
         restoreKeys: |
           ccache | "$(Agent.OS)"
       displayName: Ccache cache
-    
+
     - task: Cache@2
       inputs:
         key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)"
