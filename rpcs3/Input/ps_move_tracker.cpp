@@ -444,10 +444,27 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 
 	// Set results
 	set_valid(info, index, true);
-	info.distance_mm = distance_mm;
-	info.radius = sphere_radius_pixels;
-	info.x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
-	info.y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+
+	const u32 x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
+	const u32 y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+
+	// Only set new values if the new shape and position are relatively similar to the old ones.
+	const auto distance_travelled = [](int x1, int y1, int x2, int y2)
+	{
+		return std::sqrt(std::pow(x2 - x1, 2) + pow(y2 - y1, 2));
+	};
+	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
+	                           distance_travelled(info.x_pos, info.y_pos, x_pos, y_pos) < (info.radius * 8);
+
+	if (shape_matches || ++m_shape_fail_count[index] >= 3)
+	{
+		info.distance_mm = distance_mm;
+		info.radius = sphere_radius_pixels;
+		info.x_pos = x_pos;
+		info.y_pos = y_pos;
+
+		m_shape_fail_count[index] = 0; // Reset fail count
+	}
 
 	if constexpr (!DiagnosticsEnabled)
 		return;
