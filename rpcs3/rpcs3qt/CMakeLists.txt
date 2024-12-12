@@ -160,4 +160,5 @@ target_link_libraries(rpcs3_ui
         3rdparty::wolfssl
         3rdparty::libcurl
         3rdparty::opencv
+        3rdparty::fusion
         3rdparty::rtmidi)

@@ -77,7 +77,7 @@ for url in $DEP_URLS; do
 
     # shellcheck disable=SC1003
     case "$url" in
-    *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
+    *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir="$QTDIR/" ;;
     *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
     *glslang*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
     *Vulkan*)

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ps_move_handler.h"
+#include "ps_move_calibration.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -56,11 +57,6 @@ namespace
 		charge_full  = 0x05,
 		usb_charging = 0xEE,
 		usb_charged  = 0xEF,
-	};
-
-	enum
-	{
-		zero_shift = 0x8000,
 	};
 }
 
@@ -223,7 +219,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 
 	if (hid_set_nonblocking(device->bt_device, 1) == -1)
 	{
-		move_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(device->bt_device));
+		move_log.error("connect_move_device: hid_set_nonblocking failed! Reason: %s", hid_error(device->bt_device));
 		device->close();
 		return nullptr;
 	}
@@ -239,7 +235,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 
 	if (hid_set_nonblocking(device->hidDevice, 1) == -1)
 	{
-		move_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(device->hidDevice));
+		move_log.error("connect_move_device: hid_set_nonblocking failed! Reason: %s", hid_error(device->hidDevice));
 		device->close();
 		return nullptr;
 	}
@@ -314,6 +310,60 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, std::string_view p
 
 	device->hidDevice = hidDevice;
 	device->path = path;
+
+	// Get calibration
+	device->calibration.is_valid = true;
+
+	ps_move_calibration_blob calibration {};
+
+	for (int i = 0; i < 2; i++)
+	{
+		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
+		cal[0] = 0x10;
+		const int res = hid_get_feature_report(device->hidDevice, cal.data(), cal.size());
+		if (res < 0)
+		{
+			move_log.error("connect_move_device: hid_get_feature_report 0x10 (calibration) failed! result=%d, error=%s", res, hid_error(device->hidDevice));
+			device->calibration.is_valid = false;
+			break;
+		}
+
+		int src_offset = 0;
+		int dest_offset = 0;
+
+		if ((cal[1] == 0x01 && device->model == ps_move_model::ZCM1) ||
+			(cal[1] == 0x81 && device->model == ps_move_model::ZCM2))
+		{
+			// This is the second block
+			dest_offset = PSMOVE_CALIBRATION_SIZE;
+			src_offset = 2;
+		}
+		else if (cal[1] == 0x82 && device->model == ps_move_model::ZCM1)
+		{
+			// This is the third block
+			dest_offset = 2 * PSMOVE_CALIBRATION_SIZE - 2;
+			src_offset = 2;
+		}
+		else if (cal[1] != 0x00) // Check if this is the first block (offsets stay 0)
+		{
+			move_log.error("connect_move_device: Failed to read calibration: cal=0x%x'", cal[1]);
+			device->calibration.is_valid = false;
+			break;
+		}
+
+		std::memcpy(&calibration.data[dest_offset], &cal[src_offset], cal.size() - src_offset);
+	}
+
+	if (device->calibration.is_valid)
+	{
+		psmove_parse_calibration(calibration, *device);
+	}
+
+	// Initialize Fusion
+	FusionAhrsInitialise(&device->ahrs);
+	device->ahrs.settings.convention = FusionConvention::FusionConventionEnu;
+	FusionAhrsSetSettings(&device->ahrs, &device->ahrs.settings);
+	FusionAhrsReset(&device->ahrs);
 
 	// Activate
 	if (send_output_report(device) == -1)
@@ -620,40 +670,106 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	const ps_move_input_report_common& input = dev->input_report_common();
 
-	constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
-
 	// The default position is flat on the ground, pointing forward.
 	// The accelerometers constantly measure G forces.
 	// The gyros measure changes in orientation and will reset when the device isn't moved anymore.
-	s16 accel_x = input.accel_x_2; // Increases if the device is rolled to the left
-	s16 accel_y = input.accel_y_2; // Increases if the device is pitched upwards
-	s16 accel_z = input.accel_z_2; // Increases if the device is moved upwards
-	s16 gyro_x = input.gyro_x_2;   // Increases if the device is pitched upwards
-	s16 gyro_y = input.gyro_y_2;   // Increases if the device is rolled to the right
-	s16 gyro_z = input.gyro_z_2;   // Increases if the device is yawed to the left
+	s16 accel_x = input.accel_x_1; // Increases if the device is rolled to the left
+	s16 accel_y = input.accel_y_1; // Increases if the device is pitched upwards
+	s16 accel_z = input.accel_z_1; // Increases if the device is moved upwards
+	s16 gyro_x = input.gyro_x_1;   // Increases if the device is pitched upwards
+	s16 gyro_y = input.gyro_y_1;   // Increases if the device is rolled to the right
+	s16 gyro_z = input.gyro_z_1;   // Increases if the device is yawed to the left
 
 	if (dev->model == ps_move_model::ZCM1)
 	{
-		accel_x -= zero_shift;
-		accel_y -= zero_shift;
-		accel_z -= zero_shift;
-		gyro_x -= zero_shift;
-		gyro_y -= zero_shift;
-		gyro_z -= zero_shift;
+		accel_x = (input.accel_x_1 + input.accel_x_2) / 2 - zero_shift;
+		accel_y = (input.accel_y_1 + input.accel_y_2) / 2 - zero_shift;
+		accel_z = (input.accel_z_1 + input.accel_z_2) / 2 - zero_shift;
+		gyro_x = (input.gyro_x_1 + input.gyro_x_2) / 2 - zero_shift;
+		gyro_y = (input.gyro_y_1 + input.gyro_y_2) / 2 - zero_shift;
+		gyro_z = (input.gyro_z_1 + input.gyro_z_2) / 2 - zero_shift;
 	}
 
-	pad->m_sensors[0].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_x / MOVE_ONE_G) * -1.0f));
-	pad->m_sensors[1].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_z / MOVE_ONE_G) * -1.0f));
-	pad->m_sensors[2].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (accel_y / MOVE_ONE_G)));
-	pad->m_sensors[3].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * (gyro_z / MOVE_ONE_G) * -1.0f));
+	// Apply calibration
+	if (dev->calibration.is_valid)
+	{
+		pad->move_data.accelerometer_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
+		pad->move_data.accelerometer_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
+		pad->move_data.accelerometer_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
+		pad->move_data.gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
+		pad->move_data.gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
+		pad->move_data.gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
+	}
+	else
+	{
+		constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
 
-	pad->move_data.accelerometer_x = accel_x;
-	pad->move_data.accelerometer_y = accel_y;
-	pad->move_data.accelerometer_z = accel_z;
-	pad->move_data.gyro_x = gyro_x;
-	pad->move_data.gyro_y = gyro_y;
-	pad->move_data.gyro_z = gyro_z;
+		pad->move_data.accelerometer_x = accel_x / MOVE_ONE_G;
+		pad->move_data.accelerometer_y = accel_y / MOVE_ONE_G;
+		pad->move_data.accelerometer_z = accel_z / MOVE_ONE_G;
+		pad->move_data.gyro_x = gyro_x / MOVE_ONE_G;
+		pad->move_data.gyro_y = gyro_y / MOVE_ONE_G;
+		pad->move_data.gyro_z = gyro_z / MOVE_ONE_G;
+	}
+
 	pad->move_data.temperature = ((input.temperature << 4) | ((input.magnetometer_x & 0xF0) >> 4));
+
+	pad->m_sensors[0].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_x * -1.0f));
+	pad->m_sensors[1].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_y * -1.0f));
+	pad->m_sensors[2].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_z));
+	pad->m_sensors[3].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.gyro_z * -1.0f));
+
+	// Get elapsed time since last update
+	const u64 now_us = get_system_time();
+	const float elapsed_sec = (dev->last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - dev->last_ahrs_update_time_us) / 1'000'000.0f);
+	dev->last_ahrs_update_time_us = now_us;
+
+	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
+	// Don't ask how the axis work. It's basically been trial and error.
+	ensure(dev->ahrs.settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
+
+	const FusionVector accelerometer{
+		.axis {
+			.x = -pad->move_data.accelerometer_x,
+			.y = +pad->move_data.accelerometer_y,
+			.z = +pad->move_data.accelerometer_z
+		}
+	};
+
+	static constexpr f32 PI = 3.14159265f;
+	const auto rad_to_degree = [](f32 radians) -> f32 { return radians * 180.0f / PI; };
+	const FusionVector gyroscope{
+		.axis {
+			.x = +rad_to_degree(pad->move_data.gyro_x),
+			.y = +rad_to_degree(pad->move_data.gyro_z),
+			.z = -rad_to_degree(pad->move_data.gyro_y)
+		}
+	};
+
+	FusionVector magnetometer {};
+
+	// TODO: use magnetometer if possible
+	//if (dev->model == ps_move_model::ZCM1)
+	//{
+	//	const ps_move_input_report_ZCM1& input = dev->input_report_ZCM1;
+	//	magnetometer = FusionVector{
+	//		.axis {
+	//			.x = input.magnetometer_x2,
+	//			.y = input.magnetometer_y,
+	//			.z = input.magnetometer_z
+	//		}
+	//	};
+	//}
+
+	// Update Fusion
+	FusionAhrsUpdate(&dev->ahrs, gyroscope, accelerometer, magnetometer, elapsed_sec);
+
+	// Get quaternion
+	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(&dev->ahrs);
+	pad->move_data.quaternion[0] = quaternion.array[0];
+	pad->move_data.quaternion[1] = quaternion.array[1];
+	pad->move_data.quaternion[2] = quaternion.array[2];
+	pad->move_data.quaternion[3] = quaternion.array[3];
 
 	handle_external_device(binding);
 }

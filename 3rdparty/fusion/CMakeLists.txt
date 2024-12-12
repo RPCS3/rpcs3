@@ -1,0 +1,1 @@
+add_subdirectory(fusion EXCLUDE_FROM_ALL)

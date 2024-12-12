@@ -82,6 +82,7 @@ target_sources(rpcs3
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
     Input/product_info.cpp
+    Input/ps_move_calibration.cpp
     Input/ps_move_config.cpp
     Input/ps_move_handler.cpp
     Input/ps_move_tracker.cpp
@@ -110,6 +111,7 @@ target_link_libraries(rpcs3
         3rdparty::libcurl
         3rdparty::zlib
         3rdparty::opencv
+        3rdparty::fusion
         ${ADDITIONAL_LIBS})
 
 # Unix display manager
