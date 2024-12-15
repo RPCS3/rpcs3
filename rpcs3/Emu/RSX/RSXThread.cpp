@@ -3182,6 +3182,8 @@ namespace rsx
 	{
 		m_eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
 
+		mm_flush();
+
 		if (zcull_ctrl->has_pending())
 		{
 			zcull_ctrl->sync(this);
@@ -3717,6 +3719,9 @@ namespace rsx
 	void thread::on_frame_end(u32 buffer, bool forced)
 	{
 		bool pause_emulator = false;
+
+		// MM sync. This is a pre-emptive operation, so we can use a deferred request.
+		rsx::mm_flush_lazy();
 
 		// Marks the end of a frame scope GPU-side
 		if (g_user_asked_for_frame_capture.exchange(false) && !capture_current_frame)
