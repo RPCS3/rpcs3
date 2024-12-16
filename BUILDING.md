@@ -94,7 +94,7 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel
+    sudo dnf install llvm-devel curl-devel alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel
 
 #### OpenSUSE
 
