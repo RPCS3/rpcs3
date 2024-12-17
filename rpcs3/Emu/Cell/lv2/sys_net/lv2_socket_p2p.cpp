@@ -333,6 +333,10 @@ void lv2_socket_p2p::close()
 	auto& nc = g_fxo->get<p2p_context>();
 	{
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
+
+		if (!nc.list_p2p_ports.contains(port))
+			return;
+
 		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
 		{
 			std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);
