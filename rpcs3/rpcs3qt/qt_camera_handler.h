@@ -17,8 +17,6 @@ public:
 	qt_camera_handler();
 	virtual ~qt_camera_handler();
 
-	void set_camera(const QCameraDevice& camera_info);
-
 	void open_camera() override;
 	void close_camera() override;
 	void start_camera() override;
@@ -31,11 +29,12 @@ public:
 	camera_handler_state get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) override;
 
 private:
+	void set_camera(const QCameraDevice& camera_info);
 	void reset();
 	void update_camera_settings();
 
 	std::string m_camera_id;
-	std::shared_ptr<QCamera> m_camera;
+	std::unique_ptr<QCamera> m_camera;
 	std::unique_ptr<QMediaCaptureSession> m_media_capture_session;
 	std::unique_ptr<qt_camera_video_sink> m_video_sink;
 
