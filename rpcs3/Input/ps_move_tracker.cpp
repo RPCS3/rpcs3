@@ -41,6 +41,26 @@ ps_move_tracker<DiagnosticsEnabled>::~ps_move_tracker()
 }
 
 template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::set_valid(ps_move_info& info, u32 index, bool valid)
+{
+	u32& fail_count = ::at32(m_fail_count, index);
+
+	if (info.valid && !valid)
+	{
+		// Ignore a couple of untracked frames. This reduces noise.
+		if (++fail_count >= 3)
+		{
+			info.valid = valid;
+		}
+
+		return;
+	}
+
+	info.valid = valid;
+	fail_count = 0; // Reset fail count
+};
+
+template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format)
 {
 	if (!buf || !size || !width || !height || !format)
@@ -136,7 +156,7 @@ void ps_move_tracker<DiagnosticsEnabled>::init_workers()
 
 				// Find contours
 				ps_move_info& info = m_info[index];
-				ps_move_info new_info{};
+				ps_move_info new_info = info;
 				process_contours(new_info, index);
 
 				if (new_info.valid)
@@ -179,6 +199,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_image()
 		{
 			ps_move_info& info = m_info[index];
 			info.valid = false;
+			m_fail_count[index] = 0;
 		}
 	}
 
@@ -303,7 +324,6 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const u32 height = m_height;
 	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
 
-	info.valid = false;
 	info.x_max = width;
 	info.y_max = height;
 
@@ -362,7 +382,10 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	cv::findContours(binary, all_contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
 	if (all_contours.empty())
+	{
+		set_valid(info, index, false);
 		return;
+	}
 
 	std::vector<std::vector<cv::Point>> contours;
 	contours.reserve(all_contours.size());
@@ -406,7 +429,10 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	if (best_index == umax)
+	{
+		set_valid(info, index, false);
 		return;
+	}
 
 	// Calculate distance from sphere to camera
 	const f32 sphere_radius_pixels = radii[best_index];
@@ -417,11 +443,28 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
 
 	// Set results
-	info.valid = true;
-	info.distance_mm = distance_mm;
-	info.radius = sphere_radius_pixels;
-	info.x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
-	info.y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+	set_valid(info, index, true);
+
+	const u32 x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
+	const u32 y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+
+	// Only set new values if the new shape and position are relatively similar to the old ones.
+	const auto distance_travelled = [](int x1, int y1, int x2, int y2)
+	{
+		return std::sqrt(std::pow(x2 - x1, 2) + pow(y2 - y1, 2));
+	};
+	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
+	                           distance_travelled(info.x_pos, info.y_pos, x_pos, y_pos) < (info.radius * 8);
+
+	if (shape_matches || ++m_shape_fail_count[index] >= 3)
+	{
+		info.distance_mm = distance_mm;
+		info.radius = sphere_radius_pixels;
+		info.x_pos = x_pos;
+		info.y_pos = y_pos;
+
+		m_shape_fail_count[index] = 0; // Reset fail count
+	}
 
 	if constexpr (!DiagnosticsEnabled)
 		return;

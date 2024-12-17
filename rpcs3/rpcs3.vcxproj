@@ -62,12 +62,12 @@
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\fusion\fusion\Fusion</IncludePath>
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\fusion\fusion\Fusion</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -89,7 +89,7 @@
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;OGLCompiler.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\lib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)build\lib_ext\$(CONFIGURATION)-$(PLATFORM);$(SolutionDir)3rdparty\discord-rpc\lib;$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -141,7 +141,7 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;OGLCompilerd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_world4100.lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;OGLCompilerd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\lib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)3rdparty\discord-rpc\lib;$(SolutionDir)build\lib\$(CONFIGURATION)-$(PLATFORM);$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"  /VERBOSE %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -179,6 +179,7 @@
     <ClCompile Include="Input\evdev_gun_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
+    <ClCompile Include="Input\ps_move_calibration.cpp" />
     <ClCompile Include="Input\ps_move_config.cpp" />
     <ClCompile Include="Input\ps_move_tracker.cpp" />
     <ClCompile Include="Input\raw_mouse_config.cpp" />
@@ -971,6 +972,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
+    <ClInclude Include="Input\ps_move_calibration.h" />
     <ClInclude Include="Input\ps_move_config.h" />
     <ClInclude Include="Input\ps_move_tracker.h" />
     <ClInclude Include="Input\raw_mouse_config.h" />

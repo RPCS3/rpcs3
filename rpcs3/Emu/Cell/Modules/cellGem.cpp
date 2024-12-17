@@ -232,8 +232,8 @@ public:
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
-		f32 distance_mm{1500.0f};                          // Distance from the camera in mm
-		f32 radius{10.0f};                                 // Radius of the sphere in camera pixels
+		f32 distance_mm{3000.0f};                          // Distance from the camera in mm
+		f32 radius{5.0f};                                  // Radius of the sphere in camera pixels
 		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
@@ -716,8 +716,9 @@ public:
 		return hue < m_hues.size() && m_hues[hue] < 20; // potentially true if less than 20 pixels have the hue
 	}
 
-	ps_move_info& get_info(u32 gem_num)
+	ps_move_info get_info(u32 gem_num)
 	{
+		std::lock_guard lock(mutex);
 		return ::at32(m_info, gem_num);
 	}
 
@@ -903,7 +904,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	}
 }
 
-static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -918,9 +919,13 @@ static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controlle
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
 	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
 
+	// Half of the camera image
+	const f32 half_width = shared_data.width / 2.f;
+	const f32 half_height = shared_data.height / 2.f;
+
 	// Centered image coordinates in pixels
-	const f32 centered_x = image_x - (shared_data.width / 2.f);
-	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
+	const f32 centered_x = image_x - half_width;
+	const f32 centered_y = half_height - image_y; // Image coordinates increase downwards, so we have to invert this
 
 	// Camera coordinates in mm (centered, so it's the same as world coordinates)
 	const f32 camera_x = centered_x * mmPerPixel;
@@ -932,15 +937,46 @@ static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controlle
 	gem_state->pos[2] = controller.distance_mm;
 	gem_state->pos[3] = 0.f;
 
-	gem_state->quat[0] = 320.f - image_x;
-	gem_state->quat[1] = (y_pos / scaling_width) - 180.f;
-	gem_state->quat[2] = 1200.f;
-
 	// TODO: calculate handle position based on our world coordinate and the angles
 	gem_state->handle_pos[0] = camera_x;
 	gem_state->handle_pos[1] = camera_y;
 	gem_state->handle_pos[2] = controller.distance_mm + 10.0f;
 	gem_state->handle_pos[3] = 0.f;
+
+	// Calculate orientation
+	if (g_cfg.io.move == move_handler::real)
+	{
+		gem_state->quat[0] = move_data.quaternion[1]; // x
+		gem_state->quat[1] = move_data.quaternion[2]; // y
+		gem_state->quat[2] = move_data.quaternion[3]; // z
+		gem_state->quat[3] = move_data.quaternion[0]; // w
+	}
+	else
+	{
+		static constexpr f32 PI = 3.14159265f;
+		const auto degree_to_rad = [](f32 degree) -> f32 { return degree * PI / 180.0f; };
+
+		static constexpr f32 CONE = 10.0f / 2.0f;
+		const f32 roll = -degree_to_rad((image_y - half_height) / half_height * CONE); // This is actually the pitch
+		const f32 pitch = -degree_to_rad((image_x - half_width) / half_width * CONE); // This is actually the yaw
+		const f32 yaw = degree_to_rad(0.0f);
+		const f32 cr = std::cos(roll * 0.5f);
+		const f32 sr = std::sin(roll * 0.5f);
+		const f32 cp = std::cos(pitch * 0.5f);
+		const f32 sp = std::sin(pitch * 0.5f);
+		const f32 cy = std::cos(yaw * 0.5f);
+		const f32 sy = std::sin(yaw * 0.5f);
+
+		const f32 q_x = sr * cp * cy - cr * sp * sy;
+		const f32 q_y = cr * sp * cy + sr * cp * sy;
+		const f32 q_z = cr * cp * sy - sr * sp * cy;
+		const f32 q_w = cr * cp * cy + sr * sp * sy;
+
+		gem_state->quat[0] = q_x;
+		gem_state->quat[1] = q_y;
+		gem_state->quat[2] = q_z;
+		gem_state->quat[3] = q_w;
+	}
 
 	if (g_cfg.io.show_move_cursor)
 	{
@@ -1056,7 +1092,7 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 }
 
 template <typename T>
-static void ds3_pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& controller, T& gem_state)
+static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
 {
 	if (!gem_state || !is_input_allowed())
 	{
@@ -1078,7 +1114,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& 
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
+		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y, {});
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -1087,7 +1123,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& 
 }
 
 template <typename T>
-static void ps_move_pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& controller, T& gem_state)
+static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
 {
 	if (!gem_state || !is_input_allowed())
 	{
@@ -1104,12 +1140,17 @@ static void ps_move_pos_to_gem_state(u32 gem_num, const gem_config::gem_controll
 		return;
 	}
 
-	auto& tracker = g_fxo->get<named_thread<gem_tracker>>(); // Let's not lock the mutex. This not really important here
-	const ps_move_info& info = tracker.get_info(gem_num);
+	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
+	const ps_move_info info = tracker.get_info(gem_num);
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max);
+		gem_state->temperature = pad->move_data.temperature;
+		gem_state->accel[0] = pad->move_data.accelerometer_x * 1000; // linear velocity in mm/s²
+		gem_state->accel[1] = pad->move_data.accelerometer_y * 1000; // linear velocity in mm/s²
+		gem_state->accel[2] = pad->move_data.accelerometer_z * 1000; // linear velocity in mm/s²
+
+		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max, pad->move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -1267,7 +1308,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 }
 
 template <typename T>
-static void mouse_pos_to_gem_state(u32 mouse_no, const gem_config::gem_controller& controller, T& gem_state)
+static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& controller, T& gem_state)
 {
 	if (!gem_state || !is_input_allowed())
 	{
@@ -1290,7 +1331,7 @@ static void mouse_pos_to_gem_state(u32 mouse_no, const gem_config::gem_controlle
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
+		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, {});
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -1340,7 +1381,7 @@ static bool gun_input_to_pad(u32 gem_no, be_t<u16>& digital_buttons, be_t<u16>& 
 }
 
 template <typename T>
-static void gun_pos_to_gem_state(u32 gem_no, const gem_config::gem_controller& controller, T& gem_state)
+static void gun_pos_to_gem_state(u32 gem_no, gem_config::gem_controller& controller, T& gem_state)
 {
 	if (!gem_state || !is_input_allowed())
 		return;
@@ -1358,7 +1399,7 @@ static void gun_pos_to_gem_state(u32 gem_no, const gem_config::gem_controller& c
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max);
+		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, {});
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -1795,7 +1836,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	if (g_cfg.io.move != move_handler::null)
 	{
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
-		const auto& controller = gem.controllers[gem_num];
+		auto& controller = gem.controllers[gem_num];
 
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
@@ -1866,7 +1907,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		{
 		case move_handler::real:
 		{
-			// Get temperature
+			// Get temperature and sensor data
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
@@ -1876,6 +1917,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				if (pad && pad->m_pad_handler == pad_handler::move && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 				{
 					inertial_state->temperature = pad->move_data.temperature;
+					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
+					inertial_state->accelerometer[1] = pad->move_data.accelerometer_y;
+					inertial_state->accelerometer[2] = pad->move_data.accelerometer_z;
+					inertial_state->gyro[0] = pad->move_data.gyro_x;
+					inertial_state->gyro[1] = pad->move_data.gyro_y;
+					inertial_state->gyro[2] = pad->move_data.gyro_z;
 				}
 			}
 
@@ -2119,14 +2166,13 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		gem_state->camera_pitch_angle = 0.f;
-		gem_state->quat[3] = 1.f;
 
 		switch (g_cfg.io.move)
 		{
 		case move_handler::real:
 		{
-			auto& tracker = g_fxo->get<named_thread<gem_tracker>>(); // Let's not lock the mutex. This not really important here
-			const ps_move_info& info = tracker.get_info(gem_num);
+			auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
+			const ps_move_info info = tracker.get_info(gem_num);
 
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			ps_move_pos_to_gem_state(gem_num, controller, gem_state);
