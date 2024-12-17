@@ -47,6 +47,7 @@ void qt_camera_handler::set_camera(const QCameraDevice& camera_info)
 {
 	if (camera_info.isNull())
 	{
+		set_expected_state(camera_handler_state::closed);
 		reset();
 		return;
 	}
@@ -57,9 +58,9 @@ void qt_camera_handler::set_camera(const QCameraDevice& camera_info)
 	camera_log.success("Using camera: id=\"%s\", description=\"%s\", front_facing=%d", camera_info.id().toStdString(), camera_info.description(), front_facing);
 
 	// Create camera and video surface
-	m_media_capture_session.reset(new QMediaCaptureSession(nullptr));
-	m_video_sink.reset(new qt_camera_video_sink(front_facing, nullptr));
-	m_camera.reset(new QCamera(camera_info));
+	m_media_capture_session = std::make_unique<QMediaCaptureSession>(nullptr);
+	m_video_sink = std::make_unique<qt_camera_video_sink>(front_facing, nullptr);
+	m_camera = std::make_unique<QCamera>(camera_info);
 
 	connect(m_camera.get(), &QCamera::activeChanged, this, &qt_camera_handler::handle_camera_active);
 	connect(m_camera.get(), &QCamera::errorOccurred, this, &qt_camera_handler::handle_camera_error);
@@ -76,14 +77,37 @@ void qt_camera_handler::handle_camera_active(bool is_active)
 {
 	camera_log.notice("Camera active status changed to %d", is_active);
 
-	if (is_active)
+	// Check if the camera does what it's supposed to do.
+	const camera_handler_state expected_state = get_expected_state();
+
+	switch (expected_state)
 	{
-		m_state = camera_handler_state::running;
-	}
-	else
+	case camera_handler_state::closed:
+	case camera_handler_state::open:
 	{
-		m_state = camera_handler_state::closed;
+		if (is_active)
+		{
+			// This is not supposed to happen and indicates an unexpected QCamera issue
+			camera_log.error("Camera started unexpectedly");
+			set_state(camera_handler_state::running);
+			return;
+		}
+		break;
 	}
+	case camera_handler_state::running:
+	{
+		if (!is_active)
+		{
+			// This is not supposed to happen and indicates an unexpected QCamera issue
+			camera_log.error("Camera stopped unexpectedly");
+			set_state(camera_handler_state::open);
+			return;
+		}
+		break;
+	}
+	}
+
+	set_state(expected_state);
 }
 
 void qt_camera_handler::handle_camera_error(QCamera::Error error, const QString& errorString)
@@ -100,7 +124,11 @@ void qt_camera_handler::open_camera()
 	{
 		camera_log.notice("Switching camera from %s to %s", m_camera_id, camera_id);
 		camera_log.notice("Stopping old camera...");
-		if (m_camera) m_camera->stop();
+		if (m_camera)
+		{
+			set_expected_state(camera_handler_state::open);
+			m_camera->stop();
+		}
 		m_camera_id = camera_id;
 	}
 
@@ -129,7 +157,7 @@ void qt_camera_handler::open_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return;
 	}
 
@@ -148,7 +176,7 @@ void qt_camera_handler::open_camera()
 	// Update camera and view finder settings
 	update_camera_settings();
 
-	m_state = camera_handler_state::open;
+	set_state(camera_handler_state::open);
 }
 
 void qt_camera_handler::close_camera()
@@ -159,11 +187,12 @@ void qt_camera_handler::close_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return;
 	}
 
 	// Unload/close camera
+	set_expected_state(camera_handler_state::closed);
 	m_camera->stop();
 }
 
@@ -175,7 +204,7 @@ void qt_camera_handler::start_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return;
 	}
 
@@ -206,6 +235,7 @@ void qt_camera_handler::start_camera()
 #endif
 
 	// Start camera. We will start receiving frames now.
+	set_expected_state(camera_handler_state::running);
 	m_camera->start();
 }
 
@@ -217,7 +247,7 @@ void qt_camera_handler::stop_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return;
 	}
 
@@ -228,6 +258,7 @@ void qt_camera_handler::stop_camera()
 	}
 
 	// Stop camera. The camera will still be drawing power.
+	set_expected_state(camera_handler_state::open);
 	m_camera->stop();
 }
 
@@ -284,26 +315,26 @@ camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, 
 		m_camera_id != camera_id)
 	{
 		camera_log.notice("Switching cameras");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return camera_handler_state::closed;
 	}
 
 	if (m_camera_id.empty())
 	{
 		camera_log.notice("Camera disabled");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return camera_handler_state::closed;
 	}
 
 	if (!m_camera || !m_video_sink)
 	{
 		camera_log.fatal("Error: camera invalid");
-		m_state = camera_handler_state::closed;
+		set_state(camera_handler_state::closed);
 		return camera_handler_state::closed;
 	}
 
 	// Backup current state. State may change through events.
-	const camera_handler_state current_state = m_state;
+	const camera_handler_state current_state = get_state();
 
 	if (current_state == camera_handler_state::running)
 	{
