@@ -208,7 +208,7 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 			QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
 
 			// reset the mouse to the center for consistent results since edge movement won't be registered
-			QCursor::setPos(m_target->screen(), p_center);
+			QCursor::setPos(m_target->screen()->geometry().topLeft() + p_center);
 
 			// convert the center into screen coordinates
 			p_center = m_target->mapFromGlobal(p_center);
