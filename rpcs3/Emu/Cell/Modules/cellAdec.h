@@ -253,7 +253,7 @@ enum CellAdecSampleRate : s32
 	CELL_ADEC_FS_8kHz,
 };
 
-enum CellAdecBitLength : s32
+enum CellAdecBitLength : u32
 {
 	CELL_ADEC_BIT_LENGTH_RESERVED1,
 	CELL_ADEC_BIT_LENGTH_16,
@@ -352,8 +352,8 @@ enum AdecCorrectPtsValueType : s8
 	ADEC_CORRECT_PTS_VALUE_TYPE_UNSPECIFIED = -1,
 
 	// Adds a fixed amount
-	ADEC_CORRECT_PTS_VALUE_TYPE_LPCM = 0,
-	// 1
+	ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_HDMV = 0,
+	ADEC_CORRECT_PTS_VALUE_TYPE_LPCM_DVD = 1, // Unused for some reason, the DVD player probably takes care of timestamps itself
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_48000Hz = 2,
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_44100Hz = 3,
 	ADEC_CORRECT_PTS_VALUE_TYPE_ATRACX_32000Hz = 4,
@@ -562,6 +562,11 @@ public:
 	{
 		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
+		if (ppu.state & cpu_flag::again) // Savestate was created while waiting on the mutex
+		{
+			return {};
+		}
+
 		if (entries[front].state == 0xff)
 		{
 			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
@@ -648,6 +653,20 @@ static_assert(std::is_standard_layout_v<AdecContext> && std::is_trivial_v<AdecCo
 CHECK_SIZE_ALIGN(AdecContext, 0x530, 8);
 
 
+enum : u32
+{
+	CELL_ADEC_LPCM_DVD_CH_RESERVED1,
+	CELL_ADEC_LPCM_DVD_CH_MONO,
+	CELL_ADEC_LPCM_DVD_CH_RESERVED2,
+	CELL_ADEC_LPCM_DVD_CH_STEREO,
+	CELL_ADEC_LPCM_DVD_CH_UNK1, // Either 3 front or 2 front + 1 surround
+	CELL_ADEC_LPCM_DVD_CH_UNK2, // Either 3 front + 1 surround or 2 front + 2 surround
+	CELL_ADEC_LPCM_DVD_CH_3_2,
+	CELL_ADEC_LPCM_DVD_CH_3_2_LFE,
+	CELL_ADEC_LPCM_DVD_CH_3_4,
+	CELL_ADEC_LPCM_DVD_CH_3_4_LFE,
+};
+
 struct CellAdecParamLpcm
 {
 	be_t<u32> channelNumber;
@@ -663,6 +682,216 @@ struct CellAdecLpcmInfo
 	be_t<u32> sampleRate;
 	be_t<u32> outputDataSize;
 };
+
+// HLE exclusive, for savestates
+enum class lpcm_dec_state : u8
+{
+	waiting_for_cmd_mutex_lock,
+	waiting_for_cmd_cond_wait,
+	waiting_for_output_mutex_lock,
+	waiting_for_output_cond_wait,
+	queue_mutex_lock,
+	executing_cmd
+};
+
+class LpcmDecSemaphore
+{
+	be_t<u32> value;
+	be_t<u32> mutex; // sys_mutex_t
+	be_t<u32> cond;  // sys_cond_t
+
+public:
+	error_code init(ppu_thread& ppu, vm::ptr<LpcmDecSemaphore> _this, u32 initial_value)
+	{
+		value = initial_value;
+
+		const vm::var<sys_mutex_attribute_t> mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem01"_u64 } }};
+		const vm::var<sys_cond_attribute_t> cond_attr{{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec01"_u64 } }};
+
+		if (error_code ret = sys_mutex_create(ppu, _this.ptr(&LpcmDecSemaphore::mutex), mutex_attr); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		return sys_cond_create(ppu, _this.ptr(&LpcmDecSemaphore::cond), mutex, cond_attr);
+	}
+
+	error_code finalize(ppu_thread& ppu) const
+	{
+		if (error_code ret = sys_cond_destroy(ppu, cond); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		return sys_mutex_destroy(ppu, mutex);
+	}
+
+	error_code release(ppu_thread& ppu)
+	{
+		if (error_code ret = sys_mutex_lock(ppu, mutex, 0); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		value++;
+
+		if (error_code ret = sys_cond_signal(ppu, cond); ret != CELL_OK)
+		{
+			return ret; // LLE doesn't unlock the mutex
+		}
+
+		return sys_mutex_unlock(ppu, mutex);
+	}
+
+	error_code acquire(ppu_thread& ppu, lpcm_dec_state& savestate)
+	{
+		if (savestate == lpcm_dec_state::waiting_for_cmd_cond_wait)
+		{
+			goto cond_wait;
+		}
+
+		savestate = lpcm_dec_state::waiting_for_cmd_mutex_lock;
+
+		if (error_code ret = sys_mutex_lock(ppu, mutex, 0); ret != CELL_OK)
+		{
+			return ret;
+		}
+
+		if (ppu.state & cpu_flag::again)
+		{
+			return {};
+		}
+
+		if (value == 0u)
+		{
+			savestate = lpcm_dec_state::waiting_for_cmd_cond_wait;
+			cond_wait:
+
+			if (error_code ret = sys_cond_wait(ppu, cond, 0); ret != CELL_OK)
+			{
+				return ret; // LLE doesn't unlock the mutex
+			}
+
+			if (ppu.state & cpu_flag::again)
+			{
+				return {};
+			}
+		}
+
+		value--;
+
+		return sys_mutex_unlock(ppu, mutex);
+	}
+};
+
+CHECK_SIZE(LpcmDecSemaphore, 0xc);
+
+enum class LpcmDecCmdType : u32
+{
+	start_seq,
+	end_seq,
+	decode_au,
+	close
+};
+
+struct LpcmDecCmd
+{
+	be_t<s32> pcm_handle;
+	vm::bcptr<void> au_start_addr;
+	be_t<u32> au_size;
+	u32 reserved1[2];
+	CellAdecParamLpcm lpcm_param;
+	be_t<LpcmDecCmdType> type;
+	u32 reserved2;
+
+	LpcmDecCmd() = default; // cellAdecOpen()
+
+	LpcmDecCmd(LpcmDecCmdType&& type) // End sequence
+		: type(type)
+	{
+	}
+
+	LpcmDecCmd(LpcmDecCmdType&& type, const CellAdecParamLpcm& lpcm_param) // Start sequence
+		: lpcm_param(lpcm_param), type(type)
+	{
+	}
+
+	LpcmDecCmd(LpcmDecCmdType&& type, const s32& pcm_handle, const CellAdecAuInfo& au_info) // Decode au
+		: pcm_handle(pcm_handle), au_start_addr(au_info.startAddr), au_size(au_info.size), type(type)
+	{
+	}
+};
+
+CHECK_SIZE(LpcmDecCmd, 0x2c);
+
+struct LpcmDecContext
+{
+	AdecCmdQueue<LpcmDecCmd> cmd_queue;
+
+	be_t<u64> thread_id; // sys_ppu_thread_t
+
+	be_t<u32> queue_size_mutex; // sys_mutex_t
+	be_t<u32> queue_size_cond;  // sys_cond_t, unused
+	be_t<u32> unk_mutex;        // sys_mutex_t, unused
+	be_t<u32> unk_cond;         // sys_cond_t, unused
+
+	be_t<u32> run_thread;
+
+	AdecCb<AdecNotifyAuDone> notify_au_done;
+	AdecCb<AdecNotifyPcmOut> notify_pcm_out;
+	AdecCb<AdecNotifyError> notify_error;
+	AdecCb<AdecNotifySeqDone> notify_seq_done;
+
+	be_t<u32> output_locked;
+	vm::bptr<f32> output;
+
+	vm::bptr<CellAdecParamLpcm> lpcm_param;
+
+	vm::bcptr<void> spurs_cmd_data;
+
+	// HLE exclusive
+	lpcm_dec_state savestate;
+	u64 cmd_counter; // For debugging
+
+	u8 reserved1[24]; // 36 bytes on LLE
+
+	be_t<u32> output_mutex;    // sys_mutex_t
+	be_t<u32> output_consumed; // sys_cond_t
+
+	LpcmDecSemaphore cmd_available;
+	LpcmDecSemaphore reserved2; // Unused
+
+	be_t<u32> queue_mutex; // sys_mutex_t
+
+	be_t<u32> error_occurred;
+
+	u8 spurs_stuff[32];
+
+	be_t<u32> spurs_queue_pop_mutex;
+	be_t<u32> spurs_queue_push_mutex;
+
+	be_t<u32> using_existing_spurs_instance;
+
+	be_t<u32> dvd_packing;
+
+	be_t<u32> output_size;
+
+	LpcmDecCmd cmd; // HLE exclusive, name of Spurs taskset (32 bytes) + CellSpursTaskLsPattern on LLE
+
+	u8 more_spurs_stuff[10]; // 52 bytes on LLE
+
+	void exec(ppu_thread& ppu);
+
+	template <LpcmDecCmdType type>
+	error_code send_command(ppu_thread& ppu, auto&&... args);
+
+	inline error_code release_output(ppu_thread& ppu);
+};
+
+static_assert(std::is_standard_layout_v<LpcmDecContext>);
+CHECK_SIZE_ALIGN(LpcmDecContext, 0x1c8, 8);
+
+constexpr s32 LPCM_DEC_OUTPUT_BUFFER_SIZE = 0x40000;
 
 // CELP Excitation Mode
 enum CELP_ExcitationMode : s32
