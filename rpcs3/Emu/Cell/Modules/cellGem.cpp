@@ -956,9 +956,9 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		static constexpr f32 PI = 3.14159265f;
 		const auto degree_to_rad = [](f32 degree) -> f32 { return degree * PI / 180.0f; };
 
-		static constexpr f32 CONE = 10.0f / 2.0f;
-		const f32 roll = -degree_to_rad((image_y - half_height) / half_height * CONE); // This is actually the pitch
-		const f32 pitch = -degree_to_rad((image_x - half_width) / half_width * CONE); // This is actually the yaw
+		const f32 max_angle_per_side = g_cfg.io.fake_move_rotation_cone / 2.0f;
+		const f32 roll = -degree_to_rad((image_y - half_height) / half_height * max_angle_per_side); // This is actually the pitch
+		const f32 pitch = -degree_to_rad((image_x - half_width) / half_width * max_angle_per_side); // This is actually the yaw
 		const f32 yaw = degree_to_rad(0.0f);
 		const f32 cr = std::cos(roll * 0.5f);
 		const f32 sr = std::sin(roll * 0.5f);

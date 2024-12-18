@@ -30,22 +30,29 @@ public:
 	virtual u64 frame_number() const = 0; // Convenience function to check if there's a new frame.
 	virtual camera_handler_state get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) = 0;
 
-	camera_handler_state get_state() const { return m_state.load(); };
+	camera_handler_state get_state() const { return m_state.load(); }
+	void set_state(camera_handler_state state) { m_state = m_state_expected = state; }
 
-	bool mirrored() const { return m_mirrored; };
-	s32 format() const { return m_format; };
-	u32 bytesize() const { return m_bytesize; };
-	u32 width() const { return m_width; };
-	u32 height() const { return m_height; };
-	u32 frame_rate() const { return m_frame_rate; };
+	camera_handler_state get_expected_state() const { return m_state_expected.load(); }
+	void set_expected_state(camera_handler_state state) { m_state_expected = state; }
+
+	bool mirrored() const { return m_mirrored; }
+	s32 format() const { return m_format; }
+	u32 bytesize() const { return m_bytesize; }
+	u32 width() const { return m_width; }
+	u32 height() const { return m_height; }
+	u32 frame_rate() const { return m_frame_rate; }
 
 protected:
 	std::mutex m_mutex;
-	atomic_t<camera_handler_state> m_state = camera_handler_state::closed;
 	bool m_mirrored = false;
 	s32 m_format = 2; // CELL_CAMERA_RAW8
 	u32 m_bytesize = 0;
 	u32 m_width = 640;
 	u32 m_height = 480;
 	u32 m_frame_rate = 30;
+
+private:
+	atomic_t<camera_handler_state> m_state = camera_handler_state::closed;
+	atomic_t<camera_handler_state> m_state_expected = camera_handler_state::closed;
 };
