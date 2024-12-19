@@ -16,7 +16,7 @@ namespace
 	struct storage_manager
 	{
 		// This is probably wrong and should be assigned per fd or something
-		atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
+		atomic_ptr<shared_ptr<lv2_event_queue>> asyncequeue;
 	};
 }
 

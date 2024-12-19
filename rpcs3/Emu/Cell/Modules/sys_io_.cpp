@@ -51,7 +51,7 @@ void config_event_entry(ppu_thread& ppu)
 	}
 
 	const u32 queue_id = cfg.queue_id;
-	auto queue = idm::get<lv2_obj, lv2_event_queue>(queue_id);
+	auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(queue_id);
 
 	while (queue && sys_event_queue_receive(ppu, queue_id, vm::null, 0) == CELL_OK)
 	{
@@ -81,7 +81,7 @@ void config_event_entry(ppu_thread& ppu)
 				if (!queue->exists)
 				{
 					// Exit condition
-					queue = nullptr;
+					queue = null_ptr;
 					break;
 				}
 
@@ -134,7 +134,7 @@ extern void send_sys_io_connect_event(usz index, u32 state)
 
 	if (cfg.init_ctr)
 	{
-		if (auto port = idm::get<lv2_obj, lv2_event_queue>(cfg.queue_id))
+		if (auto port = idm::get_unlocked<lv2_obj, lv2_event_queue>(cfg.queue_id))
 		{
 			port->send(0, 1, index, state);
 		}

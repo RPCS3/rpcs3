@@ -2,13 +2,14 @@
 
 #include <cstdint>
 #include <memory>
+#include <utility>
 #include "atomic.hpp"
 #include "bless.hpp"
 
 namespace stx
 {
 	template <typename To, typename From>
-	constexpr bool same_ptr_implicit_v = std::is_convertible_v<const volatile From*, const volatile To*> ? is_same_ptr<From, To>() : false;
+	constexpr bool same_ptr_implicit_v = std::is_convertible_v<const volatile From*, const volatile To*> ? PtrSame<From, To> : false;
 
 	template <typename T>
 	class single_ptr;
@@ -126,7 +127,7 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		~single_ptr()
+		~single_ptr() noexcept
 		{
 			reset();
 		}
@@ -168,7 +169,7 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator*() const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator*() const noexcept requires (!std::is_void_v<element_type>)
 		{
 			return *m_ptr;
 		}
@@ -178,27 +179,15 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type> && std::is_array_v<T>)
 		{
-			if constexpr (std::is_array_v<T>)
-			{
-				return m_ptr[idx];
-			}
-			else
-			{
-				return *m_ptr;
-			}
+			return m_ptr[idx];
 		}
 
 		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
 		decltype(auto) operator()(Args&&... args) const noexcept
 		{
 			return std::invoke(*m_ptr, std::forward<Args>(args)...);
-		}
-
-		operator element_type*() const noexcept
-		{
-			return m_ptr;
 		}
 
 		explicit constexpr operator bool() const noexcept
@@ -214,6 +203,12 @@ namespace stx
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
 		}
+
+		template <typename U> requires same_ptr_implicit_v<T, U>
+		bool operator==(const single_ptr<U>& r) const noexcept
+		{
+			return get() == r.get();
+		}
 	};
 
 #ifndef _MSC_VER
@@ -222,7 +217,8 @@ namespace stx
 #endif
 
 	template <typename T, bool Init = true, typename... Args>
-	static std::enable_if_t<!(std::is_unbounded_array_v<T>) && (Init || !sizeof...(Args)), single_ptr<T>> make_single(Args&&... args) noexcept
+		requires(!std::is_unbounded_array_v<T> && (Init || std::is_array_v<T>) && (Init || !sizeof...(Args)))
+	static single_ptr<T> make_single(Args&&... args) noexcept
 	{
 		static_assert(offsetof(shared_data<T>, m_data) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
 
@@ -230,7 +226,7 @@ namespace stx
 
 		shared_data<T>* ptr = nullptr;
 
-		if constexpr (Init && !std::is_array_v<T>)
+		if constexpr (!std::is_array_v<T>)
 		{
 			ptr = new shared_data<T>(std::forward<Args>(args)...);
 		}
@@ -258,7 +254,8 @@ namespace stx
 	}
 
 	template <typename T, bool Init = true, usz Align = alignof(std::remove_extent_t<T>)>
-	static std::enable_if_t<std::is_unbounded_array_v<T>, single_ptr<T>> make_single(usz count) noexcept
+		requires (std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
+	static single_ptr<T> make_single(usz count) noexcept
 	{
 		static_assert(sizeof(shared_data<T>) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
 
@@ -397,7 +394,7 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		~shared_ptr()
+		~shared_ptr() noexcept
 		{
 			reset();
 		}
@@ -479,7 +476,7 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator*() const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator*() const noexcept requires (!std::is_void_v<element_type>)
 		{
 			return *m_ptr;
 		}
@@ -489,16 +486,9 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type>)
+		element_type& operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type> && std::is_array_v<T>)
 		{
-			if constexpr (std::is_array_v<T>)
-			{
-				return m_ptr[idx];
-			}
-			else
-			{
-				return *m_ptr;
-			}
+			return m_ptr[idx];
 		}
 
 		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
@@ -517,11 +507,6 @@ namespace stx
 			{
 				return 0;
 			}
-		}
-
-		operator element_type*() const noexcept
-		{
-			return m_ptr;
 		}
 
 		explicit constexpr operator bool() const noexcept
@@ -551,21 +536,30 @@ namespace stx
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
 		}
+
+		template <typename U> requires same_ptr_implicit_v<T, U>
+		bool operator==(const shared_ptr<U>& r) const noexcept
+		{
+			return get() == r.get();
+		}
 	};
 
-	template <typename T, bool Init = true, typename... Args>
-	static std::enable_if_t<!std::is_unbounded_array_v<T> && (!Init || !sizeof...(Args)), shared_ptr<T>> make_shared(Args&&... args) noexcept
+	template <typename T, typename... Args>
+		requires(!std::is_unbounded_array_v<T> && std::is_constructible_v<std::remove_extent_t<T>, Args&& ...>)
+	static shared_ptr<T> make_shared(Args&&... args) noexcept
 	{
-		return make_single<T, Init>(std::forward<Args>(args)...);
+		return make_single<T>(std::forward<Args>(args)...);
 	}
 
 	template <typename T, bool Init = true>
-	static std::enable_if_t<std::is_unbounded_array_v<T>, shared_ptr<T>> make_shared(usz count) noexcept
+		requires (std::is_unbounded_array_v<T> && std::is_default_constructible_v<std::remove_extent_t<T>>)
+	static shared_ptr<T> make_shared(usz count) noexcept
 	{
 		return make_single<T, Init>(count);
 	}
 
 	template <typename T>
+		requires (std::is_constructible_v<std::remove_reference_t<T>, T&&>)
 	static shared_ptr<std::remove_reference_t<T>> make_shared_value(T&& value)
 	{
 		return make_single_value(std::forward<T>(value));
@@ -638,11 +632,15 @@ namespace stx
 		~atomic_ptr()
 		{
 			const uptr v = m_val.raw();
-			const auto o = d(v);
 
-			if (v >> c_ref_size && !o->refs.sub_fetch(c_ref_mask + 1 - (v & c_ref_mask)))
+			if (v >> c_ref_size)
 			{
-				o->destroy.load()(o);
+				const auto o = d(v);
+
+				if (!o->refs.sub_fetch(c_ref_mask + 1 - (v & c_ref_mask)))
+				{
+					o->destroy.load()(o);
+				}
 			}
 		}
 
@@ -1035,9 +1033,9 @@ namespace stx
 		}
 
 		// Simple atomic load is much more effective than load(), but it's a non-owning reference
-		const volatile void* observe() const noexcept
+		T* observe() const noexcept
 		{
-			return reinterpret_cast<const volatile void*>(m_val >> c_ref_size);
+			return reinterpret_cast<T*>(m_val >> c_ref_size);
 		}
 
 		explicit constexpr operator bool() const noexcept
@@ -1048,13 +1046,13 @@ namespace stx
 		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool is_equal(const shared_ptr<U>& r) const noexcept
 		{
-			return observe() == r.get();
+			return static_cast<volatile const void*>(observe()) == r.get();
 		}
 
 		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool is_equal(const single_ptr<U>& r) const noexcept
 		{
-			return observe() == r.get();
+			return static_cast<volatile const void*>(observe()) == r.get();
 		}
 
 		void wait(std::nullptr_t, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
@@ -1099,11 +1097,6 @@ namespace stx
 			return false;
 		}
 
-		constexpr operator std::nullptr_t() const noexcept
-		{
-			return nullptr;
-		}
-
 		constexpr std::nullptr_t get() const noexcept
 		{
 			return nullptr;
@@ -1112,10 +1105,29 @@ namespace stx
 	} null_ptr;
 }
 
+template <typename T>
+struct std::hash<stx::single_ptr<T>>
+{
+	usz operator()(const stx::single_ptr<T>& x) const noexcept
+	{
+		return std::hash<T*>()(x.get());
+	}
+};
+
+template <typename T>
+struct std::hash<stx::shared_ptr<T>>
+{
+	usz operator()(const stx::shared_ptr<T>& x) const noexcept
+	{
+		return std::hash<T*>()(x.get());
+	}
+};
+
 using stx::null_ptr;
 using stx::single_ptr;
 using stx::shared_ptr;
 using stx::atomic_ptr;
 using stx::make_single;
+using stx::make_shared;
 using stx::make_single_value;
 using stx::make_shared_value;

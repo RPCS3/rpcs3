@@ -467,7 +467,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 		const u16 new_op_vport     = tcp_header->src_port;
 		const u64 new_cur_seq      = send_hdr.seq + 1;
 		const u64 new_data_beg_seq = send_hdr.ack;
-		auto sock_lv2              = std::make_shared<lv2_socket_p2ps>(socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio);
+		auto sock_lv2              = make_shared<lv2_socket_p2ps>(socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio);
 		const s32 new_sock_id      = idm::import_existing<lv2_socket>(sock_lv2);
 		sock_lv2->set_lv2_id(new_sock_id);
 		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
@@ -600,7 +600,7 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2ps::getpeername()
 	return {CELL_OK, res};
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 

@@ -60,7 +60,7 @@ error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, v
 	auto id = idm::make<memory_pool_t>();
 	*mempool = id;
 
-	auto memory_pool = idm::get<memory_pool_t>(id);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(id);
 
 	memory_pool->chunk = chunk;
 	memory_pool->chunk_size = chunk_size;
@@ -114,7 +114,7 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 {
 	sysPrxForUser.warning("sys_mempool_destroy(mempool=%d)", mempool);
 
-	auto memory_pool = idm::get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 	if (memory_pool)
 	{
 		u32 condid = memory_pool->condid;
@@ -136,7 +136,7 @@ error_code sys_mempool_free_block(ppu_thread& ppu, sys_mempool_t mempool, vm::pt
 {
 	sysPrxForUser.warning("sys_mempool_free_block(mempool=%d, block=*0x%x)", mempool, block);
 
-	auto memory_pool = idm::get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
 		return CELL_EINVAL;
@@ -160,7 +160,7 @@ u64 sys_mempool_get_count(ppu_thread& ppu, sys_mempool_t mempool)
 {
 	sysPrxForUser.warning("sys_mempool_get_count(mempool=%d)", mempool);
 
-	auto memory_pool = idm::get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{
 		return CELL_EINVAL;
@@ -175,7 +175,7 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 {
 	sysPrxForUser.warning("sys_mempool_allocate_block(mempool=%d)", mempool);
 
-	auto memory_pool = idm::get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 	if (!memory_pool)
 	{	// if the memory pool gets deleted-- is null, clearly it's impossible to allocate memory.
 		return vm::null;
@@ -185,7 +185,7 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 	while (memory_pool->free_blocks.empty()) // while is to guard against spurious wakeups
 	{
 		sys_cond_wait(ppu, memory_pool->condid, 0);
-		memory_pool = idm::get<memory_pool_t>(mempool);
+		memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 		if (!memory_pool)  // in case spurious wake up was from delete, don't die by accessing a freed pool.
 		{ // No need to unlock as if the pool is freed, the lock was freed as well.
 			return vm::null;
@@ -202,7 +202,7 @@ vm::ptr<void> sys_mempool_try_allocate_block(ppu_thread& ppu, sys_mempool_t memp
 {
 	sysPrxForUser.warning("sys_mempool_try_allocate_block(mempool=%d)", mempool);
 
-	auto memory_pool = idm::get<memory_pool_t>(mempool);
+	auto memory_pool = idm::get_unlocked<memory_pool_t>(mempool);
 
 	if (!memory_pool || memory_pool->free_blocks.empty())
 	{

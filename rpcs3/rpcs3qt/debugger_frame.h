@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/shared_ptr.hpp"
 
 #include "custom_dock_widget.h"
 
@@ -75,7 +76,7 @@ class debugger_frame : public custom_dock_widget
 	bool m_thread_list_pending_update = false;
 
 	std::shared_ptr<CPUDisAsm> m_disasm; // Only shared to allow base/derived functionality
-	std::shared_ptr<cpu_thread> m_cpu;
+	shared_ptr<cpu_thread> m_cpu;
 	rsx::thread* m_rsx = nullptr;
 	std::shared_ptr<utils::shm> m_spu_disasm_memory;
 	u32 m_spu_disasm_origin_eal = 0;

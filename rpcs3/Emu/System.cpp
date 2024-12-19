@@ -78,12 +78,12 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_prx);
-extern bool ppu_initialize(const ppu_module&, bool check_only = false, u64 file_size = 0);
-extern void ppu_finalize(const ppu_module&);
+extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx);
+extern bool ppu_initialize(const ppu_module<lv2_obj>&, bool check_only = false, u64 file_size = 0);
+extern void ppu_finalize(const ppu_module<lv2_obj>&);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 = 0, utils::serial* = nullptr);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 = 0, utils::serial* = nullptr);
+extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 = 0, utils::serial* = nullptr);
+extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 = 0, utils::serial* = nullptr);
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
@@ -209,7 +209,7 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, std::sou
 // This function ensures constant initialization order between different compilers and builds
 void init_fxo_for_exec(utils::serial* ar, bool full = false)
 {
-	g_fxo->init<main_ppu_module>();
+	g_fxo->init<main_ppu_module<lv2_obj>>();
 
 	void init_ppu_functions(utils::serial* ar, bool full);
 
@@ -305,7 +305,7 @@ static void fixup_settings(const psf::registry* _psf)
 	}
 }
 
-extern void dump_executable(std::span<const u8> data, const ppu_module* _module, std::string_view title_id)
+extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>* _module, std::string_view title_id)
 {
 	std::string_view filename = _module->path;
 	filename = filename.substr(filename.find_last_of('/') + 1);
@@ -1666,7 +1666,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			ensure(g_fxo->init<main_ppu_module>());
+			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 			vm::init();
 			m_force_boot = false;
 
@@ -1754,7 +1754,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
 					{
-						ensure(g_fxo->try_get<main_ppu_module>())->path = path;
+						ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>())->path = path;
 					}
 					else
 					{
@@ -1765,7 +1765,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module>()); !_main.path.empty())
+				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
 					{
@@ -2365,7 +2365,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			const auto _main = ensure(g_fxo->init<main_ppu_module>());
+			const auto _main = ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 
 			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
 			{
@@ -3010,7 +3010,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool check_if_vdec_contexts_exist();
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list = nullptr);
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false, std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>>* out_list = nullptr);
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
@@ -3032,7 +3032,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
-				std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+				std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 
 				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
 				{
@@ -3926,7 +3926,7 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 
 void Emulator::ConfigurePPUCache() const
 {
-	auto& _main = g_fxo->get<main_ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
 
 	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
 

@@ -425,7 +425,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 			return CELL_EINVAL;
 		}
 
-		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check<sys_vm_t>(sys_vm_t::find_id(addr)))
+		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check_unlocked<sys_vm_t>(sys_vm_t::find_id(addr)))
 		{
 			// Virtual memory is disallowed
 			return CELL_EINVAL;

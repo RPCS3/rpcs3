@@ -106,7 +106,7 @@ void lv2_socket_native::set_socket(socket_type socket, lv2_socket_family family,
 	set_non_blocking();
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -127,7 +127,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 
 	if (native_socket != invalid_socket)
 	{
-		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
+		auto newsock = make_single<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
 
 		// Sockets inherit non blocking behaviour from their parent
