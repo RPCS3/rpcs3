@@ -94,7 +94,7 @@ void remove_item(QComboBox* box, int data_value, int def_value)
 
 extern const std::map<std::string_view, int> g_prx_list;
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index, QWidget* parent, const GameInfo* game, bool create_cfg_from_global_cfg)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, int tab_index, QWidget* parent, const GameInfo* game, bool create_cfg_from_global_cfg)
 	: QDialog(parent)
 	, m_tab_index(tab_index)
 	, ui(new Ui::settings_dialog)
@@ -2607,14 +2607,11 @@ void settings_dialog::ApplyStylesheet(bool reset)
 	}
 }
 
-int settings_dialog::exec()
+void settings_dialog::open()
 {
-	// singleShot Hack to fix following bug:
-	// If we use setCurrentIndex now we will miraculously see a resize of the dialog as soon as we
-	// switch to the cpu tab after conjuring the settings_dialog with another tab opened first.
-	// Weirdly enough this won't happen if we change the tab order so that anything else is at index 0.
-	ui->tab_widget_settings->setCurrentIndex(0);
-	QTimer::singleShot(0, [this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_index); });
+	QDialog::open();
+
+	ui->tab_widget_settings->setCurrentIndex(m_tab_index);
 
 	// Open a dialog if your config file contained invalid entries
 	QTimer::singleShot(10, [this]
@@ -2640,8 +2637,6 @@ int settings_dialog::exec()
 			}
 		}
 	});
-
-	return QDialog::exec();
 }
 
 void settings_dialog::SubscribeDescription(QLabel* description)
