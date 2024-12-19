@@ -244,7 +244,8 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_CAMERA_FLIP: return tr("Camera Flip", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_PAD_MODE: return tr("Pad Handler Mode", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_PAD_SLEEP: return tr("Pad Handler Sleep", "Input");
-		case localized_string_id::HOME_MENU_SETTINGS_INPUT_FAKE_MOVE_ROTATION_CONE: return tr("Fake PS Move Rotation Cone", "Input");
+		case localized_string_id::HOME_MENU_SETTINGS_INPUT_FAKE_MOVE_ROTATION_CONE_H: return tr("Fake PS Move Rotation Cone (Horizontal)", "Input");
+		case localized_string_id::HOME_MENU_SETTINGS_INPUT_FAKE_MOVE_ROTATION_CONE_V: return tr("Fake PS Move Rotation Cone (Vertical)", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED: return tr("Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_PREFERRED_SPU_THREADS: return tr("Preferred SPU Threads", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_CPU_PREEMPTIONS: return tr("Max Power Saving CPU-Preemptions", "Advanced");
