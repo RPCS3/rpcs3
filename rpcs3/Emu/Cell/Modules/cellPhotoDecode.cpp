@@ -144,9 +144,9 @@ error_code cellPhotoDecodeFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 	const std::string vpath = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
 	const std::string path = vfs::get(vpath);
 
-	if (!vpath.starts_with("/dev_hdd0") && !vpath.starts_with("/dev_hdd1"))
+	if (!vpath.starts_with("/dev_hdd0") && !vpath.starts_with("/dev_hdd1") && !vpath.starts_with("/dev_bdvd"))
 	{
-		cellPhotoDecode.error("Source '%s' is not inside dev_hdd0 or dev_hdd1", vpath);
+		cellPhotoDecode.error("Source '%s' is not inside dev_hdd0 or dev_hdd1 or dev_bdvd", vpath);
 		return CELL_PHOTO_DECODE_ERROR_ACCESS_ERROR; // TODO: is this correct?
 	}
 
