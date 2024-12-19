@@ -888,7 +888,7 @@ public:
 				std::lock_guard lock(pad::g_pad_mutex);
 				const auto handler = pad::get_current_handler();
 				auto& handlers = handler->get_handlers();
-				if (auto it = handlers.find(pad_handler::move); it != handlers.end())
+				if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 				{
 					for (auto& binding : it->second->bindings())
 					{
@@ -2788,6 +2788,25 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	}
 
 	gem.controllers[gem_num].rumble = rumble;
+
+	// Set actual device rumble
+	if (g_cfg.io.move == move_handler::real)
+	{
+		std::lock_guard pad_lock(pad::g_pad_mutex);
+		const auto handler = pad::get_current_handler();
+		auto& handlers = handler->get_handlers();
+		if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
+		{
+			const u32 pad_index = pad_num(gem_num);
+			for (const auto& binding : it->second->bindings())
+			{
+				if (!binding.device || binding.device->player_id != pad_index) continue;
+
+				handler->SetRumble(pad_index, rumble, rumble > 0);
+				break;
+			}
+		}
+	}
 
 	return CELL_OK;
 }
