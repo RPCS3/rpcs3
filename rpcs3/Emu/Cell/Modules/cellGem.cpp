@@ -389,6 +389,8 @@ public:
 		}
 	}
 
+	void paint_spheres(CellGemVideoConvertFormatEnum output_format, u32 width, u32 height, u8* video_data_out, u32 video_data_out_size);
+
 	gem_config_data()
 	{
 		if (!g_cfg_gem_real.load())
@@ -474,6 +476,29 @@ static inline s32 cellGemGetVideoConvertSize(s32 output_format)
 
 namespace gem
 {
+	struct gem_position
+	{
+	public:
+		void set_position(f32 x, f32 y)
+		{
+			std::lock_guard lock(m_mutex);
+			m_x = x;
+			m_y = y;
+		}
+		void get_position(f32& x, f32& y)
+		{
+			std::lock_guard lock(m_mutex);
+			x = m_x;
+			y = m_y;
+		}
+	private:
+		std::mutex m_mutex;
+		f32 m_x = 0.0f;
+		f32 m_y = 0.0f;
+	};
+
+	std::array<gem_position, CELL_GEM_MAX_NUM> positions {};
+
 	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
 	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
 	                          u8* video_data_out, u32 video_data_out_size)
@@ -602,6 +627,101 @@ namespace gem
 	}
 }
 
+void gem_config_data::paint_spheres(CellGemVideoConvertFormatEnum output_format, u32 width, u32 height, u8* video_data_out, u32 video_data_out_size)
+{
+	if (!width || !height || !video_data_out || !video_data_out_size)
+	{
+		return;
+	}
+
+	struct sphere_information
+	{
+		f32 radius = 0.0f;
+		s16 x = 0;
+		s16 y = 0;
+		u8 r = 0;
+		u8 g = 0;
+		u8 b = 0;
+	};
+
+	std::vector<sphere_information> sphere_info;
+	{
+		reader_lock lock(mtx);
+
+		for (u32 gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
+		{
+			const gem_config_data::gem_controller& controller = controllers[gem_num];
+			if (!controller.radius_valid || controller.radius <= 0.0f) continue;
+
+			f32 x, y;
+			::at32(gem::positions, gem_num).get_position(x, y);
+
+			const u8 r = static_cast<u8>(std::clamp(controller.sphere_rgb.r * 255.0f, 0.0f, 255.0f));
+			const u8 g = static_cast<u8>(std::clamp(controller.sphere_rgb.g * 255.0f, 0.0f, 255.0f));
+			const u8 b = static_cast<u8>(std::clamp(controller.sphere_rgb.b * 255.0f, 0.0f, 255.0f));
+
+			sphere_info.push_back({ controller.radius, static_cast<s16>(x), static_cast<s16>(y), r, g, b });
+		}
+	}
+
+	switch (output_format)
+	{
+	case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
+	{
+		cellGem.trace("Painting spheres for CELL_GEM_RGBA_640x480");
+
+		const u32 out_pitch = width * 4;
+
+		for (const sphere_information& info : sphere_info)
+		{
+			const s32 x_begin = std::max(0, static_cast<s32>(std::floor(info.x - info.radius)));
+			const s32 x_end = std::min<s32>(width, static_cast<s32>(std::ceil(info.x + info.radius)));
+			const s32 y_begin = std::max(0, static_cast<s32>(std::floor(info.y - info.radius)));
+			const s32 y_end = std::min<s32>(height, static_cast<s32>(std::ceil(info.y + info.radius)));
+
+			for (s32 y = y_begin; y < y_end; y++)
+			{
+				u8* dst = video_data_out + y * out_pitch + x_begin * 4;
+
+				for (s32 x = x_begin; x < x_end; x++, dst += 4)
+				{
+					const f32 distance = static_cast<f32>(std::sqrt(std::pow(info.x - x, 2) + std::pow(info.y - y, 2)));
+					if (distance > info.radius) continue;
+
+					dst[0] = info.r;
+					dst[1] = info.g;
+					dst[2] = info.b;
+					dst[3] = 255;
+				}
+			}
+		}
+
+		break;
+	}
+	case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
+	case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
+	case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
+	case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
+	case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
+	case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+	case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
+	{
+		cellGem.trace("Unimplemented: painting spheres for %s", output_format);
+		break;
+	}
+	case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
+	{
+		cellGem.trace("Ignoring painting spheres for CELL_GEM_NO_VIDEO_OUTPUT");
+		break;
+	}
+	default:
+	{
+		cellGem.trace("Ignoring painting spheres for %d", static_cast<u32>(output_format));
+		break;
+	}
+	}
+}
+
 void gem_config_data::operator()()
 {
 	cellGem.notice("Starting thread");
@@ -635,6 +755,11 @@ void gem_config_data::operator()()
 		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size))
 		{
 			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
+
+			if (g_cfg.io.paint_move_spheres)
+			{
+				paint_spheres(vc.output_format, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size);
+			}
 		}
 
 		video_conversion_in_progress = false;
@@ -902,6 +1027,11 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
 	}
+
+	if (g_cfg.io.paint_move_spheres)
+	{
+		::at32(gem::positions, gem_num).set_position(image_x, image_y);
+	}
 }
 
 static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
@@ -982,6 +1112,11 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+	}
+
+	if (g_cfg.io.paint_move_spheres)
+	{
+		::at32(gem::positions, gem_num).set_position(image_x, image_y);
 	}
 }
 
