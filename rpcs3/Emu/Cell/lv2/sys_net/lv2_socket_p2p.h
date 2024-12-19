@@ -9,7 +9,7 @@ public:
 	lv2_socket_p2p(utils::serial& ar, lv2_socket_type type);
 	void save(utils::serial& ar);
 
-	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
 	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;

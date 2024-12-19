@@ -1031,7 +1031,7 @@ error_code cellDmuxClose(u32 handle)
 {
 	cellDmux.warning("cellDmuxClose(handle=0x%x)", handle);
 
-	const auto dmux = idm::get<Demuxer>(handle);
+	const auto dmux = idm::get_unlocked<Demuxer>(handle);
 
 	if (!dmux)
 	{
@@ -1060,7 +1060,7 @@ error_code cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 d
 {
 	cellDmux.trace("cellDmuxSetStream(handle=0x%x, streamAddress=0x%x, streamSize=%d, discontinuity=%d, userData=0x%llx)", handle, streamAddress, streamSize, discontinuity, userData);
 
-	const auto dmux = idm::get<Demuxer>(handle);
+	const auto dmux = idm::get_unlocked<Demuxer>(handle);
 
 	if (!dmux)
 	{
@@ -1088,7 +1088,7 @@ error_code cellDmuxResetStream(u32 handle)
 {
 	cellDmux.warning("cellDmuxResetStream(handle=0x%x)", handle);
 
-	const auto dmux = idm::get<Demuxer>(handle);
+	const auto dmux = idm::get_unlocked<Demuxer>(handle);
 
 	if (!dmux)
 	{
@@ -1103,7 +1103,7 @@ error_code cellDmuxResetStreamAndWaitDone(u32 handle)
 {
 	cellDmux.warning("cellDmuxResetStreamAndWaitDone(handle=0x%x)", handle);
 
-	const auto dmux = idm::get<Demuxer>(handle);
+	const auto dmux = idm::get_unlocked<Demuxer>(handle);
 
 	if (!dmux)
 	{
@@ -1164,7 +1164,7 @@ error_code cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId
 {
 	cellDmux.warning("cellDmuxEnableEs(handle=0x%x, esFilterId=*0x%x, esResourceInfo=*0x%x, esCb=*0x%x, esSpecificInfo=*0x%x, esHandle=*0x%x)", handle, esFilterId, esResourceInfo, esCb, esSpecificInfo, esHandle);
 
-	const auto dmux = idm::get<Demuxer>(handle);
+	const auto dmux = idm::get_unlocked<Demuxer>(handle);
 
 	if (!dmux)
 	{
@@ -1194,7 +1194,7 @@ error_code cellDmuxDisableEs(u32 esHandle)
 {
 	cellDmux.warning("cellDmuxDisableEs(esHandle=0x%x)", esHandle);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1213,7 +1213,7 @@ error_code cellDmuxResetEs(u32 esHandle)
 {
 	cellDmux.trace("cellDmuxResetEs(esHandle=0x%x)", esHandle);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1232,7 +1232,7 @@ error_code cellDmuxGetAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpeci
 {
 	cellDmux.trace("cellDmuxGetAu(esHandle=0x%x, auInfo=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfo, auSpecificInfo);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1255,7 +1255,7 @@ error_code cellDmuxPeekAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpec
 {
 	cellDmux.trace("cellDmuxPeekAu(esHandle=0x%x, auInfo=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfo, auSpecificInfo);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1278,7 +1278,7 @@ error_code cellDmuxGetAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auS
 {
 	cellDmux.trace("cellDmuxGetAuEx(esHandle=0x%x, auInfoEx=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfoEx, auSpecificInfo);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1301,7 +1301,7 @@ error_code cellDmuxPeekAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> au
 {
 	cellDmux.trace("cellDmuxPeekAuEx(esHandle=0x%x, auInfoEx=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfoEx, auSpecificInfo);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1324,7 +1324,7 @@ error_code cellDmuxReleaseAu(u32 esHandle)
 {
 	cellDmux.trace("cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{
@@ -1342,7 +1342,7 @@ error_code cellDmuxFlushEs(u32 esHandle)
 {
 	cellDmux.warning("cellDmuxFlushEs(esHandle=0x%x)", esHandle);
 
-	const auto es = idm::get<ElementaryStream>(esHandle);
+	const auto es = idm::get_unlocked<ElementaryStream>(esHandle);
 
 	if (!es)
 	{

@@ -205,7 +205,7 @@ error_code cellVpostClose(u32 handle)
 {
 	cellVpost.warning("cellVpostClose(handle=0x%x)", handle);
 
-	const auto vpost = idm::get<VpostInstance>(handle);
+	const auto vpost = idm::get_unlocked<VpostInstance>(handle);
 
 	if (!vpost)
 	{
@@ -220,7 +220,7 @@ error_code cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostC
 {
 	cellVpost.trace("cellVpostExec(handle=0x%x, inPicBuff=*0x%x, ctrlParam=*0x%x, outPicBuff=*0x%x, picInfo=*0x%x)", handle, inPicBuff, ctrlParam, outPicBuff, picInfo);
 
-	const auto vpost = idm::get<VpostInstance>(handle);
+	const auto vpost = idm::get_unlocked<VpostInstance>(handle);
 
 	if (!vpost)
 	{

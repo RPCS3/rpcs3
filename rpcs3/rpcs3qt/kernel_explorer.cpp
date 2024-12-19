@@ -317,7 +317,7 @@ void kernel_explorer::update()
 
 	add_solid_node(find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
-	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module& m)
+	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{
 		for (usz i = 0; i < m.segs.size(); i++)
 		{
@@ -528,7 +528,7 @@ void kernel_explorer::update()
 			auto& timer = static_cast<lv2_timer&>(obj);
 
 			u32 timer_state{SYS_TIMER_STATE_STOP};
-			std::shared_ptr<lv2_event_queue> port;
+			shared_ptr<lv2_event_queue> port;
 			u64 source = 0;
 			u64 data1 = 0;
 			u64 data2 = 0;

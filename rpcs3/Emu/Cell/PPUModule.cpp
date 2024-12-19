@@ -576,7 +576,7 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 }
 
 // Resolve relocations for variable/function linkage.
-static void ppu_patch_refs(const ppu_module& _module, std::vector<ppu_reloc>* out_relocs, u32 fref, u32 faddr)
+static void ppu_patch_refs(const ppu_module<lv2_obj>& _module, std::vector<ppu_reloc>* out_relocs, u32 fref, u32 faddr)
 {
 	struct ref_t
 	{
@@ -704,7 +704,7 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 }
 
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false, std::vector<u32>* funcs = nullptr, std::basic_string<char>* loaded_flags = nullptr)
+static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false, std::vector<u32>* funcs = nullptr, std::basic_string<char>* loaded_flags = nullptr)
 {
 	std::unordered_map<u32, u32> result;
 
@@ -803,7 +803,7 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
 
-		u32 previous_rtoc = umax;
+		u64 previous_rtoc = umax;
 
 		// Get functions
 		for (u32 i = 0, end = lib.num_func; i < end; i++)
@@ -816,21 +816,22 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 			{
 				if (previous_rtoc == fdata.rtoc)
 				{
-					ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x] rtoc=same", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr);
+					// Shortened printing, replacement string is 10 characters as 0x%08x
+					ppu_loader.notice("**** %s export: (0x%08x) at 0x%07x [at:0x%07x, rtoc:same-above]:  %s", module_name, fnid, faddr, fdata.addr, ppu_get_function_name(module_name, fnid));
 				}
 				else
 				{
 					previous_rtoc = fdata.rtoc;
-					ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x] rtoc=0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr, fdata.rtoc);
+					ppu_loader.notice("**** %s export: (0x%08x) at 0x%07x [at:0x%07x, rtoc:0x%08x]:  %s", module_name, fnid, faddr, fdata.addr, fdata.rtoc, ppu_get_function_name(module_name, fnid));
 				}
 			}
 			else if (fptr)
 			{
-				ppu_loader.error("**** %s export: [%s] (0x%08x) at 0x%x [Invalid Function Address: 0x%x!]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, fdata.addr);
+				ppu_loader.error("**** %s export: (0x%08x) at 0x%07x [Invalid Function Address: 0x%07x!]: '%s'", module_name, fnid, faddr, fdata.addr, ppu_get_function_name(module_name, fnid));
 			}
 			else
 			{
-				ppu_loader.warning("**** %s export: [%s] (0x%08x) at 0x%x [Illegal Descriptor Address!]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr);
+				ppu_loader.warning("**** %s export: (0x%08x) at 0x%07x [Illegal Descriptor Address!]: '%s'", module_name, fnid, faddr, ppu_get_function_name(module_name, fnid));
 			}
 
 			if (funcs)
@@ -938,7 +939,7 @@ static auto ppu_load_exports(const ppu_module& _module, ppu_linkage_info* link, 
 	return result;
 }
 
-static auto ppu_load_imports(const ppu_module& _module, std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
+static auto ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	std::unordered_map<u32, void*> result;
 
@@ -1030,10 +1031,10 @@ static auto ppu_load_imports(const ppu_module& _module, std::vector<ppu_reloc>& 
 // For _sys_prx_register_module
 void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<char>& loaded_flags)
 {
-	auto& _main = g_fxo->get<main_ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
-	ppu_module vm_all_fake_module{};
+	ppu_module<lv2_obj> vm_all_fake_module{};
 	vm_all_fake_module.segs.emplace_back(ppu_segment{0x10000, 0 - 0x10000u, 1 /*LOAD*/, 0, 0 - 0x1000u, vm::base(0x10000)});
 	vm_all_fake_module.addr_to_seg_index.emplace(0x10000, 0);
 
@@ -1130,7 +1131,7 @@ void init_ppu_functions(utils::serial* ar, bool full = false)
 	}
 }
 
-static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment& seg)
+static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu_segment& seg)
 {
 	if (!seg.size)
 	{
@@ -1139,7 +1140,7 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 
 	const bool is_firmware = mod.path.starts_with(vfs::get("/dev_flash/"));
 
-	const auto _main = g_fxo->try_get<main_ppu_module>();
+	const auto _main = g_fxo->try_get<main_ppu_module<lv2_obj>>();
 
 	const std::string_view seg_view{ensure(mod.get_ptr<char>(seg.addr)), seg.size};
 
@@ -1430,10 +1431,10 @@ static void ppu_check_patch_spu_images(const ppu_module& mod, const ppu_segment&
 	}
 }
 
-void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
+void try_spawn_ppu_if_exclusive_program(const ppu_module<lv2_obj>& m)
 {
 	// If only PRX/OVL has been loaded at Emu.BootGame(), launch a single PPU thread so its memory can be viewed
-	if (Emu.IsReady() && g_fxo->get<main_ppu_module>().segs.empty() && !Emu.DeserialManager())
+	if (Emu.IsReady() && g_fxo->get<main_ppu_module<lv2_obj>>().segs.empty() && !Emu.DeserialManager())
 	{
 		ppu_thread_params p
 		{
@@ -1521,15 +1522,15 @@ const char* get_prx_name_by_cia(u32 addr)
 	return nullptr;
 }
 
-std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar)
+shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
 	{
-		return nullptr;
+		return null_ptr;
 	}
 
 	// Create new PRX object
-	const auto prx = !ar && !virtual_load ? idm::make_ptr<lv2_obj, lv2_prx>() : std::make_shared<lv2_prx>();
+	const auto prx = !ar && !virtual_load ? idm::make_ptr<lv2_obj, lv2_prx>() : make_shared<lv2_prx>();
 
 	// Access linkage information object
 	auto& link = g_fxo->get<ppu_linkage_info>();
@@ -2054,7 +2055,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	init_ppu_functions(ar, false);
 
 	// Set for delayed initialization in ppu_initialize()
-	auto& _main = g_fxo->get<main_ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
 
 	// Access linkage information object
 	auto& link = g_fxo->get<ppu_linkage_info>();
@@ -2080,7 +2081,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	struct on_fatal_error
 	{
-		ppu_module& _main;
+		ppu_module<lv2_obj>& _main;
 		bool errored = true;
 
 		~on_fatal_error()
@@ -2498,7 +2499,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	}
 
 	// Initialize process
-	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
+	std::vector<shared_ptr<lv2_prx>> loaded_modules;
 
 	// Module list to load at startup
 	std::set<std::string> load_libs;
@@ -2778,11 +2779,11 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	return true;
 }
 
-std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar)
+std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
 	{
-		return {nullptr, CELL_ENOENT};
+		return {null_ptr, CELL_ENOENT};
 	}
 
 	// Access linkage information object
@@ -2804,12 +2805,12 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			if (!r.valid() || !r.inside(addr_range::start_length(0x30000000, 0x10000000)))
 			{
 				// TODO: Check error and if there's a better way to error check
-				return {nullptr, CELL_ENOEXEC};
+				return {null_ptr, CELL_ENOEXEC};
 			}
 		}
 	}
 
-	std::shared_ptr<lv2_overlay> ovlm = std::make_shared<lv2_overlay>();
+	shared_ptr<lv2_overlay> ovlm = make_shared<lv2_overlay>();
 
 	// Set path (TODO)
 	ovlm->name = path.substr(path.find_last_of('/') + 1);
@@ -2859,7 +2860,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 				if (!vm::check_addr(addr, vm::page_readable, size))
 				{
 					ppu_loader.error("ppu_load_overlay(): Archived PPU overlay memory has not been found! (addr=0x%x, memsz=0x%x)", addr, size);
-					return {nullptr, CELL_EABORT};
+					return {null_ptr, CELL_EABORT};
 				}
 			}
 			else if (!vm::get(vm::any, 0x30000000)->falloc(addr, size))
@@ -2873,7 +2874,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 				}
 
 				// TODO: Check error code, maybe disallow more than one overlay instance completely
-				return {nullptr, CELL_EBUSY};
+				return {null_ptr, CELL_EBUSY};
 			}
 
 			// Store only LOAD segments (TODO)
@@ -3088,7 +3089,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 		return !!(cpu->state & cpu_flag::exit);
 	}))
 	{
-		return {nullptr, CellError{CELL_CANCEL + 0u}};
+		return {null_ptr, CellError{CELL_CANCEL + 0u}};
 	}
 
 	// Validate analyser results (not required)
@@ -3105,11 +3106,11 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 bool ppu_load_rel_exec(const ppu_rel_object& elf)
 {
-	ppu_module relm{};
+	ppu_module<lv2_obj> relm{};
 
 	struct on_fatal_error
 	{
-		ppu_module& relm;
+		ppu_module<lv2_obj>& relm;
 		bool errored = true;
 
 		~on_fatal_error()

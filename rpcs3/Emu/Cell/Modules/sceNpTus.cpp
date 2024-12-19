@@ -133,7 +133,7 @@ error_code sceNpTusCreateTransactionCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto tus = idm::get<tus_ctx>(titleCtxId);
+	auto tus = idm::get_unlocked<tus_ctx>(titleCtxId);
 
 	if (!tus)
 	{
@@ -185,24 +185,12 @@ error_code sceNpTusSetTimeout(s32 ctxId, u32 timeout)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	const u32 idm_id = static_cast<u32>(ctxId);
-
-	if (idm_id >= tus_transaction_ctx::id_base && idm_id < (tus_transaction_ctx::id_base + tus_transaction_ctx::id_count))
+	if (auto trans = idm::get_unlocked<tus_transaction_ctx>(ctxId))
 	{
-		auto trans = idm::get<tus_transaction_ctx>(ctxId);
-		if (!trans)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
 		trans->timeout = timeout;
 	}
-	else if (idm_id >= tus_ctx::id_base && idm_id < (tus_ctx::id_base + tus_ctx::id_count))
+	else if (auto tus = idm::get_unlocked<tus_ctx>(ctxId))
 	{
-		auto tus = idm::get<tus_ctx>(ctxId);
-		if (!ctxId)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
 		tus->timeout = timeout;
 	}
 	else
@@ -224,7 +212,7 @@ error_code sceNpTusAbortTransaction(s32 transId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<tus_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<tus_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -246,7 +234,7 @@ error_code sceNpTusWaitAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<tus_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<tus_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -268,7 +256,7 @@ error_code sceNpTusPollAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<tus_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<tus_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -326,7 +314,7 @@ error_code scenp_tus_set_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -413,7 +401,7 @@ error_code scenp_tus_get_multislot_variable(s32 transId, T targetNpId, vm::cptr<
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -500,7 +488,7 @@ error_code scenp_tus_get_multiuser_variable(s32 transId, T targetNpIdArray, SceN
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -599,7 +587,7 @@ error_code scenp_tus_get_friends_variable(s32 transId, SceNpTusSlotId slotId, s3
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -659,7 +647,7 @@ error_code scenp_tus_add_and_get_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -736,7 +724,7 @@ error_code scenp_tus_try_and_set_variable(s32 transId, T targetNpId, SceNpTusSlo
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -813,7 +801,7 @@ error_code scenp_tus_delete_multislot_variable(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -885,7 +873,7 @@ error_code scenp_tus_set_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -957,7 +945,7 @@ error_code scenp_tus_get_data(s32 transId, T targetNpId, SceNpTusSlotId slotId, 
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1044,7 +1032,7 @@ error_code scenp_tus_get_multislot_data_status(s32 transId, T targetNpId, vm::cp
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1131,7 +1119,7 @@ error_code scenp_tus_get_multiuser_data_status(s32 transId, T targetNpIdArray, S
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1230,7 +1218,7 @@ error_code scenp_tus_get_friends_data_status(s32 transId, SceNpTusSlotId slotId,
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1295,7 +1283,7 @@ error_code scenp_tus_delete_multislot_data(s32 transId, T targetNpId, vm::cptr<S
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1337,7 +1325,7 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 	return scenp_tus_delete_multislot_data(transId, targetVirtualUserId, slotIdArray, arrayNum, option, true, true);
 }
 
-void scenp_tss_no_file(const std::shared_ptr<tus_transaction_ctx>& trans, vm::ptr<SceNpTssDataStatus> dataStatus)
+void scenp_tss_no_file(const shared_ptr<tus_transaction_ctx>& trans, vm::ptr<SceNpTssDataStatus> dataStatus)
 {
 	// TSS are files stored on PSN by developers, no dumps available atm
 	std::memset(dataStatus.get_ptr(), 0, sizeof(SceNpTssDataStatus));
@@ -1365,7 +1353,7 @@ error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssD
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -1398,7 +1386,7 @@ error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceN
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	auto trans_ctx = idm::get<tus_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{

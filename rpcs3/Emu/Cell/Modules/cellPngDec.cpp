@@ -93,7 +93,7 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 	if (buffer.file)
 	{
 		// Get the file
-		auto file = idm::get<lv2_fs_object, lv2_file>(buffer.fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(buffer.fd);
 
 		// Read the data
 		file->file.read(out, length);

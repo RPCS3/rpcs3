@@ -87,7 +87,7 @@ void fmt_class_string<cpu_threads_emulation_info_dump_t>::format(std::string& ou
 	const u32 must_have_cpu_id = static_cast<u32>(arg);
 
 	// Dump main_thread
-	const auto main_ppu = idm::get<named_thread<ppu_thread>>(ppu_thread::id_base);
+	const auto main_ppu = idm::get_unlocked<named_thread<ppu_thread>>(ppu_thread::id_base);
 
 	if (main_ppu)
 	{
@@ -99,7 +99,7 @@ void fmt_class_string<cpu_threads_emulation_info_dump_t>::format(std::string& ou
 	{
 		if (must_have_cpu_id != ppu_thread::id_base)
 		{
-			const auto selected_ppu = idm::get<named_thread<ppu_thread>>(must_have_cpu_id);
+			const auto selected_ppu = idm::get_unlocked<named_thread<ppu_thread>>(must_have_cpu_id);
 
 			if (selected_ppu)
 			{
@@ -110,7 +110,7 @@ void fmt_class_string<cpu_threads_emulation_info_dump_t>::format(std::string& ou
 	}
 	else if (must_have_cpu_id >> 24 == spu_thread::id_base >> 24)
 	{
-		const auto selected_spu = idm::get<named_thread<spu_thread>>(must_have_cpu_id);
+		const auto selected_spu = idm::get_unlocked<named_thread<spu_thread>>(must_have_cpu_id);
 
 		if (selected_spu)
 		{
@@ -236,7 +236,7 @@ struct cpu_prof
 		}
 
 		// Print info
-		void print(const std::shared_ptr<cpu_thread>& ptr)
+		void print(const shared_ptr<cpu_thread>& ptr)
 		{
 			if (new_samples < min_print_samples || samples == idle)
 			{
@@ -263,7 +263,7 @@ struct cpu_prof
 			new_samples = 0;
 		}
 
-		static void print_all(std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads, sample_info& all_info)
+		static void print_all(std::unordered_map<shared_ptr<cpu_thread>, sample_info>& threads, sample_info& all_info)
 		{
 			u64 new_samples = 0;
 
@@ -319,7 +319,7 @@ struct cpu_prof
 
 	void operator()()
 	{
-		std::unordered_map<std::shared_ptr<cpu_thread>, sample_info> threads;
+		std::unordered_map<shared_ptr<cpu_thread>, sample_info> threads;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -335,15 +335,15 @@ struct cpu_prof
 					continue;
 				}
 
-				std::shared_ptr<cpu_thread> ptr;
+				shared_ptr<cpu_thread> ptr;
 
 				if (id >> 24 == 1)
 				{
-					ptr = idm::get<named_thread<ppu_thread>>(id);
+					ptr = idm::get_unlocked<named_thread<ppu_thread>>(id);
 				}
 				else if (id >> 24 == 2)
 				{
-					ptr = idm::get<named_thread<spu_thread>>(id);
+					ptr = idm::get_unlocked<named_thread<spu_thread>>(id);
 				}
 				else
 				{
@@ -437,7 +437,7 @@ struct cpu_prof
 				continue;
 			}
 
-			// Wait, roughly for 20µs
+			// Wait, roughly for 20us
 			thread_ctrl::wait_for(20, false);
 		}
 
@@ -1302,7 +1302,7 @@ cpu_thread* cpu_thread::get_next_cpu()
 	return nullptr;
 }
 
-std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, std::shared_ptr<cpu_thread> handle);
+std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
 
 void cpu_thread::dump_all(std::string& ret) const
 {
@@ -1318,7 +1318,7 @@ void cpu_thread::dump_all(std::string& ret) const
 	if (u32 cur_pc = get_pc(); cur_pc != umax)
 	{
 		// Dump a snippet of currently executed code (may be unreliable with non-static-interpreter decoders)
-		auto disasm = make_disasm(this, nullptr);
+		auto disasm = make_disasm(this, null_ptr);
 
 		const auto rsx = try_get<rsx::thread>();
 
@@ -1558,14 +1558,14 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 	return 0;
 }
 
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock, std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>>* out_list)
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock, std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>>* out_list)
 {
 	if (out_list)
 	{
 		out_list->clear();
 	}
 
-	auto get_spus = [old_counter = u64{umax}, spu_list = std::vector<std::shared_ptr<named_thread<spu_thread>>>()](bool can_collect, bool force_collect) mutable
+	auto get_spus = [old_counter = u64{umax}, spu_list = std::vector<shared_ptr<named_thread<spu_thread>>>()](bool can_collect, bool force_collect) mutable
 	{
 		const u64 new_counter = cpu_thread::g_threads_created + cpu_thread::g_threads_deleted;
 

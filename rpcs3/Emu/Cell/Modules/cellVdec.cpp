@@ -659,7 +659,7 @@ extern bool check_if_vdec_contexts_exist()
 
 extern void vdecEntry(ppu_thread& ppu, u32 vid)
 {
-	idm::get<vdec_context>(vid)->exec(ppu, vid);
+	idm::get_unlocked<vdec_context>(vid)->exec(ppu, vid);
 
 	ppu.state += cpu_flag::exit;
 }
@@ -886,7 +886,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	}
 
 	// Create decoder context
-	std::shared_ptr<vdec_context> vdec;
+	shared_ptr<vdec_context> vdec;
 
 	if (std::unique_lock lock{g_fxo->get<hle_locks_t>(), std::try_to_lock})
 	{
@@ -909,7 +909,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
-	const auto thrd = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
+	const auto thrd = idm::get_unlocked<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
 
 	thrd->cmd_list
 	({
@@ -949,7 +949,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 		return {};
 	}
 
-	auto vdec = idm::get<vdec_context>(handle);
+	auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec)
 	{
@@ -1003,7 +1003,7 @@ error_code cellVdecStartSeq(ppu_thread& ppu, u32 handle)
 
 	cellVdec.warning("cellVdecStartSeq(handle=0x%x)", handle);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec)
 	{
@@ -1055,7 +1055,7 @@ error_code cellVdecEndSeq(ppu_thread& ppu, u32 handle)
 
 	cellVdec.warning("cellVdecEndSeq(handle=0x%x)", handle);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec)
 	{
@@ -1088,7 +1088,7 @@ error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode
 
 	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
@@ -1136,7 +1136,7 @@ error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode m
 
 	cellVdec.todo("cellVdecDecodeAuEx2(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
@@ -1192,7 +1192,7 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 	cellVdec.trace("cellVdecGetPictureExt(handle=0x%x, format=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format, outBuff, arg4);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec || !format)
 	{
@@ -1245,7 +1245,7 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 	if (notify)
 	{
-		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
+		auto vdec_ppu = idm::get_unlocked<named_thread<ppu_thread>>(vdec->ppu_tid);
 		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
 	}
 
@@ -1354,7 +1354,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 
 	cellVdec.trace("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec || !picItem)
 	{
@@ -1596,7 +1596,7 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frameRateCode)
 {
 	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frameRateCode=0x%x)", handle, +frameRateCode);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	// 0x80 seems like a common prefix
 	if (!vdec || (frameRateCode & 0xf8) != 0x80)
@@ -1659,7 +1659,7 @@ error_code cellVdecSetPts(u32 handle, vm::ptr<void> unk)
 {
 	cellVdec.error("cellVdecSetPts(handle=0x%x, unk=*0x%x)", handle, unk);
 
-	const auto vdec = idm::get<vdec_context>(handle);
+	const auto vdec = idm::get_unlocked<vdec_context>(handle);
 
 	if (!vdec || !unk)
 	{

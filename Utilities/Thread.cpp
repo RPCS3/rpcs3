@@ -1360,7 +1360,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	// check if address is RawSPU MMIO register
 	do if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
 	{
-		auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+		auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
 
 		if (!thread)
 		{
@@ -1548,7 +1548,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			}
 		}
 
-		if (auto pf_port = idm::get<lv2_obj, lv2_event_port>(pf_port_id); pf_port && pf_port->queue)
+		if (auto pf_port = idm::get_unlocked<lv2_obj, lv2_event_port>(pf_port_id); pf_port && pf_port->queue)
 		{
 			// We notify the game that a page fault occurred so it can rectify it.
 			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
@@ -2602,7 +2602,7 @@ bool thread_base::join(bool dtor) const
 
 		if (i >= 16 && !(i & (i - 1)) && timeout != atomic_wait_timeout::inf)
 		{
-			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (utils::get_tsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
+			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fus already!", *m_tname.load(), (utils::get_tsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
 	}
 

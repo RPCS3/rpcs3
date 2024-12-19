@@ -103,7 +103,7 @@ error_code cellJpgDecClose(u32 mainHandle, u32 subHandle)
 {
 	cellJpgDec.warning("cellJpgDecOpen(mainHandle=0x%x, subHandle=0x%x)", mainHandle, subHandle);
 
-	const auto subHandle_data = idm::get<CellJpgDecSubHandle>(subHandle);
+	const auto subHandle_data = idm::get_unlocked<CellJpgDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -120,7 +120,7 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 {
 	cellJpgDec.trace("cellJpgDecReadHeader(mainHandle=0x%x, subHandle=0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
-	const auto subHandle_data = idm::get<CellJpgDecSubHandle>(subHandle);
+	const auto subHandle_data = idm::get_unlocked<CellJpgDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -142,7 +142,7 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 
 	case CELL_JPGDEC_FILE:
 	{
-		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(buffer.get(), fileSize);
 		break;
@@ -201,7 +201,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_STOP;
 
-	const auto subHandle_data = idm::get<CellJpgDecSubHandle>(subHandle);
+	const auto subHandle_data = idm::get_unlocked<CellJpgDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
@@ -223,7 +223,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 
 	case CELL_JPGDEC_FILE:
 	{
-		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(jpg.get(), fileSize);
 		break;
@@ -340,7 +340,7 @@ error_code cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJp
 {
 	cellJpgDec.trace("cellJpgDecSetParameter(mainHandle=0x%x, subHandle=0x%x, inParam=*0x%x, outParam=*0x%x)", mainHandle, subHandle, inParam, outParam);
 
-	const auto subHandle_data = idm::get<CellJpgDecSubHandle>(subHandle);
+	const auto subHandle_data = idm::get_unlocked<CellJpgDecSubHandle>(subHandle);
 
 	if (!subHandle_data)
 	{
