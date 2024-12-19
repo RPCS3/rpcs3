@@ -5,6 +5,7 @@
 #include "TextureUtils.h"
 
 #include "Emu/Memory/vm.h"
+#include "Emu/RSX/Host/MM.h"
 #include "util/vm.hpp"
 
 #include <list>
@@ -29,8 +30,7 @@ namespace rsx
 	{
 		ensure(range.is_page_range());
 
-		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
-		utils::memory_protect(vm::base(range.start), range.length(), prot);
+		rsx::mm_protect(vm::base(range.start), range.length(), prot);
 
 #ifdef TEXTURE_CACHE_DEBUG
 		tex_cache_checker.set_protection(range, prot);

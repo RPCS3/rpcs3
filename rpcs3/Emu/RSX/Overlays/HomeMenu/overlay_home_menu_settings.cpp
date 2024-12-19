@@ -83,6 +83,7 @@ namespace rsx
 
 			add_dropdown(&g_cfg.io.pad_mode, localized_string_id::HOME_MENU_SETTINGS_INPUT_PAD_MODE);
 			add_unsigned_slider(&g_cfg.io.pad_sleep, localized_string_id::HOME_MENU_SETTINGS_INPUT_PAD_SLEEP, " µs", 100);
+			add_unsigned_slider(&g_cfg.io.fake_move_rotation_cone, localized_string_id::HOME_MENU_SETTINGS_INPUT_FAKE_MOVE_ROTATION_CONE, "°", 1);
 
 			apply_layout();
 		}

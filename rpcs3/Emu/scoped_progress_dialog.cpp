@@ -91,8 +91,8 @@ scoped_progress_dialog::scoped_progress_dialog(std::string text) noexcept
 
 scoped_progress_dialog& scoped_progress_dialog::operator=(std::string text) noexcept
 {
-	// Exchange text atomically
-	g_progr_text_queue[m_text_index].exchange(make_single_value(std::move(text)));
+	// Set text atomically
+	g_progr_text_queue[m_text_index].store(make_single_value(std::move(text)));
 	return *this;
 }
 
