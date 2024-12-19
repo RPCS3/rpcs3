@@ -79,7 +79,8 @@ flow_layout::~flow_layout()
 
 void flow_layout::clear()
 {
-	for (QLayoutItem* item : m_item_list)
+	// We can't use a ranged loop here, since deleting the widget will call takeAt on the layout. So let's also use takeAt.
+	while (QLayoutItem* item = takeAt(0))
 	{
 		if (item)
 		{
