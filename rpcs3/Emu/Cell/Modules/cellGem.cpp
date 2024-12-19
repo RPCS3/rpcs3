@@ -189,10 +189,10 @@ public:
 
 	struct gem_color
 	{
-		float r, g, b;
+		f32 r, g, b;
 
 		gem_color() : r(0.0f), g(0.0f), b(0.0f) {}
-		gem_color(float r_, float g_, float b_)
+		gem_color(f32 r_, f32 g_, f32 b_)
 		{
 			r = std::clamp(r_, 0.0f, 1.0f);
 			g = std::clamp(g_, 0.0f, 1.0f);
@@ -447,7 +447,7 @@ public:
 extern std::pair<u32, u32> get_video_resolution(const CellCameraInfoEx& info);
 extern u32 get_buffer_size_by_format(s32 format, s32 width, s32 height);
 
-static inline int32_t cellGemGetVideoConvertSize(s32 output_format)
+static inline s32 cellGemGetVideoConvertSize(s32 output_format)
 {
 	switch (output_format)
 	{
@@ -524,15 +524,15 @@ namespace gem
 					u8* dst0 = dst_row;
 					u8* dst1 = dst_row + out_pitch;
 
-					for (uint32_t x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
+					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
 					{
-						const uint8_t b  = src0[0];
-						const uint8_t g0 = src0[1];
-						const uint8_t g1 = src1[0];
-						const uint8_t r  = src1[1];
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
 
-						const uint8_t top[4] = { r, g0, b, 255 };
-						const uint8_t bottom[4] = { r, g1, b, 255 };
+						const u8 top[4] = { r, g0, b, 255 };
+						const u8 bottom[4] = { r, g1, b, 255 };
 
 						// Top-Left
 						std::memcpy(dst0, top, 4);
@@ -1657,7 +1657,7 @@ error_code cellGemFilterState(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
-error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
+error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 {
 	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
@@ -2060,7 +2060,7 @@ error_code cellGemGetMemorySize(s32 max_connect)
 	return not_an_error(GemGetMemorySize(max_connect));
 }
 
-error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
+error_code cellGemGetRGB(u32 gem_num, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
 	cellGem.todo("cellGemGetRGB(gem_num=%d, r=*0x%x, g=*0x%x, b=*0x%x)", gem_num, r, g, b);
 
