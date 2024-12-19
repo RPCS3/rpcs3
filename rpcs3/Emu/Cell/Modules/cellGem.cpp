@@ -1819,6 +1819,11 @@ error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 	gem.controllers[gem_num].sphere_rgb = gem_config::gem_color(r, g, b);
 	gem.controllers[gem_num].enabled_tracking = false;
 
+	const auto [h, s, v] = ps_move_tracker<false>::rgb_to_hsv(r, g, b);
+	gem.controllers[gem_num].hue = h;
+
+	// TODO: set hue of tracker
+
 	return CELL_OK;
 }
 
@@ -2804,7 +2809,7 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 
 error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 {
-	cellGem.todo("cellGemTrackHues(req_hues=*0x%x, res_hues=*0x%x)", req_hues, res_hues);
+	cellGem.todo("cellGemTrackHues(req_hues=%s, res_hues=*0x%x)", req_hues ? fmt::format("*0x%x [%d, %d, %d, %d]", req_hues, req_hues[0], req_hues[1], req_hues[2], req_hues[3]) : "*0x0", res_hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -2847,6 +2852,9 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 				break;
 			}
 
+			const auto [r, g, b] = ps_move_tracker<false>::hsv_to_rgb(gem.controllers[i].hue, 1.0f, 1.0f);
+			gem.controllers[i].sphere_rgb = gem_config::gem_color(r / 255.0f, g / 255.0f, b / 255.0f);
+
 			if (res_hues)
 			{
 				res_hues[i] = gem.controllers[i].hue;
@@ -2874,6 +2882,9 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 			gem.controllers[i].enabled_LED = true;
 			gem.controllers[i].hue_set = true;
 			gem.controllers[i].hue = req_hues[i];
+
+			const auto [r, g, b] = ps_move_tracker<false>::hsv_to_rgb(gem.controllers[i].hue, 1.0f, 1.0f);
+			gem.controllers[i].sphere_rgb = gem_config::gem_color(r / 255.0f, g / 255.0f, b / 255.0f);
 
 			// TODO: set hue of tracker
 
