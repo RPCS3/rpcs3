@@ -899,12 +899,22 @@ public:
 
 						if (gem_num < 0 || gem_num >= CELL_GEM_MAX_NUM) continue;
 
-						const cfg_ps_move* config = ::at32(g_cfg_move.move, gem_num);
-
 						binding.device->color_override_active = true;
-						binding.device->color_override.r = config->r.get();
-						binding.device->color_override.g = config->g.get();
-						binding.device->color_override.b = config->b.get();
+
+						if (g_cfg.io.allow_move_hue_set_by_game)
+						{
+							const auto& controller = gem.controllers[gem_num];
+							binding.device->color_override.r = static_cast<u8>(std::clamp(controller.sphere_rgb.r * 255.0f, 0.0f, 255.0f));
+							binding.device->color_override.g = static_cast<u8>(std::clamp(controller.sphere_rgb.g * 255.0f, 0.0f, 255.0f));
+							binding.device->color_override.b = static_cast<u8>(std::clamp(controller.sphere_rgb.b * 255.0f, 0.0f, 255.0f));
+						}
+						else
+						{
+							const cfg_ps_move* config = ::at32(g_cfg_move.move, gem_num);
+							binding.device->color_override.r = config->r.get();
+							binding.device->color_override.g = config->g.get();
+							binding.device->color_override.b = config->b.get();
+						}
 					}
 				}
 			}
@@ -916,7 +926,7 @@ public:
 				const cfg_ps_move* config = g_cfg_move.move[gem_num];
 
 				m_tracker.set_active(gem_num, controller.enabled_tracking && controller.status == CELL_GEM_STATUS_READY);
-				m_tracker.set_hue(gem_num, config->hue);
+				m_tracker.set_hue(gem_num, g_cfg.io.allow_move_hue_set_by_game ? controller.hue : config->hue);
 				m_tracker.set_hue_threshold(gem_num, config->hue_threshold);
 				m_tracker.set_saturation_threshold(gem_num, config->saturation_threshold);
 			}
@@ -1821,8 +1831,6 @@ error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 
 	const auto [h, s, v] = ps_move_tracker<false>::rgb_to_hsv(r, g, b);
 	gem.controllers[gem_num].hue = h;
-
-	// TODO: set hue of tracker
 
 	return CELL_OK;
 }
@@ -2833,8 +2841,6 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 			gem.controllers[i].enabled_LED = true;
 			gem.controllers[i].hue_set = true;
 
-			// TODO: set hue based on tracker data
-
 			switch (i)
 			{
 			default:
@@ -2885,8 +2891,6 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 			const auto [r, g, b] = ps_move_tracker<false>::hsv_to_rgb(gem.controllers[i].hue, 1.0f, 1.0f);
 			gem.controllers[i].sphere_rgb = gem_config::gem_color(r / 255.0f, g / 255.0f, b / 255.0f);
-
-			// TODO: set hue of tracker
 
 			if (res_hues)
 			{
