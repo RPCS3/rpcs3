@@ -854,7 +854,7 @@ public:
 	{
 		if (g_cfg.io.move != move_handler::real)
 		{
-			return 1; // potentially true if less than 20 pixels have the hue
+			return true; // potentially true if less than 20 pixels have the hue
 		}
 
 		return hue < m_hues.size() && m_hues[hue] < 20; // potentially true if less than 20 pixels have the hue
@@ -1920,9 +1920,9 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 	// TODO: use correct camera settings
 	camera_state->exposure = 0;
 	camera_state->exposure_time = 1.0f / 60.0f;
-	camera_state->gain = 1.0;
-	camera_state->pitch_angle = 0.0;
-	camera_state->pitch_angle_estimate = 0.0;
+	camera_state->gain = 1.0f;
+	camera_state->pitch_angle = 0.0f;
+	camera_state->pitch_angle_estimate = 0.0f;
 
 	return CELL_OK;
 }
