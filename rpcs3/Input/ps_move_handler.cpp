@@ -817,11 +817,9 @@ int ps_move_handler::send_output_report(ps_move_device* device)
 	const auto elapsed = now - device->last_output_report_time;
 
 	// Update LED at an interval or it will be disabled automatically
-	if (elapsed >= 4000ms)
-	{
-		device->new_output_data = true;
-	}
-	else
+	device->new_output_data |= elapsed >= 4000ms;
+
+	if (!device->new_output_data)
 	{
 		// Use LED update rate of 120ms
 		if (elapsed < 120ms)
@@ -858,6 +856,7 @@ void ps_move_handler::apply_pad_data(const pad_ensemble& binding)
 
 	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
 
+	dev->new_output_data |= dev->large_motor != speed_large;
 	dev->large_motor = speed_large;
 
 	if (send_output_report(dev) >= 0)

@@ -189,10 +189,12 @@ public:
 
 	struct gem_color
 	{
-		float r, g, b;
+		ENABLE_BITWISE_SERIALIZATION;
+
+		f32 r, g, b;
 
 		gem_color() : r(0.0f), g(0.0f), b(0.0f) {}
-		gem_color(float r_, float g_, float b_)
+		gem_color(f32 r_, f32 g_, f32 b_)
 		{
 			r = std::clamp(r_, 0.0f, 1.0f);
 			g = std::clamp(g_, 0.0f, 1.0f);
@@ -238,17 +240,16 @@ public:
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
+		u64 calibration_status_flags = 0;                  // The calibration status flags
 
 		static constexpr u64 calibration_time_us = 500000; // The calibration supposedly takes 0.5 seconds (500000 microseconds)
-
-		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 	CellGemAttribute attribute = {};
 	CellGemVideoConvertAttribute vc_attribute = {};
 	s32 video_data_out_size = -1;
 	std::vector<u8> video_data_in;
-	u64 status_flags = 0;
+	u64 runtime_status_flags = 0; // The runtime status flags
 	bool enable_pitch_correction = false;
 	u32 inertial_counter = 0;
 
@@ -279,11 +280,9 @@ public:
 			{
 				gem.is_calibrating = false;
 				gem.calibration_start_us = 0;
+				gem.calibration_status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
 				gem.calibrated_magnetometer = true;
 				gem.enabled_tracking = true;
-				gem.hue = 1;
-
-				status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
 			}
 		}
 
@@ -389,20 +388,11 @@ public:
 		}
 	}
 
+	void paint_spheres(CellGemVideoConvertFormatEnum output_format, u32 width, u32 height, u8* video_data_out, u32 video_data_out_size);
+
 	gem_config_data()
 	{
-		if (!g_cfg_gem_real.load())
-		{
-			cellGem.notice("Could not load real gem config. Using defaults.");
-		}
-
-		if (!g_cfg_gem_fake.load())
-		{
-			cellGem.notice("Could not load fake gem config. Using defaults.");
-		}
-
-		cellGem.notice("Real gem config=\n", g_cfg_gem_real.to_string());
-		cellGem.notice("Fake gem config=\n", g_cfg_gem_fake.to_string());
+		load_configs();
 	};
 
 	SAVESTATE_INIT_POS(15);
@@ -416,10 +406,36 @@ public:
 			return;
 		}
 
-		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
+		const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
 
-		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
-			, connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
+		ar(attribute, vc_attribute, runtime_status_flags, enable_pitch_correction, inertial_counter);
+
+		for (gem_controller& c : controllers)
+		{
+			ar(c.status, c.ext_status, c.ext_id, c.port, c.enabled_magnetometer, c.calibrated_magnetometer, c.enabled_filtering, c.enabled_tracking, c.enabled_LED, c.hue_set, c.rumble);
+
+			// We need to add padding because we used bitwise serialization in version 1
+			if (version < 2)
+			{
+				ar.add_padding(&gem_controller::rumble, &gem_controller::sphere_rgb);
+			}
+
+			ar(c.sphere_rgb, c.hue, c.distance_mm, c.radius, c.radius_valid, c.is_calibrating);
+
+			if (version < 2)
+			{
+				ar.add_padding(&gem_controller::is_calibrating, &gem_controller::calibration_start_us);
+			}
+
+			ar(c.calibration_start_us);
+
+			if (ar.is_writing() || version >= 2)
+			{
+				ar(c.calibration_status_flags);
+			}
+		}
+
+		ar(connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
 	}
 
 	gem_config_data(utils::serial& ar)
@@ -429,6 +445,11 @@ public:
 		if (ar.is_writing())
 			return;
 
+		load_configs();
+	}
+
+	static void load_configs()
+	{
 		if (!g_cfg_gem_real.load())
 		{
 			cellGem.notice("Could not load real gem config. Using defaults.");
@@ -447,7 +468,7 @@ public:
 extern std::pair<u32, u32> get_video_resolution(const CellCameraInfoEx& info);
 extern u32 get_buffer_size_by_format(s32 format, s32 width, s32 height);
 
-static inline int32_t cellGemGetVideoConvertSize(s32 output_format)
+static inline s32 cellGemGetVideoConvertSize(s32 output_format)
 {
 	switch (output_format)
 	{
@@ -474,6 +495,29 @@ static inline int32_t cellGemGetVideoConvertSize(s32 output_format)
 
 namespace gem
 {
+	struct gem_position
+	{
+	public:
+		void set_position(f32 x, f32 y)
+		{
+			std::lock_guard lock(m_mutex);
+			m_x = x;
+			m_y = y;
+		}
+		void get_position(f32& x, f32& y)
+		{
+			std::lock_guard lock(m_mutex);
+			x = m_x;
+			y = m_y;
+		}
+	private:
+		std::mutex m_mutex;
+		f32 m_x = 0.0f;
+		f32 m_y = 0.0f;
+	};
+
+	std::array<gem_position, CELL_GEM_MAX_NUM> positions {};
+
 	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
 	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
 	                          u8* video_data_out, u32 video_data_out_size)
@@ -524,15 +568,15 @@ namespace gem
 					u8* dst0 = dst_row;
 					u8* dst1 = dst_row + out_pitch;
 
-					for (uint32_t x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
+					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
 					{
-						const uint8_t b  = src0[0];
-						const uint8_t g0 = src0[1];
-						const uint8_t g1 = src1[0];
-						const uint8_t r  = src1[1];
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
 
-						const uint8_t top[4] = { r, g0, b, 255 };
-						const uint8_t bottom[4] = { r, g1, b, 255 };
+						const u8 top[4] = { r, g0, b, 255 };
+						const u8 bottom[4] = { r, g1, b, 255 };
 
 						// Top-Left
 						std::memcpy(dst0, top, 4);
@@ -602,6 +646,101 @@ namespace gem
 	}
 }
 
+void gem_config_data::paint_spheres(CellGemVideoConvertFormatEnum output_format, u32 width, u32 height, u8* video_data_out, u32 video_data_out_size)
+{
+	if (!width || !height || !video_data_out || !video_data_out_size)
+	{
+		return;
+	}
+
+	struct sphere_information
+	{
+		f32 radius = 0.0f;
+		s16 x = 0;
+		s16 y = 0;
+		u8 r = 0;
+		u8 g = 0;
+		u8 b = 0;
+	};
+
+	std::vector<sphere_information> sphere_info;
+	{
+		reader_lock lock(mtx);
+
+		for (u32 gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
+		{
+			const gem_config_data::gem_controller& controller = controllers[gem_num];
+			if (!controller.radius_valid || controller.radius <= 0.0f) continue;
+
+			f32 x, y;
+			::at32(gem::positions, gem_num).get_position(x, y);
+
+			const u8 r = static_cast<u8>(std::clamp(controller.sphere_rgb.r * 255.0f, 0.0f, 255.0f));
+			const u8 g = static_cast<u8>(std::clamp(controller.sphere_rgb.g * 255.0f, 0.0f, 255.0f));
+			const u8 b = static_cast<u8>(std::clamp(controller.sphere_rgb.b * 255.0f, 0.0f, 255.0f));
+
+			sphere_info.push_back({ controller.radius, static_cast<s16>(x), static_cast<s16>(y), r, g, b });
+		}
+	}
+
+	switch (output_format)
+	{
+	case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
+	{
+		cellGem.trace("Painting spheres for CELL_GEM_RGBA_640x480");
+
+		const u32 out_pitch = width * 4;
+
+		for (const sphere_information& info : sphere_info)
+		{
+			const s32 x_begin = std::max(0, static_cast<s32>(std::floor(info.x - info.radius)));
+			const s32 x_end = std::min<s32>(width, static_cast<s32>(std::ceil(info.x + info.radius)));
+			const s32 y_begin = std::max(0, static_cast<s32>(std::floor(info.y - info.radius)));
+			const s32 y_end = std::min<s32>(height, static_cast<s32>(std::ceil(info.y + info.radius)));
+
+			for (s32 y = y_begin; y < y_end; y++)
+			{
+				u8* dst = video_data_out + y * out_pitch + x_begin * 4;
+
+				for (s32 x = x_begin; x < x_end; x++, dst += 4)
+				{
+					const f32 distance = static_cast<f32>(std::sqrt(std::pow(info.x - x, 2) + std::pow(info.y - y, 2)));
+					if (distance > info.radius) continue;
+
+					dst[0] = info.r;
+					dst[1] = info.g;
+					dst[2] = info.b;
+					dst[3] = 255;
+				}
+			}
+		}
+
+		break;
+	}
+	case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
+	case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
+	case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
+	case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
+	case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
+	case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+	case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
+	{
+		cellGem.trace("Unimplemented: painting spheres for %s", output_format);
+		break;
+	}
+	case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
+	{
+		cellGem.trace("Ignoring painting spheres for CELL_GEM_NO_VIDEO_OUTPUT");
+		break;
+	}
+	default:
+	{
+		cellGem.trace("Ignoring painting spheres for %d", static_cast<u32>(output_format));
+		break;
+	}
+	}
+}
+
 void gem_config_data::operator()()
 {
 	cellGem.notice("Starting thread");
@@ -635,6 +774,11 @@ void gem_config_data::operator()()
 		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size))
 		{
 			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
+
+			if (g_cfg.io.paint_move_spheres)
+			{
+				paint_spheres(vc.output_format, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size);
+			}
 		}
 
 		video_conversion_in_progress = false;
@@ -710,7 +854,7 @@ public:
 	{
 		if (g_cfg.io.move != move_handler::real)
 		{
-			return 1; // potentially true if less than 20 pixels have the hue
+			return true; // potentially true if less than 20 pixels have the hue
 		}
 
 		return hue < m_hues.size() && m_hues[hue] < 20; // potentially true if less than 20 pixels have the hue
@@ -763,7 +907,7 @@ public:
 				std::lock_guard lock(pad::g_pad_mutex);
 				const auto handler = pad::get_current_handler();
 				auto& handlers = handler->get_handlers();
-				if (auto it = handlers.find(pad_handler::move); it != handlers.end())
+				if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 				{
 					for (auto& binding : it->second->bindings())
 					{
@@ -774,12 +918,22 @@ public:
 
 						if (gem_num < 0 || gem_num >= CELL_GEM_MAX_NUM) continue;
 
-						const cfg_ps_move* config = ::at32(g_cfg_move.move, gem_num);
-
 						binding.device->color_override_active = true;
-						binding.device->color_override.r = config->r.get();
-						binding.device->color_override.g = config->g.get();
-						binding.device->color_override.b = config->b.get();
+
+						if (g_cfg.io.allow_move_hue_set_by_game)
+						{
+							const auto& controller = gem.controllers[gem_num];
+							binding.device->color_override.r = static_cast<u8>(std::clamp(controller.sphere_rgb.r * 255.0f, 0.0f, 255.0f));
+							binding.device->color_override.g = static_cast<u8>(std::clamp(controller.sphere_rgb.g * 255.0f, 0.0f, 255.0f));
+							binding.device->color_override.b = static_cast<u8>(std::clamp(controller.sphere_rgb.b * 255.0f, 0.0f, 255.0f));
+						}
+						else
+						{
+							const cfg_ps_move* config = ::at32(g_cfg_move.move, gem_num);
+							binding.device->color_override.r = config->r.get();
+							binding.device->color_override.g = config->g.get();
+							binding.device->color_override.b = config->b.get();
+						}
 					}
 				}
 			}
@@ -791,7 +945,7 @@ public:
 				const cfg_ps_move* config = g_cfg_move.move[gem_num];
 
 				m_tracker.set_active(gem_num, controller.enabled_tracking && controller.status == CELL_GEM_STATUS_READY);
-				m_tracker.set_hue(gem_num, config->hue);
+				m_tracker.set_hue(gem_num, g_cfg.io.allow_move_hue_set_by_game ? controller.hue : config->hue);
 				m_tracker.set_hue_threshold(gem_num, config->hue_threshold);
 				m_tracker.set_saturation_threshold(gem_num, config->saturation_threshold);
 			}
@@ -902,6 +1056,11 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
 	}
+
+	if (g_cfg.io.paint_move_spheres)
+	{
+		::at32(gem::positions, gem_num).set_position(image_x, image_y);
+	}
 }
 
 static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
@@ -982,6 +1141,11 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+	}
+
+	if (g_cfg.io.paint_move_spheres)
+	{
+		::at32(gem::positions, gem_num).set_position(image_x, image_y);
 	}
 }
 
@@ -1460,7 +1624,7 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	gem.status_flags &= ~mask;
+	gem.controllers[gem_num].calibration_status_flags &= ~mask;
 
 	return CELL_OK;
 }
@@ -1657,7 +1821,7 @@ error_code cellGemFilterState(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
-error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
+error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 {
 	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
@@ -1683,6 +1847,9 @@ error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
 
 	gem.controllers[gem_num].sphere_rgb = gem_config::gem_color(r, g, b);
 	gem.controllers[gem_num].enabled_tracking = false;
+
+	const auto [h, s, v] = ps_move_tracker<false>::rgb_to_hsv(r, g, b);
+	gem.controllers[gem_num].hue = h;
 
 	return CELL_OK;
 }
@@ -1753,9 +1920,9 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 	// TODO: use correct camera settings
 	camera_state->exposure = 0;
 	camera_state->exposure_time = 1.0f / 60.0f;
-	camera_state->gain = 1.0;
-	camera_state->pitch_angle = 0.0;
-	camera_state->pitch_angle_estimate = 0.0;
+	camera_state->gain = 1.0f;
+	camera_state->pitch_angle = 0.0f;
+	camera_state->pitch_angle_estimate = 0.0f;
 
 	return CELL_OK;
 }
@@ -2060,7 +2227,7 @@ error_code cellGemGetMemorySize(s32 max_connect)
 	return not_an_error(GemGetMemorySize(max_connect));
 }
 
-error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
+error_code cellGemGetRGB(u32 gem_num, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
 	cellGem.todo("cellGemGetRGB(gem_num=%d, r=*0x%x, g=*0x%x, b=*0x%x)", gem_num, r, g, b);
 
@@ -2246,7 +2413,7 @@ error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	*flags = gem.status_flags;
+	*flags = gem.runtime_status_flags | gem.controllers[gem_num].calibration_status_flags;
 
 	return CELL_OK;
 }
@@ -2375,7 +2542,7 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 
 	gem.updating = false;
 	gem.camera_frame = 0;
-	gem.status_flags = 0;
+	gem.runtime_status_flags = 0;
 	gem.attribute = *attribute;
 
 	for (int gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
@@ -2412,8 +2579,9 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 	// TODO: does this really stop an ongoing calibration ?
 	gem.controllers[gem_num].is_calibrating = false;
 	gem.controllers[gem_num].calibration_start_us = 0;
-
-	// TODO: gem.status_flags (probably not changed)
+	gem.controllers[gem_num].calibration_status_flags = 0;
+	gem.controllers[gem_num].hue_set = false;
+	gem.controllers[gem_num].enabled_tracking = false;
 
 	return CELL_OK;
 }
@@ -2641,6 +2809,25 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 
 	gem.controllers[gem_num].rumble = rumble;
 
+	// Set actual device rumble
+	if (g_cfg.io.move == move_handler::real)
+	{
+		std::lock_guard pad_lock(pad::g_pad_mutex);
+		const auto handler = pad::get_current_handler();
+		auto& handlers = handler->get_handlers();
+		if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
+		{
+			const u32 pad_index = pad_num(gem_num);
+			for (const auto& binding : it->second->bindings())
+			{
+				if (!binding.device || binding.device->player_id != pad_index) continue;
+
+				handler->SetRumble(pad_index, rumble, rumble > 0);
+				break;
+			}
+		}
+	}
+
 	return CELL_OK;
 }
 
@@ -2669,7 +2856,7 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 
 error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 {
-	cellGem.todo("cellGemTrackHues(req_hues=*0x%x, res_hues=*0x%x)", req_hues, res_hues);
+	cellGem.todo("cellGemTrackHues(req_hues=%s, res_hues=*0x%x)", req_hues ? fmt::format("*0x%x [%d, %d, %d, %d]", req_hues, req_hues[0], req_hues[1], req_hues[2], req_hues[3]) : "*0x0", res_hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -2693,8 +2880,6 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 			gem.controllers[i].enabled_LED = true;
 			gem.controllers[i].hue_set = true;
 
-			// TODO: set hue based on tracker data
-
 			switch (i)
 			{
 			default:
@@ -2711,6 +2896,9 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 				gem.controllers[i].hue = 300; // purple
 				break;
 			}
+
+			const auto [r, g, b] = ps_move_tracker<false>::hsv_to_rgb(gem.controllers[i].hue, 1.0f, 1.0f);
+			gem.controllers[i].sphere_rgb = gem_config::gem_color(r / 255.0f, g / 255.0f, b / 255.0f);
 
 			if (res_hues)
 			{
@@ -2740,7 +2928,8 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 			gem.controllers[i].hue_set = true;
 			gem.controllers[i].hue = req_hues[i];
 
-			// TODO: set hue of tracker
+			const auto [r, g, b] = ps_move_tracker<false>::hsv_to_rgb(gem.controllers[i].hue, 1.0f, 1.0f);
+			gem.controllers[i].sphere_rgb = gem_config::gem_color(r / 255.0f, g / 255.0f, b / 255.0f);
 
 			if (res_hues)
 			{
