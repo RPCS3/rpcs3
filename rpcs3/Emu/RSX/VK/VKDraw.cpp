@@ -246,8 +246,7 @@ void VKGSRender::load_texture_env()
 
 	auto get_border_color = [&](const rsx::Texture auto& tex)
 	{
-		const auto require_border_color_remap = m_device->get_custom_border_color_support().require_border_color_remap;
-		return require_border_color_remap
+		return  m_device->get_custom_border_color_support().require_border_color_remap
 			? tex.remapped_border_color()
 			: rsx::decode_border_color(tex.border_color());
 	};
