@@ -469,6 +469,8 @@ struct ps_move_data
 	bool calibration_requested = false;
 	bool calibration_succeeded = false;
 
+	bool magnetometer_enabled = false;
+
 	std::array<f32, 4> quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
 	f32 accelerometer_x = 0.0f; // linear velocity in m/s²
 	f32 accelerometer_y = 0.0f; // linear velocity in m/s²

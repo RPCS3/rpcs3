@@ -684,6 +684,13 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 		gyro_x = (input.gyro_x_1 + input.gyro_x_2) / 2 - zero_shift;
 		gyro_y = (input.gyro_y_1 + input.gyro_y_2) / 2 - zero_shift;
 		gyro_z = (input.gyro_z_1 + input.gyro_z_2) / 2 - zero_shift;
+
+		const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
+
+		#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
+		pad->move_data.magnetometer_x = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
+		pad->move_data.magnetometer_y = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
+		pad->move_data.magnetometer_z = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
 	}
 
 	// Apply calibration
@@ -906,18 +913,16 @@ void ps_move_device::update_orientation(ps_move_data& move_data)
 
 	FusionVector magnetometer {};
 
-	// TODO: use magnetometer if possible
-	//if (dev->model == ps_move_model::ZCM1)
-	//{
-	//	const ps_move_input_report_ZCM1& input = dev->input_report_ZCM1;
-	//	magnetometer = FusionVector{
-	//		.axis {
-	//			.x = input.magnetometer_x2,
-	//			.y = input.magnetometer_y,
-	//			.z = input.magnetometer_z
-	//		}
-	//	};
-	//}
+	if (move_data.magnetometer_enabled)
+	{
+		magnetometer = FusionVector{
+			.axis {
+				.x = move_data.magnetometer_x,
+				.y = move_data.magnetometer_y,
+				.z = move_data.magnetometer_z
+			}
+		};
+	}
 
 	// Update Fusion
 	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, elapsed_sec);

@@ -225,7 +225,7 @@ public:
 		u32 ext_status = CELL_GEM_NO_EXTERNAL_PORT_DEVICE; // External port connection status
 		u32 ext_id = 0;                                    // External device ID (type). For example SHARP_SHOOTER_DEVICE_ID
 		u32 port = 0;                                      // Assigned port
-		bool enabled_magnetometer = false;                 // Whether the magnetometer is enabled (probably used for additional rotational precision)
+		bool enabled_magnetometer = true;                  // Whether the magnetometer is enabled (probably used for additional rotational precision)
 		bool calibrated_magnetometer = false;              // Whether the magnetometer is calibrated
 		bool enabled_filtering = false;                    // Whether filtering is enabled
 		bool enabled_tracking = false;                     // Whether tracking is enabled
@@ -333,6 +333,10 @@ public:
 			return;
 		}
 
+		gem_controller& controller = ::at32(controllers, gem_num);
+		controller = {};
+		controller.sphere_rgb = gem_color::get_default_color(gem_num);
+
 		bool is_connected = false;
 
 		switch (g_cfg.io.move)
@@ -351,6 +355,7 @@ public:
 
 					if (gem_num == i)
 					{
+						pad->move_data.magnetometer_enabled = controller.enabled_magnetometer;
 						is_connected = true;
 					}
 				}
@@ -412,10 +417,6 @@ public:
 		case move_handler::null:
 			break;
 		}
-
-		gem_controller& controller = ::at32(controllers, gem_num);
-		controller = {};
-		controller.sphere_rgb = gem_color::get_default_color(gem_num);
 
 		// Assign status and port number
 		if (is_connected)
@@ -1772,13 +1773,28 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 		return CELL_GEM_NOT_CONNECTED;
 	}
 
+	auto& controller = gem.controllers[gem_num];
+
 	// NOTE: RE doesn't show this check but it is mentioned in the docs, so I'll leave it here for now.
-	//if (!gem.controllers[gem_num].calibrated_magnetometer)
+	//if (!controller.calibrated_magnetometer)
 	//{
 	//	return CELL_GEM_NOT_CALIBRATED;
 	//}
 
-	gem.controllers[gem_num].enabled_magnetometer = !!enable;
+	controller.enabled_magnetometer = !!enable;
+
+	if (g_cfg.io.move == move_handler::real)
+	{
+		std::lock_guard lock(pad::g_pad_mutex);
+
+		const auto handler = pad::get_current_handler();
+		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+		if (pad && pad->m_pad_handler == pad_handler::move)
+		{
+			pad->move_data.magnetometer_enabled = controller.enabled_magnetometer;
+		}
+	}
 
 	return CELL_OK;
 }
@@ -1814,6 +1830,19 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 	}
 
 	controller.enabled_magnetometer = !!enable;
+
+	if (g_cfg.io.move == move_handler::real)
+	{
+		std::lock_guard lock(pad::g_pad_mutex);
+
+		const auto handler = pad::get_current_handler();
+		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+		if (pad && pad->m_pad_handler == pad_handler::move)
+		{
+			pad->move_data.magnetometer_enabled = controller.enabled_magnetometer;
+		}
+	}
 
 	return CELL_OK;
 }
