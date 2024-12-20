@@ -400,7 +400,7 @@ public:
 		u32 flags = 0; // iFlags
 		u64 source = 0; // Event source
 		u64 ack_timestamp = 0; // timestamp of last call of cellAudioSendAck
-		std::shared_ptr<lv2_event_queue> port{}; // Underlying event port
+		shared_ptr<lv2_event_queue> port{}; // Underlying event port
 	};
 
 	std::vector<key_info> keys{};

@@ -269,7 +269,7 @@ namespace rsx
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 	public:
-		std::shared_ptr<named_thread<class ppu_thread>> intr_thread;
+		shared_ptr<named_thread<ppu_thread>> intr_thread;
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };

@@ -161,7 +161,7 @@ struct lv2_rsxaudio final : lv2_obj
 
 	vm::addr_t shmem{};
 
-	std::array<std::shared_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
+	std::array<shared_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
 
 	// lv2 uses port memory addresses for their names
 	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{ 0x8000000000400100, 0x8000000000400200, 0x8000000000400300 };
@@ -583,7 +583,7 @@ public:
 	atomic_t<bool> rsxaudio_ctx_allocated = false;
 
 	shared_mutex rsxaudio_obj_upd_m{};
-	std::shared_ptr<lv2_rsxaudio> rsxaudio_obj_ptr{};
+	shared_ptr<lv2_rsxaudio> rsxaudio_obj_ptr{};
 
 	void operator()();
 	rsxaudio_data_thread& operator=(thread_state state);

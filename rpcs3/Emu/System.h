@@ -401,7 +401,7 @@ private:
 	struct savestate_stage
 	{
 		bool prepared = false;
-		std::vector<std::pair<std::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+		std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 	};
 public:
 

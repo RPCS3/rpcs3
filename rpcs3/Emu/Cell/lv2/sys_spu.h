@@ -296,14 +296,14 @@ struct lv2_spu_group
 	class ppu_thread* waiter = nullptr;
 	bool set_terminate = false;
 
-	std::array<std::shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
+	std::array<shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
 	std::array<s8, 256> threads_map; // SPU Threads map based number
 	std::array<std::pair<u32, std::vector<sys_spu_segment>>, 8> imgs; // Entry points, SPU image segments
 	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
-	std::shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 _prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size) noexcept
 		: name(std::move(name))
@@ -344,7 +344,7 @@ struct lv2_spu_group
 		return ep_sysmodule ? ep_sysmodule->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
-	static std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> get_thread(u32 id);
+	static std::pair<named_thread<spu_thread>*, shared_ptr<lv2_spu_group>> get_thread(u32 id);
 };
 
 class ppu_thread;

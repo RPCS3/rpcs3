@@ -22,10 +22,9 @@ lv2_event_flag::lv2_event_flag(utils::serial& ar)
 	ar(pattern);
 }
 
-std::shared_ptr<void> lv2_event_flag::load(utils::serial& ar)
+std::function<void(void*)> lv2_event_flag::load(utils::serial& ar)
 {
-	auto eflag = std::make_shared<lv2_event_flag>(ar);
-	return lv2_obj::load(eflag->key, eflag);
+	return load_func(make_shared<lv2_event_flag>(ar));
 }
 
 void lv2_event_flag::save(utils::serial& ar)
@@ -66,7 +65,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 
 	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_event_flag>(
+		return make_shared<lv2_event_flag>(
 			_attr.protocol,
 			ipc_key,
 			_attr.type,
@@ -330,7 +329,7 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 	// Warning: may be called from SPU thread.
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 
-	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id);
+	const auto flag = idm::get_unlocked<lv2_obj, lv2_event_flag>(id);
 
 	if (!flag)
 	{
@@ -502,7 +501,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	if (num) *num = 0;
 
-	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id);
+	const auto flag = idm::get_unlocked<lv2_obj, lv2_event_flag>(id);
 
 	if (!flag)
 	{

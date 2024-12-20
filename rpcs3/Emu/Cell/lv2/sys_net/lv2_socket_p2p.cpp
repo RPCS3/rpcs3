@@ -72,7 +72,7 @@ void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vect
 	}
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.fatal("[P2P] accept() called on a P2P socket");
 	return {};

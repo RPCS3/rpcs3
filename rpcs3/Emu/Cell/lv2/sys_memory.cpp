@@ -28,10 +28,13 @@ lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noe
 {
 }
 
-std::shared_ptr<void> lv2_memory_container::load(utils::serial& ar)
+std::function<void(void*)> lv2_memory_container::load(utils::serial& ar)
 {
 	// Use idm::last_id() only for the instances at IDM
-	return std::make_shared<lv2_memory_container>(stx::exact_t<utils::serial&>(ar), true);
+	return [ptr = make_shared<lv2_memory_container>(stx::exact_t<utils::serial&>(ar), true)](void* storage)
+	{
+		*static_cast<shared_ptr<lv2_memory_container>*>(storage) = ptr;
+	};
 }
 
 void lv2_memory_container::save(utils::serial& ar)
@@ -43,7 +46,7 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 {
 	if (id != SYS_MEMORY_CONTAINER_ID_INVALID)
 	{
-		return idm::check<lv2_memory_container>(id);
+		return idm::check_unlocked<lv2_memory_container>(id);
 	}
 
 	return &g_fxo->get<lv2_memory_container>();
@@ -397,7 +400,7 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 
-	const auto ct = idm::get<lv2_memory_container>(cid);
+	const auto ct = idm::get_unlocked<lv2_memory_container>(cid);
 
 	if (!ct)
 	{

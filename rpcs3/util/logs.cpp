@@ -789,7 +789,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	case level::trace:   text = reinterpret_cast<const char*>(u8"·T "); break;
 	}
 
-	// Print µs timestamp
+	// Print microsecond timestamp
 	const u64 hours = stamp / 3600'000'000;
 	const u64 mins = (stamp % 3600'000'000) / 60'000'000;
 	const u64 secs = (stamp % 60'000'000) / 1'000'000;

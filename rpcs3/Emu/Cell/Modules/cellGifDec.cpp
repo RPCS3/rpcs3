@@ -288,7 +288,7 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 	}
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(buffer, sizeof(buffer));
 		break;
@@ -500,7 +500,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 
 	case CELL_GIFDEC_FILE:
 	{
-		auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		file->file.seek(0);
 		file->file.read(gif.get(), fileSize);
 		break;

@@ -36,7 +36,7 @@ void lv2_socket_raw::save(utils::serial& ar)
 	lv2_socket::save(ar, true);
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.fatal("[RAW] accept() called on a RAW socket");
 	return {};
