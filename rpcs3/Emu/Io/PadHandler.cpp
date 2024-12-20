@@ -726,6 +726,13 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		pad->m_sticks[1].m_value = 255 - ly;
 		pad->m_sticks[2].m_value = rx;
 		pad->m_sticks[3].m_value = 255 - ry;
+
+#ifdef _WIN32
+		if (m_type == pad_handler::xinput)
+		{
+			input_log.error("LT=%d, LT+=%d, LT-=%d, RY=%d", button_values[16], button_values[18], button_values[19], pad->m_sticks[3].m_value);
+		}
+#endif
 	}
 }
 
