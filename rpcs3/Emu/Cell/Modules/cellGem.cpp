@@ -189,6 +189,8 @@ public:
 
 	struct gem_color
 	{
+		ENABLE_BITWISE_SERIALIZATION;
+
 		f32 r, g, b;
 
 		gem_color() : r(0.0f), g(0.0f), b(0.0f) {}
@@ -238,17 +240,16 @@ public:
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
+		u64 calibration_status_flags = 0;                  // The calibration status flags
 
 		static constexpr u64 calibration_time_us = 500000; // The calibration supposedly takes 0.5 seconds (500000 microseconds)
-
-		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 	CellGemAttribute attribute = {};
 	CellGemVideoConvertAttribute vc_attribute = {};
 	s32 video_data_out_size = -1;
 	std::vector<u8> video_data_in;
-	u64 status_flags = 0;
+	u64 runtime_status_flags = 0; // The runtime status flags
 	bool enable_pitch_correction = false;
 	u32 inertial_counter = 0;
 
@@ -279,11 +280,9 @@ public:
 			{
 				gem.is_calibrating = false;
 				gem.calibration_start_us = 0;
+				gem.calibration_status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
 				gem.calibrated_magnetometer = true;
 				gem.enabled_tracking = true;
-				gem.hue = 1;
-
-				status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
 			}
 		}
 
@@ -393,18 +392,7 @@ public:
 
 	gem_config_data()
 	{
-		if (!g_cfg_gem_real.load())
-		{
-			cellGem.notice("Could not load real gem config. Using defaults.");
-		}
-
-		if (!g_cfg_gem_fake.load())
-		{
-			cellGem.notice("Could not load fake gem config. Using defaults.");
-		}
-
-		cellGem.notice("Real gem config=\n", g_cfg_gem_real.to_string());
-		cellGem.notice("Fake gem config=\n", g_cfg_gem_fake.to_string());
+		load_configs();
 	};
 
 	SAVESTATE_INIT_POS(15);
@@ -418,10 +406,36 @@ public:
 			return;
 		}
 
-		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
+		const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
 
-		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
-			, connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
+		ar(attribute, vc_attribute, runtime_status_flags, enable_pitch_correction, inertial_counter);
+
+		for (gem_controller& c : controllers)
+		{
+			ar(c.status, c.ext_status, c.ext_id, c.port, c.enabled_magnetometer, c.calibrated_magnetometer, c.enabled_filtering, c.enabled_tracking, c.enabled_LED, c.hue_set, c.rumble);
+
+			// We need to add padding because we used bitwise serialization in version 1
+			if (version < 2)
+			{
+				ar.add_padding(&gem_controller::rumble, &gem_controller::sphere_rgb);
+			}
+
+			ar(c.sphere_rgb, c.hue, c.distance_mm, c.radius, c.radius_valid, c.is_calibrating);
+
+			if (version < 2)
+			{
+				ar.add_padding(&gem_controller::is_calibrating, &gem_controller::calibration_start_us);
+			}
+
+			ar(c.calibration_start_us);
+
+			if (ar.is_writing() || version >= 2)
+			{
+				ar(c.calibration_status_flags);
+			}
+		}
+
+		ar(connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
 	}
 
 	gem_config_data(utils::serial& ar)
@@ -431,6 +445,11 @@ public:
 		if (ar.is_writing())
 			return;
 
+		load_configs();
+	}
+
+	static void load_configs()
+	{
 		if (!g_cfg_gem_real.load())
 		{
 			cellGem.notice("Could not load real gem config. Using defaults.");
@@ -1605,7 +1624,7 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	gem.status_flags &= ~mask;
+	gem.controllers[gem_num].calibration_status_flags &= ~mask;
 
 	return CELL_OK;
 }
@@ -2394,7 +2413,7 @@ error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	*flags = gem.status_flags;
+	*flags = gem.runtime_status_flags | gem.controllers[gem_num].calibration_status_flags;
 
 	return CELL_OK;
 }
@@ -2523,7 +2542,7 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 
 	gem.updating = false;
 	gem.camera_frame = 0;
-	gem.status_flags = 0;
+	gem.runtime_status_flags = 0;
 	gem.attribute = *attribute;
 
 	for (int gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
@@ -2560,8 +2579,7 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 	// TODO: does this really stop an ongoing calibration ?
 	gem.controllers[gem_num].is_calibrating = false;
 	gem.controllers[gem_num].calibration_start_us = 0;
-
-	// TODO: gem.status_flags (probably not changed)
+	gem.controllers[gem_num].calibration_status_flags = 0;
 
 	return CELL_OK;
 }
