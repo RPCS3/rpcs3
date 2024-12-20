@@ -96,6 +96,29 @@ public:
 			return m_is_writing;
 		}
 
+		void add_padding(usz padding)
+		{
+			if (m_is_writing) return;
+			pos += padding;
+		}
+
+		// Add padding needed between two members
+		template <typename T, typename T2, typename T3>
+		void add_padding(T T2::*const first, T3 T2::*const second)
+		{
+			if (m_is_writing) return;
+
+			const u32 offset1 = ::offset32(first) + sizeof(first);
+			const u32 offset2 = ::offset32(second);
+
+			AUDIT(offset2 >= offset1);
+
+			if (offset2 > offset1)
+			{
+				pos += offset2 - offset1;
+			}
+		}
+
 		void set_expect_little_data(bool value)
 		{
 			m_expect_little_data = value;
