@@ -270,23 +270,60 @@ public:
 		return controllers[gem_num].status == CELL_GEM_STATUS_READY;
 	}
 
-	bool is_controller_calibrating(u32 gem_num)
+	void update_calibration_status()
 	{
-		gem_controller& gem = controllers[gem_num];
+		std::scoped_lock lock(mtx);
 
-		if (gem.is_calibrating)
+		for (u32 gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 		{
-			if ((get_guest_system_time() - gem.calibration_start_us) >= gem_controller::calibration_time_us)
+			gem_controller& controller = controllers[gem_num];
+			if (!controller.is_calibrating) continue;
+
+			bool controller_calibrated = true;
+
+			// Request controller calibration
+			if (g_cfg.io.move == move_handler::real)
 			{
-				gem.is_calibrating = false;
-				gem.calibration_start_us = 0;
-				gem.calibration_status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
-				gem.calibrated_magnetometer = true;
-				gem.enabled_tracking = true;
+				std::lock_guard pad_lock(pad::g_pad_mutex);
+				const auto handler = pad::get_current_handler();
+				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+				if (pad && pad->m_pad_handler == pad_handler::move)
+				{
+					if (!pad->move_data.calibration_requested || !pad->move_data.calibration_succeeded)
+					{
+						pad->move_data.calibration_requested = true;
+						controller_calibrated = false;
+					}
+				}
+			}
+
+			// The calibration takes ~0.5 seconds on real hardware
+			if ((get_guest_system_time() - controller.calibration_start_us) < gem_controller::calibration_time_us) continue;
+
+			if (!controller_calibrated)
+			{
+				cellGem.warning("Reached calibration timeout but ps move controller %d is still calibrating", gem_num);
+			}
+
+			controller.is_calibrating = false;
+			controller.calibration_start_us = 0;
+			controller.calibration_status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
+			controller.calibrated_magnetometer = true;
+			controller.enabled_tracking = true;
+
+			// Reset controller calibration request
+			if (g_cfg.io.move == move_handler::real)
+			{
+				std::lock_guard pad_lock(pad::g_pad_mutex);
+				const auto handler = pad::get_current_handler();
+				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+				if (pad && pad->m_pad_handler == pad_handler::move)
+				{
+					pad->move_data.calibration_requested = false;
+					pad->move_data.calibration_succeeded = false;
+				}
 			}
 		}
-
-		return gem.is_calibrating;
 	}
 
 	void reset_controller(u32 gem_num)
@@ -749,6 +786,11 @@ void gem_config_data::operator()()
 	{
 		while (!video_conversion_in_progress && thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 		{
+			if (state)
+			{
+				update_calibration_status();
+			}
+
 			thread_ctrl::wait_for(1000);
 		}
 
@@ -1105,10 +1147,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	// Calculate orientation
 	if (g_cfg.io.move == move_handler::real)
 	{
-		gem_state->quat[0] = move_data.quaternion[1]; // x
-		gem_state->quat[1] = move_data.quaternion[2]; // y
-		gem_state->quat[2] = move_data.quaternion[3]; // z
-		gem_state->quat[3] = move_data.quaternion[0]; // w
+		gem_state->quat[0] = move_data.quaternion[0]; // x
+		gem_state->quat[1] = move_data.quaternion[1]; // y
+		gem_state->quat[2] = move_data.quaternion[2]; // z
+		gem_state->quat[3] = move_data.quaternion[3]; // w
 	}
 	else
 	{
@@ -1595,13 +1637,15 @@ error_code cellGemCalibrate(u32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (gem.is_controller_calibrating(gem_num))
+	auto& controller = gem.controllers[gem_num];
+
+	if (controller.is_calibrating)
 	{
 		return CELL_EBUSY;
 	}
 
-	gem.controllers[gem_num].is_calibrating = true;
-	gem.controllers[gem_num].calibration_start_us = get_guest_system_time();
+	controller.is_calibrating = true;
+	controller.calibration_start_us = get_guest_system_time();
 
 	return CELL_OK;
 }
@@ -1762,12 +1806,14 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 		return CELL_GEM_NOT_CONNECTED;
 	}
 
-	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	auto& controller = gem.controllers[gem_num];
+
+	if (!controller.calibrated_magnetometer)
 	{
 		return CELL_GEM_NOT_CALIBRATED;
 	}
 
-	gem.controllers[gem_num].enabled_magnetometer = !!enable;
+	controller.enabled_magnetometer = !!enable;
 
 	return CELL_OK;
 }
@@ -1845,11 +1891,13 @@ error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 	//	color = color * (2.f / sum)
 	//}
 
-	gem.controllers[gem_num].sphere_rgb = gem_config::gem_color(r, g, b);
-	gem.controllers[gem_num].enabled_tracking = false;
+	auto& controller = gem.controllers[gem_num];
+
+	controller.sphere_rgb = gem_config::gem_color(r, g, b);
+	controller.enabled_tracking = false;
 
 	const auto [h, s, v] = ps_move_tracker<false>::rgb_to_hsv(r, g, b);
-	gem.controllers[gem_num].hue = h;
+	controller.hue = h;
 
 	return CELL_OK;
 }
@@ -2377,7 +2425,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_COMPUTING_AVAILABLE_COLORS;
 	}
 
-	if (gem.is_controller_calibrating(gem_num))
+	if (controller.is_calibrating)
 	{
 		return CELL_GEM_SPHERE_CALIBRATING;
 	}
@@ -2574,14 +2622,15 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	gem.controllers[gem_num].calibrated_magnetometer = false;
+	auto& controller = gem.controllers[gem_num];
 
 	// TODO: does this really stop an ongoing calibration ?
-	gem.controllers[gem_num].is_calibrating = false;
-	gem.controllers[gem_num].calibration_start_us = 0;
-	gem.controllers[gem_num].calibration_status_flags = 0;
-	gem.controllers[gem_num].hue_set = false;
-	gem.controllers[gem_num].enabled_tracking = false;
+	controller.calibrated_magnetometer = false;
+	controller.is_calibrating = false;
+	controller.calibration_start_us = 0;
+	controller.calibration_status_flags = 0;
+	controller.hue_set = false;
+	controller.enabled_tracking = false;
 
 	return CELL_OK;
 }
