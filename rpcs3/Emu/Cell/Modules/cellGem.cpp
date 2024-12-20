@@ -2580,6 +2580,8 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 	gem.controllers[gem_num].is_calibrating = false;
 	gem.controllers[gem_num].calibration_start_us = 0;
 	gem.controllers[gem_num].calibration_status_flags = 0;
+	gem.controllers[gem_num].hue_set = false;
+	gem.controllers[gem_num].enabled_tracking = false;
 
 	return CELL_OK;
 }
