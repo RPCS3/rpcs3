@@ -2347,7 +2347,7 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 
 	const std::shared_ptr<std::function<void()>> periodic_func = std::make_shared<std::function<void()>>();
 
-	*periodic_func = [=]()
+	*periodic_func = [=, this]()
 	{
 		if (should_wait_cb && should_wait_cb())
 		{

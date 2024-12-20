@@ -3643,7 +3643,7 @@ namespace rsx
 		m_invalidated_memory_range.invalidate();
 	}
 
-	void thread::renderctl(u32 request_code, void* args)
+	void thread::renderctl(u32 request_code, void* /*args*/)
 	{
 		switch (request_code)
 		{
