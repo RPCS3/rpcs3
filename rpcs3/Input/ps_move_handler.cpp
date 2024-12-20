@@ -359,12 +359,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		psmove_parse_calibration(calibration, *device);
 	}
 
-	// Initialize Fusion
-	FusionAhrsInitialise(&device->ahrs);
-	device->ahrs.settings.convention = FusionConvention::FusionConventionEnu;
-	device->ahrs.settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
-	FusionAhrsSetSettings(&device->ahrs, &device->ahrs.settings);
-	FusionAhrsReset(&device->ahrs);
+	device->reset_orientation();
 
 	// Activate
 	if (send_output_report(device) == -1)
@@ -720,57 +715,7 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_sensors[2].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.accelerometer_z));
 	pad->m_sensors[3].m_value = Clamp0To1023(512.0f + (MOTION_ONE_G * pad->move_data.gyro_z * -1.0f));
 
-	// Get elapsed time since last update
-	const u64 now_us = get_system_time();
-	const float elapsed_sec = (dev->last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - dev->last_ahrs_update_time_us) / 1'000'000.0f);
-	dev->last_ahrs_update_time_us = now_us;
-
-	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
-	// Don't ask how the axis work. It's basically been trial and error.
-	ensure(dev->ahrs.settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
-
-	const FusionVector accelerometer{
-		.axis {
-			.x = -pad->move_data.accelerometer_x,
-			.y = +pad->move_data.accelerometer_y,
-			.z = +pad->move_data.accelerometer_z
-		}
-	};
-
-	static constexpr f32 PI = 3.14159265f;
-	const auto rad_to_degree = [](f32 radians) -> f32 { return radians * 180.0f / PI; };
-	const FusionVector gyroscope{
-		.axis {
-			.x = +rad_to_degree(pad->move_data.gyro_x),
-			.y = +rad_to_degree(pad->move_data.gyro_z),
-			.z = -rad_to_degree(pad->move_data.gyro_y)
-		}
-	};
-
-	FusionVector magnetometer {};
-
-	// TODO: use magnetometer if possible
-	//if (dev->model == ps_move_model::ZCM1)
-	//{
-	//	const ps_move_input_report_ZCM1& input = dev->input_report_ZCM1;
-	//	magnetometer = FusionVector{
-	//		.axis {
-	//			.x = input.magnetometer_x2,
-	//			.y = input.magnetometer_y,
-	//			.z = input.magnetometer_z
-	//		}
-	//	};
-	//}
-
-	// Update Fusion
-	FusionAhrsUpdate(&dev->ahrs, gyroscope, accelerometer, magnetometer, elapsed_sec);
-
-	// Get quaternion
-	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(&dev->ahrs);
-	pad->move_data.quaternion[0] = quaternion.array[0];
-	pad->move_data.quaternion[1] = quaternion.array[1];
-	pad->move_data.quaternion[2] = quaternion.array[2];
-	pad->move_data.quaternion[3] = quaternion.array[3];
+	dev->update_orientation(pad->move_data);
 
 	handle_external_device(binding);
 }
@@ -910,4 +855,77 @@ u32 ps_move_handler::get_battery_level(const std::string& padId)
 
 	// 0 to 5
 	return std::clamp<u32>(device->battery_level * 20, 0, 100);
+}
+
+void ps_move_device::reset_orientation()
+{
+	// Initialize Fusion
+	ahrs = {};
+	FusionAhrsInitialise(&ahrs);
+	ahrs.settings.convention = FusionConvention::FusionConventionEnu;
+	ahrs.settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
+	FusionAhrsSetSettings(&ahrs, &ahrs.settings);
+	FusionAhrsReset(&ahrs);
+}
+
+void ps_move_device::update_orientation(ps_move_data& move_data)
+{
+	if (move_data.calibration_requested)
+	{
+		reset_orientation();
+
+		move_data.calibration_succeeded = true;
+	}
+
+	// Get elapsed time since last update
+	const u64 now_us = get_system_time();
+	const float elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
+	last_ahrs_update_time_us = now_us;
+
+	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
+	// Don't ask how the axis work. It's basically been trial and error.
+	ensure(ahrs.settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
+
+	const FusionVector accelerometer{
+		.axis {
+			.x = -move_data.accelerometer_x,
+			.y = +move_data.accelerometer_y,
+			.z = +move_data.accelerometer_z
+		}
+	};
+
+	static constexpr f32 PI = 3.14159265f;
+	const auto rad_to_degree = [](f32 radians) -> f32 { return radians * 180.0f / PI; };
+	const FusionVector gyroscope{
+		.axis {
+			.x = +rad_to_degree(move_data.gyro_x),
+			.y = +rad_to_degree(move_data.gyro_z),
+			.z = -rad_to_degree(move_data.gyro_y)
+		}
+	};
+
+	FusionVector magnetometer {};
+
+	// TODO: use magnetometer if possible
+	//if (dev->model == ps_move_model::ZCM1)
+	//{
+	//	const ps_move_input_report_ZCM1& input = dev->input_report_ZCM1;
+	//	magnetometer = FusionVector{
+	//		.axis {
+	//			.x = input.magnetometer_x2,
+	//			.y = input.magnetometer_y,
+	//			.z = input.magnetometer_z
+	//		}
+	//	};
+	//}
+
+	// Update Fusion
+	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, elapsed_sec);
+
+	// Get quaternion
+	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(&ahrs);
+	move_data.quaternion[0] = quaternion.array[1];
+	move_data.quaternion[1] = quaternion.array[2];
+	move_data.quaternion[2] = quaternion.array[3];
+	move_data.quaternion[3] = quaternion.array[0];
 }
