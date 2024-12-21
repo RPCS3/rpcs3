@@ -49,7 +49,16 @@ namespace vk
 		descriptor_indexing_features(bool supported = false)
 			: supported(supported) {}
 
-		operator bool() { return supported; }
+		operator bool() const { return supported; }
+	};
+
+	struct custom_border_color_features
+	{
+		bool supported = false;
+		bool swizzle_extension_supported = false;
+		bool require_border_color_remap = true;  // Assume that without the swizzle extension and explicit remap the device just samples border color as replacement.
+
+		operator bool() const { return supported; }
 	};
 
 	class physical_device
@@ -68,11 +77,12 @@ namespace vk
 		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
 		descriptor_indexing_features descriptor_indexing_support{};
 
+		custom_border_color_features custom_border_color_support{};
+
 		struct
 		{
 			bool barycentric_coords = false;
 			bool conditional_rendering = false;
-			bool custom_border_color = false;
 			bool debug_utils = false;
 			bool external_memory_host = false;
 			bool framebuffer_loops = false;
@@ -161,6 +171,7 @@ namespace vk
 		const gpu_formats_support& get_formats_support() const { return m_formats_support; }
 		const pipeline_binding_table& get_pipeline_binding_table() const { return m_pipeline_binding_table; }
 		const gpu_shader_types_support& get_shader_types_support() const { return pgpu->shader_types_support; }
+		const custom_border_color_features& get_custom_border_color_support() const { return pgpu->custom_border_color_support; }
 
 		bool get_shader_stencil_export_support() const { return pgpu->optional_features_support.shader_stencil_export; }
 		bool get_depth_bounds_support() const { return pgpu->features.depthBounds != VK_FALSE; }
@@ -175,7 +186,6 @@ namespace vk
 		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
-		bool get_custom_border_color_support() const { return pgpu->optional_features_support.custom_border_color; }
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
