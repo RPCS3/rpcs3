@@ -81,11 +81,7 @@ namespace vk
 		return fault_message;
 	}
 
-	void die_with_error(VkResult error_code, std::string message,
-		const char* file,
-		const char* func,
-		u32 line,
-		u32 col)
+	void die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
 	{
 		std::string error_message, extra_info;
 		int severity = 0; // 0 - die, 1 - warn, 2 - nothing
