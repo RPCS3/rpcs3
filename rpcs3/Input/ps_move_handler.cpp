@@ -678,12 +678,12 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->model == ps_move_model::ZCM1)
 	{
-		accel_x = (input.accel_x_1 + input.accel_x_2) / 2 - zero_shift;
-		accel_y = (input.accel_y_1 + input.accel_y_2) / 2 - zero_shift;
-		accel_z = (input.accel_z_1 + input.accel_z_2) / 2 - zero_shift;
-		gyro_x = (input.gyro_x_1 + input.gyro_x_2) / 2 - zero_shift;
-		gyro_y = (input.gyro_y_1 + input.gyro_y_2) / 2 - zero_shift;
-		gyro_z = (input.gyro_z_1 + input.gyro_z_2) / 2 - zero_shift;
+		accel_x -= zero_shift;
+		accel_y -= zero_shift;
+		accel_z -= zero_shift;
+		gyro_x -= zero_shift;
+		gyro_y -= zero_shift;
+		gyro_z -= zero_shift;
 
 		const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
 
