@@ -465,8 +465,8 @@ void ps_move_tracker_dialog::process_camera_frame()
 	}
 
 	m_ps_move_tracker->set_image_data(m_frame_frozen ? m_image_data_frozen.data() : m_image_data.data(), m_image_data.size(), width, height, m_camera_handler->format());
-	m_ps_move_tracker->set_min_radius(static_cast<f32>(g_cfg_move.min_radius.get() / g_cfg_move.min_radius.max));
-	m_ps_move_tracker->set_max_radius(static_cast<f32>(g_cfg_move.max_radius.get() / g_cfg_move.max_radius.max));
+	m_ps_move_tracker->set_min_radius(static_cast<f32>(g_cfg_move.min_radius) / 100.0f);
+	m_ps_move_tracker->set_max_radius(static_cast<f32>(g_cfg_move.max_radius) / 100.0f);
 	m_ps_move_tracker->set_filter_small_contours(m_filter_small_contours);
 	m_ps_move_tracker->set_show_all_contours(m_show_all_contours);
 	m_ps_move_tracker->set_draw_contours(m_draw_contours);
