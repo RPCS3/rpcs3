@@ -314,6 +314,34 @@ static bool is_circular_contour(const std::vector<cv::Point>& contour, f32& area
 }
 
 template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radius)
+{
+	if constexpr (!DiagnosticsEnabled) return;
+	if (!m_draw_overlays) return;
+
+	// Map memory
+	cv::Mat rgba(cv::Size(m_width, m_height), CV_8UC4, m_image_rgba_contours.data(), 0);
+
+	// Draw result, min and max radius
+	const f32 min_radius = m_min_radius * m_width;
+	const f32 max_radius = m_max_radius * m_width;
+	const f32 min_radius_clamped = std::max(0.0f, std::min(min_radius, max_radius));
+	const cv::Point2f center = cv::Point2f(m_width - 1 - max_radius, max_radius);
+	if (result_radius > 0.0f)
+	{
+		cv::circle(rgba, center, static_cast<int>(result_radius), cv::Scalar(255, 0, 0, 255), cv::FILLED);
+	}
+	if (min_radius_clamped > 0.0f && min_radius_clamped <= max_radius)
+	{
+		cv::circle(rgba, center, static_cast<int>(min_radius_clamped), cv::Scalar(0, 0, 0, 255), cv::FILLED);
+	}
+	if (max_radius > min_radius_clamped)
+	{
+		cv::circle(rgba, center, static_cast<int>(max_radius), cv::Scalar(0, 0, 0, 255), 1);
+	}
+}
+
+template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u32 index)
 {
 	const ps_move_config& config = ::at32(m_config, index);
@@ -384,6 +412,11 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	if (all_contours.empty())
 	{
 		set_valid(info, index, false);
+
+		if constexpr (DiagnosticsEnabled)
+		{
+			draw_sphere_size_range(0.0f);
+		}
 		return;
 	}
 
@@ -431,6 +464,11 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	if (best_index == umax)
 	{
 		set_valid(info, index, false);
+
+		if constexpr (DiagnosticsEnabled)
+		{
+			draw_sphere_size_range(0.0f);
+		}
 		return;
 	}
 
@@ -471,6 +509,8 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 
 	if (!m_draw_contours && !m_draw_overlays) [[likely]]
 		return;
+
+	draw_sphere_size_range(info.radius);
 
 	// Map memory
 	cv::Mat rgba(cv::Size(width, height), CV_8UC4, m_image_rgba_contours.data(), 0);
