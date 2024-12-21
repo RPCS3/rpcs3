@@ -73,6 +73,8 @@ private:
 
 	void set_valid(ps_move_info& info, u32 index, bool valid);
 
+	void draw_sphere_size_range(f32 result_radius);
+
 	u32 m_width = 0;
 	u32 m_height = 0;
 	s32 m_format = 0;
