@@ -2877,6 +2877,14 @@ void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 	// NOTE: flushing the queue is very expensive, do not flush just because query stopped
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
 	{
+		// VK_1_0 rules dictate that query must match subpass behavior on begin/end query.
+		// This is slow, so only do this for drivers that care.
+		if (vk::use_strict_query_scopes() &&
+			vk::is_renderpass_open(*m_current_command_buffer))
+		{
+			vk::end_renderpass(*m_current_command_buffer);
+		}
+
 		// End query
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
 		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);

@@ -797,6 +797,16 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			}
 		}
 
+		// Before starting a query, we need to match RP scope (VK_1_0 rules).
+		// We always want our queries to start outside a renderpass whenever possible.
+		// We ignore this for performance reasons whenever possible of course and only do this for sensitive drivers.
+		if (vk::use_strict_query_scopes() &&
+			vk::is_renderpass_open(*m_current_command_buffer))
+		{
+			vk::end_renderpass(*m_current_command_buffer);
+			emergency_query_cleanup(m_current_command_buffer);
+		}
+
 		// Begin query
 		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
 

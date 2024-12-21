@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "VKHelpers.h"
 #include "VKQueryPool.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
@@ -74,13 +75,20 @@ namespace vk
 	{
 		ensure(!m_current_query_pool);
 
-		const u32 count = ::size32(query_slot_status);
-		m_current_query_pool = std::make_unique<query_pool>(*owner, query_type, count);
+		if (m_query_pool_cache.size() > 0)
+		{
+			m_current_query_pool = std::move(m_query_pool_cache.front());
+			m_query_pool_cache.pop_front();
+		}
+		else
+		{
+			const u32 count = ::size32(query_slot_status);
+			m_current_query_pool = std::make_unique<query_pool>(*owner, query_type, count);
+		}
 
 		// From spec: "After query pool creation, each query must be reset before it is used."
-		vkCmdResetQueryPool(cmd, *m_current_query_pool.get(), 0, count);
-
-		m_pool_lifetime_counter = count;
+		vkCmdResetQueryPool(cmd, *m_current_query_pool.get(), 0, m_current_query_pool->size());
+		m_pool_lifetime_counter = m_current_query_pool->size();
 	}
 
 	void query_pool_manager::reallocate_pool(vk::command_buffer& cmd)
@@ -89,7 +97,8 @@ namespace vk
 		{
 			if (!m_current_query_pool->has_refs())
 			{
-				vk::get_resource_manager()->dispose(m_current_query_pool);
+				auto ref = std::make_unique<query_pool_ref>(this, m_current_query_pool);
+				vk::get_resource_manager()->dispose(ref);
 			}
 			else
 			{
@@ -112,7 +121,8 @@ namespace vk
 		{
 			if (!(*It)->has_refs())
 			{
-				vk::get_resource_manager()->dispose(*It);
+				auto ref = std::make_unique<query_pool_ref>(this, *It);
+				vk::get_resource_manager()->dispose(ref);
 				It = m_consumed_pools.erase(It);
 			}
 			else
@@ -218,5 +228,22 @@ namespace vk
 		}
 
 		return ~0u;
+	}
+
+	void query_pool_manager::on_query_pool_released(std::unique_ptr<vk::query_pool>& pool)
+	{
+		if (!vk::force_reuse_query_pools())
+		{
+			// Delete and let the driver recreate a new pool each time.
+			pool.reset();
+			return;
+		}
+
+		m_query_pool_cache.emplace_back(std::move(pool));
+	}
+
+	query_pool_manager::query_pool_ref::~query_pool_ref()
+	{
+		m_pool_man->on_query_pool_released(m_object);
 	}
 }
