@@ -277,9 +277,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 
 		for (u32 x = 0; x < width; x++, rgba += 4, hsv += 3)
 		{
-			const float r = rgba[0] / 255.0f;
-			const float g = rgba[1] / 255.0f;
-			const float b = rgba[2] / 255.0f;
+			const f32 r = rgba[0] / 255.0f;
+			const f32 g = rgba[1] / 255.0f;
+			const f32 b = rgba[2] / 255.0f;
 			const auto [hue, saturation, value] = rgb_to_hsv(r, g, b);
 
 			hsv[0] = static_cast<u8>(hue / 2);
@@ -296,17 +296,17 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 }
 
 #ifdef HAVE_OPENCV
-static bool is_circular_contour(const std::vector<cv::Point>& contour, float& area)
+static bool is_circular_contour(const std::vector<cv::Point>& contour, f32& area)
 {
 	std::vector<cv::Point> approx;
 	cv::approxPolyDP(contour, approx, 0.01 * cv::arcLength(contour, true), true);
 	if (approx.size() < 8ULL) return false;
 
-	area = static_cast<float>(cv::contourArea(contour));
+	area = static_cast<f32>(cv::contourArea(contour));
 	if (area < 30.0f) return false;
 
 	cv::Point2f center;
-	float radius;
+	f32 radius;
 	cv::minEnclosingCircle(contour, center, radius);
 	if (radius < 5.0f) return false;
 
@@ -363,7 +363,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		cv::findContours(binary, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
 		for (auto it = contours.begin(); it != contours.end();)
 		{
-			float area;
+			f32 area;
 			if (is_circular_contour(*it, area))
 			{
 				it = contours.erase(it);
@@ -393,24 +393,24 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	std::vector<cv::Point2f> centers;
 	centers.reserve(all_contours.size());
 
-	std::vector<float> radii;
+	std::vector<f32> radii;
 	radii.reserve(all_contours.size());
 
 	const f32 min_radius = m_min_radius * width;
 	const f32 max_radius = m_max_radius * width;
 
 	usz best_index = umax;
-	float best_area = 0.0f;
+	f32 best_area = 0.0f;
 	for (usz i = 0; i < all_contours.size(); i++)
 	{
 		const std::vector<cv::Point>& contour = all_contours[i];
-		float area;
+		f32 area;
 		if (!is_circular_contour(contour, area))
 			continue;
 
 		// Get center and radius
 		cv::Point2f center;
-		float radius;
+		f32 radius;
 		cv::minEnclosingCircle(contour, center, radius);
 
 		// Filter radius
@@ -438,7 +438,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const f32 sphere_radius_pixels = radii[best_index];
 	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
 	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
-	const f32 image_width_pixels = static_cast<float>(width);
+	const f32 image_width_pixels = static_cast<f32>(width);
 	const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
 	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
 
@@ -499,11 +499,11 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		for (usz i = 0; i < centers.size(); i++)
 		{
 			const cv::Point2f& center = centers[i];
-			const float radius = radii[i];
+			const f32 radius = radii[i];
 
 			cv::circle(rgba, center, static_cast<int>(radius), circle_color, 1);
-			cv::line(rgba, center + cv::Point2f(-2, 0), center + cv::Point2f(2, 0), center_color, 1);
-			cv::line(rgba, center + cv::Point2f(0, -2), center + cv::Point2f(0, 2), center_color, 1);
+			cv::line(rgba, center + cv::Point2f(-2.0f, 0.0f), center + cv::Point2f(2.0f, 0.0f), center_color, 1);
+			cv::line(rgba, center + cv::Point2f(0.0f, -2.0f), center + cv::Point2f(0.0f, 2.0f), center_color, 1);
 		}
 	}
 }
@@ -525,16 +525,16 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 #endif
 
 template <bool DiagnosticsEnabled>
-std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, float saturation, float value)
+std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, f32 saturation, f32 value)
 {
-	const float h = hue / 60.0f;
-	const float chroma = value * saturation;
-	const float x = chroma * (1.0f - std::abs(std::fmod(h, 2.0f) - 1.0f));
-	const float m = value - chroma;
+	const f32 h = hue / 60.0f;
+	const f32 chroma = value * saturation;
+	const f32 x = chroma * (1.0f - std::abs(std::fmod(h, 2.0f) - 1.0f));
+	const f32 m = value - chroma;
 
-	float r = 0.0f;
-	float g = 0.0f;
-	float b = 0.0f;
+	f32 r = 0.0f;
+	f32 g = 0.0f;
+	f32 b = 0.0f;
 
 	switch (static_cast<int>(std::ceil(h)))
 	{
@@ -581,12 +581,12 @@ std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, 
 }
 
 template <bool DiagnosticsEnabled>
-std::tuple<s16, float, float> ps_move_tracker<DiagnosticsEnabled>::rgb_to_hsv(float r, float g, float b)
+std::tuple<s16, f32, f32> ps_move_tracker<DiagnosticsEnabled>::rgb_to_hsv(f32 r, f32 g, f32 b)
 {
-	const float cmax = std::max({r, g, b}); // V (of HSV)
-	const float cmin = std::min({r, g, b});
-	const float delta = cmax - cmin;
-	const float saturation = cmax ? (delta / cmax) : 0.0f; // S (of HSV)
+	const f32 cmax = std::max({r, g, b}); // V (of HSV)
+	const f32 cmin = std::min({r, g, b});
+	const f32 delta = cmax - cmin;
+	const f32 saturation = cmax ? (delta / cmax) : 0.0f; // S (of HSV)
 
 	s16 hue; // H (of HSV)
 
