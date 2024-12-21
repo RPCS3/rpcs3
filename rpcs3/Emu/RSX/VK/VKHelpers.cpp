@@ -139,6 +139,9 @@ namespace vk
 			rsx_log.error("Dozen is currently unsupported. How did you even get this to run outside windows?");
 #endif
 			break;
+		case driver_vendor::HONEYKRISP:
+			// Needs more testing
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}

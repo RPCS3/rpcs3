@@ -297,6 +297,11 @@ namespace vk
 				return driver_vendor::V3DV;
 			}
 
+			if (gpu_name.find("Apple") != umax)
+			{
+				return driver_vendor::HONEYKRISP;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -322,6 +327,8 @@ namespace vk
 				return driver_vendor::NVK;
 			case VK_DRIVER_ID_MESA_V3DV:
 				return driver_vendor::V3DV;
+			case VK_DRIVER_ID_MESA_HONEYKRISP:
+				return driver_vendor::HONEYKRISP;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
