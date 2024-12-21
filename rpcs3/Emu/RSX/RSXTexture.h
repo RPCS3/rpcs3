@@ -142,4 +142,7 @@ namespace rsx
 		rsx::texture_dimension_extended get_extended_texture_dimension() const;
 		u16 get_exact_mipmap_count() const;
 	};
+
+	template<typename T>
+	concept Texture = std::is_same_v<T, fragment_texture> || std::is_same_v<T, vertex_texture>;
 }
