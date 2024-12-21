@@ -19,7 +19,22 @@ namespace vk
 			u32 data;
 		};
 
+		class query_pool_ref
+		{
+			std::unique_ptr<query_pool> m_object;
+			query_pool_manager* m_pool_man;
+
+		public:
+			query_pool_ref(query_pool_manager* pool_man, std::unique_ptr<query_pool>& pool)
+				: m_object(std::move(pool))
+				, m_pool_man(pool_man)
+			{}
+
+			~query_pool_ref();
+		};
+
 		std::vector<std::unique_ptr<query_pool>> m_consumed_pools;
+		std::deque<std::unique_ptr<query_pool>> m_query_pool_cache;
 		std::unique_ptr<query_pool> m_current_query_pool;
 		std::deque<u32> m_available_slots;
 		u32 m_pool_lifetime_counter = 0;
@@ -51,6 +66,8 @@ namespace vk
 
 		u32 allocate_query(vk::command_buffer& cmd);
 		void free_query(vk::command_buffer&/*cmd*/, u32 index);
+
+		void on_query_pool_released(std::unique_ptr<vk::query_pool>& pool);
 
 		template<template<class> class _List>
 		void free_queries(vk::command_buffer& cmd, _List<u32>& list)

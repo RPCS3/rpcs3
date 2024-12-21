@@ -62,6 +62,8 @@ namespace vk
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 	bool emulate_conditional_rendering();
+	bool use_strict_query_scopes();
+	bool force_reuse_query_pools();
 	VkFlags get_heap_compatible_buffer_types();
 
 	// Sync helpers around vkQueueSubmit
