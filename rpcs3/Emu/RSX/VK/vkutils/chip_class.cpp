@@ -103,7 +103,11 @@ namespace vk
 
 		if (vendor_id == 0x106B)
 		{
-			return chip_class::MVK_apple;
+#ifdef __APPLE__
+			return chip_class::APPLE_MVK;
+#else
+			return chip_class::APPLE_HK_generic; // Lazy, but at the moment we don't care about the differences in M1, M2, M3, M4, etc
+#endif
 		}
 
 		if (vendor_id == 0x8086)

@@ -31,7 +31,9 @@ namespace vk
 		_NV_ENUM_MAX_, // Do not insert NV enums beyond this point
 
 		// APPLE
-		MVK_apple,
+		APPLE_HK_generic,
+		APPLE_MVK,
+		_APPLE_ENUM_MAX, // Do not insert APPLE enums beyond this point
 
 		// INTEL
 		INTEL_generic,
@@ -51,7 +53,8 @@ namespace vk
 		DOZEN,
 		LAVAPIPE,
 		NVK,
-		V3DV
+		V3DV,
+		HONEYKRISP
 	};
 
 	driver_vendor get_driver_vendor();
