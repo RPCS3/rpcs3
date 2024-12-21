@@ -362,8 +362,7 @@ void ps_move_tracker_dialog::update_saturation_threshold(bool update_slider)
 }
 void ps_move_tracker_dialog::update_min_radius(bool update_slider)
 {
-	const f32 min_radius = std::clamp(g_cfg_move.min_radius / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
-	ui->minRadiusGb->setTitle(tr("Min Radius: %0 %").arg(min_radius));
+	ui->minRadiusGb->setTitle(tr("Min Radius: %0 %").arg(g_cfg_move.min_radius));
 
 	if (update_slider)
 	{
@@ -373,8 +372,7 @@ void ps_move_tracker_dialog::update_min_radius(bool update_slider)
 
 void ps_move_tracker_dialog::update_max_radius(bool update_slider)
 {
-	const f32 max_radius = std::clamp(g_cfg_move.max_radius / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
-	ui->maxRadiusGb->setTitle(tr("Max Radius: %0 %").arg(max_radius));
+	ui->maxRadiusGb->setTitle(tr("Max Radius: %0 %").arg(g_cfg_move.max_radius));
 
 	if (update_slider)
 	{
