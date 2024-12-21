@@ -26,8 +26,8 @@ struct cfg_ps_moves final : cfg::node
 	cfg_ps_move move3{ this, "PS Move 3" };
 	cfg_ps_move move4{ this, "PS Move 4" };
 
-	cfg::_float<0, 100> min_radius{ this, "Minimum Radius", 1.0f, true }; // Percentage of image width
-	cfg::_float<0, 100> max_radius{ this, "Maximum Radius", 10.0f, true }; // Percentage of image width
+	cfg::_float<0, 50> min_radius{ this, "Minimum Radius", 1.0f, true }; // Percentage of image width
+	cfg::_float<0, 50> max_radius{ this, "Maximum Radius", 10.0f, true }; // Percentage of image width
 
 	std::array<cfg_ps_move*, 4> move{ &move1, &move2, &move3, &move4 };
 

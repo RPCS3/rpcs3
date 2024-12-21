@@ -993,8 +993,8 @@ public:
 				m_tracker.set_saturation_threshold(gem_num, config->saturation_threshold);
 			}
 
-			m_tracker.set_min_radius(static_cast<f32>(g_cfg_move.min_radius.get() / g_cfg_move.min_radius.max));
-			m_tracker.set_max_radius(static_cast<f32>(g_cfg_move.max_radius.get() / g_cfg_move.max_radius.max));
+			m_tracker.set_min_radius(static_cast<f32>(g_cfg_move.min_radius) / 100.0f);
+			m_tracker.set_max_radius(static_cast<f32>(g_cfg_move.max_radius) / 100.0f);
 
 			// Process camera image
 			m_tracker.process_image();
