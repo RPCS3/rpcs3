@@ -20,7 +20,10 @@ namespace vk
 		ensure(g_render_device->_vkGetDeviceFaultInfoEXT);
 
 		std::string fault_message = "Device Fault Information:";
-		VkDeviceFaultCountsEXT fault_counts{};
+		VkDeviceFaultCountsEXT fault_counts
+		{
+			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT
+		};
 		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, NULL);
 
 		std::vector<VkDeviceFaultAddressInfoEXT> address_info(fault_counts.addressInfoCount, VkDeviceFaultAddressInfoEXT{});
