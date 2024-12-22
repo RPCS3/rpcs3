@@ -1837,7 +1837,7 @@ public:
 	virtual ~RecvMessageDialogBase() = default;
 
 	virtual error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) = 0;
-	virtual void callback_handler(const std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) = 0;
+	virtual void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) = 0;
 
 protected:
 	std::shared_ptr<rpcn::rpcn_client> m_rpcn;

@@ -19,10 +19,9 @@ lv2_rwlock::lv2_rwlock(utils::serial& ar)
 	ar(owner);
 }
 
-std::shared_ptr<void> lv2_rwlock::load(utils::serial& ar)
+std::function<void(void*)> lv2_rwlock::load(utils::serial& ar)
 {
-	auto rwlock = std::make_shared<lv2_rwlock>(ar);
-	return lv2_obj::load(rwlock->key, rwlock);
+	return load_func(make_shared<lv2_rwlock>(stx::exact_t<utils::serial&>(ar)));
 }
 
 void lv2_rwlock::save(utils::serial& ar)
@@ -56,7 +55,7 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 
 	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
+		return make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
 	}))
 	{
 		return error;

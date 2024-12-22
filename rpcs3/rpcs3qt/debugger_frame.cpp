@@ -54,14 +54,14 @@ extern bool is_using_interpreter(thread_class t_class)
 	}
 }
 
-extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, std::shared_ptr<cpu_thread> handle)
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle)
 {
 	if (!handle)
 	{
 		switch (cpu->get_class())
 		{
-		case thread_class::ppu: handle = idm::get<named_thread<ppu_thread>>(cpu->id); break;
-		case thread_class::spu: handle = idm::get<named_thread<spu_thread>>(cpu->id); break;
+		case thread_class::ppu: handle = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id); break;
+		case thread_class::spu: handle = idm::get_unlocked<named_thread<spu_thread>>(cpu->id); break;
 		default: break;
 		}
 	}
@@ -850,7 +850,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 
 	const auto type = cpu ? cpu->get_class() : thread_class::general;
 
-	std::shared_ptr<cpu_thread> shared;
+	shared_ptr<cpu_thread> shared;
 
 	if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>() && g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
 	{
@@ -869,11 +869,11 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 		{
 			if (type == thread_class::ppu)
 			{
-				shared = idm::get<named_thread<ppu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
 			}
 			else if (type == thread_class::spu)
 			{
-				shared = idm::get<named_thread<spu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
 			}
 		}
 	}
@@ -1153,7 +1153,7 @@ void debugger_frame::OnSelectUnit()
 		{
 		case 1:
 		{
-			m_cpu = idm::get<named_thread<ppu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(cpu_id);
 
 			if (selected == m_cpu.get())
 			{
@@ -1164,7 +1164,7 @@ void debugger_frame::OnSelectUnit()
 		}
 		case 2:
 		{
-			m_cpu = idm::get<named_thread<spu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<spu_thread>>(cpu_id);
 
 			if (selected == m_cpu.get())
 			{
@@ -1179,7 +1179,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (get_cpu())
 			{
-				m_disasm = make_disasm(m_rsx, nullptr);
+				m_disasm = make_disasm(m_rsx, null_ptr);
 			}
 
 			break;

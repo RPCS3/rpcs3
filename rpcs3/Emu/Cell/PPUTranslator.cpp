@@ -3,6 +3,7 @@
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/Common.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 #include "SPUThread.h"
@@ -28,7 +29,7 @@ const ppu_decoder<PPUTranslator> s_ppu_decoder;
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module<lv2_obj>& info, ExecutionEngine& engine)
 	: cpu_translator(_module, false)
 	, m_info(info)
 	, m_pure_attr()
@@ -322,7 +323,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	return m_function;
 }
 
-Function* PPUTranslator::GetSymbolResolver(const ppu_module& info)
+Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 {
 	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), { get_type<u8*>(), get_type<u64>() }, false)).getCallee());
 

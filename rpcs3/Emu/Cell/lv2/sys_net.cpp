@@ -266,25 +266,25 @@ lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
 	ar(last_bound_addr);
 }
 
-std::shared_ptr<void> lv2_socket::load(utils::serial& ar)
+std::function<void(void*)> lv2_socket::load(utils::serial& ar)
 {
 	const lv2_socket_type type{ar};
 
-	std::shared_ptr<lv2_socket> sock_lv2;
+	shared_ptr<lv2_socket> sock_lv2;
 
 	switch (type)
 	{
 	case SYS_NET_SOCK_STREAM:
 	case SYS_NET_SOCK_DGRAM:
 	{
-		auto lv2_native = std::make_shared<lv2_socket_native>(ar, type);
+		auto lv2_native = make_shared<lv2_socket_native>(ar, type);
 		ensure(lv2_native->create_socket() >= 0);
 		sock_lv2 = std::move(lv2_native);
 		break;
 	}
-	case SYS_NET_SOCK_RAW: sock_lv2 = std::make_shared<lv2_socket_raw>(ar, type); break;
-	case SYS_NET_SOCK_DGRAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2p>(ar, type); break;
-	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2ps>(ar, type); break;
+	case SYS_NET_SOCK_RAW: sock_lv2 = make_shared<lv2_socket_raw>(ar, type); break;
+	case SYS_NET_SOCK_DGRAM_P2P: sock_lv2 = make_shared<lv2_socket_p2p>(ar, type); break;
+	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = make_shared<lv2_socket_p2ps>(ar, type); break;
 	}
 
 	if (std::memcmp(&sock_lv2->last_bound_addr, std::array<u8, 16>{}.data(), 16))
@@ -293,7 +293,7 @@ std::shared_ptr<void> lv2_socket::load(utils::serial& ar)
 		sock_lv2->bind(sock_lv2->last_bound_addr);
 	}
 
-	return sock_lv2;
+	return [ptr = sock_lv2](void* storage) { *static_cast<shared_ptr<lv2_socket>*>(storage) = ptr; };;
 }
 
 void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
@@ -352,7 +352,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	s32 result = 0;
 	sys_net_sockaddr sn_addr{};
-	std::shared_ptr<lv2_socket> new_socket{};
+	shared_ptr<lv2_socket> new_socket{};
 
 	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock)
 		{
@@ -465,7 +465,7 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 		return -SYS_NET_EINVAL;
 	}
 
-	if (!idm::check<lv2_socket>(s))
+	if (!idm::check_unlocked<lv2_socket>(s))
 	{
 		return -SYS_NET_EBADF;
 	}
@@ -514,7 +514,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		return -SYS_NET_EAFNOSUPPORT;
 	}
 
-	if (!idm::check<lv2_socket>(s))
+	if (!idm::check_unlocked<lv2_socket>(s))
 	{
 		return -SYS_NET_EBADF;
 	}
@@ -1194,14 +1194,14 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, lv2_socket_family family, lv2_so
 		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
-	std::shared_ptr<lv2_socket> sock_lv2;
+	shared_ptr<lv2_socket> sock_lv2;
 
 	switch (type)
 	{
 	case SYS_NET_SOCK_STREAM:
 	case SYS_NET_SOCK_DGRAM:
 	{
-		auto lv2_native = std::make_shared<lv2_socket_native>(family, type, protocol);
+		auto lv2_native = make_shared<lv2_socket_native>(family, type, protocol);
 		if (s32 result = lv2_native->create_socket(); result < 0)
 		{
 			return sys_net_error{result};
@@ -1210,9 +1210,9 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, lv2_socket_family family, lv2_so
 		sock_lv2 = std::move(lv2_native);
 		break;
 	}
-	case SYS_NET_SOCK_RAW: sock_lv2 = std::make_shared<lv2_socket_raw>(family, type, protocol); break;
-	case SYS_NET_SOCK_DGRAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2p>(family, type, protocol); break;
-	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2ps>(family, type, protocol); break;
+	case SYS_NET_SOCK_RAW: sock_lv2 = make_shared<lv2_socket_raw>(family, type, protocol); break;
+	case SYS_NET_SOCK_DGRAM_P2P: sock_lv2 = make_shared<lv2_socket_p2p>(family, type, protocol); break;
+	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = make_shared<lv2_socket_p2ps>(family, type, protocol); break;
 	}
 
 	const s32 s = idm::import_existing<lv2_socket>(sock_lv2);
@@ -1775,7 +1775,7 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 	{
 		std::lock_guard nw_lock(g_fxo->get<network_context>().mutex_thread_loop);
 
-		const auto sock = idm::get<lv2_socket>(static_cast<u32>(arg));
+		const auto sock = idm::get_unlocked<lv2_socket>(static_cast<u32>(arg));
 
 		if (!sock)
 		{

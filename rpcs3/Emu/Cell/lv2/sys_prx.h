@@ -172,7 +172,7 @@ enum : u32
 	PRX_STATE_DESTROYED, // Last state, the module cannot be restarted
 };
 
-struct lv2_prx final : lv2_obj, ppu_module
+struct lv2_prx final : ppu_module<lv2_obj>
 {
 	static const u32 id_base = 0x23000000;
 
@@ -204,7 +204,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 
 	lv2_prx() noexcept = default;
 	lv2_prx(utils::serial&) {}
-	static std::shared_ptr<void> load(utils::serial&);
+	static std::function<void(void*)> load(utils::serial&);
 	void save(utils::serial& ar);
 };
 

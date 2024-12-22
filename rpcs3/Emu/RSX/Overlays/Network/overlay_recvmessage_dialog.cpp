@@ -9,7 +9,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void recvmessage_callback(void* param, std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
+		void recvmessage_callback(void* param, shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 		{
 			auto* dlg = static_cast<recvmessage_dialog*>(param);
 			dlg->callback_handler(std::move(new_msg), msg_id);
@@ -319,7 +319,7 @@ namespace rsx
 			return result;
 		}
 
-		void recvmessage_dialog::callback_handler(std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
+		void recvmessage_dialog::callback_handler(shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 		{
 			ensure(new_msg);
 

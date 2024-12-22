@@ -82,13 +82,13 @@ CellError lv2_memory::on_id_create()
 	return {};
 }
 
-std::shared_ptr<void> lv2_memory::load(utils::serial& ar)
+std::function<void(void*)> lv2_memory::load(utils::serial& ar)
 {
-	auto mem = std::make_shared<lv2_memory>(ar);
+	auto mem = make_shared<lv2_memory>(ar);
 	mem->exists++; // Disable on_id_create()
-	std::shared_ptr<void> ptr = lv2_obj::load(mem->key, mem, +mem->pshared);
+	auto func = load_func(mem, +mem->pshared);
 	mem->exists--;
-	return ptr;
+	return func;
 }
 
 void lv2_memory::save(utils::serial& ar)
@@ -128,7 +128,7 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 
 	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, exclusive ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE, [&]()
 	{
-		return std::make_shared<lv2_memory>(
+		return make_shared<lv2_memory>(
 			static_cast<u32>(size),
 			align,
 			flags,
@@ -294,7 +294,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	}
 	}
 
-	const auto ct = idm::get<lv2_memory_container>(cid);
+	const auto ct = idm::get_unlocked<lv2_memory_container>(cid);
 
 	if (!ct)
 	{
@@ -491,7 +491,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 		}
 	}
 
-	const auto ct = idm::get<lv2_memory_container>(cid);
+	const auto ct = idm::get_unlocked<lv2_memory_container>(cid);
 
 	if (!ct)
 	{
@@ -797,7 +797,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 
 	// TODO: Check memory region's flags to make sure the memory can be used for page faults.
 
-	auto queue = idm::get<lv2_obj, lv2_event_queue>(event_queue_id);
+	auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(event_queue_id);
 
 	if (!queue)
 	{ // Can't connect the queue if it doesn't exist.

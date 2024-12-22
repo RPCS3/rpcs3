@@ -949,7 +949,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
 
-	std::vector<std::pair<std::shared_ptr<lv2_file>, std::string>> escaped_real;
+	std::vector<std::pair<shared_ptr<lv2_file>, std::string>> escaped_real;
 
 	std::unique_lock mp_lock(mp->mutex, std::defer_lock);
 

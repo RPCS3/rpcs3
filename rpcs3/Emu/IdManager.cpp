@@ -33,7 +33,7 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 	return s_map;
 }
 
-idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
+id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, usz& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
 {
 	if (dst_id != (base ? 0 : u32{umax}))
 	{
@@ -41,44 +41,43 @@ idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst
 		const u32 index = id_manager::get_index(dst_id, base, step, count, invl_range);
 		ensure(index < count);
 
-		vec.resize(std::max<usz>(vec.size(), index + 1));
+		highest_index = std::max<usz>(highest_index, index + 1);
 
-		if (vec[index].second)
+		if (keys[index].type() != umax)
 		{
 			return nullptr;
 		}
 
 		id_manager::g_id = dst_id;
-		vec[index] = {id_manager::id_key(dst_id, type_id), nullptr};
-		return &vec[index];
+		keys[index] = id_manager::id_key(dst_id, type_id);
+		return &keys[index];
 	}
 
 	if (uses_lowest_id)
 	{
 		// Disable the optimization below (hurts accuracy for known cases)
-		vec.resize(count);
+		highest_index = count;
 	}
-	else if (vec.size() < count)
+	else if (highest_index < count)
 	{
 		// Try to emplace back
-		const u32 _next = base + step * ::size32(vec);
+		const u32 _next = base + step * highest_index;
 		id_manager::g_id = _next;
-		vec.emplace_back(id_manager::id_key(_next, type_id), nullptr);
-		return &vec.back();
+		return &(keys[highest_index++] = (id_manager::id_key(_next, type_id)));
 	}
 
 	// Check all IDs starting from "next id" (TODO)
 	for (u32 i = 0, next = base; i < count; i++, next += step)
 	{
-		const auto ptr = &vec[i];
+		const auto ptr = &keys[i];
 
 		// Look for free ID
-		if (!ptr->second)
+		if (ptr->type() == umax)
 		{
 			// Incremenet ID invalidation counter
-			const u32 id = next | ((ptr->first + (1u << invl_range.first)) & (invl_range.second ? (((1u << invl_range.second) - 1) << invl_range.first) : 0));
+			const u32 id = next | ((ptr->value() + (1u << invl_range.first)) & (invl_range.second ? (((1u << invl_range.second) - 1) << invl_range.first) : 0));
 			id_manager::g_id = id;
-			ptr->first = id_manager::id_key(id, type_id);
+			*ptr = id_manager::id_key(id, type_id);
 			return ptr;
 		}
 	}
