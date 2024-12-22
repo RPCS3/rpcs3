@@ -13,6 +13,7 @@
 #include "util/types.hpp"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QDateTime>
 #include <QMessageBox>
 #include <QLabel>
@@ -232,29 +233,31 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	const Localized localized;
 
-	m_new_version = latest["version"].toString().toStdString();
+	const QString new_version = latest["version"].toString();
+	m_new_version = new_version.toStdString();
 	const QString support_message = tr("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
 
 	if (hash_found)
 	{
-		m_old_version = current["version"].toString().toStdString();
+		const QString old_version = current["version"].toString();
+		m_old_version = old_version.toStdString();
 
 		if (diff_msec < 0)
 		{
 			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
 			m_update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
-				.arg(current["version"].toString())
+				.arg(old_version)
 				.arg(cur_str)
-				.arg(latest["version"].toString())
+				.arg(new_version)
 				.arg(lts_str)
 				.arg(support_message);
 		}
 		else
 		{
 			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
-				.arg(current["version"].toString())
+				.arg(old_version)
 				.arg(cur_str)
-				.arg(latest["version"].toString())
+				.arg(new_version)
 				.arg(lts_str)
 				.arg(localized.GetVerboseTimeByMs(diff_msec, true))
 				.arg(support_message);
@@ -265,7 +268,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
 
 		m_update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
-			.arg(latest["version"].toString())
+			.arg(new_version)
 			.arg(lts_str)
 			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
 			.arg(support_message);
@@ -285,6 +288,13 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	if (!auto_accept)
 	{
+		if (automatic && m_gui_settings->GetValue(gui::ib_skip_version).toString() == new_version)
+		{
+			update_log.notice("Skipping automatic update notification for version '%s' due to user preference", new_version);
+			m_downloader->close_progress_dialog();
+			return true;
+		}
+
 		const auto& changelog = json_data["changelog"];
 
 		if (changelog.isArray())
@@ -372,6 +382,7 @@ void update_manager::update(bool auto_accept)
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 		mb.setTextFormat(Qt::RichText);
+		mb.setCheckBox(new QCheckBox(tr("Don't show again for this version")));
 
 		if (!changelog_content.isEmpty())
 		{
@@ -397,6 +408,13 @@ void update_manager::update(bool auto_accept)
 		if (mb.exec() == QMessageBox::No)
 		{
 			update_log.notice("Aborting update: User declined update");
+
+			if (mb.checkBox()->isChecked())
+			{
+				update_log.notice("User requested to skip further automatic update notifications for version '%s'", m_new_version);
+				m_gui_settings->SetValue(gui::ib_skip_version, QString::fromStdString(m_new_version));
+			}
+
 			m_downloader->close_progress_dialog();
 			return;
 		}
