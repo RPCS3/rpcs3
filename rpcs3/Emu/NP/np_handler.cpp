@@ -502,7 +502,7 @@ namespace np
 
 	np_handler::~np_handler()
 	{
-		std::unordered_map<u32, std::shared_ptr<generic_async_transaction_context>> moved_trans;
+		std::unordered_map<u32, shared_ptr<generic_async_transaction_context>> moved_trans;
 		{
 			std::lock_guard lock(mutex_async_transactions);
 			moved_trans = std::move(async_transactions);
@@ -999,7 +999,7 @@ namespace np
 		return CELL_OK;
 	}
 
-	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message(u64 id)
+	std::optional<shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message(u64 id)
 	{
 		return get_rpcn()->get_message(id);
 	}
@@ -1019,7 +1019,7 @@ namespace np
 		}
 	}
 
-	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message_selected(SceNpBasicAttachmentDataId id)
+	std::optional<shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message_selected(SceNpBasicAttachmentDataId id)
 	{
 		switch (id)
 		{
@@ -1672,7 +1672,7 @@ namespace np
 		return ctx_id;
 	}
 
-	std::shared_ptr<matching_ctx> np_handler::take_pending_gui_request(u32 req_id)
+	shared_ptr<matching_ctx> np_handler::take_pending_gui_request(u32 req_id)
 	{
 		const u32 ctx_id = take_gui_request(req_id);
 

@@ -26,19 +26,14 @@ struct lv2_cond final : lv2_obj
 	const u64 name;
 	const u32 mtx_id;
 
-	std::shared_ptr<lv2_mutex> mutex; // Associated Mutex
+	lv2_mutex* mutex; // Associated Mutex
+	shared_ptr<lv2_obj> _mutex;
 	ppu_thread* sq{};
 
-	lv2_cond(u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
-		: key(key)
-		, name(name)
-		, mtx_id(mtx_id)
-		, mutex(std::move(mutex))
-	{
-	}
+	lv2_cond(u64 key, u64 name, u32 mtx_id, shared_ptr<lv2_obj> mutex0) noexcept;
 
-	lv2_cond(utils::serial& ar);
-	static std::shared_ptr<void> load(utils::serial& ar);
+	lv2_cond(utils::serial& ar) noexcept;
+	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
 
 	CellError on_id_create();

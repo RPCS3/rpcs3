@@ -43,7 +43,7 @@ error_code sys_io_buffer_allocate(u32 handle, vm::ptr<u32> block)
 		return CELL_EFAULT;
 	}
 
-	if (auto io = idm::get<lv2_io_buf>(handle))
+	if (auto io = idm::get_unlocked<lv2_io_buf>(handle))
 	{
 		// no idea what we actually need to allocate
 		if (u32 addr = vm::alloc(io->block_count * io->block_size, vm::main))
@@ -62,7 +62,7 @@ error_code sys_io_buffer_free(u32 handle, u32 block)
 {
 	sys_io.todo("sys_io_buffer_free(handle=0x%x, block=0x%x)", handle, block);
 
-	const auto io = idm::get<lv2_io_buf>(handle);
+	const auto io = idm::get_unlocked<lv2_io_buf>(handle);
 
 	if (!io)
 	{

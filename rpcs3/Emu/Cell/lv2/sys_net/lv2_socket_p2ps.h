@@ -58,6 +58,8 @@ std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u
 class lv2_socket_p2ps final : public lv2_socket_p2p
 {
 public:
+	static constexpr u32 id_type = 2;
+
 	lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio);
 	lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type);
@@ -70,7 +72,7 @@ public:
 	void send_u2s_packet(std::vector<u8> data, const ::sockaddr_in* dst, u64 seq, bool require_ack);
 	void close_stream();
 
-	std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
+	std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) override;
 	s32 bind(const sys_net_sockaddr& addr) override;
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;

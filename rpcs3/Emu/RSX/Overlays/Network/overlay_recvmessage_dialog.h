@@ -36,7 +36,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 
 			error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) override;
-			void callback_handler(const std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) override;
+			void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) override;
 		};
 	}
 }

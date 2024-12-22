@@ -12,13 +12,13 @@
 LOG_CHANNEL(sys_interrupt);
 
 lv2_int_tag::lv2_int_tag() noexcept
-	: lv2_obj{1}
+	: lv2_obj(1)
 	, id(idm::last_id())
 {
 }
 
 lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
-	: lv2_obj{1}
+	: lv2_obj(1)
 	, id(idm::last_id())
 	, handler([&]()
 	{
@@ -44,8 +44,8 @@ void lv2_int_tag::save(utils::serial& ar)
 	ar(lv2_obj::check(handler) ? handler->id : 0);
 }
 
-lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2) noexcept
-	: lv2_obj{1}
+lv2_int_serv::lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1, u64 arg2) noexcept
+	: lv2_obj(1)
 	, id(idm::last_id())
 	, thread(thread)
 	, arg1(arg1)
@@ -54,7 +54,7 @@ lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thre
 }
 
 lv2_int_serv::lv2_int_serv(utils::serial& ar) noexcept
-	: lv2_obj{1}
+	: lv2_obj(1)
 	, id(idm::last_id())
 	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar))
 	, arg1(ar)
@@ -96,7 +96,7 @@ void lv2_int_serv::join() const
 	thread->cmd_notify.notify_one();
 	(*thread)();
 
-	idm::remove_verify<named_thread<ppu_thread>>(thread->id, static_cast<std::weak_ptr<named_thread<ppu_thread>>>(thread));
+	idm::remove_verify<named_thread<ppu_thread>>(thread->id, thread);
 }
 
 error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
@@ -139,7 +139,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 	const u32 id = idm::import<lv2_obj, lv2_int_serv>([&]()
 	{
-		std::shared_ptr<lv2_int_serv> result;
+		shared_ptr<lv2_int_serv> result;
 
 		// Get interrupt tag
 		const auto tag = idm::check_unlocked<lv2_obj, lv2_int_tag>(intrtag);
@@ -173,7 +173,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 			return result;
 		}
 
-		result = std::make_shared<lv2_int_serv>(it, arg1, arg2);
+		result = make_shared<lv2_int_serv>(it, arg1, arg2);
 		tag->handler = result;
 
 		it->cmd_list
@@ -251,7 +251,7 @@ void ppu_interrupt_thread_entry(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struc
 {
 	while (true)
 	{
-		std::shared_ptr<lv2_int_serv> serv = nullptr;
+		shared_ptr<lv2_int_serv> serv = null_ptr;
 
 		// Loop endlessly trying to invoke an interrupt if required
 		idm::select<named_thread<spu_thread>>([&](u32, spu_thread& spu)

@@ -15,6 +15,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUFunction.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "util/yaml.hpp"
 #include "util/asm.hpp"
@@ -441,7 +442,7 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	if (Emu.IsStopped())
 		return false;
 
-	const auto ppum = g_fxo->try_get<main_ppu_module>();
+	const auto ppum = g_fxo->try_get<main_ppu_module<lv2_obj>>();
 
 	if (!ppum)
 	{

@@ -3,6 +3,7 @@
 #include "system_utils.hpp"
 #include "system_config.h"
 #include "IdManager.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUThread.h"
 
@@ -12,7 +13,7 @@ namespace rpcs3::cache
 {
 	std::string get_ppu_cache()
 	{
-		const auto _main = g_fxo->try_get<main_ppu_module>();
+		const auto _main = g_fxo->try_get<main_ppu_module<lv2_obj>>();
 
 		if (!_main || _main->cache.empty())
 		{

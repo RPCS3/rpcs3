@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PPUAnalyser.h"
 
+#include "lv2/sys_sync.h"
+
 #include "PPUOpcodes.h"
 #include "PPUThread.h"
 
@@ -37,7 +39,8 @@ void fmt_class_string<bs_t<ppu_attr>>::format(std::string& out, u64 arg)
 	format_bitset(out, arg, "[", ",", "]", &fmt_class_string<ppu_attr>::format);
 }
 
-void ppu_module::validate(u32 reloc)
+template <>
+void ppu_module<lv2_obj>::validate(u32 reloc)
 {
 	// Load custom PRX configuration if available
 	if (fs::file yml{path + ".yml"})
@@ -529,7 +532,8 @@ namespace ppu_patterns
 	};
 }
 
-bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
+template <>
+bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
 {
 	if (segs.empty())
 	{

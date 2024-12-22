@@ -16,7 +16,7 @@ namespace
 	struct storage_manager
 	{
 		// This is probably wrong and should be assigned per fd or something
-		atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
+		atomic_ptr<shared_ptr<lv2_event_queue>> asyncequeue;
 	};
 }
 
@@ -65,7 +65,7 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 	}
 
 	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
-	const auto handle = idm::get<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -94,7 +94,7 @@ error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors
 		return CELL_EFAULT;
 	}
 
-	const auto handle = idm::get<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -119,7 +119,7 @@ error_code sys_storage_async_configure(u32 fd, u32 io_buf, u32 equeue_id, u32 un
 
 	auto& manager = g_fxo->get<storage_manager>();
 
-	if (auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id))
+	if (auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
 	{
 		manager.asyncequeue.store(queue);
 	}

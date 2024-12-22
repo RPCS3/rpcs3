@@ -9,7 +9,7 @@
 
 struct recvmessage_signal_struct
 {
-	std::shared_ptr<std::pair<std::string, message_data>> msg;
+	shared_ptr<std::pair<std::string, message_data>> msg;
 	u64 msg_id;
 };
 
@@ -23,10 +23,10 @@ public:
 	recvmessage_dialog_frame() = default;
 	~recvmessage_dialog_frame();
 	error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) override;
-	void callback_handler(const std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) override;
+	void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) override;
 
 private:
-	void add_message(const std::shared_ptr<std::pair<std::string, message_data>>& msg, u64 msg_id);
+	void add_message(const shared_ptr<std::pair<std::string, message_data>>& msg, u64 msg_id);
 
 Q_SIGNALS:
 	void signal_new_message(const recvmessage_signal_struct msg_and_id);

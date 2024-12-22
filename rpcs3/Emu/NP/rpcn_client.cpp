@@ -2775,7 +2775,7 @@ namespace rpcn
 		{
 			std::lock_guard lock(mutex_messages);
 			const u64 msg_id = message_counter++;
-			auto id_and_msg  = std::make_shared<std::pair<std::string, message_data>>(std::make_pair(std::move(sender), std::move(mdata)));
+			auto id_and_msg  = stx::make_shared<std::pair<std::string, message_data>>(std::make_pair(std::move(sender), std::move(mdata)));
 			messages.emplace(msg_id, id_and_msg);
 			new_messages.push_back(msg_id);
 			active_messages.insert(msg_id);
@@ -2791,7 +2791,7 @@ namespace rpcn
 		}
 	}
 
-	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id)
+	std::optional<shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id)
 	{
 		{
 			std::lock_guard lock(mutex_messages);
@@ -2803,9 +2803,9 @@ namespace rpcn
 		}
 	}
 
-	std::vector<std::pair<u64, std::shared_ptr<std::pair<std::string, message_data>>>> rpcn_client::get_messages_and_register_cb(SceNpBasicMessageMainType type_filter, bool include_bootable, message_cb_func cb_func, void* cb_param)
+	std::vector<std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>> rpcn_client::get_messages_and_register_cb(SceNpBasicMessageMainType type_filter, bool include_bootable, message_cb_func cb_func, void* cb_param)
 	{
-		std::vector<std::pair<u64, std::shared_ptr<std::pair<std::string, message_data>>>> vec_messages;
+		std::vector<std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>> vec_messages;
 		{
 			std::lock_guard lock(mutex_messages);
 			for (auto id : active_messages)

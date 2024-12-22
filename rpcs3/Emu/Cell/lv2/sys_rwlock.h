@@ -40,7 +40,7 @@ struct lv2_rwlock final : lv2_obj
 	}
 
 	lv2_rwlock(utils::serial& ar);
-	static std::shared_ptr<void> load(utils::serial& ar);
+	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
 };
 

@@ -348,7 +348,7 @@ namespace np
 		return generic_gui_notification_handler(data, "UserKickedGUI", SCE_NP_MATCHING_EVENT_ROOM_KICKED);
 	}
 
-	void gui_epilog(const std::shared_ptr<matching_ctx>& ctx);
+	void gui_epilog(const shared_ptr<matching_ctx>& ctx);
 
 	void np_handler::notif_quickmatch_complete_gui(std::vector<u8>& data)
 	{

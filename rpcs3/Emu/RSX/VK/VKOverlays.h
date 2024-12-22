@@ -237,7 +237,7 @@ namespace vk
 	template<class T>
 	T* get_overlay_pass()
 	{
-		u32 index = id_manager::typeinfo::get_index<T>();
+		u32 index = stx::typeindex<id_manager::typeinfo, T>();
 		auto& e = g_overlay_passes[index];
 
 		if (!e)

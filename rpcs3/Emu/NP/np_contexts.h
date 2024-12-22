@@ -20,7 +20,7 @@
 // Used By Score and Tus
 struct generic_async_transaction_context
 {
-	virtual ~generic_async_transaction_context();
+	~generic_async_transaction_context();
 
 	generic_async_transaction_context(const SceNpCommunicationId& communicationId, const SceNpCommunicationPassphrase& passphrase, u64 timeout);
 
@@ -37,6 +37,8 @@ struct generic_async_transaction_context
 	u64 timeout;
 
 	std::thread thread;
+
+	u32 idm_id;
 };
 
 struct tdata_invalid
@@ -137,8 +139,7 @@ bool destroy_tus_context(s32 ctx_id);
 
 struct tus_transaction_ctx : public generic_async_transaction_context
 {
-	tus_transaction_ctx(const std::shared_ptr<tus_ctx>& tus);
-	virtual ~tus_transaction_ctx() = default;
+	tus_transaction_ctx(const shared_ptr<tus_ctx>& tus);
 
 	static const u32 id_base  = 0x8001;
 	static const u32 id_step  = 1;
@@ -148,7 +149,7 @@ struct tus_transaction_ctx : public generic_async_transaction_context
 	std::variant<tdata_invalid, tdata_tus_get_variables_generic, tdata_tus_get_variable_generic, tdata_tus_set_data, tdata_tus_get_data, tdata_tus_get_datastatus_generic> tdata;
 };
 
-s32 create_tus_transaction_context(const std::shared_ptr<tus_ctx>& tus);
+s32 create_tus_transaction_context(const shared_ptr<tus_ctx>& tus);
 bool destroy_tus_transaction_context(s32 ctx_id);
 
 // Score related
@@ -172,8 +173,7 @@ bool destroy_score_context(s32 ctx_id);
 
 struct score_transaction_ctx : public generic_async_transaction_context
 {
-	score_transaction_ctx(const std::shared_ptr<score_ctx>& score);
-	virtual ~score_transaction_ctx() = default;
+	score_transaction_ctx(const shared_ptr<score_ctx>& score);
 
 	static const u32 id_base  = 0x1001;
 	static const u32 id_step  = 1;
@@ -183,7 +183,7 @@ struct score_transaction_ctx : public generic_async_transaction_context
 	std::variant<tdata_invalid, tdata_get_board_infos, tdata_record_score, tdata_record_score_data, tdata_get_score_data, tdata_get_score_generic> tdata;
 	s32 pcId = 0;
 };
-s32 create_score_transaction_context(const std::shared_ptr<score_ctx>& score);
+s32 create_score_transaction_context(const shared_ptr<score_ctx>& score);
 bool destroy_score_transaction_context(s32 ctx_id);
 
 // Match2 related
@@ -214,7 +214,7 @@ struct match2_ctx
 };
 u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option);
 bool check_match2_context(u16 ctx_id);
-std::shared_ptr<match2_ctx> get_match2_context(u16 ctx_id);
+shared_ptr<match2_ctx> get_match2_context(u16 ctx_id);
 bool destroy_match2_context(u16 ctx_id);
 
 struct lookup_title_ctx
@@ -261,7 +261,7 @@ struct commerce2_ctx
 	vm::ptr<void> context_callback_param{};
 };
 s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
-std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id);
+shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id);
 bool destroy_commerce2_context(u32 ctx_id);
 
 struct signaling_ctx
@@ -282,7 +282,7 @@ struct signaling_ctx
 	vm::ptr<void> ext_arg{};
 };
 s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
-std::shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id);
+shared_ptr<signaling_ctx> get_signaling_context(u32 ctx_id);
 bool destroy_signaling_context(u32 ctx_id);
 
 struct matching_ctx
@@ -315,5 +315,5 @@ struct matching_ctx
 	atomic_t<bool> get_room_limit_version = false;
 };
 s32 create_matching_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg);
-std::shared_ptr<matching_ctx> get_matching_context(u32 ctx_id);
+shared_ptr<matching_ctx> get_matching_context(u32 ctx_id);
 bool destroy_matching_context(u32 ctx_id);

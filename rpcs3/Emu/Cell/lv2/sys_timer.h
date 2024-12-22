@@ -28,7 +28,7 @@ struct lv2_timer : lv2_obj
 	shared_mutex mutex;
 	atomic_t<u32> state{SYS_TIMER_STATE_STOP};
 
-	std::shared_ptr<lv2_event_queue> port;
+	shared_ptr<lv2_event_queue> port;
 	u64 source;
 	u64 data1;
 	u64 data2;
@@ -40,7 +40,7 @@ struct lv2_timer : lv2_obj
 	u64 check_unlocked(u64 _now) noexcept;
 
 	lv2_timer() noexcept
-		: lv2_obj{1}
+		: lv2_obj(1)
 	{
 	}
 
