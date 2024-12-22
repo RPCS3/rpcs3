@@ -20,3 +20,7 @@
 #endif
 
 #include <util/types.hpp>
+
+#if VK_HEADER_VERSION < 287
+constexpr VkDriverId VK_DRIVER_ID_MESA_HONEYKRISP = static_cast<VkDriverId>(26);
+#endif
