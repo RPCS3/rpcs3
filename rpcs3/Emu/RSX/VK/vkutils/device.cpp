@@ -524,6 +524,11 @@ namespace vk
 			requested_extensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		}
 
+		if (pgpu->optional_features_support.extended_device_fault)
+		{
+			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
