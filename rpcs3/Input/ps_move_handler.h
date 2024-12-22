@@ -54,8 +54,9 @@ namespace reports
 
 		//                                      ID    Size   Description
 		u8 magnetometer_x2{};                // 0x27    1-   X-axis magnetometer
-		u8 magnetometer_y{};                 // 0x28    1+   Z-axis magnetometer
-		u16 magnetometer_z{};                // 0x29    1-   Y-axis magnetometer
+		u8 magnetometer_y{};                 // 0x28    1+   Y-axis magnetometer
+		u8 magnetometer_yz{};                // 0x29    1    XZ-axis magnetometer
+		u8 magnetometer_z{};                 // 0x2A    1-   Z-axis magnetometer
 		u8 timestamp_lower{};                // 0x2B    1    Timestamp (lower byte)
 		std::array<u8, 5> ext_device_data{}; // 0x2C    5    External device data
 	};
@@ -147,6 +148,9 @@ public:
 
 	FusionAhrs ahrs {};               // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
+
+	void update_orientation(ps_move_data& move_data);
+	void reset_orientation();
 
 	const reports::ps_move_input_report_common& input_report_common() const;
 };
