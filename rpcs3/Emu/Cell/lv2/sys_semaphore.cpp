@@ -20,10 +20,9 @@ lv2_sema::lv2_sema(utils::serial& ar)
 	ar(val);
 }
 
-std::shared_ptr<void> lv2_sema::load(utils::serial& ar)
+std::function<void(void*)> lv2_sema::load(utils::serial& ar)
 {
-	auto sema = std::make_shared<lv2_sema>(ar);
-	return lv2_obj::load(sema->key, sema);
+	return load_func(make_shared<lv2_sema>(stx::exact_t<utils::serial&>(ar)));
 }
 
 void lv2_sema::save(utils::serial& ar)
@@ -68,7 +67,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 
 	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
+		return make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
 	}))
 	{
 		return error;

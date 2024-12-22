@@ -652,7 +652,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	std::string enc_drm_path;
 	ensure(vm::read_string(drm_path.addr(), 0x100, enc_drm_path, true), "Secret access violation");
 
-	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
+	sceNp.warning("npDrmIsAvailable(): drm_path=\"%s\"", enc_drm_path);
 
 	auto& npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
@@ -5347,7 +5347,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	auto score = idm::get<score_ctx>(titleCtxId);
+	auto score = idm::get_unlocked<score_ctx>(titleCtxId);
 
 	if (!score)
 	{
@@ -5399,24 +5399,12 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	const u32 idm_id = static_cast<u32>(ctxId);
-
-	if (idm_id >= score_transaction_ctx::id_base && idm_id < (score_transaction_ctx::id_base + score_transaction_ctx::id_count))
+	if (auto trans = idm::get_unlocked<score_transaction_ctx>(ctxId))
 	{
-		auto trans = idm::get<score_transaction_ctx>(ctxId);
-		if (!trans)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
 		trans->timeout = timeout;
 	}
-	else if (idm_id >= score_ctx::id_base && idm_id < (score_ctx::id_base + score_ctx::id_count))
+	else if (auto score = idm::get_unlocked<score_ctx>(ctxId))
 	{
-		auto score = idm::get<score_ctx>(ctxId);
-		if (!ctxId)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
 		score->timeout = timeout;
 	}
 	else
@@ -5443,23 +5431,17 @@ error_code sceNpScoreSetPlayerCharacterId(s32 ctxId, SceNpScorePcId pcId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (static_cast<u32>(ctxId) >= score_transaction_ctx::id_base)
+	if (auto trans = idm::get_unlocked<score_transaction_ctx>(ctxId))
 	{
-		auto trans = idm::get<score_transaction_ctx>(ctxId);
-		if (!trans)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
 		trans->pcId = pcId;
+	}
+	else if (auto score = idm::get_unlocked<score_ctx>(ctxId))
+	{
+		score->pcId = pcId;
 	}
 	else
 	{
-		auto score = idm::get<score_ctx>(ctxId);
-		if (!ctxId)
-		{
-			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-		}
-		score->pcId = pcId;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
 	return CELL_OK;
@@ -5476,7 +5458,7 @@ error_code sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<score_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<score_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -5498,7 +5480,7 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<score_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<score_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -5515,9 +5497,9 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
-std::pair<std::optional<error_code>, std::shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId, bool reset_transaction = true)
+std::pair<std::optional<error_code>, shared_ptr<score_transaction_ctx>> get_score_transaction_context(s32 transId, bool reset_transaction = true)
 {
-	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+	auto trans_ctx = idm::get_unlocked<score_transaction_ctx>(transId);
 
 	if (!trans_ctx)
 	{
@@ -6217,7 +6199,7 @@ error_code sceNpScoreAbortTransaction(s32 transId)
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto trans = idm::get<score_transaction_ctx>(transId);
+	auto trans = idm::get_unlocked<score_transaction_ctx>(transId);
 	if (!trans)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;

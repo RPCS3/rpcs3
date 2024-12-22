@@ -20,7 +20,7 @@ LOG_CHANNEL(sys_timer);
 struct lv2_timer_thread
 {
 	shared_mutex mutex;
-	std::deque<std::shared_ptr<lv2_timer>> timers;
+	std::deque<shared_ptr<lv2_timer>> timers;
 
 	lv2_timer_thread();
 	void operator()();
@@ -31,7 +31,7 @@ struct lv2_timer_thread
 };
 
 lv2_timer::lv2_timer(utils::serial& ar)
-	: lv2_obj{1}
+	: lv2_obj(1)
 	, state(ar)
 	, port(lv2_event_queue::load_ptr(ar, port, "timer"))
 	, source(ar)
@@ -368,7 +368,7 @@ error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queu
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		const auto found = idm::find_unlocked<lv2_obj, lv2_event_queue>(queue_id);
+		auto found = idm::get_unlocked<lv2_obj, lv2_event_queue>(queue_id);
 
 		if (!found)
 		{
@@ -383,7 +383,7 @@ error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queu
 		}
 
 		// Connect event queue
-		timer.port   = std::static_pointer_cast<lv2_event_queue>(found->second);
+		timer.port   = found;
 		timer.source = name ? name : (u64{process_getpid() + 0u} << 32) | u64{timer_id};
 		timer.data1  = data1;
 		timer.data2  = data2;

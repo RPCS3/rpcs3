@@ -331,7 +331,7 @@ namespace rpcn
 	};
 
 	using friend_cb_func  = void (*)(void* param, NotificationType ntype, const std::string& username, bool status);
-	using message_cb_func = void (*)(void* param, const std::shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id);
+	using message_cb_func = void (*)(void* param, const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id);
 
 	struct friend_online_data
 	{
@@ -463,8 +463,8 @@ namespace rpcn
 		std::map<std::string, friend_online_data> get_presence_states();
 
 		std::vector<u64> get_new_messages();
-		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
-		std::vector<std::pair<u64, std::shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
+		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
+		std::vector<std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
 		void mark_message_used(u64 id);
 
@@ -595,7 +595,7 @@ namespace rpcn
 		};
 		shared_mutex mutex_messages;
 		std::set<message_cb_t> message_cbs;
-		std::unordered_map<u64, std::shared_ptr<std::pair<std::string, message_data>>> messages; // msg id / (sender / message)
+		std::unordered_map<u64, shared_ptr<std::pair<std::string, message_data>>> messages; // msg id / (sender / message)
 		std::set<u64> active_messages;                                                           // msg id of messages that have not been discarded
 		std::vector<u64> new_messages;                                                           // list of msg_id used to inform np_handler of new messages
 		u64 message_counter = 3;                                                                 // id counter

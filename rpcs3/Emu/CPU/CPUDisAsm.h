@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include "Emu/CPU/CPUThread.h"
 #include "Utilities/StrFmt.h"
 
 enum class cpu_disasm_mode
@@ -22,7 +23,7 @@ protected:
 	const u8* m_offset{};
 	const u32 m_start_pc;
 	std::add_pointer_t<const cpu_thread> m_cpu{};
-	std::shared_ptr<cpu_thread> m_cpu_handle;
+	shared_ptr<cpu_thread> m_cpu_handle;
 	u32 m_op = 0;
 
 	void format_by_mode()
@@ -81,7 +82,7 @@ public:
 		return const_cast<cpu_thread*>(m_cpu);
 	}
 
-	void set_cpu_handle(std::shared_ptr<cpu_thread> cpu)
+	void set_cpu_handle(shared_ptr<cpu_thread> cpu)
 	{
 		m_cpu_handle = std::move(cpu);
 

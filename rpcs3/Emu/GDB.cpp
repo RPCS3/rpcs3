@@ -587,7 +587,7 @@ bool gdb_thread::cmd_thread_info(gdb_cmd&)
 
 bool gdb_thread::cmd_current_thread(gdb_cmd&)
 {
-	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
+	return send_cmd_ack(selected_thread && selected_thread->state.none_of(cpu_flag::exit) ? "" : ("QC" + u64_to_padded_hex(selected_thread->id)));
 }
 
 bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
@@ -596,8 +596,13 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 	{
 		return send_cmd_ack("E02");
 	}
-	auto th = selected_thread.lock();
-	if (auto ppu = th->try_get<named_thread<ppu_thread>>())
+
+	if (!selected_thread || selected_thread->state & cpu_flag::exit)
+	{
+		return send_cmd_ack("");
+	}
+
+	if (auto ppu = selected_thread->try_get<named_thread<ppu_thread>>())
 	{
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
@@ -608,7 +613,8 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 		}
 		return send_cmd_ack(result);
 	}
-	GDB.warning("Unimplemented thread type %d.", th->id_type());
+
+	GDB.warning("Unimplemented thread type %d.", selected_thread->id_type());
 	return send_cmd_ack("");
 }
 
@@ -618,10 +624,14 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 	{
 		return send_cmd_ack("E02");
 	}
-	auto th = selected_thread.lock();
-	if (th->get_class() == thread_class::ppu)
+
+	if (!selected_thread || selected_thread->state & cpu_flag::exit)
 	{
-		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
+		return send_cmd_ack("");
+	}
+
+	if (auto ppu = selected_thread->try_get<named_thread<ppu_thread>>())
+	{
 		usz eq_pos = cmd.data.find('=');
 		if (eq_pos == umax)
 		{
@@ -637,7 +647,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 		}
 		return send_cmd_ack("OK");
 	}
-	GDB.warning("Unimplemented thread type %d.", th->id_type());
+	GDB.warning("Unimplemented thread type %d.", selected_thread->id_type());
 	return send_cmd_ack("");
 }
 
@@ -707,10 +717,13 @@ bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 	std::string result;
 	select_thread(general_ops_thread_id);
 
-	auto th = selected_thread.lock();
-	if (th->get_class() == thread_class::ppu)
+	if (!selected_thread || selected_thread->state & cpu_flag::exit)
 	{
-		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
+		return send_cmd_ack("");
+	}
+
+	if (auto ppu = selected_thread->try_get<named_thread<ppu_thread>>())
+	{
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);
 		for (int i = 0; i < 71; ++i)
@@ -719,17 +732,22 @@ bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 		}
 		return send_cmd_ack(result);
 	}
-	GDB.warning("Unimplemented thread type %d.", th->id_type());
+
+	GDB.warning("Unimplemented thread type %d.", selected_thread ->id_type());
 	return send_cmd_ack("");
 }
 
 bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 {
 	select_thread(general_ops_thread_id);
-	auto th = selected_thread.lock();
-	if (th->get_class() == thread_class::ppu)
+
+	if (!selected_thread || selected_thread->state & cpu_flag::exit)
 	{
-		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
+		return send_cmd_ack("");
+	}
+
+	if (auto ppu = selected_thread->try_get<named_thread<ppu_thread>>())
+	{
 		int ptr = 0;
 		for (int i = 0; i < 71; ++i)
 		{
@@ -739,7 +757,8 @@ bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 		}
 		return send_cmd_ack("OK");
 	}
-	GDB.warning("Unimplemented thread type %d.", th->id_type());
+
+	GDB.warning("Unimplemented thread type %d.", selected_thread->id_type());
 	return send_cmd_ack("E01");
 }
 
@@ -789,13 +808,23 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 	if (cmd.data[1] == 'c' || cmd.data[1] == 's')
 	{
 		select_thread(continue_ops_thread_id);
-		auto ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
+
+		auto ppu = !selected_thread || selected_thread->state & cpu_flag::exit ? nullptr : selected_thread->try_get<named_thread<ppu_thread>>();
+
 		paused = false;
-		if (cmd.data[1] == 's')
+
+		if (ppu)
 		{
-			ppu->state += cpu_flag::dbg_step;
+			bs_t<cpu_flag> add_flags{};
+
+			if (cmd.data[1] == 's')
+			{
+				add_flags += cpu_flag::dbg_step;
+			}
+
+			ppu->add_remove_flags(add_flags, cpu_flag::dbg_pause);
 		}
-		ppu->state -= cpu_flag::dbg_pause;
+
 		//special case if app didn't start yet (only loaded)
 		if (Emu.IsReady())
 		{
@@ -805,19 +834,21 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		{
 			Emu.Resume();
 		}
-		else
-		{
-			ppu->state.notify_one();
-		}
+
 		wait_with_interrupts();
 		//we are in all-stop mode
 		Emu.Pause();
 		select_thread(pausedBy);
 		// we have to remove dbg_pause from thread that paused execution, otherwise
 		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
-		ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
+
+		ppu = !selected_thread || selected_thread->state & cpu_flag::exit ? nullptr : selected_thread->try_get<named_thread<ppu_thread>>();
+
 		if (ppu)
-			ppu->state -= cpu_flag::dbg_pause;
+		{
+			ppu->add_remove_flags({}, cpu_flag::dbg_pause);
+		}
+
 		return send_reason();
 	}
 	return send_cmd_ack("");

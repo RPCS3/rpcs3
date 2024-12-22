@@ -14,11 +14,21 @@
 
 LOG_CHANNEL(sys_cond);
 
-lv2_cond::lv2_cond(utils::serial& ar)
+lv2_cond::lv2_cond(utils::serial& ar) noexcept
 	: key(ar)
 	, name(ar)
 	, mtx_id(ar)
-	, mutex(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)) // May be nullptr
+	, mutex(idm::check_unlocked<lv2_obj, lv2_mutex>(mtx_id))
+	, _mutex(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)) // May be nullptr
+{
+}
+
+lv2_cond::lv2_cond(u64 key, u64 name, u32 mtx_id, shared_ptr<lv2_obj> mutex0) noexcept
+	: key(key)
+	, name(name)
+	, mtx_id(mtx_id)
+	, mutex(static_cast<lv2_mutex*>(mutex0.get()))
+	, _mutex(mutex0)
 {
 }
 
@@ -49,7 +59,8 @@ CellError lv2_cond::on_id_create()
 	{
 		if (!mutex)
 		{
-			mutex = ensure(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id));
+			_mutex = static_cast<shared_ptr<lv2_obj>>(ensure(idm::get_unlocked<lv2_obj, lv2_mutex>(mtx_id)));
+
 		}
 
 		// Defer function
@@ -59,10 +70,9 @@ CellError lv2_cond::on_id_create()
 	return {};
 }
 
-std::shared_ptr<void> lv2_cond::load(utils::serial& ar)
+std::function<void(void*)> lv2_cond::load(utils::serial& ar)
 {
-	auto cond = std::make_shared<lv2_cond>(ar);
-	return lv2_obj::load(cond->key, cond);
+	return load_func(make_shared<lv2_cond>(ar));
 }
 
 void lv2_cond::save(utils::serial& ar)
@@ -76,7 +86,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	sys_cond.trace("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
-	auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
+	auto mutex = idm::get_unlocked<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)
 	{
@@ -94,7 +104,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_cond>(
+		return make_single<lv2_cond>(
 			ipc_key,
 			_attr.name_u64,
 			mutex_id,

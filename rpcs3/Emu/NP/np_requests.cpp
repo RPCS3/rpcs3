@@ -802,7 +802,7 @@ namespace np
 		return true;
 	}
 
-	void np_handler::transaction_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<generic_async_transaction_context>& trans_ctx, u32 req_id, bool async)
+	void np_handler::transaction_async_handler(std::unique_lock<shared_mutex> lock, const shared_ptr<generic_async_transaction_context>& trans_ctx, u32 req_id, bool async)
 	{
 		auto worker_function = [trans_ctx = trans_ctx, req_id, this](std::unique_lock<shared_mutex> lock)
 		{
@@ -842,7 +842,7 @@ namespace np
 		cpu_thread.check_state();
 	}
 
-	void np_handler::get_board_infos(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, bool async)
+	void np_handler::get_board_infos(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
@@ -877,7 +877,7 @@ namespace np
 			return false;
 		}
 
-		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 
 		std::lock_guard lock(score_trans->mutex);
@@ -892,7 +892,7 @@ namespace np
 		return true;
 	}
 
-	void np_handler::record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
+	void np_handler::record_score(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -920,7 +920,7 @@ namespace np
 			return false;
 		}
 
-		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 
 		std::lock_guard lock(score_trans->mutex);
@@ -961,7 +961,7 @@ namespace np
 		return true;
 	}
 
-	void np_handler::record_score_data(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, const u8* score_data, bool async)
+	void np_handler::record_score_data(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, const u8* score_data, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
@@ -1021,7 +1021,7 @@ namespace np
 		return set_result_and_wake(CELL_OK);
 	}
 
-	void np_handler::get_score_data(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const SceNpId& npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> score_data, bool async)
+	void np_handler::get_score_data(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const SceNpId& npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> score_data, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
@@ -1062,7 +1062,7 @@ namespace np
 			return false;
 		}
 
-		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 		std::lock_guard lock(score_trans->mutex);
 
@@ -1098,7 +1098,7 @@ namespace np
 		return score_trans->set_result_and_wake(not_an_error(to_copy));
 	}
 
-	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
+	void np_handler::get_score_range(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1152,7 +1152,7 @@ namespace np
 			return false;
 		}
 
-		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 		std::lock_guard lock(score_trans->mutex);
 
@@ -1280,7 +1280,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
+	void np_handler::get_score_friend(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1309,7 +1309,7 @@ namespace np
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
-	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
+	void np_handler::get_score_npid(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
@@ -1380,7 +1380,7 @@ namespace np
 			return false;
 		}
 
-		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
@@ -1448,7 +1448,7 @@ namespace np
 			return false;
 		}
 
-		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
@@ -1506,7 +1506,7 @@ namespace np
 			return false;
 		}
 
-		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
@@ -1568,7 +1568,7 @@ namespace np
 		return true;
 	}
 
-	void np_handler::tus_set_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_set_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1582,7 +1582,7 @@ namespace np
 		return handle_tus_no_data(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_get_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1601,7 +1601,7 @@ namespace np
 		return handle_TusVarResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_multiuser_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_get_multiuser_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1620,7 +1620,7 @@ namespace np
 		return handle_TusVarResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_friends_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async)
+	void np_handler::tus_get_friends_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1639,7 +1639,7 @@ namespace np
 		return handle_TusVarResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_add_and_get_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
+	void np_handler::tus_add_and_get_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1657,7 +1657,7 @@ namespace np
 		return handle_TusVariable(req_id, reply_data);
 	}
 
-	void np_handler::tus_try_and_set_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
+	void np_handler::tus_try_and_set_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1675,7 +1675,7 @@ namespace np
 		return handle_TusVariable(req_id, reply_data);
 	}
 
-	void np_handler::tus_delete_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_delete_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1689,7 +1689,7 @@ namespace np
 		return handle_tus_no_data(req_id, reply_data);
 	}
 
-	void np_handler::tus_set_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
+	void np_handler::tus_set_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
@@ -1723,7 +1723,7 @@ namespace np
 		return handle_tus_no_data(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, bool vuser, bool async)
+	void np_handler::tus_get_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
@@ -1762,7 +1762,7 @@ namespace np
 			return false;
 		}
 
-		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
@@ -1835,7 +1835,7 @@ namespace np
 		return true;
 	}
 
-	void np_handler::tus_get_multislot_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_get_multislot_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1854,7 +1854,7 @@ namespace np
 		return handle_TusDataStatusResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_multiuser_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_get_multiuser_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1873,7 +1873,7 @@ namespace np
 		return handle_TusDataStatusResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_get_friends_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async)
+	void np_handler::tus_get_friends_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
@@ -1892,7 +1892,7 @@ namespace np
 		return handle_TusDataStatusResponse(req_id, reply_data);
 	}
 
-	void np_handler::tus_delete_multislot_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
+	void np_handler::tus_delete_multislot_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);

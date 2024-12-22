@@ -231,7 +231,7 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 		return CELL_EPERM;
 	default:
 	{
-		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr)))
+		if (auto vm0 = idm::get_unlocked<sys_vm_t>(sys_vm_t::find_id(addr)))
 		{
 			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region
 			if (vm0->addr + vm0->size - 1 < addr)
@@ -433,16 +433,26 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 		using namespace id_manager;
 
-		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
+		shared_ptr<utils::serial> idm_capture = make_shared<utils::serial>();
+		{
+			reader_lock rlock{g_mutex};
+			g_fxo->get<id_map<lv2_memory_container>>().save(*idm_capture);
+		}
+
+		idm_capture->set_reading_state();
+
+		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, idm_capture](u32 sdk_suggested_mem) mutable
 		{
 			if (is_real_reboot)
 			{
 				// Do not save containers on actual reboot
-				vec.clear();
+				ensure(g_fxo->init<id_map<lv2_memory_container>>());
 			}
-
-			// Save LV2 memory containers
-			ensure(g_fxo->init<id_map<lv2_memory_container>>())->vec = std::move(vec);
+			else
+			{
+				// Save LV2 memory containers
+				ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
+			}
 
 			// Empty the containers, accumulate their total size
 			u32 total_size = 0;
