@@ -4829,8 +4829,9 @@ public:
 		if (auto [ok, v0, v1] = match_expr(ax, rotqbybi(match<u8[16]>(), match<u8[16]>())); ok && v1.eq(bx))
 		{
 			const auto b32 = get_vr<s32[4]>(op.rb);
+
 			// Is the rotate less than 31 bits?
-			if (auto k = get_known_bits(b32); !!(k.Zero & 0x60))
+			if (auto k = get_known_bits(b32); (k.Zero & 0x60) == 0x60u)
 			{
 				const auto b = splat_scalar(get_vr(op.rb));
 				set_vr(op.rt, fshl(bitcast<u32[4]>(v0), zshuffle(bitcast<u32[4]>(v0), 3, 0, 1, 2), b));
@@ -4842,9 +4843,9 @@ public:
 			{
 				if (auto [ok2, data] = get_const_vector(v10.value, m_pos); ok2)
 				{
-					if (data == v128::from32p(0x80))
+					if ((data & v128::from32p(0x7f)) == v128{})
 					{
-						if (auto k = get_known_bits(v11); !!(k.Zero & 0x60))
+						if (auto k = get_known_bits(v11); (k.Zero & 0x60) == 0x60u)
 						{
 							set_vr(op.rt, fshr(zshuffle(bitcast<u32[4]>(v0), 1, 2, 3, 0), bitcast<u32[4]>(v0), splat_scalar(bitcast<u32[4]>(v11))));
 							return;
