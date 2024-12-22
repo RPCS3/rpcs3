@@ -14,49 +14,55 @@ namespace vk
 	{
 		if (!g_render_device || !g_render_device->get_extended_device_fault_support())
 		{
-			return {};
+			return "Extended fault info is not available. Extension 'VK_EXT_device_fault' is probably not supported by your driver.";
 		}
 
 		ensure(g_render_device->_vkGetDeviceFaultInfoEXT);
 
-		std::string fault_message = "Device Fault Information:";
 		VkDeviceFaultCountsEXT fault_counts
 		{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT
 		};
-		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, NULL);
+		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
 
 		std::vector<VkDeviceFaultAddressInfoEXT> address_info(fault_counts.addressInfoCount, VkDeviceFaultAddressInfoEXT{});
 		std::vector<VkDeviceFaultVendorInfoEXT> vendor_info(fault_counts.vendorInfoCount, VkDeviceFaultVendorInfoEXT{});
+		std::vector<u8> vendor_binary_data(fault_counts.vendorBinarySize);
 		VkDeviceFaultInfoEXT fault_info
 		{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
 			.pAddressInfos = address_info.data(),
-			.pVendorInfos = vendor_info.data()
+			.pVendorInfos = vendor_info.data(),
+			.pVendorBinaryData = vendor_binary_data.data()
 		};
 
 		fault_counts.vendorInfoCount = 0;
 		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
 
-		fault_message += fmt::format("Fault Summary:\n  %s\n\n", fault_info.description);
+		std::string fault_message = fmt::format(
+			"Device Fault Information:\n"
+			"Fault Summary:\n"
+			"  %s\n\n",
+			fault_info.description);
 
 		if (!address_info.empty())
 		{
-			fault_message += fmt::format("  Address Fault Information:\n", fault_info.description);
+			fmt::append(fault_message, "  Address Fault Information:\n", fault_info.description);
 
 			for (const auto& fault : address_info)
 			{
-				std::string access_type = "unknown";
+				std::string access_type = "access_unknown";
 				switch (fault.addressType)
 				{
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT:
-					access_type = "none"; break;
+					access_type = "access_none";
+					break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT:
-					access_type = "read"; break;
+					access_type = "access_read"; break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT:
-					access_type = "write"; break;
+					access_type = "access_write"; break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT:
-					access_type = "execute"; break;
+					access_type = "access_execute"; break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT:
 					access_type = "instruction_pointer_unknown"; break;
 				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT:
@@ -67,17 +73,17 @@ namespace vk
 					break;
 				}
 
-				fault_message += fmt::format("  - Fault at address 0x%llx caused by %s\n", fault.reportedAddress, access_type);
+				fmt::append(fault_message, "  - Fault at address 0x%llx caused by %s\n", fault.reportedAddress, access_type);
 			}
 		}
 
 		if (!vendor_info.empty())
 		{
-			fault_message += fmt::format("  Vendor Fault Information:\n", fault_info.description);
+			fmt::append(fault_message, "  Vendor Fault Information:\n", fault_info.description);
 
 			for (const auto& fault : vendor_info)
 			{
-				fault_message += fmt::format("  - [0x%llx, 0x%llx] %s\n", fault.vendorFaultCode, fault.vendorFaultData, fault.description);
+				fmt::append(fault_message, "  - [0x%llx, 0x%llx] %s\n", fault.vendorFaultCode, fault.vendorFaultData, fault.description);
 			}
 		}
 
