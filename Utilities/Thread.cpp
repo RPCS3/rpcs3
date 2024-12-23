@@ -2555,13 +2555,13 @@ std::string thread_ctrl::get_name_cached()
 	return *name_cache;
 }
 
-thread_base::thread_base(native_entry entry, std::string name)
+thread_base::thread_base(native_entry entry, std::string name) noexcept
 	: entry_point(entry)
 	, m_tname(make_single_value(std::move(name)))
 {
 }
 
-thread_base::~thread_base()
+thread_base::~thread_base() noexcept
 {
 	// Cleanup abandoned tasks: initialize default results and signal
 	this->exec();
@@ -2602,7 +2602,7 @@ bool thread_base::join(bool dtor) const
 
 		if (i >= 16 && !(i & (i - 1)) && timeout != atomic_wait_timeout::inf)
 		{
-			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fus already!", *m_tname.load(), (utils::get_tsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
+			sig_log.error("Thread [%s] is too sleepy. Waiting for it %.3fus already!", *m_tname.load(), (utils::get_tsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
 	}
 
