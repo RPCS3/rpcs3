@@ -390,13 +390,9 @@ public:
 	}
 
 	// Destructor
-	~lv2_config_service_event() noexcept
-	{
-		if (auto global = g_fxo->try_get<lv2_config>())
-		{
-			global->remove_service_event(id);
-		}
-	}
+	lv2_config_service_event& operator=(thread_state s) noexcept;
+
+	~lv2_config_service_event() noexcept = default;
 
 	// Notify queue that this event exists
 	bool notify() const;

@@ -693,7 +693,7 @@ public:
 
 		if constexpr (std::is_assignable_v<Context&, thread_state>)
 		{
-			static_cast<Context&>(*this) = s;
+			static_cast<Context&>(*this) = thread_state::aborting;
 		}
 
 		if (notify_sync)
@@ -706,6 +706,11 @@ public:
 		{
 			// This participates in emulation stopping, use destruction-alike semantics
 			thread::join(true);
+
+			if constexpr (std::is_assignable_v<Context&, thread_state>)
+			{
+				static_cast<Context&>(*this) = thread_state::finished;
+			}
 		}
 
 		return *this;
