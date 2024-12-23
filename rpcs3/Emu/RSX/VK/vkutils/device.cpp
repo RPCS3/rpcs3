@@ -732,6 +732,16 @@ namespace vk
 			device.pNext = &synchronization2_info;
 		}
 
+		VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
+		if (pgpu->optional_features_support.extended_device_fault)
+		{
+			device_fault_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+			device_fault_info.pNext = const_cast<void*>(device.pNext);
+			device_fault_info.deviceFault = VK_TRUE;
+			device_fault_info.deviceFaultVendorBinary = VK_FALSE;
+			device_fault_info.pNext = &device_fault_info;
+		}
+
 		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))
 		{
 			dump_debug_info(requested_extensions, enabled_features);
