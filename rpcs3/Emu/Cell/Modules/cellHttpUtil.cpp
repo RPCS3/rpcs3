@@ -516,7 +516,7 @@ error_code cellHttpUtilEscapeUri(vm::ptr<char> out, u32 outSize, vm::cptr<u8> in
 
 	for (u32 pos = 0; rindex >= 0; rindex--, pos++)
 	{
-		char c1 = in[pos];
+		const char c1 = in[pos];
 
 		if (false) // DAT[c1] == '\x03') // TODO
 		{
@@ -529,7 +529,7 @@ error_code cellHttpUtilEscapeUri(vm::ptr<char> out, u32 outSize, vm::cptr<u8> in
 					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
 				}
 
-				const char* chars = "0123456789ABCDEF";
+				constexpr const char* chars = "0123456789ABCDEF";
 				out[out_pos++] = '%'; // 0x25
 				out[out_pos++] = chars[c1 >> 4];
 				out[out_pos++] = chars[c1 & 0xf];
@@ -618,7 +618,7 @@ error_code cellHttpUtilFormUrlEncode(vm::ptr<char> out, u32 outSize, vm::cptr<u8
 
 	for (u32 pos = 0; rindex >= 0; rindex--, pos++)
 	{
-		char c1 = in[pos];
+		const char c1 = in[pos];
 
 		if (c1 == ' ')
 		{
@@ -645,7 +645,7 @@ error_code cellHttpUtilFormUrlEncode(vm::ptr<char> out, u32 outSize, vm::cptr<u8
 					return CELL_HTTP_UTIL_ERROR_NO_MEMORY;
 				}
 
-				const char* chars = "0123456789ABCDEF";
+				constexpr const char* chars = "0123456789ABCDEF";
 				out[out_pos++] = '%'; // 0x25
 				out[out_pos++] = chars[c1 >> 4];
 				out[out_pos++] = chars[c1 & 0xf];
@@ -707,7 +707,7 @@ error_code cellHttpUtilFormUrlDecode(vm::ptr<u8> out, u32 size, vm::cptr<char> i
 	for (s32 index = 0, pos = 0;; index++)
 	{
 		size_needed = index + 1;
-		char c1 = in[pos++];
+		const char c1 = in[pos++];
 
 		if (!c1)
 		{
@@ -731,7 +731,7 @@ error_code cellHttpUtilFormUrlDecode(vm::ptr<u8> out, u32 size, vm::cptr<char> i
 
 			const auto check_char = [](b8 c)
 			{
-				u32 utmp = static_cast<u32>(c);
+				const u32 utmp = static_cast<u32>(c);
 				s32 stmp = utmp - 48;
 				if (static_cast<u8>(c - 48) > 9)
 				{

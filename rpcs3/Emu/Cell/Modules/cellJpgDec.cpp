@@ -76,7 +76,7 @@ error_code cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJp
 	case CELL_JPGDEC_FILE:
 	{
 		// Get file descriptor and size
-		const auto real_path = vfs::get(src->fileName.get_ptr());
+		const std::string real_path = vfs::get(src->fileName.get_ptr());
 		fs::file file_s(real_path);
 		if (!file_s) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
@@ -127,8 +127,8 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 		return CELL_JPGDEC_ERROR_FATAL;
 	}
 
-	const u32& fd = subHandle_data->fd;
-	const u64& fileSize = subHandle_data->fileSize;
+	const u32 fd = subHandle_data->fd;
+	const u64 fileSize = subHandle_data->fileSize;
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
 	// Write the header to buffer
@@ -158,12 +158,12 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 
 	u32 i = 4;
 
-	if(i >= fileSize)
+	if (i >= fileSize)
 		return CELL_JPGDEC_ERROR_HEADER;
 
-	u16 block_length = buffer[i] * 0xFF + buffer[i+1];
+	u16 block_length = buffer[i] * 0xFF + buffer[i + 1];
 
-	while(true)
+	while (true)
 	{
 		i += block_length;                                  // Increase the file index to get to the next block
 		if (i >= fileSize ||                                // Check to protect against segmentation faults
@@ -172,15 +172,15 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 			return CELL_JPGDEC_ERROR_HEADER;
 		}
 
-		if(buffer[i+1] == 0xC0)
+		if (buffer[i + 1] == 0xC0)
 			break;                                          // 0xFFC0 is the "Start of frame" marker which contains the file size
 
 		i += 2;                                             // Skip the block marker
-		block_length = buffer[i] * 0xFF + buffer[i+1];      // Go to the next block
+		block_length = buffer[i] * 0xFF + buffer[i + 1];    // Go to the next block
 	}
 
-	current_info.imageWidth    = buffer[i+7]*0x100 + buffer[i+8];
-	current_info.imageHeight   = buffer[i+5]*0x100 + buffer[i+6];
+	current_info.imageWidth    = buffer[i + 7] * 0x100 + buffer[i + 8];
+	current_info.imageHeight   = buffer[i + 5] * 0x100 + buffer[i + 6];
 	current_info.numComponents = 3; // Unimplemented
 	current_info.colorSpace    = CELL_JPG_RGB;
 
@@ -267,12 +267,11 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 		{
 			memcpy(data.get_ptr(), image.get(), image_size);
 		}
+		break;
 	}
-	break;
-
 	case CELL_JPG_ARGB:
 	{
-		const int nComponents = 4;
+		constexpr int nComponents = 4;
 		image_size *= nComponents;
 		if (bytesPerLine > width * nComponents || flip) //check if we need padding
 		{
@@ -307,16 +306,15 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 			}
 			std::memcpy(data.get_ptr(), img.get(), image_size);
 		}
+		break;
 	}
-	break;
-
 	case CELL_JPG_GRAYSCALE:
 	case CELL_JPG_YCbCr:
 	case CELL_JPG_UPSAMPLE_ONLY:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_RGBA:
 	case CELL_JPG_GRAYSCALE_TO_ALPHA_ARGB:
 		cellJpgDec.error("cellJpgDecDecodeData: Unsupported color space (%d)", current_outParam.outputColorSpace);
-	break;
+		break;
 
 	default:
 		return CELL_JPGDEC_ERROR_ARG;
@@ -324,7 +322,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_FINISH;
 
-	if(dataCtrlParam->outputBytesPerLine)
+	if (dataCtrlParam->outputBytesPerLine)
 		dataOutInfo->outputLines = static_cast<u32>(image_size / dataCtrlParam->outputBytesPerLine);
 
 	return CELL_OK;
