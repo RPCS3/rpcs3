@@ -801,6 +801,15 @@ public:
 			}
 		}
 
+		if constexpr (std::is_assignable_v<Get&, thread_state>)
+		{
+			if (ptr)
+			{
+				constexpr thread_state finished{3};
+				*static_cast<Get*>(ptr.get()) = finished;
+			}
+		}
+
 		return true;
 	}
 
@@ -821,6 +830,15 @@ public:
 			else
 			{
 				return false;
+			}
+		}
+
+		if constexpr (std::is_assignable_v<Get&, thread_state>)
+		{
+			if (ptr)
+			{
+				constexpr thread_state finished{3};
+				*static_cast<Get*>(ptr.get()) = finished;
 			}
 		}
 
