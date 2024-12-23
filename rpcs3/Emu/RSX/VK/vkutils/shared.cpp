@@ -36,7 +36,6 @@ namespace vk
 			.pVendorBinaryData = vendor_binary_data.data()
 		};
 
-		fault_counts.vendorInfoCount = 0;
 		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
 
 		std::string fault_message = fmt::format(
