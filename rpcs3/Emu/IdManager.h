@@ -559,10 +559,8 @@ class idm
 				place = object;
 				return object;
 			}
-			else
-			{
-				key_ptr->clear();
-			}
+
+			*key_ptr = {};
 		}
 
 		return {};

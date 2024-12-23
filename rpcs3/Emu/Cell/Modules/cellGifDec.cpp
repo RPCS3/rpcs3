@@ -273,7 +273,7 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
-	const u32& fd = subHandle->fd;
+	const u32 fd = subHandle->fd;
 	CellGifDecInfo& current_info = subHandle->info;
 
 	// Write the header to buffer
@@ -302,7 +302,7 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
 
-	u8 packedField = buffer[10];
+	const u8 packedField = buffer[10];
 	current_info.SWidth                  = buffer[6] + buffer[7] * 0x100;
 	current_info.SHeight                 = buffer[8] + buffer[9] * 0x100;
 	current_info.SGlobalColorTableFlag   = packedField >> 7;
@@ -520,8 +520,8 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
 	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
-	const char nComponents = 4;
-	uint image_size = width * height * nComponents;
+	constexpr char nComponents = 4;
+	const u32 image_size = width * height * nComponents;
 
 	switch(current_outParam.outputColorSpace)
 	{
@@ -541,9 +541,8 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 		{
 			memcpy(data.get_ptr(), image.get(), image_size);
 		}
+		break;
 	}
-	break;
-
 	case CELL_GIFDEC_ARGB:
 	{
 		if (bytesPerLine > width * nComponents) // Check if we need padding
@@ -579,9 +578,8 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 			}
 			std::memcpy(data.get_ptr(), img.get(), image_size);
 		}
+		break;
 	}
-	break;
-
 	default:
 		return CELL_GIFDEC_ERROR_ARG;
 	}

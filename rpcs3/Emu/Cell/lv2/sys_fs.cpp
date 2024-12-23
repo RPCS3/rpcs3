@@ -79,7 +79,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
 
-	fmt::append(out, u8"%s, â€œ%sâ€, Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
+	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
 }
 
 template<>
@@ -87,7 +87,7 @@ void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 {
 	const auto& dir = get_object(arg);
 
-	fmt::append(out, u8"Directory, â€œ%sâ€, Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
+	fmt::append(out, u8"Directory, '%s', Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
 }
 
 bool has_fs_write_rights(std::string_view vpath)
