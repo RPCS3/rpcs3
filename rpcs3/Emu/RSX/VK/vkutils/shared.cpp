@@ -23,30 +23,52 @@ namespace vk
 		{
 			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT
 		};
-		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
 
-		std::vector<VkDeviceFaultAddressInfoEXT> address_info(fault_counts.addressInfoCount, VkDeviceFaultAddressInfoEXT{});
-		std::vector<VkDeviceFaultVendorInfoEXT> vendor_info(fault_counts.vendorInfoCount, VkDeviceFaultVendorInfoEXT{});
-		std::vector<u8> vendor_binary_data(fault_counts.vendorBinarySize);
-		VkDeviceFaultInfoEXT fault_info
+		std::vector<VkDeviceFaultAddressInfoEXT> address_info;
+		std::vector<VkDeviceFaultVendorInfoEXT> vendor_info;
+		std::vector<u8> vendor_binary_data;
+		std::string fault_description;
+
+#ifdef _MSC_VER
+		__try
 		{
-			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
-			.pAddressInfos = address_info.data(),
-			.pVendorInfos = vendor_info.data(),
-			.pVendorBinaryData = vendor_binary_data.data()
-		};
+#endif
+			// Retrieve sizes
+			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
 
-		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
+			// Resize arrays and fill
+			address_info.resize(fault_counts.addressInfoCount);
+			vendor_info.resize(fault_counts.vendorInfoCount);
+			vendor_binary_data.resize(fault_counts.vendorBinarySize);
+
+			VkDeviceFaultInfoEXT fault_info
+			{
+				.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
+				.pAddressInfos = address_info.data(),
+				.pVendorInfos = vendor_info.data(),
+				.pVendorBinaryData = vendor_binary_data.data()
+			};
+			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
+
+			fault_description = fault_info.description;
+#ifdef _MSC_VER
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			rsx_log.error("Driver crashed retrieving extended crash information. Are you running on an NVIDIA card?");
+			return "Extended fault information is not available. The driver crashed when retrieving the details.";
+		}
+#endif
 
 		std::string fault_message = fmt::format(
 			"Device Fault Information:\n"
 			"Fault Summary:\n"
 			"  %s\n\n",
-			fault_info.description);
+			fault_description);
 
 		if (!address_info.empty())
 		{
-			fmt::append(fault_message, "  Address Fault Information:\n", fault_info.description);
+			fmt::append(fault_message, "  Address Fault Information:\n", fault_description);
 
 			for (const auto& fault : address_info)
 			{
@@ -78,7 +100,7 @@ namespace vk
 
 		if (!vendor_info.empty())
 		{
-			fmt::append(fault_message, "  Vendor Fault Information:\n", fault_info.description);
+			fmt::append(fault_message, "  Vendor Fault Information:\n", fault_description);
 
 			for (const auto& fault : vendor_info)
 			{
