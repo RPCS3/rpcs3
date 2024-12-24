@@ -566,9 +566,41 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 		fmt::append(out, "\n(in file %s", loc.file_name());
 	}
 
-	if (auto func = loc.function_name(); func && func[0])
+	if (std::string_view full_func{loc.function_name() ? loc.function_name() : ""}; !full_func.empty())
 	{
-		fmt::append(out, ", in function %s)", func);
+		// Remove useless disambiguators
+		std::string func = fmt::replace_all(std::string(full_func), {
+			{"struct ", ""},
+			{"class ", ""},
+			{"enum ", ""},
+			{"typename ", ""},
+#ifdef _MSC_VER
+			{"__cdecl ", ""},
+#endif
+			{"unsigned long long", "ullong"},
+			//{"unsigned long", "ulong"}, // ullong
+			{"unsigned int", "uint"},
+			{"unsigned short", "ushort"},
+			{"unsigned char", "uchar"}});
+
+		// Remove function argument signature for long names
+		for (usz index = func.find_first_of('('); index != umax && func.size() >= 100u; index = func.find_first_of('(', index))
+		{
+			// Operator() function
+			if (func.compare(0, 3, "()("sv) == 0 || func.compare(0, 3, "() "sv))
+			{
+				if (usz not_space = func.find_first_not_of(' ', index + 2); not_space != umax && func[not_space] == '(')
+				{
+					index += 2;
+					continue;
+				}
+			}
+
+			func = func.substr(0, index);
+			break;
+		}
+
+		fmt::append(out, ", in function '%s')", func);
 	}
 	else
 	{
