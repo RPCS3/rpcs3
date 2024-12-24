@@ -2718,8 +2718,15 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		cpu.state += cpu_flag::dbg_global_pause;
 	};
 
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
+	if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>())
+	{
+		idm::select<named_thread<ppu_thread>>(on_select);
+	}
+
+	if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+	{
+		idm::select<named_thread<spu_thread>>(on_select);
+	}
 
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
