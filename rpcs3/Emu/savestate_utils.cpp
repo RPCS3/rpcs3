@@ -372,6 +372,7 @@ namespace stx
 		{
 			// Reset, probably a new utils::serial object
 			s_tls_call_count = 1;
+			s_tls_object_name = "none"sv;
 		}
 
 		s_tls_current_pos = ar.pos;

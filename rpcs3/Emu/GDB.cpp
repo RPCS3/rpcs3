@@ -587,7 +587,7 @@ bool gdb_thread::cmd_thread_info(gdb_cmd&)
 
 bool gdb_thread::cmd_current_thread(gdb_cmd&)
 {
-	return send_cmd_ack(selected_thread && selected_thread->state.none_of(cpu_flag::exit) ? "" : ("QC" + u64_to_padded_hex(selected_thread->id)));
+	return send_cmd_ack(selected_thread && selected_thread->state.none_of(cpu_flag::exit) ? ("QC" + u64_to_padded_hex(selected_thread->id)) : "");
 }
 
 bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
@@ -733,7 +733,7 @@ bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 		return send_cmd_ack(result);
 	}
 
-	GDB.warning("Unimplemented thread type %d.", selected_thread ->id_type());
+	GDB.warning("Unimplemented thread type %d.", selected_thread->id_type());
 	return send_cmd_ack("");
 }
 
