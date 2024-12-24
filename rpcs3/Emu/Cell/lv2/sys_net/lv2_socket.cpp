@@ -175,3 +175,14 @@ void lv2_socket::queue_wake(ppu_thread* ppu)
 		break;
 	}
 }
+
+lv2_socket& lv2_socket::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::finished)
+	{
+		close();
+	}
+
+	return *this;
+}
+

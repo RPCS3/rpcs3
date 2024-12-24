@@ -330,8 +330,9 @@ void lv2_socket_p2p::close()
 		return;
 	}
 
-	auto& nc = g_fxo->get<p2p_context>();
+	if (g_fxo->is_init<p2p_context>())
 	{
+		auto& nc = g_fxo->get<p2p_context>();
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
 
 		if (!nc.list_p2p_ports.contains(port))
