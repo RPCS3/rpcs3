@@ -944,8 +944,9 @@ void lv2_socket_p2ps::close()
 		return;
 	}
 
-	auto& nc = g_fxo->get<p2p_context>();
+	if (g_fxo->is_init<p2p_context>())
 	{
+		auto& nc = g_fxo->get<p2p_context>();
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
 		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
 		{
@@ -973,8 +974,10 @@ void lv2_socket_p2ps::close()
 		}
 	}
 
-	auto& tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
-	tcpm.clear_all_messages(lv2_id);
+	if (const auto tcpm = g_fxo->try_get<named_thread<tcp_timeout_monitor>>())
+	{
+		tcpm->clear_all_messages(lv2_id);
+	}
 }
 
 s32 lv2_socket_p2ps::shutdown([[maybe_unused]] s32 how)

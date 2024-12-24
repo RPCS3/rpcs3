@@ -109,10 +109,29 @@ void lv2_config::add_service_event(shared_ptr<lv2_config_service_event> event)
 
 void lv2_config::remove_service_event(u32 id)
 {
+	shared_ptr<lv2_config_service_event> ptr;
+
 	std::lock_guard lock(m_mutex);
-	events.erase(id);
+
+	if (auto it = events.find(id); it != events.end())
+	{
+		ptr = std::move(it->second);
+		events.erase(it);
+	}
 }
 
+lv2_config_service_event& lv2_config_service_event::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::finished)
+	{
+		if (auto global = g_fxo->try_get<lv2_config>())
+		{
+			global->remove_service_event(id);
+		}
+	}
+
+	return *this;
+}
 
 // LV2 Config Service Listener
 bool lv2_config_service_listener::check_service(const lv2_config_service& service) const

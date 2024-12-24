@@ -1049,8 +1049,15 @@ void debugger_frame::UpdateUnitList()
 
 	if (emu_state != system_state::stopped)
 	{
-		idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
-		idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
+		if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>())
+		{
+			idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
+		}
+
+		if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+		{
+			idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
+		}
 
 		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->ctrl)
 		{

@@ -2718,8 +2718,15 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		cpu.state += cpu_flag::dbg_global_pause;
 	};
 
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
+	if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>())
+	{
+		idm::select<named_thread<ppu_thread>>(on_select);
+	}
+
+	if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+	{
+		idm::select<named_thread<spu_thread>>(on_select);
+	}
 
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
@@ -2760,6 +2767,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 			std::unique_ptr<named_thread<decltype(refresh_l)>> m_thread;
 		};
 
+		g_fxo->need<thread_t>();
 		g_fxo->get<thread_t>().m_thread.reset();
 		g_fxo->get<thread_t>().m_thread = std::make_unique<named_thread<decltype(refresh_l)>>("Pause Message Thread"sv, std::move(refresh_l));
 	});
