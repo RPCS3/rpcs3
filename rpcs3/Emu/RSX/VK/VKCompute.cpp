@@ -96,6 +96,7 @@ namespace vk
 				optimal_group_size = 64;
 				break;
 			case vk::driver_vendor::MVK:
+			case vk::driver_vendor::HONEYKRISP:
 				unroll_loops = true;
 				optimal_kernel_size = 1;
 				optimal_group_size = 256;
