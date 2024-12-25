@@ -451,23 +451,18 @@ namespace stx
 			}
 		}
 
-		// Converts to unique (single) ptr if reference is 1, otherwise returns null. Nullifies self.
+		// Converts to unique (single) ptr if reference is 1. Nullifies self on success.
 		template <typename U> requires PtrSame<T, U>
-		explicit operator single_ptr<U>() && noexcept
+		single_ptr<U> try_convert_to_single_ptr() noexcept
 		{
-			const auto o = d();
-
-			if (m_ptr && !--o->refs)
+			if (const auto o = m_ptr ? d() : nullptr; o && o->refs == 1u)
 			{
 				// Convert last reference to single_ptr instance.
-				o->refs.release(1);
-				single_ptr<T> r;
+				single_ptr<U> r;
 				r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 				return r;
 			}
 
-			// Otherwise, both pointers are gone. Didn't seem right to do it in the constructor.
-			m_ptr = nullptr;
 			return {};
 		}
 
