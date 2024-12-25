@@ -572,7 +572,10 @@ void game_list_frame::OnParsingFinished()
 	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 	const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 
+	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
+	{
 	m_path_entries.emplace_back(path_entry{dev_flash + "vsh/module/vsh.self", false, false});
+	};
 
 	// Remove duplicates
 	sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
