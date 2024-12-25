@@ -64,7 +64,7 @@ public:
 	lv2_socket(utils::serial&, lv2_socket_type type);
 	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial&, bool save_only_this_class = false);
-	~lv2_socket() noexcept = default;
+	virtual ~lv2_socket() noexcept;
 	lv2_socket& operator=(thread_state s) noexcept;
 
 	std::unique_lock<shared_mutex> lock();
