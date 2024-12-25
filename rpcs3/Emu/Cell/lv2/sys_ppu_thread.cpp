@@ -166,8 +166,16 @@ s32 sys_ppu_thread_yield(ppu_thread& ppu)
 
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
+	const s32 success = lv2_obj::yield(ppu) ? CELL_OK : CELL_CANCEL;
+
+	if (success == CELL_CANCEL)
+	{
+		// Do other work in the meantime
+		lv2_obj::notify_all();
+	}
+
 	// Return 0 on successful context switch, 1 otherwise
-	return +!lv2_obj::yield(ppu);
+	return success;
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
