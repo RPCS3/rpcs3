@@ -51,6 +51,8 @@ namespace rsx
 			}
 		}
 
+		bool check_trivially_instanced() const;
+
 	public:
 		primitive_type primitive{};
 		draw_command command{};
@@ -59,6 +61,7 @@ namespace rsx
 		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
 		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
 		bool is_rendering{};               // Set while we're actually pushing the draw calls to host GPU
+		bool is_trivial_instanced_draw{};  // Set if the draw call can be executed on the host GPU as a single instanced draw.
 
 		simple_array<u32> inline_vertex_array{};
 
@@ -73,8 +76,8 @@ namespace rsx
 		{
 			// End draw call append mode
 			current_range_index = ~0u;
-
-			// TODO
+			// Check if we can instance on host
+			is_trivial_instanced_draw = check_trivially_instanced();
 		}
 
 		/**
