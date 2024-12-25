@@ -393,7 +393,7 @@ namespace stx
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(%u): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;
