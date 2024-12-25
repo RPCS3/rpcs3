@@ -89,6 +89,45 @@ namespace rsx
 		}
 	}
 
+	bool draw_clause::check_trivially_instanced() const
+	{
+		if (draw_command_ranges.size() <= 1)
+		{
+			// Cannot instance one draw call or less
+			return false;
+		}
+
+		// For instancing all draw calls must be identical
+		const auto& ref = draw_command_ranges.front();
+		for (const auto& range : draw_command_ranges)
+		{
+			if (range.first != ref.first || range.count != ref.count)
+			{
+				return false;
+			}
+		}
+
+		if (draw_command_barriers.empty())
+		{
+			// Raise alarm here for investigation, we may be missing a corner case.
+			rsx_log.error("Instanced draw detected, but no command barriers found!");
+			return false;
+		}
+
+		// Barriers must exist, but can only involve updating transform constants (for now)
+		for (const auto& barrier : draw_command_barriers)
+		{
+			if (barrier.type != rsx::transform_constant_load_modifier_barrier &&
+				barrier.type != rsx::transform_constant_update_barrier)
+			{
+				// Only transform constant instancing is supported at the moment.
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void draw_clause::reset(primitive_type type)
 	{
 		current_range_index = ~0u;
@@ -97,6 +136,7 @@ namespace rsx
 		command = draw_command::none;
 		primitive = type;
 		primitive_barrier_enable = false;
+		is_trivial_instanced_draw = false;
 
 		draw_command_ranges.clear();
 		draw_command_barriers.clear();
