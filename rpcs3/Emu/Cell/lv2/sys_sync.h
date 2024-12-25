@@ -454,36 +454,7 @@ public:
 
 	static bool wait_timeout(u64 usec, ppu_thread* cpu = {}, bool scale = true, bool is_usleep = false);
 
-	static inline void notify_all()
-	{
-		for (auto cpu : g_to_notify)
-		{
-			if (!cpu)
-			{
-				break;
-			}
-
-			if (cpu != &g_to_notify)
-			{
-				const auto res_start = vm::reservation_notifier(0).second;
-				const auto res_end = vm::reservation_notifier(umax).second;
-
-				if (cpu >= res_start && cpu <= res_end)
-				{
-					// Notify SPU reservation
-					atomic_wait_engine::notify_all(cpu);
-				}
-				else
-				{
-					// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
-					atomic_wait_engine::notify_one(cpu);
-				}
-			}
-		}
-
-		g_to_notify[0] = nullptr;
-		g_postpone_notify_barrier = false;
-	}
+	static void notify_all() noexcept;
 
 	// Can be called before the actual sleep call in order to move it out of mutex scope
 	static void prepare_for_sleep(cpu_thread& cpu);
