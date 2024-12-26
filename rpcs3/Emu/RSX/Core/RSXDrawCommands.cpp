@@ -3,6 +3,8 @@
 
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/buffer_stream.hpp"
+#include "Emu/RSX/Common/io_buffer.h"
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/RSXThread.h"
@@ -244,7 +246,7 @@ namespace rsx
 		// This whole thing becomes a mess if we don't have a provoking attribute.
 		const auto vertex_id = m_vertex_push_buffers[0].get_vertex_id();
 		m_vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
-		m_thread->m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
+		RSX(m_ctx)->m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
 	}
 
 	u32 draw_command_processor::get_push_buffer_vertex_count() const
@@ -268,7 +270,7 @@ namespace rsx
 
 	void draw_command_processor::clear_push_buffers()
 	{
-		auto& graphics_state = m_thread->m_graphics_state;
+		auto& graphics_state = RSX(m_ctx)->m_graphics_state;
 		if (graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
 		{
 			for (auto& push_buf : m_vertex_push_buffers)
@@ -631,7 +633,7 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void draw_command_processor::fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table)
+	void draw_command_processor::fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table) const
 	{
 		if (!reloc_table.empty()) [[ likely ]]
 		{
@@ -648,7 +650,7 @@ namespace rsx
 		}
 	}
 
-	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
+	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/) const
 	{
 		ROP_control_t rop_control{};
 
@@ -664,7 +666,7 @@ namespace rsx
 			rop_control.enable_polygon_stipple();
 		}
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !m_thread->get_backend_config().supports_hw_a2c)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !RSX(m_ctx)->get_backend_config().supports_hw_a2c)
 		{
 			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending
@@ -730,5 +732,112 @@ namespace rsx
 		u32* dst = static_cast<u32*>(buffer);
 		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
 		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+	}
+
+#pragma optimize("", off)
+
+	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const
+	{
+		auto& draw_call = rsx::method_registers.current_draw_clause;
+
+		// Only call this for instanced draws!
+		ensure(draw_call.is_trivial_instanced_draw);
+
+		// Temp indirection table. Used to track "running" updates.
+		std::vector<u32> instancing_indirection_table;
+		// indirection table size
+		const auto redirection_table_size = prog.has_indexed_constants ? 468u : ::size32(prog.constant_ids);
+
+		// Temp constants data
+		std::vector<u128> constants_data;
+		constants_data.reserve(redirection_table_size * draw_call.pass_count());
+
+		// Allocate indirection buffer on GPU stream
+		indirection_table_buf.reserve(redirection_table_size * draw_call.pass_count() * sizeof(u32));
+		auto indirection_out = indirection_table_buf.data<u32>();
+
+		rsx::instanced_draw_config_t instance_config;
+		u32 indirection_table_offset = 0;
+
+		// We now replay the draw call here to pack the data.
+		draw_call.begin();
+
+		// Write initial draw data.
+		instancing_indirection_table.resize(redirection_table_size);
+		std::iota(instancing_indirection_table.begin(), instancing_indirection_table.end(), 0);
+
+		constants_data.resize(redirection_table_size);
+		fill_vertex_program_constants_data(constants_data.data(), prog.constant_ids);
+
+		// Next draw. We're guaranteed more than one draw call by the caller.
+		draw_call.next();
+
+		do
+		{
+			// Write previous state
+			std::memcpy(indirection_out + indirection_table_offset, instancing_indirection_table.data(), instancing_indirection_table.size() * sizeof(u32));
+			indirection_table_offset += redirection_table_size;
+
+			// Decode next draw state
+			instance_config = {};
+			draw_call.execute_pipeline_dependencies(m_ctx, &instance_config);
+
+			if (!instance_config.transform_constants_data_changed)
+			{
+				continue;
+			}
+
+			const bool do_full_reload = prog.has_indexed_constants;
+			if (do_full_reload)
+			{
+				const u32 redirection_loc = ::size32(constants_data);
+				constants_data.resize(redirection_loc + redirection_table_size);
+				fill_vertex_program_constants_data(constants_data.data() + redirection_loc, prog.constant_ids);
+
+				std::iota(instancing_indirection_table.begin(), instancing_indirection_table.end(), redirection_loc);
+				continue;
+			}
+
+			if (auto xform_id = prog.TranslateConstantsRange(instance_config.patch_load_offset, instance_config.patch_load_count); xform_id >= 0)
+			{
+				// Trivially patchable in bulk
+				const u32 redirection_loc = ::size32(constants_data);
+				constants_data.resize(::size32(constants_data) + instance_config.patch_load_count);
+				std::memcpy(constants_data.data() + redirection_loc, &REGS(m_ctx)->transform_constants[instance_config.patch_load_offset], instance_config.patch_load_count * sizeof(u128));
+
+				// Update indirection table
+				for (auto i = xform_id, count = 0;
+					 static_cast<u32>(count) < instance_config.patch_load_count;
+					 ++i, ++count)
+				{
+					instancing_indirection_table[i] = redirection_loc + count;
+				}
+
+				continue;
+			}
+
+			// Sparse. Update records individually instead of bulk
+			const auto load_end = instance_config.patch_load_offset + instance_config.patch_load_count;
+			for (u32 i = 0; i < redirection_table_size; ++i)
+			{
+				const auto read_index = prog.constant_ids[i];
+				if (read_index < instance_config.patch_load_offset || read_index >= load_end)
+				{
+					// Reading outside "hot" range.
+					continue;
+				}
+
+				const u32 redirection_loc = ::size32(constants_data);
+				constants_data.resize(::size32(constants_data) + 1);
+				std::memcpy(constants_data.data() + redirection_loc, &REGS(m_ctx)->transform_constants[read_index], sizeof(u128));
+
+				instancing_indirection_table[i] = redirection_loc;
+			}
+
+		} while (draw_call.next());
+
+		// Now write the constants to the GPU buffer
+		constants_data_array_buffer.reserve(constants_data.size());
+		std::memcpy(constants_data_array_buffer.data(), constants_data.data(), constants_data.size() * sizeof(u128));
 	}
 }

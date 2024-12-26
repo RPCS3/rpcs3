@@ -7,6 +7,14 @@
 
 namespace rsx
 {
+	struct instanced_draw_config_t
+	{
+		bool transform_constants_data_changed;
+
+		u32 patch_load_offset;
+		u32 patch_load_count;
+	};
+
 	class draw_clause
 	{
 		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
@@ -272,7 +280,7 @@ namespace rsx
 		/**
 		 * Executes commands reqiured to make the current draw state valid
 		 */
-		u32 execute_pipeline_dependencies(struct context* ctx) const;
+		u32 execute_pipeline_dependencies(struct context* ctx, instanced_draw_config_t* instance_config = nullptr) const;
 
 		const draw_range_t& get_range() const
 		{
