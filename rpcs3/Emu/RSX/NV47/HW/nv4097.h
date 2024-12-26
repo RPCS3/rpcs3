@@ -204,7 +204,7 @@ namespace rsx
 
 			static void decode_one(context* ctx, u32 reg, u32 arg);
 
-			static void batch_decode(context* ctx, u32 reg, const std::span<const u32>& args);
+			static void batch_decode(context* ctx, u32 reg, const std::span<const u32>& args, const std::function<bool(context*, u32, u32)>& notify = {});
 		};
 
 		struct set_transform_program
