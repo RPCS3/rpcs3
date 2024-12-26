@@ -476,6 +476,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Core/RSXContext.cpp
+    RSX/Core/RSXDrawCommands.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
     RSX/GL/GLCommonDecompiler.cpp

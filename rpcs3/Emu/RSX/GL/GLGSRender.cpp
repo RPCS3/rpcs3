@@ -1007,7 +1007,14 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	m_draw_processor.fill_vertex_layout_state(
+		m_vertex_layout,
+		current_vp_metadata,
+		upload_info.first_vertex,
+		upload_info.allocated_vertex_count,
+		reinterpret_cast<s32*>(buf),
+		upload_info.persistent_mapping_offset,
+		upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(GL_VERTEX_LAYOUT_BIND_SLOT, mapping.second, 128 + 16);
 
