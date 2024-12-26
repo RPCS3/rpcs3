@@ -1940,6 +1940,13 @@
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QCheckBox" name="emptyHdd0Tmp">
+               <property name="text">
+                <string>Empty /dev_hdd0/tmp/</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
