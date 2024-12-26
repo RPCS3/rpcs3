@@ -2202,6 +2202,13 @@ namespace rsx
 
 	void thread::prefetch_vertex_program()
 	{
+		// Test if instanced command is coming up
+		current_vertex_program.ctrl = 0;
+		if (rsx::method_registers.current_draw_clause.is_trivial_instanced_draw)
+		{
+			current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+		}
+
 		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
 		{
 			return;
@@ -2256,7 +2263,6 @@ namespace rsx
 
 		ensure(!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
-		current_vertex_program.ctrl = 0; // Reserved
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{

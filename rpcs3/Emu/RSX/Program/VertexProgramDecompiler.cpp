@@ -131,7 +131,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
 		properties.has_indexed_constants |= !!d3.index_const;
 		m_constant_ids.insert(static_cast<u16>(d1.const_src));
-		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
+		fmt::append(ret, "_fetch_constant(%u%s)", d1.const_src, (d3.index_const ? " + " + AddAddrReg() : ""));
 		break;
 
 	default:

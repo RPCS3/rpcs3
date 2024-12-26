@@ -262,6 +262,11 @@ namespace glsl
 				}
 			}
 
+			if (props.require_instanced_render)
+			{
+				enabled_options.push_back("_ENABLE_INSTANCED_CONSTANTS");
+			}
+
 			// Import vertex header
 			program_common::define_glsl_switches(OS, enabled_options);
 
