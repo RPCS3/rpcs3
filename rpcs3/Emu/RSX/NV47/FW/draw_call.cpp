@@ -91,7 +91,7 @@ namespace rsx
 
 	bool draw_clause::check_trivially_instanced() const
 	{
-		if (draw_command_ranges.size() <= 1)
+		if (pass_count() <= 1)
 		{
 			// Cannot instance one draw call or less
 			return false;
@@ -145,7 +145,7 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
-	u32 draw_clause::execute_pipeline_dependencies(context* ctx) const
+	u32 draw_clause::execute_pipeline_dependencies(context* ctx, instanced_draw_config_t* instance_config) const
 	{
 		u32 result = 0u;
 		for (;
@@ -191,7 +191,20 @@ namespace rsx
 				// Update transform constants
 				auto ptr = RSX(ctx)->fifo_ctrl->translate_address(barrier.arg0);
 				auto buffer = std::span<const u32>(static_cast<const u32*>(vm::base(ptr)), barrier.arg1);
-				nv4097::set_transform_constant::batch_decode(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, buffer);
+				auto notify = [&](rsx::context*, u32 load, u32 count)
+				{
+					if (!instance_config)
+					{
+						return false;
+					}
+
+					instance_config->transform_constants_data_changed = true;
+					instance_config->patch_load_offset = load;
+					instance_config->patch_load_count = count;
+					return true;
+				};
+
+				nv4097::set_transform_constant::batch_decode(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, buffer, notify);
 				result |= transform_constants_changed;
 				break;
 			}

@@ -163,7 +163,8 @@ void VKGSRender::advance_queued_frames()
 		m_transform_constants_ring_info.get_current_put_pos_minus_one(),
 		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
 		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one(),
-		m_raster_env_ring_info.get_current_put_pos_minus_one());
+		m_raster_env_ring_info.get_current_put_pos_minus_one(),
+		m_instancing_buffer_ring_info.get_current_put_pos_minus_one());
 
 	m_queued_frames.push_back(m_current_frame);
 	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
@@ -266,6 +267,8 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 			m_fragment_texture_params_ring_info.m_get_pos = ctx->frag_texparam_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
+			m_raster_env_ring_info.m_get_pos = ctx->rasterizer_env_heap_ptr;
+			m_instancing_buffer_ring_info.m_get_pos = ctx->instancing_heap_ptr;
 
 			m_attrib_ring_info.notify();
 			m_vertex_env_ring_info.notify();
@@ -276,6 +279,8 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 			m_fragment_texture_params_ring_info.notify();
 			m_index_buffer_ring_info.notify();
 			m_texture_upload_buffer_ring_info.notify();
+			m_raster_env_ring_info.notify();
+			m_instancing_buffer_ring_info.notify();
 		}
 	}
 

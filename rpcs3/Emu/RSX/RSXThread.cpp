@@ -690,13 +690,14 @@ namespace rsx
 		m_vertex_textures_dirty.fill(true);
 
 		m_graphics_state |= pipeline_state::all_dirty;
-		m_draw_processor.init(this);
 
 		g_user_asked_for_frame_capture = false;
 
 		// TODO: Proper context management in the driver
 		s_ctx.rsxthr = this;
 		m_ctx = &s_ctx;
+
+		m_draw_processor.init(m_ctx);
 
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{

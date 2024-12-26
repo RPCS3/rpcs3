@@ -4,7 +4,7 @@
 
 namespace rsx
 {
-		enum pipeline_state : u32
+	enum pipeline_state : u32
 	{
 		fragment_program_ucode_dirty = (1 << 0),   // Fragment program ucode changed
 		vertex_program_ucode_dirty   = (1 << 1),   // Vertex program ucode changed

@@ -30,7 +30,7 @@ namespace rsx
 			REGS(ctx)->transform_constants[load + constant_id][subreg] = arg;
 		}
 
-		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args)
+		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args, const std::function<bool(context*, u32, u32)>& notify)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
@@ -40,8 +40,15 @@ namespace rsx
 			auto dst = &REGS(ctx)->transform_constants[load + constant_id][subreg];
 			copy_data_swap_u32(dst, args.data(), ::size32(args));
 
+			// Notify
 			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
-			RSX(ctx)->patch_transform_constants(ctx, load + constant_id, last_constant_id - constant_id);
+			const u32 load_index = load + constant_id;
+			const u32 load_count = last_constant_id - constant_id;
+
+			if (!notify || !notify(ctx, load_index, load_count))
+			{
+				RSX(ctx)->patch_transform_constants(ctx, load_index, load_count);
+			}
 		}
 
 		void set_transform_constant::impl(context* ctx, u32 reg, [[maybe_unused]] u32 arg)

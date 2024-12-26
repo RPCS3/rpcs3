@@ -13,13 +13,14 @@
 namespace rsx
 {
 	struct rsx_state;
-	class thread;
+	struct context;
+	class io_buffer;
 
 	class draw_command_processor
 	{
 		using vertex_program_metadata_t = program_hash_util::vertex_program_utils::vertex_program_metadata;
 
-		thread* m_thread = nullptr;
+		context* m_ctx = nullptr;
 
 	protected:
 		friend class thread;
@@ -30,9 +31,9 @@ namespace rsx
 	public:
 		draw_command_processor() = default;
 
-		void init(thread* rsxthr)
+		void init(context* ctx)
 		{
-			m_thread = rsxthr;
+			m_ctx = ctx;
 		}
 
 		// Analyze vertex inputs and group all interleaved blocks
@@ -94,12 +95,16 @@ namespace rsx
 		* Fill buffer with vertex program constants.
 		* Relocation table allows to do a partial fill with only selected registers.
 		*/
-		void fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table);
+		void fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table) const;
 
 		/**
 		 * Fill buffer with fragment rasterization state.
 		 * Fills current fog values, alpha test parameters and texture scaling parameters
 		 */
-		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program);
+		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program) const;
+
+		// Fill instancing buffers. A single iobuf is used for both. 256byte alignment enforced to allow global bind
+		// Returns offsets to the index redirection lookup table and constants field array
+		void fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const;
 	};
 }
