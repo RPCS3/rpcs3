@@ -513,7 +513,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
-		analyse_inputs_interleaved(m_vertex_layout);
+		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, current_vp_metadata);
 	}
 	else if (vertex_state & rsx::vertex_base_changed)
 	{

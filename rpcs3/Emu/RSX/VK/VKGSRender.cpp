@@ -2360,8 +2360,14 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, static_cast<s32*>(dst),
-		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
+	m_draw_processor.fill_vertex_layout_state(
+		m_vertex_layout,
+		current_vp_metadata,
+		vertex_info.first_vertex,
+		vertex_info.allocated_vertex_count,
+		static_cast<s32*>(dst),
+		vertex_info.persistent_window_offset,
+		vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();
 }

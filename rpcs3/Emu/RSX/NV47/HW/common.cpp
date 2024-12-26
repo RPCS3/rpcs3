@@ -18,7 +18,7 @@ namespace rsx
 				// NOTE: Push buffers still behave like register writes.
 				// You do not need to specify each attribute for each vertex, the register is referenced instead.
 				// This is classic OpenGL 1.x behavior as I remember.
-				RSX(ctx)->append_to_push_buffer(attrib_index, count, channel_select, vtype, value);
+				RSX(ctx)->GRAPH_frontend().append_to_push_buffer(attrib_index, count, channel_select, vtype, value);
 			}
 
 			auto& info = REGS(ctx)->register_vertex_info[attrib_index];

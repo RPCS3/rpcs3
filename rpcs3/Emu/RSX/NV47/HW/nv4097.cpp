@@ -256,15 +256,15 @@ namespace rsx
 		{
 			if (RSX(ctx)->in_begin_end)
 			{
-				RSX(ctx)->append_array_element(arg & 0xFFFF);
-				RSX(ctx)->append_array_element(arg >> 16);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg & 0xFFFF);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg >> 16);
 			}
 		}
 
 		void set_array_element32(context* ctx, u32, u32 arg)
 		{
 			if (RSX(ctx)->in_begin_end)
-				RSX(ctx)->append_array_element(arg);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg);
 		}
 
 		void draw_arrays(context* /*rsx*/, u32 /*reg*/, u32 arg)
@@ -353,8 +353,8 @@ namespace rsx
 			// Check if we have immediate mode vertex data in a driver-local buffer
 			if (REGS(ctx)->current_draw_clause.command == rsx::draw_command::none)
 			{
-				const u32 push_buffer_vertices_count = RSX(ctx)->get_push_buffer_vertex_count();
-				const u32 push_buffer_index_count = RSX(ctx)->get_push_buffer_index_count();
+				const u32 push_buffer_vertices_count = RSX(ctx)->GRAPH_frontend().get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = RSX(ctx)->GRAPH_frontend().get_push_buffer_index_count();
 
 				// Need to set this flag since it overrides some register contents
 				REGS(ctx)->current_draw_clause.is_immediate_draw = true;
