@@ -2,6 +2,8 @@
 #include "RSXDrawCommands.h"
 
 #include "Emu/RSX/Common/BufferUtils.h"
+#include "Emu/RSX/Common/buffer_stream.hpp"
+#include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/RSXThread.h"
 
@@ -554,5 +556,179 @@ namespace rsx
 				persistent += data_size;
 			}
 		}
+	}
+
+	void draw_command_processor::fill_scale_offset_data(void* buffer, bool flip_y) const
+	{
+		int clip_w = rsx::method_registers.surface_clip_width();
+		int clip_h = rsx::method_registers.surface_clip_height();
+
+		float scale_x = rsx::method_registers.viewport_scale_x() / (clip_w / 2.f);
+		float offset_x = rsx::method_registers.viewport_offset_x() - (clip_w / 2.f);
+		offset_x /= clip_w / 2.f;
+
+		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
+		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
+		offset_y /= clip_h / 2.f;
+		if (flip_y) scale_y *= -1;
+		if (flip_y) offset_y *= -1;
+
+		float scale_z = rsx::method_registers.viewport_scale_z();
+		float offset_z = rsx::method_registers.viewport_offset_z();
+		float one = 1.f;
+
+		utils::stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
+		utils::stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		utils::stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		utils::stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
+	}
+
+	void draw_command_processor::fill_user_clip_data(void* buffer) const
+	{
+		const rsx::user_clip_plane_op clip_plane_control[6] =
+		{
+			rsx::method_registers.clip_plane_0_enabled(),
+			rsx::method_registers.clip_plane_1_enabled(),
+			rsx::method_registers.clip_plane_2_enabled(),
+			rsx::method_registers.clip_plane_3_enabled(),
+			rsx::method_registers.clip_plane_4_enabled(),
+			rsx::method_registers.clip_plane_5_enabled(),
+		};
+
+		u8 data_block[64];
+		s32* clip_enabled_flags = reinterpret_cast<s32*>(data_block);
+		f32* clip_distance_factors = reinterpret_cast<f32*>(data_block + 32);
+
+		for (int index = 0; index < 6; ++index)
+		{
+			switch (clip_plane_control[index])
+			{
+			default:
+				rsx_log.error("bad clip plane control (0x%x)", static_cast<u8>(clip_plane_control[index]));
+				[[fallthrough]];
+
+			case rsx::user_clip_plane_op::disable:
+				clip_enabled_flags[index] = 0;
+				clip_distance_factors[index] = 0.f;
+				break;
+
+			case rsx::user_clip_plane_op::greater_or_equal:
+				clip_enabled_flags[index] = 1;
+				clip_distance_factors[index] = 1.f;
+				break;
+
+			case rsx::user_clip_plane_op::less_than:
+				clip_enabled_flags[index] = 1;
+				clip_distance_factors[index] = -1.f;
+				break;
+			}
+		}
+
+		memcpy(buffer, data_block, 2 * 8 * sizeof(u32));
+	}
+
+	/**
+	* Fill buffer with vertex program constants.
+	* Buffer must be at least 512 float4 wide.
+	*/
+	void draw_command_processor::fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table)
+	{
+		if (!reloc_table.empty()) [[ likely ]]
+		{
+			char* dst = reinterpret_cast<char*>(buffer);
+			for (const auto& index : reloc_table)
+			{
+				utils::stream_vector_from_memory(dst, &rsx::method_registers.transform_constants[index]);
+				dst += 16;
+			}
+		}
+		else
+		{
+			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		}
+	}
+
+	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
+	{
+		ROP_control_t rop_control{};
+
+		if (rsx::method_registers.alpha_test_enabled())
+		{
+			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+			rop_control.set_alpha_test_func(alpha_func);
+			rop_control.enable_alpha_test();
+		}
+
+		if (rsx::method_registers.polygon_stipple_enabled())
+		{
+			rop_control.enable_polygon_stipple();
+		}
+
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !m_thread->get_backend_config().supports_hw_a2c)
+		{
+			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
+			// Alpha values generate a coverage mask for order independent blending
+			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
+			// Simulated using combined alpha blend and alpha test
+			rop_control.enable_alpha_to_coverage();
+			if (rsx::method_registers.msaa_sample_mask())
+			{
+				rop_control.enable_MSAA_writes();
+			}
+
+			// Sample configuration bits
+			switch (rsx::method_registers.surface_antialias())
+			{
+			case rsx::surface_antialiasing::center_1_sample:
+				break;
+			case rsx::surface_antialiasing::diagonal_centered_2_samples:
+				rop_control.set_msaa_control(1u);
+				break;
+			default:
+				rop_control.set_msaa_control(3u);
+				break;
+			}
+		}
+
+		const f32 fog0 = rsx::method_registers.fog_params_0();
+		const f32 fog1 = rsx::method_registers.fog_params_1();
+		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
+
+		// Check if framebuffer is actually an XRGB format and not a WZYX format
+		switch (rsx::method_registers.surface_color())
+		{
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		case rsx::surface_color_format::x32:
+			// These behave very differently from "normal" formats.
+			break;
+		default:
+			// Integer framebuffer formats.
+			rop_control.enable_framebuffer_INT();
+
+			// Check if we want sRGB conversion.
+			if (rsx::method_registers.framebuffer_srgb_enabled())
+			{
+				rop_control.enable_framebuffer_sRGB();
+			}
+			break;
+		}
+
+		// Generate wpos coefficients
+		// wpos equation is now as follows:
+		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)
+		// wpos.x = (frag_coord / resolution_scale)
+		// wpos.zw = frag_coord.zw
+
+		const auto window_origin = rsx::method_registers.shader_window_origin();
+		const u32 window_height = rsx::method_registers.shader_window_height();
+		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
+		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
+		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
+		const f32 alpha_ref = rsx::method_registers.alpha_ref();
+
+		u32* dst = static_cast<u32*>(buffer);
+		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
+		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 }

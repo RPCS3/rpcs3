@@ -2139,8 +2139,8 @@ void VKGSRender::load_program_env()
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
 		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
 
-		fill_scale_offset_data(buf, false);
-		fill_user_clip_data(buf + 64);
+		m_draw_processor.fill_scale_offset_data(buf, false);
+		m_draw_processor.fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
@@ -2200,7 +2200,7 @@ void VKGSRender::load_program_env()
 		auto mem = m_fragment_env_ring_info.alloc<256>(256);
 		auto buf = m_fragment_env_ring_info.map(mem, 32);
 
-		fill_fragment_state_buffer(buf, current_fragment_program);
+		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
 		m_fragment_env_ring_info.unmap();
 		m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, mem, 32 };
 	}
@@ -2317,7 +2317,7 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 		const auto constant_ids = (transform_constants_size == 8192)
 			? std::span<const u16>{}
 			: std::span<const u16>(m_vertex_prog->constant_ids);
-		fill_vertex_program_constants_data(buf, constant_ids);
+		m_draw_processor.fill_vertex_program_constants_data(buf, constant_ids);
 	}
 }
 
