@@ -400,30 +400,6 @@ namespace rsx
 		draw_command_processor& GRAPH_frontend() { return m_draw_processor; }
 
 		/**
-		 * Fill buffer with 4x4 scale offset matrix.
-		 * Vertex shader's position is to be multiplied by this matrix.
-		 * if flip_y is set, the matrix is modified to use d3d convention.
-		 */
-		void fill_scale_offset_data(void *buffer, bool flip_y) const;
-
-		/**
-		 * Fill buffer with user clip information
-		 */
-		void fill_user_clip_data(void *buffer) const;
-
-		/**
-		* Fill buffer with vertex program constants.
-		* Relocation table allows to do a partial fill with only selected registers.
-		*/
-		void fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table);
-
-		/**
-		 * Fill buffer with fragment rasterization state.
-		 * Fills current fog values, alpha test parameters and texture scaling parameters
-		 */
-		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program);
-
-		/**
 		 * Notify that a section of memory has been mapped
 		 * If there is a notify_memory_unmapped request on this range yet to be handled,
 		 * handles it immediately.
