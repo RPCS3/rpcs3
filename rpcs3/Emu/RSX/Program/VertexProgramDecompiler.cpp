@@ -409,7 +409,7 @@ std::string VertexProgramDecompiler::BuildCode()
 		{
 			const auto i = offset++;
 			if (i == index) continue; // Replace with self
-			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%d]", i));
+			reloc_table.emplace_back(fmt::format("_fetch_constant(%d)", index), fmt::format("_fetch_constant(%d)", i));
 		}
 
 		// One-time patch
