@@ -1749,8 +1749,7 @@ namespace vm
 				if (is_memory_compatible_for_copy_from_executable_optimization(addr, shm.first))
 				{
 					// Revert changes
-					ar.data.resize(ar.data.size() - (sizeof(u32) * 2 + sizeof(memory_page)));
-					ar.seek_end();
+					ar.trunc(sizeof(u32) * 2 + sizeof(memory_page));
 					vm_log.success("Removed memory block matching the memory of the executable from savestate. (addr=0x%x, size=0x%x)", addr, shm.first);
 					continue;
 				}

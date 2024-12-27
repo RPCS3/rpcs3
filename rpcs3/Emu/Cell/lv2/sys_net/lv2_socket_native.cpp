@@ -57,6 +57,11 @@ void lv2_socket_native::save(utils::serial& ar)
 	ar(is_socket_connected());
 }
 
+lv2_socket_native::~lv2_socket_native() noexcept
+{
+	lv2_socket_native::close();
+}
+
 s32 lv2_socket_native::create_socket()
 {
 	ensure(family == SYS_NET_AF_INET);

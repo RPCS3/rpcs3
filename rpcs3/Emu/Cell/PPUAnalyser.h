@@ -186,6 +186,10 @@ struct main_ppu_module : public ppu_module<T>
 	u32 elf_entry{};
 	u32 seg0_code_end{};
 	std::vector<u32> applied_patches;
+
+	// Disable inherited savestate ordering
+	void save(utils::serial&) = delete;
+	static constexpr double savestate_init_pos = double{};
 };
 
 // Aux

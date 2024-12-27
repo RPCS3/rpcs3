@@ -479,10 +479,6 @@ public:
 	gem_config_data(utils::serial& ar)
 	{
 		save(ar);
-
-		if (ar.is_writing())
-			return;
-
 		load_configs();
 	}
 

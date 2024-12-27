@@ -186,3 +186,6 @@ lv2_socket& lv2_socket::operator=(thread_state s) noexcept
 	return *this;
 }
 
+lv2_socket::~lv2_socket() noexcept
+{
+}
