@@ -393,6 +393,14 @@ namespace rsx
 					return;
 				}
 
+				// FIXME: This doesn't belong here
+				constexpr u32 instance_control_mask = RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+				RSX(ctx)->current_vertex_program.ctrl &= ~instance_control_mask;
+				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw)
+				{
+					RSX(ctx)->current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+				}
+
 				RSX(ctx)->end();
 			}
 			else
