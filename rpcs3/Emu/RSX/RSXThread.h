@@ -424,9 +424,17 @@ namespace rsx
 		 */
 		virtual void on_semaphore_acquire_wait() {}
 
+		/**
+		 * Load an image from memory with optional scaling and rotation.
+		 * Returns false to tell the HW decoder to perform the operation on the CPU as a fallback when the operation cannot be safely accelerated.
+		 */
+		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
+
+
+		// Program public "get" handlers
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 
-		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
+		bool is_current_vertex_program_instanced() const { return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS); }
 
 	public:
 		void reset();
