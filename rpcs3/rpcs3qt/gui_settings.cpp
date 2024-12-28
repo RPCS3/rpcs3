@@ -206,7 +206,7 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	{
 		if (Emu.GetStatus(false) != system_state::stopping)
 		{
-			ensure(info == Emu.GetEmulationIdentifier(old_status == system_state::stopping ? true : false));
+			ensure(info == Emu.GetEmulationIdentifier(old_status == system_state::stopping));
 			return true;
 		}
 
