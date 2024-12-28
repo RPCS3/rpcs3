@@ -362,14 +362,13 @@ std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 std::string VertexProgramDecompiler::BuildCode()
 {
 	std::string main_body;
-	for (uint i = 0, lvl = 1; i < m_instr_count; i++)
+	for (int i = 0, lvl = 1; i < static_cast<int>(m_instr_count); i++)
 	{
-		lvl -= m_instructions[i].close_scopes;
-		if (lvl < 1) lvl = 1;
+		lvl = std::max<int>(lvl - m_instructions[i].close_scopes, 0);
+
 		for (int j = 0; j < m_instructions[i].put_close_scopes; ++j)
 		{
-			--lvl;
-			if (lvl < 1) lvl = 1;
+			if (lvl > 1) --lvl;
 			main_body.append(lvl, '\t') += "}\n";
 		}
 
@@ -379,6 +378,8 @@ std::string VertexProgramDecompiler::BuildCode()
 			main_body.append(lvl, '\t') += "{\n";
 			lvl++;
 		}
+
+		ensure(lvl >= 0); // Underflow of indent level will cause crashes!!
 
 		for (const auto& instruction_body : m_instructions[i].body)
 		{
