@@ -16,7 +16,7 @@ namespace rsx
 {
 	void draw_command_processor::analyse_inputs_interleaved(vertex_input_layout& result, const vertex_program_metadata_t& vp_metadata)
 	{
-		const rsx_state& state = rsx::method_registers;
+		const rsx_state& state = *REGS(m_ctx);
 		const u32 input_mask = state.vertex_attrib_input_mask() & vp_metadata.referenced_inputs_mask;
 
 		result.clear();
@@ -60,7 +60,7 @@ namespace rsx
 			return;
 		}
 
-		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 frequency_divider_mask = REGS(m_ctx)->frequency_divider_operation_mask();
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
@@ -78,8 +78,8 @@ namespace rsx
 			result.attribute_placement[index] = attribute_buffer_placement::none;
 
 			// Check for interleaving
-			if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
-				rsx::method_registers.current_draw_clause.command != rsx::draw_command::indexed)
+			if (REGS(m_ctx)->current_draw_clause.is_immediate_draw &&
+				REGS(m_ctx)->current_draw_clause.command != rsx::draw_command::indexed)
 			{
 				// NOTE: In immediate rendering mode, all vertex setup is ignored
 				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
@@ -199,11 +199,11 @@ namespace rsx
 			return { reinterpret_cast<const std::byte*>(m_element_push_buffer.data()), ::narrow<u32>(m_element_push_buffer.size() * sizeof(u32)) };
 		}
 
-		const rsx::index_array_type type = rsx::method_registers.index_type();
+		const rsx::index_array_type type = REGS(m_ctx)->index_type();
 		const u32 type_size = get_index_type_size(type);
 
 		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+		const u32 address = (0 - type_size) & get_address(REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
@@ -215,7 +215,7 @@ namespace rsx
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		draw_command_processor::get_draw_command(const rsx::rsx_state& state) const
 	{
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed) [[ likely ]]
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::indexed) [[ likely ]]
 		{
 			return draw_indexed_array_command
 			{
@@ -223,12 +223,12 @@ namespace rsx
 			};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::array)
 		{
 			return draw_array_command{};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			return draw_inlined_array{};
 		}
@@ -238,7 +238,7 @@ namespace rsx
 
 	void draw_command_processor::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
 	{
-		if (!(rsx::method_registers.vertex_attrib_input_mask() & (1 << attribute)))
+		if (!(REGS(m_ctx)->vertex_attrib_input_mask() & (1 << attribute)))
 		{
 			return;
 		}
@@ -277,7 +277,7 @@ namespace rsx
 			for (auto& push_buf : m_vertex_push_buffers)
 			{
 				//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-				//rsx::method_registers.register_vertex_info[index].size = 0;
+				//REGS(m_ctx)->register_vertex_info[index].size = 0;
 
 				push_buf.clear();
 			}
@@ -302,7 +302,7 @@ namespace rsx
 		u32 persistent_offset = persistent_offset_base;
 
 		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
-		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
+		if (REGS(m_ctx)->current_draw_clause.is_immediate_draw)
 		{
 			for (const auto& info : layout.volatile_blocks)
 			{
@@ -317,13 +317,13 @@ namespace rsx
 			volatile_offset += 16;
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto& block = layout.interleaved_blocks[0];
 			u32 inline_data_offset = volatile_offset;
 			for (const auto& attrib : block->locations)
 			{
-				auto& info = rsx::method_registers.vertex_arrays_info[attrib.index];
+				auto& info = REGS(m_ctx)->vertex_arrays_info[attrib.index];
 
 				offset_in_block[attrib.index] = inline_data_offset;
 				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
@@ -335,7 +335,7 @@ namespace rsx
 			{
 				for (const auto& attrib : block->locations)
 				{
-					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
+					const u32 local_address = (REGS(m_ctx)->vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
 					offset_in_block[attrib.index] = persistent_offset + (local_address - block->base_offset);
 				}
 
@@ -361,7 +361,7 @@ namespace rsx
 		const s32 volatile_storage_mask = (1 << 30);
 		const s32 modulo_op_frequency_mask = smin;
 
-		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 modulo_mask = REGS(m_ctx)->frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;
 
 		for (u16 ref_mask = vp_metadata.referenced_inputs_mask, index = 0; ref_mask; ++index, ref_mask >>= 1)
@@ -386,14 +386,14 @@ namespace rsx
 
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
-				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+				if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
 				{
-					const auto& info = rsx::method_registers.vertex_arrays_info[index];
+					const auto& info = REGS(m_ctx)->vertex_arrays_info[index];
 
 					if (!info.size())
 					{
 						// Register
-						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
+						const auto& reginfo = REGS(m_ctx)->register_vertex_info[index];
 						type = reginfo.type;
 						size = reginfo.size;
 
@@ -413,7 +413,7 @@ namespace rsx
 					// Data is either from an immediate render or register input
 					// Immediate data overrides register input
 
-					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
+					if (REGS(m_ctx)->current_draw_clause.is_immediate_draw &&
 						m_vertex_push_buffers[index].vertex_count > 1)
 					{
 						// Push buffer
@@ -426,7 +426,7 @@ namespace rsx
 					else
 					{
 						// Register
-						const auto& info = rsx::method_registers.register_vertex_info[index];
+						const auto& info = REGS(m_ctx)->register_vertex_info[index];
 						type = info.type;
 						size = info.size;
 
@@ -438,7 +438,7 @@ namespace rsx
 			}
 			else
 			{
-				auto& info = rsx::method_registers.vertex_arrays_info[index];
+				auto& info = REGS(m_ctx)->vertex_arrays_info[index];
 				type = info.type();
 				size = info.size();
 
@@ -511,7 +511,7 @@ namespace rsx
 		auto transient = static_cast<char*>(volatile_data);
 		auto persistent = static_cast<char*>(persistent_data);
 
-		auto& draw_call = rsx::method_registers.current_draw_clause;
+		auto& draw_call = REGS(m_ctx)->current_draw_clause;
 
 		if (transient != nullptr)
 		{
@@ -519,7 +519,7 @@ namespace rsx
 			{
 				for (const u8 index : layout.referenced_registers)
 				{
-					memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+					memcpy(transient, REGS(m_ctx)->register_vertex_info[index].data.data(), 16);
 					transient += 16;
 				}
 
@@ -541,7 +541,7 @@ namespace rsx
 
 			for (const u8 index : layout.referenced_registers)
 			{
-				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+				memcpy(transient, REGS(m_ctx)->register_vertex_info[index].data.data(), 16);
 				transient += 16;
 			}
 		}
@@ -563,21 +563,21 @@ namespace rsx
 
 	void draw_command_processor::fill_scale_offset_data(void* buffer, bool flip_y) const
 	{
-		int clip_w = rsx::method_registers.surface_clip_width();
-		int clip_h = rsx::method_registers.surface_clip_height();
+		int clip_w = REGS(m_ctx)->surface_clip_width();
+		int clip_h = REGS(m_ctx)->surface_clip_height();
 
-		float scale_x = rsx::method_registers.viewport_scale_x() / (clip_w / 2.f);
-		float offset_x = rsx::method_registers.viewport_offset_x() - (clip_w / 2.f);
+		float scale_x = REGS(m_ctx)->viewport_scale_x() / (clip_w / 2.f);
+		float offset_x = REGS(m_ctx)->viewport_offset_x() - (clip_w / 2.f);
 		offset_x /= clip_w / 2.f;
 
-		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
-		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
+		float scale_y = REGS(m_ctx)->viewport_scale_y() / (clip_h / 2.f);
+		float offset_y = (REGS(m_ctx)->viewport_offset_y() - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float scale_z = rsx::method_registers.viewport_scale_z();
-		float offset_z = rsx::method_registers.viewport_offset_z();
+		float scale_z = REGS(m_ctx)->viewport_scale_z();
+		float offset_z = REGS(m_ctx)->viewport_offset_z();
 		float one = 1.f;
 
 		utils::stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
@@ -590,12 +590,12 @@ namespace rsx
 	{
 		const rsx::user_clip_plane_op clip_plane_control[6] =
 		{
-			rsx::method_registers.clip_plane_0_enabled(),
-			rsx::method_registers.clip_plane_1_enabled(),
-			rsx::method_registers.clip_plane_2_enabled(),
-			rsx::method_registers.clip_plane_3_enabled(),
-			rsx::method_registers.clip_plane_4_enabled(),
-			rsx::method_registers.clip_plane_5_enabled(),
+			REGS(m_ctx)->clip_plane_0_enabled(),
+			REGS(m_ctx)->clip_plane_1_enabled(),
+			REGS(m_ctx)->clip_plane_2_enabled(),
+			REGS(m_ctx)->clip_plane_3_enabled(),
+			REGS(m_ctx)->clip_plane_4_enabled(),
+			REGS(m_ctx)->clip_plane_5_enabled(),
 		};
 
 		u8 data_block[64];
@@ -641,13 +641,13 @@ namespace rsx
 			char* dst = reinterpret_cast<char*>(buffer);
 			for (const auto& index : reloc_table)
 			{
-				utils::stream_vector_from_memory(dst, &rsx::method_registers.transform_constants[index]);
+				utils::stream_vector_from_memory(dst, &REGS(m_ctx)->transform_constants[index]);
 				dst += 16;
 			}
 		}
 		else
 		{
-			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+			memcpy(buffer, REGS(m_ctx)->transform_constants.data(), 468 * 4 * sizeof(float));
 		}
 	}
 
@@ -655,32 +655,32 @@ namespace rsx
 	{
 		ROP_control_t rop_control{};
 
-		if (rsx::method_registers.alpha_test_enabled())
+		if (REGS(m_ctx)->alpha_test_enabled())
 		{
-			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+			const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
 			rop_control.set_alpha_test_func(alpha_func);
 			rop_control.enable_alpha_test();
 		}
 
-		if (rsx::method_registers.polygon_stipple_enabled())
+		if (REGS(m_ctx)->polygon_stipple_enabled())
 		{
 			rop_control.enable_polygon_stipple();
 		}
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !RSX(m_ctx)->get_backend_config().supports_hw_a2c)
+		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled() && !RSX(m_ctx)->get_backend_config().supports_hw_a2c)
 		{
 			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
 			rop_control.enable_alpha_to_coverage();
-			if (rsx::method_registers.msaa_sample_mask())
+			if (REGS(m_ctx)->msaa_sample_mask())
 			{
 				rop_control.enable_MSAA_writes();
 			}
 
 			// Sample configuration bits
-			switch (rsx::method_registers.surface_antialias())
+			switch (REGS(m_ctx)->surface_antialias())
 			{
 			case rsx::surface_antialiasing::center_1_sample:
 				break;
@@ -693,12 +693,12 @@ namespace rsx
 			}
 		}
 
-		const f32 fog0 = rsx::method_registers.fog_params_0();
-		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
+		const f32 fog0 = REGS(m_ctx)->fog_params_0();
+		const f32 fog1 = REGS(m_ctx)->fog_params_1();
+		const u32 fog_mode = static_cast<u32>(REGS(m_ctx)->fog_equation());
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
-		switch (rsx::method_registers.surface_color())
+		switch (REGS(m_ctx)->surface_color())
 		{
 		case rsx::surface_color_format::w16z16y16x16:
 		case rsx::surface_color_format::w32z32y32x32:
@@ -710,7 +710,7 @@ namespace rsx
 			rop_control.enable_framebuffer_INT();
 
 			// Check if we want sRGB conversion.
-			if (rsx::method_registers.framebuffer_srgb_enabled())
+			if (REGS(m_ctx)->framebuffer_srgb_enabled())
 			{
 				rop_control.enable_framebuffer_sRGB();
 			}
@@ -723,12 +723,12 @@ namespace rsx
 		// wpos.x = (frag_coord / resolution_scale)
 		// wpos.zw = frag_coord.zw
 
-		const auto window_origin = rsx::method_registers.shader_window_origin();
-		const u32 window_height = rsx::method_registers.shader_window_height();
+		const auto window_origin = REGS(m_ctx)->shader_window_origin();
+		const u32 window_height = REGS(m_ctx)->shader_window_height();
 		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
-		const f32 alpha_ref = rsx::method_registers.alpha_ref();
+		const f32 alpha_ref = REGS(m_ctx)->alpha_ref();
 
 		u32* dst = static_cast<u32*>(buffer);
 		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
@@ -737,7 +737,7 @@ namespace rsx
 
 	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const
 	{
-		auto& draw_call = rsx::method_registers.current_draw_clause;
+		auto& draw_call = REGS(m_ctx)->current_draw_clause;
 
 		// Only call this for instanced draws!
 		ensure(draw_call.is_trivial_instanced_draw);
