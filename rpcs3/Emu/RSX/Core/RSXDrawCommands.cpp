@@ -109,7 +109,7 @@ namespace rsx
 			{
 				if (state.register_vertex_info[index].size > 0)
 				{
-					//Reads from register
+					// Reads from register
 					result.referenced_registers.push_back(index);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
 					continue;
@@ -126,13 +126,13 @@ namespace rsx
 				{
 					if (block->single_vertex)
 					{
-						//Single vertex definition, continue
+						// Single vertex definition, continue
 						continue;
 					}
 
 					if (block->attribute_stride != info.stride())
 					{
-						//Stride does not match, continue
+						// Stride does not match, continue
 						continue;
 					}
 
@@ -141,7 +141,7 @@ namespace rsx
 						const u32 diff = base_address - block->base_offset;
 						if (diff > info.stride())
 						{
-							//Not interleaved, continue
+							// Not interleaved, continue
 							continue;
 						}
 					}
@@ -150,11 +150,11 @@ namespace rsx
 						const u32 diff = block->base_offset - base_address;
 						if (diff > info.stride())
 						{
-							//Not interleaved, continue
+							// Not interleaved, continue
 							continue;
 						}
 
-						//Matches, and this address is lower than existing
+						// Matches, and this address is lower than existing
 						block->base_offset = base_address;
 					}
 
@@ -186,7 +186,7 @@ namespace rsx
 
 		for (auto& info : result.interleaved_blocks)
 		{
-			//Calculate real data address to be used during upload
+			// Calculate real data address to be used during upload
 			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
 		}
 	}
@@ -301,7 +301,7 @@ namespace rsx
 		u32 volatile_offset = volatile_offset_base;
 		u32 persistent_offset = persistent_offset_base;
 
-		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
+		// NOTE: Order is important! Transient ayout is always push_buffers followed by register data
 		if (REGS(m_ctx)->current_draw_clause.is_immediate_draw)
 		{
 			for (const auto& info : layout.volatile_blocks)
@@ -445,7 +445,7 @@ namespace rsx
 				auto stride = info.stride();
 				attrib0 = stride;
 
-				if (stride > 0) //when stride is 0, input is not an array but a single element
+				if (stride > 0) // when stride is 0, input is not an array but a single element
 				{
 					const u32 frequency = info.frequency();
 					switch (frequency)
@@ -482,7 +482,7 @@ namespace rsx
 					}
 					}
 				}
-			} //end attribute placement check
+			} // end attribute placement check
 
 			// Special compressed 4 components into one 4-byte value. Decoded as one value.
 			if (type == rsx::vertex_base_type::cmp)
@@ -524,14 +524,14 @@ namespace rsx
 				}
 
 				memcpy(transient, draw_call.inline_vertex_array.data(), draw_call.inline_vertex_array.size() * sizeof(u32));
-				//Is it possible to reference data outside of the inlined array?
+				// Is it possible to reference data outside of the inlined array?
 				return;
 			}
 
-			//NOTE: Order is important! Transient layout is always push_buffers followed by register data
+			// NOTE: Order is important! Transient layout is always push_buffers followed by register data
 			if (draw_call.is_immediate_draw)
 			{
-				//NOTE: It is possible for immediate draw to only contain index data, so vertex data can be in persistent memory
+				// NOTE: It is possible for immediate draw to only contain index data, so vertex data can be in persistent memory
 				for (const auto& info : layout.volatile_blocks)
 				{
 					memcpy(transient, m_vertex_push_buffers[info.first].data.data(), info.second);
@@ -563,10 +563,10 @@ namespace rsx
 
 	void draw_command_processor::fill_scale_offset_data(void* buffer, bool flip_y) const
 	{
-		int clip_w = REGS(m_ctx)->surface_clip_width();
-		int clip_h = REGS(m_ctx)->surface_clip_height();
+		const int clip_w = REGS(m_ctx)->surface_clip_width();
+		const int clip_h = REGS(m_ctx)->surface_clip_height();
 
-		float scale_x = REGS(m_ctx)->viewport_scale_x() / (clip_w / 2.f);
+		const float scale_x = REGS(m_ctx)->viewport_scale_x() / (clip_w / 2.f);
 		float offset_x = REGS(m_ctx)->viewport_offset_x() - (clip_w / 2.f);
 		offset_x /= clip_w / 2.f;
 
@@ -576,9 +576,9 @@ namespace rsx
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float scale_z = REGS(m_ctx)->viewport_scale_z();
-		float offset_z = REGS(m_ctx)->viewport_offset_z();
-		float one = 1.f;
+		const float scale_z = REGS(m_ctx)->viewport_scale_z();
+		const float offset_z = REGS(m_ctx)->viewport_offset_z();
+		const float one = 1.f;
 
 		utils::stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
 		utils::stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
