@@ -33,7 +33,7 @@
 #ifdef _WIN32
 #include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
-
+#include <shellapi.h>
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -620,10 +620,25 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
+		if (i > 0) argument_str += " ";
 		argument_str += '\'' + std::string(argv[i]) + '\'';
-		if (i != argc - 1) argument_str += " ";
 	}
+
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
+
+#ifdef _WIN32
+	int n_args = 0;
+	if (LPWSTR* arg_list = CommandLineToArgvW(GetCommandLineW(), &n_args))
+	{
+		std::string utf8_args;
+		for (int i = 0; i < n_args; i++)
+		{
+			if (i > 0) utf8_args += " ";
+			utf8_args += '\'' + wchar_to_utf8(arg_list[i]) + '\'';
+		}
+		sys_log.notice("argv_utf8: %s", utf8_args);
+	}
+#endif
 
 	// Before we proceed, run some sanity checks
 	run_platform_sanity_checks();
