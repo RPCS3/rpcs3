@@ -393,12 +393,10 @@ namespace rsx
 					return;
 				}
 
-				// FIXME: This doesn't belong here
-				constexpr u32 instance_control_mask = RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
-				RSX(ctx)->current_vertex_program.ctrl &= ~instance_control_mask;
-				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw)
+				// Notify the backend if the drawing style changes (instanced vs non-instanced)
+				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw != RSX(ctx)->is_current_vertex_program_instanced())
 				{
-					RSX(ctx)->current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::xform_instancing_state_dirty;
 				}
 
 				RSX(ctx)->end();

@@ -1940,13 +1940,6 @@ namespace rsx
 
 	void thread::prefetch_vertex_program()
 	{
-		// Test if instanced command is coming up
-		current_vertex_program.ctrl = 0;
-		if (rsx::method_registers.current_draw_clause.is_trivial_instanced_draw)
-		{
-			current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
-		}
-
 		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
 		{
 			return;
@@ -1994,6 +1987,17 @@ namespace rsx
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
 	{
+		if (m_graphics_state.test(rsx::pipeline_state::xform_instancing_state_dirty))
+		{
+			current_vertex_program.ctrl = 0;
+			if (rsx::method_registers.current_draw_clause.is_trivial_instanced_draw)
+			{
+				current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+			}
+
+			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
+		}
+
 		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
 		{
 			return;
@@ -3002,7 +3006,7 @@ namespace rsx
 
 	u32 thread::get_load()
 	{
-		//Average load over around 30 frames
+		// Average load over around 30 frames
 		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
 		{
 			const auto timestamp = get_system_time();
