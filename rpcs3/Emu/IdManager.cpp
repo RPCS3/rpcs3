@@ -33,7 +33,7 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 	return s_map;
 }
 
-id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, usz& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
+id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
 {
 	if (dst_id != (base ? 0 : u32{umax}))
 	{
@@ -41,7 +41,7 @@ id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, usz& hi
 		const u32 index = id_manager::get_index(dst_id, base, step, count, invl_range);
 		ensure(index < count);
 
-		highest_index = std::max<usz>(highest_index, index + 1);
+		highest_index = std::max(highest_index, index + 1);
 
 		if (keys[index].type() != umax)
 		{

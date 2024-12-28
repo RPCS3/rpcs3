@@ -286,7 +286,7 @@ namespace id_manager
 		std::array<stx::atomic_ptr<T>, T::id_count> vec_data{};
 		std::array<stx::shared_ptr<T>, T::id_count> private_copy{};
 		std::array<id_key, T::id_count> vec_keys{};
-		usz highest_index = 0;
+		u32 highest_index = 0;
 
 		shared_mutex mutex{}; // TODO: Use this instead of global mutex
 
@@ -330,11 +330,11 @@ namespace id_manager
 				// Simulate construction semantics (idm::last_id() value)
 				g_id = id;
 
-				const usz object_index = get_index(id, info->base, info->step, info->count, info->invl_range);
+				const u32 object_index = get_index(id, info->base, info->step, info->count, info->invl_range);
 				auto& obj = ::at32(vec_data, object_index);
 				ensure(!obj);
 
-				highest_index = std::max<usz>(highest_index, object_index + 1);
+				highest_index = std::max(highest_index, object_index + 1);
 
 				vec_keys[object_index] = id_key(id, static_cast<u32>(static_cast<u64>(type_init_pos >> 64)));
 				info->load(ar)(&obj);
@@ -383,7 +383,7 @@ namespace id_manager
 				reader_lock lock(g_mutex);
 
 				// Save all entries
-				for (usz i = 0; i < highest_index; i++)
+				for (u32 i = 0; i < highest_index; i++)
 				{
 					private_copy[i] = vec_data[i].load();
 				}
@@ -489,7 +489,7 @@ class idm
 	}
 
 	// Prepare new ID (returns nullptr if out of resources)
-	static id_manager::id_key* allocate_id(std::span<id_manager::id_key> vec, usz& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range);
+	static id_manager::id_key* allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range);
 
 	// Get object by internal index if exists (additionally check type if types are not equal)
 	template <typename T, typename Type>
