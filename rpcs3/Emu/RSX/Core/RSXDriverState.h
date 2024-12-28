@@ -38,9 +38,11 @@ namespace rsx
 		rtt_config_valid              = (1 << 23), // Render target configuration is valid
 		rtt_cache_state_dirty         = (1 << 24), // Texture cache state is indeterminate
 
+		xform_instancing_state_dirty  = (1 << 25), // Transform instancing state has changed
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
-		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty | xform_instancing_state_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
 
