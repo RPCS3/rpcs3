@@ -190,6 +190,9 @@
     <Filter Include="Io\Move">
       <UniqueIdentifier>{f8a98f7b-dc23-47c0-8a5f-d0b76eaf0df5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Darwin">
+      <UniqueIdentifier>{f6b701aa-7f4a-4816-b05f-80d24cb70e13}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1805,6 +1808,9 @@
     </None>
     <None Include="..\.ci\optimize-mac.sh">
       <Filter>CI</Filter>
+    </None>
+    <None Include="..\darwin\util\sysinfo_darwin.mm">
+      <Filter>Darwin</Filter>
     </None>
   </ItemGroup>
 </Project>
