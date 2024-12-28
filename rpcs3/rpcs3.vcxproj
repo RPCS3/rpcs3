@@ -2069,6 +2069,7 @@
     <None Include="..\buildfiles\msvc\rpcs3_debug.props" />
     <None Include="..\buildfiles\msvc\rpcs3_default.props" />
     <None Include="..\buildfiles\msvc\rpcs3_release.props" />
+    <None Include="..\darwin\util\sysinfo_darwin.mm" />
     <None Include="..\Utilities\git-version-gen.cmd" />
     <None Include="update_helper.sh" />
   </ItemGroup>
