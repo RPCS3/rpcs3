@@ -2650,6 +2650,15 @@
     <ClInclude Include="Emu\RSX\Host\MM.h">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\fb_helpers.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_contexts.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_gui_cache.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
