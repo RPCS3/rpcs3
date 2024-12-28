@@ -34,6 +34,7 @@ public:
 
 	lv2_socket_native(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	lv2_socket_native(utils::serial& ar, lv2_socket_type type);
+	~lv2_socket_native() noexcept override;
 	void save(utils::serial& ar);
 	s32 create_socket();
 

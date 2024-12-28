@@ -42,7 +42,7 @@ static std::array<serial_ver_t, 27> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            18) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            19) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -393,7 +393,7 @@ namespace stx
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(%u): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;

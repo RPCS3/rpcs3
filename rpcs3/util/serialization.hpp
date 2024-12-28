@@ -108,10 +108,10 @@ public:
 		{
 			if (m_is_writing) return;
 
-			const u32 offset1 = ::offset32(first) + sizeof(first);
+			const u32 offset1 = ::offset32(first) + sizeof(T);
 			const u32 offset2 = ::offset32(second);
 
-			AUDIT(offset2 >= offset1);
+			AUDIT(::offset32(first) <= ::offset32(second));
 
 			if (offset2 > offset1)
 			{
@@ -459,10 +459,16 @@ public:
 			m_file_handler.reset();
 		}
 
-		usz seek_end(usz backwards = 0)
+		usz seek_end()
 		{
-			ensure(data.size() + data_offset >= backwards);
-			pos = data.size() + data_offset - backwards;
+			pos = data.size() + data_offset;
+			return pos;
+		}
+
+		usz trunc(usz count)
+		{
+			data.resize(data.size() - count);
+			seek_end();
 			return pos;
 		}
 

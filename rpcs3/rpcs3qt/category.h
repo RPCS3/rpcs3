@@ -13,6 +13,7 @@ enum Category
 	Home,
 	Media,
 	Data,
+	OS,
 	Unknown_Cat,
 	Others,
 };
@@ -50,5 +51,6 @@ namespace cat
 	const QStringList psp_games = { cat_psp_game, cat_psp_mini, cat_psp_rema };
 	const QStringList media = { cat_app_photo, cat_app_video, cat_bc_video, cat_app_music, cat_app_store, cat_app_tv, cat_web_tv };
 	const QStringList data = { cat_ps3_data, cat_ps2_data, cat_ps3_save, cat_psp_save };
-	const QStringList others = { cat_network, cat_store_fe, cat_ps3_os };
+	const QStringList os = { cat_ps3_os };
+	const QStringList others = { cat_network, cat_store_fe };
 }

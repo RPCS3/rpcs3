@@ -596,7 +596,7 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 				}
 			}
 
-			func = func.substr(0, index);
+			func = func.substr(0, index) + "()";
 			break;
 		}
 
