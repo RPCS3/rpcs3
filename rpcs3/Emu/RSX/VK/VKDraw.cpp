@@ -244,6 +244,13 @@ void VKGSRender::load_texture_env()
 		return false;
 	};
 
+	auto get_border_color = [&](const rsx::Texture auto& tex)
+	{
+		return  m_device->get_custom_border_color_support().require_border_color_remap
+			? tex.remapped_border_color()
+			: rsx::decode_border_color(tex.border_color());
+	};
+
 	std::lock_guard lock(m_sampler_mutex);
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -304,10 +311,10 @@ void VKGSRender::load_texture_env()
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
 
-				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
-				// It is a direct texel replacement and must be remapped before attaching to the sampler.
+				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
+				// Check the device properties to determine whether to pre-swizzle the colors or not.
 				const auto border_color = rsx::is_border_clamped_texture(tex)
-					? vk::border_color_t(tex.remapped_border_color())
+					? vk::border_color_t(get_border_color(tex))
 					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				// Check if non-point filtering can even be used on this format
@@ -449,10 +456,10 @@ void VKGSRender::load_texture_env()
 				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
 
-				// NOTE: In vulkan, the border color bypasses the swizzling defined in the image view.
-				// It is a direct texel replacement and must be remapped before attaching to the sampler.
+				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
+				// Check the device properties to determine whether to pre-swizzle the colors or not.
 				const auto border_color = is_border_clamped_texture(tex)
-					? vk::border_color_t(tex.remapped_border_color())
+					? vk::border_color_t(get_border_color(tex))
 					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 				if (vs_sampler_handles[i])
@@ -788,6 +795,16 @@ void VKGSRender::emit_geometry(u32 sub_index)
 				//rsx_log.error("Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
+		}
+
+		// Before starting a query, we need to match RP scope (VK_1_0 rules).
+		// We always want our queries to start outside a renderpass whenever possible.
+		// We ignore this for performance reasons whenever possible of course and only do this for sensitive drivers.
+		if (vk::use_strict_query_scopes() &&
+			vk::is_renderpass_open(*m_current_command_buffer))
+		{
+			vk::end_renderpass(*m_current_command_buffer);
+			emergency_query_cleanup(m_current_command_buffer);
 		}
 
 		// Begin query

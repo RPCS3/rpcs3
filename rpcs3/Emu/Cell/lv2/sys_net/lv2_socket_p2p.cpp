@@ -72,7 +72,7 @@ void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vect
 	}
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.fatal("[P2P] accept() called on a P2P socket");
 	return {};
@@ -330,9 +330,14 @@ void lv2_socket_p2p::close()
 		return;
 	}
 
-	auto& nc = g_fxo->get<p2p_context>();
+	if (g_fxo->is_init<p2p_context>())
 	{
+		auto& nc = g_fxo->get<p2p_context>();
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
+
+		if (!nc.list_p2p_ports.contains(port))
+			return;
+
 		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
 		{
 			std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);

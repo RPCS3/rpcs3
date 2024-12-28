@@ -22,9 +22,9 @@ LOG_CHANNEL(sys_ppu_thread);
 // Simple structure to cleanup previous thread, because can't remove its own thread
 struct ppu_thread_cleaner
 {
-	std::shared_ptr<void> old;
+	shared_ptr<named_thread<ppu_thread>> old;
 
-	std::shared_ptr<void> clean(std::shared_ptr<void> ptr)
+	shared_ptr<named_thread<ppu_thread>> clean(shared_ptr<named_thread<ppu_thread>> ptr)
 	{
 		return std::exchange(old, std::move(ptr));
 	}
@@ -86,7 +86,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	ppu_join_status old_status;
 
 	// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
-	std::shared_ptr<void> old_ppu;
+	shared_ptr<named_thread<ppu_thread>> old_ppu;
 	{
 		lv2_obj::notify_all_t notify;
 		lv2_obj::prepare_for_sleep(ppu);
@@ -115,7 +115,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		if (old_status != ppu_join_status::joinable)
 		{
 			// Remove self ID from IDM, move owning ptr
-			old_ppu = g_fxo->get<ppu_thread_cleaner>().clean(std::move(idm::find_unlocked<named_thread<ppu_thread>>(ppu.id)->second));
+			old_ppu = g_fxo->get<ppu_thread_cleaner>().clean(idm::withdraw<named_thread<ppu_thread>>(ppu.id, 0, std::false_type{}));
 		}
 
 		// Get writers mask (wait for all current writers to quit)
@@ -147,7 +147,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	if (old_ppu)
 	{
 		// It is detached from IDM now so join must be done explicitly now
-		*static_cast<named_thread<ppu_thread>*>(old_ppu.get()) = thread_state::finished;
+		*old_ppu = thread_state::finished;
 	}
 
 	// Need to wait until the current writers finish
@@ -435,7 +435,7 @@ error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 		return CELL_ENOSYS;
 	}
 
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id);
+	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [](named_thread<ppu_thread>&) {});
 
 	if (!thread)
 	{
@@ -529,7 +529,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		p.arg0 = arg;
 		p.arg1 = unk;
 
-		return std::make_shared<named_thread<ppu_thread>>(p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
+		return stx::make_shared<named_thread<ppu_thread>>(p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
 	});
 
 	if (!tid)
@@ -539,7 +539,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return CELL_EAGAIN;
 	}
 
-	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
+	sys_ppu_thread.warning("_sys_ppu_thread_create(): Thread \"%s\" created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
 
 	ppu.check_state();
 	*thread_id = tid;
@@ -594,7 +594,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 
 	sys_ppu_thread.warning("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
+	const auto thread = idm::get_unlocked<named_thread<ppu_thread>>(thread_id);
 
 	if (!thread)
 	{
@@ -618,7 +618,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 	auto _name = make_single<std::string>(std::move(out_str));
 
 	// thread_ctrl name is not changed (TODO)
-	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
+	sys_ppu_thread.warning("sys_ppu_thread_rename(): Thread renamed to \"%s\"", *_name);
 	thread->ppu_tname.store(std::move(_name));
 	thread_ctrl::set_name(*thread, thread->thread_name); // TODO: Currently sets debugger thread name only for local thread
 
@@ -631,7 +631,7 @@ error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.warning("sys_ppu_thread_recover_page_fault(thread_id=0x%x)", thread_id);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
+	const auto thread = idm::get_unlocked<named_thread<ppu_thread>>(thread_id);
 
 	if (!thread)
 	{
@@ -647,7 +647,7 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 
 	sys_ppu_thread.todo("sys_ppu_thread_get_page_fault_context(thread_id=0x%x, ctxt=*0x%x)", thread_id, ctxt);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
+	const auto thread = idm::get_unlocked<named_thread<ppu_thread>>(thread_id);
 
 	if (!thread)
 	{

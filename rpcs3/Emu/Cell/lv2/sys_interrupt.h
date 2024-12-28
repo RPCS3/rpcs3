@@ -11,7 +11,7 @@ struct lv2_int_tag final : public lv2_obj
 	static const u32 id_base = 0x0a000000;
 
 	const u32 id;
-	std::shared_ptr<struct lv2_int_serv> handler;
+	shared_ptr<struct lv2_int_serv> handler;
 
 	lv2_int_tag() noexcept;
 	lv2_int_tag(utils::serial& ar) noexcept;
@@ -23,11 +23,11 @@ struct lv2_int_serv final : public lv2_obj
 	static const u32 id_base = 0x0b000000;
 
 	const u32 id;
-	const std::shared_ptr<named_thread<ppu_thread>> thread;
+	const shared_ptr<named_thread<ppu_thread>> thread;
 	const u64 arg1;
 	const u64 arg2;
 
-	lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2) noexcept;
+	lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1, u64 arg2) noexcept;
 	lv2_int_serv(utils::serial& ar) noexcept;
 	void save(utils::serial& ar);
 

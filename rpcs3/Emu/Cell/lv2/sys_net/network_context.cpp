@@ -138,7 +138,7 @@ void p2p_thread::bind_sce_np_port()
 
 void network_thread::operator()()
 {
-	std::vector<std::shared_ptr<lv2_socket>> socklist;
+	std::vector<shared_ptr<lv2_socket>> socklist;
 	socklist.reserve(lv2_socket::id_count);
 
 	{

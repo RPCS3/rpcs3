@@ -64,7 +64,7 @@ void lv2_socket::set_poll_event(bs_t<lv2_socket::poll_t> event)
 	events += event;
 }
 
-void lv2_socket::poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<lv2_socket::poll_t> event, std::function<bool(bs_t<lv2_socket::poll_t>)> poll_cb)
+void lv2_socket::poll_queue(shared_ptr<ppu_thread> ppu, bs_t<lv2_socket::poll_t> event, std::function<bool(bs_t<lv2_socket::poll_t>)> poll_cb)
 {
 	set_poll_event(event);
 	queue.emplace_back(std::move(ppu), poll_cb);
@@ -174,4 +174,18 @@ void lv2_socket::queue_wake(ppu_thread* ppu)
 	default:
 		break;
 	}
+}
+
+lv2_socket& lv2_socket::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::finished)
+	{
+		close();
+	}
+
+	return *this;
+}
+
+lv2_socket::~lv2_socket() noexcept
+{
 }

@@ -7,6 +7,9 @@
 
 namespace rsx
 {
+	void mm_flush_lazy();
+	void mm_flush();
+
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
@@ -24,17 +27,24 @@ namespace rsx
 					return;
 				}
 
-				if constexpr (FlushDMA)
+				if constexpr (FlushDMA || FlushPipe)
 				{
-					// If the backend handled the request, this call will basically be a NOP
-					g_fxo->get<rsx::dma_manager>().sync();
-				}
+					// Release op must be acoompanied by MM flush.
+					// FlushPipe implicitly does a MM flush but FlushDMA does not. Trigger the flush here
+					rsx::mm_flush();
 
-				if constexpr (FlushPipe)
-				{
-					// Manually flush the pipeline.
-					// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.
-					RSX(ctx)->sync();
+					if constexpr (FlushDMA)
+					{
+						// If the backend handled the request, this call will basically be a NOP
+						g_fxo->get<rsx::dma_manager>().sync();
+					}
+
+					if constexpr (FlushPipe)
+					{
+						// Manually flush the pipeline.
+						// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.
+						RSX(ctx)->sync();
+					}
 				}
 
 				if (handled)

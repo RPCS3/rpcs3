@@ -355,6 +355,7 @@
      <addaction name="showCatHomeAct"/>
      <addaction name="showCatAudioVideoAct"/>
      <addaction name="showCatGameDataAct"/>
+     <addaction name="showCatOSAct"/>
      <addaction name="showCatUnknownAct"/>
      <addaction name="showCatOtherAct"/>
     </widget>
@@ -883,18 +884,12 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>HDD Games</string>
    </property>
   </action>
   <action name="showCatDiscGameAct">
    <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -905,18 +900,12 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>PS1 Games</string>
    </property>
   </action>
   <action name="showCatPS2GamesAct">
    <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -927,18 +916,12 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>PSP Games</string>
    </property>
   </action>
   <action name="showCatHomeAct">
    <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -949,9 +932,6 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Audio/Video</string>
    </property>
@@ -960,18 +940,12 @@
    <property name="checkable">
     <bool>true</bool>
    </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
    <property name="text">
     <string>Game Data</string>
    </property>
   </action>
   <action name="showCatUnknownAct">
    <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -1088,9 +1062,6 @@
   </action>
   <action name="showCatOtherAct">
    <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">
@@ -1400,6 +1371,14 @@
   <action name="confPSMoveAct">
    <property name="text">
     <string>PS Move</string>
+   </property>
+  </action>
+  <action name="showCatOSAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Operating System</string>
    </property>
   </action>
  </widget>

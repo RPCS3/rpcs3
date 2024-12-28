@@ -57,17 +57,9 @@ void lv2_socket_native::save(utils::serial& ar)
 	ar(is_socket_connected());
 }
 
-lv2_socket_native::~lv2_socket_native()
+lv2_socket_native::~lv2_socket_native() noexcept
 {
-	std::lock_guard lock(mutex);
-	if (socket)
-	{
-#ifdef _WIN32
-		::closesocket(socket);
-#else
-		::close(socket);
-#endif
-	}
+	lv2_socket_native::close();
 }
 
 s32 lv2_socket_native::create_socket()
@@ -106,7 +98,7 @@ void lv2_socket_native::set_socket(socket_type socket, lv2_socket_family family,
 	set_non_blocking();
 }
 
-std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
+std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -127,7 +119,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 
 	if (native_socket != invalid_socket)
 	{
-		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
+		auto newsock = make_single<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
 
 		// Sockets inherit non blocking behaviour from their parent
@@ -274,7 +266,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 #ifdef _WIN32
 			connecting = true;
 #endif
-			this->poll_queue(nullptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
+			this->poll_queue(null_ptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::write)
 					{
@@ -1114,10 +1106,12 @@ void lv2_socket_native::close()
 		socket = {};
 	}
 
-	auto& dnshook = g_fxo->get<np::dnshook>();
-	dnshook.remove_dns_spy(lv2_id);
+	if (auto dnshook = g_fxo->try_get<np::dnshook>())
+	{
+		dnshook->remove_dns_spy(lv2_id);
+	}
 
-	if (bound_port)
+	if (bound_port && g_fxo->is_init<named_thread<np::np_handler>>())
 	{
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");

@@ -362,8 +362,7 @@ void ps_move_tracker_dialog::update_saturation_threshold(bool update_slider)
 }
 void ps_move_tracker_dialog::update_min_radius(bool update_slider)
 {
-	const f32 min_radius = std::clamp(g_cfg_move.min_radius / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
-	ui->minRadiusGb->setTitle(tr("Min Radius: %0 %").arg(min_radius));
+	ui->minRadiusGb->setTitle(tr("Min Radius: %0 %").arg(g_cfg_move.min_radius));
 
 	if (update_slider)
 	{
@@ -373,8 +372,7 @@ void ps_move_tracker_dialog::update_min_radius(bool update_slider)
 
 void ps_move_tracker_dialog::update_max_radius(bool update_slider)
 {
-	const f32 max_radius = std::clamp(g_cfg_move.max_radius / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
-	ui->maxRadiusGb->setTitle(tr("Max Radius: %0 %").arg(max_radius));
+	ui->maxRadiusGb->setTitle(tr("Max Radius: %0 %").arg(g_cfg_move.max_radius));
 
 	if (update_slider)
 	{
@@ -467,8 +465,8 @@ void ps_move_tracker_dialog::process_camera_frame()
 	}
 
 	m_ps_move_tracker->set_image_data(m_frame_frozen ? m_image_data_frozen.data() : m_image_data.data(), m_image_data.size(), width, height, m_camera_handler->format());
-	m_ps_move_tracker->set_min_radius(static_cast<f32>(g_cfg_move.min_radius.get() / g_cfg_move.min_radius.max));
-	m_ps_move_tracker->set_max_radius(static_cast<f32>(g_cfg_move.max_radius.get() / g_cfg_move.max_radius.max));
+	m_ps_move_tracker->set_min_radius(static_cast<f32>(g_cfg_move.min_radius) / 100.0f);
+	m_ps_move_tracker->set_max_radius(static_cast<f32>(g_cfg_move.max_radius) / 100.0f);
 	m_ps_move_tracker->set_filter_small_contours(m_filter_small_contours);
 	m_ps_move_tracker->set_show_all_contours(m_show_all_contours);
 	m_ps_move_tracker->set_draw_contours(m_draw_contours);

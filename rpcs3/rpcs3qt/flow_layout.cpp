@@ -79,10 +79,14 @@ flow_layout::~flow_layout()
 
 void flow_layout::clear()
 {
+	// We can't use a ranged loop here, since deleting the widget will call takeAt on the layout. So let's also use takeAt.
 	while (QLayoutItem* item = takeAt(0))
 	{
-		delete item->widget();
-		delete item;
+		if (item)
+		{
+			delete item->widget();
+			delete item;
+		}
 	}
 	m_item_list.clear();
 	m_positions.clear();
@@ -185,8 +189,8 @@ int flow_layout::doLayout(const QRect& rect, bool testOnly) const
 	int x = effectiveRect.x();
 	int y = effectiveRect.y();
 	int lineHeight = 0;
-	int rows = 0;
-	int cols = 0;
+	int row_count = 0;
+	int col_count = 0;
 
 	if (m_dynamic_spacing)
 	{
@@ -259,8 +263,8 @@ int flow_layout::doLayout(const QRect& rect, bool testOnly) const
 		pos.row = row;
 		pos.col = col++;
 
-		rows = std::max(rows, pos.row + 1);
-		cols = std::max(cols, pos.col + 1);
+		row_count = std::max(row_count, pos.row + 1);
+		col_count = std::max(col_count, pos.col + 1);
 
 		if (!testOnly)
 			item->setGeometry(QRect(QPoint(x, y), item->sizeHint()));
@@ -269,8 +273,8 @@ int flow_layout::doLayout(const QRect& rect, bool testOnly) const
 		lineHeight = qMax(lineHeight, item->sizeHint().height());
 	}
 
-	m_rows = rows;
-	m_cols = cols;
+	m_rows = row_count;
+	m_cols = col_count;
 
 	return y + lineHeight - rect.y() + bottom;
 }

@@ -52,7 +52,7 @@ namespace rsx
 				std::lock_guard lock(m_list_mutex);
 
 				entry->uid = m_uid_ctr.fetch_add(1);
-				entry->type_index = id_manager::typeinfo::get_index<T>();
+				entry->type_index = stx::typeindex<id_manager::typeinfo, T>();
 
 				if (remove_existing)
 				{
@@ -88,7 +88,7 @@ namespace rsx
 			template <typename T>
 			void remove()
 			{
-				const auto type_id = id_manager::typeinfo::get_index<T>();
+				const auto type_id = stx::typeindex<id_manager::typeinfo, T>();
 				if (m_list_mutex.try_lock())
 				{
 					remove_type(type_id);
@@ -138,7 +138,7 @@ namespace rsx
 			{
 				reader_lock lock(m_list_mutex);
 
-				const auto type_id = id_manager::typeinfo::get_index<T>();
+				const auto type_id = stx::typeindex<id_manager::typeinfo, T>();
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->type_index == type_id)

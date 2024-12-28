@@ -1,3 +1,4 @@
+#include "device.h"
 #include "shared.h"
 #include "util/logs.hpp"
 
@@ -9,9 +10,110 @@ namespace vk
 {
 	extern void print_debug_markers();
 
+	std::string retrieve_device_fault_info()
+	{
+		if (!g_render_device || !g_render_device->get_extended_device_fault_support())
+		{
+			return "Extended fault info is not available. Extension 'VK_EXT_device_fault' is probably not supported by your driver.";
+		}
+
+		ensure(g_render_device->_vkGetDeviceFaultInfoEXT);
+
+		VkDeviceFaultCountsEXT fault_counts
+		{
+			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT
+		};
+
+		std::vector<VkDeviceFaultAddressInfoEXT> address_info;
+		std::vector<VkDeviceFaultVendorInfoEXT> vendor_info;
+		std::vector<u8> vendor_binary_data;
+		std::string fault_description;
+
+#ifdef _MSC_VER
+		__try
+		{
+#endif
+			// Retrieve sizes
+			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
+
+			// Resize arrays and fill
+			address_info.resize(fault_counts.addressInfoCount);
+			vendor_info.resize(fault_counts.vendorInfoCount);
+			vendor_binary_data.resize(fault_counts.vendorBinarySize);
+
+			VkDeviceFaultInfoEXT fault_info
+			{
+				.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
+				.pAddressInfos = address_info.data(),
+				.pVendorInfos = vendor_info.data(),
+				.pVendorBinaryData = vendor_binary_data.data()
+			};
+			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
+
+			fault_description = fault_info.description;
+#ifdef _MSC_VER
+		}
+		__except (EXCEPTION_EXECUTE_HANDLER)
+		{
+			rsx_log.error("Driver crashed retrieving extended crash information. Are you running on an NVIDIA card?");
+			return "Extended fault information is not available. The driver crashed when retrieving the details.";
+		}
+#endif
+
+		std::string fault_message = fmt::format(
+			"Device Fault Information:\n"
+			"Fault Summary:\n"
+			"  %s\n\n",
+			fault_description);
+
+		if (!address_info.empty())
+		{
+			fmt::append(fault_message, "  Address Fault Information:\n", fault_description);
+
+			for (const auto& fault : address_info)
+			{
+				std::string access_type = "access_unknown";
+				switch (fault.addressType)
+				{
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT:
+					access_type = "access_none";
+					break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT:
+					access_type = "access_read"; break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT:
+					access_type = "access_write"; break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT:
+					access_type = "access_execute"; break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT:
+					access_type = "instruction_pointer_unknown"; break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT:
+					access_type = "instruction_pointer_invalid"; break;
+				case VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT:
+					access_type = "instruction_pointer_fault"; break;
+				default:
+					break;
+				}
+
+				fmt::append(fault_message, "  - Fault at address 0x%llx caused by %s\n", fault.reportedAddress, access_type);
+			}
+		}
+
+		if (!vendor_info.empty())
+		{
+			fmt::append(fault_message, "  Vendor Fault Information:\n", fault_description);
+
+			for (const auto& fault : vendor_info)
+			{
+				fmt::append(fault_message, "  - [0x%llx, 0x%llx] %s\n", fault.vendorFaultCode, fault.vendorFaultData, fault.description);
+			}
+		}
+
+		return fault_message;
+	}
+
 	void die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
 	{
-		std::string error_message;
+		std::string error_message, extra_info;
 		int severity = 0; // 0 - die, 1 - warn, 2 - nothing
 
 		switch (error_code)
@@ -42,6 +144,7 @@ namespace vk
 			break;
 		case VK_ERROR_DEVICE_LOST:
 			error_message = "Device lost (Driver crashed with unspecified error or stopped responding and recovered) (VK_ERROR_DEVICE_LOST)";
+			extra_info = retrieve_device_fault_info();
 			break;
 		case VK_ERROR_MEMORY_MAP_FAILED:
 			error_message = "Memory map failed (VK_ERROR_MEMORY_MAP_FAILED)";
@@ -98,6 +201,11 @@ namespace vk
 		default:
 			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc);
 			break;
+		}
+
+		if (!extra_info.empty())
+		{
+			error_message = fmt::format("%s\n---------------- EXTRA INFORMATION --------------------\n%s", error_message, extra_info);
 		}
 
 		switch (severity)

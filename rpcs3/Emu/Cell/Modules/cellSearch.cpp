@@ -94,11 +94,11 @@ struct search_content_t
 	ENABLE_BITWISE_SERIALIZATION;
 };
 
-using content_id_type = std::pair<u64, std::shared_ptr<search_content_t>>;
+using content_id_type = std::pair<u64, shared_ptr<search_content_t>>;
 
 struct content_id_map
 {
-	std::unordered_map<u64, std::shared_ptr<search_content_t>> map;
+	std::unordered_map<u64, shared_ptr<search_content_t>> map;
 
 	shared_mutex mutex;
 
@@ -539,7 +539,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	sysutil_register_cb([=, &content_map = g_fxo->get<content_id_map>(), &search](ppu_thread& ppu) -> s32
 	{
-		auto curr_search = idm::get<search_object_t>(id);
+		auto curr_search = idm::get_unlocked<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // Set again later
@@ -613,7 +613,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+					shared_ptr<search_content_t> curr_find = make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// TODO: Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
@@ -800,7 +800,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 	sysutil_register_cb([=, list_path = std::string(content_info->infoPath.contentPath), &search, &content_map](ppu_thread& ppu) -> s32
 	{
-		auto curr_search = idm::get<search_object_t>(id);
+		auto curr_search = idm::get_unlocked<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // Set again later
@@ -855,7 +855,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+					shared_ptr<search_content_t> curr_find = make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
@@ -1060,7 +1060,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	sysutil_register_cb([=, &content_map = g_fxo->get<content_id_map>(), &search](ppu_thread& ppu) -> s32
 	{
-		auto curr_search = idm::get<search_object_t>(id);
+		auto curr_search = idm::get_unlocked<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // Set again later
@@ -1096,7 +1096,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+					shared_ptr<search_content_t> curr_find = make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
@@ -1372,7 +1372,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		std::memset(outContentId->data + 4, -1, CELL_SEARCH_CONTENT_ID_SIZE - 4);
 	}
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -1518,7 +1518,7 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 		return error;
 	}
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -1568,7 +1568,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 		std::memset(outContentId->data + 4, -1, CELL_SEARCH_CONTENT_ID_SIZE - 4);
 	}
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -1663,7 +1663,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	// Reset values first
 	std::memset(outContext->data, 0, 4);
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -1690,17 +1690,17 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	const auto& first_content = first_content_id.second;
 	ensure(first_content);
 
-	const auto get_random_content = [&searchObject, &first_content]() -> std::shared_ptr<search_content_t>
+	const auto get_random_content = [&searchObject, &first_content]() -> shared_ptr<search_content_t>
 	{
 		if (searchObject->content_ids.size() == 1)
 		{
 			return first_content;
 		}
+
 		std::vector<content_id_type> result;
 		std::sample(searchObject->content_ids.begin(), searchObject->content_ids.end(), std::back_inserter(result), 1, std::mt19937{std::random_device{}()});
 		ensure(result.size() == 1);
-		std::shared_ptr<search_content_t> content = result[0].second;
-		ensure(!!content);
+		shared_ptr<search_content_t> content = ensure(result[0].second);
 		return content;
 	};
 
@@ -1736,7 +1736,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		{
 			// Select random track
 			// TODO: whole playlist
-			std::shared_ptr<search_content_t> content = get_random_content();
+			shared_ptr<search_content_t> content = get_random_content();
 			context.playlist.push_back(content->infoPath.contentPath);
 			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning random track: Type=0x%x, Path=%s", content_hash, +content->type, context.playlist.back());
 		}
@@ -1757,7 +1757,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	{
 		// Select random track
 		// TODO: whole playlist
-		std::shared_ptr<search_content_t> content = get_random_content();
+		shared_ptr<search_content_t> content = get_random_content();
 		context.playlist.push_back(content->infoPath.contentPath);
 		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning random track: Type=0x%x, Path=%s", +content->type, context.playlist.back());
 	}
@@ -2044,7 +2044,7 @@ error_code cellSearchCancel(CellSearchId searchId)
 {
 	cellSearch.todo("cellSearchCancel(searchId=0x%x)", searchId);
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -2075,7 +2075,7 @@ error_code cellSearchEnd(CellSearchId searchId)
 		return error;
 	}
 
-	const auto searchObject = idm::get<search_object_t>(searchId);
+	const auto searchObject = idm::get_unlocked<search_object_t>(searchId);
 
 	if (!searchObject)
 	{
@@ -2120,7 +2120,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 
 	// Search for the content that matches our current selection
 	auto& content_map = g_fxo->get<content_id_map>();
-	std::shared_ptr<search_content_t> found_content;
+	shared_ptr<search_content_t> found_content;
 	u64 hash = 0;
 
 	for (const std::string& track : playlist)
@@ -2187,7 +2187,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 				}
 
 				// TODO: check for actual content inside the directory
-				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+				shared_ptr<search_content_t> curr_find = make_shared<search_content_t>();
 				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSICLIST;
 				curr_find->repeat_mode = repeat_mode;
 				curr_find->context_option = context_option;
@@ -2243,7 +2243,7 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 					continue;
 				}
 
-				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+				shared_ptr<search_content_t> curr_find = make_shared<search_content_t>();
 				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 				curr_find->repeat_mode = repeat_mode;
 				curr_find->context_option = context_option;

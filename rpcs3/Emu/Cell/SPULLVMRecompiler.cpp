@@ -4666,35 +4666,44 @@ public:
 		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 	}
 
+	template <typename T, typename U>
+	static llvm_calli<u8[16], T, U> rotqbybi(T&& a, U&& b)
+	{
+		return {"spu_rotqbybi", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
 	void ROTQBYBI(spu_opcode_t op)
 	{
-		const auto a = get_vr<u8[16]>(op.ra);
-
-		// Data with swapped endian from a load instruction
-		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		register_intrinsic("spu_rotqbybi", [&](llvm::CallInst* ci)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+			const auto a = value<u8[16]>(ci->getOperand(0));
+			const auto b = value<u8[16]>(ci->getOperand(1));
+
+			// Data with swapped endian from a load instruction
+			if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+			{
+				const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+				const auto sh = sc + (splat_scalar(b) >> 3);
+
+				if (m_use_avx512_icl)
+				{
+					return eval(vpermb(as, sh));
+				}
+
+				return eval(pshufb(as, (sh & 0xf)));
+			}
+			const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+			const auto sh = sc - (splat_scalar(b) >> 3);
 
 			if (m_use_avx512_icl)
 			{
-				set_vr(op.rt, vpermb(as, sh));
-				return;
+				return eval(vpermb(a, sh));
 			}
 
-			set_vr(op.rt, pshufb(as, (sh & 0xf)));
-			return;
-		}
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+			return eval(pshufb(a, (sh & 0xf)));
+		});
 
-		if (m_use_avx512_icl)
-		{
-			set_vr(op.rt, vpermb(a, sh));
-			return;
-		}
-
-		set_vr(op.rt, pshufb(a, (sh & 0xf)));
+		set_vr(op.rt, rotqbybi(get_vr<u8[16]>(op.ra), get_vr<u8[16]>(op.rb)));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
@@ -4813,6 +4822,39 @@ public:
 	void ROTQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
+		const auto ax = get_vr<u8[16]>(op.ra);
+		const auto bx = get_vr<u8[16]>(op.rb);
+
+		// Combined bit and bytes shift
+		if (auto [ok, v0, v1] = match_expr(ax, rotqbybi(match<u8[16]>(), match<u8[16]>())); ok && v1.eq(bx))
+		{
+			const auto b32 = get_vr<s32[4]>(op.rb);
+
+			// Is the rotate less than 31 bits?
+			if (auto k = get_known_bits(b32); (k.Zero & 0x60) == 0x60u)
+			{
+				const auto b = splat_scalar(get_vr(op.rb));
+				set_vr(op.rt, fshl(bitcast<u32[4]>(v0), zshuffle(bitcast<u32[4]>(v0), 3, 0, 1, 2), b));
+				return;
+			}
+
+			// Inverted shift count
+			if (auto [ok1, v10, v11] = match_expr(b32, match<s32[4]>() - match<s32[4]>()); ok1)
+			{
+				if (auto [ok2, data] = get_const_vector(v10.value, m_pos); ok2)
+				{
+					if ((data & v128::from32p(0x7f)) == v128{})
+					{
+						if (auto k = get_known_bits(v11); (k.Zero & 0x60) == 0x60u)
+						{
+							set_vr(op.rt, fshr(zshuffle(bitcast<u32[4]>(v0), 1, 2, 3, 0), bitcast<u32[4]>(v0), splat_scalar(bitcast<u32[4]>(v11))));
+							return;
+						}
+					}
+				}
+			}
+		}
+
 		const auto b = splat_scalar(get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshl(a, zshuffle(a, 3, 0, 1, 2), b));
 	}

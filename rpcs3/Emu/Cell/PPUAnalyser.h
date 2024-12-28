@@ -72,8 +72,11 @@ struct ppu_segment
 };
 
 // PPU Module Information
-struct ppu_module
+template <typename Type>
+struct ppu_module : public Type
 {
+	using Type::Type;
+
 	ppu_module() noexcept = default;
 
 	ppu_module(const ppu_module&) = delete;
@@ -177,11 +180,16 @@ struct ppu_module
 	}
 };
 
-struct main_ppu_module : public ppu_module
+template <typename T>
+struct main_ppu_module : public ppu_module<T>
 {
 	u32 elf_entry{};
 	u32 seg0_code_end{};
 	std::vector<u32> applied_patches;
+
+	// Disable inherited savestate ordering
+	void save(utils::serial&) = delete;
+	static constexpr double savestate_init_pos = double{};
 };
 
 // Aux

@@ -120,6 +120,7 @@ namespace gui
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
 
+	const gui_save ib_skip_version = gui_save(main_window, "infoBoxSkipVersion",       "");
 	const gui_save ib_pkg_success  = gui_save(main_window, "infoBoxEnabledInstallPKG", true);
 	const gui_save ib_pup_success  = gui_save(main_window, "infoBoxEnabledInstallPUP", true);
 	const gui_save ib_show_welcome = gui_save(main_window, "infoBoxEnabledWelcome",    true);
@@ -160,6 +161,7 @@ namespace gui
 	const gui_save cat_home        = gui_save(game_list, "categoryVisibleHome",       true);
 	const gui_save cat_audio_video = gui_save(game_list, "categoryVisibleAudioVideo", true);
 	const gui_save cat_game_data   = gui_save(game_list, "categoryVisibleGameData",   false);
+	const gui_save cat_os          = gui_save(game_list, "categoryVisibleOS",         false);
 	const gui_save cat_unknown     = gui_save(game_list, "categoryVisibleUnknown",    true);
 	const gui_save cat_other       = gui_save(game_list, "categoryVisibleOther",      true);
 
@@ -171,6 +173,7 @@ namespace gui
 	const gui_save grid_cat_home        = gui_save(game_list, "gridCategoryVisibleHome",       true);
 	const gui_save grid_cat_audio_video = gui_save(game_list, "gridCategoryVisibleAudioVideo", true);
 	const gui_save grid_cat_game_data   = gui_save(game_list, "gridCategoryVisibleGameData",   false);
+	const gui_save grid_cat_os          = gui_save(game_list, "gridCategoryVisibleOS",         false);
 	const gui_save grid_cat_unknown     = gui_save(game_list, "gridCategoryVisibleUnknown",    true);
 	const gui_save grid_cat_other       = gui_save(game_list, "gridCategoryVisibleOther",      true);
 

@@ -784,26 +784,26 @@ s32 cellCameraIsAttached(s32 dev_num)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return false;
+		return 0;
 	}
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
 	if (!g_camera.init)
 	{
-		return false;
+		return 0;
 	}
 
 	if (!check_dev_num(dev_num))
 	{
-		return false;
+		return 0;
 	}
 
 	vm::var<s32> type;
 
 	if (cellCameraGetType(dev_num, type) != CELL_OK)
 	{
-		return false;
+		return 0;
 	}
 
 	std::lock_guard lock(g_camera.mutex);
@@ -821,12 +821,12 @@ s32 cellCameraIsAttached(s32 dev_num)
 		}
 	}
 
-	return is_attached;
+	return is_attached ? 1 : 0;
 }
 
 s32 cellCameraIsOpen(s32 dev_num)
 {
-	cellCamera.notice("cellCameraIsOpen(dev_num=%d)", dev_num);
+	cellCamera.trace("cellCameraIsOpen(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -852,7 +852,7 @@ s32 cellCameraIsOpen(s32 dev_num)
 
 s32 cellCameraIsStarted(s32 dev_num)
 {
-	cellCamera.notice("cellCameraIsStarted(dev_num=%d)", dev_num);
+	cellCamera.trace("cellCameraIsStarted(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{

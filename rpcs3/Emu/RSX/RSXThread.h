@@ -269,7 +269,7 @@ namespace rsx
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 	public:
-		std::shared_ptr<named_thread<class ppu_thread>> intr_thread;
+		shared_ptr<named_thread<ppu_thread>> intr_thread;
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
@@ -404,7 +404,7 @@ namespace rsx
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// control
-		virtual void renderctl(u32 /*request_code*/, void* /*args*/) {}
+		virtual void renderctl(u32 request_code, void* args);
 
 		// zcull
 		void notify_zcull_info_changed();

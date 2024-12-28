@@ -31,6 +31,8 @@ namespace vk
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
 	bool g_drv_emulate_cond_render = false;
+	bool g_drv_strict_query_scopes = false;
+	bool g_drv_force_reuse_query_pools = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -139,6 +141,9 @@ namespace vk
 			rsx_log.error("Dozen is currently unsupported. How did you even get this to run outside windows?");
 #endif
 			break;
+		case driver_vendor::HONEYKRISP:
+			// Needs more testing
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
@@ -226,6 +231,16 @@ namespace vk
 	bool emulate_conditional_rendering()
 	{
 		return g_drv_emulate_cond_render;
+	}
+
+	bool use_strict_query_scopes()
+	{
+		return g_drv_strict_query_scopes;
+	}
+
+	bool force_reuse_query_pools()
+	{
+		return g_drv_force_reuse_query_pools;
 	}
 
 	void raise_status_interrupt(runtime_state status)

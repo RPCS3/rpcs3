@@ -622,7 +622,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 {
 	const auto ctxt = spu._ptr<SpursKernelContext>(0x100);
-	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
+	const bool isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
 	auto pollStatus = static_cast<u32>(widAndPollStatus);
 	auto wid = static_cast<u32>(widAndPollStatus >> 32);
@@ -674,7 +674,7 @@ void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 bool spursKernelWorkloadExit(spu_thread& spu)
 {
 	const auto ctxt = spu._ptr<SpursKernelContext>(0x100);
-	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
+	const bool isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
 	// Select next workload to run
 	spu.gpr[3].clear();
@@ -701,7 +701,7 @@ bool spursKernelEntry(spu_thread& spu)
 	ctxt->spuNum = spu.gpr[3]._u32[3];
 	ctxt->spurs.set(spu.gpr[4]._u64[1]);
 
-	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
+	const bool isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
 	// Initialise the SPURS context to its initial values
 	ctxt->dmaTagId = CELL_SPURS_KERNEL_DMA_TAG_ID;
@@ -785,8 +785,8 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 			}
 		}
 
-		bool allSpusIdle = nIdlingSpus == spurs->nSpus ? true : false;
-		bool exitIfNoWork = spurs->flags1 & SF1_EXIT_IF_NO_WORK ? true : false;
+		const bool allSpusIdle = nIdlingSpus == spurs->nSpus;
+		const bool exitIfNoWork = spurs->flags1 & SF1_EXIT_IF_NO_WORK ? true : false;
 		shouldExit = allSpusIdle && exitIfNoWork;
 
 		// Check if any workloads can be scheduled
@@ -843,7 +843,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 			}
 		}
 
-		bool spuIdling = spurs->spuIdling & (1 << ctxt->spuNum) ? true : false;
+		const bool spuIdling = spurs->spuIdling & (1 << ctxt->spuNum) ? true : false;
 		if (foundReadyWorkload && shouldExit == false)
 		{
 			spurs->spuIdling &= ~(1 << ctxt->spuNum);

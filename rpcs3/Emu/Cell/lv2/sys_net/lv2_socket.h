@@ -27,6 +27,8 @@ using socket_type = uptr;
 using socket_type = int;
 #endif
 
+enum class thread_state : u32;
+
 class lv2_socket
 {
 public:
@@ -60,16 +62,17 @@ public:
 	lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	lv2_socket(utils::serial&) {}
 	lv2_socket(utils::serial&, lv2_socket_type type);
-	static std::shared_ptr<void> load(utils::serial& ar);
+	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial&, bool save_only_this_class = false);
-	virtual ~lv2_socket() = default;
+	virtual ~lv2_socket() noexcept;
+	lv2_socket& operator=(thread_state s) noexcept;
 
 	std::unique_lock<shared_mutex> lock();
 
 	void set_lv2_id(u32 id);
 	bs_t<poll_t> get_events() const;
 	void set_poll_event(bs_t<poll_t> event);
-	void poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
+	void poll_queue(shared_ptr<ppu_thread> ppu, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
 	u32 clear_queue(ppu_thread*);
 	void handle_events(const pollfd& native_fd, bool unset_connecting = false);
 	void queue_wake(ppu_thread* ppu);
@@ -85,7 +88,7 @@ public:
 #endif
 
 public:
-	virtual std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) = 0;
+	virtual std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) = 0;
 	virtual s32 bind(const sys_net_sockaddr& addr) = 0;
 
 	virtual std::optional<s32> connect(const sys_net_sockaddr& addr) = 0;
@@ -133,7 +136,7 @@ protected:
 	atomic_bs_t<poll_t> events{};
 
 	// Event processing workload (pair of thread id and the processing function)
-	std::vector<std::pair<std::shared_ptr<ppu_thread>, std::function<bool(bs_t<poll_t>)>>> queue;
+	std::vector<std::pair<shared_ptr<ppu_thread>, std::function<bool(bs_t<poll_t>)>>> queue;
 
 	// Socket options value keepers
 	// Non-blocking IO option

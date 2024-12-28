@@ -35,10 +35,10 @@ lv2_event_queue::lv2_event_queue(utils::serial& ar) noexcept
 	ar(events);
 }
 
-std::shared_ptr<void> lv2_event_queue::load(utils::serial& ar)
+std::function<void(void*)> lv2_event_queue::load(utils::serial& ar)
 {
-	auto queue = std::make_shared<lv2_event_queue>(ar);
-	return lv2_obj::load(queue->key, queue);
+	auto queue = make_shared<lv2_event_queue>(ar);
+	return [ptr = lv2_obj::load(queue->key, queue)](void* storage) { *static_cast<shared_ptr<lv2_obj>*>(storage) = ptr; };
 }
 
 void lv2_event_queue::save(utils::serial& ar)
@@ -57,13 +57,13 @@ void lv2_event_queue::save_ptr(utils::serial& ar, lv2_event_queue* q)
 	ar(q->id);
 }
 
-std::shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue, std::string_view msg)
+shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, shared_ptr<lv2_event_queue>& queue, std::string_view msg)
 {
 	const u32 id = ar.pop<u32>();
 
 	if (!id)
 	{
-		return nullptr;
+		return {};
 	}
 
 	if (auto q = idm::get_unlocked<lv2_obj, lv2_event_queue>(id))
@@ -89,7 +89,7 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, st
 	});
 
 	// Null until resolved
-	return nullptr;
+	return {};
 }
 
 lv2_event_port::lv2_event_port(utils::serial& ar)
@@ -106,7 +106,7 @@ void lv2_event_port::save(utils::serial& ar)
 	lv2_event_queue::save_ptr(ar, queue.get());
 }
 
-std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
+shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
 	{
@@ -238,7 +238,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 
 	if (const auto error = lv2_obj::create<lv2_event_queue>(pshared, ipc_key, flags, [&]()
 	{
-		return std::make_shared<lv2_event_queue>(protocol, type, size, name, ipc_key);
+		return make_shared<lv2_event_queue>(protocol, type, size, name, ipc_key);
 	}))
 	{
 		return error;
@@ -394,7 +394,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
+	const auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
 
 	if (!queue)
 	{

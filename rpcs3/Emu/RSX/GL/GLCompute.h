@@ -381,7 +381,7 @@ namespace gl
 	template<class T>
 	T* get_compute_task()
 	{
-		u32 index = id_manager::typeinfo::get_index<T>();
+		u32 index = stx::typeindex<id_manager::typeinfo, T>();
 		auto &e = g_compute_tasks[index];
 
 		if (!e)

@@ -42,7 +42,7 @@ static std::array<serial_ver_t, 27> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            17) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            19) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -72,7 +72,7 @@ SERIALIZATION_VER(sceNp, 11)
 SERIALIZATION_VER(cellVdec, 12,                                 1)
 SERIALIZATION_VER(cellAudio, 13,                                1)
 SERIALIZATION_VER(cellCamera, 14,                               1)
-SERIALIZATION_VER(cellGem, 15,                                  1)
+SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
 SERIALIZATION_VER(cellMusic, 17,                                1)
 SERIALIZATION_VER(cellVoice, 18,                                1)
@@ -372,6 +372,7 @@ namespace stx
 		{
 			// Reset, probably a new utils::serial object
 			s_tls_call_count = 1;
+			s_tls_object_name = "none"sv;
 		}
 
 		s_tls_current_pos = ar.pos;
@@ -392,7 +393,7 @@ namespace stx
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(%u): %s, object: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;
