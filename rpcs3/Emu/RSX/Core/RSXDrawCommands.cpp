@@ -4,6 +4,7 @@
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/buffer_stream.hpp"
 #include "Emu/RSX/Common/io_buffer.h"
+#include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -734,8 +735,6 @@ namespace rsx
 		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
-#pragma optimize("", off)
-
 	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const
 	{
 		auto& draw_call = rsx::method_registers.current_draw_clause;
@@ -744,16 +743,18 @@ namespace rsx
 		ensure(draw_call.is_trivial_instanced_draw);
 
 		// Temp indirection table. Used to track "running" updates.
-		std::vector<u32> instancing_indirection_table;
+		rsx::simple_array<u32> instancing_indirection_table;
 		// indirection table size
+		const auto reloc_table = prog.has_indexed_constants ? decltype(prog.constant_ids){} : prog.constant_ids;
 		const auto redirection_table_size = prog.has_indexed_constants ? 468u : ::size32(prog.constant_ids);
+		instancing_indirection_table.resize(redirection_table_size);
 
 		// Temp constants data
-		std::vector<u128> constants_data;
+		rsx::simple_array<u128> constants_data;
 		constants_data.reserve(redirection_table_size * draw_call.pass_count());
 
 		// Allocate indirection buffer on GPU stream
-		indirection_table_buf.reserve(redirection_table_size * draw_call.pass_count() * sizeof(u32));
+		indirection_table_buf.reserve(instancing_indirection_table.size_bytes() * draw_call.pass_count());
 		auto indirection_out = indirection_table_buf.data<u32>();
 
 		rsx::instanced_draw_config_t instance_config;
@@ -763,11 +764,10 @@ namespace rsx
 		draw_call.begin();
 
 		// Write initial draw data.
-		instancing_indirection_table.resize(redirection_table_size);
 		std::iota(instancing_indirection_table.begin(), instancing_indirection_table.end(), 0);
 
 		constants_data.resize(redirection_table_size);
-		fill_vertex_program_constants_data(constants_data.data(), prog.constant_ids);
+		fill_vertex_program_constants_data(constants_data.data(), reloc_table);
 
 		// Next draw. We're guaranteed more than one draw call by the caller.
 		draw_call.next();
@@ -775,7 +775,7 @@ namespace rsx
 		do
 		{
 			// Write previous state
-			std::memcpy(indirection_out + indirection_table_offset, instancing_indirection_table.data(), instancing_indirection_table.size() * sizeof(u32));
+			std::memcpy(indirection_out + indirection_table_offset, instancing_indirection_table.data(), instancing_indirection_table.size_bytes());
 			indirection_table_offset += redirection_table_size;
 
 			// Decode next draw state
@@ -787,18 +787,11 @@ namespace rsx
 				continue;
 			}
 
-			const bool do_full_reload = prog.has_indexed_constants;
-			if (do_full_reload)
-			{
-				const u32 redirection_loc = ::size32(constants_data);
-				constants_data.resize(redirection_loc + redirection_table_size);
-				fill_vertex_program_constants_data(constants_data.data() + redirection_loc, prog.constant_ids);
+			const int translated_offset = prog.has_indexed_constants
+				? instance_config.patch_load_offset
+				: prog.TranslateConstantsRange(instance_config.patch_load_offset, instance_config.patch_load_count);
 
-				std::iota(instancing_indirection_table.begin(), instancing_indirection_table.end(), redirection_loc);
-				continue;
-			}
-
-			if (auto xform_id = prog.TranslateConstantsRange(instance_config.patch_load_offset, instance_config.patch_load_count); xform_id >= 0)
+			if (translated_offset >= 0)
 			{
 				// Trivially patchable in bulk
 				const u32 redirection_loc = ::size32(constants_data);
@@ -806,7 +799,7 @@ namespace rsx
 				std::memcpy(constants_data.data() + redirection_loc, &REGS(m_ctx)->transform_constants[instance_config.patch_load_offset], instance_config.patch_load_count * sizeof(u128));
 
 				// Update indirection table
-				for (auto i = xform_id, count = 0;
+				for (auto i = translated_offset, count = 0;
 					 static_cast<u32>(count) < instance_config.patch_load_count;
 					 ++i, ++count)
 				{
@@ -816,7 +809,10 @@ namespace rsx
 				continue;
 			}
 
-			// Sparse. Update records individually instead of bulk
+			ensure(!prog.has_indexed_constants);
+
+			// Sparse update. Update records individually instead of bulk
+			// FIXME: Range batching optimization
 			const auto load_end = instance_config.patch_load_offset + instance_config.patch_load_count;
 			for (u32 i = 0; i < redirection_table_size; ++i)
 			{
@@ -836,8 +832,12 @@ namespace rsx
 
 		} while (draw_call.next());
 
+		// Tail
+		ensure(indirection_table_offset < (instancing_indirection_table.size() * draw_call.pass_count()));
+		std::memcpy(indirection_out + indirection_table_offset, instancing_indirection_table.data(), instancing_indirection_table.size_bytes());
+
 		// Now write the constants to the GPU buffer
-		constants_data_array_buffer.reserve(constants_data.size());
-		std::memcpy(constants_data_array_buffer.data(), constants_data.data(), constants_data.size() * sizeof(u128));
+		constants_data_array_buffer.reserve(constants_data.size_bytes());
+		std::memcpy(constants_data_array_buffer.data(), constants_data.data(), constants_data.size_bytes());
 	}
 }
