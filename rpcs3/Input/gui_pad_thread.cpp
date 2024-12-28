@@ -27,6 +27,10 @@
 #elif defined(__APPLE__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic ignored "-Wmissing-declarations"
+#pragma GCC diagnostic ignored "-Wnullability-completeness"
+#pragma GCC diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
 #include <ApplicationServices/ApplicationServices.h>
 #include <Carbon/Carbon.h>
 #pragma GCC diagnostic pop
