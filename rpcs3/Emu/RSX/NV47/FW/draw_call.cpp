@@ -120,8 +120,14 @@ namespace rsx
 			if (barrier.type != rsx::transform_constant_load_modifier_barrier &&
 				barrier.type != rsx::transform_constant_update_barrier)
 			{
-				// Only transform constant instancing is supported at the moment.
-				// FIXME: Dangling command barriers should be ignored.
+				ensure(barrier.draw_id < ::size32(draw_command_ranges));
+				if (draw_command_ranges[barrier.draw_id].count == 0)
+				{
+					// Dangling command barriers are ignored. We're also at the end of the command, so abort.
+					break;
+				}
+
+				// Fail. Only transform constant instancing is supported at the moment.
 				return false;
 			}
 		}
