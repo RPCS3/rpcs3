@@ -1428,6 +1428,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings_type::EnableHostRoot);
 	SubscribeTooltip(ui->enableHostRoot, tooltips.settings.enable_host_root);
 
+	m_emu_settings->EnhanceCheckBox(ui->emptyHdd0Tmp, emu_settings_type::EmptyHdd0Tmp);
+	SubscribeTooltip(ui->emptyHdd0Tmp, tooltips.settings.empty_hdd0_tmp);
+
 	m_emu_settings->EnhanceCheckBox(ui->enableCacheClearing, emu_settings_type::LimitCacheSize);
 	SubscribeTooltip(ui->gb_DiskCacheClearing, tooltips.settings.limit_cache_size);
 	if (game)
