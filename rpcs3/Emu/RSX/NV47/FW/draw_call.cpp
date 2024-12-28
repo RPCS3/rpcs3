@@ -121,6 +121,7 @@ namespace rsx
 				barrier.type != rsx::transform_constant_update_barrier)
 			{
 				// Only transform constant instancing is supported at the moment.
+				// FIXME: Dangling command barriers should be ignored.
 				return false;
 			}
 		}
