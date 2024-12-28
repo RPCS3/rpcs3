@@ -289,8 +289,8 @@ struct matching_ctx
 {
 	matching_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpMatchingHandler> handler, vm::ptr<void> arg);
 
-	void queue_callback(u32 req_id, s32 event, s32 error_code);
-	void queue_gui_callback(s32 event, s32 error_code);
+	void queue_callback(u32 req_id, s32 event, s32 error_code) const;
+	void queue_gui_callback(s32 event, s32 error_code) const;
 
 	static const u32 id_base = 0x9001;
 	static const u32 id_step = 1;

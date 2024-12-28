@@ -238,7 +238,7 @@ matching_ctx::matching_ctx(vm::ptr<SceNpId> npId, vm::ptr<SceNpMatchingHandler> 
 	this->handler = handler;
 	this->arg = arg;
 }
-void matching_ctx::queue_callback(u32 req_id, s32 event, s32 error_code)
+void matching_ctx::queue_callback(u32 req_id, s32 event, s32 error_code) const
 {
 	if (handler)
 	{
@@ -249,7 +249,7 @@ void matching_ctx::queue_callback(u32 req_id, s32 event, s32 error_code)
 			});
 	}
 }
-void matching_ctx::queue_gui_callback(s32 event, s32 error_code)
+void matching_ctx::queue_gui_callback(s32 event, s32 error_code) const
 {
 	if (gui_handler)
 	{

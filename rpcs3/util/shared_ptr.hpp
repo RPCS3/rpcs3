@@ -895,6 +895,8 @@ namespace stx
 			return value;
 		}
 
+		[[nodiscard]] shared_type exchange(struct null_ptr_t) noexcept;
+
 		// Ineffective
 		[[nodiscard]] bool compare_exchange(shared_type& cmp_and_old, shared_type exch)
 		{
@@ -1141,6 +1143,18 @@ namespace stx
 		}
 
 	} null_ptr;
+
+	template <typename T>
+	atomic_ptr<T>::shared_type atomic_ptr<T>::exchange(null_ptr_t) noexcept
+	{
+		atomic_ptr old;
+		old.m_val.raw() = m_val.exchange(0);
+		old.m_val.raw() += 1;
+
+		shared_type result;
+		result.m_ptr = std::launder(ptr_to(old.m_val));
+		return result;
+	}
 }
 
 template <typename T>
