@@ -6,6 +6,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
@@ -67,11 +68,6 @@ struct ppu_non_sleeping_count_t
 	bool has_running; // no actual count for optimization sake
 	u32 onproc_count;
 };
-
-namespace vm
-{
-	extern u8 g_reservations[65536 / 128 * 64];
-}
 
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
@@ -469,8 +465,12 @@ public:
 
 			if (cpu != &g_to_notify)
 			{
-				if (cpu >= vm::g_reservations && cpu <= vm::g_reservations + (std::size(vm::g_reservations) - 1))
+				const auto res_start = vm::reservation_notifier(0).second;
+				const auto res_end = vm::reservation_notifier(umax).second;
+
+				if (cpu >= res_start && cpu <= res_end)
 				{
+					// Notify SPU reservation
 					atomic_wait_engine::notify_all(cpu);
 				}
 				else

@@ -2659,6 +2659,15 @@
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\fb_helpers.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_contexts.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_gui_cache.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
