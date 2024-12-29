@@ -271,10 +271,10 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		if (llvm::isa<llvm::ConstantExpr>(c))
 		{
 			// Sorry, if we cannot evaluate it we cannot use it
-			fmt::throw_exception("[0x%x, %u] Constant Expression!\n%s", _pos, _line, result);
+			fmt::throw_exception("[0x%x, %u] Constant Expression \n%s", _pos, _line, result);
 		}
 
-		fmt::throw_exception("[0x%x, %u] Unexpected constant type!\n%s", _pos, _line, result);
+		fmt::throw_exception("[0x%x, %u] Unexpected constant type.\n%s", _pos, _line, result);
 	}
 
 	const auto sct = t->getScalarType();
@@ -412,7 +412,7 @@ void cpu_translator::replace_intrinsics(llvm::Function& f)
 
 			if (names.contains(func_name))
 			{
-				fmt::throw_exception("cpu_translator::replace_intrinsics(): Recursion detected at function '%s'!", func_name);
+				fmt::throw_exception("cpu_translator::replace_intrinsics(): Recursion detected at thhe function '%s'.", func_name);
 			}
 
 			names.emplace(std::string(func_name));
