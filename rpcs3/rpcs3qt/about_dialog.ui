@@ -341,33 +341,33 @@
      <item>
       <widget class="QPushButton" name="website">
        <property name="text">
-        <string>Website</string>
+        <string>Visit our website</string>
        </property>
       </widget>
      </item>
      <item>
       <widget class="QPushButton" name="forum">
        <property name="text">
-        <string>Forum</string>
+        <string>got questions?=</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="discord">
+      <widget class="QPushButton" name="Join our discord!">
        <property name="text">
         <string>Discord</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="wiki">
+      <widget class="QPushButton" name="find out more with our wiki">
        <property name="text">
         <string>Wiki</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="patreon">
+      <widget class="QPushButton" name="fund this project on patreon.">
        <property name="text">
         <string>Patreon</string>
        </property>
