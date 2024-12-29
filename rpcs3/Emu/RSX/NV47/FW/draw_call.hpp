@@ -7,14 +7,6 @@
 
 namespace rsx
 {
-	struct instanced_draw_config_t
-	{
-		bool transform_constants_data_changed;
-
-		u32 patch_load_offset;
-		u32 patch_load_count;
-	};
-
 	class draw_clause
 	{
 		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
@@ -59,8 +51,6 @@ namespace rsx
 			}
 		}
 
-		bool check_trivially_instanced() const;
-
 	public:
 		primitive_type primitive{};
 		draw_command command{};
@@ -69,7 +59,6 @@ namespace rsx
 		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
 		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
 		bool is_rendering{};               // Set while we're actually pushing the draw calls to host GPU
-		bool is_trivial_instanced_draw{};  // Set if the draw call can be executed on the host GPU as a single instanced draw.
 
 		simple_array<u32> inline_vertex_array{};
 
@@ -84,8 +73,8 @@ namespace rsx
 		{
 			// End draw call append mode
 			current_range_index = ~0u;
-			// Check if we can instance on host
-			is_trivial_instanced_draw = check_trivially_instanced();
+
+			// TODO
 		}
 
 		/**
@@ -280,7 +269,7 @@ namespace rsx
 		/**
 		 * Executes commands reqiured to make the current draw state valid
 		 */
-		u32 execute_pipeline_dependencies(struct context* ctx, instanced_draw_config_t* instance_config = nullptr) const;
+		u32 execute_pipeline_dependencies(struct context* ctx) const;
 
 		const draw_range_t& get_range() const
 		{
