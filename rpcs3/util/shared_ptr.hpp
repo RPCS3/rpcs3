@@ -605,10 +605,10 @@ namespace stx
 
 		template <typename T1>
 		static constexpr bool is_stx_pointer = false
-			|| is_instance_of<std::remove_cv_t<T1>, shared_ptr>::value
-			|| is_instance_of<std::remove_cv_t<T1>, single_ptr>::value
-			|| is_instance_of<std::remove_cv_t<T1>, atomic_ptr>::value;
-			|| std::is_same_v<T1, null_ptr_t>;
+			|| is_instance_of<std::remove_cvref_t<T1>, shared_ptr>::value
+			|| is_instance_of<std::remove_cvref_t<T1>, single_ptr>::value
+			|| is_instance_of<std::remove_cvref_t<T1>, atomic_ptr>::value;
+			|| std::is_same_v<std::remove_cvref_t<T1>, null_ptr_t>;
 
 	public:
 		using element_type = std::remove_extent_t<T>;
