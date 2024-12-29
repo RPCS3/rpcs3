@@ -840,8 +840,8 @@ void GLGSRender::load_program_env()
 		// Vertex state
 		auto mapping = m_vertex_env_buffer->alloc_from_heap(144, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		fill_scale_offset_data(buf, false);
-		fill_user_clip_data(buf + 64);
+		m_draw_processor.fill_scale_offset_data(buf, false);
+		m_draw_processor.fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
 		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
@@ -887,7 +887,7 @@ void GLGSRender::load_program_env()
 		// Fragment state
 		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		fill_fragment_state_buffer(buf, current_fragment_program);
+		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
 
 		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
@@ -988,7 +988,7 @@ void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 			: std::span<const u16>(m_vertex_prog->constant_ids);
 
 		buffer.reserve(transform_constants_size);
-		fill_vertex_program_constants_data(buffer.data(), constant_ids);
+		m_draw_processor.fill_vertex_program_constants_data(buffer.data(), constant_ids);
 	}
 }
 
@@ -1007,7 +1007,14 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	m_draw_processor.fill_vertex_layout_state(
+		m_vertex_layout,
+		current_vp_metadata,
+		upload_info.first_vertex,
+		upload_info.allocated_vertex_count,
+		reinterpret_cast<s32*>(buf),
+		upload_info.persistent_mapping_offset,
+		upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(GL_VERTEX_LAYOUT_BIND_SLOT, mapping.second, 128 + 16);
 

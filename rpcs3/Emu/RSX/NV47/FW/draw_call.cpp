@@ -89,6 +89,52 @@ namespace rsx
 		}
 	}
 
+	bool draw_clause::check_trivially_instanced() const
+	{
+		if (pass_count() <= 1)
+		{
+			// Cannot instance one draw call or less
+			return false;
+		}
+
+		// For instancing all draw calls must be identical
+		const auto& ref = draw_command_ranges.front();
+		for (const auto& range : draw_command_ranges)
+		{
+			if (range.first != ref.first || range.count != ref.count)
+			{
+				return false;
+			}
+		}
+
+		if (draw_command_barriers.empty())
+		{
+			// Raise alarm here for investigation, we may be missing a corner case.
+			rsx_log.error("Instanced draw detected, but no command barriers found!");
+			return false;
+		}
+
+		// Barriers must exist, but can only involve updating transform constants (for now)
+		for (const auto& barrier : draw_command_barriers)
+		{
+			if (barrier.type != rsx::transform_constant_load_modifier_barrier &&
+				barrier.type != rsx::transform_constant_update_barrier)
+			{
+				ensure(barrier.draw_id < ::size32(draw_command_ranges));
+				if (draw_command_ranges[barrier.draw_id].count == 0)
+				{
+					// Dangling command barriers are ignored. We're also at the end of the command, so abort.
+					break;
+				}
+
+				// Fail. Only transform constant instancing is supported at the moment.
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void draw_clause::reset(primitive_type type)
 	{
 		current_range_index = ~0u;
@@ -97,6 +143,7 @@ namespace rsx
 		command = draw_command::none;
 		primitive = type;
 		primitive_barrier_enable = false;
+		is_trivial_instanced_draw = false;
 
 		draw_command_ranges.clear();
 		draw_command_barriers.clear();
@@ -105,7 +152,7 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
-	u32 draw_clause::execute_pipeline_dependencies(context* ctx) const
+	u32 draw_clause::execute_pipeline_dependencies(context* ctx, instanced_draw_config_t* instance_config) const
 	{
 		u32 result = 0u;
 		for (;
@@ -151,7 +198,20 @@ namespace rsx
 				// Update transform constants
 				auto ptr = RSX(ctx)->fifo_ctrl->translate_address(barrier.arg0);
 				auto buffer = std::span<const u32>(static_cast<const u32*>(vm::base(ptr)), barrier.arg1);
-				nv4097::set_transform_constant::batch_decode(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, buffer);
+				auto notify = [&](rsx::context*, u32 load, u32 count)
+				{
+					if (!instance_config)
+					{
+						return false;
+					}
+
+					instance_config->transform_constants_data_changed = true;
+					instance_config->patch_load_offset = load;
+					instance_config->patch_load_count = count;
+					return true;
+				};
+
+				nv4097::set_transform_constant::batch_decode(ctx, NV4097_SET_TRANSFORM_CONSTANT + barrier.index, buffer, notify);
 				result |= transform_constants_changed;
 				break;
 			}

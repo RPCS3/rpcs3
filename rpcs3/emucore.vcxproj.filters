@@ -1315,6 +1315,9 @@
     <ClCompile Include="Emu\RSX\Host\MM.cpp">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2658,6 +2661,12 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\np_gui_cache.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDrawCommands.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDriverState.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

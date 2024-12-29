@@ -149,6 +149,7 @@ private:
 	vk::data_heap m_index_buffer_ring_info;            // Index data
 	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
 	vk::data_heap m_raster_env_ring_info;              // Raster control such as polygon and line stipple
+	vk::data_heap m_instancing_buffer_ring_info;       // Instanced rendering data (constants indirection table + instanced constants)
 
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
@@ -160,6 +161,8 @@ private:
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
 	VkDescriptorBufferInfo m_raster_env_buffer_info {};
+	VkDescriptorBufferInfo m_instancing_indirection_buffer_info {};
+	VkDescriptorBufferInfo m_instancing_constants_array_buffer_info{};
 
 	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
 	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};

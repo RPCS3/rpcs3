@@ -55,4 +55,23 @@ vec4 apply_zclip_xform(
 }
 #endif
 
+#if defined(_ENABLE_INSTANCED_CONSTANTS)
+// Workaround for GL vs VK builtin variable naming
+#ifdef VULKAN
+#define _gl_InstanceID gl_InstanceIndex
+#else
+#define _gl_InstanceID gl_InstanceID
+#endif
+
+vec4 _fetch_constant(const in int base_offset)
+{
+	// Get virtual draw/instance id. Normally will be 1:1 based on instance index
+	const int indirection_offset = (_gl_InstanceID * CONSTANTS_ARRAY_LENGTH) + base_offset;
+	const int corrected_offset = constants_addressing_lookup[indirection_offset];
+	return instanced_constants_array[corrected_offset];
+}
+#else
+#define _fetch_constant(x) vc[x]
+#endif
+
 )"

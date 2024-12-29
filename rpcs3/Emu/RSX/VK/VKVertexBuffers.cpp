@@ -217,7 +217,7 @@ namespace
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
-	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
+	auto result = std::visit(visitor, m_draw_processor.get_draw_command(rsx::method_registers));
 
 	const u32 vertex_count = (result.max_index - result.min_index) + 1;
 	u32 vertex_base = result.min_index;
@@ -294,7 +294,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		const usz volatile_offset_in_block = volatile_offset - persistent_offset;
 
 		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
-		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
+		m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
 		m_attrib_ring_info.unmap();
 	}
 	else
@@ -302,14 +302,14 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (required.first > 0 && persistent_offset != umax)
 		{
 			void *persistent_mapping = m_attrib_ring_info.map(persistent_offset, required.first);
-			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping, nullptr);
+			m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping, nullptr);
 			m_attrib_ring_info.unmap();
 		}
 
 		if (required.second > 0)
 		{
 			void *volatile_mapping = m_attrib_ring_info.map(volatile_offset, required.second);
-			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
+			m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
 			m_attrib_ring_info.unmap();
 		}
 	}
