@@ -76,6 +76,8 @@ namespace stx
 		constexpr shared_data() noexcept = default;
 	};
 
+	struct null_ptr_t;
+
 	// Simplified unique pointer. In some cases, std::unique_ptr is preferred.
 	// This one is shared_ptr counterpart, it has a control block with refs and deleter.
 	// It's trivially convertible to shared_ptr, and back if refs == 1.
@@ -606,6 +608,7 @@ namespace stx
 			|| is_instance_of<std::remove_cv_t<T1>, shared_ptr>::value
 			|| is_instance_of<std::remove_cv_t<T1>, single_ptr>::value
 			|| is_instance_of<std::remove_cv_t<T1>, atomic_ptr>::value;
+			|| std::is_same_v<T1, null_ptr_t>;
 
 	public:
 		using element_type = std::remove_extent_t<T>;
@@ -895,8 +898,6 @@ namespace stx
 			return value;
 		}
 
-		[[nodiscard]] shared_type exchange(struct null_ptr_t) noexcept;
-
 		// Ineffective
 		[[nodiscard]] bool compare_exchange(shared_type& cmp_and_old, shared_type exch)
 		{
@@ -1143,18 +1144,6 @@ namespace stx
 		}
 
 	} null_ptr;
-
-	template <typename T>
-	atomic_ptr<T>::shared_type atomic_ptr<T>::exchange(null_ptr_t) noexcept
-	{
-		atomic_ptr old;
-		old.m_val.raw() = m_val.exchange(0);
-		old.m_val.raw() += 1;
-
-		shared_type result;
-		result.m_ptr = std::launder(ptr_to(old.m_val));
-		return result;
-	}
 }
 
 template <typename T>
