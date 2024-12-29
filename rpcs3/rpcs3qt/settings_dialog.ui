@@ -1900,206 +1900,237 @@
        <attribute name="title">
         <string>System</string>
        </attribute>
-       <layout class="QVBoxLayout" name="systemTab_layout" stretch="0,0,0,0,1,0">
+       <layout class="QVBoxLayout" name="systemTab_layout" stretch="0,1,0">
         <item>
-         <layout class="QHBoxLayout" name="systemTabLayout1" stretch="1,1,1">
+         <layout class="QHBoxLayout" name="systemTabHorizontalLayout" stretch="1,1,1">
           <item>
-           <widget class="QGroupBox" name="gb_sysLang">
-            <property name="title">
-             <string>Console Language</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_sysLang_layout">
-             <item>
-              <widget class="QComboBox" name="sysLangBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="gb_keyboardType">
-            <property name="title">
-             <string>Keyboard Type</string>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_keyboardType">
-             <item>
-              <widget class="QComboBox" name="keyboardType"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="gb_homebrew">
-            <property name="title">
-             <string>Homebrew</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_homebrew_layout">
-             <item>
-              <widget class="QCheckBox" name="enableHostRoot">
-               <property name="text">
-                <string>Enable /host_root/</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="systemTabLayout2" stretch="1,1,1">
-          <item>
-           <widget class="QGroupBox" name="gb_console_region">
-            <property name="title">
-             <string>Console Region</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_console_region_layout">
-             <item>
-              <widget class="QComboBox" name="console_region"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QGroupBox" name="gb_console_time">
-            <property name="title">
-             <string>Console Time</string>
-            </property>
-            <layout class="QVBoxLayout" name="verticalLayout_2">
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout">
+           <layout class="QVBoxLayout" name="systemTabLeftLayout">
+            <item>
+             <widget class="QGroupBox" name="gb_sysLang">
+              <property name="title">
+               <string>Console Language</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_sysLang_layout">
                <item>
-                <widget class="QDateTimeEdit" name="console_time_edit">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                   <horstretch>10</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="layoutDirection">
-                  <enum>Qt::LayoutDirection::LeftToRight</enum>
-                 </property>
-                 <property name="wrapping">
-                  <bool>false</bool>
-                 </property>
-                 <property name="frame">
-                  <bool>true</bool>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignCenter</set>
-                 </property>
-                 <property name="readOnly">
-                  <bool>false</bool>
-                 </property>
-                 <property name="buttonSymbols">
-                  <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
-                 </property>
-                 <property name="accelerated">
-                  <bool>true</bool>
-                 </property>
-                 <property name="showGroupSeparator" stdset="0">
-                  <bool>false</bool>
-                 </property>
-                 <property name="calendarPopup">
-                  <bool>true</bool>
+                <widget class="QComboBox" name="sysLangBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_console_region">
+              <property name="title">
+               <string>Console Region</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_console_region_layout">
+               <item>
+                <widget class="QComboBox" name="console_region"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_enterButtonAssignment">
+              <property name="title">
+               <string>Enter Button Assignment</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_enterButtonAssignment_layout">
+               <item>
+                <widget class="QRadioButton" name="enterButtonAssignCircle">
+                 <property name="text">
+                  <string notr="true">Enter with the Circle button</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QPushButton" name="console_time_reset">
+                <widget class="QRadioButton" name="enterButtonAssignCross">
                  <property name="text">
-                  <string>Set to Now</string>
+                  <string notr="true">Enter with the Cross button</string>
                  </property>
                 </widget>
                </item>
               </layout>
-             </item>
-            </layout>
-           </widget>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_DiskCacheClearing">
+              <property name="title">
+               <string>Disk Cache</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_DiskCacheClearing_layout">
+               <item>
+                <widget class="QCheckBox" name="enableCacheClearing">
+                 <property name="text">
+                  <string>Clear cache automatically</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="maximumCacheSizeLabel">
+                 <property name="text">
+                  <string>Cache size: 3072 MB</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QSlider" name="maximumCacheSize">
+                 <property name="pageStep">
+                  <number>512</number>
+                 </property>
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                 <property name="tickPosition">
+                  <enum>QSlider::TickPosition::TicksBelow</enum>
+                 </property>
+                 <property name="tickInterval">
+                  <number>1024</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="systemTabLeftVerticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
           <item>
-           <widget class="QWidget" name="systemTabSpacerWidget2" native="true"/>
+           <layout class="QVBoxLayout" name="systemTabMiddleLayout">
+            <item>
+             <widget class="QGroupBox" name="gb_keyboardType">
+              <property name="title">
+               <string>Keyboard Type</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_keyboardType">
+               <item>
+                <widget class="QComboBox" name="keyboardType"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_console_time">
+              <property name="title">
+               <string>Console Time</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_2">
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                 <item>
+                  <widget class="QDateTimeEdit" name="console_time_edit">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>10</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="layoutDirection">
+                    <enum>Qt::LayoutDirection::LeftToRight</enum>
+                   </property>
+                   <property name="wrapping">
+                    <bool>false</bool>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                   </property>
+                   <property name="readOnly">
+                    <bool>false</bool>
+                   </property>
+                   <property name="buttonSymbols">
+                    <enum>QAbstractSpinBox::ButtonSymbols::UpDownArrows</enum>
+                   </property>
+                   <property name="accelerated">
+                    <bool>true</bool>
+                   </property>
+                   <property name="showGroupSeparator" stdset="0">
+                    <bool>false</bool>
+                   </property>
+                   <property name="calendarPopup">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="console_time_reset">
+                   <property name="text">
+                    <string>Set to Now</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="systemTabMiddleVerticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="systemTabLayout3" stretch="1,1,1">
           <item>
-           <widget class="QGroupBox" name="gb_enterButtonAssignment">
-            <property name="title">
-             <string>Enter Button Assignment</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_enterButtonAssignment_layout">
-             <item>
-              <widget class="QRadioButton" name="enterButtonAssignCircle">
-               <property name="text">
-                <string notr="true">Enter with the Circle button</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="enterButtonAssignCross">
-               <property name="text">
-                <string notr="true">Enter with the Cross button</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QWidget" name="systemTabSpacerWidget3" native="true"/>
-          </item>
-          <item>
-           <widget class="QWidget" name="systemTabSpacerWidget4" native="true"/>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="systemTabLayout4" stretch="1,1,1">
-          <item>
-           <widget class="QGroupBox" name="gb_DiskCacheClearing">
-            <property name="title">
-             <string>Disk Cache</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_DiskCacheClearing_layout">
-             <item>
-              <widget class="QCheckBox" name="enableCacheClearing">
-               <property name="text">
-                <string>Clear cache automatically</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="maximumCacheSizeLabel">
-               <property name="text">
-                <string>Cache size: 3072 MB</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSlider" name="maximumCacheSize">
-               <property name="pageStep">
-                <number>512</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Orientation::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TickPosition::TicksBelow</enum>
-               </property>
-               <property name="tickInterval">
-                <number>1024</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item>
-           <widget class="QWidget" name="systemTabSpacerWidget5" native="true"/>
-          </item>
-          <item>
-           <widget class="QWidget" name="systemTabSpacerWidget6" native="true"/>
+           <layout class="QVBoxLayout" name="systemTabRightLayout">
+            <item>
+             <widget class="QGroupBox" name="gb_homebrew">
+              <property name="title">
+               <string>Homebrew</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_homebrew_layout">
+               <item>
+                <widget class="QCheckBox" name="enableHostRoot">
+                 <property name="text">
+                  <string>Enable /host_root/</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="emptyHdd0Tmp">
+                 <property name="text">
+                  <string>Empty /dev_hdd0/tmp/</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="systemTabRightVerticalSpacer">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>
