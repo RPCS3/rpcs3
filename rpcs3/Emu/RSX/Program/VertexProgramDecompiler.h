@@ -132,6 +132,10 @@ protected:
 public:
 	struct
 	{
+		// Configuration properties (in)
+		// None
+
+		// Decoded properties (out)
 		bool has_lit_op = false;
 		bool has_indexed_constants = false;
 	}

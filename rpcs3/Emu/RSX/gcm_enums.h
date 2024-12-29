@@ -455,7 +455,8 @@ namespace gcm
 		RSX_SHADER_CONTROL_UNKNOWN1 = 0x8000, // seemingly set when srgb packer is used??
 
 		// Custom
-		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000 // Rasterizing triangles and not lines or points
+		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000, // Rasterizing triangles and not lines or points
+		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x20000, // Support instance ID offsets when loading constants
 	};
 
 	// GCM Reports

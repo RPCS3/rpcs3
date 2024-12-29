@@ -28,6 +28,8 @@
 #include "Emu/IdManager.h"
 
 #include "Core/RSXDisplay.h"
+#include "Core/RSXDrawCommands.h"
+#include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
 #include "Core/RSXContext.h"
 #include "Core/RSXIOMap.hpp"
@@ -57,52 +59,6 @@ namespace rsx
 		context_clear_color = 1,
 		context_clear_depth = 2,
 		context_clear_all = context_clear_color | context_clear_depth
-	};
-
-	enum pipeline_state : u32
-	{
-		fragment_program_ucode_dirty = (1 << 0),   // Fragment program ucode changed
-		vertex_program_ucode_dirty   = (1 << 1),   // Vertex program ucode changed
-		fragment_program_state_dirty = (1 << 2),   // Fragment program state changed
-		vertex_program_state_dirty   = (1 << 3),   // Vertex program state changed
-		fragment_state_dirty         = (1 << 4),   // Fragment state changed (alpha test, etc)
-		vertex_state_dirty           = (1 << 5),   // Vertex state changed (scale_offset, clip planes, etc)
-		transform_constants_dirty    = (1 << 6),   // Transform constants changed
-		fragment_constants_dirty     = (1 << 7),   // Fragment constants changed
-		framebuffer_reads_dirty      = (1 << 8),   // Framebuffer contents changed
-		fragment_texture_state_dirty = (1 << 9),   // Fragment texture parameters changed
-		vertex_texture_state_dirty   = (1 << 10),  // Fragment texture parameters changed
-		scissor_config_state_dirty   = (1 << 11),  // Scissor region changed
-		zclip_config_state_dirty     = (1 << 12),  // Viewport Z clip changed
-
-		scissor_setup_invalid        = (1 << 13),  // Scissor configuration is broken
-		scissor_setup_clipped        = (1 << 14),  // Scissor region is cropped by viewport constraint
-
-		polygon_stipple_pattern_dirty = (1 << 15),  // Rasterizer stippling pattern changed
-		line_stipple_pattern_dirty    = (1 << 16),  // Line stippling pattern changed
-
-		push_buffer_arrays_dirty      = (1 << 17),   // Push buffers have data written to them (immediate mode vertex buffers)
-
-		polygon_offset_state_dirty    = (1 << 18), // Polygon offset config was changed
-		depth_bounds_state_dirty      = (1 << 19), // Depth bounds configuration changed
-
-		pipeline_config_dirty         = (1 << 20), // Generic pipeline configuration changes. Shader peek hint.
-
-		rtt_config_dirty              = (1 << 21), // Render target configuration changed
-		rtt_config_contested          = (1 << 22), // Render target configuration is indeterminate
-		rtt_config_valid              = (1 << 23), // Render target configuration is valid
-		rtt_cache_state_dirty         = (1 << 24), // Texture cache state is indeterminate
-
-		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
-		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
-		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
-		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
-		memory_barrier_bits = framebuffer_reads_dirty,
-
-		// Vulkan-specific signals
-		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty | polygon_offset_state_dirty | depth_bounds_state_dirty,
-
-		all_dirty = ~0u
 	};
 
 	enum eng_interrupt_reason : u32
@@ -161,8 +117,6 @@ namespace rsx
 		void cpu_task() override;
 	protected:
 
-		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
-
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
 
@@ -217,6 +171,9 @@ namespace rsx
 		// Host DMA
 		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
+		// Draw call management
+		draw_command_processor m_draw_processor;
+
 	public:
 		atomic_t<u64> new_get_put = u64{umax};
 		u32 restore_point = 0;
@@ -225,7 +182,7 @@ namespace rsx
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
-		rsx::simple_array<u32> element_push_buffer;
+
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
@@ -268,6 +225,8 @@ namespace rsx
 		void capture_frame(const std::string& name);
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
+		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
+
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
 
@@ -300,11 +259,6 @@ namespace rsx
 	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
-
-		/**
-		 * Analyze vertex inputs and group all interleaved blocks
-		 */
-		void analyse_inputs_interleaved(vertex_input_layout&);
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
@@ -424,21 +378,6 @@ namespace rsx
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
 
-		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
-
-		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
-		get_draw_command(const rsx::rsx_state& state) const;
-
-		/**
-		* Immediate mode rendering requires a temp push buffer to hold attrib values
-		* Appends a value to the push buffer (currently only supports 32-wide types)
-		*/
-		void append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value);
-		u32 get_push_buffer_vertex_count() const;
-
-		void append_array_element(u32 index);
-		u32 get_push_buffer_index_count() const;
-
 	protected:
 
 		/**
@@ -447,17 +386,6 @@ namespace rsx
 		 * result.second contains volatile memory requirements
 		 */
 		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
-
-		/**
-		 * Generates vertex input descriptors as an array of 16x4 s32s
-		 */
-		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
-
-		/**
-		 * Uploads vertex data described in the layout descriptor
-		 * Copies from local memory to the write-only output buffers provided in a sequential manner
-		 */
-		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
 		void evaluate_cpu_usage_reduction_limits();
 
@@ -468,29 +396,8 @@ namespace rsx
 		void handle_invalidated_memory_range();
 
 	public:
-		/**
-		 * Fill buffer with 4x4 scale offset matrix.
-		 * Vertex shader's position is to be multiplied by this matrix.
-		 * if flip_y is set, the matrix is modified to use d3d convention.
-		 */
-		void fill_scale_offset_data(void *buffer, bool flip_y) const;
 
-		/**
-		 * Fill buffer with user clip information
-		 */
-		void fill_user_clip_data(void *buffer) const;
-
-		/**
-		* Fill buffer with vertex program constants.
-		* Relocation table allows to do a partial fill with only selected registers.
-		*/
-		void fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table);
-
-		/**
-		 * Fill buffer with fragment rasterization state.
-		 * Fills current fog values, alpha test parameters and texture scaling parameters
-		 */
-		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program);
+		draw_command_processor& GRAPH_frontend() { return m_draw_processor; }
 
 		/**
 		 * Notify that a section of memory has been mapped
@@ -517,9 +424,17 @@ namespace rsx
 		 */
 		virtual void on_semaphore_acquire_wait() {}
 
+		/**
+		 * Load an image from memory with optional scaling and rotation.
+		 * Returns false to tell the HW decoder to perform the operation on the CPU as a fallback when the operation cannot be safely accelerated.
+		 */
+		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
+
+
+		// Program public "get" handlers
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 
-		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
+		bool is_current_vertex_program_instanced() const { return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS); }
 
 	public:
 		void reset();
