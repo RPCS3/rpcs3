@@ -625,13 +625,18 @@ namespace gui
 		{
 			usz byte_unit = 0;
 			usz divisor = 1;
+#if defined(__APPLE__)
+			usz multiplier = 1000; 
+#else
+			usz multiplier = 1024;
+#endif
 
 			static const QString s_units[]{"B", "KB", "MB", "GB", "TB", "PB"};
 
-			while (byte_unit < std::size(s_units) - 1 && size / divisor >= 1024)
+			while (byte_unit < std::size(s_units) - 1 && size / divisor >= multiplier)
 			{
 				byte_unit++;
-				divisor *= 1024;
+				divisor *= multiplier;
 			}
 
 			return QStringLiteral("%0 %1").arg(QString::number((size + 0.) / divisor, 'f', 2)).arg(s_units[byte_unit]);
