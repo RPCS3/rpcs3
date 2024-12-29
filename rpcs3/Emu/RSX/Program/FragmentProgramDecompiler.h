@@ -269,7 +269,6 @@ public:
 
 	struct
 	{
-		// Configuration properties (in)
 		u16 in_register_mask = 0;
 
 		u16 common_access_sampler_mask = 0;
@@ -277,7 +276,6 @@ public:
 		u16 redirected_sampler_mask = 0;
 		u16 multisampled_sampler_mask = 0;
 
-		// Decoded properties (out)
 		bool has_lit_op = false;
 		bool has_gather_op = false;
 		bool has_no_output = false;

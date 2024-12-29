@@ -730,7 +730,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (state_flags & rsx::vertex_arrays_changed)
 	{
-		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, current_vp_metadata);
+		analyse_inputs_interleaved(m_vertex_layout);
 	}
 	else if (state_flags & rsx::vertex_base_changed)
 	{
@@ -929,11 +929,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (!upload_info.index_info)
 	{
-		if (draw_call.is_trivial_instanced_draw)
-		{
-			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0);
-		}
-		else if (draw_call.is_single_draw())
+		if (draw_call.is_single_draw())
 		{
 			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
 		}
@@ -955,13 +951,10 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 
-		if (draw_call.is_trivial_instanced_draw)
+		if (rsx::method_registers.current_draw_clause.is_single_draw())
 		{
-			vkCmdDrawIndexed(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0, 0);
-		}
-		else if (rsx::method_registers.current_draw_clause.is_single_draw())
-		{
-			vkCmdDrawIndexed(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0, 0);
+			const u32 index_count = upload_info.vertex_draw_count;
+			vkCmdDrawIndexed(*m_current_command_buffer, index_count, 1, 0, 0, 0);
 		}
 		else
 		{
@@ -1059,10 +1052,7 @@ void VKGSRender::end()
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Apply write memory barriers
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
-	{
-		ds->write_barrier(*m_current_command_buffer);
-	}
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
 
 	for (auto &rtt : m_rtts.m_bound_render_targets)
 	{
@@ -1121,19 +1111,12 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	}
 
-	auto& draw_call = rsx::method_registers.current_draw_clause;
-	draw_call.begin();
+	rsx::method_registers.current_draw_clause.begin();
 	do
 	{
 		emit_geometry(sub_index++);
-
-		if (draw_call.is_trivial_instanced_draw)
-		{
-			// We already completed. End the draw.
-			draw_call.end();
-		}
 	}
-	while (draw_call.next());
+	while (rsx::method_registers.current_draw_clause.next());
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
 	{
