@@ -16,7 +16,7 @@ namespace
 	struct storage_manager
 	{
 		// This is probably wrong and should be assigned per fd or something
-		atomic_ptr<shared_ptr<lv2_event_queue>> asyncequeue;
+		atomic_ptr<lv2_event_queue> asyncequeue;
 	};
 }
 
@@ -137,7 +137,7 @@ error_code sys_storage_async_send_device_command(u32 dev_handle, u64 cmd, vm::pt
 
 	auto& manager = g_fxo->get<storage_manager>();
 
-	if (auto q = *manager.asyncequeue.load())
+	if (auto q = manager.asyncequeue.load())
 	{
 		q->send(0, unk, unk, unk);
 	}
