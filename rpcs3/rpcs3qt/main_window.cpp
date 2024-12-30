@@ -2391,6 +2391,7 @@ void main_window::UpdateFilterActions()
 	ui->showCatHomeAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Home, m_is_list_mode));
 	ui->showCatAudioVideoAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Media, m_is_list_mode));
 	ui->showCatGameDataAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Data, m_is_list_mode));
+	ui->showCatOSAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::OS, m_is_list_mode));
 	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat, m_is_list_mode));
 	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others, m_is_list_mode));
 }
@@ -2551,6 +2552,7 @@ void main_window::CreateActions()
 	m_category_visible_act_group->addAction(ui->showCatHomeAct);
 	m_category_visible_act_group->addAction(ui->showCatAudioVideoAct);
 	m_category_visible_act_group->addAction(ui->showCatGameDataAct);
+	m_category_visible_act_group->addAction(ui->showCatOSAct);
 	m_category_visible_act_group->addAction(ui->showCatUnknownAct);
 	m_category_visible_act_group->addAction(ui->showCatOtherAct);
 	m_category_visible_act_group->setExclusive(false);
@@ -3227,16 +3229,17 @@ void main_window::CreateConnects()
 	const auto get_cats = [this](QAction* act, int& id) -> QStringList
 	{
 		QStringList categories;
-		if      (act == ui->showCatHDDGameAct)    { categories += cat::cat_hdd_game;  id = Category::HDD_Game;    }
-		else if (act == ui->showCatDiscGameAct)   { categories += cat::cat_disc_game; id = Category::Disc_Game;   }
-		else if (act == ui->showCatPS1GamesAct)   { categories += cat::cat_ps1_game;  id = Category::PS1_Game;    }
-		else if (act == ui->showCatPS2GamesAct)   { categories += cat::ps2_games;     id = Category::PS2_Game;    }
-		else if (act == ui->showCatPSPGamesAct)   { categories += cat::psp_games;     id = Category::PSP_Game;    }
-		else if (act == ui->showCatHomeAct)       { categories += cat::cat_home;      id = Category::Home;        }
-		else if (act == ui->showCatAudioVideoAct) { categories += cat::media;         id = Category::Media;       }
-		else if (act == ui->showCatGameDataAct)   { categories += cat::data;          id = Category::Data;        }
-		else if (act == ui->showCatUnknownAct)    { categories += cat::cat_unknown;   id = Category::Unknown_Cat; }
-		else if (act == ui->showCatOtherAct)      { categories += cat::others;        id = Category::Others;      }
+		if      (act == ui->showCatHDDGameAct)    { categories.append(cat::cat_hdd_game);  id = Category::HDD_Game;    }
+		else if (act == ui->showCatDiscGameAct)   { categories.append(cat::cat_disc_game); id = Category::Disc_Game;   }
+		else if (act == ui->showCatPS1GamesAct)   { categories.append(cat::cat_ps1_game);  id = Category::PS1_Game;    }
+		else if (act == ui->showCatPS2GamesAct)   { categories.append(cat::ps2_games);     id = Category::PS2_Game;    }
+		else if (act == ui->showCatPSPGamesAct)   { categories.append(cat::psp_games);     id = Category::PSP_Game;    }
+		else if (act == ui->showCatHomeAct)       { categories.append(cat::cat_home);      id = Category::Home;        }
+		else if (act == ui->showCatAudioVideoAct) { categories.append(cat::media);         id = Category::Media;       }
+		else if (act == ui->showCatGameDataAct)   { categories.append(cat::data);          id = Category::Data;        }
+		else if (act == ui->showCatOSAct)         { categories.append(cat::os);            id = Category::OS;          }
+		else if (act == ui->showCatUnknownAct)    { categories.append(cat::cat_unknown);   id = Category::Unknown_Cat; }
+		else if (act == ui->showCatOtherAct)      { categories.append(cat::others);        id = Category::Others;      }
 		else { gui_log.warning("categoryVisibleActGroup: category action not found"); }
 		return categories;
 	};
@@ -3276,6 +3279,7 @@ void main_window::CreateConnects()
 		set_cat_count(ui->showCatHomeAct, tr("Home"));
 		set_cat_count(ui->showCatAudioVideoAct, tr("Audio/Video"));
 		set_cat_count(ui->showCatGameDataAct, tr("Game Data"));
+		set_cat_count(ui->showCatOSAct, tr("Operating System"));
 		set_cat_count(ui->showCatUnknownAct, tr("Unknown"));
 		set_cat_count(ui->showCatOtherAct, tr("Other"));
 	});

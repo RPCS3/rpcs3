@@ -6,6 +6,8 @@
 #include "Emu/Memory/vm_locking.h"
 
 #include "Emu/Cell/PPUFunction.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/MFC.h"
 #include "sys_sync.h"
@@ -54,6 +56,7 @@
 #include <algorithm>
 #include <optional>
 #include <deque>
+#include <shared_mutex>
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
 #include "util/init_mutex.hpp"
@@ -74,6 +77,9 @@ namespace rsx
 {
 	void set_rsx_yield_flag() noexcept;
 }
+
+using spu_rdata_t = decltype(spu_thread::rdata);
+extern u32 compute_rdata_hash32(const spu_rdata_t& _src);
 
 template <>
 void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
@@ -2214,4 +2220,130 @@ void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
 {
 	vm::temporary_unlock(cpu);
 	cpu_counter::remove(&cpu);
+}
+
+void lv2_obj::notify_all() noexcept
+{
+	for (auto cpu : g_to_notify)
+	{
+		if (!cpu)
+		{
+			break;
+		}
+
+		if (cpu != &g_to_notify)
+		{
+			const auto res_start = vm::reservation_notifier(0).second;
+			const auto res_end = vm::reservation_notifier(umax).second;
+
+			if (cpu >= res_start && cpu <= res_end)
+			{
+				atomic_wait_engine::notify_all(cpu);
+			}
+			else
+			{
+				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+				atomic_wait_engine::notify_one(cpu);
+			}
+		}
+	}
+
+	g_to_notify[0] = nullptr;
+	g_postpone_notify_barrier = false;
+
+	const auto cpu = cpu_thread::get_current();
+
+	if (!cpu)
+	{
+		return;
+	}
+
+	if (cpu->get_class() != thread_class::spu && cpu->state.none_of(cpu_flag::suspend))
+	{
+		return;
+	}
+
+	std::optional<vm::writer_lock> lock;
+
+	constexpr usz total_waiters = std::size(spu_thread::g_spu_waiters_by_value);
+
+	u32 notifies[total_waiters]{};
+
+	// There may be 6 waiters, but checking them all may be performance expensive 
+	// Instead, check 2 at max, but use the CPU ID index to tell which index to start checking so the work would be distributed across all threads
+
+	atomic_t<u64, 64>* range_lock = nullptr;
+
+	for (usz i = 0, checked = 0; checked < 3 && i < total_waiters; i++)
+	{
+		auto& waiter = spu_thread::g_spu_waiters_by_value[(i + cpu->id) % total_waiters];
+		const u64 value = waiter.load();
+		u32 raddr = static_cast<u32>(value) & -128;
+
+		if (vm::check_addr(raddr))
+		{
+			if (((raddr >> 28) < 2 || (raddr >> 28) == 0xd))
+			{
+				checked++;
+
+				if (compute_rdata_hash32(*vm::get_super_ptr<spu_rdata_t>(raddr)) != static_cast<u32>(value >> 32))
+				{
+					// Clear address to avoid a race, keep waiter counter
+					if (waiter.fetch_op([&](u64& x)
+					{
+						if ((x & -128) == (value & -128))
+						{
+							x &= 127;
+							return true;
+						}
+
+						return false;
+					}).second)
+					{
+						notifies[i] = raddr;
+					}
+				}
+
+				continue;
+			}
+
+			if (!range_lock)
+			{
+				range_lock = vm::alloc_range_lock();
+			}
+
+			checked++;
+
+			if (spu_thread::reservation_check(raddr, static_cast<u32>(value >> 32), range_lock))
+			{
+				// Clear address to avoid a race, keep waiter counter
+				if (waiter.fetch_op([&](u64& x)
+				{
+					if ((x & -128) == (value & -128))
+					{
+						x &= 127;
+						return true;
+					}
+
+					return false;
+				}).second)
+				{
+					notifies[i] = raddr;
+				}
+			}
+		}
+	}
+
+	if (range_lock)
+	{
+		vm::free_range_lock(range_lock);
+	}
+
+	for (u32 addr : notifies)
+	{
+		if (addr)
+		{
+			vm::reservation_notifier_notify(addr);
+		}
+	}
 }

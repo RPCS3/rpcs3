@@ -341,6 +341,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
 {
 	usz hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
+	hash ^= program.ctrl;
 	hash ^= program.output_mask;
 	hash ^= program.texture_state.texture_dimensions;
 	hash ^= program.texture_state.multisampled_textures;
@@ -350,6 +351,8 @@ usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) con
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
 	if (binary1.output_mask != binary2.output_mask)
+		return false;
+	if (binary1.ctrl != binary2.ctrl)
 		return false;
 	if (binary1.texture_state != binary2.texture_state)
 		return false;

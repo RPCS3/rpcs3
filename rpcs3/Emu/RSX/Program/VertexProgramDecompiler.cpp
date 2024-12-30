@@ -131,7 +131,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
 		properties.has_indexed_constants |= !!d3.index_const;
 		m_constant_ids.insert(static_cast<u16>(d1.const_src));
-		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
+		fmt::append(ret, "_fetch_constant(%u%s)", d1.const_src, (d3.index_const ? " + " + AddAddrReg() : ""));
 		break;
 
 	default:
@@ -362,14 +362,13 @@ std::string VertexProgramDecompiler::NotZeroPositive(const std::string& code)
 std::string VertexProgramDecompiler::BuildCode()
 {
 	std::string main_body;
-	for (uint i = 0, lvl = 1; i < m_instr_count; i++)
+	for (int i = 0, lvl = 1; i < static_cast<int>(m_instr_count); i++)
 	{
-		lvl -= m_instructions[i].close_scopes;
-		if (lvl < 1) lvl = 1;
+		lvl = std::max<int>(lvl - m_instructions[i].close_scopes, 0);
+
 		for (int j = 0; j < m_instructions[i].put_close_scopes; ++j)
 		{
-			--lvl;
-			if (lvl < 1) lvl = 1;
+			if (lvl > 1) --lvl;
 			main_body.append(lvl, '\t') += "}\n";
 		}
 
@@ -379,6 +378,8 @@ std::string VertexProgramDecompiler::BuildCode()
 			main_body.append(lvl, '\t') += "{\n";
 			lvl++;
 		}
+
+		ensure(lvl >= 0); // Underflow of indent level will cause crashes!!
 
 		for (const auto& instruction_body : m_instructions[i].body)
 		{
@@ -409,7 +410,7 @@ std::string VertexProgramDecompiler::BuildCode()
 		{
 			const auto i = offset++;
 			if (i == index) continue; // Replace with self
-			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%d]", i));
+			reloc_table.emplace_back(fmt::format("_fetch_constant(%d)", index), fmt::format("_fetch_constant(%d)", i));
 		}
 
 		// One-time patch

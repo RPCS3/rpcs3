@@ -888,6 +888,9 @@ public:
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
 	bool reservation_check(u32 addr, const decltype(rdata)& data) const;
+	static bool reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_lock);
+	usz register_cache_line_waiter(u32 addr);
+	void deregister_cache_line_waiter(usz index);
 
 	bool read_reg(const u32 addr, u32& value);
 	bool write_reg(const u32 addr, const u32 value);
@@ -896,6 +899,8 @@ public:
 	static atomic_t<u32> g_raw_spu_ctr;
 	static atomic_t<u32> g_raw_spu_id[5];
 	static atomic_t<u32> g_spu_work_count;
+
+	static atomic_t<u64> g_spu_waiters_by_value[6];
 
 	static u32 find_raw_spu(u32 id)
 	{

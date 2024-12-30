@@ -30,7 +30,7 @@ namespace rsx
 			REGS(ctx)->transform_constants[load + constant_id][subreg] = arg;
 		}
 
-		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args)
+		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args, const std::function<bool(context*, u32, u32)>& notify)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
 			const u32 constant_id = index / 4;
@@ -40,8 +40,15 @@ namespace rsx
 			auto dst = &REGS(ctx)->transform_constants[load + constant_id][subreg];
 			copy_data_swap_u32(dst, args.data(), ::size32(args));
 
+			// Notify
 			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
-			RSX(ctx)->patch_transform_constants(ctx, load + constant_id, last_constant_id - constant_id);
+			const u32 load_index = load + constant_id;
+			const u32 load_count = last_constant_id - constant_id;
+
+			if (!notify || !notify(ctx, load_index, load_count))
+			{
+				RSX(ctx)->patch_transform_constants(ctx, load_index, load_count);
+			}
 		}
 
 		void set_transform_constant::impl(context* ctx, u32 reg, [[maybe_unused]] u32 arg)
@@ -256,15 +263,15 @@ namespace rsx
 		{
 			if (RSX(ctx)->in_begin_end)
 			{
-				RSX(ctx)->append_array_element(arg & 0xFFFF);
-				RSX(ctx)->append_array_element(arg >> 16);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg & 0xFFFF);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg >> 16);
 			}
 		}
 
 		void set_array_element32(context* ctx, u32, u32 arg)
 		{
 			if (RSX(ctx)->in_begin_end)
-				RSX(ctx)->append_array_element(arg);
+				RSX(ctx)->GRAPH_frontend().append_array_element(arg);
 		}
 
 		void draw_arrays(context* /*rsx*/, u32 /*reg*/, u32 arg)
@@ -353,8 +360,8 @@ namespace rsx
 			// Check if we have immediate mode vertex data in a driver-local buffer
 			if (REGS(ctx)->current_draw_clause.command == rsx::draw_command::none)
 			{
-				const u32 push_buffer_vertices_count = RSX(ctx)->get_push_buffer_vertex_count();
-				const u32 push_buffer_index_count = RSX(ctx)->get_push_buffer_index_count();
+				const u32 push_buffer_vertices_count = RSX(ctx)->GRAPH_frontend().get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = RSX(ctx)->GRAPH_frontend().get_push_buffer_index_count();
 
 				// Need to set this flag since it overrides some register contents
 				REGS(ctx)->current_draw_clause.is_immediate_draw = true;
@@ -384,6 +391,12 @@ namespace rsx
 					RSX(ctx)->execute_nop_draw();
 					RSX(ctx)->rsx::thread::end();
 					return;
+				}
+
+				// Notify the backend if the drawing style changes (instanced vs non-instanced)
+				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw != RSX(ctx)->is_current_vertex_program_instanced())
+				{
+					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::xform_instancing_state_dirty;
 				}
 
 				RSX(ctx)->end();
