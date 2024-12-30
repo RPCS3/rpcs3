@@ -1202,6 +1202,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<sleep_timers_accuracy_level>(index))
 		{
 		case sleep_timers_accuracy_level::_as_host: return tr("As Host", "Sleep timers accuracy");
+		case sleep_timers_accuracy_level::_dynamic: return tr("Dynamic", "Sleep timers accuracy");
 		case sleep_timers_accuracy_level::_usleep: return tr("Usleep Only", "Sleep timers accuracy");
 		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers", "Sleep timers accuracy");
 		}
