@@ -237,6 +237,7 @@ void fmt_class_string<sleep_timers_accuracy_level>::format(std::string& out, u64
 		switch (value)
 		{
 		case sleep_timers_accuracy_level::_as_host: return "As Host";
+		case sleep_timers_accuracy_level::_dynamic: return "Dynamic";
 		case sleep_timers_accuracy_level::_usleep: return "Usleep Only";
 		case sleep_timers_accuracy_level::_all_timers: return "All Timers";
 		}

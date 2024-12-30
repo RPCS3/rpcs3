@@ -870,11 +870,13 @@ namespace rsx
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
 			do_local_task(rsx::FIFO::state::paused);
+			lv2_obj::notify_all();
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
 		{
 			on_semaphore_acquire_wait();
+			lv2_obj::notify_all();
 			std::this_thread::yield();
 		}
 	}

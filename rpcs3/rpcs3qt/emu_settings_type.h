@@ -233,7 +233,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::SPUCache,                 { "Core", "SPU Cache"}},
 	{ emu_settings_type::DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 	{ emu_settings_type::MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
-	{ emu_settings_type::SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
+	{ emu_settings_type::SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy 2"}},
 	{ emu_settings_type::ClocksScale,              { "Core", "Clocks scale"}},
 	{ emu_settings_type::AccuratePPU128Loop,       { "Core", "Accurate PPU 128-byte Reservation Op Max Length"}},
 	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
