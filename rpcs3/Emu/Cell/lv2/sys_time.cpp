@@ -151,7 +151,7 @@ u64 get_timebased_time()
 	{
 		const u64 tsc = utils::get_tsc();
 
-#if _MSC_VER
+#if 0
 		const u64 result = static_cast<u64>(u128_from_mul(tsc, g_timebase_freq) / freq) * g_cfg.core.clocks_scale / 100u;
 #else
 		const u64 result = (tsc / freq * g_timebase_freq + tsc % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
@@ -168,7 +168,7 @@ u64 get_timebased_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
-#if _MSC_VER
+#if 0
 		const u64 result = static_cast<u64>(u128_from_mul(time * g_cfg.core.clocks_scale, g_timebase_freq) / freq / 100u);
 #else
 		const u64 result = (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
@@ -211,7 +211,7 @@ u64 get_system_time()
 	{
 		const u64 tsc = utils::get_tsc();
 
-#if _MSC_VER
+#if 0
 		const u64 result = static_cast<u64>(u128_from_mul(tsc, 1000000ull) / freq);
 #else
 		const u64 result = (tsc / freq * 1000000ull + tsc % freq * 1000000ull / freq);
@@ -228,7 +228,7 @@ u64 get_system_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
-#if _MSC_VER
+#if 0
 		const u64 result = static_cast<u64>(u128_from_mul(time, 1000000ull) / freq);
 #else
 		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
