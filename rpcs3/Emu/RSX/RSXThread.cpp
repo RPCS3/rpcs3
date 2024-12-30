@@ -2829,6 +2829,9 @@ namespace rsx
 
 	void thread::on_notify_pre_memory_unmapped(u32 address, u32 size, std::vector<std::pair<u64, u64>>& event_data)
 	{
+		// Always flush MM if memory mapping is going to change.
+		rsx::mm_flush();
+
 		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
 			// Each bit represents io entry to be unmapped
