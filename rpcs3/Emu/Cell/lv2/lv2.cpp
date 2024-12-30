@@ -1339,11 +1339,13 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 
 	if (cpu.get_class() == thread_class::ppu)
 	{
-		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
-		{
-			static_cast<ppu_thread&>(cpu).res_notify = 0;
+		ppu_thread& ppu = static_cast<ppu_thread&>(cpu);
 
-			if (static_cast<ppu_thread&>(cpu).res_notify_time != vm::reservation_notifier_count_index(addr).second)
+		if (u32 addr = ppu.res_notify)
+		{
+			ppu.res_notify = 0;
+
+			if (ppu.res_notify_time != vm::reservation_notifier_count_index(addr).second)
 			{
 				// Ignore outdated notification request
 			}
@@ -1361,6 +1363,17 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 			{
 				vm::reservation_notifier_notify(addr);
 			}
+		}
+
+		if (ppu.last_lv2_deschedule_cia == ppu.cia && ppu.last_lv2_deschedule_r3 == ppu.gpr[3])
+		{
+			ppu.last_lv2_deschedule_match_count++;
+		}
+		else
+		{
+			ppu.last_lv2_deschedule_cia = ppu.cia;
+			ppu.last_lv2_deschedule_r3 = ppu.gpr[3];
+			ppu.last_lv2_deschedule_match_count = 0;
 		}
 	}
 
@@ -2178,7 +2191,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 		static atomic_t<u64> g_success = 0;
 		static atomic_t<u64> g_fails = 0;
 
-		if (accuracy_type == sleep_timers_accuracy_level::_dynamic && avg_delay < 30 && avg_delay < (remaining + 15) / 2)
+		if ((accuracy_type == sleep_timers_accuracy_level::_dynamic && avg_delay < 30) && ((avg_delay < (remaining + 15) / 2) || (cpu && cpu->last_lv2_deschedule_match_count > 3)))
 		{
 			wait_for(remaining);
 
