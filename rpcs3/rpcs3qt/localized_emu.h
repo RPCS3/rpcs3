@@ -292,6 +292,16 @@ private:
 		case localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT: return tr("Save Emulation State And Exit");
 		case localized_string_id::HOME_MENU_RELOAD_SAVESTATE: return tr("Reload Last Emulation State");
 		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");
+		case localized_string_id::HOME_MENU_TROPHIES: return tr("Trophies");
+		case localized_string_id::HOME_MENU_TROPHY_LIST_TITLE: return tr("Trophy Progress: %0").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_TROPHY_LOCKED_TITLE: return tr("Locked trophy: %0").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_TROPHY_HIDDEN_TITLE: return tr("Hidden trophy");
+		case localized_string_id::HOME_MENU_TROPHY_HIDDEN_DESCRIPTION: return tr("This trophy is hidden");
+		case localized_string_id::HOME_MENU_TROPHY_PLATINUM_RELEVANT: return tr("Platinum relevant");
+		case localized_string_id::HOME_MENU_TROPHY_GRADE_BRONZE: return tr("Bronze", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS: return tr("Progress:");
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS_ANALYZING: return tr("Progress: analyzing...");
 		case localized_string_id::PROGRESS_DIALOG_REMAINING: return tr("remaining");

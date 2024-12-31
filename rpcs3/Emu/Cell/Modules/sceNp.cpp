@@ -5214,7 +5214,7 @@ error_code sceNpProfileCallGui(vm::cptr<SceNpId> npid, vm::ptr<SceNpProfileResul
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
+		return SCE_NP_PROFILE_ERROR_NOT_INITIALIZED;
 	}
 
 	// TODO: SCE_NP_PROFILE_ERROR_BUSY
@@ -5240,7 +5240,7 @@ error_code sceNpProfileAbortGui()
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED; // Not SCE_NP_PROFILE_ERROR_NOT_INITIALIZED !
 	}
 
 	return CELL_OK;
