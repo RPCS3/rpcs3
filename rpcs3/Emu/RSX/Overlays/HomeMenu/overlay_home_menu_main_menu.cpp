@@ -4,9 +4,11 @@
 #include "overlay_home_menu_settings.h"
 #include "overlay_home_menu_savestate.h"
 #include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
+#include "Emu/RSX/Overlays/Trophies/overlay_trophy_list_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/Modules/sceNpTrophy.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
@@ -54,6 +56,32 @@ namespace rsx
 				});
 				return page_navigation::stay;
 			});
+
+			// get current trophy name for trophy list overlay
+			std::string trop_name;
+			{
+				current_trophy_name& current_id = g_fxo->get<current_trophy_name>();
+				std::lock_guard lock(current_id.mtx);
+				trop_name = current_id.name;
+			}
+			if (!trop_name.empty())
+			{
+				std::unique_ptr<overlay_element> trophies = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TROPHIES));
+				add_item(trophies, [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
+				{
+					if (btn != pad_button::cross) return page_navigation::stay;
+
+					rsx_log.notice("User selected trophies in home menu");
+					Emu.CallFromMainThread([trop_name = std::move(trop_name)]()
+					{
+						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+						{
+							manager->create<rsx::overlays::trophy_list_dialog>()->show(trop_name);
+						}
+					});
+					return page_navigation::stay;
+				});
+			}
 
 			std::unique_ptr<overlay_element> screenshot = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT));
 			add_item(screenshot, [](pad_button btn) -> page_navigation

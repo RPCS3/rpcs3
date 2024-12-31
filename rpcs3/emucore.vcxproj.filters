@@ -127,6 +127,9 @@
     <Filter Include="Emu\GPU\RSX\Utils">
       <UniqueIdentifier>{0e218fca-53a6-4066-a412-4e0659d6ff0b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\Trophies">
+      <UniqueIdentifier>{caf84300-5c45-4340-bd9a-8ac859409351}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1317,6 +1320,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2667,6 +2673,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

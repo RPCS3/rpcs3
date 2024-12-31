@@ -636,6 +636,7 @@ int main(int argc, char** argv)
 			if (i > 0) utf8_args += " ";
 			utf8_args += '\'' + wchar_to_utf8(arg_list[i]) + '\'';
 		}
+		LocalFree(arg_list);
 		sys_log.notice("argv_utf8: %s", utf8_args);
 	}
 #endif

@@ -528,6 +528,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/HomeMenu/overlay_home_menu_savestate.cpp
     RSX/Overlays/Network/overlay_recvmessage_dialog.cpp
     RSX/Overlays/Network/overlay_sendmessage_dialog.cpp
+    RSX/Overlays/Trophies/overlay_trophy_list_dialog.cpp
     RSX/Overlays/overlays.cpp
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp

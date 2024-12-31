@@ -504,9 +504,16 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	}
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
-	ctxt->trp_name = std::move(name);
+	ctxt->trp_name = name;
 	ctxt->read_only = !!(options & SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY);
 	*context = idm::last_id();
+
+	// set current trophy name for trophy list overlay
+	{
+		current_trophy_name& current_id = g_fxo->get<current_trophy_name>();
+		std::lock_guard lock(current_id.mtx);
+		current_id.name = std::move(name);
+	}
 
 	return CELL_OK;
 }
