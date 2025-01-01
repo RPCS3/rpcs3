@@ -666,6 +666,12 @@ namespace vk
 			enabled_features.textureCompressionBC = VK_FALSE;
 		}
 
+		if (!pgpu->features.textureCompressionBC && pgpu->get_driver_vendor() == driver_vendor::PANVK)
+		{
+			rsx_log.error("Your GPU running on the PANVK driver does not support full texture block compression. Graphics may not render correctly.");
+			enabled_features.textureCompressionBC = VK_FALSE;
+		}
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
