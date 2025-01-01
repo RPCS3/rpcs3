@@ -18,6 +18,7 @@
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/Audio/audio_utils.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
@@ -621,7 +622,7 @@ void gui_application::InitializeCallbacks()
 				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
 				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
 				sound_effect->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
-				sound_effect->setVolume(g_cfg.audio.volume * 0.01f);
+				sound_effect->setVolume(audio::get_volume());
 				sound_effect->play();
 
 				m_sound_effects.push_back(std::move(sound_effect));

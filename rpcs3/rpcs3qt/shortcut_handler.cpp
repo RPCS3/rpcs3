@@ -20,7 +20,7 @@ shortcut_handler::shortcut_handler(gui::shortcuts::shortcut_handler_id handler_i
 
 		const QKeySequence key_sequence = sc_settings.get_key_sequence(info, gui_settings);
 		QShortcut* shortcut = new QShortcut(key_sequence, parent);
-		shortcut->setAutoRepeat(false);
+		shortcut->setAutoRepeat(info.allow_auto_repeat);
 
 		shortcut_key_info key_info{};
 		key_info.shortcut = shortcut;
