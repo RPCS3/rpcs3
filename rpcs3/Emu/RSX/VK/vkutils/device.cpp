@@ -302,6 +302,11 @@ namespace vk
 				return driver_vendor::HONEYKRISP;
 			}
 
+			if (gpu_name.find("Panfrost") != umax)
+			{
+				return driver_vendor::PANVK;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -329,6 +334,8 @@ namespace vk
 				return driver_vendor::V3DV;
 			case VK_DRIVER_ID_MESA_HONEYKRISP:
 				return driver_vendor::HONEYKRISP;
+			case VK_DRIVER_ID_MESA_PANVK:
+				return driver_vendor::PANVK;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
