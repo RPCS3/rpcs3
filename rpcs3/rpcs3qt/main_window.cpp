@@ -405,6 +405,7 @@ void main_window::OnMissingFw()
 	//       So, instead of using Qt::WA_DeleteOnClose attribute, manually delete "mb" by using deleteLater() when the dialog is closed
 	// 
 	//mb->setAttribute(Qt::WA_DeleteOnClose);
+
 	connect(mb, &QDialog::finished, this, [mb]()
 	{
 		mb->deleteLater();
