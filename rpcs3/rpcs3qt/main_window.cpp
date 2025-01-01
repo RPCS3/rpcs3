@@ -394,19 +394,29 @@ void main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
-				"\n<br>For information about how to obtain the required firmware read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
+		"\n<br>For information about how to obtain the required firmware read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
 	mb->setTextFormat(Qt::RichText);
-
 	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
-	mb->setAttribute(Qt::WA_DeleteOnClose);
-	mb->open();
+
+	// NOTE: Qt::WA_DeleteOnClose attribute causes the dialogs invoked in InstallPup() to immediately destroy (probably a bug in Qt)
+	//       the "mb" dialog (while still in use in the "mb"'s "accected" connection) often causing a crash due to access violation.
+	//       So, instead of using Qt::WA_DeleteOnClose attribute, manually delete "mb" by using deleteLater() when the dialog is closed
+	// 
+	//mb->setAttribute(Qt::WA_DeleteOnClose);
+	connect(mb, &QDialog::finished, this, [mb]()
+	{
+		mb->deleteLater();
+	});
 
 	connect(mb, &QDialog::accepted, this, [this]()
 	{
 		InstallPup();
+
 	});
+
+	mb->open();
 }
 
 void main_window::ResizeIcons(int index)
@@ -2852,6 +2862,7 @@ void main_window::CreateConnects()
 		connect(dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
 		connect(dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::update_gui_pad_thread);
 		connect(dlg, &settings_dialog::EmuSettingsApplied, m_log_frame, &log_frame::LoadSettings);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
 		dlg->open();
 	};
 
