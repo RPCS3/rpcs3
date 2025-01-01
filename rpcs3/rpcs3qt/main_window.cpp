@@ -414,7 +414,6 @@ void main_window::OnMissingFw()
 	connect(mb, &QDialog::accepted, this, [this]()
 	{
 		InstallPup();
-
 	});
 
 	mb->open();
