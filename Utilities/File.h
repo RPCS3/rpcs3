@@ -605,6 +605,9 @@ namespace fs
 	// Get common cache directory
 	const std::string& get_cache_dir();
 
+	// Get common log directory
+	const std::string& get_log_dir();
+
 	// Temporary directory
 	const std::string& get_temp_dir();
 
