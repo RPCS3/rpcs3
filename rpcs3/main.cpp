@@ -510,7 +510,7 @@ int main(int argc, char** argv)
 	}
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
-	const std::string log_name = fs::get_cache_dir() + "RPCS3.log";
+	const std::string log_name = fs::get_log_dir() + "RPCS3.log";
 
 	static fs::file instance_lock;
 

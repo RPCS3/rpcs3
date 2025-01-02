@@ -2152,6 +2152,16 @@ const std::string& fs::get_cache_dir()
 	return s_dir;
 }
 
+const std::string& fs::get_log_dir()
+{
+#ifdef _WIN32
+	static const std::string s_dir = fs::get_config_dir() + "log/";
+	return s_dir;
+#else
+	return fs::get_cache_dir();
+#endif
+}
+
 const std::string& fs::get_temp_dir()
 {
 	static const std::string s_dir = []
