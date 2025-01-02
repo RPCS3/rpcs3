@@ -4,6 +4,7 @@
 #include "sdl_pad_handler.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
+#include "Emu/System.h"
 
 #include <mutex>
 
@@ -262,7 +263,14 @@ bool sdl_pad_handler::Init()
 	if (m_is_init)
 		return true;
 
-	if (!sdl_instance::get_instance().initialize())
+	bool instance_success;
+
+	Emu.BlockingCallFromMainThread([&instance_success]()
+	{
+		instance_success = sdl_instance::get_instance().initialize();
+	});
+
+	if (!instance_success)
 		return false;
 
 	if (g_cfg.io.load_sdl_mappings)
