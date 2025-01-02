@@ -374,7 +374,22 @@ void Emulator::Init()
 
 	g_cfg_defaults = g_cfg.to_string();
 
-	const std::string cfg_path = fs::get_config_dir() + "/config.yml";
+	const std::string cfg_path = fs::get_config_dir(true) + "config.yml";
+
+	// Move file from deprecated location to new location
+#ifdef _WIN32
+	const std::string old_path = fs::get_config_dir(false) + "config.yml";
+
+	if (fs::is_file(old_path))
+	{
+		sys_log.notice("Found deprecated config.yml file: '%s'", old_path);
+
+		if (!fs::rename(old_path, cfg_path, false))
+		{
+			sys_log.error("Failed to move '%s' to '%s' (error='%s')", old_path, cfg_path, fs::g_tls_error);
+		}
+	}
+#endif
 
 	// Save new global config if it doesn't exist or is empty
 	if (fs::stat_t info{}; !fs::get_stat(cfg_path, info) || info.size == 0)
@@ -4508,7 +4523,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 
 	if (title_id.empty())
 	{
-		config_name = fs::get_config_dir() + "/config.yml";
+		config_name = fs::get_config_dir(true) + "config.yml";
 	}
 	else
 	{

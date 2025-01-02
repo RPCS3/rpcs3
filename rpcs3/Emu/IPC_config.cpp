@@ -25,7 +25,7 @@ void cfg_ipc::load()
 void cfg_ipc::save() const
 {
 #ifdef _WIN32
-	const std::string path_to_cfg = fs::get_config_dir() + "config/";
+	const std::string path_to_cfg = fs::get_config_dir(true);
 	if (!fs::create_path(path_to_cfg))
 	{
 		IPC.error("Could not create path: %s", path_to_cfg);
@@ -42,11 +42,7 @@ void cfg_ipc::save() const
 
 std::string cfg_ipc::get_path()
 {
-#ifdef _WIN32
-	return fs::get_config_dir() + "config/ipc.yml";
-#else
-	return fs::get_config_dir() + "ipc.yml";
-#endif
+	return fs::get_config_dir(true) + "ipc.yml";
 }
 
 bool cfg_ipc::get_server_enabled() const
