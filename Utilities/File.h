@@ -599,8 +599,8 @@ namespace fs
 	// Get executable containing directory
 	std::string get_executable_dir();
 
-	// Get configuration directory
-	const std::string& get_config_dir();
+	// Get configuration directory. Set get_config_subdirectory to true to get the nested config dir on windows.
+	const std::string& get_config_dir(bool get_config_subdirectory = false);
 
 	// Get common cache directory
 	const std::string& get_cache_dir();
