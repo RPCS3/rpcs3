@@ -80,6 +80,7 @@ protected:
 	void showEvent(QShowEvent *event) override;
 
 	void close() override;
+	void reset() override;
 
 	bool shown() override;
 	void hide() override;
