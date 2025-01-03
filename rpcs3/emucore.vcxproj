@@ -58,6 +58,7 @@
     <ClCompile Include="Crypto\decrypt_binaries.cpp" />
     <ClCompile Include="Crypto\unzip.cpp" />
     <ClCompile Include="Emu\Audio\audio_resampler.cpp" />
+    <ClCompile Include="Emu\Audio\audio_utils.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -530,6 +531,7 @@
     <ClInclude Include="Crypto\unzip.h" />
     <ClInclude Include="Emu\Audio\audio_resampler.h" />
     <ClInclude Include="Emu\Audio\audio_device_enumerator.h" />
+    <ClInclude Include="Emu\Audio\audio_utils.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>

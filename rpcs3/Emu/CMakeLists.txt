@@ -125,6 +125,7 @@ target_sources(rpcs3_emu PRIVATE
 # Audio
 target_sources(rpcs3_emu PRIVATE
     Audio/audio_resampler.cpp
+    Audio/audio_utils.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
     Audio/Cubeb/CubebBackend.cpp

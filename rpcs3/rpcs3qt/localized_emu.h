@@ -302,6 +302,9 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::AUDIO_MUTED: return tr("Audio muted", "Audio");
+		case localized_string_id::AUDIO_UNMUTED: return tr("Audio unmuted", "Audio");
+		case localized_string_id::AUDIO_CHANGED: return tr("Volume changed to %0", "Audio").arg(std::forward<Args>(args)...);
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS: return tr("Progress:");
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS_ANALYZING: return tr("Progress: analyzing...");
 		case localized_string_id::PROGRESS_DIALOG_REMAINING: return tr("remaining");
