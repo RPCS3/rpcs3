@@ -779,6 +779,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 			// r1.zw was not written to
 			properties.has_gather_op = true;
 			main_epilogue << "	r1.z = " + r1.gather_r() << ";\n";
+
+			// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+			rsx_log.warning("ROP reads from shader depth without writing to it. Final value will be gathered.");
 		}
 	}
 
@@ -817,6 +820,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 		// We need to gather the data from existing registers
 		main_epilogue << "	" << output_register_names[n] << " = " << r.gather_r() << ";\n";
 		properties.has_gather_op = true;
+
+		// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", output_register_names[n]);
 	}
 
 	if (properties.has_dynamic_register_load)
