@@ -54,7 +54,8 @@ namespace vk
 		LAVAPIPE,
 		NVK,
 		V3DV,
-		HONEYKRISP
+		HONEYKRISP,
+		PANVK
 	};
 
 	driver_vendor get_driver_vendor();

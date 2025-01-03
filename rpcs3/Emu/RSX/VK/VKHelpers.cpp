@@ -144,6 +144,9 @@ namespace vk
 		case driver_vendor::HONEYKRISP:
 			// Needs more testing
 			break;
+		case driver_vendor::PANVK:
+			// Needs more testing
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
