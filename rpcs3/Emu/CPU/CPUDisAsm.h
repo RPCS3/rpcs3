@@ -110,7 +110,8 @@ protected:
 	virtual u32 DisAsmBranchTarget(s32 /*imm*/);
 
 	// TODO: Add builtin fmt helpper for best performance
-	template <typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
+	template <typename T>
+		requires std::is_integral_v<T>
 	static std::string SignedHex(T value)
 	{
 		const auto v = static_cast<std::make_signed_t<T>>(value);

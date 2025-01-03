@@ -272,14 +272,16 @@ struct alignas(16) u128
 
 	u128() noexcept = default;
 
-	template <typename T, std::enable_if_t<std::is_unsigned_v<T>, u64> = 0>
+	template <typename T>
+		requires std::is_unsigned_v<T>
 	constexpr u128(T arg) noexcept
 		: lo(arg)
 		, hi(0)
 	{
 	}
 
-	template <typename T, std::enable_if_t<std::is_signed_v<T>, s64> = 0>
+	template <typename T>
+		requires std::is_signed_v<T>
 	constexpr u128(T arg) noexcept
 		: lo(s64{arg})
 		, hi(s64{arg} >> 63)
