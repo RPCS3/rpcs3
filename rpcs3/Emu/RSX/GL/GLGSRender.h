@@ -159,6 +159,7 @@ public:
 
 	GLGSRender(utils::serial* ar) noexcept;
 	GLGSRender() noexcept : GLGSRender(nullptr) {}
+	virtual ~GLGSRender();
 
 private:
 

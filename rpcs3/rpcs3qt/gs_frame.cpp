@@ -328,6 +328,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 				{
 					Emu.Restart();
 				};
+				Emu.SetContinuousMode(true);
 			}
 
 			Emu.Kill(false, true);
@@ -621,6 +622,10 @@ void gs_frame::close()
 			deleteLater();
 		}
 	});
+}
+
+void gs_frame::reset()
+{
 }
 
 bool gs_frame::shown()

@@ -52,6 +52,14 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_normalized_barycentrics = true;
 }
 
+GLGSRender::~GLGSRender()
+{
+	if (m_frame)
+	{
+		m_frame->reset();
+	}
+}
+
 extern CellGcmContextData current_context;
 
 void GLGSRender::set_viewport()

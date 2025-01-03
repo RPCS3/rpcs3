@@ -60,6 +60,8 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
+#include "Emu/RSX/GSRender.h"
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB
@@ -1003,6 +1005,16 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
+}
+
+void Emulator::SetContinuousMode(bool continuous_mode)
+{
+	m_continuous_mode = continuous_mode;
+
+	if (GSRender* render = static_cast<GSRender*>(g_fxo->try_get<rsx::thread>()))
+	{
+		render->set_continuous_mode(continuous_mode);
+	}
 }
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
@@ -2897,6 +2909,9 @@ void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op
 
 void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate)
 {
+	// Make sure we close the game window
+	Emu.SetContinuousMode(false);
+
 	// Ensure no game has booted inbetween
 	const auto guard = Emu.MakeEmulationStateGuard();
 
@@ -3277,7 +3292,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				thread_ctrl::wait_for(5'000);
 			}
-
 
 			*closed_sucessfully = true;
 		}));

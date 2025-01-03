@@ -114,6 +114,7 @@ namespace rsx
 
 				Emu.CallFromMainThread([]()
 				{
+					Emu.SetContinuousMode(true);
 					Emu.Restart(false);
 				});
 				return page_navigation::exit;
