@@ -798,19 +798,29 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	for (int n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, output_register_names[n]))
+		const auto& reg_name = output_register_names[n];
+		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, reg_name))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, float4_type, output_register_names[n], init_value);
-		}
-
-		if (fp16_out)
-		{
-			// We don't care about half outputs. They'll always be made available.
-			continue;
+			m_parr.AddParam(PF_PARAM_NONE, float4_type, reg_name, init_value);
 		}
 
 		const auto block_index = ouput_register_indices[n];
 		auto& r = temp_registers[block_index];
+
+		if (fp16_out)
+		{
+			// Check if we need a split/extract op
+			if (r.requires_split(0))
+			{
+				main_epilogue << "	" << reg_name << " = " << float4_type << r.split_h0() << ";\n";
+
+				// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+				rsx_log.warning("ROP reads from %s without writing to it. Final value will be extracted from the 32-bit register.", reg_name);
+			}
+
+			continue;
+		}
+
 		if (!r.requires_gather128())
 		{
 			// Nothing to do
@@ -818,11 +828,11 @@ std::string FragmentProgramDecompiler::BuildCode()
 		}
 
 		// We need to gather the data from existing registers
-		main_epilogue << "	" << output_register_names[n] << " = " << r.gather_r() << ";\n";
+		main_epilogue << "	" << reg_name << " = " << r.gather_r() << ";\n";
 		properties.has_gather_op = true;
 
 		// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
-		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", output_register_names[n]);
+		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", reg_name);
 	}
 
 	if (properties.has_dynamic_register_load)
@@ -1051,6 +1061,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	if (const auto epilogue = main_epilogue.str(); !epilogue.empty())
 	{
+		OS << "	// Epilogue\n";
 		OS << epilogue << std::endl;
 	}
 	insertMainEnd(OS);

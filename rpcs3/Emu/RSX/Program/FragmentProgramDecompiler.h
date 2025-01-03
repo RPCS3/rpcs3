@@ -105,8 +105,9 @@ struct temp_register
 		// Data fetched from any of the two half registers requires sync with the full register
 		if (!(last_write_half[0] || last_write_half[1]) && aliased_r0)
 		{
-			//r0 has been written to
-			//TODO: Check for specific elements in real32 register
+			// r0 has been written to but h0 was not the last write.
+			// This means to read h0 we need to split r0.xy
+			//TODO: Check for specific elements in real32 register. This incomplete version only checks the first half-word.
 			return true;
 		}
 
@@ -115,9 +116,10 @@ struct temp_register
 
 	std::string gather_r() const
 	{
-		std::string h0 = "h" + std::to_string(real_index << 1);
-		std::string h1 = "h" + std::to_string(real_index << 1 | 1);
-		std::string reg = "r" + std::to_string(real_index);
+		const auto half_index = real_index << 1;
+		const std::string h0 = "h" + std::to_string(half_index);
+		const std::string h1 = "h" + std::to_string(half_index + 1);
+		const std::string reg = "r" + std::to_string(real_index);
 		std::string ret = "// Invalid gather";
 
 		if (aliased_h0 && aliased_h1)
@@ -134,6 +136,16 @@ struct temp_register
 		}
 
 		return ret;
+	}
+
+	std::string split_h0() const
+	{
+		// Reads half-word 0 (H16x4) from a full real (R32x4) register
+		// glsl-specific since other backends disappeared.
+		const std::string reg = "r" + std::to_string(real_index);
+		const std::string word0 = "floatBitsToUint(" + reg + ".x)";
+		const std::string word1 = "floatBitsToUint(" + reg + ".y)";
+		return "(unpackHalf2x16(" + word0 + "), unpackHalf2x16(" + word1 + "))";
 	}
 };
 
