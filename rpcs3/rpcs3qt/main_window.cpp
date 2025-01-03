@@ -405,7 +405,7 @@ void main_window::OnMissingFw()
 
 	connect(mb, &QDialog::accepted, this, [this]()
 	{
-		InstallPup();
+		QTimer::singleShot(1, [this](){ InstallPup(); }); // singleShot to avoid a Qt bug that causes a deletion of the sender during long slots.
 	});
 }
 

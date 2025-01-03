@@ -40,10 +40,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL2;ZLIB_CONST;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
       <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
     </ClCompile>

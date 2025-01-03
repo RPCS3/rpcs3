@@ -71,7 +71,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -79,7 +79,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;HAVE_SDL2;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;HAVE_SDL2;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -124,7 +124,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\include;$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)3rdparty\flatbuffers\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\debug;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -132,7 +132,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_WINEXTRAS_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <SuppressStartupBanner>true</SuppressStartupBanner>
