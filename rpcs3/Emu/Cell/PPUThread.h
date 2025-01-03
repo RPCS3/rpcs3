@@ -300,6 +300,11 @@ public:
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 	const char* current_module{}; // Current module name, for savestates.
 
+	// Sycall pattern recognition variables
+	u64 last_lv2_deschedule_cia = umax; // Position of syscall that puts the PPU to sleep
+	u64 last_lv2_deschedule_r3 = umax; // R3 argument of syscall that puts the PPU to sleep
+	u64 last_lv2_deschedule_match_count = 0; // Arguments matching count when PPU puts to sleep
+
 	const bool is_interrupt_thread; // True for interrupts-handler threads
 
 	// Thread name

@@ -24,6 +24,7 @@ enum class spu_block_size_type
 enum class sleep_timers_accuracy_level
 {
 	_as_host,
+	_dynamic,
 	_usleep,
 	_all_timers,
 };
