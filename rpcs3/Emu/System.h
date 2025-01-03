@@ -154,6 +154,7 @@ class Emulator final
 	// 2. It signifies that we don't want to exit on Kill(), for example if we want to transition to another application.
 	bool m_force_boot = false;
 
+	bool m_continuous_mode = false;
 	bool m_has_gui = true;
 
 	bool m_state_inspection_savestate = false;
@@ -346,6 +347,15 @@ public:
 		return m_config_mode == cfg_mode::continuous;
 	}
 
+	bool ContinuousModeEnabled(bool reset)
+	{
+		if (reset)
+		{
+			return std::exchange(m_continuous_mode, false);
+		}
+		return m_continuous_mode;
+	}
+
 	class emulation_state_guard_t
 	{
 		class Emulator* _this = nullptr;
@@ -385,6 +395,7 @@ public:
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
+	void SetContinuousMode(bool continuous_mode);
 
 	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false, usz recursion_count = 0);
 	void Run(bool start_playtime);

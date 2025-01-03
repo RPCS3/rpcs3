@@ -28,6 +28,11 @@ gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& ap
 	show();
 }
 
+void gl_gs_frame::reset()
+{
+	m_primary_context = nullptr;
+}
+
 draw_context_t gl_gs_frame::make_context()
 {
 	auto context = new GLContext();

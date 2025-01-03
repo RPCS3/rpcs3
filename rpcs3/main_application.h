@@ -1,9 +1,10 @@
 #pragma once
 
 #include <string>
-#include <QWindow>
+#include <QThread>
 
 struct EmuCallbacks;
+class gs_frame;
 
 class main_application
 {
@@ -25,5 +26,5 @@ protected:
 	EmuCallbacks CreateCallbacks();
 
 	std::string m_active_user;
-	QWindow* m_game_window = nullptr; // (Currently) only needed so that pad handlers have a valid target for event filtering.
+	gs_frame* m_game_window = nullptr;
 };
