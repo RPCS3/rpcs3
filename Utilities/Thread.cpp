@@ -53,6 +53,8 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#define gettid() syscall(SYS_gettid)
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -3091,6 +3093,24 @@ void thread_ctrl::set_native_priority(int priority)
 	if (!SetThreadPriority(_this_thread, native_priority))
 	{
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
+#elif defined(__linux__)
+	// available niceness for root: -20~19
+	id_t threadpid = gettid();
+	uid_t euid = geteuid();
+
+	if (euid == 0)
+	{
+		int linuxprio = 0;
+		if (priority > 0)
+			linuxprio = -6;
+		else if (priority < 0)
+			linuxprio = 6;
+
+		if (int err = setpriority(PRIO_PROCESS, threadpid, linuxprio))
+		{
+			sig_log.error("setpriority(%d, %d) failed: %d", threadpid, linuxprio, err);
+		}
 	}
 #else
 	int policy;
