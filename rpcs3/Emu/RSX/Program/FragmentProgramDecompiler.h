@@ -1,115 +1,9 @@
 #pragma once
 #include "ShaderParam.h"
+#include "FragmentProgramRegister.h"
 #include "RSXFragmentProgram.h"
+
 #include <sstream>
-
-// Helper for GPR occupancy tracking
-struct temp_register
-{
-	bool aliased_r0 = false;
-	bool aliased_h0 = false;
-	bool aliased_h1 = false;
-	bool last_write_half[4] = { false, false, false, false };
-
-	u32 real_index = -1;
-
-	u32 h0_writes = 0u;   // Number of writes to the first 64-bits of the register
-	u32 h1_writes = 0u;   // Number of writes to the last 64-bits of the register
-
-	void tag(u32 index, bool half_register, bool x, bool y, bool z, bool w)
-	{
-		if (half_register)
-		{
-			if (index & 1)
-			{
-				if (x) last_write_half[2] = true;
-				if (y) last_write_half[2] = true;
-				if (z) last_write_half[3] = true;
-				if (w) last_write_half[3] = true;
-
-				aliased_h1 = true;
-				h1_writes++;
-			}
-			else
-			{
-				if (x) last_write_half[0] = true;
-				if (y) last_write_half[0] = true;
-				if (z) last_write_half[1] = true;
-				if (w) last_write_half[1] = true;
-
-				aliased_h0 = true;
-				h0_writes++;
-			}
-		}
-		else
-		{
-			if (x) last_write_half[0] = false;
-			if (y) last_write_half[1] = false;
-			if (z) last_write_half[2] = false;
-			if (w) last_write_half[3] = false;
-
-			aliased_r0 = true;
-
-			h0_writes++;
-			h1_writes++;
-		}
-
-		if (real_index == umax)
-		{
-			if (half_register)
-				real_index = index >> 1;
-			else
-				real_index = index;
-		}
-	}
-
-	bool requires_gather(u8 channel) const
-	{
-		//Data fetched from the single precision register requires merging of the two half registers
-		ensure(channel < 4);
-		if (aliased_h0 && channel < 2)
-		{
-			return last_write_half[channel];
-		}
-
-		if (aliased_h1 && channel > 1)
-		{
-			return last_write_half[channel];
-		}
-
-		return false;
-	}
-
-	bool requires_split(u32 /*index*/) const
-	{
-		//Data fetched from any of the two half registers requires sync with the full register
-		if (!(last_write_half[0] || last_write_half[1]) && aliased_r0)
-		{
-			//r0 has been written to
-			//TODO: Check for specific elements in real32 register
-			return true;
-		}
-
-		return false;
-	}
-
-	std::string gather_r() const
-	{
-		std::string h0 = "h" + std::to_string(real_index << 1);
-		std::string h1 = "h" + std::to_string(real_index << 1 | 1);
-		std::string reg = "r" + std::to_string(real_index);
-		std::string ret = "//Invalid gather";
-
-		if (aliased_h0 && aliased_h1)
-			ret = "(gather(" + h0 + ", " + h1 + "))";
-		else if (aliased_h0)
-			ret = "(gather(" + h0 + "), " + reg + ".zw)";
-		else if (aliased_h1)
-			ret = "(" + reg + ".xy, gather(" + h1 + "))";
-
-		return ret;
-	}
-};
 
 /**
  * This class is used to translate RSX Fragment program to GLSL/HLSL code
@@ -157,7 +51,7 @@ class FragmentProgramDecompiler
 
 	bool m_is_valid_ucode = true;
 
-	std::array<temp_register, 64> temp_registers;
+	std::array<rsx::MixedPrecisionRegister, 64> temp_registers;
 
 	std::string GetMask() const;
 
