@@ -98,6 +98,7 @@ struct ppu_module : public Type
 	std::vector<ppu_function> funcs{};
 	std::deque<std::shared_ptr<void>> allocations;
 	std::map<u32, u32> addr_to_seg_index;
+	std::unordered_map<u32, u32> duplicate_map;
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
@@ -110,6 +111,7 @@ struct ppu_module : public Type
 		secs = info.secs;
 		allocations = info.allocations;
 		addr_to_seg_index = info.addr_to_seg_index;
+		duplicate_map = info.duplicate_map;
 	}
 
 	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs = std::vector<u32>{}, std::function<bool()> check_aborted = {});
