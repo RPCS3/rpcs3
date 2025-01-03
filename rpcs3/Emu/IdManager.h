@@ -26,7 +26,7 @@ template <typename T>
 concept IdmBaseCompatible = (std::is_final_v<T> ? IdmCompatible<T> : !!(requires () { u32{T::id_step}, u32{T::id_count}; }));
 
 template <typename T>
-concept IdmSavable = IdmBaseCompatible<T> && T::savestate_init_pos != 0 && (requires () { std::declval<T>().save(std::declval<stx::exact_t<utils::serial&>>()); });
+concept IdmSavable = IdmBaseCompatible<T> && T::savestate_init_pos != 0 && (requires(T& t, utils::serial& ar) { t.save(stx::exact_t<utils::serial&>(ar)); });
 
 // If id_base is declared in base type, than storage type must declare id_type
 template <typename Base, typename Type>
@@ -105,7 +105,7 @@ namespace id_manager
 	}
 
 	// ID traits
-	template <typename T, typename = void>
+	template <typename T>
 	struct id_traits_load_func
 	{
 		static constexpr pointer_keeper(*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper
@@ -126,7 +126,8 @@ namespace id_manager
 	};
 
 	template <typename T>
-	struct id_traits_load_func<T, std::void_t<decltype(&T::load)>>
+		requires requires() { &T::load; }
+	struct id_traits_load_func<T>
 	{
 		static constexpr pointer_keeper(*load)(utils::serial&) = [](utils::serial& ar) -> pointer_keeper
 		{
@@ -134,14 +135,15 @@ namespace id_manager
 		};
 	};
 
-	template <typename T, typename = void>
+	template <typename T>
 	struct id_traits_savable_func
 	{
 		static constexpr bool(*savable)(void*) = [](void*) -> bool { return true; };
 	};
 
 	template <typename T>
-	struct id_traits_savable_func<T, std::void_t<decltype(&T::savable)>>
+		requires requires { &T::savable; }
+	struct id_traits_savable_func<T>
 	{
 		static constexpr bool(*savable)(void* ptr) = [](void* ptr) -> bool { return static_cast<const T*>(ptr)->savable(); };
 	};

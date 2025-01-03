@@ -256,7 +256,7 @@ struct ff_t : bf_base<T, N>
 #endif
 
 template <typename T, uint I, uint N>
-struct fmt_unveil<bf_t<T, I, N>, void>
+struct fmt_unveil<bf_t<T, I, N>>
 {
 	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
@@ -267,7 +267,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 };
 
 template <typename F, typename... Fields>
-struct fmt_unveil<cf_t<F, Fields...>, void>
+struct fmt_unveil<cf_t<F, Fields...>>
 {
 	using type = typename fmt_unveil<std::common_type_t<typename F::type>>::type;
 
@@ -278,7 +278,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 };
 
 template <typename T, T V, uint N>
-struct fmt_unveil<ff_t<T, V, N>, void>
+struct fmt_unveil<ff_t<T, V, N>>
 {
 	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 

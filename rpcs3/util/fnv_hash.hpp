@@ -14,7 +14,8 @@ namespace rpcs3
 		return static_cast<usz>(value);
 	}
 
-	template <typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+	template <typename T>
+		requires std::is_integral_v<T>
 	static inline usz hash64(usz hash_value, T data)
 	{
 		hash_value ^= data;

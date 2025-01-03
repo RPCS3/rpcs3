@@ -18,9 +18,8 @@ namespace utils
 	};
 
 	template <typename T>
-	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires ()
-	{
-		std::enable_if_t<std::conjunction_v<typename T::enable_bitcopy>>();
+	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires() {
+		typename T::enable_bitcopy;
 	};
 
 	template <typename T>
@@ -30,7 +29,7 @@ namespace utils
 	};
 
 	template <typename T>
-	concept ListAlike = requires (std::remove_cvref_t<T>& obj) { obj.insert(obj.end(), std::declval<typename T::value_type>()); };
+	concept ListAlike = requires(std::remove_cvref_t<T>& obj, T::value_type item) { obj.insert(obj.end(), item); };
 
 	struct serial;
 
@@ -427,7 +426,8 @@ public:
 			return true;
 		}
 
-		template <typename T> requires requires (T& obj) { (obj.*(&T::operator()))(std::declval<stx::exact_t<utils::serial&>>()); }
+		template <typename T>
+			requires requires(T& obj, utils::serial& ar) { (obj.*(&T::operator()))(ar); }
 		bool serialize(T& obj)
 		{
 			obj(*this);

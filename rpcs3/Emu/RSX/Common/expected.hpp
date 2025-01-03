@@ -94,11 +94,11 @@ namespace rsx
             return value;
         }
 
-        template<typename = std::enable_if<!std::is_same_v<T, bool>>>
-        operator bool() const
-        {
-            return error.empty();
-        }
+		operator bool() const
+			requires(!std::is_same_v<T, bool>)
+		{
+			return error.empty();
+		}
 
         operator std::pair<T&, E&>() const
         {
