@@ -13,19 +13,15 @@ namespace gui
 	{
 		std::string get_uuid_path()
 		{
-#ifdef _WIN32
-			const std::string config_dir = fs::get_config_dir() + "config/";
+			const std::string config_dir = fs::get_config_dir(true);
 			const std::string uuid_path = config_dir + "uuid";
-
+#ifdef _WIN32
 			if (!fs::create_path(config_dir))
 			{
 				uuid_log.error("Could not create path: %s (%s)", uuid_path, fs::g_tls_error);
 			}
-
-			return uuid_path;
-#else
-			return fs::get_config_dir() + "uuid";
 #endif
+			return uuid_path;
 		}
 
 		std::string make_uuid()

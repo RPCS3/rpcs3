@@ -59,11 +59,7 @@ namespace np
 {
 	std::string get_players_history_path()
 	{
-#ifdef _WIN32
-		return fs::get_config_dir() + "config/players_history.yml";
-#else
-		return fs::get_config_dir() + "players_history.yml";
-#endif
+		return fs::get_config_dir(true) + "players_history.yml";
 	}
 
 	std::map<std::string, player_history> load_players_history()
@@ -1440,7 +1436,7 @@ namespace np
 	void np_handler::save_players_history()
 	{
 #ifdef _WIN32
-		const std::string path_to_cfg = fs::get_config_dir() + "config/";
+		const std::string path_to_cfg = fs::get_config_dir(true);
 		if (!fs::create_path(path_to_cfg))
 		{
 			nph_log.error("Could not create path: %s", path_to_cfg);

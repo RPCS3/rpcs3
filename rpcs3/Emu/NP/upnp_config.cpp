@@ -24,7 +24,7 @@ void cfg_upnp::load()
 void cfg_upnp::save() const
 {
 #ifdef _WIN32
-	const std::string path_to_cfg = fs::get_config_dir() + "config/";
+	const std::string path_to_cfg = fs::get_config_dir(true);
 	if (!fs::create_path(path_to_cfg))
 	{
 		upnp_cfg_log.error("Could not create path: %s", path_to_cfg);
@@ -51,9 +51,5 @@ void cfg_upnp::set_device_url(std::string_view url)
 
 std::string cfg_upnp::get_path()
 {
-#ifdef _WIN32
-	return fs::get_config_dir() + "config/upnp.yml";
-#else
-	return fs::get_config_dir() + "upnp.yml";
-#endif
+	return fs::get_config_dir(true) + "upnp.yml";
 }

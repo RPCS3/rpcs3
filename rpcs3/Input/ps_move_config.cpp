@@ -7,11 +7,7 @@ cfg_ps_moves g_cfg_move;
 
 cfg_ps_moves::cfg_ps_moves()
 	: cfg::node()
-#ifdef _WIN32
-	, path(fs::get_config_dir() + "config/ps_move.yml")
-#else
-	, path(fs::get_config_dir() + "ps_move.yml")
-#endif
+	, path(fs::get_config_dir(true) + "ps_move.yml")
 {
 }
 

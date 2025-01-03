@@ -8,11 +8,7 @@ cfg_camera g_cfg_camera;
 
 cfg_camera::cfg_camera()
 	: cfg::node()
-#ifdef _WIN32
-	, path(fs::get_config_dir() + "config/camera.yml")
-#else
-	, path(fs::get_config_dir() + "camera.yml")
-#endif
+	, path(fs::get_config_dir(true) + "camera.yml")
 {
 }
 

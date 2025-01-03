@@ -34,7 +34,7 @@ void cfg_rpcn::load()
 void cfg_rpcn::save() const
 {
 #ifdef _WIN32
-	const std::string path_to_cfg = fs::get_config_dir() + "config/";
+	const std::string path_to_cfg = fs::get_config_dir(true);
 	if (!fs::create_path(path_to_cfg))
 	{
 		rpcn_log.error("Could not create path: %s", path_to_cfg);
@@ -51,11 +51,7 @@ void cfg_rpcn::save() const
 
 std::string cfg_rpcn::get_path()
 {
-#ifdef _WIN32
-	return fs::get_config_dir() + "config/rpcn.yml";
-#else
-	return fs::get_config_dir() + "rpcn.yml";
-#endif
+	return fs::get_config_dir(true) + "rpcn.yml";
 }
 
 std::string cfg_rpcn::generate_npid()
