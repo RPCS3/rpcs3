@@ -398,25 +398,15 @@ void main_window::OnMissingFw()
 
 	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
 	mb->setTextFormat(Qt::RichText);
+
 	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
-
-	// NOTE: Qt::WA_DeleteOnClose attribute causes the dialogs invoked in InstallPup() to immediately destroy (probably a bug in Qt)
-	//       the "mb" dialog (while still in use in the "mb"'s "accected" connection) often causing a crash due to access violation.
-	//       So, instead of using Qt::WA_DeleteOnClose attribute, manually delete "mb" by using deleteLater() when the dialog is closed
-	// 
-	//mb->setAttribute(Qt::WA_DeleteOnClose);
-
-	connect(mb, &QDialog::finished, this, [mb]()
-	{
-		mb->deleteLater();
-	});
+	mb->setAttribute(Qt::WA_DeleteOnClose);
+	mb->open();
 
 	connect(mb, &QDialog::accepted, this, [this]()
 	{
 		InstallPup();
 	});
-
-	mb->open();
 }
 
 void main_window::ResizeIcons(int index)
