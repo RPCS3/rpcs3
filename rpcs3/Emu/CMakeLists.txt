@@ -558,6 +558,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
     RSX/Program/FragmentProgramDecompiler.cpp
+    RSX/Program/FragmentProgramRegister.cpp
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp

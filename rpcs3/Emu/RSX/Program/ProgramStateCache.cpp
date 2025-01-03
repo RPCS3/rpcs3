@@ -555,10 +555,14 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	if (binary1.ctrl != binary2.ctrl || binary1.texture_state != binary2.texture_state ||
+	if (binary1.ucode_length != binary2.ucode_length ||
+		binary1.ctrl != binary2.ctrl ||
+		binary1.texture_state != binary2.texture_state ||
 		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
 		binary1.two_sided_lighting != binary2.two_sided_lighting)
+	{
 		return false;
+	}
 
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
@@ -569,7 +573,9 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
 
 		if (inst1._u ^ inst2._u)
+		{
 			return false;
+		}
 
 		instIndex++;
 		// Skip constants
@@ -578,9 +584,11 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			fragment_program_utils::is_constant(inst1._u32[3]))
 			instIndex++;
 
-		bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
+		const bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
 		if (end)
+		{
 			return true;
+		}
 	}
 }
 

@@ -1330,6 +1330,9 @@
     <ClCompile Include="Emu\Cell\ErrorCodes.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2685,6 +2688,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_utils.h">
       <Filter>Emu\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h">
+      <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
