@@ -227,6 +227,14 @@ struct ParamArray
 
 		return name;
 	}
+
+	void Clear()
+	{
+		for (auto& param : params)
+		{
+			param.clear();
+		}
+	}
 };
 
 class ShaderVariable

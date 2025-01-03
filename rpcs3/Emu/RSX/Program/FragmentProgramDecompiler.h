@@ -56,16 +56,30 @@ struct temp_register
 
 		if (real_index == umax)
 		{
-			if (half_register)
-				real_index = index >> 1;
-			else
-				real_index = index;
+			real_index = half_register
+				? (index >> 1)
+				: index;
 		}
+	}
+
+	bool floating() const
+	{
+		return !h0_writes && !h1_writes;
+	}
+
+	bool floating_h0() const
+	{
+		return !h0_writes;
+	}
+
+	bool floating_h1() const
+	{
+		return !h1_writes;
 	}
 
 	bool requires_gather(u8 channel) const
 	{
-		//Data fetched from the single precision register requires merging of the two half registers
+		// Data fetched from the single precision register requires merging of the two half registers
 		ensure(channel < 4);
 		if (aliased_h0 && channel < 2)
 		{
@@ -80,13 +94,20 @@ struct temp_register
 		return false;
 	}
 
+	bool requires_gather128() const
+	{
+		// Full 128-bit check
+		return last_write_half[0] || last_write_half[1] || last_write_half[2] || last_write_half[3];
+	}
+
 	bool requires_split(u32 /*index*/) const
 	{
-		//Data fetched from any of the two half registers requires sync with the full register
+		// Data fetched from any of the two half registers requires sync with the full register
 		if (!(last_write_half[0] || last_write_half[1]) && aliased_r0)
 		{
-			//r0 has been written to
-			//TODO: Check for specific elements in real32 register
+			// r0 has been written to but h0 was not the last write.
+			// This means to read h0 we need to split r0.xy
+			//TODO: Check for specific elements in real32 register. This incomplete version only checks the first half-word.
 			return true;
 		}
 
@@ -95,19 +116,36 @@ struct temp_register
 
 	std::string gather_r() const
 	{
-		std::string h0 = "h" + std::to_string(real_index << 1);
-		std::string h1 = "h" + std::to_string(real_index << 1 | 1);
-		std::string reg = "r" + std::to_string(real_index);
-		std::string ret = "//Invalid gather";
+		const auto half_index = real_index << 1;
+		const std::string h0 = "h" + std::to_string(half_index);
+		const std::string h1 = "h" + std::to_string(half_index + 1);
+		const std::string reg = "r" + std::to_string(real_index);
+		std::string ret = "// Invalid gather";
 
 		if (aliased_h0 && aliased_h1)
+		{
 			ret = "(gather(" + h0 + ", " + h1 + "))";
+		}
 		else if (aliased_h0)
+		{
 			ret = "(gather(" + h0 + "), " + reg + ".zw)";
+		}
 		else if (aliased_h1)
+		{
 			ret = "(" + reg + ".xy, gather(" + h1 + "))";
+		}
 
 		return ret;
+	}
+
+	std::string split_h0() const
+	{
+		// Reads half-word 0 (H16x4) from a full real (R32x4) register
+		// glsl-specific since other backends disappeared.
+		const std::string reg = "r" + std::to_string(real_index);
+		const std::string word0 = "floatBitsToUint(" + reg + ".x)";
+		const std::string word1 = "floatBitsToUint(" + reg + ".y)";
+		return "(unpackHalf2x16(" + word0 + "), unpackHalf2x16(" + word1 + "))";
 	}
 };
 
