@@ -53,7 +53,7 @@ namespace rsx
 			return result;
 		}
 
-		image_info::image_info(const char* filename)
+		image_info::image_info(const char* filename, bool grayscaled)
 		{
 			fs::file f(filename, fs::read + fs::isfile);
 
@@ -64,12 +64,12 @@ namespace rsx
 			}
 
 			const std::vector<u8> bytes = f.to_vector<u8>();
-			load_data(bytes);
+			load_data(bytes, grayscaled);
 		}
 
-		image_info::image_info(const std::vector<u8>& bytes)
+		image_info::image_info(const std::vector<u8>& bytes, bool grayscaled)
 		{
-			load_data(bytes);
+			load_data(bytes, grayscaled);
 		}
 
 		image_info::~image_info()
@@ -77,9 +77,30 @@ namespace rsx
 			if (data) stbi_image_free(data);
 		}
 
-		void image_info::load_data(const std::vector<u8>& bytes)
+		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
 		{
-			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
+			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, grayscaled ? STBI_grey_alpha : STBI_rgb_alpha);
+			channels = grayscaled ? 2 : 4;
+
+			if (data && grayscaled)
+			{
+				data_grey.resize(4 * w * h);
+
+				for (usz i = 0, n = 0; i < data_grey.size(); i += 4, n += 2)
+				{
+					const u8 grey = data[n];
+					const u8 alpha = data[n + 1];
+
+					data_grey[i + 0] = grey;
+					data_grey[i + 1] = grey;
+					data_grey[i + 2] = grey;
+					data_grey[i + 3] = alpha;
+				}
+			}
+			else
+			{
+				data_grey.clear();
+			}
 		}
 
 		resource_config::resource_config()
@@ -114,7 +135,7 @@ namespace rsx
 
 #if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
 				// Check the DATADIR if defined
-				if (info->data == nullptr)
+				if (info->get_data() == nullptr)
 				{
 					const std::string data_dir (DATADIR);
 					const std::string image_data = data_dir + "/Icons/ui/" + res;
@@ -122,7 +143,7 @@ namespace rsx
 				}
 #endif
 
-				if (info->data == nullptr)
+				if (info->get_data() == nullptr)
 				{
 					// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
 					std::string src = "Icons/ui/" + res;
@@ -130,12 +151,12 @@ namespace rsx
 #ifndef _WIN32
 					// Check for Icons in ../share/rpcs3 for AppImages,
 					// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
-					if (info->data == nullptr)
+					if (info->get_data() == nullptr)
 					{
 						char result[ PATH_MAX ];
 #if defined(__APPLE__)
 						u32 bufsize = PATH_MAX;
-						bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+						const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
 #elif defined(KERN_PROC_PATHNAME)
 						usz bufsize = PATH_MAX;
 						int mib[] = {
@@ -150,13 +171,13 @@ namespace rsx
 							-1,
 #endif
 						};
-						bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
+						const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
 #elif defined(__linux__)
-						bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
+						const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
 #elif defined(__sun)
-						bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
+						const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
 #else
-						bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
+						const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
 #endif
 						if (success)
 						{
@@ -168,7 +189,7 @@ namespace rsx
 #endif
 							info = std::make_unique<image_info>(src.c_str());
 							// Check if the icons are in the same directory as the executable (local builds)
-							if (info->data == nullptr)
+							if (info->get_data() == nullptr)
 							{
 								src = executablePath + "/Icons/ui/" + res;
 								info = std::make_unique<image_info>(src.c_str());
@@ -176,7 +197,7 @@ namespace rsx
 						}
 					}
 #endif
-					if (info->data != nullptr)
+					if (info->get_data())
 					{
 						// Install the image to config dir
 						fs::create_path(fs::get_parent_dir(image_path));

@@ -168,3 +168,9 @@ public:
 
 	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
 };
+
+struct current_trophy_name
+{
+	std::mutex mtx;
+	std::string name;
+};

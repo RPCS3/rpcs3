@@ -435,7 +435,7 @@ namespace vk
 
 		for (const auto &res : configuration.texture_raw_data)
 		{
-			upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->data, -1);
+			upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->get_data(), -1);
 		}
 
 		configuration.free_resources();
@@ -516,7 +516,7 @@ namespace vk
 			return found->second.get();
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, 1,
-				false, true, desc->data, owner_uid);
+				false, true, desc->get_data(), owner_uid);
 	}
 
 	std::vector<VkPushConstantRange> ui_overlay_renderer::get_push_constants()

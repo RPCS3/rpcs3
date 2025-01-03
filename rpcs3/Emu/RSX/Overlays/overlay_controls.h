@@ -33,16 +33,21 @@ namespace rsx
 
 		struct image_info
 		{
-			int w = 0, h = 0;
-			int bpp = 0;
+		private:
 			u8* data = nullptr;
+			std::vector<u8> data_grey;
+
+		public:
+			int w = 0, h = 0, channels = 0;
+			int bpp = 0;
 
 			image_info(image_info&) = delete;
-			image_info(const char* filename);
-			image_info(const std::vector<u8>& bytes);
+			image_info(const char* filename, bool grayscaled = false);
+			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
 			~image_info();
 
-			void load_data(const std::vector<u8>& bytes);
+			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
+			const u8* get_data() const { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
 		};
 
 		struct resource_config

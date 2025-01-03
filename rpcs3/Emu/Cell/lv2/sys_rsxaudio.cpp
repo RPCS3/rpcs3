@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu//Audio/audio_utils.h"
 #include "Emu//Cell/Modules/cellAudioOut.h"
 #include "util/video_provider.h"
 
@@ -1308,11 +1309,11 @@ rsxaudio_backend_thread::rsxaudio_backend_thread()
 {
 	new_emu_cfg = get_emu_cfg();
 
-	const u64 new_vol = g_cfg.audio.volume;
+	const f32 new_vol = audio::get_volume();
 
 	callback_cfg.atomic_op([&](callback_config& val)
 	{
-		val.target_volume = static_cast<u16>(new_vol / 100.0 * callback_config::VOL_NOMINAL);
+		val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
 		val.initial_volume = val.current_volume;
 	});
 }
@@ -1332,11 +1333,11 @@ void rsxaudio_backend_thread::update_emu_cfg()
 {
 	std::unique_lock lock(state_update_m);
 	const emu_audio_cfg _new_emu_cfg = get_emu_cfg();
-	const u64 new_vol = g_cfg.audio.volume;
+	const f32 new_vol = audio::get_volume();
 
 	callback_cfg.atomic_op([&](callback_config& val)
 	{
-		val.target_volume = static_cast<u16>(new_vol / 100.0 * callback_config::VOL_NOMINAL);
+		val.target_volume = static_cast<u16>(new_vol * callback_config::VOL_NOMINAL);
 		val.initial_volume = val.current_volume;
 	});
 
