@@ -410,7 +410,7 @@ namespace utils
 			return static_cast<T>(value * u64{numerator} / u64{denominator});
 		}
 
-#if is_u128_emulated
+#ifdef _MSC_VER
 		if constexpr (sizeof(T) <= sizeof(u128) / 2)
 		{
 			return static_cast<T>(u128_from_mul(value, numerator) / u64{denominator});

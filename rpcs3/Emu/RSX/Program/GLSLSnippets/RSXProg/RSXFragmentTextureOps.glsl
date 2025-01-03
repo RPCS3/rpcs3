@@ -175,10 +175,69 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 vec4 _sext_unorm8x4(const in vec4 x)
 {
 	// TODO: Handle clamped sign-extension
-	const vec4 bits = floor(fma(x, vec4(255.f), vec4(0.5f)));
-	const bvec4 sign_check = lessThan(bits, vec4(128.f));
-	const vec4 ret = _select(bits - 256.f, bits, sign_check);
+	const vec4 bits = floor(fma(x, vec4(255.f), vec4(0.5f)));    // floor of ((a * b) + c) (e.g. 0.0 -> 0, 1.0 -> 255)
+	const bvec4 sign_check = lessThan(bits, vec4(128.f));        // 1 if a < b (e.g. 127 -> 1, 128 -> 0)
+	const vec4 ret = _select(bits - 256.f, bits, sign_check);    // a if c is false, b if c is true
 	return ret / 127.f;
+
+//	const bvec4 clamped_check = lessThan(ret, vec4(-127.f));     // handle clamped sign-extension
+//	const vec4 ret2 = _select(ret, vec4(-127.f), clamped_check);
+//	return ret2 / 127.f;
+
+//	return vec4(0.0f);
+
+//	return ret;
+//	return ret / vec4(512.f, 512.f, 512.f, 512.f);
+//	return vec4(-1.f, -1.f, -1.f, 0.f);
+/*
+	const vec4 bits = x;  // max di a * b + c (es. 0.0 -> 0.0, 1.0 -> 255)
+	const bvec4 sign_check = lessThan(bits, vec4(128.f));      // 1 se a < b (es. 127.0 -> 1)
+	const vec4 ret = _select(bits - 256.f, bits, sign_check);  // a if c false, b if c true
+	return ret / 127.f;
+*/
+/*
+//	const vec4 bits = floor(fma(x, vec4(255.f), vec4(0.f)));         // max di a*b+c (es. 0.0 -> 0.0, 1.0 -> 255)
+	const vec4 bits = fma(x, vec4(255.f), vec4(0.f));                // max di a*b+c (es. 0.0 -> 0.0, 1.0 -> 255)
+	const bvec4 sign_check = lessThan(bits, vec4(128.f));            // 1 se a < b (es. 127.0 -> 1)
+//	const vec4 ret = _select(vec4(127.f), bits, sign_check);         // a if c false, b if c true
+	const vec4 ret = _select(bits - vec4(256.f), bits, sign_check);  // a if c false, b if c true
+	return ret / 127.f;
+*/
+/*
+	const bvec4 sign_check2 = lessThan(ret, vec4(-127.f));
+	const vec4 ret2 = _select(ret, vec4(-127.f), sign_check2);
+//	return ret2 * 2;  // -255 255
+//	return ret2 / vec4(127.f);  // -1.0 - 1.0
+//	return ret2 
+	return ret / 256.f;
+//	return ret + 255.f;
+//	return ret * 256.f;
+	return ret * 1024.f;
+*/
+/*
+	const vec4 bits = x;
+	const bvec4 sign_check = lessThan(bits, vec4(0.5f));  // 1 se a < b (es. 0.0 -> 1, 0.5 -> 0)
+	const vec4 ret = _select(bits - vec4(1.f), bits, sign_check);  // a if c false, b if c true
+	return ret / vec4(0.5f);
+*/
+/*
+	const vec4 bits = floor(fma(x, vec4(1.f), vec4(1.f)));                     // max di a*b+c (es. -1.0 -> 0.0, 1.0 -> 2.0)
+//	const vec4 bits = fma(x, vec4(1.f), vec4(1.f));                            // max di a*b+c (es. -1.0 -> 0.0, 1.0 -> 2.0)
+	const bvec4 sign_check = lessThan(bits, vec4(1.f));                        // 1 se a < b (es. 0.0 -> 1, 1.0 -> 0)
+//	const vec4 ret = _select(bits - vec4(1.f), bits + vec4(1.f), sign_check);  // a if c false, b if c true
+	const vec4 ret = _select(bits - vec4(1.f), vec4(2.f) - bits, sign_check);  // a if c false, b if c true
+	return ret / vec4(1.f);
+*/
+/*
+	const bvec4 sign_check = lessThan(x, vec4(0.5f));  // 1 se a < b (es. 0.4 -> 1, 1.0 -> 0)
+	const vec4 ret = _select(x - vec4(1.f), x, sign_check);  // a if c false, b if c true
+	return ret * vec4(2.f);
+*/
+/*	const bvec4 sign_check = lessThan(x, vec4(128.f));  // 1 se a < b (es. 127.0 -> 1)
+	const vec4 ret = _select(x - 256.f, x, sign_check);  // a if c false, b if c true
+	return ret;
+//	return ret / 127.f;
+*/
 }
 
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
@@ -208,7 +267,21 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 	uvec4 mask;
 	vec4 convert;
 
-	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);
+	uint op_mask;
+/*
+	op_mask = control_bits & uint(SEXT_MASK);
+	if (op_mask != 0u)
+	{
+		// Sign-extend the input signal
+		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
+		convert = _sext_unorm8x4(rgba);
+//		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+
+		rgba = convert * vec4(0.f, 0.f, 0.f, 1.f);
+	}
+*/
+
+	op_mask = control_bits & uint(SIGN_EXPAND_MASK);
 	if (op_mask != 0u)
 	{
 		// Expand to signed normalized by decompressing the signal
@@ -217,22 +290,37 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
+
 	op_mask = control_bits & uint(SEXT_MASK);
 	if (op_mask != 0u)
 	{
 		// Sign-extend the input signal
 		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
-		convert = _sext_unorm8x4(rgba);
-		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
-	}
+//		convert = _sext_unorm8x4(rgba);
+//		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 
+//		convert = (rgba + 1.f) / 2.f;
+//		convert = rgba * 2.f;
+//		convert = rgba / 16.f;
+		convert = rgba;
+		convert = _sext_unorm8x4(convert);
+//		convert = convert * vec4(1.f, 1.f, 1.f, 0.f);
+//		convert = (rgba + 1.f) / 2.f;
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+
+//		rgba = convert * vec4(0.f, 0.f, 0.f, 1.f);
+//		rgba = vec4(0.f, 0.f, 0.f, 0.f);
+	}
+	
 	op_mask = control_bits & uint(GAMMA_CTRL_MASK);
 	if (op_mask != 0u)
 	{
 		// Gamma correction
 		mask = uvec4(op_mask) & uvec4(GAMMA_R_MASK, GAMMA_G_MASK, GAMMA_B_MASK, GAMMA_A_MASK);
 		convert = srgb_to_linear(rgba);
-		return _select(rgba, convert, notEqual(mask, uvec4(0)));
+//		return _select(rgba, convert, notEqual(mask, uvec4(0)));
+
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
 	return rgba;
