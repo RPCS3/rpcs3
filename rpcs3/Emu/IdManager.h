@@ -123,7 +123,7 @@ namespace id_manager
 				ptr = stx::make_shared<T>(stx::exact_t<utils::serial&>(ar));
 			}
 
-			return [ptr](void* storage) { *static_cast<stx::shared_ptr<T>*>(storage) = ptr; };
+			return [ptr](void* storage) { *static_cast<stx::atomic_ptr<T>*>(storage) = ptr; };
 		};
 	};
 

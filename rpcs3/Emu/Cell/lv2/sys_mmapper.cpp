@@ -84,7 +84,7 @@ CellError lv2_memory::on_id_create()
 
 std::function<void(void*)> lv2_memory::load(utils::serial& ar)
 {
-	auto mem = make_shared<lv2_memory>(ar);
+	auto mem = make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar));
 	mem->exists++; // Disable on_id_create()
 	auto func = load_func(mem, +mem->pshared);
 	mem->exists--;
