@@ -328,6 +328,8 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 				{
 					Emu.Restart();
 				};
+
+				// Make sure we keep the game window opened
 				Emu.SetContinuousMode(true);
 			}
 

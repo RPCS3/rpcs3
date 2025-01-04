@@ -2590,6 +2590,8 @@ void main_window::CreateConnects()
 			{
 				Emu.Restart();
 			};
+
+			// Make sure we keep the game window opened
 			Emu.SetContinuousMode(true);
 		}
 

@@ -2912,10 +2912,13 @@ u64 get_sysutil_cb_manager_read_count();
 
 void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
-void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate)
+void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate, bool continuous_mode)
 {
 	// Make sure we close the game window
-	Emu.SetContinuousMode(false);
+	if (!continuous_mode)
+	{
+		Emu.SetContinuousMode(false);
+	}
 
 	// Ensure no game has booted inbetween
 	const auto guard = Emu.MakeEmulationStateGuard();
