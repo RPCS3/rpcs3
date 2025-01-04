@@ -41,6 +41,7 @@ void progress_dialog_server::operator()()
 {
 	std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
 	g_system_progress_stopping = false;
+	g_system_progress_canceled = false;
 
 	const auto get_state = []()
 	{
