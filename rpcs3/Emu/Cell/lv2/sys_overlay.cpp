@@ -112,7 +112,7 @@ std::function<void(void*)> lv2_overlay::load(utils::serial& ar)
 
 	return [ovlm](void* storage)
 	{
-		*static_cast<shared_ptr<lv2_obj>*>(storage) = ovlm;
+		*static_cast<atomic_ptr<lv2_obj>*>(storage) = ovlm;
 	};
 }
 

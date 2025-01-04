@@ -293,7 +293,7 @@ std::function<void(void*)> lv2_socket::load(utils::serial& ar)
 		sock_lv2->bind(sock_lv2->last_bound_addr);
 	}
 
-	return [ptr = sock_lv2](void* storage) { *static_cast<shared_ptr<lv2_socket>*>(storage) = ptr; };;
+	return [ptr = sock_lv2](void* storage) { *static_cast<atomic_ptr<lv2_socket>*>(storage) = ptr; };;
 }
 
 void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
