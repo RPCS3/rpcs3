@@ -114,6 +114,7 @@ namespace rsx
 
 				Emu.CallFromMainThread([]()
 				{
+					// Make sure we keep the game window opened
 					Emu.SetContinuousMode(true);
 					Emu.Restart(false);
 				});

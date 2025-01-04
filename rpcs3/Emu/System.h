@@ -419,7 +419,7 @@ public:
 
 	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
-	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
+	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false, bool continuous_mode = false);
 	void Kill(bool allow_autoexit = true, bool savestate = false, savestate_stage* stage = nullptr);
 	game_boot_result Restart(bool graceful = true);
 	bool Quit(bool force_quit);

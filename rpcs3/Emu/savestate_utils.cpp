@@ -322,7 +322,10 @@ bool boot_last_savestate(bool testing)
 		if (result)
 		{
 			sys_log.success("Booting the most recent savestate \'%s\' using the Reload shortcut.", savestate_path);
-			Emu.GracefulShutdown(false);
+
+			// Make sure we keep the game window opened
+			Emu.SetContinuousMode(true);
+			Emu.GracefulShutdown(false, false, false, true);
 
 			if (game_boot_result error = Emu.BootGame(savestate_path, "", true); error != game_boot_result::no_errors)
 			{
