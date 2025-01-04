@@ -429,7 +429,7 @@ error_code sys_config_unregister_service(u32 config_hdl, u32 service_hdl)
 	sys_config.trace("sys_config_unregister_service(config_hdl=0x%x, service_hdl=0x%x)", config_hdl, service_hdl);
 
 	// Remove listener from IDM
-	auto service = idm::withdraw<lv2_config_service>(service_hdl);
+	auto service = idm::get_unlocked<lv2_config_service>(service_hdl);
 	if (!service)
 	{
 		return CELL_ESRCH;
