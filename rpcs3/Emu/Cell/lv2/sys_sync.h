@@ -449,7 +449,7 @@ public:
 	static std::function<void(void*)> load_func(shared_ptr<T> make, u64 pshared = umax)
 	{
 		const u64 key = make->key;
-		return [ptr = load<T>(key, make, pshared)](void* storage) { *static_cast<shared_ptr<Storage>*>(storage) = ptr; };
+		return [ptr = load<T>(key, make, pshared)](void* storage) { *static_cast<atomic_ptr<Storage>*>(storage) = ptr; };
 	}
 
 	static bool wait_timeout(u64 usec, ppu_thread* cpu = {}, bool scale = true, bool is_usleep = false);
