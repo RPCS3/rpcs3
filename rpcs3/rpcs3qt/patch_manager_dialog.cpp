@@ -1247,7 +1247,16 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 	if (patch_engine::load(patches, "From Download", content, true, &log_message))
 	{
 		patch_log.notice("Successfully validated downloaded patch file");
-		const std::string path = patch_engine::get_patches_path() + "patch.yml";
+
+		const std::string patches_path = patch_engine::get_patches_path();
+
+		if (!fs::create_path(patches_path))
+		{
+			patch_log.fatal("Failed to create path: %s (%s)", patches_path, fs::g_tls_error);
+			return false;
+		}
+
+		const std::string path = patches_path + "patch.yml";
 
 		// Back up current patch file if possible
 		if (fs::is_file(path))
