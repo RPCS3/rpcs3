@@ -20,6 +20,7 @@ private:
 public:
 	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 
+	void reset() override;
 	draw_context_t make_context() override;
 	void set_current(draw_context_t ctx) override;
 	void delete_context(draw_context_t ctx) override;

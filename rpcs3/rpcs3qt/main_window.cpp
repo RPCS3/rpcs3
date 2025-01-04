@@ -2590,6 +2590,7 @@ void main_window::CreateConnects()
 			{
 				Emu.Restart();
 			};
+			Emu.SetContinuousMode(true);
 		}
 
 		Emu.Kill(false, true);

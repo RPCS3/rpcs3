@@ -14,6 +14,7 @@ public:
 	virtual ~GSFrameBase() = default;
 
 	virtual void close() = 0;
+	virtual void reset() = 0;
 	virtual bool shown() = 0;
 	virtual void hide() = 0;
 	virtual void show() = 0;
