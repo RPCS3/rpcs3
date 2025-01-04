@@ -10,6 +10,7 @@
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/IdManager.h"
+#include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/Cell/Modules/cellAudio.h"
@@ -356,6 +357,21 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	case gui::shortcuts::shortcut::gw_home_menu:
 	{
 		pad::g_home_menu_requested = true;
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_mute_unmute:
+	{
+		audio::toggle_mute();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_volume_up:
+	{
+		audio::change_volume(5);
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_volume_down:
+	{
+		audio::change_volume(-5);
 		break;
 	}
 	default:

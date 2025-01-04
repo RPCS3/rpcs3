@@ -139,6 +139,94 @@
   <ItemGroup>
     <ClInclude Include="extra\win32\user_settings.h" />
     <ClInclude Include="wolfssl\resource.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\aes.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\arc4.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\asn.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\asn_public.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\blake2-impl.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\blake2-int.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\blake2.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\camellia.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\chacha.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\chacha20_poly1305.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\cmac.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\coding.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\compress.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\cpuid.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\cryptocb.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\curve25519.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\curve448.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\des3.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\dh.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\dilithium.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\dsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ecc.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\eccsi.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ed25519.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ed448.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\error-crypt.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_kyber.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_lms.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_xmss.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\falcon.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\fe_448.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\fe_operations.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\fips_test.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ge_448.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ge_operations.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\hash.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\hmac.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\hpke.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\integer.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\kdf.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\kyber.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\lms.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\logging.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\md2.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\md4.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\md5.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\memory.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\mem_track.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\misc.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\mpi_class.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\mpi_superclass.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pkcs11.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pkcs12.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pkcs7.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\poly1305.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pwdbased.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\random.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\rc2.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ripemd.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\rsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sakke.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\selftest.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\settings.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sha.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sha256.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sha3.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sha512.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\signature.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\siphash.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sm2.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sm3.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sm4.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sp.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sphincs.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sp_int.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\srp.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\tfm.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\types.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\visibility.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_encrypt.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_kyber.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_lms.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_pkcs11.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_port.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_xmss.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wolfevent.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wolfmath.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\xmss.h" />
     <CustomBuild Include="wolfssl\wolfcrypt\src\aes_asm.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DLL Debug|x64'">false</ExcludedFromBuild>
@@ -159,6 +247,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="wolfssl\wolfssl\wolfcrypt\include.am" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

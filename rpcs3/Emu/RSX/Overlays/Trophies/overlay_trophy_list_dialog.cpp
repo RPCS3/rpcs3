@@ -68,7 +68,7 @@ namespace rsx
 		{
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);
-			m_dim_background->back_color.a = 0.5f;
+			m_dim_background->back_color.a = 0.9f;
 
 			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
