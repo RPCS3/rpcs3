@@ -172,6 +172,7 @@ target_link_libraries(rpcs3_emu
 
 # Cell
 target_sources(rpcs3_emu PRIVATE
+    Cell/ErrorCodes.cpp
     Cell/MFC.cpp
     Cell/PPUAnalyser.cpp
     Cell/PPUDisAsm.cpp

@@ -66,6 +66,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
+    <ClCompile Include="Emu\Cell\ErrorCodes.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
