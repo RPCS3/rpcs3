@@ -2414,6 +2414,14 @@ void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_da
 	pdlg->setAutoReset(false);
 	pdlg->open();
 
+	connect(pdlg, &progress_dialog::canceled, this, []()
+	{
+		if (!Emu.IsStopped())
+		{
+			Emu.GracefulShutdown(false, true);
+		}
+	});
+
 	BatchActionBySerials(pdlg, serials, tr("%0\nProgress: %1/%2 caches compiled").arg(main_label),
 	[&, game_data](const std::string& serial)
 	{
