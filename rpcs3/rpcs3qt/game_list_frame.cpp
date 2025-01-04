@@ -2366,19 +2366,17 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 		if ((*iterate_over_serial)(*index))
 		{
 			QTimer::singleShot(1, this, *periodic_func);
+			return;
 		}
-		else
+
+		pdlg->setLabelText(progressLabel.arg(*index).arg(serials_size));
+		pdlg->setCancelButtonText(tr("OK"));
+		connect(pdlg, &progress_dialog::canceled, this, [pdlg](){ pdlg->deleteLater(); });
+		QApplication::beep();
+
+		if (refresh_on_finish && index)
 		{
-			pdlg->setLabelText(progressLabel.arg(*index).arg(serials_size));
-			pdlg->setCancelButtonText(tr("OK"));
-			QApplication::beep();
-
-			if (refresh_on_finish && index)
-			{
-				Refresh(true);
-			}
-
-			pdlg->deleteLater();
+			Refresh(true);
 		}
 	};
 
