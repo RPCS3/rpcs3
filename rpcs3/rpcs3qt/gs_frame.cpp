@@ -603,6 +603,11 @@ void gs_frame::close()
 
 	gui_log.notice("Closing game window");
 
+	if (m_ignore_stop_events)
+	{
+		return;
+	}
+
 	Emu.CallFromMainThread([this]()
 	{
 		// Hide window if necessary
@@ -1138,6 +1143,11 @@ bool gs_frame::event(QEvent* ev)
 		}
 
 		gui_log.notice("Game window close event issued");
+
+		if (m_ignore_stop_events)
+		{
+			return QWindow::event(ev);
+		}
 
 		if (Emu.IsStopped())
 		{

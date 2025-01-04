@@ -966,6 +966,11 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
 				};
 			}
+
+			if (result != game_boot_result::no_errors)
+			{
+				GetCallbacks().close_gs_frame();
+			}
 		}
 
 		return result;

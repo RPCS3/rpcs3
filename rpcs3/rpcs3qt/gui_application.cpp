@@ -366,6 +366,9 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 			}
 			return std::unique_ptr<gs_frame>(m_game_window);
 		}
+
+		// Clean-up old game window. This should only happen if there was an unexpected error during boot.
+		Emu.GetCallbacks().close_gs_frame();
 	}
 
 	gui_log.notice("gui_application: Creating new game window");
@@ -564,6 +567,16 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
+	callbacks.close_gs_frame  = [this]()
+	{
+		if (m_game_window)
+		{
+			gui_log.warning("gui_application: Closing old game window");
+			m_game_window->ignore_stop_events();
+			delete m_game_window;
+			m_game_window = nullptr;
+		}
+	};
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
