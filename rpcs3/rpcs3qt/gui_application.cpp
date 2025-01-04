@@ -356,7 +356,10 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		// Check if the continuous mode is enabled. We reset the mode after each use in order to ensure that it is only used when explicitly needed.
 		const bool continuous_mode_enabled = Emu.ContinuousModeEnabled(true);
 
-		if (Emu.IsChildProcess() || continuous_mode_enabled)
+		// Make sure we run the same config
+		const bool is_same_renderer = m_game_window->renderer() == g_cfg.video.renderer;
+
+		if (is_same_renderer && (Emu.IsChildProcess() || continuous_mode_enabled))
 		{
 			gui_log.notice("gui_application: Re-using old game window (IsChildProcess=%d, ContinuousModeEnabled=%d)", Emu.IsChildProcess(), continuous_mode_enabled);
 
@@ -367,7 +370,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 			return std::unique_ptr<gs_frame>(m_game_window);
 		}
 
-		// Clean-up old game window. This should only happen if there was an unexpected error during boot.
+		// Clean-up old game window. This should only happen if the renderer changed or there was an unexpected error during boot.
 		Emu.GetCallbacks().close_gs_frame();
 	}
 

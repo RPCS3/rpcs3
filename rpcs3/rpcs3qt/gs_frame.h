@@ -15,6 +15,7 @@
 #include <vector>
 
 class gui_settings;
+enum class video_renderer;
 
 class gs_frame : public QWindow, public GSFrameBase
 {
@@ -53,6 +54,8 @@ public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
+	video_renderer renderer() const { return m_renderer; };
+
 	void ignore_stop_events() { m_ignore_stop_events = true; }
 
 	draw_context_t make_context() override;
@@ -79,6 +82,8 @@ public:
 	void take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
 protected:
+	video_renderer m_renderer;
+
 	void paintEvent(QPaintEvent *event) override;
 	void showEvent(QShowEvent *event) override;
 

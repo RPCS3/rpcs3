@@ -1147,7 +1147,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		bool resolve_path_as_vfs_path = false;
 
-		const bool from_dev_flash  = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
+		const bool from_dev_flash = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
 		std::string savestate_build_version;
 		std::string savestate_creation_date;
