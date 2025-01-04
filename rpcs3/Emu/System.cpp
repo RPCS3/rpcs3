@@ -3063,6 +3063,22 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
+				struct scoped_success_guard
+				{
+					bool save_state_success = false;
+					~scoped_success_guard()
+					{
+						if (!save_state_success)
+						{
+							// Reset continuous mode on savestate error
+							Emu.SetContinuousMode(false);
+
+							// Reset after_kill_callback (which is usually used for Emu.Restart in combination with savestates)
+							Emu.after_kill_callback = nullptr;
+						}
+					}
+				} success_guard {};
+
 				std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 
 				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
@@ -3132,6 +3148,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					return;
 				}
+
+				success_guard.save_state_success = true;
 
 				CallFromMainThread([allow_autoexit, this, paused_spus]()
 				{
