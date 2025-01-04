@@ -36,6 +36,13 @@ struct alignas(16) progress_dialog_string_t
 	}
 };
 
+enum system_progress_stop_state : u32
+{
+	stop_state_disabled = 0,
+	stop_state_stopping,
+	stop_state_continuous_savestate
+};
+
 extern progress_dialog_string_t g_progr_text;
 extern atomic_t<u32> g_progr_ftotal;
 extern atomic_t<u32> g_progr_fdone;
@@ -44,7 +51,7 @@ extern atomic_t<u64> g_progr_fknown_bits;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 extern atomic_t<bool> g_system_progress_canceled;
-extern atomic_t<bool> g_system_progress_stopping;
+extern atomic_t<system_progress_stop_state> g_system_progress_stopping;
 
 // Initialize progress dialog (can be recursive)
 class scoped_progress_dialog final

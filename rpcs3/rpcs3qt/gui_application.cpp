@@ -795,7 +795,7 @@ void gui_application::InitializeCallbacks()
 							verbose_message += ". ";
 						}
 
-						verbose_message += "If Stuck, Report To Developers";
+						verbose_message += tr("If Stuck, Report To Developers").toStdString();
 					}
 					else
 					{

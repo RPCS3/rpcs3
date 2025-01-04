@@ -3200,15 +3200,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	sys_log.notice("Stopping emulator...");
 
+	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
+
+	// Show visual feedback to the user in case that stopping takes a while.
+	// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
+	if (g_fxo->try_get<named_thread<progress_dialog_server>>() && (continuous_savestate_mode || g_progr_text.operator bool()))
 	{
-		// Show visual feedback to the user in case that stopping takes a while.
-		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
-		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr_text.operator bool())
-		{
-			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
-			g_system_progress_stopping = true;
-			std::this_thread::sleep_for(20ms); // Enough for one frame to be rendered
-		}
+		// Notify progress dialog that we are going to stop emulation
+		g_system_progress_stopping = continuous_savestate_mode ? system_progress_stop_state::stop_state_continuous_savestate : system_progress_stop_state::stop_state_stopping;
+		std::this_thread::sleep_for(30ms); // Enough for one frame to be rendered
 	}
 
 	// Signal threads
@@ -3280,7 +3280,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (auto ar_ptr = to_ar->load())
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
+					if (g_cfg.savestate.suspend_emu)
+					{
+						GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
+					}
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{

@@ -314,6 +314,7 @@ private:
 		case localized_string_id::PROGRESS_DIALOG_OF: return tr("of");
 		case localized_string_id::PROGRESS_DIALOG_PLEASE_WAIT: return tr("Please wait");
 		case localized_string_id::PROGRESS_DIALOG_STOPPING_PLEASE_WAIT: return tr("Stopping. Please wait...");
+		case localized_string_id::PROGRESS_DIALOG_SAVESTATE_PLEASE_WAIT: return tr("Creating savestate. Please wait...");
 		case localized_string_id::PROGRESS_DIALOG_SCANNING_PPU_EXECUTABLE: return tr("Scanning PPU Executable...");
 		case localized_string_id::PROGRESS_DIALOG_ANALYZING_PPU_EXECUTABLE: return tr("Analyzing PPU Executable...");
 		case localized_string_id::PROGRESS_DIALOG_SCANNING_PPU_MODULES: return tr("Scanning PPU Modules...");
