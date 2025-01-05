@@ -22,6 +22,5 @@ else()
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
-	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP)
-	target_compile_definitions(wolfssl PUBLIC FP_MAX_BITS=8192)
+	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP FP_MAX_BITS=8192 WOLFSSL_NO_OPTIONS_H)
 endif()
