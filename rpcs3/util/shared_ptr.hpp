@@ -361,13 +361,8 @@ namespace stx
 		[[deprecated("Use null_ptr")]] shared_ptr(std::nullptr_t) = delete;
 
 		// Not-so-aliasing constructor: emulates std::enable_shared_from_this without its overhead
-		explicit shared_ptr(T* _this) noexcept
-			: m_ptr(_this)
-		{
-			// Random checks which may fail on invalid pointer
-			ensure((reinterpret_cast<u64>(d()->destroy) - 0x10000) >> 47 == 0);
-			ensure((d()->refs++ - 1) >> 58 == 0);
-		}
+		template <typename Type>
+		friend shared_ptr<Type> make_shared_from_this(const Type* _this) noexcept;
 
 		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr(const shared_ptr<U>& r) noexcept
@@ -562,9 +557,27 @@ namespace stx
 
 	template <typename T>
 		requires (std::is_constructible_v<std::remove_reference_t<T>, T&&>)
-	static shared_ptr<std::remove_reference_t<T>> make_shared_value(T&& value)
+	static shared_ptr<std::remove_reference_t<T>> make_shared_value(T&& value) noexcept
 	{
 		return make_single_value(std::forward<T>(value));
+	}
+
+	// Not-so-aliasing constructor: emulates std::enable_shared_from_this without its overhead
+	template <typename T>
+	static shared_ptr<T> make_shared_from_this(const T* _this) noexcept
+	{
+		shared_ptr<T> r;
+		r.m_ptr = const_cast<T*>(_this);
+
+		if (!_this) [[unlikely]]
+		{
+			return r;
+		}
+
+		// Random checks which may fail on invalid pointer
+		ensure((reinterpret_cast<u64>(r.d()->destroy.load()) - 0x10000) >> 47 == 0);
+		ensure((r.d()->refs++ - 1) >> 58 == 0);
+		return r;
 	}
 
 	// Atomic simplified shared pointer
@@ -1059,9 +1072,9 @@ namespace stx
 			do
 			{
 				// Update old head with current value
-				next.m_ptr = reinterpret_cast<T*>(old.m_val.raw() >> c_ref_size);
+				next.m_ptr = std::launder(ptr_to(old.m_val.raw()));
 
-			} while (!m_val.compare_exchange(old.m_val.raw(), reinterpret_cast<uptr>(exch.m_ptr) << c_ref_size));
+			} while (!m_val.compare_exchange(old.m_val.raw(), to_val(exch.m_ptr)));
 
 			// This argument is consumed (moved from)
 			exch.m_ptr = nullptr;
@@ -1076,7 +1089,7 @@ namespace stx
 		// Simple atomic load is much more effective than load(), but it's a non-owning reference
 		T* observe() const noexcept
 		{
-			return reinterpret_cast<T*>(m_val >> c_ref_size);
+			return std::launder(ptr_to(m_val));
 		}
 
 		explicit constexpr operator bool() const noexcept
@@ -1136,11 +1149,6 @@ namespace stx
 		explicit constexpr operator bool() const noexcept
 		{
 			return false;
-		}
-
-		constexpr std::nullptr_t get() const noexcept
-		{
-			return nullptr;
 		}
 
 	} null_ptr;

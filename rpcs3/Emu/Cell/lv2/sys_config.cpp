@@ -133,6 +133,23 @@ lv2_config_service_event& lv2_config_service_event::operator=(thread_state s) no
 	return *this;
 }
 
+lv2_config_service_event::~lv2_config_service_event() noexcept
+{
+	operator=(thread_state::destroying_context);
+}
+
+lv2_config::~lv2_config() noexcept
+{
+	for (auto& [key, event] : events)
+	{
+		if (event)
+		{
+			// Avoid collision with lv2_config_service_event destructor
+			event->m_destroyed = true;
+		}
+	}
+}
+
 // LV2 Config Service Listener
 bool lv2_config_service_listener::check_service(const lv2_config_service& service) const
 {
