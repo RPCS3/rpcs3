@@ -33,7 +33,8 @@ enum class thread_state : u32
 	aborting = 1, // The thread has been joined in the destructor or explicitly aborted
 	errored = 2, // Set after the emergency_exit call
 	finished = 3,  // Final state, always set at the end of thread execution
-	mask = 3
+	mask = 3,
+	destroying_context = 7, // Special value assigned to destroy data explicitly before the destructor
 };
 
 template <class Context>
@@ -702,14 +703,17 @@ public:
 			thread::m_sync.notify_all();
 		}
 
-		if (s == thread_state::finished)
+		if (s == thread_state::finished || s == thread_state::destroying_context)
 		{
 			// This participates in emulation stopping, use destruction-alike semantics
 			thread::join(true);
+		}
 
+		if (s == thread_state::destroying_context)
+		{
 			if constexpr (std::is_assignable_v<Context&, thread_state>)
 			{
-				static_cast<Context&>(*this) = thread_state::finished;
+				static_cast<Context&>(*this) = thread_state::destroying_context;
 			}
 		}
 

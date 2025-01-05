@@ -805,8 +805,8 @@ public:
 		{
 			if (ptr)
 			{
-				constexpr thread_state finished{3};
-				*static_cast<Get*>(ptr.get()) = finished;
+				constexpr thread_state destroying_context{7};
+				*static_cast<Get*>(ptr.get()) = destroying_context;
 			}
 		}
 
@@ -837,8 +837,8 @@ public:
 		{
 			if (ptr)
 			{
-				constexpr thread_state finished{3};
-				*static_cast<Get*>(ptr.get()) = finished;
+				constexpr thread_state destroying_context{7};
+				*static_cast<Get*>(ptr.get()) = destroying_context;
 			}
 		}
 

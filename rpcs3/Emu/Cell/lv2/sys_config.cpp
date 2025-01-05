@@ -122,7 +122,7 @@ void lv2_config::remove_service_event(u32 id)
 
 lv2_config_service_event& lv2_config_service_event::operator=(thread_state s) noexcept
 {
-	if (s == thread_state::finished)
+	if (s == thread_state::destroying_context && !m_destroyed.exchange(true))
 	{
 		if (auto global = g_fxo->try_get<lv2_config>())
 		{

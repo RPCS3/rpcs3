@@ -347,6 +347,19 @@ namespace stx
 				}
 			}
 
+			// Order semi-destructors before the actual destructors
+			// This allows to safely access data that may be deallocated or destroyed from other members of FXO regardless of their intialization time
+			for (u32 i = 0; i < _max; i++)
+			{
+				const auto info = (*std::prev(m_info, i + 1));
+
+				if (auto op = info->thread_op)
+				{
+					constexpr thread_state destroying_context{7};
+					op(*std::prev(m_order, i + 1), destroying_context);
+				}
+			}
+
 			// Destroy objects in reverse order
 			for (; _max; _max--)
 			{
