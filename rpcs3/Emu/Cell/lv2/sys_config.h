@@ -362,6 +362,10 @@ class lv2_config_service_event
 		return g_fxo->get<service_event_id>().next_id++;
 	}
 
+	atomic_t<bool> m_destroyed = false;
+
+	friend class lv2_config;
+
 public:
 	const u32 id;
 
@@ -393,8 +397,7 @@ public:
 
 	// Destructor
 	lv2_config_service_event& operator=(thread_state s) noexcept;
-
-	~lv2_config_service_event() noexcept = default;
+	~lv2_config_service_event() noexcept;
 
 	// Notify queue that this event exists
 	bool notify() const;
