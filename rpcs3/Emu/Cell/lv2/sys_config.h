@@ -161,6 +161,8 @@ public:
 
 		return null_ptr;
 	}
+
+	~lv2_config() noexcept;
 };
 
 /*
@@ -276,7 +278,7 @@ public:
 
 	// Utilities
 	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
-	shared_ptr<lv2_config_service> get_shared_ptr () const { return idm::get_unlocked<lv2_config_service>(idm_id); }
+	shared_ptr<lv2_config_service> get_shared_ptr () const { return stx::make_shared_from_this<lv2_config_service>(this); }
 	u32 get_id() const { return idm_id; }
 };
 
@@ -342,7 +344,7 @@ public:
 
 	// Utilities
 	u32 get_id() const { return idm_id; }
-	shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return idm::get_unlocked<lv2_config_service_listener>(idm_id); }
+	shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return stx::make_shared_from_this<lv2_config_service_listener>(this); }
 };
 
 /*
