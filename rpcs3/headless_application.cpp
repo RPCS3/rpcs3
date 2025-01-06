@@ -120,6 +120,7 @@ void headless_application::InitializeCallbacks()
 		return nullptr;
 	};
 
+	callbacks.close_gs_frame = [](){};
 	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
 	{
 		if (g_cfg.video.renderer != video_renderer::null)

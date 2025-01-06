@@ -498,6 +498,9 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 		};
 
 		signal_system_cache_can_stay();
+
+		// Make sure we keep the game window opened
+		Emu.SetContinuousMode(true);
 		Emu.Kill(false);
 	});
 

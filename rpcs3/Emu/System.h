@@ -86,6 +86,7 @@ struct EmuCallbacks
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<void()> update_emu_settings;
 	std::function<void()> save_emu_settings;
+	std::function<void()> close_gs_frame;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
@@ -154,6 +155,7 @@ class Emulator final
 	// 2. It signifies that we don't want to exit on Kill(), for example if we want to transition to another application.
 	bool m_force_boot = false;
 
+	bool m_continuous_mode = false;
 	bool m_has_gui = true;
 
 	bool m_state_inspection_savestate = false;
@@ -346,6 +348,15 @@ public:
 		return m_config_mode == cfg_mode::continuous;
 	}
 
+	bool ContinuousModeEnabled(bool reset)
+	{
+		if (reset)
+		{
+			return std::exchange(m_continuous_mode, false);
+		}
+		return m_continuous_mode;
+	}
+
 	class emulation_state_guard_t
 	{
 		class Emulator* _this = nullptr;
@@ -385,6 +396,7 @@ public:
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
+	void SetContinuousMode(bool continuous_mode);
 
 	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false, usz recursion_count = 0);
 	void Run(bool start_playtime);
@@ -407,7 +419,7 @@ public:
 
 	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
-	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
+	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false, bool continuous_mode = false);
 	void Kill(bool allow_autoexit = true, bool savestate = false, savestate_stage* stage = nullptr);
 	game_boot_result Restart(bool graceful = true);
 	bool Quit(bool force_quit);
@@ -455,8 +467,6 @@ public:
 };
 
 extern Emulator Emu;
-
-extern bool g_log_all_errors;
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;

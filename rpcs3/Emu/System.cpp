@@ -60,12 +60,12 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
+#include "Emu/RSX/GSRender.h"
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
-
-bool g_log_all_errors = false;
 
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
@@ -964,6 +964,11 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
 				};
 			}
+
+			if (result != game_boot_result::no_errors)
+			{
+				GetCallbacks().close_gs_frame();
+			}
 		}
 
 		return result;
@@ -1003,6 +1008,16 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
+}
+
+void Emulator::SetContinuousMode(bool continuous_mode)
+{
+	m_continuous_mode = continuous_mode;
+
+	if (GSRender* render = static_cast<GSRender*>(g_fxo->try_get<rsx::thread>()))
+	{
+		render->set_continuous_mode(continuous_mode);
+	}
 }
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
@@ -1132,7 +1147,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		bool resolve_path_as_vfs_path = false;
 
-		const bool from_dev_flash  = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
+		const bool from_dev_flash = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
 		std::string savestate_build_version;
 		std::string savestate_creation_date;
@@ -2895,8 +2910,14 @@ u64 get_sysutil_cb_manager_read_count();
 
 void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
-void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate)
+void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savestate, bool continuous_mode)
 {
+	// Make sure we close the game window
+	if (!continuous_mode)
+	{
+		Emu.SetContinuousMode(false);
+	}
+
 	// Ensure no game has booted inbetween
 	const auto guard = Emu.MakeEmulationStateGuard();
 
@@ -3040,6 +3061,22 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			*pause_thread = make_ptr(new named_thread("Savestate Prepare Thread"sv, [pause_thread, allow_autoexit, this]() mutable
 			{
+				struct scoped_success_guard
+				{
+					bool save_state_success = false;
+					~scoped_success_guard()
+					{
+						if (!save_state_success)
+						{
+							// Reset continuous mode on savestate error
+							Emu.SetContinuousMode(false);
+
+							// Reset after_kill_callback (which is usually used for Emu.Restart in combination with savestates)
+							Emu.after_kill_callback = nullptr;
+						}
+					}
+				} success_guard {};
+
 				std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 
 				if (!try_lock_spu_threads_in_a_state_compatible_with_savestates(false, &paused_spus))
@@ -3109,6 +3146,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 					return;
 				}
+
+				success_guard.save_state_success = true;
 
 				CallFromMainThread([allow_autoexit, this, paused_spus]()
 				{
@@ -3185,15 +3224,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	sys_log.notice("Stopping emulator...");
 
+	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
+
+	// Show visual feedback to the user in case that stopping takes a while.
+	// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
+	if (g_fxo->try_get<named_thread<progress_dialog_server>>() && (continuous_savestate_mode || g_progr_text.operator bool()))
 	{
-		// Show visual feedback to the user in case that stopping takes a while.
-		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
-		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && g_progr_text.operator bool())
-		{
-			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
-			g_system_progress_stopping = true;
-			std::this_thread::sleep_for(20ms); // Enough for one frame to be rendered
-		}
+		// Notify progress dialog that we are going to stop emulation
+		g_system_progress_stopping = continuous_savestate_mode ? system_progress_stop_state::stop_state_continuous_savestate : system_progress_stop_state::stop_state_stopping;
+		std::this_thread::sleep_for(30ms); // Enough for one frame to be rendered
 	}
 
 	// Signal threads
@@ -3265,7 +3304,10 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (auto ar_ptr = to_ar->load())
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
+					if (g_cfg.savestate.suspend_emu)
+					{
+						GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
+					}
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -3277,7 +3319,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				thread_ctrl::wait_for(5'000);
 			}
-
 
 			*closed_sucessfully = true;
 		}));
@@ -3847,89 +3888,6 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	title_data.fps = fps;
 
 	return rpcs3::get_formatted_title(title_data);
-}
-
-s32 error_code::error_report(s32 result, const logs::message* channel, const char* fmt, const fmt_type_info* sup, const u64* args)
-{
-	static thread_local std::string g_tls_error_str;
-	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
-
-	if (!channel)
-	{
-		channel = &sys_log.error;
-	}
-
-	if (!sup && !args)
-	{
-		if (!fmt)
-		{
-			// Report and clean error state
-			for (auto&& pair : g_tls_error_stats)
-			{
-				if (pair.second > 3)
-				{
-					channel->operator()("Stat: %s [x%u]", pair.first, pair.second);
-				}
-			}
-
-			g_tls_error_stats.clear();
-			return 0;
-		}
-	}
-
-	ensure(fmt);
-
-	const char* func = "Unknown function";
-
-	if (auto ppu = get_current_cpu_thread<ppu_thread>())
-	{
-		if (auto current = ppu->current_function)
-		{
-			func = current;
-		}
-	}
-	else if (auto spu = get_current_cpu_thread<spu_thread>())
-	{
-		if (auto current = spu->current_func; current && spu->start_time)
-		{
-			func = current;
-		}
-	}
-
-	// Format log message (use preallocated buffer)
-	g_tls_error_str.clear();
-
-	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
-
-	// Add spacer between error and fmt if necessary
-	if (fmt[0] != ' ')
-		g_tls_error_str += " : ";
-
-	fmt::raw_append(g_tls_error_str, fmt, sup, args);
-
-	// Update stats and check log threshold
-
-	if (g_log_all_errors) [[unlikely]]
-	{
-		if (!g_tls_error_stats.empty())
-		{
-			// Report and clean error state
-			error_report(0, nullptr, nullptr, nullptr, nullptr);
-		}
-
-		channel->operator()("%s", g_tls_error_str);
-	}
-	else
-	{
-		const auto stat = ++g_tls_error_stats[g_tls_error_str];
-
-		if (stat <= 3)
-		{
-			channel->operator()("%s [%u]", g_tls_error_str, stat);
-		}
-	}
-
-	return result;
 }
 
 void Emulator::ConfigurePPUCache() const

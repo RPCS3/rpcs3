@@ -15,6 +15,7 @@
 #include <vector>
 
 class gui_settings;
+enum class video_renderer;
 
 class gs_frame : public QWindow, public GSFrameBase
 {
@@ -45,12 +46,17 @@ private:
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;
 	bool m_start_games_fullscreen = false;
+	bool m_ignore_stop_events = false;
 
 	std::shared_ptr<utils::video_encoder> m_video_encoder{};
 
 public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
+
+	video_renderer renderer() const { return m_renderer; };
+
+	void ignore_stop_events() { m_ignore_stop_events = true; }
 
 	draw_context_t make_context() override;
 	void set_current(draw_context_t context) override;
@@ -76,10 +82,13 @@ public:
 	void take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
 protected:
+	video_renderer m_renderer;
+
 	void paintEvent(QPaintEvent *event) override;
 	void showEvent(QShowEvent *event) override;
 
 	void close() override;
+	void reset() override;
 
 	bool shown() override;
 	void hide() override;

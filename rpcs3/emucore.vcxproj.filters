@@ -1327,6 +1327,9 @@
     <ClCompile Include="Emu\Audio\audio_utils.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\ErrorCodes.cpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

@@ -348,6 +348,34 @@ void gui_application::InitializeConnects()
 
 std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
+	// Load AppIcon
+	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+
+	if (m_game_window)
+	{
+		// Check if the continuous mode is enabled. We reset the mode after each use in order to ensure that it is only used when explicitly needed.
+		const bool continuous_mode_enabled = Emu.ContinuousModeEnabled(true);
+
+		// Make sure we run the same config
+		const bool is_same_renderer = m_game_window->renderer() == g_cfg.video.renderer;
+
+		if (is_same_renderer && (Emu.IsChildProcess() || continuous_mode_enabled))
+		{
+			gui_log.notice("gui_application: Re-using old game window (IsChildProcess=%d, ContinuousModeEnabled=%d)", Emu.IsChildProcess(), continuous_mode_enabled);
+
+			if (!app_icon.isNull())
+			{
+				m_game_window->setIcon(app_icon);
+			}
+			return std::unique_ptr<gs_frame>(m_game_window);
+		}
+
+		// Clean-up old game window. This should only happen if the renderer changed or there was an unexpected error during boot.
+		Emu.GetCallbacks().close_gs_frame();
+	}
+
+	gui_log.notice("gui_application: Creating new game window");
+
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
 	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
@@ -424,9 +452,6 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame_geometry.setSize(QSize(w, h));
 	}
 
-	// Load AppIcon
-	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
-
 	gs_frame* frame = nullptr;
 
 	switch (g_cfg.video.renderer.get())
@@ -445,6 +470,12 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	}
 
 	m_game_window = frame;
+
+	connect(m_game_window, &gs_frame::destroyed, this, [this]()
+	{
+		gui_log.notice("gui_application: Deleting old game window");
+		m_game_window = nullptr;
+	});
 
 	return std::unique_ptr<gs_frame>(frame);
 }
@@ -539,6 +570,16 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
+	callbacks.close_gs_frame  = [this]()
+	{
+		if (m_game_window)
+		{
+			gui_log.warning("gui_application: Closing old game window");
+			m_game_window->ignore_stop_events();
+			delete m_game_window;
+			m_game_window = nullptr;
+		}
+	};
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
@@ -582,10 +623,10 @@ void gui_application::InitializeCallbacks()
 		{
 			switch (type)
 			{
-			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
-			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
-			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
-			case 3: static_cast<gs_frame*>(m_game_window)->progress_set_value(value); break;
+			case 0: m_game_window->progress_reset(value); break;
+			case 1: m_game_window->progress_increment(value); break;
+			case 2: m_game_window->progress_set_limit(value); break;
+			case 3: m_game_window->progress_set_value(value); break;
 			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
@@ -770,7 +811,7 @@ void gui_application::InitializeCallbacks()
 							verbose_message += ". ";
 						}
 
-						verbose_message += "If Stuck, Report To Developers";
+						verbose_message += tr("If Stuck, Report To Developers").toStdString();
 					}
 					else
 					{
@@ -1045,7 +1086,7 @@ void gui_application::OnShortcutChange()
 {
 	if (m_game_window)
 	{
-		static_cast<gs_frame*>(m_game_window)->update_shortcuts();
+		m_game_window->update_shortcuts();
 	}
 }
 
@@ -1074,7 +1115,7 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 	}
 
 	const auto emu_state = Emu.GetStatus();
-	const bool is_active = state == Qt::ApplicationActive;
+	const bool is_active = state & Qt::ApplicationActive;
 
 	if (emu_state != system_state::paused && emu_state != system_state::running)
 	{
