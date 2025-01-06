@@ -372,7 +372,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 
 	return [prx](void* storage)
 	{
-		*static_cast<shared_ptr<lv2_obj>*>(storage) = prx;
+		*static_cast<atomic_ptr<lv2_obj>*>(storage) = prx;
 	};
 }
 

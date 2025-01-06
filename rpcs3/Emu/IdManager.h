@@ -123,7 +123,7 @@ namespace id_manager
 				ptr = stx::make_shared<T>(stx::exact_t<utils::serial&>(ar));
 			}
 
-			return [ptr](void* storage) { *static_cast<stx::shared_ptr<T>*>(storage) = ptr; };
+			return [ptr](void* storage) { *static_cast<stx::atomic_ptr<T>*>(storage) = ptr; };
 		};
 	};
 
@@ -805,8 +805,8 @@ public:
 		{
 			if (ptr)
 			{
-				constexpr thread_state finished{3};
-				*static_cast<Get*>(ptr.get()) = finished;
+				constexpr thread_state destroying_context{7};
+				*static_cast<Get*>(ptr.get()) = destroying_context;
 			}
 		}
 
@@ -837,8 +837,8 @@ public:
 		{
 			if (ptr)
 			{
-				constexpr thread_state finished{3};
-				*static_cast<Get*>(ptr.get()) = finished;
+				constexpr thread_state destroying_context{7};
+				*static_cast<Get*>(ptr.get()) = destroying_context;
 			}
 		}
 

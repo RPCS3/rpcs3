@@ -71,7 +71,7 @@ CellError lv2_cond::on_id_create()
 
 std::function<void(void*)> lv2_cond::load(utils::serial& ar)
 {
-	return load_func(make_shared<lv2_cond>(ar));
+	return load_func(make_shared<lv2_cond>(stx::exact_t<utils::serial&>(ar)));
 }
 
 void lv2_cond::save(utils::serial& ar)

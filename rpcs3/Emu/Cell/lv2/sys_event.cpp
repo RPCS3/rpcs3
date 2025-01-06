@@ -37,8 +37,8 @@ lv2_event_queue::lv2_event_queue(utils::serial& ar) noexcept
 
 std::function<void(void*)> lv2_event_queue::load(utils::serial& ar)
 {
-	auto queue = make_shared<lv2_event_queue>(ar);
-	return [ptr = lv2_obj::load(queue->key, queue)](void* storage) { *static_cast<shared_ptr<lv2_obj>*>(storage) = ptr; };
+	auto queue = make_shared<lv2_event_queue>(stx::exact_t<utils::serial&>(ar));
+	return [ptr = lv2_obj::load(queue->key, queue)](void* storage) { *static_cast<atomic_ptr<lv2_obj>*>(storage) = ptr; };
 }
 
 void lv2_event_queue::save(utils::serial& ar)

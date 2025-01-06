@@ -190,6 +190,7 @@ namespace vk
 			case driver_vendor::LAVAPIPE:
 			case driver_vendor::V3DV:
 			case driver_vendor::HONEYKRISP:
+			case driver_vendor::PANVK:
 				break;
 			}
 
