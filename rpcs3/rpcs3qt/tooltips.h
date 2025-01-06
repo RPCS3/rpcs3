@@ -77,21 +77,21 @@ public:
 
 		// cpu
 
-		const QString ppu__static               = tr("Interpreter (slow). Try this if PPU Recompiler (LLVM) doesn't work.");
-		const QString ppu_dynamic               = tr("Alternative interpreter (slow). May be faster than static interpreter. Try this if PPU Recompiler (LLVM) doesn't work.");
-		const QString ppu_llvm                  = tr("Recompiles and caches the game's PPU code using the LLVM Recompiler once before running it for the first time.\nThis is by far the fastest option and should always be used.\nShould you face compatibility issues, fall back to one of the Interpreters and retry.\nIf unsure, use this option.");
-		const QString llvm_precompilation       = tr("Searches the game's directory and precompiles extra PPU and SPU modules during boot.\nIf disabled, these modules will only be compiled when needed. Depending on the game, this might interrupt the gameplay unexpectedly and possibly frequently.\nOnly disable this if you want to get ingame more quickly.");
-		const QString spu__static               = tr("Interpreter (slow). Try this if SPU Recompiler (LLVM) doesn't work.");
-		const QString spu_dynamic               = tr("Alternative interpreter (slow). May be faster than static interpreter. Try this if SPU Recompiler (LLVM) doesn't work.");
-		const QString spu_asmjit                = tr("Recompiles the game's SPU code using the ASMJIT Recompiler.\nThis is the fast option with very good compatibility.\nIf unsure, use this option.");
-		const QString spu_llvm                  = tr("Recompiles and caches the game's SPU code using the LLVM Recompiler before running which adds extra start-up time.\nThis is the fastest option with very good compatibility.\nIf you experience issues, use the ASMJIT Recompiler.");
-		const QString xfloat                    = tr("Control accuracy to SPU float vectors processing.\nFixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU Decoder is set to Dynamic or LLVM.");
-		const QString enable_thread_scheduler   = tr("Control how RPCS3 utilizes the threads of your system.\nEach option heavily depends on the game and on your CPU. It's recommended to try each option to find out which performs the best.\nChanging the thread scheduler is not supported on CPUs with less than 12 threads.");
-		const QString spu_loop_detection        = tr("Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases.");
-		const QString enable_tsx                = tr("Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs or CPUs with the TSX-FA instruction set.\nForcing TSX in these cases may lead to system and performance instability, use it with caution.");
-		const QString spu_block_size            = tr("This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.");
-		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
-		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
+		const QString ppu__static             = tr("Interpreter (slow). Try this if PPU Recompiler (LLVM) doesn't work.");
+		const QString ppu_dynamic             = tr("Alternative interpreter (slow). May be faster than static interpreter. Try this if PPU Recompiler (LLVM) doesn't work.");
+		const QString ppu_llvm                = tr("Recompiles and caches the game's PPU code using the LLVM Recompiler once before running it for the first time.\nThis is by far the fastest option and should always be used.\nShould you face compatibility issues, fall back to one of the Interpreters and retry.\nIf unsure, use this option.");
+		const QString llvm_precompilation     = tr("Searches the game's directory and precompiles extra PPU and SPU modules during boot.\nIf disabled, these modules will only be compiled when needed. Depending on the game, this might interrupt the gameplay unexpectedly and possibly frequently.\nOnly disable this if you want to get ingame more quickly.");
+		const QString spu__static             = tr("Interpreter (slow). Try this if SPU Recompiler (LLVM) doesn't work.");
+		const QString spu_dynamic             = tr("Alternative interpreter (slow). May be faster than static interpreter. Try this if SPU Recompiler (LLVM) doesn't work.");
+		const QString spu_asmjit              = tr("Recompiles the game's SPU code using the ASMJIT Recompiler.\nThis is the fast option with very good compatibility.\nIf unsure, use this option.");
+		const QString spu_llvm                = tr("Recompiles and caches the game's SPU code using the LLVM Recompiler before running which adds extra start-up time.\nThis is the fastest option with very good compatibility.\nIf you experience issues, use the ASMJIT Recompiler.");
+		const QString xfloat                  = tr("Control accuracy to SPU float vectors processing.\nFixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU Decoder is set to Dynamic or LLVM.");
+		const QString enable_thread_scheduler = tr("Control how RPCS3 utilizes the threads of your system.\nEach option heavily depends on the game and on your CPU. It's recommended to try each option to find out which performs the best.\nChanging the thread scheduler is not supported on CPUs with less than 12 threads.");
+		const QString spu_loop_detection      = tr("Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases.");
+		const QString enable_tsx              = tr("Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs or CPUs with the TSX-FA instruction set.\nForcing TSX in these cases may lead to system and performance instability, use it with caution.");
+		const QString spu_block_size          = tr("This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.");
+		const QString preferred_spu_threads   = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
+		const QString max_cpu_preempt         = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 
 		// debug
 
@@ -127,28 +127,28 @@ public:
 
 		// emulator
 
-		const QString exit_on_stop                 = tr("Automatically close RPCS3 when closing a game, or when a game closes itself.");
-		const QString pause_on_focus_loss          = tr("Automatically pause emulation when RPCS3 loses its focus or the application is inactive in order to save power and reduce CPU usage.\nDo note that emulation pausing in general is not perfect and may not be compatible with all games.\nAlthough it currently also pauses gameplay, it is not recommended to rely on it as this behavior may be changed in the future and it is not the purpose of this setting.");
-		const QString start_game_fullscreen        = tr("Automatically puts the game window in fullscreen.\nDouble click on the game window or press Alt+Enter to toggle fullscreen and windowed mode.");
-		const QString prevent_display_sleep        = tr("Prevent the display from sleeping while a game is running.\nThis requires the org.freedesktop.ScreenSaver D-Bus service on Linux.\nThis option will be disabled if the current platform does not support display sleep control.");
-		const QString game_window_title_format     = tr("Configure the game window title.\nChanging this and/or adding the framerate may cause buggy or outdated recording software to not notice RPCS3.");
-		const QString resize_on_boot               = tr("Automatically resizes the game window on boot.\nThis does not change the internal game resolution.");
-		const QString show_trophy_popups           = tr("Show trophy pop-ups when a trophy is unlocked.");
-		const QString show_rpcn_popups             = tr("Show RPCN friend list pop-ups.");
-		const QString disable_mouse                = tr("Disables the activation of fullscreen mode per double-click while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).");
-		const QString disable_kb_hotkeys           = tr("Disables keyboard hotkeys such as Ctrl+S, Ctrl+E, Ctrl+R, Ctrl+P while the game screen is active.\nThis does not include Ctrl+L (hide and lock mouse) and Alt+Enter (toggle fullscreen).\nCheck this if you want to play with mouse and keyboard.");
-		const QString max_llvm_threads             = tr("Limits the maximum number of threads used for the initial PPU and SPU module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.");
-		const QString show_mouse_in_fullscreen     = tr("Shows the mouse cursor when the fullscreen mode is active.\nCurrently this may not work every time.");
-		const QString lock_mouse_in_fullscreen     = tr("Locks the mouse cursor to the center when the fullscreen mode is active.");
-		const QString hide_mouse_on_idle           = tr("Hides the mouse cursor if no mouse movement is detected for the configured time.");
-		const QString show_shader_compilation_hint = tr("Shows 'Compiling shaders' hint using the native overlay.");
-		const QString show_ppu_compilation_hint    = tr("Shows 'Compiling PPU modules' hint using the native overlay.");
+		const QString exit_on_stop                        = tr("Automatically close RPCS3 when closing a game, or when a game closes itself.");
+		const QString pause_on_focus_loss                 = tr("Automatically pause emulation when RPCS3 loses its focus or the application is inactive in order to save power and reduce CPU usage.\nDo note that emulation pausing in general is not perfect and may not be compatible with all games.\nAlthough it currently also pauses gameplay, it is not recommended to rely on it as this behavior may be changed in the future and it is not the purpose of this setting.");
+		const QString start_game_fullscreen               = tr("Automatically puts the game window in fullscreen.\nDouble click on the game window or press Alt+Enter to toggle fullscreen and windowed mode.");
+		const QString prevent_display_sleep               = tr("Prevent the display from sleeping while a game is running.\nThis requires the org.freedesktop.ScreenSaver D-Bus service on Linux.\nThis option will be disabled if the current platform does not support display sleep control.");
+		const QString game_window_title_format            = tr("Configure the game window title.\nChanging this and/or adding the framerate may cause buggy or outdated recording software to not notice RPCS3.");
+		const QString resize_on_boot                      = tr("Automatically resizes the game window on boot.\nThis does not change the internal game resolution.");
+		const QString show_trophy_popups                  = tr("Show trophy pop-ups when a trophy is unlocked.");
+		const QString show_rpcn_popups                    = tr("Show RPCN friend list pop-ups.");
+		const QString disable_mouse                       = tr("Disables the activation of fullscreen mode per double-click while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).");
+		const QString disable_kb_hotkeys                  = tr("Disables keyboard hotkeys such as Ctrl+S, Ctrl+E, Ctrl+R, Ctrl+P while the game screen is active.\nThis does not include Ctrl+L (hide and lock mouse) and Alt+Enter (toggle fullscreen).\nCheck this if you want to play with mouse and keyboard.");
+		const QString max_llvm_threads                    = tr("Limits the maximum number of threads used for the initial PPU and SPU module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.");
+		const QString show_mouse_in_fullscreen            = tr("Shows the mouse cursor when the fullscreen mode is active.\nCurrently this may not work every time.");
+		const QString lock_mouse_in_fullscreen            = tr("Locks the mouse cursor to the center when the fullscreen mode is active.");
+		const QString hide_mouse_on_idle                  = tr("Hides the mouse cursor if no mouse movement is detected for the configured time.");
+		const QString show_shader_compilation_hint        = tr("Shows 'Compiling shaders' hint using the native overlay.");
+		const QString show_ppu_compilation_hint           = tr("Shows 'Compiling PPU modules' hint using the native overlay.");
+		const QString show_autosave_autoload_hint         = tr("Shows autosave/autoload hint using the native overlay.");
 		const QString show_pressure_intensity_toggle_hint = tr("Shows pressure intensity toggle hint using the native overlay.");
-		const QString show_analog_limiter_toggle_hint = tr("Shows analog limiter toggle hint using the native overlay.");
+		const QString show_analog_limiter_toggle_hint     = tr("Shows analog limiter toggle hint using the native overlay.");
 		const QString show_mouse_and_keyboard_toggle_hint = tr("Shows mouse and keyboard toggle hint using the native overlay.");
-		const QString show_autosave_autoload_hint  = tr("Shows autosave/autoload hint using the native overlay.");
-		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
-		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
+		const QString use_native_interface                = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
+		const QString pause_during_home_menu              = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
 
 		const QString perf_overlay_enabled                 = tr("Enables or disables the performance overlay.");
 		const QString perf_overlay_framerate_graph_enabled = tr("Enables or disables the framerate graph.");
@@ -186,12 +186,12 @@ public:
 		const QString stretch_to_display_area    = tr("Overrides the aspect ratio and stretches the image to the full display area.");
 		const QString multithreaded_rsx          = tr("Offloads some RSX operations to a secondary thread.\nImproves performance for high-core processors.\nMay cause slowdown in weaker CPUs due to the extra worker thread load.");
 
-		const QString legacy_shader_recompiler        = tr("Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces severe stuttering or lag.\nUse this if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.");
-		const QString async_shader_recompiler         = tr("This is the recommended option.\nIf a shader is not found in the cache, nothing will be rendered for this shader until it has compiled.\nYou may experience graphics pop-in.");
-		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
-		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
-		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
-		const QString shader_precision                = tr("Controls the precision level of generated shaders. Low precision generates much faster code depending on the hardware, but can sometimes generate minor visual glitches or flicker.");
+		const QString legacy_shader_recompiler      = tr("Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces severe stuttering or lag.\nUse this if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.");
+		const QString async_shader_recompiler       = tr("This is the recommended option.\nIf a shader is not found in the cache, nothing will be rendered for this shader until it has compiled.\nYou may experience graphics pop-in.");
+		const QString async_with_shader_interpreter = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
+		const QString shader_interpreter_only       = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
+		const QString shader_compiler_threads       = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
+		const QString shader_precision              = tr("Controls the precision level of generated shaders. Low precision generates much faster code depending on the hardware, but can sometimes generate minor visual glitches or flicker.");
 
 		const QString async_texture_streaming   = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
 		const QString exclusive_fullscreen_mode = tr("Controls which fullscreen mode RPCS3 requests from drivers when using Vulkan renderer.\nAutomatic will let the driver choose an appropriate mode, while the other options will hint the drivers on whether they should use exclusive or borderless fullscreen.\nUsing Prefer borderless fullscreen option can help if you have issues with streaming RPCS3 gameplay or if your system incorrectly enables HDR mode when using fullscreen.");
@@ -224,35 +224,35 @@ public:
 
 		// input
 
-		const QString pad_mode          = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
-		const QString pad_connection    = tr("Shows all configured pads as always connected ingame even if they are physically disconnected.");
-		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
-		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic or Raw will work in these cases.");
-		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
-		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
-		const QString camera_type       = tr("Depending on the game, you may need to select a specific camera type.");
-		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axes.");
-		const QString camera_id         = tr("Select the camera that you want to use during gameplay.");
-		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.\nRaw Mouse: Emulate PSMove with Raw Mouse handler.");
-		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
-		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
-		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
-		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
-		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
-		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
-		const QString sdl_mappings      = tr("Loads the SDL GameController database for improved gamepad compatibility. Only used in the SDL pad handler.");
+		const QString pad_mode         = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
+		const QString pad_connection   = tr("Shows all configured pads as always connected ingame even if they are physically disconnected.");
+		const QString keyboard_handler = tr("Some games support native keyboard input.\nBasic will work in these cases.");
+		const QString mouse_handler    = tr("Some games support native mouse input.\nBasic or Raw will work in these cases.");
+		const QString music_handler    = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
+		const QString camera           = tr("Select Qt Camera to use the default camera device of your operating system.");
+		const QString camera_type      = tr("Depending on the game, you may need to select a specific camera type.");
+		const QString camera_flip      = tr("Flips the camera image either horizontally, vertically, or on both axes.");
+		const QString camera_id        = tr("Select the camera that you want to use during gameplay.");
+		const QString move             = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.\nRaw Mouse: Emulate PSMove with Raw Mouse handler.");
+		const QString buzz             = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
+		const QString turntable        = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
+		const QString ghltar           = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
+		const QString background_input = tr("Allows pad and keyboard input while the game window is unfocused.");
+		const QString show_move_cursor = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
+		const QString midi_devices     = tr("Select up to 3 emulated MIDI devices and their types.");
+		const QString sdl_mappings     = tr("Loads the SDL GameController database for improved gamepad compatibility. Only used in the SDL pad handler.");
 
-		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
+		const QString lock_overlay_input_to_player_one = tr("Locks the native overlay input to the first player.");
 
 		// network
 
-		const QString net_status    = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
-		const QString psn_status    = tr("If set to RPCN, RPCS3 will use the RPCN server as PSN connection if the game is supported.\nIf set to Simulated, RPCS3 will try to fake the PSN connection, but any actual attempt at using the PSN functionality may result in errors or crashes.\nSimulated is only available in custom configurations.");
-		const QString dns           = tr("DNS used to resolve hostnames by applications.");
-		const QString dns_swap      = tr("DNS Swap List.\nOnly available in custom configurations.");
-		const QString bind          = tr("Interface IP Address to bind to.\nOnly available in custom configurations.");
-		const QString enable_upnp   = tr("Enable UPNP.\nThis will automatically forward ports bound on 0.0.0.0 if your router has UPNP enabled.");
-		const QString psn_country   = tr("Changes the RPCN country.");
+		const QString net_status  = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
+		const QString psn_status  = tr("If set to RPCN, RPCS3 will use the RPCN server as PSN connection if the game is supported.\nIf set to Simulated, RPCS3 will try to fake the PSN connection, but any actual attempt at using the PSN functionality may result in errors or crashes.\nSimulated is only available in custom configurations.");
+		const QString dns         = tr("DNS used to resolve hostnames by applications.");
+		const QString dns_swap    = tr("DNS Swap List.\nOnly available in custom configurations.");
+		const QString bind        = tr("Interface IP Address to bind to.\nOnly available in custom configurations.");
+		const QString enable_upnp = tr("Enable UPNP.\nThis will automatically forward ports bound on 0.0.0.0 if your router has UPNP enabled.");
+		const QString psn_country = tr("Changes the RPCN country.");
 
 		// system
 
@@ -268,24 +268,24 @@ public:
 
 	const struct gamepad_settings
 	{
-		const QString null        = tr("This controller is disabled and will appear as disconnected to software. Choose another handler to enable it.");
-		const QString ldd_pad     = tr("This port is currently assigned to a custom controller by the application and can't be changed.");
-		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended.<br>To bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
-		const QString ds3_windows = tr("In order to use the DualShock 3 handler, you need to install the official DualShock 3 driver first.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
-		const QString ds3_linux   = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
-		const QString ds3_other   = tr("The DualShock 3 handler is recommended for official DualShock 3 controllers.");
-		const QString ds4_windows = tr("If you have any issues with the DualShock 4 handler, it might be caused by third-party tools such as DS4Windows. It's recommended that you disable them while using this handler.");
-		const QString ds4_linux   = tr("In order to use the DualShock 4 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
-		const QString ds4_other   = tr("The DualShock 4 handler is recommended for official DualShock 4 controllers.");
+		const QString null              = tr("This controller is disabled and will appear as disconnected to software. Choose another handler to enable it.");
+		const QString ldd_pad           = tr("This port is currently assigned to a custom controller by the application and can't be changed.");
+		const QString keyboard          = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended.<br>To bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
+		const QString ds3_windows       = tr("In order to use the DualShock 3 handler, you need to install the official DualShock 3 driver first.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
+		const QString ds3_linux         = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
+		const QString ds3_other         = tr("The DualShock 3 handler is recommended for official DualShock 3 controllers.");
+		const QString ds4_windows       = tr("If you have any issues with the DualShock 4 handler, it might be caused by third-party tools such as DS4Windows. It's recommended that you disable them while using this handler.");
+		const QString ds4_linux         = tr("In order to use the DualShock 4 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
+		const QString ds4_other         = tr("The DualShock 4 handler is recommended for official DualShock 4 controllers.");
 		const QString dualsense_windows = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString dualsense_linux   = tr("The DualSense handler is recommended for official DualSense controllers.");
 		const QString dualsense_other   = tr("The DualSense handler is recommended for official DualSense controllers.");
-		const QString skateboard  = tr("The Skateboard handler is recommended for official RIDE skateboard controllers.");
-		const QString move        = tr("The PS Move handler is recommended for official PS Move controllers.");
-		const QString xinput      = tr("The XInput handler will work with Xbox controllers and many third-party PC-compatible controllers. Pressure sensitive buttons from SCP are supported when SCP's XInput1_3.dll is placed in the main RPCS3 directory. For more details, see the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a>.").arg(gui::utils::get_link_style());
-		const QString evdev       = tr("The evdev handler should work with any controller that has Linux support.<br>If your joystick is not being centered properly, read the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
-		const QString mmjoy       = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");
-		const QString sdl         = tr("The SDL handler supports a variety of controllers across different platforms.");
+		const QString skateboard        = tr("The Skateboard handler is recommended for official RIDE skateboard controllers.");
+		const QString move              = tr("The PS Move handler is recommended for official PS Move controllers.");
+		const QString xinput            = tr("The XInput handler will work with Xbox controllers and many third-party PC-compatible controllers. Pressure sensitive buttons from SCP are supported when SCP's XInput1_3.dll is placed in the main RPCS3 directory. For more details, see the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a>.").arg(gui::utils::get_link_style());
+		const QString evdev             = tr("The evdev handler should work with any controller that has Linux support.<br>If your joystick is not being centered properly, read the <a %0 href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.").arg(gui::utils::get_link_style());
+		const QString mmjoy             = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");
+		const QString sdl               = tr("The SDL handler supports a variety of controllers across different platforms.");
 
 		const QString analog_limiter     = tr("Applies the stick multipliers while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the analog limiter on button press instead.");
 		const QString pressure_intensity = tr("Controls the intensity of pressure sensitive buttons while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the intensity on button press instead.<br>Use the percentage to change how hard you want to press a button.");

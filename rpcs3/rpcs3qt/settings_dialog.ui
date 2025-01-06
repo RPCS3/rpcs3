@@ -3011,6 +3011,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showShaderCompilationHint">
+                 <property name="text">
+                  <string>Show shader compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="showPPUCompilationHint">
                  <property name="text">
                   <string>Show PPU compilation hint</string>
@@ -3018,9 +3025,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="showShaderCompilationHint">
+                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
                  <property name="text">
-                  <string>Show shader compilation hint</string>
+                  <string>Show autosave/autoload hint</string>
                  </property>
                 </widget>
                </item>
@@ -3042,13 +3049,6 @@
                 <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
                  <property name="text">
                   <string>Show mouse and keyboard toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
-                 <property name="text">
-                  <string>Show autosave/autoload hint</string>
                  </property>
                 </widget>
                </item>
