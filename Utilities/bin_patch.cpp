@@ -1449,7 +1449,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 void patch_engine::apply(std::vector<u32>& applied_total, const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
-	applied_total.clear();
+	// applied_total may be non-empty, do not clear it
 
 	if (!m_map.contains(name))
 	{

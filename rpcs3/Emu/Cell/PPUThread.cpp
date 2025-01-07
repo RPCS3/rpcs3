@@ -4904,15 +4904,20 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				// Potentially occuring during patches
 				// Avoid doing it for files with a single module such as most PRX
 
-				std::vector<be_t<u32>> addrs(info.funcs.size() + 1);
-				usz addr_index = 0;
+				std::vector<be_t<u32>> addrs;
 
 				for (const ppu_function& func : info.funcs)
 				{
-					addrs[addr_index++] = func.addr - reloc;
+					if (func.size == 0)
+					{
+						continue;
+					}
+
+					addrs.emplace_back(func.addr - reloc);
 				}
 
-				addrs.back() = ::size32(info.funcs);
+				// Hash its size too
+				addrs.emplace_back(::size32(addrs));
 
 				sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
 			}
