@@ -1315,14 +1315,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		remove_menu->addSeparator();
 
-		QAction* remove_savestate = remove_menu->addAction(tr("&Remove Savestate"));
+		QAction* remove_savestate = remove_menu->addAction(tr("&Remove Savestates"));
 		remove_savestate->setEnabled(!is_current_running_game);
 		connect(remove_savestate, &QAction::triggered, [this, current_game, savestate_dir]()
 		{
 			if (is_game_running(current_game.serial))
 				return;
 
-			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestate?")) != QMessageBox::Yes)
+			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestates?")) != QMessageBox::Yes)
 				return;
 
 			RemoveContentPath(savestate_dir, "savestate");
@@ -1768,7 +1768,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QCheckBox* disc = new QCheckBox(tr("Remove title from game list (Disc Game path is not removed!)"));
 		QCheckBox* caches = new QCheckBox(tr("Remove caches and custom configs"));
 		QCheckBox* icons = new QCheckBox(tr("Remove icons and shortcuts"));
-		QCheckBox* savestate = new QCheckBox(tr("Remove savestate"));
+		QCheckBox* savestate = new QCheckBox(tr("Remove savestates"));
 		QCheckBox* captures = new QCheckBox(tr("Remove captures"));
 		QCheckBox* recordings = new QCheckBox(tr("Remove recordings"));
 		QCheckBox* screenshots = new QCheckBox(tr("Remove screenshots"));
