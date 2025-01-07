@@ -467,7 +467,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 			sleep_time = std::max<u64>(1, utils::sub_saturate<u64>(sleep_time, -add_time));
 		}
 
-		lv2_obj::sleep(ppu, g_cfg.core.sleep_timers_accuracy < sleep_timers_accuracy_level::_usleep ? sleep_time : 0);
+		lv2_obj::sleep(ppu, sleep_time);
 
 		if (!lv2_obj::wait_timeout(sleep_time, &ppu, true, true))
 		{

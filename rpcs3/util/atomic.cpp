@@ -6,6 +6,10 @@
 #define USE_STD
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef _MSC_VER
 
 #include "emmintrin.h"
@@ -302,7 +306,7 @@ namespace
 				return false;
 			}
 
-			static LARGE_INTEGER instant{};
+			LARGE_INTEGER instant{};
 
 			if (NtReleaseKeyedEvent(nullptr, &sync, 1, &instant) != NTSTATUS_SUCCESS)
 			{
@@ -859,6 +863,19 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 {
 	uint ext_size = 0;
 
+#ifdef _WIN32
+	LARGE_INTEGER start_time{};
+	//QueryPerformanceCounter(&start_time); // get time in 1/perf_freq units from RDTSC
+
+	FILETIME ftime{};
+	if (timeout != umax)
+	{
+		GetSystemTimeAsFileTime(&ftime); // get time in 100ns units since January 1, 1601 (UTC)
+	}
+
+
+#endif
+
 #ifdef __linux__
 	::timespec ts{};
 	if (timeout + 1)
@@ -1073,13 +1090,18 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 			cond->cv->wait(lock);
 		}
 #elif defined(_WIN32)
-		LARGE_INTEGER qw;
+		LARGE_INTEGER qw{};
 		qw.QuadPart = -static_cast<s64>(timeout / 100);
 
 		if (timeout % 100)
 		{
 			// Round up to closest 100ns unit
 			qw.QuadPart -= 1;
+		}
+
+		if (!s_tls_one_time_wait_cb) 
+		{
+			qw.QuadPart = (u64{ftime.dwHighDateTime} << 32) + ftime.dwLowDateTime - qw.QuadPart;
 		}
 
 		if (fallback) [[unlikely]]
@@ -1096,7 +1118,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 		}
 		else if (NtWaitForAlertByThreadId)
 		{
-			switch (DWORD status = NtWaitForAlertByThreadId(cond, timeout + 1 ? &qw : nullptr))
+			switch (DWORD status = NtWaitForAlertByThreadId(nullptr, timeout + 1 ? &qw : nullptr))
 			{
 			case NTSTATUS_ALERTED: fallback = true; break;
 			case NTSTATUS_TIMEOUT: break;
@@ -1137,7 +1159,7 @@ atomic_wait_engine::wait(const void* data, u32 old_value, u64 timeout, atomic_wa
 	while (!fallback)
 	{
 #if defined(_WIN32)
-		static LARGE_INTEGER instant{};
+		LARGE_INTEGER instant{};
 
 		if (cond->wakeup(1))
 		{

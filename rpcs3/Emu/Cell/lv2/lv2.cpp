@@ -1307,6 +1307,8 @@ static std::deque<class cpu_thread*> g_to_sleep;
 static atomic_t<bool> g_scheduler_ready = false;
 static atomic_t<u64> s_yield_frequency = 0;
 static atomic_t<u64> s_max_allowed_yield_tsc = 0;
+static atomic_t<u64> s_lv2_timers_sum_of_ten_delay_in_us = 5000;
+static atomic_t<u64> s_lv2_timers_min_timer_in_us = u64{umax};
 static u64 s_last_yield_tsc = 0;
 atomic_t<u32> g_lv2_preempts_taken = 0;
 
@@ -1337,11 +1339,13 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 
 	if (cpu.get_class() == thread_class::ppu)
 	{
-		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
-		{
-			static_cast<ppu_thread&>(cpu).res_notify = 0;
+		ppu_thread& ppu = static_cast<ppu_thread&>(cpu);
 
-			if (static_cast<ppu_thread&>(cpu).res_notify_time != vm::reservation_notifier_count_index(addr).second)
+		if (u32 addr = ppu.res_notify)
+		{
+			ppu.res_notify = 0;
+
+			if (ppu.res_notify_time != vm::reservation_notifier_count_index(addr).second)
 			{
 				// Ignore outdated notification request
 			}
@@ -1359,6 +1363,17 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 			{
 				vm::reservation_notifier_notify(addr);
 			}
+		}
+
+		if (ppu.last_lv2_deschedule_cia == ppu.cia && ppu.last_lv2_deschedule_r3 == ppu.gpr[3])
+		{
+			ppu.last_lv2_deschedule_match_count++;
+		}
+		else
+		{
+			ppu.last_lv2_deschedule_cia = ppu.cia;
+			ppu.last_lv2_deschedule_r3 = ppu.gpr[3];
+			ppu.last_lv2_deschedule_match_count = 0;
 		}
 	}
 
@@ -1432,7 +1447,7 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 
 	if (!g_postpone_notify_barrier)
 	{
-		notify_all();
+		notify_all(thread);
 	}
 
 	return result;
@@ -1567,6 +1582,11 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 	if (timeout)
 	{
 		const u64 wait_until = start_time + std::min<u64>(timeout, ~start_time);
+
+		if (wait_until < s_lv2_timers_min_timer_in_us)
+		{
+			s_lv2_timers_min_timer_in_us.release(wait_until);
+		}
 
 		// Register timeout if necessary
 		for (auto it = g_waiting.cbegin(), end = g_waiting.cend();; it++)
@@ -1835,6 +1855,8 @@ void lv2_obj::cleanup()
 	g_waiting.clear();
 	g_pending = 0;
 	s_yield_frequency = 0;
+	s_lv2_timers_sum_of_ten_delay_in_us = 5000;
+	s_lv2_timers_min_timer_in_us = u64{umax};
 }
 
 void lv2_obj::schedule_all(u64 current_time)
@@ -1876,7 +1898,7 @@ void lv2_obj::schedule_all(u64 current_time)
 	}
 
 	// Check registered timeouts
-	while (!g_waiting.empty())
+	while (!g_waiting.empty() && it != std::end(g_to_notify))
 	{
 		const auto pair = &g_waiting.front();
 
@@ -1896,15 +1918,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				ensure(!target->state.test_and_set(cpu_flag::notify));
 
 				// Otherwise notify it to wake itself
-				if (it == std::end(g_to_notify))
-				{
-					// Out of notification slots, notify locally (resizable container is not worth it)
-					target->state.notify_one();
-				}
-				else
-				{
-					*it++ = &target->state;
-				}
+				*it++ = &target->state;
 			}
 		}
 		else
@@ -2134,7 +2148,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 
 	auto wait_for = [&](u64 timeout)
 	{
-		thread_ctrl::wait_on(state, old_state, timeout);
+		state.wait(old_state, atomic_wait_timeout{std::min<u64>(timeout, u64{umax} / 1000) * 1000});
 	};
 
 	for (;; old_state = state)
@@ -2142,7 +2156,7 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 		if (old_state & cpu_flag::notify)
 		{
 			// Timeout notification has been forced
-			break;
+			//break;
 		}
 
 		if (old_state & cpu_flag::signal)
@@ -2171,7 +2185,56 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 #endif
 		// TODO: Tune for other non windows operating sytems
 
-		if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+		const sleep_timers_accuracy_level accuracy_type = g_cfg.core.sleep_timers_accuracy;
+		const u64 avg_delay = get_avg_timer_reponse_delay();
+
+		static atomic_t<u64> g_success = 0;
+		static atomic_t<u64> g_fails = 0;
+
+		if ((accuracy_type == sleep_timers_accuracy_level::_dynamic && avg_delay < 30) && ((avg_delay < (remaining + 15) / 2) || (cpu && cpu->last_lv2_deschedule_match_count > 3)))
+		{
+			wait_for(remaining);
+
+			if (remaining < host_min_quantum)
+			{
+				g_success += remaining;
+				//g_success++;
+			}
+
+			passed = get_system_time() - start_time;
+
+			if (passed >= usec && cpu)
+			{
+				static atomic_t<u64> g_fail_time = 10000;
+				static atomic_t<u64> c_all = 0, c_sig = 0;
+				c_all++;
+				if (cpu->state & cpu_flag::notify)
+				{
+					c_sig++;
+					g_fail_time.atomic_op([miss = passed - usec](u64& x)
+					{
+						x = x - x / 100 + miss;
+					});
+					volatile u64 tls_fail_time = g_fail_time / 100;
+					+tls_fail_time;
+				}
+			}
+			else if (passed < usec && cpu && cpu->state & cpu_flag::notify)
+			{
+				__debugbreak();
+			}
+			continue;
+		}
+		else
+		{
+			if (remaining < host_min_quantum)
+			{
+				g_fails += remaining;
+				//g_fails++;
+			}
+		}
+
+		if (accuracy_type < (is_usleep ? sleep_timers_accuracy_level::_dynamic : sleep_timers_accuracy_level::_all_timers))
 		{
 			wait_for(remaining);
 		}
@@ -2222,7 +2285,7 @@ void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
 	cpu_counter::remove(&cpu);
 }
 
-void lv2_obj::notify_all() noexcept
+void lv2_obj::notify_all(cpu_thread* woke_thread) noexcept
 {
 	for (auto cpu : g_to_notify)
 	{
@@ -2258,12 +2321,10 @@ void lv2_obj::notify_all() noexcept
 		return;
 	}
 
-	if (cpu->get_class() != thread_class::spu && cpu->state.none_of(cpu_flag::suspend))
+	if (cpu->get_class() == thread_class::ppu && cpu->state.none_of(cpu_flag::suspend + cpu_flag::signal))
 	{
 		return;
 	}
-
-	std::optional<vm::writer_lock> lock;
 
 	constexpr usz total_waiters = std::size(spu_thread::g_spu_waiters_by_value);
 
@@ -2346,4 +2407,96 @@ void lv2_obj::notify_all() noexcept
 			vm::reservation_notifier_notify(addr);
 		}
 	}
+
+	if (woke_thread == cpu)
+	{
+		return;
+	}
+
+	const u64 min_timer = s_lv2_timers_min_timer_in_us;
+	const u64 current_time = get_guest_system_time();
+
+	if (current_time < min_timer)
+	{
+		return;
+	}
+
+	atomic_bs_t<cpu_flag>* notifies_cpus[16];
+	usz count_notifies_cpus = 0;
+
+	static atomic_t<u64> 
+	g_ok = 0,
+	g_fail = 0;
+
+	std::unique_lock lock(g_mutex, std::try_to_lock);
+
+	if (!lock)
+	{
+		// Not only is that this method is an opportunistic optimization
+		// But if it's already locked than it is likely that soon another thread would do this check instead
+		g_fail++;
+		return;
+	}
+
+	// Do it BEFORE clearing the queue in order to measure the delay properly even if the sleeping thread notified itself
+	// This 'redundancy' is what allows proper measurements
+	if (u64 min_time2 = s_lv2_timers_min_timer_in_us; current_time >= min_time2)
+	{
+		const u64 sum = s_lv2_timers_sum_of_ten_delay_in_us.observe();
+		s_lv2_timers_sum_of_ten_delay_in_us.release(sum - sum / 10 + (current_time - min_time2));
+	}
+
+	// Check registered timeouts
+	while (!g_waiting.empty() && count_notifies_cpus < std::size(notifies_cpus))
+	{
+		const auto pair = &g_waiting.front();
+
+		if (pair->first <= current_time)
+		{
+			const auto target = pair->second;
+			g_waiting.pop_front();
+
+			if (target != cpu)
+			{
+				// Change cpu_thread::state for the lightweight notification to work
+				ensure(!target->state.test_and_set(cpu_flag::notify));
+				//target->state.notify_one();target->state.notify_one();
+				notifies_cpus[count_notifies_cpus++] = &target->state;
+			}
+		}
+		else
+		{
+			// The list is sorted so assume no more timeouts
+			break;
+		}
+	}
+
+
+	if (g_waiting.empty())
+	{
+		s_lv2_timers_min_timer_in_us.release(u64{umax});
+	}
+	else
+	{
+		s_lv2_timers_min_timer_in_us.release(g_waiting.front().first);
+	}
+
+	lock.unlock();
+	g_ok++;
+
+	if (!count_notifies_cpus)
+	{
+		return;
+	}
+
+	for (usz i = count_notifies_cpus - 1; i != umax; i--)
+	{
+		notifies_cpus[i]->notify_one();;
+	}
+	std::this_thread::yield();
+}
+
+u64 lv2_obj::get_avg_timer_reponse_delay()
+{
+	return s_lv2_timers_sum_of_ten_delay_in_us / 10;
 }

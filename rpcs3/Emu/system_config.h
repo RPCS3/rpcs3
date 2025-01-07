@@ -91,11 +91,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, (1 << 6) - 1> spu_wakeup_delay_mask{ this, "SPU Wake-Up Delay Thread Mask", (1 << 6) - 1, true };
 		cfg::uint<0, 400> max_cpu_preempt_count_per_frame{ this, "Max CPU Preempt Count", 0, true };
 		cfg::_bool allow_rsx_cpu_preempt{ this, "Allow RSX CPU Preemptions", true, true };
-#if defined (__linux__) || defined (__APPLE__)
-		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_as_host, true };
-#else
-		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_usleep, true };
-#endif
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy 2", sleep_timers_accuracy_level::_dynamic, true };
 		cfg::_int<-1000, 1500> usleep_addend{ this, "Usleep Time Addend", 0, true };
 
 		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
