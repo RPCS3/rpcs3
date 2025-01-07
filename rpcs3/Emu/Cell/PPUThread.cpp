@@ -4898,6 +4898,22 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
+			if (fpos >= info.funcs.size())
+			{
+				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
+				// Potentially occuring during patches
+
+				std::vector<be_t<u32>> addrs(info.funcs.size());
+				usz addr_index = 0;
+
+				for (const ppu_function& func : info.funcs)
+				{
+					addrs[addr_index] = func.addr;
+				}
+
+				sha1_update(&ctx, addrs.data(), addrs.size() * sizeof(be_t<u32>));
+			}
+
 			if (false)
 			{
 				const be_t<u64> forced_upd = 3;
@@ -4920,7 +4936,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_fpcc,
 				accurate_vnan,
 				accurate_nj_mode,
-				contains_symbol_resolver,
 
 				__bitset_enum_max
 			};
@@ -4950,8 +4965,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
-			if (fpos >= info.funcs.size())
-				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
