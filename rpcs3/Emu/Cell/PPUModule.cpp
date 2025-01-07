@@ -1947,6 +1947,7 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 		ppu_check_patch_spu_images(*prx, seg);
 	}
 
+	prx->applied_patches = applied;
 	prx->analyse(toc, 0, end, applied, exported_funcs);
 
 	if (!ar && !virtual_load)
