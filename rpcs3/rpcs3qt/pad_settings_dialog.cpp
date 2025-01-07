@@ -996,25 +996,26 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 	}
 	else
 	{
+		constexpr int delta_threshold = 20;
 		const QPoint mouse_pos = QCursor::pos();
 		const int delta_x = mouse_pos.x() - m_last_pos.x();
 		const int delta_y = mouse_pos.y() - m_last_pos.y();
 
 		u32 key = 0;
 
-		if (delta_x > 100)
+		if (delta_x > delta_threshold)
 		{
 			key = mouse::move_right;
 		}
-		else if (delta_x < -100)
+		else if (delta_x < -delta_threshold)
 		{
 			key = mouse::move_left;
 		}
-		else if (delta_y > 100)
+		else if (delta_y > delta_threshold)
 		{
 			key = mouse::move_down;
 		}
-		else if (delta_y < -100)
+		else if (delta_y < -delta_threshold)
 		{
 			key = mouse::move_up;
 		}
