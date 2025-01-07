@@ -11,7 +11,6 @@ struct lv2_overlay final : ppu_module<lv2_obj>
 
 	u32 entry{};
 	u32 seg0_code_end{};
-	std::vector<u32> applied_patches;
 
 	lv2_overlay() = default;
 	lv2_overlay(utils::serial&){}
