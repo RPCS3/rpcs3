@@ -289,20 +289,21 @@ public:
 		m_done.notify_one();
 	}
 
-	void wait_for_result()
+	bool wait_for_result(ppu_thread& ppu)
 	{
-		if (!m_done)
+		while (!m_done && !ppu.is_stopped())
 		{
-			m_done.wait(0);
-			m_done = 0;
+			thread_ctrl::wait_on(m_done, 0);
 		}
-	}
 
-	gem_config_data& operator=(thread_state)
-	{
-		wake_up();
-		done();
-		return *this;
+		if (ppu.is_stopped())
+		{
+			ppu.state += cpu_flag::again;
+			return false;
+		}
+
+		m_done = 0;
+		return true;
 	}
 
 	// helper functions
@@ -1253,7 +1254,7 @@ void gem_config_data::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
-		atomic_wait_timeout timeout = atomic_wait_timeout::inf;
+		u64 timeout = umax;
 
 		if (state && !video_conversion_in_progress)
 		{
@@ -1263,11 +1264,11 @@ void gem_config_data::operator()()
 
 			if (elapsed_us < update_timeout_us)
 			{
-				timeout = atomic_wait_timeout{(update_timeout_us - elapsed_us) * 1000};
+				timeout = update_timeout_us - elapsed_us;
 			}
 			else
 			{
-				timeout = atomic_wait_timeout{update_timeout_us * 1000};
+				timeout = update_timeout_us;
 				last_update_us = now_us;
 
 				std::scoped_lock lock(mtx);
@@ -1278,7 +1279,7 @@ void gem_config_data::operator()()
 
 		if (!m_wake_up)
 		{
-			m_wake_up.wait(0, timeout);
+			thread_ctrl::wait_on(m_wake_up, 0, timeout);
 		}
 
 		m_wake_up = 0;
@@ -1337,25 +1338,39 @@ public:
 		return m_busy;
 	}
 
-	void wake_up()
+	void wake_up_tracker()
 	{
-		m_wake_up.release(1);
-		m_wake_up.notify_one();
+		m_wake_up_tracker.release(1);
+		m_wake_up_tracker.notify_one();
 	}
 
-	void done()
+	void tracker_done()
 	{
-		m_done.release(1);
-		m_done.notify_one();
+		m_tracker_done.release(1);
+		m_tracker_done.notify_one();
 	}
 
-	void wait_for_result()
+	bool wait_for_tracker_result(ppu_thread& ppu)
 	{
-		if (!m_done)
+		if (g_cfg.io.move != move_handler::real)
 		{
-			m_done.wait(0);
-			m_done = 0;
+			m_tracker_done = 0;
+			return true;
 		}
+
+		while (!m_tracker_done && !ppu.is_stopped())
+		{
+			thread_ctrl::wait_on(m_tracker_done, 0);
+		}
+
+		if (ppu.is_stopped())
+		{
+			ppu.state += cpu_flag::again;
+			return false;
+		}
+
+		m_tracker_done = 0;
+		return true;
 	}
 
 	bool set_image(u32 addr)
@@ -1410,13 +1425,6 @@ public:
 		return ::at32(m_info, gem_num);
 	}
 
-	gem_tracker& operator=(thread_state)
-	{
-		wake_up();
-		done();
-		return *this;
-	}
-
 	void operator()()
 	{
 		if (g_cfg.io.move != move_handler::real)
@@ -1434,10 +1442,10 @@ public:
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Check if we have a new frame
-			if (!m_wake_up)
+			if (!m_wake_up_tracker)
 			{
-				m_wake_up.wait(0);
-				m_wake_up.release(0);
+				thread_ctrl::wait_on(m_wake_up_tracker, 0);
+				m_wake_up_tracker.release(0);
 
 				if (thread_ctrl::state() == thread_state::aborting)
 				{
@@ -1523,7 +1531,7 @@ public:
 			}
 
 			// Notify that we are finished with this frame
-			done();
+			tracker_done();
 
 			m_busy.release(false);
 		}
@@ -1534,8 +1542,8 @@ public:
 	shared_mutex mutex;
 
 private:
-	atomic_t<u32> m_wake_up = 0;
-	atomic_t<u32> m_done = 1;
+	atomic_t<u32> m_wake_up_tracker = 0;
+	atomic_t<u32> m_tracker_done = 1;
 	atomic_t<bool> m_busy = false;
 	ps_move_tracker<false> m_tracker{};
 	CellCameraInfoEx m_camera_info{};
@@ -2226,7 +2234,7 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 	return CELL_OK;
 }
 
-error_code cellGemConvertVideoFinish()
+error_code cellGemConvertVideoFinish(ppu_thread& ppu)
 {
 	cellGem.warning("cellGemConvertVideoFinish()");
 
@@ -2242,7 +2250,10 @@ error_code cellGemConvertVideoFinish()
 		return CELL_GEM_ERROR_CONVERT_NOT_STARTED;
 	}
 
-	gem.wait_for_result();
+	if (!gem.wait_for_result(ppu))
+	{
+		return {};
+	}
 
 	return CELL_OK;
 }
@@ -2417,7 +2428,10 @@ error_code cellGemEnd(ppu_thread& ppu)
 	}
 
 	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
-	tracker.wait_for_result();
+	if (!tracker.wait_for_tracker_result(ppu))
+	{
+		return {};
+	}
 
 	gem.updating = false;
 
@@ -3507,7 +3521,7 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 	return CELL_OK;
 }
 
-error_code cellGemUpdateFinish()
+error_code cellGemUpdateFinish(ppu_thread& ppu)
 {
 	cellGem.warning("cellGemUpdateFinish()");
 
@@ -3526,7 +3540,10 @@ error_code cellGemUpdateFinish()
 	}
 
 	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
-	tracker.wait_for_result();
+	if (!tracker.wait_for_tracker_result(ppu))
+	{
+		return {};
+	}
 
 	gem.updating = false;
 
@@ -3576,7 +3593,7 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
 
-	tracker.wake_up();
+	tracker.wake_up_tracker();
 
 	return CELL_OK;
 }
