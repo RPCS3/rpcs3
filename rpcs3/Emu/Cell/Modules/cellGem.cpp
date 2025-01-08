@@ -274,6 +274,37 @@ public:
 
 	u64 start_timestamp_us = 0;
 
+	atomic_t<u32> m_wake_up = 0;
+	atomic_t<u32> m_done = 0;
+
+	void wake_up()
+	{
+		m_wake_up.release(1);
+		m_wake_up.notify_one();
+	}
+
+	void done()
+	{
+		m_done.release(1);
+		m_done.notify_one();
+	}
+
+	void wait_for_result()
+	{
+		if (!m_done)
+		{
+			m_done.wait(0);
+			m_done = 0;
+		}
+	}
+
+	gem_config_data& operator=(thread_state)
+	{
+		wake_up();
+		done();
+		return *this;
+	}
+
 	// helper functions
 	bool is_controller_ready(u32 gem_num) const
 	{
@@ -1222,24 +1253,39 @@ void gem_config_data::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
-		while (!video_conversion_in_progress && thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+		atomic_wait_timeout timeout = atomic_wait_timeout::inf;
+
+		if (state && !video_conversion_in_progress)
 		{
-			if (state)
+			constexpr u64 update_timeout_us = 100'000; // Update controllers at 10Hz
+			const u64 now_us = get_system_time();
+			const u64 elapsed_us = now_us - last_update_us;
+
+			if (elapsed_us < update_timeout_us)
 			{
-				const u64 now_us = get_system_time();
-				constexpr u64 update_timeout = 100000; // Update controllers at 10Hz
-
-				if (now_us - last_update_us >= update_timeout)
-				{
-					last_update_us = now_us;
-
-					std::scoped_lock lock(mtx);
-					update_connections();
-					update_calibration_status();
-				}
+				timeout = atomic_wait_timeout{(update_timeout_us - elapsed_us) * 1000};
 			}
+			else
+			{
+				timeout = atomic_wait_timeout{update_timeout_us * 1000};
+				last_update_us = now_us;
 
-			thread_ctrl::wait_for(1000);
+				std::scoped_lock lock(mtx);
+				update_connections();
+				update_calibration_status();
+			}
+		}
+
+		if (!m_wake_up)
+		{
+			m_wake_up.wait(0, timeout);
+		}
+
+		m_wake_up = 0;
+
+		if (!video_conversion_in_progress)
+		{
+			continue;
 		}
 
 		if (thread_ctrl::state() == thread_state::aborting || Emu.IsStopped())
@@ -1256,6 +1302,7 @@ void gem_config_data::operator()()
 		if (g_cfg.io.camera != camera_handler::qt)
 		{
 			video_conversion_in_progress = false;
+			done();
 			continue;
 		}
 
@@ -1272,6 +1319,7 @@ void gem_config_data::operator()()
 		}
 
 		video_conversion_in_progress = false;
+		done();
 	}
 }
 
@@ -1295,12 +1343,18 @@ public:
 		m_wake_up.notify_one();
 	}
 
+	void done()
+	{
+		m_done.release(1);
+		m_done.notify_one();
+	}
+
 	void wait_for_result()
 	{
 		if (!m_done)
 		{
 			m_done.wait(0);
-			m_done.release(0);
+			m_done = 0;
 		}
 	}
 
@@ -1359,6 +1413,7 @@ public:
 	gem_tracker& operator=(thread_state)
 	{
 		wake_up();
+		done();
 		return *this;
 	}
 
@@ -1468,8 +1523,7 @@ public:
 			}
 
 			// Notify that we are finished with this frame
-			m_done.release(1);
-			m_done.notify_one();
+			done();
 
 			m_busy.release(false);
 		}
@@ -2188,10 +2242,7 @@ error_code cellGemConvertVideoFinish()
 		return CELL_GEM_ERROR_CONVERT_NOT_STARTED;
 	}
 
-	while (gem.video_conversion_in_progress && !Emu.IsStopped())
-	{
-		thread_ctrl::wait_for(100);
-	}
+	gem.wait_for_result();
 
 	return CELL_OK;
 }
@@ -2225,7 +2276,9 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 	gem.video_data_in.resize(shared_data.size);
 	std::memcpy(gem.video_data_in.data(), video_frame.get_ptr(), gem.video_data_in.size());
+
 	gem.video_conversion_in_progress = true;
+	gem.wake_up();
 
 	return CELL_OK;
 }
@@ -3062,6 +3115,8 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 
 	// TODO: is this correct?
 	gem.start_timestamp_us = get_guest_system_time();
+
+	gem.wake_up();
 
 	return CELL_OK;
 }
