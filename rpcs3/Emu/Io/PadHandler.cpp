@@ -883,7 +883,7 @@ void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
 		return;
 	}
 
-	if (!pad->move_data.orientation_enabled || pad->get_orientation_reset_button_active(pad->m_player_id))
+	if (!pad->move_data.orientation_enabled || pad->get_orientation_reset_button_active())
 	{
 		// This can be called extensively in quick succession, so let's just reset the pointer instead of creating a new object.
 		device->ahrs.reset();

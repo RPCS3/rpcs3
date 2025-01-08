@@ -518,7 +518,7 @@ struct Pad
 	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
 
 	s32 m_orientation_reset_button_index{-1}; // Special button index. -1 if not set.
-	bool get_orientation_reset_button_active(u32 player_id);
+	bool get_orientation_reset_button_active();
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};

@@ -253,7 +253,7 @@ bool Pad::get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id)
 	return analog_limiter_button.m_pressed;
 }
 
-bool Pad::get_orientation_reset_button_active(u32 player_id)
+bool Pad::get_orientation_reset_button_active()
 {
 	if (m_orientation_reset_button_index < 0)
 	{

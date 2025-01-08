@@ -679,12 +679,12 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->model == ps_move_model::ZCM1)
 	{
-		accel_x -= zero_shift;
-		accel_y -= zero_shift;
-		accel_z -= zero_shift;
-		gyro_x -= zero_shift;
-		gyro_y -= zero_shift;
-		gyro_z -= zero_shift;
+		accel_x -= static_cast<f32>(zero_shift);
+		accel_y -= static_cast<f32>(zero_shift);
+		accel_z -= static_cast<f32>(zero_shift);
+		gyro_x -= static_cast<f32>(zero_shift);
+		gyro_y -= static_cast<f32>(zero_shift);
+		gyro_z -= static_cast<f32>(zero_shift);
 	}
 
 	if (!device->config || !device->config->orientation_enabled)
