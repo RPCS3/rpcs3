@@ -1142,7 +1142,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->handle_pos[3] = 0.f;
 
 	// Calculate orientation
-	if (g_cfg.io.move == move_handler::real)
+	if (g_cfg.io.move == move_handler::real || (g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
 	{
 		gem_state->quat[0] = move_data.quaternion[0]; // x
 		gem_state->quat[1] = move_data.quaternion[1]; // y
@@ -1151,14 +1151,11 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	}
 	else
 	{
-		static constexpr f32 PI = 3.14159265f;
-		const auto degree_to_rad = [](f32 degree) -> f32 { return degree * PI / 180.0f; };
-
 		const f32 max_angle_per_side_h = g_cfg.io.fake_move_rotation_cone_h / 2.0f;
 		const f32 max_angle_per_side_v = g_cfg.io.fake_move_rotation_cone_v / 2.0f;
-		const f32 roll = -degree_to_rad((image_y - half_height) / half_height * max_angle_per_side_v); // This is actually the pitch
-		const f32 pitch = -degree_to_rad((image_x - half_width) / half_width * max_angle_per_side_h); // This is actually the yaw
-		const f32 yaw = degree_to_rad(0.0f);
+		const f32 roll = -PadHandlerBase::degree_to_rad((image_y - half_height) / half_height * max_angle_per_side_v); // This is actually the pitch
+		const f32 pitch = -PadHandlerBase::degree_to_rad((image_x - half_width) / half_width * max_angle_per_side_h); // This is actually the yaw
+		const f32 yaw = PadHandlerBase::degree_to_rad(0.0f);
 		const f32 cr = std::cos(roll * 0.5f);
 		const f32 sr = std::sin(roll * 0.5f);
 		const f32 cp = std::cos(pitch * 0.5f);
@@ -1318,7 +1315,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y, {});
+		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y, pad->move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2147,6 +2144,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		switch (g_cfg.io.move)
 		{
 		case move_handler::real:
+		case move_handler::fake:
 		{
 			// Get temperature and sensor data
 			{
@@ -2155,7 +2153,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				const auto handler = pad::get_current_handler();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-				if (pad && pad->m_pad_handler == pad_handler::move && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+				if (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 				{
 					inertial_state->temperature = pad->move_data.temperature;
 					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
@@ -2170,9 +2168,6 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
 			break;
 		}
-		case move_handler::fake:
-			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-			break;
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);

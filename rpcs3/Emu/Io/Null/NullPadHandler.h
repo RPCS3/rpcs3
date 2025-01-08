@@ -48,6 +48,7 @@ public:
 
 		cfg->pressure_intensity_button.def = "";
 		cfg->analog_limiter_button.def = "";
+		cfg->orientation_reset_button.def = "";
 
 		// Apply defaults
 		cfg->from_default();

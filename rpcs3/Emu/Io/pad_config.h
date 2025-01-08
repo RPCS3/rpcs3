@@ -66,6 +66,9 @@ struct cfg_pad final : cfg::node
 	cfg_sensor motion_sensor_z{ this, "Motion Sensor Z" };
 	cfg_sensor motion_sensor_g{ this, "Motion Sensor G" };
 
+	cfg::string orientation_reset_button{ this, "Orientation Reset Button", "" };
+	cfg::_bool orientation_enabled{ this, "Orientation Enabled", false };
+
 	cfg::string pressure_intensity_button{ this, "Pressure Intensity Button", "" };
 	cfg::uint<0, 100> pressure_intensity{ this, "Pressure Intensity Percent", 50 };
 	cfg::_bool pressure_intensity_toggle_mode{ this, "Pressure Intensity Toggle Mode", false };

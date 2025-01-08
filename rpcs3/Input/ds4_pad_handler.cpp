@@ -118,6 +118,7 @@ ds4_pad_handler::ds4_pad_handler()
 	b_has_rgb = true;
 	b_has_battery = true;
 	b_has_battery_led = true;
+	b_has_orientation = true;
 
 	m_name_string = "DS4 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -179,6 +180,7 @@ void ds4_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, DS4KeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, DS4KeyCodes::None);
+	cfg->orientation_reset_button.def = ::at32(button_list, DS4KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -883,29 +885,27 @@ void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
-	// accel
-	f32 accelX = static_cast<s16>(input.accel[0]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
-	f32 accelY = static_cast<s16>(input.accel[1]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
-	f32 accelZ = static_cast<s16>(input.accel[2]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	// acceleration (linear velocity in m/s²)
+	const f32 accel_x = static_cast<s16>(input.accel[0]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	const f32 accel_y = static_cast<s16>(input.accel[1]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	const f32 accel_z = static_cast<s16>(input.accel[2]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+
+	// gyro (angular velocity in degree/s)
+	const f32 gyro_x = static_cast<s16>(input.gyro[0]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	const f32 gyro_y = static_cast<s16>(input.gyro[1]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	const f32 gyro_z = static_cast<s16>(input.gyro[2]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
 
 	// now just use formula from ds3
-	accelX = accelX * 113 + 512;
-	accelY = accelY * 113 + 512;
-	accelZ = accelZ * 113 + 512;
+	pad->m_sensors[0].m_value = Clamp0To1023(accel_x * MOTION_ONE_G + 512);
+	pad->m_sensors[1].m_value = Clamp0To1023(accel_y * MOTION_ONE_G + 512);
+	pad->m_sensors[2].m_value = Clamp0To1023(accel_z * MOTION_ONE_G + 512);
 
-	pad->m_sensors[0].m_value = Clamp0To1023(accelX);
-	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
-	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
-
-	// gyroY is yaw, which is all that we need
-	//f32 gyroX = static_cast<s16>(input.gyro[0]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-	f32 gyroY = static_cast<s16>(input.gyro[1]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-	//f32 gyroZ = static_cast<s16>(input.gyro[2]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-
+	// gyro_y is yaw, which is all that we need.
 	// Convert to ds3. The ds3 resolution is 123/90°/sec.
-	gyroY = gyroY * (123.f / 90.f) + 512;
+	pad->m_sensors[3].m_value = Clamp0To1023(gyro_y * (123.f / 90.f) + 512);
 
-	pad->m_sensors[3].m_value = Clamp0To1023(gyroY);
+	// Set raw orientation
+	set_raw_orientation(pad->move_data, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z);
 }
 
 void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)

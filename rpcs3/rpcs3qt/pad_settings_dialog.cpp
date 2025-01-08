@@ -312,6 +312,7 @@ void pad_settings_dialog::InitButtons()
 
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
 	insert_button(button_ids::id_analog_limiter, ui->b_analog_limiter);
+	insert_button(button_ids::id_orientation_reset, ui->b_orientation_reset);
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
@@ -720,6 +721,7 @@ void pad_settings_dialog::ReloadButtons()
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 	updateButton(button_ids::id_analog_limiter, ui->b_analog_limiter, &cfg.analog_limiter_button);
+	updateButton(button_ids::id_orientation_reset, ui->b_orientation_reset, &cfg.orientation_reset_button);
 
 	UpdateLabels(true);
 }
@@ -1195,6 +1197,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, cfg.lpadsquircling, cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 
+		// Update orientation toggle
+		ui->cb_orientation_toggle->setChecked(cfg.orientation_enabled.get());
+
 		// Update analog limiter toggle mode
 		ui->cb_analog_limiter_toggle_mode->setChecked(cfg.analog_limiter_toggle_mode.get());
 
@@ -1249,6 +1254,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_analog_limiter->setEnabled(is_enabled && m_enable_analog_limiter_button);
+	ui->gb_orientation_reset->setEnabled(is_enabled && m_enable_orientation_reset_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
 	ui->gb_stick_deadzones->setEnabled(is_enabled && m_enable_deadzones);
@@ -1467,11 +1473,15 @@ void pad_settings_dialog::ChangeHandler()
 	// Enable Analog Limiter Settings
 	m_enable_analog_limiter_button = m_handler->has_analog_limiter_button();
 
+	// Enable Orientation Reset Settings
+	m_enable_orientation_reset_button = m_handler->has_orientation();
+
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->gb_pressure_intensity->setVisible(m_handler->has_pressure_intensity_button());
 	ui->gb_analog_limiter->setVisible(m_handler->has_analog_limiter_button());
+	ui->gb_orientation_reset->setVisible(m_handler->has_orientation());
 
 	// Update device dropdown and block signals while doing so
 	ui->chooseDevice->blockSignals(true);
@@ -1829,8 +1839,11 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
-			if ((id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter) && m_handler->m_type != pad_handler::keyboard)
+			if (m_handler->m_type != pad_handler::keyboard &&
+				(id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter || id == button_ids::id_orientation_reset))
+			{
 				continue;
+			}
 
 			for (const std::string& key : cfg_pad::get_buttons(button.keys))
 			{
@@ -1884,6 +1897,11 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	{
 		cfg.pressure_intensity.set(ui->sb_pressure_intensity->value());
 		cfg.pressure_intensity_toggle_mode.set(ui->cb_pressure_intensity_toggle_mode->isChecked());
+	}
+
+	if (m_handler->has_orientation())
+	{
+		cfg.orientation_enabled.set(ui->cb_orientation_toggle->isChecked());
 	}
 
 	cfg.pressure_intensity_deadzone.set(ui->pressure_intensity_deadzone->value());
@@ -2077,6 +2095,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	// Localized tooltips
 	const Tooltips tooltips;
 
+	SubscribeTooltip(ui->gb_orientation_reset, tooltips.gamepad_settings.orientation_reset);
 	SubscribeTooltip(ui->gb_analog_limiter, tooltips.gamepad_settings.analog_limiter);
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);

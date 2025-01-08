@@ -146,12 +146,6 @@ public:
 	u32 external_device_id = 0;
 	ps_move_calibration calibration{};
 
-	FusionAhrs ahrs {};               // Used to calculate quaternions from sensor data
-	u64 last_ahrs_update_time_us = 0; // Last ahrs update
-
-	void update_orientation(ps_move_data& move_data);
-	void reset_orientation();
-
 	const reports::ps_move_input_report_common& input_report_common() const;
 };
 

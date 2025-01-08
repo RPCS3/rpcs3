@@ -84,6 +84,7 @@ skateboard_pad_handler::skateboard_pad_handler()
 	b_has_battery = false;
 	b_has_battery_led = false;
 	b_has_pressure_intensity_button = false;
+	b_has_orientation = true;
 
 	m_name_string = "Skateboard #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -133,6 +134,8 @@ void skateboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->ir_right.def   = ::at32(button_list, skateboard_key_codes::ir_right);
 	cfg->tilt_left.def  = ::at32(button_list, skateboard_key_codes::tilt_left);
 	cfg->tilt_right.def = ::at32(button_list, skateboard_key_codes::tilt_right);
+
+	cfg->orientation_reset_button.def = ::at32(button_list, skateboard_key_codes::none);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = 0;
@@ -323,6 +326,8 @@ void skateboard_pad_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_sensors[1].m_value = Clamp0To1023(input.large_axes[1]);
 	pad->m_sensors[2].m_value = Clamp0To1023(input.large_axes[2]);
 	pad->m_sensors[3].m_value = Clamp0To1023(input.large_axes[3]);
+
+	set_raw_orientation(*pad);
 }
 
 pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& /*data*/)
