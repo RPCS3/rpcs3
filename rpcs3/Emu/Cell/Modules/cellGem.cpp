@@ -280,10 +280,74 @@ public:
 		return controllers[gem_num].status == CELL_GEM_STATUS_READY;
 	}
 
+	void update_connections()
+	{
+		switch (g_cfg.io.move)
+		{
+		case move_handler::real:
+		case move_handler::fake:
+		{
+			connected_controllers = 0;
+
+			std::lock_guard lock(pad::g_pad_mutex);
+			const auto handler = pad::get_current_handler();
+
+			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+			{
+				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
+				const bool connected = (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect);
+				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
+
+				if (connected && is_real_move)
+				{
+					connected_controllers++;
+					controllers[i].status = CELL_GEM_STATUS_READY;
+					controllers[i].port = port_num(i);
+				}
+				else
+				{
+					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
+					controllers[i].port = 0;
+				}
+			}
+			break;
+		}
+		case move_handler::raw_mouse:
+		{
+			connected_controllers = 0;
+
+			auto& handler = g_fxo->get<MouseHandlerBase>();
+			std::lock_guard mouse_lock(handler.mutex);
+
+			const MouseInfo& info = handler.GetInfo();
+
+			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+			{
+				const bool connected = i < attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED;
+
+				if (connected)
+				{
+					connected_controllers++;
+					controllers[i].status = CELL_GEM_STATUS_READY;
+					controllers[i].port = port_num(i);
+				}
+				else
+				{
+					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
+					controllers[i].port = 0;
+				}
+			}
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
+
 	void update_calibration_status()
 	{
-		std::scoped_lock lock(mtx);
-
 		for (u32 gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 		{
 			gem_controller& controller = controllers[gem_num];
@@ -1154,13 +1218,25 @@ void gem_config_data::operator()()
 {
 	cellGem.notice("Starting thread");
 
+	u64 last_update_us = 0;
+
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
 		while (!video_conversion_in_progress && thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 		{
 			if (state)
 			{
-				update_calibration_status();
+				const u64 now_us = get_system_time();
+				constexpr u64 update_timeout = 100000; // Update controllers at 10Hz
+
+				if (now_us - last_update_us >= update_timeout)
+				{
+					last_update_us = now_us;
+
+					std::scoped_lock lock(mtx);
+					update_connections();
+					update_calibration_status();
+				}
 			}
 
 			thread_ctrl::wait_for(1000);
@@ -2630,69 +2706,6 @@ error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 	if (!info)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
-	}
-
-	switch (g_cfg.io.move)
-	{
-	case move_handler::real:
-	case move_handler::fake:
-	{
-		gem.connected_controllers = 0;
-
-		std::lock_guard lock(pad::g_pad_mutex);
-		const auto handler = pad::get_current_handler();
-
-		for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
-		{
-			const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-			const bool connected = (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < gem.attribute.max_connect);
-			const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
-
-			if (connected && is_real_move)
-			{
-				gem.connected_controllers++;
-				gem.controllers[i].status = CELL_GEM_STATUS_READY;
-				gem.controllers[i].port = port_num(i);
-			}
-			else
-			{
-				gem.controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-				gem.controllers[i].port = 0;
-			}
-		}
-		break;
-	}
-	case move_handler::raw_mouse:
-	{
-		gem.connected_controllers = 0;
-
-		auto& handler = g_fxo->get<MouseHandlerBase>();
-		std::lock_guard mouse_lock(handler.mutex);
-
-		const MouseInfo& info = handler.GetInfo();
-
-		for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
-		{
-			const bool connected = i < gem.attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED;
-
-			if (connected)
-			{
-				gem.connected_controllers++;
-				gem.controllers[i].status = CELL_GEM_STATUS_READY;
-				gem.controllers[i].port = port_num(i);
-			}
-			else
-			{
-				gem.controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-				gem.controllers[i].port = 0;
-			}
-		}
-		break;
-	}
-	default:
-	{
-		break;
-	}
 	}
 
 	info->max_connect = gem.attribute.max_connect;
