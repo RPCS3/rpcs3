@@ -46,8 +46,8 @@ public:
 		bool has_accel = false;
 		bool has_gyro = false;
 
-		float data_rate_accel = 0.0f;
-		float data_rate_gyro = 0.0f;
+		f32 data_rate_accel = 0.0f;
+		f32 data_rate_gyro = 0.0f;
 
 		std::set<SDL_GameControllerButton> button_ids;
 		std::set<SDL_GameControllerAxis> axis_ids;
@@ -57,8 +57,8 @@ public:
 
 	sdl_info sdl{};
 
-	std::array<float, 3> values_accel{};
-	std::array<float, 3> values_gyro{};
+	std::array<f32, 3> values_accel{};
+	std::array<f32, 3> values_gyro{};
 
 	bool led_needs_update = true;
 	bool led_is_on = true;

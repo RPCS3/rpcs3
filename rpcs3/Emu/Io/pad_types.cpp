@@ -159,6 +159,20 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	}
 }
 
+void ps_move_data::reset_sensors()
+{
+	quaternion = default_quaternion;
+	accelerometer_x = 0.0f;
+	accelerometer_y = 0.0f;
+	accelerometer_z = 0.0f;
+	gyro_x = 0.0f;
+	gyro_y = 0.0f;
+	gyro_z = 0.0f;
+	magnetometer_x = 0.0f;
+	magnetometer_y = 0.0f;
+	magnetometer_z = 0.0f;
+}
+
 bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id)
 {
 	if (m_pressure_intensity_button_index < 0)
@@ -237,4 +251,14 @@ bool Pad::get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id)
 	}
 
 	return analog_limiter_button.m_pressed;
+}
+
+bool Pad::get_orientation_reset_button_active(u32 player_id)
+{
+	if (m_orientation_reset_button_index < 0)
+	{
+		return false;
+	}
+
+	return m_buttons[m_orientation_reset_button_index].m_pressed;
 }

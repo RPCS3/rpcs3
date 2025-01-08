@@ -34,6 +34,7 @@ evdev_joystick_handler::evdev_joystick_handler()
 	b_has_rumble    = true;
 	b_has_motion    = true;
 	b_has_deadzones = true;
+	b_has_orientation = true;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold   = thumb_max / 2;
@@ -84,6 +85,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 	cfg->analog_limiter_button.def = ::at32(button_list, NO_BUTTON);
+	cfg->orientation_reset_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -1075,6 +1077,8 @@ void evdev_joystick_handler::get_extended_info(const pad_ensemble& binding)
 		}
 	}
 
+	set_raw_orientation(*pad);
+
 	if (ret < 0)
 	{
 		// -EAGAIN signifies no available events, not an actual *error*.
@@ -1380,6 +1384,12 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	{
 		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->analog_limiter_button), special_button_value::analog_limiter);
 		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
+	if (b_has_orientation)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, find_buttons(cfg->orientation_reset_button), special_button_value::orientation_reset);
+		pad->m_orientation_reset_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
