@@ -108,16 +108,22 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 		switch (ev->type())
 		{
 		case QEvent::MouseButtonPress:
-			MouseButtonDown(static_cast<QMouseEvent*>(ev));
+			MouseButton(static_cast<QMouseEvent*>(ev), true);
 			break;
 		case QEvent::MouseButtonRelease:
-			MouseButtonUp(static_cast<QMouseEvent*>(ev));
+			MouseButton(static_cast<QMouseEvent*>(ev), false);
 			break;
 		case QEvent::MouseMove:
 			MouseMove(static_cast<QMouseEvent*>(ev));
 			break;
 		case QEvent::Wheel:
 			MouseScroll(static_cast<QWheelEvent*>(ev));
+			break;
+		case QEvent::KeyPress:
+			Key(static_cast<QKeyEvent*>(ev), true);
+			break;
+		case QEvent::KeyRelease:
+			Key(static_cast<QKeyEvent*>(ev), false);
 			break;
 		default:
 			return false;
@@ -126,22 +132,22 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 	return false;
 }
 
-void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
+void basic_mouse_handler::Key(QKeyEvent* event, bool pressed)
 {
 	if (!event) [[unlikely]]
 	{
 		return;
 	}
 
-	const int button = event->button();
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
+	const int key = event->key();
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [key](const auto& entry){ return entry.second.code == key && entry.second.is_key; });
 		it != m_buttons.cend())
 	{
-		MouseHandlerBase::Button(0, it->first, true);
+		MouseHandlerBase::Button(0, it->first, pressed);
 	}
 }
 
-void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
+void basic_mouse_handler::MouseButton(QMouseEvent* event, bool pressed)
 {
 	if (!event) [[unlikely]]
 	{
@@ -149,10 +155,10 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 	}
 
 	const int button = event->button();
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second.code == button && !entry.second.is_key; });
 		it != m_buttons.cend())
 	{
-		MouseHandlerBase::Button(0, it->first, false);
+		MouseHandlerBase::Button(0, it->first, pressed);
 	}
 }
 
@@ -176,17 +182,31 @@ bool basic_mouse_handler::get_mouse_lock_state() const
 	return false;
 }
 
-int basic_mouse_handler::get_mouse_button(const cfg::string& button)
+basic_mouse_handler::mouse_button basic_mouse_handler::get_mouse_button(const cfg::string& button)
 {
 	const std::string name = button.to_string();
 	const auto it = std::find_if(mouse_list.cbegin(), mouse_list.cend(), [&name](const auto& entry){ return entry.second == name; });
 
 	if (it != mouse_list.cend())
 	{
-		return it->first;
+		return mouse_button{
+			.code = static_cast<int>(it->first),
+			.is_key = false
+		};
 	}
 
-	return Qt::MouseButton::NoButton;
+	if (const u32 key = keyboard_pad_handler::GetKeyCode(QString::fromStdString(name)))
+	{
+		return mouse_button{
+			.code = static_cast<int>(key),
+			.is_key = true
+		};
+	}
+
+	return mouse_button{
+		.code = Qt::MouseButton::NoButton,
+		.is_key = false
+	};
 }
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)

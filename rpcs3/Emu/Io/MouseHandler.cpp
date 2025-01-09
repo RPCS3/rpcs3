@@ -34,7 +34,7 @@ void MouseHandlerBase::save(utils::serial& ar)
 bool MouseHandlerBase::is_time_for_update(double elapsed_time)
 {
 	steady_clock::time_point now = steady_clock::now();
-	double elapsed = (now - last_update).count() / 1000'000.;
+	const double elapsed = (now - last_update).count() / 1000'000.;
 
 	if (elapsed > elapsed_time)
 	{
