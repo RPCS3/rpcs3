@@ -1719,12 +1719,20 @@ namespace rsx
 
 			for (uint i = 0; i < mrt_buffers.size(); ++i)
 			{
-				if (rsx::method_registers.color_write_enabled(i))
+				if (m_ctx->register_state->color_write_enabled(i))
 				{
 					const auto real_index = mrt_buffers[i];
 					m_framebuffer_layout.color_write_enabled[real_index] = true;
 					any_found = true;
 				}
+			}
+
+			if (::size32(mrt_buffers) != current_fragment_program.mrt_buffers_count &&
+				!m_graphics_state.test(rsx::pipeline_state::fragment_program_dirty) &&
+				!is_current_program_interpreted())
+			{
+				// Notify that we should recompile the FS
+				m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 			}
 
 			return any_found;
@@ -2038,9 +2046,10 @@ namespace rsx
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
-		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
-		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
+		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+		current_fragment_program.texcoord_control_mask = m_ctx->register_state->texcoord_control_mask();
+		current_fragment_program.two_sided_lighting = m_ctx->register_state->two_side_light_en();
+		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(m_ctx->register_state->surface_color_target());
 
 		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
 		{

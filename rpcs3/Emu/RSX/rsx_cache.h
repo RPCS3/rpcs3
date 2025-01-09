@@ -51,7 +51,10 @@ namespace rsx
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
 			u16 fp_multisampled_textures;
-			u64 fp_reserved_0;
+			u8  fp_mrt_count;
+			u8  fp_reserved0;
+			u16 fp_reserved1;
+			u32 fp_reserved2;
 
 			pipeline_storage_type pipeline_properties;
 		};
@@ -306,20 +309,24 @@ namespace rsx
 				fs::write_file(vp_name, fs::rewrite, vp.data);
 			}
 
-			u64 state_hash = 0;
-			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl0);
-			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl1);
-			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
-			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
-			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
-			state_hash ^= rpcs3::hash_base<u32>(data.fp_texcoord_control);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_pixel_layout);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.vp_multisampled_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_multisampled_textures);
+			const u32 state_params[] =
+			{
+				data.vp_ctrl0,
+				data.vp_ctrl1,
+				data.fp_ctrl,
+				data.vp_texture_dimensions,
+				data.fp_texture_dimensions,
+				data.fp_texcoord_control,
+				data.fp_height,
+				data.fp_pixel_layout,
+				data.fp_lighting_flags,
+				data.fp_shadow_textures,
+				data.fp_redirected_textures,
+				data.vp_multisampled_textures,
+				data.fp_multisampled_textures,
+				data.fp_mrt_count,
+			};
+			const usz state_hash = rpcs3::hash_array(state_params);
 
 			const std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
 			const std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
@@ -439,6 +446,7 @@ namespace rsx
 			data_block.fp_shadow_textures = fp.texture_state.shadow_textures;
 			data_block.fp_redirected_textures = fp.texture_state.redirected_textures;
 			data_block.fp_multisampled_textures = fp.texture_state.multisampled_textures;
+			data_block.fp_mrt_count = fp.mrt_buffers_count;
 
 			return data_block;
 		}

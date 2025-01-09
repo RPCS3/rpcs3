@@ -795,12 +795,18 @@ std::string FragmentProgramDecompiler::BuildCode()
 		output_register_names = { "h0", "h4", "h6", "h8" };
 	}
 
-	for (int n = 0; n < 4; ++n)
+	for (u32 n = 0; n < 4; ++n)
 	{
 		const auto& reg_name = output_register_names[n];
 		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, reg_name))
 		{
 			m_parr.AddParam(PF_PARAM_NONE, float4_type, reg_name, init_value);
+		}
+
+		if (n >= m_prog.mrt_buffers_count)
+		{
+			// Skip gather
+			continue;
 		}
 
 		const auto block_index = ouput_register_indices[n];
