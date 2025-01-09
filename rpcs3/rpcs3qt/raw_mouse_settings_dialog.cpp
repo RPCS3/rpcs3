@@ -11,6 +11,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 constexpr u32 button_count = 8;
 
 raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)

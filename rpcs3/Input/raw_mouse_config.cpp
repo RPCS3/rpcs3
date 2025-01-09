@@ -2,6 +2,8 @@
 #include "raw_mouse_config.h"
 #include "Emu/Io/MouseHandler.h"
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 std::string mouse_button_id(int code)
 {
 	switch (code)
