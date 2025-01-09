@@ -2911,6 +2911,12 @@ void main_window::CreateConnects()
 		dlg->show();
 	});
 
+	connect(ui->confPSMoveMouseAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::mousegem, this);
+		dlg->show();
+	});
+
 	connect(ui->confPSMoveDS3Act, &QAction::triggered, this, [this]
 	{
 		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::ds3gem, this);

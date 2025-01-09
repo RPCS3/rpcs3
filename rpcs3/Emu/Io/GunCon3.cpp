@@ -227,7 +227,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		return;
 	}
 
-	const auto input_callback = [&gc](guncon3_btn btn, u16 value, bool pressed)
+	const auto input_callback = [&gc](guncon3_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
 	{
 		if (!pressed)
 			return;
