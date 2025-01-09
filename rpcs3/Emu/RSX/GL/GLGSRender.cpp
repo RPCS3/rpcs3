@@ -39,7 +39,7 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
-	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.94");
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.95");
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
@@ -984,6 +984,11 @@ void GLGSRender::load_program_env()
 		rsx::pipeline_state::transform_constants_dirty |
 		rsx::pipeline_state::fragment_constants_dirty |
 		rsx::pipeline_state::fragment_texture_state_dirty);
+}
+
+bool GLGSRender::is_current_program_interpreted() const
+{
+	return m_program && m_shader_interpreter.is_interpreter(m_program);
 }
 
 void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)

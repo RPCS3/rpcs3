@@ -436,6 +436,8 @@ namespace rsx
 
 		bool is_current_vertex_program_instanced() const { return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS); }
 
+		virtual bool is_current_program_interpreted() const { return false; }
+
 	public:
 		void reset();
 		void init(u32 ctrlAddress);
