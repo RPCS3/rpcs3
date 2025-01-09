@@ -161,7 +161,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 		}
 
 		const auto& cfg = g_cfg_buzz.players[i];
-		cfg->handle_input(pad, true, [&buf, &index](buzz_btn btn, u16 /*value*/, bool pressed)
+		cfg->handle_input(pad, true, [&buf, &index](buzz_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& /*abort*/)
 			{
 				if (!pressed)
 					return;

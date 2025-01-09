@@ -308,7 +308,7 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 	}
 
 	bool up = false, right = false, down = false, left = false;
-	const auto input_callback = [&ts, &up, &down, &left, &right](topshotfearmaster_btn btn, u16 value, bool pressed)
+	const auto input_callback = [&ts, &up, &down, &left, &right](topshotfearmaster_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
 	{
 		if (!pressed)
 			return;

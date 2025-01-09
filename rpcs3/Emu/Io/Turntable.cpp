@@ -159,7 +159,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 		return;
 
 	const auto& cfg = ::at32(g_cfg_turntable.players, m_controller_index);
-	cfg->handle_input(pad, true, [&buf](turntable_btn btn, u16 value, bool pressed)
+	cfg->handle_input(pad, true, [&buf](turntable_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
 		{
 			if (!pressed)
 				return;
