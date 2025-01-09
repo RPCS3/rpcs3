@@ -5,8 +5,6 @@
 
 #include <array>
 
-LOG_CHANNEL(cfg_log, "CFG");
-
 std::string mouse_button_id(int code);
 
 struct raw_mouse_config : cfg::node

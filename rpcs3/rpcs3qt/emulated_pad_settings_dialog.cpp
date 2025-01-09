@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "emulated_pad_settings_dialog.h"
 #include "localized_emu.h"
+#include "Input/raw_mouse_config.h"
+#include "Emu/Io/mouse_config.h"
 #include "Emu/Io/buzz_config.h"
 #include "Emu/Io/gem_config.h"
 #include "Emu/Io/ghltar_config.h"
@@ -13,6 +15,7 @@
 
 #include <QDialogButtonBox>
 #include <QGroupBox>
+#include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -191,9 +194,24 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 
 	m_combos.resize(players);
 
+	const bool show_mouse_legend = m_type == pad_type::mousegem;
+
+	if (show_mouse_legend)
+	{
+		if (!g_cfg_mouse.load())
+		{
+			cfg_log.notice("Could not restore mouse config. Using defaults.");
+		}
+
+		if (!g_cfg_raw_mouse.load())
+		{
+			cfg_log.notice("Could not restore raw mouse config. Using defaults.");
+		}
+	}
+
 	for (usz player = 0; player < players; player++)
 	{
-		QWidget* widget = new QWidget(this);
+		// Create grid with all buttons
 		QGridLayout* grid_layout = new QGridLayout(this);
 
 		for (int i = 0, row = 0, col = 0; i < static_cast<int>(T::count); i++)
@@ -344,7 +362,56 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			row++;
 		}
 
-		widget->setLayout(grid_layout);
+		QVBoxLayout* v_layout = new QVBoxLayout(this);
+
+		// Create a legend of the current mouse settings
+		if (show_mouse_legend)
+		{
+			QHBoxLayout* legend_layout = new QHBoxLayout(this);
+			if (player == 0)
+			{
+				std::string basic_mouse_settings;
+				fmt::append(basic_mouse_settings, "1: %s\n", g_cfg_mouse.mouse_button_1.to_string());
+				fmt::append(basic_mouse_settings, "2: %s\n", g_cfg_mouse.mouse_button_2.to_string());
+				fmt::append(basic_mouse_settings, "3: %s\n", g_cfg_mouse.mouse_button_3.to_string());
+				fmt::append(basic_mouse_settings, "4: %s\n", g_cfg_mouse.mouse_button_4.to_string());
+				fmt::append(basic_mouse_settings, "5: %s\n", g_cfg_mouse.mouse_button_5.to_string());
+				fmt::append(basic_mouse_settings, "6: %s\n", g_cfg_mouse.mouse_button_6.to_string());
+				fmt::append(basic_mouse_settings, "7: %s\n", g_cfg_mouse.mouse_button_7.to_string());
+				fmt::append(basic_mouse_settings, "8: %s",   g_cfg_mouse.mouse_button_8.to_string());
+
+				QGroupBox* gb_legend_basic = new QGroupBox(tr("Current Basic Mouse Config"), this);
+				QVBoxLayout* gb_legend_basic_layout = new QVBoxLayout(this);
+				gb_legend_basic_layout->addWidget(new QLabel(QString::fromStdString(basic_mouse_settings), this));
+				gb_legend_basic->setLayout(gb_legend_basic_layout);
+				legend_layout->addWidget(gb_legend_basic);
+			}
+			{
+				std::string raw_mouse_settings;
+				const auto& raw_cfg = *ensure(::at32(g_cfg_raw_mouse.players, player));
+				fmt::append(raw_mouse_settings, "1: %s\n", raw_cfg.mouse_button_1.to_string());
+				fmt::append(raw_mouse_settings, "2: %s\n", raw_cfg.mouse_button_2.to_string());
+				fmt::append(raw_mouse_settings, "3: %s\n", raw_cfg.mouse_button_3.to_string());
+				fmt::append(raw_mouse_settings, "4: %s\n", raw_cfg.mouse_button_4.to_string());
+				fmt::append(raw_mouse_settings, "5: %s\n", raw_cfg.mouse_button_5.to_string());
+				fmt::append(raw_mouse_settings, "6: %s\n", raw_cfg.mouse_button_6.to_string());
+				fmt::append(raw_mouse_settings, "7: %s\n", raw_cfg.mouse_button_7.to_string());
+				fmt::append(raw_mouse_settings, "8: %s",   raw_cfg.mouse_button_8.to_string());
+
+				QGroupBox* gb_legend_raw = new QGroupBox(tr("Current Raw Mouse Config"), this);
+				QVBoxLayout* gb_legend_raw_layout = new QVBoxLayout(this);
+				gb_legend_raw_layout->addWidget(new QLabel(QString::fromStdString(raw_mouse_settings), this));
+				gb_legend_raw->setLayout(gb_legend_raw_layout);
+				legend_layout->addWidget(gb_legend_raw);
+			}
+			v_layout->addLayout(legend_layout);
+		}
+
+		v_layout->addLayout(grid_layout);
+
+		QWidget* widget = new QWidget(this);
+		widget->setLayout(v_layout);
+
 		tabs->addTab(widget, tr("Player %0").arg(player + 1));
 	}
 }
