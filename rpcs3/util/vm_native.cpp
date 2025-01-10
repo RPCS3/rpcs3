@@ -310,6 +310,11 @@ namespace utils
 
 	void memory_commit(void* pointer, usz size, protection prot)
 	{
+		if (!size)
+		{
+			return;
+		}
+
 #ifdef _WIN32
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
@@ -329,6 +334,11 @@ namespace utils
 
 	void memory_decommit(void* pointer, usz size)
 	{
+		if (!size)
+		{
+			return;
+		}
+
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
@@ -357,6 +367,11 @@ namespace utils
 
 	void memory_reset(void* pointer, usz size, protection prot)
 	{
+		if (!size)
+		{
+			return;
+		}
+
 #ifdef _WIN32
 		memory_decommit(pointer, size);
 		memory_commit(pointer, size, prot);
@@ -390,6 +405,11 @@ namespace utils
 
 	void memory_release(void* pointer, usz size)
 	{
+		if (!size)
+		{
+			return;
+		}
+
 #ifdef _WIN32
 		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
@@ -400,6 +420,11 @@ namespace utils
 
 	void memory_protect(void* pointer, usz size, protection prot)
 	{
+		if (!size)
+		{
+			return;
+		}
+
 #ifdef _WIN32
 
 		DWORD old;
@@ -429,6 +454,11 @@ namespace utils
 
 	bool memory_lock(void* pointer, usz size)
 	{
+		if (!size)
+		{
+			return true;
+		}
+
 #ifdef _WIN32
 		return ::VirtualLock(pointer, size);
 #else

@@ -77,8 +77,7 @@ static u64 make_null_function(const std::string& name)
 
 		if (res.ec == std::errc() && res.ptr == name.c_str() + name.size() && addr < 0x8000'0000)
 		{
-			// Point the garbage to reserved, non-executable memory
-			return reinterpret_cast<u64>(vm::g_sudo_addr + addr);
+			fmt::throw_exception("Unhandled symbols cementing! (name='%s'", name);
 		}
 	}
 
@@ -174,18 +173,34 @@ struct JITAnnouncer : llvm::JITEventListener
 struct MemoryManager1 : llvm::RTDyldMemoryManager
 {
 	// 256 MiB for code or data
-	static constexpr u64 c_max_size = 0x20000000 / 2;
+	static constexpr u64 c_max_size = 0x1000'0000;
 
 	// Allocation unit (2M)
 	static constexpr u64 c_page_size = 2 * 1024 * 1024;
 
-	// Reserve 512 MiB
-	u8* const ptr = static_cast<u8*>(utils::memory_reserve(c_max_size * 2));
+	// Reserve 256 MiB blocks
+	void* m_code_mems = nullptr;
+	void* m_data_ro_mems = nullptr;
+	void* m_data_rw_mems = nullptr;
 
 	u64 code_ptr = 0;
-	u64 data_ptr = c_max_size;
+	u64 data_ro_ptr = 0;
+	u64 data_rw_ptr = 0;
 
-	MemoryManager1() = default;
+	// First fallback for non-existing symbols
+	// May be a memory container internally
+	std::function<u64(const std::string&)> m_symbols_cement;
+
+	MemoryManager1(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
+		: m_symbols_cement(std::move(symbols_cement))
+	{
+		auto ptr = reinterpret_cast<u8*>(utils::memory_reserve(c_max_size * 3));
+		m_code_mems = ptr;
+		// ptr += c_max_size;
+		// m_data_ro_mems = ptr;
+		 ptr += c_max_size;
+		m_data_rw_mems = ptr;
+	}
 
 	MemoryManager1(const MemoryManager1&) = delete;
 
@@ -194,12 +209,21 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	~MemoryManager1() override
 	{
 		// Hack: don't release to prevent reuse of address space, see jit_announce
-		utils::memory_decommit(ptr, c_max_size * 2);
+		// constexpr auto how_much = [](u64 pos) { return utils::align(pos, pos < c_page_size ? c_page_size / 4 : c_page_size); };
+		// utils::memory_decommit(m_code_mems, how_much(code_ptr));
+		// utils::memory_decommit(m_data_ro_mems, how_much(data_ro_ptr));
+		// utils::memory_decommit(m_data_rw_mems, how_much(data_rw_ptr));
+		utils::memory_decommit(m_code_mems, c_max_size * 3);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
 		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+
+		if (!addr && m_symbols_cement)
+		{
+			addr = m_symbols_cement(name);
+		}
 
 		if (!addr)
 		{
@@ -214,45 +238,79 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	u8* allocate(u64& oldp, uptr size, uint align, utils::protection prot)
+	u8* allocate(u64& alloc_pos, void* block, uptr size, u64 align, utils::protection prot)
 	{
-		if (align > c_page_size)
+		align = align ? align : 16;
+ 
+		const u64 sizea = utils::align(size, align);
+
+		if (!size || align > c_page_size || sizea > c_max_size || sizea < size)
 		{
-			jit_log.fatal("Unsupported alignment (size=0x%x, align=0x%x)", size, align);
+			jit_log.fatal("Unsupported size/alignment (size=0x%x, align=0x%x)", size, align);
 			return nullptr;
 		}
 
-		const u64 olda = utils::align(oldp, align);
-		const u64 newp = utils::align(olda + size, align);
+		u64 oldp = alloc_pos;
 
-		if ((newp - 1) / c_max_size != oldp / c_max_size)
+		u64 olda = utils::align(oldp, align);
+
+		ensure(olda >= oldp);
+		ensure(olda < ~sizea);
+
+		u64 newp = olda + sizea;
+
+		if ((newp - 1) / c_max_size != (oldp - 1) / c_max_size)
 		{
-			jit_log.fatal("Out of memory (size=0x%x, align=0x%x)", size, align);
-			return nullptr;
+			constexpr usz num_of_allocations = 1;
+
+			if ((newp - 1) / c_max_size > num_of_allocations)
+			{
+				// Allocating more than one region does not work for relocations, needs more robust solution
+				fmt::throw_exception("Out of memory (size=0x%x, align=0x%x)", size, align);
+			}
 		}
 
-		if ((oldp - 1) / c_page_size != (newp - 1) / c_page_size)
+		// Update allocation counter
+		alloc_pos = newp;
+
+		constexpr usz page_quarter = c_page_size / 4;
+
+		// Optimization: split the first allocation to 512 KiB for single-module compilers
+		if (oldp < c_page_size && align < page_quarter && (std::min(newp, c_page_size) - 1) / page_quarter != (oldp - 1) / page_quarter)
+		{
+			const u64 pagea = utils::align(oldp, page_quarter);
+			const u64 psize = utils::align(std::min(newp, c_page_size) - pagea, page_quarter);
+			utils::memory_commit(reinterpret_cast<u8*>(block) + (pagea % c_max_size), psize, prot);
+
+			// Advance
+			oldp = pagea + psize;
+		}
+
+		if ((newp - 1) / c_page_size != (oldp - 1) / c_page_size)
 		{
 			// Allocate pages on demand
 			const u64 pagea = utils::align(oldp, c_page_size);
 			const u64 psize = utils::align(newp - pagea, c_page_size);
-			utils::memory_commit(this->ptr + pagea, psize, prot);
+			utils::memory_commit(reinterpret_cast<u8*>(block) + (pagea % c_max_size), psize, prot);
 		}
 
-		// Update allocation counter
-		oldp = newp;
-
-		return this->ptr + olda;
+		return reinterpret_cast<u8*>(block) + (olda % c_max_size);
 	}
 
 	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		return allocate(code_ptr, size, align, utils::protection::wx);
+		return allocate(code_ptr, m_code_mems, size, align, utils::protection::wx);
 	}
 
-	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
+	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool is_ro) override
 	{
-		return allocate(data_ptr, size, align, utils::protection::rw);
+		if (is_ro)
+		{
+			// Disabled
+			//return allocate(data_ro_ptr, m_data_ro_mems, size, align, utils::protection::rw);
+		}
+
+		return allocate(data_rw_ptr, m_data_rw_mems, size, align, utils::protection::rw);
 	}
 
 	bool finalizeMemory(std::string* = nullptr) override
@@ -272,7 +330,14 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 // Simple memory manager
 struct MemoryManager2 : llvm::RTDyldMemoryManager
 {
-	MemoryManager2() = default;
+	// First fallback for non-existing symbols
+	// May be a memory container internally
+	std::function<u64(const std::string&)> m_symbols_cement;
+
+	MemoryManager2(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
+		: m_symbols_cement(std::move(symbols_cement))
+	{
+	}
 
 	~MemoryManager2() override
 	{
@@ -281,6 +346,11 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
 		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+
+		if (!addr && m_symbols_cement)
+		{
+			addr = m_symbols_cement(name);
+		}
 
 		if (!addr)
 		{
@@ -561,7 +631,7 @@ bool jit_compiler::add_sub_disk_space(ssz space)
 	}).second;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
 {
@@ -589,17 +659,17 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		if (flags & 0x1)
 		{
-			mem = std::make_unique<MemoryManager1>();
+			mem = std::make_unique<MemoryManager1>(std::move(symbols_cement));
 		}
 		else
 		{
-			mem = std::make_unique<MemoryManager2>();
+			mem = std::make_unique<MemoryManager2>(std::move(symbols_cement));
 			null_mod->setTargetTriple(jit_compiler::triple2());
 		}
 	}
 	else
 	{
-		mem = std::make_unique<MemoryManager1>();
+		mem = std::make_unique<MemoryManager1>(std::move(symbols_cement));
 	}
 
 	{
@@ -648,7 +718,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	}
 }
 
-jit_compiler::~jit_compiler()
+jit_compiler::~jit_compiler() noexcept
 {
 }
 
