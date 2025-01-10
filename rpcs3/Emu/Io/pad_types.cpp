@@ -39,7 +39,7 @@ void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
 		case pad_button::rs_right: return "Right Stick Right";
 		case pad_button::rs_x: return "Right Stick X-Axis";
 		case pad_button::rs_y: return "Right Stick Y-Axis";
-		case pad_button::pad_button_max_enum: return "MAX_ENUM";
+		case pad_button::pad_button_max_enum: return "";
 		case pad_button::mouse_button_1: return "Mouse Button 1";
 		case pad_button::mouse_button_2: return "Mouse Button 2";
 		case pad_button::mouse_button_3: return "Mouse Button 3";
