@@ -878,7 +878,7 @@ void GLGSRender::load_program_env()
 		}
 	}
 
-	if (update_fragment_constants && !update_instruction_buffers)
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
 	{
 		// Fragment constants
 		auto mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
@@ -978,12 +978,18 @@ void GLGSRender::load_program_env()
 		}
 	}
 
-	m_graphics_state.clear(
+	rsx::flags32_t handled_flags =
 		rsx::pipeline_state::fragment_state_dirty |
 		rsx::pipeline_state::vertex_state_dirty |
 		rsx::pipeline_state::transform_constants_dirty |
-		rsx::pipeline_state::fragment_constants_dirty |
-		rsx::pipeline_state::fragment_texture_state_dirty);
+		rsx::pipeline_state::fragment_texture_state_dirty;
+
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
+	{
+		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
+	}
+
+	m_graphics_state.clear(handled_flags);
 }
 
 bool GLGSRender::is_current_program_interpreted() const
