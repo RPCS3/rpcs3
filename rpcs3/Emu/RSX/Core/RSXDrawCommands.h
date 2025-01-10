@@ -105,6 +105,6 @@ namespace rsx
 
 		// Fill instancing buffers. A single iobuf is used for both. 256byte alignment enforced to allow global bind
 		// Returns offsets to the index redirection lookup table and constants field array
-		void fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const;
+		void fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase* prog) const;
 	};
 }
