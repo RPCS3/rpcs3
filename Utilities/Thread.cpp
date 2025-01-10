@@ -1818,6 +1818,11 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 			pExp->ExceptionRecord->ExceptionInformation[0] == 1 ? "writing" : "reading";
 
 		fmt::append(msg, "Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+
+		if (vm::try_get_addr(reinterpret_cast<u8*>(pExp->ExceptionRecord->ExceptionInformation[1])).second)
+		{
+			fmt::append(msg, "Sudo Addr: %p, VM Addr: %p\n", vm::g_sudo_addr, vm::g_base_addr);
+		}
 	}
 	else
 	{
@@ -1998,6 +2003,11 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	}
 
 	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
+
+	if (vm::try_get_addr(info->si_addr).second)
+	{
+		fmt::append(msg, "Sudo Addr: %p, VM Addr: %p\n", vm::g_sudo_addr, vm::g_base_addr);
+	}
 
 	append_thread_name(msg);
 
