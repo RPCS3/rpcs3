@@ -1543,7 +1543,7 @@ public:
 
 private:
 	atomic_t<u32> m_wake_up_tracker = 0;
-	atomic_t<u32> m_tracker_done = 1;
+	atomic_t<u32> m_tracker_done = 0;
 	atomic_t<bool> m_busy = false;
 	ps_move_tracker<false> m_tracker{};
 	CellCameraInfoEx m_camera_info{};
