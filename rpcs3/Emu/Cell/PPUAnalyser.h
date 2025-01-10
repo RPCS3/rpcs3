@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <deque>
+#include <span>
 #include "util/types.hpp"
 #include "util/endian.hpp"
 #include "util/asm.hpp"
@@ -38,7 +39,51 @@ struct ppu_function
 	std::map<u32, u32> blocks{}; // Basic blocks: addr -> size
 	std::set<u32> calls{}; // Set of called functions
 	std::set<u32> callers{};
-	std::string name{}; // Function name
+	mutable std::string name{}; // Function name
+
+	struct iterator
+	{
+		const ppu_function* _this;
+		typename std::map<u32, u32>::const_iterator it;
+		usz index = 0;
+
+		std::pair<const u32, u32> operator*() const
+		{
+			return _this->blocks.empty() ? std::pair<const u32, u32>(_this->addr, _this->size) : *it;
+		}
+
+		iterator& operator++()
+		{
+			index++;
+
+			if (it != _this->blocks.end())
+			{
+				it++;
+			}
+
+			return *this;
+		}
+
+		bool operator==(const iterator& rhs) const noexcept
+		{
+			return it == rhs.it || (rhs.index == index && _this->blocks.empty());
+		}
+
+		bool operator!=(const iterator& rhs) const noexcept
+		{
+			return !operator==(rhs);
+		}
+	};
+
+	iterator begin() const
+	{
+		return iterator{this, blocks.begin()};
+	}
+
+	iterator end() const
+	{
+		return iterator{this, blocks.end(), 1};
+	}
 };
 
 // PPU Relocation Information
@@ -87,18 +132,56 @@ struct ppu_module : public Type
 
 	ppu_module& operator=(ppu_module&&) noexcept = default;
 
-	uchar sha1[20]{};
-	std::string name{};
-	std::string path{};
+	uchar sha1[20]{}; // Hash
+	std::string name{}; // Filename
+	std::string path{}; // Filepath
 	s64 offset = 0; // Offset of file
-	std::string cache{};
-	std::vector<ppu_reloc> relocs{};
-	std::vector<ppu_segment> segs{};
-	std::vector<ppu_segment> secs{};
-	std::vector<ppu_function> funcs{};
-	std::vector<u32> applied_patches;
-	std::deque<std::shared_ptr<void>> allocations;
-	std::map<u32, u32> addr_to_seg_index;
+	mutable bs_t<ppu_attr> attr{}; // Shared module attributes
+	std::string cache{}; // Cache file path
+	std::vector<ppu_reloc> relocs{}; // Relocations
+	std::vector<ppu_segment> segs{}; // Segments
+	std::vector<ppu_segment> secs{}; // Segment sections
+	std::vector<ppu_function> funcs{}; // Function list
+	std::vector<u32> applied_patches; // Patch addresses
+	std::deque<std::shared_ptr<void>> allocations; // Segment memory allocations
+	std::map<u32, u32> addr_to_seg_index; // address->segment ordered translator map
+	ppu_module* parent = nullptr;
+	std::pair<u32, u32> local_bounds{0, u32{umax}}; // Module addresses range
+	std::shared_ptr<std::pair<u32, u32>> jit_bounds; // JIT instance modules addresses range
+
+	template <typename T>
+	auto as_span(T&& arg, bool bound_local, bool bound_jit) const
+	{
+		using unref = std::remove_reference_t<T>;
+		using type = std::conditional_t<std::is_const_v<unref>, std::add_const_t<typename unref::value_type>, typename unref::value_type>;
+
+		if (bound_local || bound_jit)
+		{
+			// Return span bound to specified bounds
+			const auto [min_addr, max_addr] = bound_jit ? *jit_bounds : local_bounds;
+			constexpr auto compare = [](const type& a, u32 addr) { return a.addr < addr; };
+			const auto end = arg.data() + arg.size();
+			const auto start = std::lower_bound(arg.data(), end, min_addr, compare);
+			return std::span<type>{ start, std::lower_bound(start, end, max_addr, compare) };
+		}
+
+		return std::span<type>(arg.data(), arg.size());
+	}
+
+	auto get_funcs(bool bound_local = true, bool bound_jit = false)
+	{
+		return as_span(parent ? parent->funcs : funcs, bound_local, bound_jit);
+	}
+
+	auto get_funcs(bool bound_local = true, bool bound_jit = false) const
+	{
+		return as_span(parent ? parent->funcs : funcs, bound_local, bound_jit);
+	}
+
+	auto get_relocs(bool bound_local = false) const
+	{
+		return as_span(parent ? parent->relocs : relocs, bound_local, false);
+	}
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
@@ -106,11 +189,12 @@ struct ppu_module : public Type
 		std::memcpy(sha1, info.sha1, sizeof(sha1));
 		name = info.name;
 		path = info.path;
-		relocs = info.relocs;
 		segs = info.segs;
-		secs = info.secs;
 		allocations = info.allocations;
 		addr_to_seg_index = info.addr_to_seg_index;
+		parent = const_cast<ppu_module*>(&info);
+		attr = info.attr;
+		local_bounds = {u32{umax}, 0}; // Initially empty range
 	}
 
 	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs = std::vector<u32>{}, std::function<bool()> check_aborted = {});
