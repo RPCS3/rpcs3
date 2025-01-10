@@ -565,6 +565,18 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
 {
+	static const bool s_install_llvm_error_handler = []()
+	{
+		llvm::remove_fatal_error_handler();
+		llvm::install_fatal_error_handler([](void*, const char* msg, bool)
+		{
+			const std::string_view out = msg ? msg : "";
+			fmt::throw_exception("LLVM Emergency Exit Invoked: '%s'", out);
+		}, nullptr);
+
+		return true;
+	}();
+
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
