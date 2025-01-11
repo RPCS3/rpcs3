@@ -790,7 +790,7 @@ namespace rsx
 
 			const int translated_offset = full_reupload
 				? instance_config.patch_load_offset
-				: prog->TranslateConstantsRange(instance_config.patch_load_offset, instance_config.patch_load_count);
+				: prog->translate_constants_range(instance_config.patch_load_offset, instance_config.patch_load_count);
 
 			if (translated_offset >= 0)
 			{
