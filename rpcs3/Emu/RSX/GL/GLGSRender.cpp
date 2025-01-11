@@ -1045,10 +1045,16 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
-	if (!m_vertex_prog)
+	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
 		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
+	if (!m_vertex_prog->overlaps_constants_range(index, count))
+	{
+		// Nothing meaningful to us
 		return;
 	}
 
@@ -1065,7 +1071,7 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range = { bound_range.first + byte_offset, byte_count};
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
-	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	else if (auto xform_id = m_vertex_prog->translate_constants_range(index, count); xform_id >= 0)
 	{
 		const auto write_offset = xform_id * 16;
 		const auto byte_count = count * 16;
