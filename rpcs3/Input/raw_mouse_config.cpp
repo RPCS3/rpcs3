@@ -43,6 +43,15 @@ std::string raw_mouse_config::get_button_name(std::string_view value)
 		return std::string(value);
 	}
 
+	if (value.starts_with(key_prefix))
+	{
+		s64 scan_code{};
+		if (try_to_int64(&scan_code, value.substr(key_prefix.size()), s32{smin}, s32{smax}))
+		{
+			return get_key_name(static_cast<s32>(scan_code));
+		}
+	}
+
 	return "";
 }
 
@@ -56,6 +65,22 @@ std::string raw_mouse_config::get_button_name(s32 button_code)
 		}
 	}
 	return "";
+}
+
+std::string raw_mouse_config::get_key_name(s32 scan_code)
+{
+#ifdef _WIN32
+	TCHAR name_buf[MAX_PATH] {};
+	if (!GetKeyNameTextW(scan_code, name_buf, MAX_PATH))
+	{
+		cfg_log.error("raw_mouse_config: GetKeyNameText failed: %s", fmt::win_error{GetLastError(), nullptr});
+		return {};
+	}
+	return wchar_to_utf8(name_buf);
+#else
+	static_cast<void>(scan_code);
+	return "";
+#endif
 }
 
 raw_mice_config::raw_mice_config()

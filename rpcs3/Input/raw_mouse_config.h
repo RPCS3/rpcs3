@@ -42,8 +42,11 @@ public:
 	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);
 
+	static constexpr std::string_view key_prefix = "Key ";
+
 	static std::string get_button_name(std::string_view value);
 	static std::string get_button_name(s32 button_code);
+	static std::string get_key_name(s32 scan_code);
 };
 
 struct raw_mice_config : cfg::node

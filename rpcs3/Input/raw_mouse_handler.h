@@ -22,6 +22,7 @@ public:
 
 #ifdef _WIN32
 	void update_values(const RAWMOUSE& state);
+	void update_values(s32 scan_code, bool pressed);
 #endif
 
 	const std::string& device_name() const { return m_device_name; }
@@ -34,11 +35,11 @@ private:
 	{
 		int down = 0;
 		int up = 0;
+		s32 scan_code = 0;
+		bool is_key = false;
 	};
 
-#ifdef _WIN32
 	static const std::unordered_map<int, raw_mouse::mouse_button> btn_pairs;
-#endif
 
 	void reload_config();
 	static mouse_button get_mouse_button(const cfg::string& button);
@@ -86,6 +87,19 @@ public:
 		}
 	}
 
+	void set_key_press_callback(std::function<void(const std::string&, s32, bool)> cb)
+	{
+		m_key_press_callback = std::move(cb);
+	}
+
+	void key_press_callback(const std::string& device_name, s32 scan_code, bool pressed)
+	{
+		if (m_key_press_callback)
+		{
+			m_key_press_callback(device_name, scan_code, pressed);
+		}
+	}
+
 	void update_devices();
 
 #ifdef _WIN32
@@ -107,6 +121,7 @@ private:
 	bool m_is_for_gui = false;
 	std::map<void*, raw_mouse> m_raw_mice;
 	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
+	std::function<void(const std::string&, s32, bool)> m_key_press_callback;
 
 	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 };
