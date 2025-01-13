@@ -148,45 +148,29 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 			// Only update the value if either down or up flags are present
 			if ((state.usButtonFlags & btn.down))
 			{
-				m_handler->mouse_press_callback(m_device_name, 0, up, true);
+				m_handler->mouse_press_callback(m_device_name, up, true);
 			}
 			else if ((state.usButtonFlags & btn.up))
 			{
-				m_handler->mouse_press_callback(m_device_name, 0, up, false);
+				m_handler->mouse_press_callback(m_device_name, up, false);
 			}
 		}
 		return;
 	}
 
-	const auto get_button_pressed = [this](u8 button, int button_flags)
+	// Get mouse buttons
+	for (const auto& [button, btn] : m_buttons)
 	{
-		const auto it = m_buttons.find(button);
-		if (it == m_buttons.cend()) return;
-
-		const mouse_button& btn = it->second;
-
 		// Only update the value if either down or up flags are present
-		if ((button_flags & btn.down))
+		if ((state.usButtonFlags & btn.down))
 		{
 			m_handler->Button(m_index, button, true);
-			m_handler->mouse_press_callback(m_device_name, button, btn.up, true);
 		}
-		else if ((button_flags & btn.up))
+		else if ((state.usButtonFlags & btn.up))
 		{
 			m_handler->Button(m_index, button, false);
-			m_handler->mouse_press_callback(m_device_name, button, btn.up, false);
 		}
-	};
-
-	// Get mouse buttons
-	get_button_pressed(CELL_MOUSE_BUTTON_1, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_2, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_3, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_6, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_7, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_8, state.usButtonFlags);
+	}
 
 	// Get mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))

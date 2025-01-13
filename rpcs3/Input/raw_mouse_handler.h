@@ -73,16 +73,16 @@ public:
 
 	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
 
-	void set_mouse_press_callback(std::function<void(const std::string&, s32, s32, bool)> cb)
+	void set_mouse_press_callback(std::function<void(const std::string&, s32, bool)> cb)
 	{
 		m_mouse_press_callback = std::move(cb);
 	}
 
-	void mouse_press_callback(const std::string& device_name, s32 cell_code, s32 button_code, bool pressed)
+	void mouse_press_callback(const std::string& device_name, s32 button_code, bool pressed)
 	{
 		if (m_mouse_press_callback)
 		{
-			m_mouse_press_callback(device_name, cell_code, button_code, pressed);
+			m_mouse_press_callback(device_name, button_code, pressed);
 		}
 	}
 
@@ -106,7 +106,7 @@ private:
 
 	bool m_is_for_gui = false;
 	std::map<void*, raw_mouse> m_raw_mice;
-	std::function<void(const std::string&, s32, s32, bool)> m_mouse_press_callback;
+	std::function<void(const std::string&, s32, bool)> m_mouse_press_callback;
 
 	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 };
