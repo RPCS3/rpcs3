@@ -24,6 +24,7 @@ public:
 	void MouseButton(QMouseEvent* event, bool pressed);
 	void MouseScroll(QWheelEvent* event);
 	void MouseMove(QMouseEvent* event);
+	void MouseMove(const QPoint& e_pos);
 
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
