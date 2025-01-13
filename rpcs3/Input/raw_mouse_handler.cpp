@@ -27,17 +27,17 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 [[maybe_unused]] static inline void draw_overlay_cursor(u32, s32, s32, s32, s32) {}
 #endif
 
-#ifdef _WIN32
 const std::unordered_map<int, raw_mouse::mouse_button> raw_mouse::btn_pairs =
 {
 	{ 0, {}},
-	{ RI_MOUSE_BUTTON_1_UP, mouse_button{ RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP }},
-	{ RI_MOUSE_BUTTON_2_UP, mouse_button{ RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP }},
-	{ RI_MOUSE_BUTTON_3_UP, mouse_button{ RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP }},
-	{ RI_MOUSE_BUTTON_4_UP, mouse_button{ RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP }},
-	{ RI_MOUSE_BUTTON_5_UP, mouse_button{ RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP }},
-};
+#ifdef _WIN32
+	{ RI_MOUSE_BUTTON_1_UP, mouse_button{ RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP, 0, false }},
+	{ RI_MOUSE_BUTTON_2_UP, mouse_button{ RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP, 0, false }},
+	{ RI_MOUSE_BUTTON_3_UP, mouse_button{ RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP, 0, false }},
+	{ RI_MOUSE_BUTTON_4_UP, mouse_button{ RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP, 0, false }},
+	{ RI_MOUSE_BUTTON_5_UP, mouse_button{ RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP, 0, false }},
 #endif
+};
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -89,12 +89,19 @@ raw_mouse::mouse_button raw_mouse::get_mouse_button(const cfg::string& button)
 {
 	const std::string value = button.to_string();
 
-#ifdef _WIN32
 	if (const auto it = raw_mouse_button_map.find(value); it != raw_mouse_button_map.cend())
 	{
 		return ::at32(btn_pairs, it->second);
 	}
-#endif
+
+	if (value.starts_with(raw_mouse_config::key_prefix))
+	{
+		s64 scan_code{};
+		if (try_to_int64(&scan_code, value.substr(raw_mouse_config::key_prefix.size()), s32{smin}, s32{smax}))
+		{
+			return mouse_button{ 0, 0, static_cast<s32>(scan_code), true };
+		}
+	}
 
 	return {};
 }
@@ -161,6 +168,8 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	// Get mouse buttons
 	for (const auto& [button, btn] : m_buttons)
 	{
+		if (btn.is_key) continue;
+
 		// Only update the value if either down or up flags are present
 		if ((state.usButtonFlags & btn.down))
 		{
@@ -238,6 +247,30 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 			m_handler->Move(m_index, m_pos_x, m_pos_y, m_window_width, m_window_height, true, delta_x, delta_y);
 			draw_overlay_cursor(m_index, m_pos_x, m_pos_y, m_window_width, m_window_height);
 		}
+	}
+}
+
+void raw_mouse::update_values(s32 scan_code, bool pressed)
+{
+	ensure(m_handler != nullptr);
+
+	if (std::exchange(m_reload_requested, false))
+	{
+		reload_config();
+	}
+
+	if (m_handler->is_for_gui())
+	{
+		m_handler->key_press_callback(m_device_name, scan_code, pressed);
+		return;
+	}
+
+	// Get mouse buttons
+	for (const auto& [button, btn] : m_buttons)
+	{
+		if (!btn.is_key || btn.scan_code != scan_code) return;
+
+		m_handler->Button(m_index, button, pressed);
 	}
 }
 #endif
@@ -419,6 +452,12 @@ void raw_mouse_handler::register_raw_input_devices()
 		.dwFlags = 0,
 		.hwndTarget = mouse.window_handle()
 	});
+	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.usUsagePage = HID_USAGE_PAGE_GENERIC,
+		.usUsage = HID_USAGE_GENERIC_KEYBOARD,
+		.dwFlags = 0,
+		.hwndTarget = mouse.window_handle()
+	});
 
 	{
 		std::lock_guard lock(g_registered_handlers_mutex);
@@ -459,6 +498,13 @@ void raw_mouse_handler::unregister_raw_input_devices() const
 		.dwFlags = RIDEV_REMOVE,
 		.hwndTarget = nullptr
 	});
+	raw_input_devices.push_back(RAWINPUTDEVICE {
+		.usUsagePage = HID_USAGE_PAGE_GENERIC,
+		.usUsage = HID_USAGE_GENERIC_KEYBOARD,
+		.dwFlags = 0,
+		.hwndTarget = nullptr
+	});
+
 	if (!RegisterRawInputDevices(raw_input_devices.data(), ::size32(raw_input_devices), sizeof(RAWINPUTDEVICE)))
 	{
 		input_log.error("raw_mouse_handler: RegisterRawInputDevices (unregister) failed: %s", fmt::win_error{GetLastError(), nullptr});
@@ -566,7 +612,7 @@ void raw_mouse_handler::handle_native_event(const MSG& msg)
 		return;
 	}
 
-	if (msg.message != WM_INPUT)
+	if (msg.message != WM_INPUT && msg.message != WM_KEYDOWN && msg.message != WM_KEYUP)
 	{
 		return;
 	}
@@ -585,23 +631,61 @@ void raw_mouse_handler::handle_native_event(const MSG& msg)
 		return;
 	}
 
+	if ((raw_input.header.dwType == RIM_TYPEMOUSE || raw_input.header.dwType == RIM_TYPEKEYBOARD) &&
+		g_cfg_raw_mouse.reload_requested.exchange(false))
+	{
+		std::lock_guard lock(m_raw_mutex);
+
+		for (auto& [handle, mouse] : m_raw_mice)
+		{
+			mouse.request_reload();
+		}
+	}
+
 	switch (raw_input.header.dwType)
 	{
 	case RIM_TYPEMOUSE:
 	{
 		std::lock_guard lock(m_raw_mutex);
 
-		if (g_cfg_raw_mouse.reload_requested.exchange(false))
-		{
-			for (auto& [handle, mouse] : m_raw_mice)
-			{
-				mouse.request_reload();
-			}
-		}
-
 		if (auto it = m_raw_mice.find(raw_input.header.hDevice); it != m_raw_mice.end())
 		{
 			it->second.update_values(raw_input.data.mouse);
+		}
+		break;
+	}
+	case RIM_TYPEKEYBOARD:
+	{
+		const RAWKEYBOARD& keyboard = raw_input.data.keyboard;
+
+		// Ignore key overrun state and keys not mapped to any virtual key code
+		if (keyboard.MakeCode == KEYBOARD_OVERRUN_MAKE_CODE || keyboard.VKey >= UCHAR_MAX)
+		{
+			break;
+		}
+
+		WORD scan_code;
+
+		if (keyboard.MakeCode)
+		{
+			// Compose the full scan code value with its extended byte
+			scan_code = MAKEWORD(keyboard.MakeCode & 0x7f, ((keyboard.Flags & RI_KEY_E0) ? 0xe0 : ((keyboard.Flags & RI_KEY_E1) ? 0xe1 : 0x00)));
+		}
+		else
+		{
+			// Scan code value may be empty for some buttons (for example multimedia buttons)
+			// Try to get the scan code from the virtual key code
+			scan_code = LOWORD(MapVirtualKey(keyboard.VKey, MAPVK_VK_TO_VSC_EX));
+		}
+
+		const LONG scan_code_extended = static_cast<LONG>(MAKELPARAM(0, (HIBYTE(scan_code) ? KF_EXTENDED : 0x00) | LOBYTE(scan_code)));
+		const bool pressed = !(keyboard.Flags & RI_KEY_BREAK);
+
+		std::lock_guard lock(m_raw_mutex);
+
+		for (auto& [handle, mouse] : m_raw_mice)
+		{
+			mouse.update_values(scan_code_extended, pressed);
 		}
 		break;
 	}

@@ -1187,7 +1187,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 
 	if (eventType == "windows_generic_MSG")
 	{
-		if (MSG* msg = static_cast<MSG*>(message); msg && msg->message == WM_INPUT)
+		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP))
 		{
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
