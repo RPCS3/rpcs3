@@ -70,9 +70,9 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>();
 	g_raw_mouse_handler->set_is_for_gui(true);
 	g_raw_mouse_handler->Init(std::max(max_devices, ::size32(g_cfg_raw_mouse.players)));
-	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 cell_code, s32 button_code, bool pressed)
+	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 button_code, bool pressed)
 	{
-		mouse_press(device_name, cell_code, button_code, pressed);
+		mouse_press(device_name, button_code, pressed);
 	});
 
 	m_buttons = new QButtonGroup(this);
@@ -346,7 +346,7 @@ void raw_mouse_settings_dialog::reset_config()
 	}
 }
 
-void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 /*cell_code*/, s32 button_code, bool pressed)
+void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 button_code, bool pressed)
 {
 	if (m_button_id < 0 || pressed) // Let's only react to mouse releases
 	{
