@@ -4,22 +4,6 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-std::string mouse_button_id(int code)
-{
-	switch (code)
-	{
-	case CELL_MOUSE_BUTTON_1: return "Button 1";
-	case CELL_MOUSE_BUTTON_2: return "Button 2";
-	case CELL_MOUSE_BUTTON_3: return "Button 3";
-	case CELL_MOUSE_BUTTON_4: return "Button 4";
-	case CELL_MOUSE_BUTTON_5: return "Button 5";
-	case CELL_MOUSE_BUTTON_6: return "Button 6";
-	case CELL_MOUSE_BUTTON_7: return "Button 7";
-	case CELL_MOUSE_BUTTON_8: return "Button 8";
-	}
-	return "";
-}
-
 cfg::string& raw_mouse_config::get_button_by_index(int index)
 {
 	switch (index)
@@ -50,6 +34,28 @@ cfg::string& raw_mouse_config::get_button(int code)
 	case CELL_MOUSE_BUTTON_8: return mouse_button_8;
 	default: fmt::throw_exception("Invalid code %d", code);
 	}
+}
+
+std::string raw_mouse_config::get_button_name(std::string_view value)
+{
+	if (raw_mouse_button_map.contains(value))
+	{
+		return std::string(value);
+	}
+
+	return "";
+}
+
+std::string raw_mouse_config::get_button_name(s32 button_code)
+{
+	for (const auto& [name, code] : raw_mouse_button_map)
+	{
+		if (code == button_code)
+		{
+			return std::string(name);
+		}
+	}
+	return "";
 }
 
 raw_mice_config::raw_mice_config()
