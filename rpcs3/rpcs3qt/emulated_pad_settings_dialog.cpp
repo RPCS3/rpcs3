@@ -389,14 +389,14 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			{
 				std::string raw_mouse_settings;
 				const auto& raw_cfg = *ensure(::at32(g_cfg_raw_mouse.players, player));
-				fmt::append(raw_mouse_settings, "1: %s\n", raw_cfg.mouse_button_1.to_string());
-				fmt::append(raw_mouse_settings, "2: %s\n", raw_cfg.mouse_button_2.to_string());
-				fmt::append(raw_mouse_settings, "3: %s\n", raw_cfg.mouse_button_3.to_string());
-				fmt::append(raw_mouse_settings, "4: %s\n", raw_cfg.mouse_button_4.to_string());
-				fmt::append(raw_mouse_settings, "5: %s\n", raw_cfg.mouse_button_5.to_string());
-				fmt::append(raw_mouse_settings, "6: %s\n", raw_cfg.mouse_button_6.to_string());
-				fmt::append(raw_mouse_settings, "7: %s\n", raw_cfg.mouse_button_7.to_string());
-				fmt::append(raw_mouse_settings, "8: %s",   raw_cfg.mouse_button_8.to_string());
+				fmt::append(raw_mouse_settings, "1: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_1.to_string()));
+				fmt::append(raw_mouse_settings, "2: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_2.to_string()));
+				fmt::append(raw_mouse_settings, "3: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_3.to_string()));
+				fmt::append(raw_mouse_settings, "4: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_4.to_string()));
+				fmt::append(raw_mouse_settings, "5: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_5.to_string()));
+				fmt::append(raw_mouse_settings, "6: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_6.to_string()));
+				fmt::append(raw_mouse_settings, "7: %s\n", raw_mouse_config::get_button_name(raw_cfg.mouse_button_7.to_string()));
+				fmt::append(raw_mouse_settings, "8: %s",   raw_mouse_config::get_button_name(raw_cfg.mouse_button_8.to_string()));
 
 				QGroupBox* gb_legend_raw = new QGroupBox(tr("Current Raw Mouse Config"), this);
 				QVBoxLayout* gb_legend_raw_layout = new QVBoxLayout(this);

@@ -6,22 +6,6 @@
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
-static const std::map<std::string, int> raw_mouse_button_map
-{
-	{ "", 0 },
-#ifdef _WIN32
-	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
-	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
-	{ "Button 3", RI_MOUSE_BUTTON_3_UP },
-	{ "Button 4", RI_MOUSE_BUTTON_4_UP },
-	{ "Button 5", RI_MOUSE_BUTTON_5_UP },
-#endif
-};
-
 class raw_mouse_handler;
 
 class raw_mouse
@@ -43,11 +27,21 @@ public:
 	const std::string& device_name() const { return m_device_name; }
 	u32 index() const { return m_index; }
 	void set_index(u32 index);
-	void request_reload() { reload_requested = true; }
+	void request_reload() { m_reload_requested = true; }
 
 private:
+	struct mouse_button
+	{
+		int down = 0;
+		int up = 0;
+	};
+
+#ifdef _WIN32
+	static const std::unordered_map<int, raw_mouse::mouse_button> btn_pairs;
+#endif
+
 	void reload_config();
-	static std::pair<int, int> get_mouse_button(const cfg::string& button);
+	static mouse_button get_mouse_button(const cfg::string& button);
 
 	u32 m_index = 0;
 	std::string m_device_name;
@@ -61,8 +55,8 @@ private:
 	int m_pos_y{};
 	float m_mouse_acceleration = 1.0f;
 	raw_mouse_handler* m_handler{};
-	std::map<u8, std::pair<int, int>> m_buttons;
-	bool reload_requested = false;
+	std::map<u8, mouse_button> m_buttons;
+	bool m_reload_requested = false;
 };
 
 class raw_mouse_handler final : public MouseHandlerBase
@@ -74,10 +68,8 @@ public:
 
 	void Init(const u32 max_connect) override;
 
-	void SetIsForGui(bool value)
-	{
-		m_is_for_gui = value;
-	}
+	void set_is_for_gui(bool value) { m_is_for_gui = value; }
+	bool is_for_gui() const { return m_is_for_gui; }
 
 	const std::map<void*, raw_mouse>& get_mice() const { return m_raw_mice; };
 
@@ -86,11 +78,11 @@ public:
 		m_mouse_press_callback = std::move(cb);
 	}
 
-	void mouse_press_callback(const std::string& device_name, s32 cell_code, bool pressed)
+	void mouse_press_callback(const std::string& device_name, s32 button_code, bool pressed)
 	{
 		if (m_mouse_press_callback)
 		{
-			m_mouse_press_callback(device_name, cell_code, pressed);
+			m_mouse_press_callback(device_name, button_code, pressed);
 		}
 	}
 

@@ -27,6 +27,18 @@ static inline void draw_overlay_cursor(u32 index, s32 x_pos, s32 y_pos, s32 x_ma
 [[maybe_unused]] static inline void draw_overlay_cursor(u32, s32, s32, s32, s32) {}
 #endif
 
+#ifdef _WIN32
+const std::unordered_map<int, raw_mouse::mouse_button> raw_mouse::btn_pairs =
+{
+	{ 0, {}},
+	{ RI_MOUSE_BUTTON_1_UP, mouse_button{ RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP }},
+	{ RI_MOUSE_BUTTON_2_UP, mouse_button{ RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP }},
+	{ RI_MOUSE_BUTTON_3_UP, mouse_button{ RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP }},
+	{ RI_MOUSE_BUTTON_4_UP, mouse_button{ RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP }},
+	{ RI_MOUSE_BUTTON_5_UP, mouse_button{ RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP }},
+};
+#endif
+
 LOG_CHANNEL(input_log, "Input");
 
 raw_mice_config g_cfg_raw_mouse;
@@ -70,24 +82,14 @@ void raw_mouse::reload_config()
 void raw_mouse::set_index(u32 index)
 {
 	m_index = index;
-	reload_requested = true;
+	m_reload_requested = true;
 }
 
-std::pair<int, int> raw_mouse::get_mouse_button(const cfg::string& button)
+raw_mouse::mouse_button raw_mouse::get_mouse_button(const cfg::string& button)
 {
 	const std::string value = button.to_string();
 
 #ifdef _WIN32
-	static const std::unordered_map<int, std::pair<int, int>> btn_pairs
-	{
-		{ 0, {}},
-		{ RI_MOUSE_BUTTON_1_UP, { RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP }},
-		{ RI_MOUSE_BUTTON_2_UP, { RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP }},
-		{ RI_MOUSE_BUTTON_3_UP, { RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP }},
-		{ RI_MOUSE_BUTTON_4_UP, { RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP }},
-		{ RI_MOUSE_BUTTON_5_UP, { RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP }},
-	};
-
 	if (const auto it = raw_mouse_button_map.find(value); it != raw_mouse_button_map.cend())
 	{
 		return ::at32(btn_pairs, it->second);
@@ -134,40 +136,41 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	// Update window handle and size
 	update_window_handle();
 
-	if (std::exchange(reload_requested, false))
+	if (std::exchange(m_reload_requested, false))
 	{
 		reload_config();
 	}
 
-	const auto get_button_pressed = [this](u8 button, int button_flags)
+	if (m_handler->is_for_gui())
 	{
-		const auto it = m_buttons.find(button);
-		if (it == m_buttons.cend()) return;
-
-		const auto& [down, up] = it->second;
-
-		// Only update the value if either down or up flags are present
-		if ((button_flags & down))
+		for (const auto& [up, btn] : btn_pairs)
 		{
-			m_handler->Button(m_index, button, true);
-			m_handler->mouse_press_callback(m_device_name, button, true);
+			// Only update the value if either down or up flags are present
+			if ((state.usButtonFlags & btn.down))
+			{
+				m_handler->mouse_press_callback(m_device_name, up, true);
+			}
+			else if ((state.usButtonFlags & btn.up))
+			{
+				m_handler->mouse_press_callback(m_device_name, up, false);
+			}
 		}
-		else if ((button_flags & up))
-		{
-			m_handler->Button(m_index, button, false);
-			m_handler->mouse_press_callback(m_device_name, button, false);
-		}
-	};
+		return;
+	}
 
 	// Get mouse buttons
-	get_button_pressed(CELL_MOUSE_BUTTON_1, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_2, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_3, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_6, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_7, state.usButtonFlags);
-	get_button_pressed(CELL_MOUSE_BUTTON_8, state.usButtonFlags);
+	for (const auto& [button, btn] : m_buttons)
+	{
+		// Only update the value if either down or up flags are present
+		if ((state.usButtonFlags & btn.down))
+		{
+			m_handler->Button(m_index, button, true);
+		}
+		else if ((state.usButtonFlags & btn.up))
+		{
+			m_handler->Button(m_index, button, false);
+		}
+	}
 
 	// Get mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))
@@ -576,7 +579,7 @@ void raw_mouse_handler::handle_native_event(const MSG& msg)
 	RAWINPUT raw_input{};
 	UINT size = sizeof(RAWINPUT);
 
-	u32 res = GetRawInputData(reinterpret_cast<HRAWINPUT>(msg.lParam), RID_INPUT, &raw_input, &size, sizeof(RAWINPUTHEADER));
+	const u32 res = GetRawInputData(reinterpret_cast<HRAWINPUT>(msg.lParam), RID_INPUT, &raw_input, &size, sizeof(RAWINPUTHEADER));
 	if (res == umax)
 	{
 		return;
