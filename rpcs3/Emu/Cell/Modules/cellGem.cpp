@@ -8,6 +8,7 @@
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/gem_config.h"
+#include "Emu/Io/interception.h"
 #include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -1713,7 +1714,7 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 	digital_buttons = 0;
 	analog_t = 0;
 
-	if (!is_input_allowed())
+	if (!is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return;
 	}
@@ -1806,7 +1807,7 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 template <typename T>
 static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
 {
-	if (!gem_state || !is_input_allowed())
+	if (!gem_state || !is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return;
 	}
@@ -1837,7 +1838,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 template <typename T>
 static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
 {
-	if (!gem_state || !is_input_allowed())
+	if (!gem_state || !is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return;
 	}
@@ -1882,7 +1883,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 {
 	ext = {};
 
-	if (!is_input_allowed())
+	if (!is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return;
 	}
@@ -1963,7 +1964,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 	digital_buttons = 0;
 	analog_t = 0;
 
-	if (!is_input_allowed())
+	if (!is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return false;
 	}
@@ -2078,7 +2079,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 template <typename T>
 static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& controller, T& gem_state)
 {
-	if (!gem_state || !is_input_allowed())
+	if (!gem_state || !is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
 	{
 		return;
 	}
