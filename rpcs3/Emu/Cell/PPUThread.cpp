@@ -4908,9 +4908,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			part.local_bounds.first = std::min<u32>(part.local_bounds.first, func.addr);
 			part.local_bounds.second = std::max<u32>(part.local_bounds.second, func.addr + func.size);
 
-			// Fixup some information
-			func.name = fmt::format("__0x%x", func.addr - reloc);
-
 			bsize += func.size;
 
 			fpos++;
@@ -5473,7 +5470,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	{
 		if (func.size)
 		{
-			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
+			const auto f = cast<Function>(_module->getOrInsertFunction(fmt::format("__0x%x", func.addr - reloc), _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
 			f->addFnAttr(Attribute::NoUnwind);
