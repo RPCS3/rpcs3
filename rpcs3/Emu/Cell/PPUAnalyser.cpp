@@ -21,7 +21,6 @@ void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case ppu_attr::known_addr: return "known_addr";
 		case ppu_attr::known_size: return "known_size";
 		case ppu_attr::no_return: return "no_return";
 		case ppu_attr::no_size: return "no_size";
@@ -786,7 +785,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			TOCs.emplace(toc);
 			auto& func = add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
-			func.attr += ppu_attr::known_addr;
 			known_functions.emplace(addr);
 		}
 	}
@@ -924,7 +922,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 
 				//auto& func = add_func(addr, 0, 0);
-				//func.attr += ppu_attr::known_addr;
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
 				//known_functions.emplace(func);
@@ -1109,7 +1106,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				func.toc = -1;
 				func.size = 0x1C;
 				func.blocks.emplace(func.addr, func.size);
-				func.attr += ppu_attr::known_addr;
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
@@ -1128,7 +1124,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x1C;
 					next.blocks.emplace(next.addr, next.size);
-					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
 					advance(_p2, p2, 7);
 				}
@@ -1148,8 +1143,9 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Trampoline with TOC
 				const u32 target = (ptr[3] << 16) + s16(ptr[4]);
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
+				constexpr u32 func_size = 0x1C;
 
-				if (target >= start && target < end && verify_func((_ptr + 3).addr()))
+				if (target >= start && target < end && verify_func((_ptr + 3).addr()) && target - func.addr >= func_size)
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1247,7 +1243,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				func.toc = -1;
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
-				func.attr += ppu_attr::known_addr;
 				known_functions.emplace(func.addr);
 				func.attr += ppu_attr::known_size;
 
@@ -1268,7 +1263,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x20;
 					next.blocks.emplace(next.addr, next.size);
-					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
 					advance(_p2, p2, 8);
 					known_functions.emplace(next.addr);
