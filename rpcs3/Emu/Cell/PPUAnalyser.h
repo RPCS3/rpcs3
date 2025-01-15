@@ -16,7 +16,6 @@
 // PPU Function Attributes
 enum class ppu_attr : u32
 {
-	known_addr,
 	known_size,
 	no_return,
 	no_size,
