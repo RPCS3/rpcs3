@@ -14,7 +14,7 @@
 #include "PPUOpcodes.h"
 
 // PPU Function Attributes
-enum class ppu_attr : u32
+enum class ppu_attr : u8
 {
 	known_size,
 	no_return,
@@ -38,7 +38,6 @@ struct ppu_function
 	std::map<u32, u32> blocks{}; // Basic blocks: addr -> size
 	std::set<u32> calls{}; // Set of called functions
 	std::set<u32> callers{};
-	mutable std::string name{}; // Function name
 
 	struct iterator
 	{

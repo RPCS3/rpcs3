@@ -185,18 +185,18 @@ bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts);
 
 Function* PPUTranslator::Translate(const ppu_function& info)
 {
-	m_function = m_module->getFunction(info.name);
+	// Instruction address is (m_addr + base)
+	const u64 base = m_reloc ? m_reloc->addr : 0;
+	m_addr = info.addr - base;
+	m_attr = m_info.attr + info.attr;
+
+	m_function = m_module->getFunction(fmt::format("__0x%x", m_addr));
 
 	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
 	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
 	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &irb;
-
-	// Instruction address is (m_addr + base)
-	const u64 base = m_reloc ? m_reloc->addr : 0;
-	m_addr = info.addr - base;
-	m_attr = m_info.attr + info.attr;
 
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
