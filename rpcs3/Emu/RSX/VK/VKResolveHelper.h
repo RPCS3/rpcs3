@@ -387,7 +387,7 @@ namespace vk
 
 	struct stencilonly_unresolve : depth_resolve_base
 	{
-		VkClearRect region{};
+		VkClearRect clear_region{};
 		VkClearAttachment clear_info{};
 
 		stencilonly_unresolve()
@@ -402,8 +402,8 @@ namespace vk
 			renderpass_config.set_depth_mask(false);
 
 			clear_info.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-			region.baseArrayLayer = 0;
-			region.layerCount = 1;
+			clear_region.baseArrayLayer = 0;
+			clear_region.layerCount = 1;
 
 			static_parameters_width = 3;
 
@@ -425,7 +425,7 @@ namespace vk
 
 		void emit_geometry(vk::command_buffer& cmd) override
 		{
-			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &region);
+			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &clear_region);
 
 			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
 			{
@@ -444,8 +444,8 @@ namespace vk
 
 			auto stencil_view = resolve_image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY), VK_IMAGE_ASPECT_STENCIL_BIT);
 
-			region.rect.extent.width = resolve_image->width();
-			region.rect.extent.height = resolve_image->height();
+			clear_region.rect.extent.width = msaa_image->width();
+			clear_region.rect.extent.height = msaa_image->height();
 
 			overlay_pass::run(
 				cmd,

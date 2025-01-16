@@ -302,6 +302,11 @@ namespace vk
 				return driver_vendor::HONEYKRISP;
 			}
 
+			if (gpu_name.find("Panfrost") != umax)
+			{
+				return driver_vendor::PANVK;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -329,6 +334,8 @@ namespace vk
 				return driver_vendor::V3DV;
 			case VK_DRIVER_ID_MESA_HONEYKRISP:
 				return driver_vendor::HONEYKRISP;
+			case VK_DRIVER_ID_MESA_PANVK:
+				return driver_vendor::PANVK;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
@@ -656,6 +663,12 @@ namespace vk
 		{
 			// v3dv supports BC1-BC3 which is all we require, support is reported as false since not all formats are supported
 			rsx_log.error("Your GPU running on the V3DV driver does not support full texture block compression. Graphics may not render correctly.");
+			enabled_features.textureCompressionBC = VK_FALSE;
+		}
+
+		if (!pgpu->features.textureCompressionBC && pgpu->get_driver_vendor() == driver_vendor::PANVK)
+		{
+			rsx_log.error("Your GPU running on the PANVK driver does not support full texture block compression. Graphics may not render correctly.");
 			enabled_features.textureCompressionBC = VK_FALSE;
 		}
 

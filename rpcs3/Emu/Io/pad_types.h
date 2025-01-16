@@ -365,7 +365,8 @@ constexpr u32 special_button_offset = 666; // Must not conflict with other CELL 
 enum special_button_value
 {
 	pressure_intensity,
-	analog_limiter
+	analog_limiter,
+	orientation_reset
 };
 
 struct Button
@@ -470,8 +471,10 @@ struct ps_move_data
 	bool calibration_succeeded = false;
 
 	bool magnetometer_enabled = false;
+	bool orientation_enabled = false;
 
-	std::array<f32, 4> quaternion { 1.0f, 0.0f, 0.0f, 0.0f }; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
+	static constexpr std::array<f32, 4> default_quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
+	std::array<f32, 4> quaternion = default_quaternion; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
 	f32 accelerometer_x = 0.0f; // linear velocity in m/s²
 	f32 accelerometer_y = 0.0f; // linear velocity in m/s²
 	f32 accelerometer_z = 0.0f; // linear velocity in m/s²
@@ -482,6 +485,8 @@ struct ps_move_data
 	f32 magnetometer_y = 0.0f;
 	f32 magnetometer_z = 0.0f;
 	s16 temperature = 0;
+
+	void reset_sensors();
 };
 
 struct Pad
@@ -511,6 +516,9 @@ struct Pad
 	bool m_analog_limiter_toggled{}; // Whether the sensitivity is toggled on or off.
 	bool m_analog_limiter_enabled_last{}; // only used in keyboard_pad_handler
 	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
+
+	s32 m_orientation_reset_button_index{-1}; // Special button index. -1 if not set.
+	bool get_orientation_reset_button_active();
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};

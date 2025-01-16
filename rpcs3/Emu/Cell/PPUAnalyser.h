@@ -96,6 +96,7 @@ struct ppu_module : public Type
 	std::vector<ppu_segment> segs{};
 	std::vector<ppu_segment> secs{};
 	std::vector<ppu_function> funcs{};
+	std::vector<u32> applied_patches;
 	std::deque<std::shared_ptr<void>> allocations;
 	std::map<u32, u32> addr_to_seg_index;
 
@@ -185,7 +186,6 @@ struct main_ppu_module : public ppu_module<T>
 {
 	u32 elf_entry{};
 	u32 seg0_code_end{};
-	std::vector<u32> applied_patches;
 
 	// Disable inherited savestate ordering
 	void save(utils::serial&) = delete;

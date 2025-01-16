@@ -67,6 +67,9 @@ namespace rsx
 		// Translates an incoming range of constants against our mapping.
 		// If there is no linear mapping available, return -1, otherwise returns the translated index of the first slot
 		// TODO: Move this somewhere else during refactor
-		int TranslateConstantsRange(int first_index, int count) const;
+		int translate_constants_range(int first_index, int count) const;
+
+		// Returns true if this program consumes any constants in the range [first, first + count - 1]
+		bool overlaps_constants_range(int first_index, int count) const;
 	};
 }

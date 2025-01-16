@@ -688,10 +688,10 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	// Initialize optional allocation information with placeholders
-	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 32 };
-	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 32 };
-	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 32 };
-	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 32 };
+	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 16 };
+	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 16 };
+	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 16 };
+	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
 	const auto limits = m_device->gpu().get_limits();
@@ -730,7 +730,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.94");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.95");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -2192,7 +2192,7 @@ void VKGSRender::load_program_env()
 			return std::make_pair(m_instancing_buffer_ring_info.map(constants_data_table_offset, size), size);
 		});
 
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, *m_vertex_prog);
+		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
 		m_instancing_buffer_ring_info.unmap();
 
 		m_instancing_indirection_buffer_info = { m_instancing_buffer_ring_info.heap->value, indirection_table_offset, indirection_table_buf.size() };
@@ -2219,7 +2219,7 @@ void VKGSRender::load_program_env()
 		}
 	}
 
-	if (update_fragment_constants && !update_instruction_buffers)
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
 	{
 		check_heap_status(VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE);
 
@@ -2350,9 +2350,9 @@ void VKGSRender::load_program_env()
 	}
 
 	// Clear flags
-	u32 handled_flags = rsx::pipeline_state::fragment_state_dirty |
+	rsx::flags32_t handled_flags =
+		rsx::pipeline_state::fragment_state_dirty |
 		rsx::pipeline_state::vertex_state_dirty |
-		rsx::pipeline_state::fragment_constants_dirty |
 		rsx::pipeline_state::fragment_texture_state_dirty;
 
 	if (!update_instancing_data)
@@ -2360,7 +2360,17 @@ void VKGSRender::load_program_env()
 		handled_flags |= rsx::pipeline_state::transform_constants_dirty;
 	}
 
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
+	{
+		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
+	}
+
 	m_graphics_state.clear(handled_flags);
+}
+
+bool VKGSRender::is_current_program_interpreted() const
+{
+	return m_program && m_shader_interpreter.is_interpreter(m_program);
 }
 
 void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
@@ -2433,10 +2443,16 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
-	if (!m_vertex_prog)
+	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
 		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
+	if (!m_vertex_prog->overlaps_constants_range(index, count))
+	{
+		// Nothing meaningful to us
 		return;
 	}
 
@@ -2453,7 +2469,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
-	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	else if (auto xform_id = m_vertex_prog->translate_constants_range(index, count); xform_id >= 0)
 	{
 		const auto write_offset = xform_id * 16;
 		const auto byte_count = count * 16;

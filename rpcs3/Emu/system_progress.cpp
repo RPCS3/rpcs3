@@ -26,7 +26,7 @@ atomic_t<u32> g_progr_pdone{0};
 atomic_t<bool> g_system_progress_canceled{false};
 
 // For showing feedback while stopping emulation
-atomic_t<bool> g_system_progress_stopping{false};
+atomic_t<system_progress_stop_state> g_system_progress_stopping{system_progress_stop_state::stop_state_disabled};
 
 namespace rsx::overlays
 {
@@ -40,7 +40,8 @@ namespace rsx::overlays
 void progress_dialog_server::operator()()
 {
 	std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
-	g_system_progress_stopping = false;
+	g_system_progress_stopping = system_progress_stop_state::stop_state_disabled;
+	g_system_progress_canceled = false;
 
 	const auto get_state = []()
 	{
@@ -60,6 +61,41 @@ void progress_dialog_server::operator()()
 		}
 
 		return whole_state;
+	};
+
+	const auto create_native_dialog = [&native_dlg](const std::string& text, bool* show_overlay_message)
+	{
+		if (const auto renderer = rsx::get_current_renderer())
+		{
+			// Some backends like OpenGL actually initialize a lot of driver objects in the "on_init" method.
+			// Wait for init to complete within reasonable time. Abort just in case we have hardware/driver issues.
+			renderer->is_initialized.wait(0, atomic_wait_timeout(5 * 1000000000ull));
+
+			auto manager = g_fxo->try_get<rsx::overlays::display_manager>();
+
+			if (show_overlay_message)
+			{
+				*show_overlay_message = g_fxo->get<progress_dialog_workaround>().show_overlay_message_only;
+				if (*show_overlay_message)
+				{
+					return;
+				}
+			}
+
+			if (manager)
+			{
+				MsgDialogType type{};
+				type.se_mute_on         = true;
+				type.se_normal          = true;
+				type.bg_invisible       = true;
+				type.disable_cancel     = true;
+				type.progress_bar_count = 1;
+
+				native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
+				native_dlg->show(false, text, type, msg_dialog_source::sys_progress, nullptr);
+				native_dlg->progress_bar_set_message(0, get_localized_string(localized_string_id::PROGRESS_DIALOG_PLEASE_WAIT));
+			}
+		}
 	};
 
 	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
@@ -112,29 +148,7 @@ void progress_dialog_server::operator()()
 		bool show_overlay_message = false; // Only show an overlay message after initial loading is done.
 		std::shared_ptr<MsgDialogBase> dlg;
 
-		if (const auto renderer = rsx::get_current_renderer())
-		{
-			// Some backends like OpenGL actually initialize a lot of driver objects in the "on_init" method.
-			// Wait for init to complete within reasonable time. Abort just in case we have hardware/driver issues.
-			renderer->is_initialized.wait(0, atomic_wait_timeout(5 * 1000000000ull));
-
-			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			show_overlay_message = g_fxo->get<progress_dialog_workaround>().show_overlay_message_only;
-
-			if (manager && !show_overlay_message)
-			{
-				MsgDialogType type{};
-				type.se_mute_on         = true;
-				type.se_normal          = true;
-				type.bg_invisible       = true;
-				type.disable_cancel     = true;
-				type.progress_bar_count = 1;
-
-				native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
-				native_dlg->show(false, text0, type, msg_dialog_source::sys_progress, nullptr);
-				native_dlg->progress_bar_set_message(0, get_localized_string(localized_string_id::PROGRESS_DIALOG_PLEASE_WAIT));
-			}
-		}
+		create_native_dialog(text0, &show_overlay_message);
 
 		if (!show_overlay_message && !native_dlg && (dlg = Emu.GetCallbacks().get_msg_dialog()))
 		{
@@ -391,6 +405,7 @@ void progress_dialog_server::operator()()
 		else if (native_dlg)
 		{
 			native_dlg->close(false, false);
+			native_dlg.reset();
 		}
 		else if (dlg)
 		{
@@ -410,10 +425,25 @@ void progress_dialog_server::operator()()
 		g_progr_ptotal.notify_all();
 	}
 
-	if (native_dlg && g_system_progress_stopping)
+	if (g_system_progress_stopping)
 	{
-		native_dlg->set_text(get_localized_string(localized_string_id::PROGRESS_DIALOG_STOPPING_PLEASE_WAIT));
-		native_dlg->refresh();
+		const std::string text = get_localized_string(
+			g_system_progress_stopping == system_progress_stop_state::stop_state_continuous_savestate
+				? localized_string_id::PROGRESS_DIALOG_SAVESTATE_PLEASE_WAIT
+				: localized_string_id::PROGRESS_DIALOG_STOPPING_PLEASE_WAIT
+		);
+		if (native_dlg)
+		{
+			native_dlg->set_text(text);
+		}
+		else
+		{
+			create_native_dialog(text, nullptr);
+		}
+		if (native_dlg)
+		{
+			native_dlg->refresh();
+		}
 	}
 
 	if (g_progr_ptotal.exchange(0))

@@ -179,6 +179,7 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 	b_has_rgb = true;
 	b_has_battery = true;
 	b_has_battery_led = true;
+	b_has_orientation = true;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
@@ -233,6 +234,7 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, SDLKeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, SDLKeyCodes::None);
+	cfg->orientation_reset_button.def = ::at32(button_list, SDLKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -732,14 +734,14 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 		}
 		else
 		{
-			const float& accel_x = dev->values_accel[0]; // Angular speed around the x axis (pitch)
-			const float& accel_y = dev->values_accel[1]; // Angular speed around the y axis (yaw)
-			const float& accel_z = dev->values_accel[2]; // Angular speed around the z axis (roll
+			const f32 accel_x = dev->values_accel[0]; // Angular speed around the x axis (pitch)
+			const f32 accel_y = dev->values_accel[1]; // Angular speed around the y axis (yaw)
+			const f32 accel_z = dev->values_accel[2]; // Angular speed around the z axis (roll
 
 			// Convert to ds3. The ds3 resolution is 113/G.
-			pad->m_sensors[0].m_value = Clamp0To1023((accel_x / SDL_STANDARD_GRAVITY) * -1 * 113 + 512);
-			pad->m_sensors[1].m_value = Clamp0To1023((accel_y / SDL_STANDARD_GRAVITY) * -1 * 113 + 512);
-			pad->m_sensors[2].m_value = Clamp0To1023((accel_z / SDL_STANDARD_GRAVITY) * -1 * 113 + 512);
+			pad->m_sensors[0].m_value = Clamp0To1023((accel_x / SDL_STANDARD_GRAVITY) * -1 * MOTION_ONE_G + 512);
+			pad->m_sensors[1].m_value = Clamp0To1023((accel_y / SDL_STANDARD_GRAVITY) * -1 * MOTION_ONE_G + 512);
+			pad->m_sensors[2].m_value = Clamp0To1023((accel_z / SDL_STANDARD_GRAVITY) * -1 * MOTION_ONE_G + 512);
 		}
 	}
 
@@ -751,15 +753,19 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 		}
 		else
 		{
-			//const float& gyro_x = dev->values_gyro[0]; // Angular speed around the x axis (pitch)
-			const float& gyro_y = dev->values_gyro[1]; // Angular speed around the y axis (yaw)
-			//const float& gyro_z = dev->values_gyro[2]; // Angular speed around the z axis (roll)
+			//const f32 gyro_x = dev->values_gyro[0]; // Angular speed around the x axis (pitch)
+			const f32 gyro_y = dev->values_gyro[1]; // Angular speed around the y axis (yaw)
+			//const f32 gyro_z = dev->values_gyro[2]; // Angular speed around the z axis (roll)
 
 			// Convert to ds3. The ds3 resolution is 123/90°/sec. The SDL gyro is measured in rad/sec.
-			static constexpr f32 PI = 3.14159265f;
-			const float degree = (gyro_y * 180.0f / PI);
+			const f32 degree = rad_to_degree(gyro_y);
 			pad->m_sensors[3].m_value = Clamp0To1023(degree * (123.f / 90.f) + 512);
 		}
+	}
+
+	if (dev->sdl.has_accel || dev->sdl.has_gyro)
+	{
+		set_raw_orientation(*pad);
 	}
 }
 

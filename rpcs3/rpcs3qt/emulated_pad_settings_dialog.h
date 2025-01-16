@@ -21,6 +21,7 @@ public:
 		usio,
 		gem,
 		ds3gem,
+		mousegem,
 		guncon3,
 		topshotelite,
 		topshotfearmaster,

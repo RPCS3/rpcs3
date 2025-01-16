@@ -288,6 +288,9 @@ public:
 	// GRAPH backend
 	void patch_transform_constants(rsx::context* ctx, u32 index, u32 count) override;
 
+	// Misc
+	bool is_current_program_interpreted() const override;
+
 protected:
 	void clear_surface(u32 mask) override;
 	void begin() override;

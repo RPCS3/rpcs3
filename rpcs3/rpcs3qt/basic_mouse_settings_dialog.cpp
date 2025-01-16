@@ -190,6 +190,26 @@ void basic_mouse_settings_dialog::on_button_click(int id)
 	m_remap_timer.start(1000);
 }
 
+void basic_mouse_settings_dialog::keyPressEvent(QKeyEvent* event)
+{
+	if (m_button_id < 0)
+	{
+		// We are not remapping a button, so pass the event to the base class.
+		QDialog::keyPressEvent(event);
+		return;
+	}
+
+	const std::string name = keyboard_pad_handler::GetKeyName(event, false);
+	g_cfg_mouse.get_button(m_button_id).from_string(name);
+
+	if (auto button = m_buttons->button(m_button_id))
+	{
+		button->setText(QString::fromStdString(name));
+	}
+
+	reactivate_buttons();
+}
+
 void basic_mouse_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 {
 	if (m_button_id < 0)

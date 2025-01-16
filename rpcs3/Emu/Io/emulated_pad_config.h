@@ -88,7 +88,7 @@ public:
 		button_map.clear();
 	}
 
-	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, u16, bool)>& func) const
+	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, pad_button, u16, bool, bool&)>& func) const
 	{
 		if (!pad)
 			return;
@@ -97,19 +97,25 @@ public:
 		{
 			if (button.m_pressed || !press_only)
 			{
-				handle_input(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true);
+				if (handle_input(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true))
+				{
+					return;
+				}
 			}
 		}
 
 		for (const AnalogStick& stick : pad->m_sticks)
 		{
-			handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true);
+			if (handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true))
+			{
+				return;
+			}
 		}
 	}
 
-	void handle_input(const Mouse& mouse, const std::function<void(T, u16, bool)>& func) const
+	void handle_input(const Mouse& mouse, const std::function<void(T, pad_button, u16, bool, bool&)>& func) const
 	{
-		for (int i = 0; i < 7; i++)
+		for (int i = 0; i < 8; i++)
 		{
 			const MouseButtonCodes cell_code = get_mouse_button_code(i);
 			if ((mouse.buttons & cell_code))
@@ -117,7 +123,11 @@ public:
 				const pad_button button = static_cast<pad_button>(static_cast<int>(pad_button::mouse_button_1) + i);
 				const u32 offset = pad_button_offset(button);
 				const u32 keycode = pad_button_keycode(button);
-				handle_input(func, offset, keycode, 255, true, true);
+
+				if (handle_input(func, offset, keycode, 255, true, true))
+				{
+					return;
+				}
 			}
 		}
 	}
@@ -163,9 +173,11 @@ protected:
 		return empty_set;
 	}
 
-	void handle_input(const std::function<void(T, u16, bool)>& func, u32 offset, u32 keycode, u16 value, bool pressed, bool check_axis) const
+	bool handle_input(const std::function<void(T, pad_button, u16, bool, bool&)>& func, u32 offset, u32 keycode, u16 value, bool pressed, bool check_axis) const
 	{
 		m_mutex.lock();
+
+		bool abort = false;
 
 		const auto& btns = find_button(offset, keycode);
 		if (btns.empty())
@@ -180,24 +192,26 @@ protected:
 				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
 				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
 				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-					handle_input(func, offset, static_cast<u32>(axis_direction::both), value, pressed, false);
+					abort = handle_input(func, offset, static_cast<u32>(axis_direction::both), value, pressed, false);
 					break;
 				default:
 					break;
 				}
 			}
-			return;
+			return abort;
 		}
 
 		for (const auto& btn : btns)
 		{
 			if (btn && func)
 			{
-				func(btn->btn_id(), value, pressed);
+				func(btn->btn_id(), btn->get(), value, pressed, abort);
+				if (abort) break;
 			}
 		}
 
 		m_mutex.unlock();
+		return abort;
 	}
 };
 

@@ -1315,14 +1315,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		remove_menu->addSeparator();
 
-		QAction* remove_savestate = remove_menu->addAction(tr("&Remove Savestate"));
+		QAction* remove_savestate = remove_menu->addAction(tr("&Remove Savestates"));
 		remove_savestate->setEnabled(!is_current_running_game);
 		connect(remove_savestate, &QAction::triggered, [this, current_game, savestate_dir]()
 		{
 			if (is_game_running(current_game.serial))
 				return;
 
-			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestate?")) != QMessageBox::Yes)
+			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestates?")) != QMessageBox::Yes)
 				return;
 
 			RemoveContentPath(savestate_dir, "savestate");
@@ -1768,7 +1768,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QCheckBox* disc = new QCheckBox(tr("Remove title from game list (Disc Game path is not removed!)"));
 		QCheckBox* caches = new QCheckBox(tr("Remove caches and custom configs"));
 		QCheckBox* icons = new QCheckBox(tr("Remove icons and shortcuts"));
-		QCheckBox* savestate = new QCheckBox(tr("Remove savestate"));
+		QCheckBox* savestate = new QCheckBox(tr("Remove savestates"));
 		QCheckBox* captures = new QCheckBox(tr("Remove captures"));
 		QCheckBox* recordings = new QCheckBox(tr("Remove recordings"));
 		QCheckBox* screenshots = new QCheckBox(tr("Remove screenshots"));
@@ -2277,10 +2277,12 @@ void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::st
 		game_list_log.fatal("Only %d/%d HDD1 cache directories could be removed in %s (%s)", dirs_removed, dirs_total, base_dir, title_id);
 }
 
-void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials, QString progressLabel, std::function<bool(const std::string&)> action, std::function<void(u32, u32)> cancel_log, bool refresh_on_finish,  bool can_be_concurrent, std::function<bool()> should_wait_cb)
+void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials, QString progressLabel, std::function<bool(const std::string&)> action, std::function<void(u32, u32)> cancel_log, bool refresh_on_finish, bool can_be_concurrent, std::function<bool()> should_wait_cb)
 {
 	// Concurrent tasks should not wait (at least not in current implementation)
 	ensure(!should_wait_cb || !can_be_concurrent);
+
+	g_system_progress_canceled = false;
 
 	const std::shared_ptr<std::function<bool(int)>> iterate_over_serial = std::make_shared<std::function<bool(int)>>();
 
@@ -2297,12 +2299,16 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 
 		const std::string& serial = *std::next(serials.begin(), index);
 
-		if (pdlg->wasCanceled() || g_system_progress_canceled)
+		if (pdlg->wasCanceled() || g_system_progress_canceled.exchange(false))
 		{
-			cancel_log(index, serials_size);
+			if (cancel_log)
+			{
+				cancel_log(index, serials_size);
+			}
 			return false;
 		}
-		else if (action(serial))
+
+		if (action(serial))
 		{
 			const int done = index_ptr->load();
 			pdlg->setLabelText(progressLabel.arg(done + 1).arg(serials_size));
@@ -2360,19 +2366,17 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 		if ((*iterate_over_serial)(*index))
 		{
 			QTimer::singleShot(1, this, *periodic_func);
+			return;
 		}
-		else
+
+		pdlg->setLabelText(progressLabel.arg(*index).arg(serials_size));
+		pdlg->setCancelButtonText(tr("OK"));
+		connect(pdlg, &progress_dialog::canceled, this, [pdlg](){ pdlg->deleteLater(); });
+		QApplication::beep();
+
+		if (refresh_on_finish && index)
 		{
-			pdlg->setLabelText(progressLabel.arg(*index).arg(serials_size));
-			pdlg->setCancelButtonText(tr("OK"));
-			QApplication::beep();
-
-			if (refresh_on_finish && index)
-			{
-				Refresh(true);
-			}
-
-			pdlg->deleteLater();
+			Refresh(true);
 		}
 	};
 
@@ -2413,6 +2417,14 @@ void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_da
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->open();
+
+	connect(pdlg, &progress_dialog::canceled, this, []()
+	{
+		if (!Emu.IsStopped())
+		{
+			Emu.GracefulShutdown(false, true);
+		}
+	});
 
 	BatchActionBySerials(pdlg, serials, tr("%0\nProgress: %1/%2 caches compiled").arg(main_label),
 	[&, game_data](const std::string& serial)

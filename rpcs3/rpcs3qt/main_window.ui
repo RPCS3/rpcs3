@@ -244,6 +244,7 @@
      <addaction name="confUSIOAct"/>
      <addaction name="confPSMoveAct"/>
      <addaction name="confPSMoveDS3Act"/>
+     <addaction name="confPSMoveMouseAct"/>
      <addaction name="confGunCon3Act"/>
      <addaction name="confTopShotEliteAct"/>
      <addaction name="confTopShotFearmasterAct"/>
@@ -1331,6 +1332,11 @@
   <action name="confPSMoveDS3Act">
    <property name="text">
     <string>PS Move (Fake)</string>
+   </property>
+  </action>
+  <action name="confPSMoveMouseAct">
+   <property name="text">
+    <string>PS Move (Mouse)</string>
    </property>
   </action>
   <action name="confGunCon3Act">

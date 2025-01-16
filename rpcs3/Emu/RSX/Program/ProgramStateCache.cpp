@@ -340,12 +340,16 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
 {
-	usz hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
-	hash ^= program.ctrl;
-	hash ^= program.output_mask;
-	hash ^= program.texture_state.texture_dimensions;
-	hash ^= program.texture_state.multisampled_textures;
-	return hash;
+	const usz ucode_hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
+	const u32 state_params[] =
+	{
+		program.ctrl,
+		program.output_mask,
+		program.texture_state.texture_dimensions,
+		program.texture_state.multisampled_textures,
+	};
+	const usz metadata_hash = rpcs3::hash_array(state_params);
+	return rpcs3::hash64(ucode_hash, metadata_hash);
 }
 
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
@@ -541,24 +545,33 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 
 usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
 {
-	usz hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
-	hash ^= program.ctrl;
-	hash ^= +program.two_sided_lighting;
-	hash ^= program.texture_state.texture_dimensions;
-	hash ^= program.texture_state.shadow_textures;
-	hash ^= program.texture_state.redirected_textures;
-	hash ^= program.texture_state.multisampled_textures;
-	hash ^= program.texcoord_control_mask;
-
-	return hash;
+	const usz ucode_hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
+	const u32 state_params[] =
+	{
+		program.ctrl,
+		program.two_sided_lighting ? 1u : 0u,
+		program.texture_state.texture_dimensions,
+		program.texture_state.shadow_textures,
+		program.texture_state.redirected_textures,
+		program.texture_state.multisampled_textures,
+		program.texcoord_control_mask,
+		program.mrt_buffers_count
+	};
+	const usz metadata_hash = rpcs3::hash_array(state_params);
+	return rpcs3::hash64(ucode_hash, metadata_hash);
 }
 
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	if (binary1.ctrl != binary2.ctrl || binary1.texture_state != binary2.texture_state ||
+	if (binary1.ucode_length != binary2.ucode_length ||
+		binary1.ctrl != binary2.ctrl ||
+		binary1.texture_state != binary2.texture_state ||
 		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
-		binary1.two_sided_lighting != binary2.two_sided_lighting)
+		binary1.two_sided_lighting != binary2.two_sided_lighting ||
+		binary1.mrt_buffers_count != binary2.mrt_buffers_count)
+	{
 		return false;
+	}
 
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
@@ -569,7 +582,9 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
 
 		if (inst1._u ^ inst2._u)
+		{
 			return false;
+		}
 
 		instIndex++;
 		// Skip constants
@@ -578,9 +593,11 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			fragment_program_utils::is_constant(inst1._u32[3]))
 			instIndex++;
 
-		bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
+		const bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
 		if (end)
+		{
 			return true;
+		}
 	}
 }
 

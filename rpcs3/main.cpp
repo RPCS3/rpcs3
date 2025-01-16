@@ -111,6 +111,65 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
+#ifdef _WIN32
+std::set<std::string> get_one_drive_paths()
+{
+	std::set<std::string> paths;
+	for (const char* key : { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+	{
+		if (const char* env_path = std::getenv(key))
+		{
+			sys_log.notice("get_one_drive_paths: Found OneDrive env path: '%s' (key='%s')", env_path, key);
+			paths.insert(env_path);
+		}
+	}
+
+	for (const wchar_t* key : { L"Software\\Microsoft\\OneDrive\\Accounts\\Personal" })
+	{
+		HKEY hkey = NULL;
+		LSTATUS status = RegOpenKeyW(HKEY_CURRENT_USER, key, &hkey);
+		if (status != ERROR_SUCCESS)
+		{
+			sys_log.trace("get_one_drive_paths: RegOpenKeyW failed: %s (key='%s')", fmt::win_error{static_cast<unsigned long>(status), nullptr}, wchar_to_utf8(key));
+			continue;
+		}
+
+		std::wstring path_buffer;
+		static_cast<DWORD>(path_buffer.size() - 1);
+		DWORD type = 0U;
+
+		do
+		{
+			path_buffer.resize(path_buffer.size() + MAX_PATH);
+			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
+			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
+		}
+		while (status == ERROR_MORE_DATA);
+
+		const LSTATUS close_status = RegCloseKey(hkey);
+		if (close_status != ERROR_SUCCESS)
+		{
+			sys_log.error("get_one_drive_paths: RegCloseKey failed: %s", fmt::win_error{static_cast<unsigned long>(close_status), nullptr});
+		}
+
+		if (status != ERROR_SUCCESS)
+		{
+			sys_log.error("get_one_drive_paths: RegQueryValueExW failed: %s", fmt::win_error{static_cast<unsigned long>(status), nullptr});
+			continue;
+		}
+
+		if ((type == REG_SZ) || (type == REG_EXPAND_SZ) || (type == REG_MULTI_SZ))
+		{
+			const std::string path = wchar_to_utf8(path_buffer.data());
+			sys_log.notice("get_one_drive_paths: Found OneDrive registry path: '%s' (key='%s')", path, wchar_to_utf8(key));
+			paths.insert(path);
+		}
+	}
+
+	return paths;
+}
+#endif
+
 [[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
 {
 #ifdef __linux__
@@ -1135,6 +1194,21 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		}
+
+#ifdef _WIN32
+		// Check OneDrive locations
+		for (const std::string& one_drive_path : get_one_drive_paths())
+		{
+			if (Emu.IsPathInsideDir(emu_dir, one_drive_path))
+			{
+				report_fatal_error(QObject::tr(
+					"RPCS3 should never be run from a OneDrive path!\n"
+					"Please move RPCS3 to a location not synced by OneDrive.\n"
+					"Current location:\n%0").arg(QString::fromStdString(emu_dir)).toStdString());
+				return 1;
+			}
+		}
+#endif
 	}
 
 // Set timerslack value for Linux. The default value is 50,000ns. Change this to just 1 since we value precise timers.

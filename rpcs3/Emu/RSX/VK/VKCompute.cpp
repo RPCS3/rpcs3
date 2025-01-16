@@ -78,6 +78,7 @@ namespace vk
 				break;
 			case vk::driver_vendor::LAVAPIPE:
 			case vk::driver_vendor::V3DV:
+			case vk::driver_vendor::PANVK:
 				// TODO: Actually bench this. Using 32 for now to match other common configurations.
 			case vk::driver_vendor::DOZEN:
 				// Actual optimal size depends on the D3D device. Use 32 since it should work well on both AMD and NVIDIA

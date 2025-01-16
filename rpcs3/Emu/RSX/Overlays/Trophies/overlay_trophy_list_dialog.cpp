@@ -265,7 +265,6 @@ namespace rsx
 			fade_animation.end = color4f(1.f);
 			fade_animation.active = true;
 
-			this->on_close = std::move(on_close);
 			visible = true;
 
 			const auto notify = std::make_shared<atomic_t<u32>>(0);
