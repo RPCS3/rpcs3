@@ -32,11 +32,11 @@ struct ppu_function
 	u32 size = 0;
 	bs_t<ppu_attr> attr{};
 
-	u32 stack_frame = 0;
+	//u32 stack_frame = 0;
+	u32 single_target = 0;
 	u32 trampoline = 0;
 
 	std::map<u32, u32> blocks{}; // Basic blocks: addr -> size
-	std::set<u32> calls{}; // Set of called functions
 	std::set<u32> callers{};
 
 	struct iterator
