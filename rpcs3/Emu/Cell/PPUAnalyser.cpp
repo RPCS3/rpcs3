@@ -1705,7 +1705,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 	u32 per_instruction_bytes = 0;
 
-	for (auto&& [_, func] : as_rvalue(fmap))
+	for (auto&& [_, func] : fmap)
 	{
 		if (func.attr & ppu_attr::no_size && entry)
 		{
@@ -2080,8 +2080,10 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	}
 
 	// Convert map to vector (destructive)
-	for (auto&& [_, block] : as_rvalue(std::move(fmap)))
+	for (auto it = fmap.begin(); it != fmap.end(); it = fmap.begin())
 	{
+		ppu_function block = std::move(fmap.extract(it).mapped());
+
 		if (block.attr & ppu_attr::no_size && block.size > 4 && !used_fallback)
 		{
 			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
