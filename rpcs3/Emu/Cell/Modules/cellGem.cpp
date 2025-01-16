@@ -247,7 +247,7 @@ public:
 		u32 hue = 0;                                       // Tracking hue of the motion controller
 		f32 distance_mm{3000.0f};                          // Distance from the camera in mm
 		f32 radius{5.0f};                                  // Radius of the sphere in camera pixels
-		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
+		bool radius_valid = false;                         // If the radius and distance of the sphere was computed. Also used for visibility.
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
@@ -1598,7 +1598,7 @@ static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_contro
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
 }
 
-static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -1628,6 +1628,13 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	// Projected camera coordinates in mm
 	gem_image_state->projectionx = camera_x / controller.distance_mm;
 	gem_image_state->projectiony = camera_y / controller.distance_mm;
+
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
 
 	if (g_cfg.io.show_move_cursor)
 	{
@@ -1710,6 +1717,13 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[1] = q_y;
 		gem_state->quat[2] = q_z;
 		gem_state->quat[3] = q_w;
+	}
+
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
 	}
 
 	if (g_cfg.io.show_move_cursor)
@@ -2657,6 +2671,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	cellGem.warning("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	auto& gem = g_fxo->get<gem_config>();
+	std::scoped_lock lock(gem.mtx);
 
 	if (!gem.state)
 	{
@@ -2677,10 +2692,6 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
-		gem_image_state->r = controller.radius; // Radius in camera pixels
-		gem_image_state->distance = controller.distance_mm;
-		gem_image_state->visible = gem.is_controller_ready(gem_num);
-		gem_image_state->r_valid = controller.radius_valid;
 
 		switch (g_cfg.io.move)
 		{
@@ -2702,6 +2713,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		case move_handler::null:
 			fmt::throw_exception("Unreachable");
 		}
+
+		gem_image_state->r = controller.radius; // Radius in camera pixels
+		gem_image_state->distance = controller.distance_mm;
+		gem_image_state->visible = controller.radius_valid && gem.is_controller_ready(gem_num);
+		gem_image_state->r_valid = controller.radius_valid;
 	}
 
 	return CELL_OK;
