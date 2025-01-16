@@ -33,6 +33,7 @@
 #ifdef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wextern-c-compat"
 #endif
 #include <wolfssl/ssl.h>
 #ifdef __clang__
