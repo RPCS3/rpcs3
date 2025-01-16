@@ -1003,6 +1003,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		// Fixup TOCs
 		if (func.toc && func.toc != umax)
 		{
+			// Fixup callers
 			for (u32 addr : func.callers)
 			{
 				ppu_function& caller = fmap[addr];
@@ -1013,13 +1014,59 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 			}
 
-			for (u32 addr : func.calls)
+			// Fixup callees
+			auto for_callee = [&](u32 addr)
 			{
-				ppu_function& callee = fmap[addr];
+				if (addr < func.addr || addr >= func.addr + func.size)
+				{
+					return;
+				}
+
+				const u32 iaddr = addr;
+
+				const ppu_opcode_t op{get_ref<u32>(iaddr)};
+				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+
+				if (type == ppu_itype::B || type == ppu_itype::BC)
+				{
+					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
+
+					if (target >= start && target < end && (!op.aa || verify_func(iaddr)))
+					{
+						if (target < func.addr || target >= func.addr + func.size)
+						{
+							ppu_function& callee = fmap[target];
+
+							if (!callee.toc)
+							{
+								add_func(target, func.toc + func.trampoline, 0);
+							}
+						}
+					}
+				}
+			};
+
+			for (const auto& [addr, size] : func.blocks)
+			{
+				if (size)
+				{
+					for_callee(addr + size - 4);
+				}
+			}
+
+			if (func.size)
+			{
+				for_callee(func.addr + func.size - 4);
+			}
+
+			// For trampoline functions
+			if (func.single_target)
+			{
+				ppu_function& callee = fmap[func.single_target];
 
 				if (!callee.toc)
 				{
-					add_func(addr, func.toc + func.trampoline, 0);
+					add_func(func.single_target, func.toc + func.trampoline, 0);
 				}
 			}
 		}
@@ -1060,7 +1107,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x4;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = 0;
 					continue;
 				}
@@ -1088,7 +1135,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = 0;
 					continue;
 				}
@@ -1176,7 +1223,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x1C;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = toc_add;
 					continue;
 				}
@@ -1223,7 +1270,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = toc_add;
 					continue;
 				}
@@ -1562,7 +1609,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
-							func.calls.emplace(target);
 							add_func(target, func.toc ? func.toc + func.trampoline : 0, func.addr);
 						}
 					}
