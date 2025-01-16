@@ -115,14 +115,16 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 std::set<std::string> get_one_drive_paths()
 {
 	std::set<std::string> paths;
-	for (const char* key : { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
-	{
-		if (const char* env_path = std::getenv(key))
-		{
-			sys_log.notice("get_one_drive_paths: Found OneDrive env path: '%s' (key='%s')", env_path, key);
-			paths.insert(env_path);
-		}
-	}
+
+	// NOTE: Disabled. The environment variables can lead to false positives.
+	//for (const char* key : { "OneDrive", "OneDriveConsumer", "OneDriveCommercial" })
+	//{
+	//	if (const char* env_path = std::getenv(key))
+	//	{
+	//		sys_log.notice("get_one_drive_paths: Found OneDrive env path: '%s' (key='%s')", env_path, key);
+	//		paths.insert(env_path);
+	//	}
+	//}
 
 	for (const wchar_t* key : { L"Software\\Microsoft\\OneDrive\\Accounts\\Personal" })
 	{
@@ -135,7 +137,6 @@ std::set<std::string> get_one_drive_paths()
 		}
 
 		std::wstring path_buffer;
-		static_cast<DWORD>(path_buffer.size() - 1);
 		DWORD type = 0U;
 
 		do
@@ -154,7 +155,7 @@ std::set<std::string> get_one_drive_paths()
 
 		if (status != ERROR_SUCCESS)
 		{
-			sys_log.error("get_one_drive_paths: RegQueryValueExW failed: %s", fmt::win_error{static_cast<unsigned long>(status), nullptr});
+			sys_log.trace("get_one_drive_paths: RegQueryValueExW failed: %s", fmt::win_error{static_cast<unsigned long>(status), nullptr});
 			continue;
 		}
 
