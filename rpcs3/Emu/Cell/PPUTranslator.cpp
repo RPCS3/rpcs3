@@ -188,7 +188,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	// Instruction address is (m_addr + base)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
-	m_attr = m_info.attr + info.attr;
+	m_attr = m_info.attr;
 
 	m_function = m_module->getFunction(fmt::format("__0x%x", m_addr));
 
