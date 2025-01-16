@@ -548,12 +548,22 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
 
+	struct ppu_function_ext : ppu_function
+	{
+		//u32 stack_frame = 0;
+		u32 single_target = 0;
+		u32 trampoline = 0;
+		bs_t<ppu_attr> attr{};
+
+		std::set<u32> callers{};
+	};
+
 	// Known functions
-	std::map<u32, ppu_function> fmap;
+	std::map<u32, ppu_function_ext> fmap;
 	std::set<u32> known_functions;
 
 	// Function analysis workload
-	std::vector<std::reference_wrapper<ppu_function>> func_queue;
+	std::vector<std::reference_wrapper<ppu_function_ext>> func_queue;
 
 	// Known references (within segs, addr and value alignment = 4)
 	std::set<u32> addr_heap;
@@ -607,9 +617,9 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	};
 
 	// Register new function
-	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
+	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function_ext&
 	{
-		ppu_function& func = fmap[addr];
+		ppu_function_ext& func = fmap[addr];
 
 		if (caller)
 		{
@@ -998,7 +1008,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			return false;
 		}
 
-		ppu_function& func = func_queue[i];
+		ppu_function_ext& func = func_queue[i];
 
 		// Fixup TOCs
 		if (func.toc && func.toc != umax)
@@ -1006,7 +1016,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			// Fixup callers
 			for (u32 addr : func.callers)
 			{
-				ppu_function& caller = fmap[addr];
+				ppu_function_ext& caller = fmap[addr];
 
 				if (!caller.toc)
 				{
@@ -1035,7 +1045,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
-							ppu_function& callee = fmap[target];
+							ppu_function_ext& callee = fmap[target];
 
 							if (!callee.toc)
 							{
@@ -1062,7 +1072,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			// For trampoline functions
 			if (func.single_target)
 			{
-				ppu_function& callee = fmap[func.single_target];
+				ppu_function_ext& callee = fmap[func.single_target];
 
 				if (!callee.toc)
 				{
@@ -2128,7 +2138,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Convert map to vector (destructive)
 	for (auto it = fmap.begin(); it != fmap.end(); it = fmap.begin())
 	{
-		ppu_function block = std::move(fmap.extract(it).mapped());
+		ppu_function_ext block = std::move(fmap.extract(it).mapped());
 
 		if (block.attr & ppu_attr::no_size && block.size > 4 && !used_fallback)
 		{
@@ -2140,7 +2150,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				i.addr = addr;
 				i.size = 4;
 				i.toc  = block.toc;
-				i.attr = ppu_attr::no_size;
 			}
 
 			per_instruction_bytes += block.size;
