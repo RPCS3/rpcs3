@@ -72,6 +72,7 @@
     <ClCompile Include="Emu\RSX\VK\upscalers\fsr1\fsr_pass.cpp">
       <Filter>upscalers\fsr1</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKCommonPipelineLayout.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -173,6 +174,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h">
       <Filter>vkutils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKCommonPipelineLayout.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">
