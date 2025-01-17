@@ -41,6 +41,7 @@ namespace vk
 
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
+		rsx::simple_array<VkDescriptorPoolSize> m_descriptor_pool_sizes;
 		vk::descriptor_pool m_descriptor_pool;
 
 		u32 m_vertex_instruction_start = 0;
