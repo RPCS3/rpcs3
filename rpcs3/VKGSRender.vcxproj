@@ -36,6 +36,7 @@
     <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
     <ClInclude Include="Emu\RSX\VK\VKResourceManager.h" />
     <ClInclude Include="Emu\RSX\VK\VKShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommonPipelineLayout.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\buffer_object.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h" />
@@ -84,6 +85,7 @@
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommonPipelineLayout.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\barriers.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\buffer_object.cpp" />

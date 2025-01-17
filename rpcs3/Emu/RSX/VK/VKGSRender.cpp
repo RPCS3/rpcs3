@@ -5,6 +5,7 @@
 #include "VKAsyncScheduler.h"
 #include "VKCommandStream.h"
 #include "VKCommonDecompiler.h"
+#include "VKCommonPipelineLayout.h"
 #include "VKCompute.h"
 #include "VKGSRender.h"
 #include "VKHelpers.h"
@@ -401,148 +402,6 @@ namespace vk
 	}
 }
 
-namespace
-{
-	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
-	{
-		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
-
-		u32 idx = 0;
-
-		// Vertex stream, one stream for cacheable data, one stream for transient data
-		for (int i = 0; i < 3; i++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_state_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = binding_table.vertex_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.instancing_lookup_table_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.instancing_constants_buffer_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		for (auto binding = binding_table.textures_first_bind_slot;
-			 binding < binding_table.vertex_textures_first_bind_slot;
-			 binding++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[idx].binding = binding;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		for (int i = 0; i < rsx::limits::vertex_textures_count; i++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = binding_table.vertex_textures_first_bind_slot + i;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		ensure(idx == binding_table.total_descriptor_bindings);
-
-		std::array<VkPushConstantRange, 1> push_constants;
-		push_constants[0].offset = 0;
-		push_constants[0].size = 16;
-		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		if (vk::emulate_conditional_rendering())
-		{
-			// Conditional render toggle
-			push_constants[0].size = 20;
-		}
-
-		const auto set_layout = vk::descriptors::create_layout(bindings);
-
-		VkPipelineLayoutCreateInfo layout_info = {};
-		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layout_info.setLayoutCount = 1;
-		layout_info.pSetLayouts = &set_layout;
-		layout_info.pushConstantRangeCount = 1;
-		layout_info.pPushConstantRanges = push_constants.data();
-
-		VkPipelineLayout result;
-		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
-		return std::make_tuple(result, set_layout);
-	}
-}
-
 u64 VKGSRender::get_cycles()
 {
 	return thread_ctrl::get_cycles(static_cast<named_thread<VKGSRender>&>(*this));
@@ -633,7 +492,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
 
 	//Precalculated stuff
-	std::tie(m_pipeline_layout, m_descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+	std::tie(m_pipeline_layout, m_descriptor_layouts) = vk::get_common_pipeline_layout(*m_device);
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
