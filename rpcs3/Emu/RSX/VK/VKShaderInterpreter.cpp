@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKShaderInterpreter.h"
+#include "VKCommonPipelineLayout.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKGSRender.h"
@@ -233,77 +234,12 @@ namespace vk
 	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
 	{
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
+		auto bindings = get_common_binding_table();
+		u32 idx = ::size32(bindings);
 
-		u32 idx = 0;
+		bindings.resize(binding_table.total_descriptor_bindings);
 
-		// Vertex stream, one stream for cacheable data, one stream for transient data. Third stream contains vertex layout info
-		for (int i = 0; i < 3; i++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_state_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = binding_table.vertex_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
+		// Texture 1D array
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -313,6 +249,7 @@ namespace vk
 		m_fragment_textures_start = bindings[idx].binding;
 		idx++;
 
+		// Texture 2D array
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -321,6 +258,7 @@ namespace vk
 
 		idx++;
 
+		// Texture 3D array
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -329,6 +267,7 @@ namespace vk
 
 		idx++;
 
+		// Texture CUBE array
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		bindings[idx].descriptorCount = 16;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -337,6 +276,7 @@ namespace vk
 
 		idx++;
 
+		// Vertex texture array (2D only)
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		bindings[idx].descriptorCount = 4;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -345,6 +285,7 @@ namespace vk
 
 		idx++;
 
+		// Vertex program ucode block
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -354,6 +295,7 @@ namespace vk
 		m_vertex_instruction_start = bindings[idx].binding;
 		idx++;
 
+		// Fragment program ucode block
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -363,6 +305,22 @@ namespace vk
 		m_fragment_instruction_start = bindings[idx].binding;
 		idx++;
 		bindings.resize(idx);
+
+		// Compile descriptor pool sizes
+		const u32 num_ubo = bindings.reduce(0, FN(x + (y.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ? y.descriptorCount : 0)));
+		const u32 num_texel_buffers = bindings.reduce(0, FN(x + (y.descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ? y.descriptorCount : 0)));
+		const u32 num_combined_image_sampler = bindings.reduce(0, FN(x + (y.descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ? y.descriptorCount : 0)));
+		const u32 num_ssbo = bindings.reduce(0, FN(x + (y.descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ? y.descriptorCount : 0)));
+
+		ensure(num_ubo > 0 && num_texel_buffers > 0 && num_combined_image_sampler > 0 && num_ssbo > 0);
+
+		m_descriptor_pool_sizes =
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , num_ubo },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , num_texel_buffers },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , num_combined_image_sampler },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, num_ssbo }
+		};
 
 		std::array<VkPushConstantRange, 1> push_constants;
 		push_constants[0].offset = 0;
@@ -392,16 +350,7 @@ namespace vk
 	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
 	{
 		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
-
-		rsx::simple_array<VkDescriptorPoolSize> sizes =
-		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 },
-			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
-		};
-
-		m_descriptor_pool.create(dev, sizes, max_draw_calls);
+		m_descriptor_pool.create(dev, m_descriptor_pool_sizes, max_draw_calls);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -410,6 +359,7 @@ namespace vk
 		std::tie(m_shared_descriptor_layout, m_shared_pipeline_layout) = create_layout(dev);
 		create_descriptor_pools(dev);
 
+		rsx_log.notice("Building global vertex program interpreter...");
 		build_vs();
 		// TODO: Seed the cache
 	}
@@ -449,6 +399,7 @@ namespace vk
 		}
 		else
 		{
+			rsx_log.notice("Compiling FS...");
 			fs = build_fs(compiler_opt);
 		}
 
@@ -463,15 +414,17 @@ namespace vk
 		shader_stages[1].module = fs->get_handle();
 		shader_stages[1].pName = "main";
 
-		std::vector<VkDynamicState> dynamic_state_descriptors;
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_VIEWPORT);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_SCISSOR);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_LINE_WIDTH);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_BLEND_CONSTANTS);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
-		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+		std::vector<VkDynamicState> dynamic_state_descriptors =
+		{
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR,
+			VK_DYNAMIC_STATE_LINE_WIDTH,
+			VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+			VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+			VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+			VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+			VK_DYNAMIC_STATE_DEPTH_BIAS
+		};
 
 		if (vk::get_current_renderer()->get_depth_bounds_support())
 		{
@@ -502,6 +455,9 @@ namespace vk
 		VkPipelineColorBlendStateCreateInfo cs = properties.state.cs;
 		cs.pAttachments = properties.state.att_state;
 
+		VkPipelineTessellationStateCreateInfo ts = {};
+		ts.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
@@ -511,6 +467,7 @@ namespace vk
 		info.pMultisampleState = &ms;
 		info.pViewportState = &vp;
 		info.pDepthStencilState = &properties.state.ds;
+		info.pTessellationState = &ts;
 		info.stageCount = 2;
 		info.pStages = shader_stages;
 		info.pDynamicState = &dynamic_state_info;

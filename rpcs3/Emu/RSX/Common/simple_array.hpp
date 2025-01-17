@@ -427,5 +427,17 @@ namespace rsx
 			}
 			return result;
 		}
+
+		template <typename F, typename U>
+			requires std::is_invocable_r_v<U, F, const U&, const Ty&>
+		U reduce(U initial_value, F&& reducer) const
+		{
+			U accumulate = initial_value;
+			for (auto it = begin(); it != end(); ++it)
+			{
+				accumulate = reducer(accumulate, *it);
+			}
+			return accumulate;
+		}
 	};
 }
