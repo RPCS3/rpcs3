@@ -624,6 +624,14 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Register new function
 	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function_ext&
 	{
+		if (addr < start || addr >= end || s_ppu_itype.decode(*get_ptr<u32>(addr)) == ppu_itype::UNK)
+		{
+			if (!fmap.contains(addr))
+			{
+				ppu_log.error("Potentially invalid function has been added: 0x%x", addr);
+			}
+		}
+
 		ppu_function_ext& func = fmap[addr];
 
 		if (caller)
