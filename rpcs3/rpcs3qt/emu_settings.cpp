@@ -93,7 +93,7 @@ void emu_settings::LoadSettings(const std::string& title_id, bool create_config_
 	m_title_id = title_id;
 
 	// Create config path if necessary
-	fs::create_path(title_id.empty() ? fs::get_config_dir() : rpcs3::utils::get_custom_config_dir());
+	fs::create_path(title_id.empty() ? fs::get_config_dir(true) : rpcs3::utils::get_custom_config_dir());
 
 	// Load default config
 	auto [default_config, default_error] = yaml_load(g_cfg_defaults);
@@ -113,7 +113,7 @@ void emu_settings::LoadSettings(const std::string& title_id, bool create_config_
 	if (create_config_from_global)
 	{
 		// Add global config
-		const std::string global_config_path = fs::get_config_dir() + "config.yml";
+		const std::string global_config_path = fs::get_config_dir(true) + "config.yml";
 		fs::g_tls_error = fs::error::ok;
 		fs::file config(global_config_path, fs::read + fs::create);
 		auto [global_config, global_error] = yaml_load(config ? config.to_string() : "");

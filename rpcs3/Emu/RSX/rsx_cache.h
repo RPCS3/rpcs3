@@ -400,6 +400,7 @@ namespace rsx
 			fp.texture_state.multisampled_textures = data.fp_multisampled_textures;
 			fp.texcoord_control_mask = data.fp_texcoord_control;
 			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
+			fp.mrt_buffers_count = data.fp_mrt_count;
 
 			return result;
 		}

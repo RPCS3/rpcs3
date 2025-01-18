@@ -2676,8 +2676,8 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		const std::string archived_path = fs::get_cache_dir() + "RPCS3.log.gz";
-		const std::string raw_file_path = fs::get_cache_dir() + "RPCS3.log";
+		const std::string archived_path = fs::get_log_dir() + "RPCS3.log.gz";
+		const std::string raw_file_path = fs::get_log_dir() + "RPCS3.log";
 
 		fs::stat_t raw_stat{};
 		fs::stat_t archived_stat{};

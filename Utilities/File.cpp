@@ -2021,7 +2021,7 @@ std::string fs::get_executable_dir()
 	return s_exe_dir;
 }
 
-const std::string& fs::get_config_dir()
+const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirectory)
 {
 	// Use magic static
 	static const std::string s_dir = []
@@ -2103,6 +2103,14 @@ const std::string& fs::get_config_dir()
 		return dir;
 	}();
 
+#ifdef _WIN32
+	if (get_config_subdirectory)
+	{
+		static const std::string subdir = s_dir + "config/";
+		return subdir;
+	}
+#endif
+
 	return s_dir;
 }
 
@@ -2142,6 +2150,16 @@ const std::string& fs::get_cache_dir()
 	}();
 
 	return s_dir;
+}
+
+const std::string& fs::get_log_dir()
+{
+#ifdef _WIN32
+	static const std::string s_dir = fs::get_config_dir() + "log/";
+	return s_dir;
+#else
+	return fs::get_cache_dir();
+#endif
 }
 
 const std::string& fs::get_temp_dir()

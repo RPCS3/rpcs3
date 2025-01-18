@@ -96,7 +96,7 @@ bool raw_mice_config::load()
 	m_mutex.lock();
 
 	bool result = false;
-	const std::string cfg_name = fmt::format("%sconfig/%s.yml", fs::get_config_dir(), cfg_id);
+	const std::string cfg_name = fmt::format("%s%s.yml", fs::get_config_dir(true), cfg_id);
 	cfg_log.notice("Loading %s config: %s", cfg_id, cfg_name);
 
 	from_default();
@@ -123,7 +123,7 @@ void raw_mice_config::save()
 {
 	std::lock_guard lock(m_mutex);
 
-	const std::string cfg_name = fmt::format("%sconfig/%s.yml", fs::get_config_dir(), cfg_id);
+	const std::string cfg_name = fmt::format("%s%s.yml", fs::get_config_dir(true), cfg_id);
 	cfg_log.notice("Saving %s config to '%s'", cfg_id, cfg_name);
 
 	if (!fs::create_path(fs::get_parent_dir(cfg_name)))

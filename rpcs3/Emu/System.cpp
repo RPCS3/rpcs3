@@ -347,9 +347,40 @@ void Emulator::Init()
 {
 	jit_runtime::initialize();
 
+	const std::string emu_dir = rpcs3::utils::get_emu_dir();
+	auto make_path_verbose = [&](const std::string& path, bool must_exist_outside_emu_dir)
+	{
+		if (fs::is_dir(path))
+		{
+			return true;
+		}
+
+		if (must_exist_outside_emu_dir)
+		{
+			const std::string parent = fs::get_parent_dir(path);
+			const std::string emu_dir_no_delim = emu_dir.substr(0, emu_dir.find_last_not_of(fs::delim) + 1);
+
+			if (parent != emu_dir_no_delim && GetCallbacks().resolve_path(parent) != GetCallbacks().resolve_path(emu_dir_no_delim))
+			{
+				sys_log.fatal("Cannot use '%s' for Virtual File System because it does not exist.\nPlease specify an existing and writable directory path in Toolbar -> Manage -> Virtual File System.", path);
+				return false;
+			}
+		}
+
+		if (!fs::create_path(path))
+		{
+			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
+			return false;
+		}
+
+		return true;
+	};
+
 	if (!g_tty)
 	{
-		const auto tty_path = fs::get_cache_dir() + "TTY.log";
+		make_path_verbose(fs::get_log_dir(), true);
+
+		const auto tty_path = fs::get_log_dir() + "TTY.log";
 		g_tty.open(tty_path, fs::rewrite + fs::append);
 
 		if (!g_tty)
@@ -374,7 +405,22 @@ void Emulator::Init()
 
 	g_cfg_defaults = g_cfg.to_string();
 
-	const std::string cfg_path = fs::get_config_dir() + "/config.yml";
+	const std::string cfg_path = fs::get_config_dir(true) + "config.yml";
+
+	// Move file from deprecated location to new location
+#ifdef _WIN32
+	const std::string old_path = fs::get_config_dir(false) + "config.yml";
+
+	if (fs::is_file(old_path))
+	{
+		sys_log.notice("Found deprecated config.yml file: '%s'", old_path);
+
+		if (!fs::rename(old_path, cfg_path, false))
+		{
+			sys_log.error("Failed to move '%s' to '%s' (error='%s')", old_path, cfg_path, fs::g_tls_error);
+		}
+	}
+#endif
 
 	// Save new global config if it doesn't exist or is empty
 	if (fs::stat_t info{}; !fs::get_stat(cfg_path, info) || info.size == 0)
@@ -387,7 +433,6 @@ void Emulator::Init()
 	sys_log.notice("Using VFS config:\n%s", g_cfg_vfs.to_string());
 
 	// Mount all devices
-	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string elf_dir = fs::get_parent_dir(m_path);
 	const std::string dev_bdvd = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, emu_dir); // Only used for make_path
 	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
@@ -487,34 +532,6 @@ void Emulator::Init()
 	g_backup_cfg.from_string(g_cfg.to_string());
 
 	// Create directories (can be disabled if necessary)
-	auto make_path_verbose = [&](const std::string& path, bool must_exist_outside_emu_dir)
-	{
-		if (fs::is_dir(path))
-		{
-			return true;
-		}
-
-		if (must_exist_outside_emu_dir)
-		{
-			const std::string parent = fs::get_parent_dir(path);
-			const std::string emu_dir_no_delim = emu_dir.substr(0, emu_dir.find_last_not_of(fs::delim) + 1);
-
-			if (parent != emu_dir_no_delim && GetCallbacks().resolve_path(parent) != GetCallbacks().resolve_path(emu_dir_no_delim))
-			{
-				sys_log.fatal("Cannot use '%s' for Virtual File System because it does not exist.\nPlease specify an existing and writable directory path in Toolbar -> Manage -> Virtual File System.", path);
-				return false;
-			}
-		}
-
-		if (!fs::create_path(path))
-		{
-			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
-			return false;
-		}
-
-		return true;
-	};
-
 	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
 	const std::string user_path = dev_hdd0 + "home/" + m_usr + "/localusername";
 
@@ -3621,7 +3638,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (usz attempted_read_size = utils::sub_saturate<usz>(g_tty.pos(), m_tty_file_init_pos))
 			{
-				if (fs::file tty_read_fd{fs::get_cache_dir() + "TTY.log"})
+				if (fs::file tty_read_fd{fs::get_log_dir() + "TTY.log"})
 				{
 					// Enforce an arbitrary limit for now to avoid OOM in case the guest code has bombarded TTY
 					// 3MB, this should be enough
@@ -4466,7 +4483,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 
 	if (title_id.empty())
 	{
-		config_name = fs::get_config_dir() + "/config.yml";
+		config_name = fs::get_config_dir(true) + "config.yml";
 	}
 	else
 	{
