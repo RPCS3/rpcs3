@@ -86,8 +86,11 @@ layout(location=0) in vec4 in_regs[16];
 #define CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT 0xe
 #define CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS 0x40
 
-#define GET_BITS(word, offset, count) bitfieldExtract(inst.words[word], offset, count)
-#define TEST_BIT(word, offset) (GET_BITS(word, offset, 1) > 0)
+#define GET_BITS(bitfield, offset, count) bitfieldExtract(bitfield, offset, count)
+#define TEST_BIT(bitfield, offset) (GET_BITS(bitfield, offset, 1) > 0)
+
+#define GET_INST_BITS(word, offset, count) GET_BITS(inst.words[word], offset, count)
+#define TEST_INST_BIT(word, offset) (GET_INST_BITS(word, offset, 1) > 0)
 
 #define select mix
 #define reg_mov(d, s, m) d = select(d, s, m)
@@ -174,7 +177,7 @@ int counter = 0;
 
 vec4 read_src(const in int index)
 {
-	ur0 = GET_BITS(index + 1, 0, 2);
+	ur0 = GET_INST_BITS(index + 1, 0, 2);
 
 	switch (ur0)
 	{
@@ -183,14 +186,14 @@ vec4 read_src(const in int index)
 		switch(index)
 		{
 		case 0:
-			ur1 = GET_BITS(1, 2, 6); break;
+			ur1 = GET_INST_BITS(1, 2, 6); break;
 		case 1:
-			ur1 = GET_BITS(2, 2, 6); break;
+			ur1 = GET_INST_BITS(2, 2, 6); break;
 		case 2:
-			ur1 = GET_BITS(3, 2, 6); break;
+			ur1 = GET_INST_BITS(3, 2, 6); break;
 		}
 
-		if (TEST_BIT(index + 1, 8))
+		if (TEST_INST_BIT(index + 1, 8))
 		{
 			vr0 = regs16[ur1];
 		}
@@ -202,7 +205,7 @@ vec4 read_src(const in int index)
 	}
 	case RSX_FP_REGISTER_TYPE_INPUT:
 	{
-		ur1 = GET_BITS(0, 13, 4);
+		ur1 = GET_INST_BITS(0, 13, 4);
 		switch (ur1)
 		{
 		case 0:
@@ -235,27 +238,27 @@ vec4 read_src(const in int index)
 	}
 	}
 
-	ur1 = GET_BITS(index + 1, 9, 8);
+	ur1 = GET_INST_BITS(index + 1, 9, 8);
 	vr0 = shuffle(vr0, ur1);
 
 	// abs
 	if (index == 0)
 	{
-		if (TEST_BIT(1, 29)) vr0 = abs(vr0);
+		if (TEST_INST_BIT(1, 29)) vr0 = abs(vr0);
 	}
 	else
 	{
 		ur1 = index + 1;
-		if (TEST_BIT(ur1, 18)) vr0 = abs(vr0);
+		if (TEST_INST_BIT(ur1, 18)) vr0 = abs(vr0);
 	}
 
 	// neg
-	return (TEST_BIT(index + 1, 17))? -vr0 : vr0;
+	return (TEST_INST_BIT(index + 1, 17))? -vr0 : vr0;
 }
 
 vec4 read_cond()
 {
-	return shuffle(cc[GET_BITS(1, 31, 1)], GET_BITS(1, 21, 8));
+	return shuffle(cc[GET_INST_BITS(1, 31, 1)], GET_INST_BITS(1, 21, 8));
 }
 
 bvec4 decode_cond(const in uint mode, const in vec4 cond)
@@ -283,7 +286,7 @@ bvec4 decode_cond(const in uint mode, const in vec4 cond)
 
 bool check_cond()
 {
-	ur0 = GET_BITS(1, 18, 3);
+	ur0 = GET_INST_BITS(1, 18, 3);
 	if (ur0 == 0x7)
 	{
 		return true;
@@ -351,14 +354,14 @@ vec3 _texcoord_xform(const in vec3 coord, const in sampler_info params)
 
 vec4 _texture(in vec4 coord, float bias)
 {
-	ur0 = GET_BITS(0, 17, 4);
+	ur0 = GET_INST_BITS(0, 17, 4);
 	if (!IS_TEXTURE_RESIDENT(ur0))
 	{
 		return vr_zero;
 	}
 
 	ur1 = ur0 + ur0;
-	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
+	const uint type = GET_BITS(texture_control, int(ur1), 2);
 
 	switch (type)
 	{
@@ -380,7 +383,7 @@ vec4 _texture(in vec4 coord, float bias)
 		break;
 	}
 
-	if (TEST_BIT(0, 21))
+	if (TEST_INST_BIT(0, 21))
 	{
 		vr0 = vr0 * 2. - 1.;
 	}
@@ -390,14 +393,14 @@ vec4 _texture(in vec4 coord, float bias)
 
 vec4 _textureLod(in vec4 coord, float lod)
 {
-	ur0 = GET_BITS(0, 17, 4);
+	ur0 = GET_INST_BITS(0, 17, 4);
 	if (!IS_TEXTURE_RESIDENT(ur0))
 	{
 		return vr_zero;
 	}
 
 	ur1 = ur0 + ur0;
-	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
+	const uint type = GET_BITS(texture_control, int(ur1), 2);
 
 	switch (type)
 	{
@@ -419,7 +422,7 @@ vec4 _textureLod(in vec4 coord, float lod)
 		break;
 	}
 
-	if (TEST_BIT(0, 21))
+	if (TEST_INST_BIT(0, 21))
 	{
 		// Normal-expand, v = 2v - 1
 		vr0 += vr0;
@@ -436,27 +439,27 @@ void write_dst(const in vec4 value)
 	uvr0 = uvec4(uint(1 << 9), uint(1 << 10), uint(1 << 11), uint(1 << 12));
 	bvr0 = bvec4(uvr0 & inst.words.xxxx);
 
-	if (TEST_BIT(0, 8)) // SET COND
+	if (TEST_INST_BIT(0, 8)) // SET COND
 	{
-		ur0 = GET_BITS(1, 30, 1);
+		ur0 = GET_INST_BITS(1, 30, 1);
 		reg_mov(cc[ur0], value, bvr0);
 	}
 
-	if (TEST_BIT(0, 30)) // NO DEST
+	if (TEST_INST_BIT(0, 30)) // NO DEST
 	{
 		return;
 	}
 
-	ur1 = GET_BITS(2, 28, 3);
+	ur1 = GET_INST_BITS(2, 28, 3);
 	sr0 = modifier_scale[ur1];
 	vr0 = value * sr0;
 
-	if (TEST_BIT(0, 31)) // SAT
+	if (TEST_INST_BIT(0, 31)) // SAT
 	{
 		vr0 = clamp(vr0, 0, 1);
 	}
 
-	ur0 = GET_BITS(1, 18, 3);
+	ur0 = GET_INST_BITS(1, 18, 3);
 	if (ur0 != 0x7)
 	{
 		vr1 = read_cond();
@@ -464,8 +467,8 @@ void write_dst(const in vec4 value)
 		bvr0 = bvec4(uvec4(bvr0) & uvec4(bvr1));
 	}
 
-	ur1 = GET_BITS(0, 1, 6);
-	if (TEST_BIT(0, 7))
+	ur1 = GET_INST_BITS(0, 1, 6);
+	if (TEST_INST_BIT(0, 7))
 	{
 		reg_mov(regs16[ur1], vr0, bvr0);
 	}
@@ -481,7 +484,7 @@ void initialize()
 	// NOTE: Register count is the number of 'full' registers that will be consumed. Hardware seems to do some renaming.
 	// NOTE: Attempting to zero-initialize all the registers will slow things to a crawl!
 
-	uint register_count = bitfieldExtract(shader_control, 24, 6);
+	uint register_count = GET_BITS(shader_control, 24, 6);
 	ur0 = 0, ur1 = 0;
 	while (register_count > 0)
 	{
@@ -587,11 +590,11 @@ void main()
 			((fp_instructions[ip] << 8) & uvec4(0xFF00FF00)) |
 			((fp_instructions[ip] >> 8) & uvec4(0x00FF00FF));
 
-		inst.opcode = GET_BITS(0, 24, 6);
-		inst.end = TEST_BIT(0, 0);
+		inst.opcode = GET_INST_BITS(0, 24, 6);
+		inst.end = TEST_INST_BIT(0, 0);
 
 #ifdef WITH_FLOW_CTRL
-		if (TEST_BIT(2, 31))
+		if (TEST_INST_BIT(2, 31))
 		{
 			// Flow control
 			switch (inst.opcode | (1 << 6))
@@ -623,8 +626,8 @@ void main()
 			case RSX_FP_OPCODE_REP:
 				if (check_cond())
 				{
-					counter = int(GET_BITS(2, 2, 8) - GET_BITS(2, 10, 8));
-					counter /= int(GET_BITS(2, 19, 8));
+					counter = int(GET_INST_BITS(2, 2, 8) - GET_INST_BITS(2, 10, 8));
+					counter /= int(GET_INST_BITS(2, 19, 8));
 					loop_start_addr = ip + 1;
 					loop_end_addr = int(inst.words.w >> 2);
 				}
