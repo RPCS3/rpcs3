@@ -1089,9 +1089,15 @@ error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, 
 
 	sys_prx.warning("_sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", name, flags, pOpt);
 
+	std::string module_name;
+	if (!vm::read_string(name.addr(), 28, module_name))
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto [prx, id] = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx) -> u32
 	{
-		if (strncmp(name.get_ptr(), prx.module_info_name, sizeof(prx.module_info_name)) == 0)
+		if (strncmp(module_name.c_str(), prx.module_info_name, sizeof(prx.module_info_name)) == 0)
 		{
 			return id;
 		}
