@@ -573,7 +573,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		addr_heap.emplace(entry);
 	}
 
-	auto verify_func = [&](u32 addr)
+	auto verify_ref = [&](u32 addr)
 	{
 		if (entry)
 		{
@@ -582,9 +582,14 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		}
 
 		// Check if the storage address exists within relocations
+		constexpr auto compare = [](const ppu_reloc& a, u32 addr) { return a.addr < addr; };
+		auto it = std::lower_bound(this->relocs.begin(), this->relocs.end(), (addr & -8), compare);
+		auto end = std::lower_bound(it, this->relocs.end(), (addr & -8) + 8, compare);
 
-		for (auto& rel : this->relocs)
+		for (; it != end; it++)
 		{
+			const ppu_reloc& rel = *it;
+
 			if ((rel.addr & -8) == (addr & -8))
 			{
 				if (rel.type != 38 && rel.type != 44 && (rel.addr & -4) != (addr & -4))
@@ -677,7 +682,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			for (; _ptr <= seg_end;)
 			{
-				if (ptr[1] == toc && FN(x >= start && x < end && x % 4 == 0)(ptr[0]) && verify_func(_ptr.addr()))
+				if (ptr[1] == toc && FN(x >= start && x < end && x % 4 == 0)(ptr[0]) && verify_ref(_ptr.addr()))
 				{
 					// New function
 					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", _ptr, ptr[0], ptr[1]);
@@ -712,7 +717,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		{
 			const u32 value = *ptr;
 
-			if (value % 4)
+			if (value % 4 || !verify_ref(_ptr.addr()))
 			{
 				continue;
 			}
@@ -771,7 +776,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				break;
 			}
 
-			if (addr % 4 || addr < start || addr >= end || !verify_func(_ptr.addr()))
+			if (addr % 4 || addr < start || addr >= end || !verify_ref(_ptr.addr()))
 			{
 				sec_end.set(0);
 				break;
@@ -982,7 +987,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			const ppu_opcode_t op{*ptr};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_func(iaddr)))
+			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_ref(iaddr)))
 			{
 				const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
@@ -1041,7 +1046,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target >= start && target < end && (!op.aa || verify_func(iaddr)))
+					if (target >= start && target < end && (!op.aa || verify_ref(iaddr)))
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
@@ -1104,7 +1109,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					continue;
 				}
 
-				if (target >= start && target < end && (~ptr[0] & 0x2 || verify_func(_ptr.addr())))
+				if (target >= start && target < end && (~ptr[0] & 0x2 || verify_ref(_ptr.addr())))
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
 
@@ -1132,7 +1137,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Simple trampoline
 				const u32 target = (ptr[0] << 16) + ppu_opcode_t{ptr[1]}.simm16;
 
-				if (target >= start && target < end && verify_func(_ptr.addr()))
+				if (target >= start && target < end && verify_ref(_ptr.addr()))
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
 
@@ -1202,7 +1207,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
 				constexpr u32 func_size = 0x1C;
 
-				if (target >= start && target < end && verify_func((_ptr + 3).addr()) && target - func.addr >= func_size)
+				if (target >= start && target < end && verify_ref((_ptr + 3).addr()) && target - func.addr >= func_size)
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1249,7 +1254,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
 				const u32 target = (ptr[3] & 0x2 ? 0 : (_ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
-				if (target >= start && target < end && (~ptr[3] & 0x2 || verify_func((_ptr + 3).addr())))
+				if (target >= start && target < end && (~ptr[3] & 0x2 || verify_ref((_ptr + 3).addr())))
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1615,7 +1620,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target >= start && target < end && (!op.aa || verify_func(iaddr)))
+					if (target >= start && target < end && (!op.aa || verify_ref(iaddr)))
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
