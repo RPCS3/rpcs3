@@ -1034,7 +1034,7 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		return CELL_EFAULT;
 	}
 
-	if (pOpt->info->size != pOpt->info.size())
+	if (pOpt->info->size != pOpt->info.size() && pOpt->info_v2->size != pOpt->info_v2.size())
 	{
 		return CELL_EINVAL;
 	}
@@ -1072,6 +1072,14 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		pOpt->info->segments_num = i;
 	}
 
+	if (pOpt->info_v2->size == pOpt->info_v2.size())
+	{
+		pOpt->info_v2->exports_addr = prx->exports_start;
+		pOpt->info_v2->exports_size = prx->exports_end - prx->exports_start;
+		pOpt->info_v2->imports_addr = prx->imports_start;
+		pOpt->info_v2->imports_size = prx->imports_end - prx->imports_start;
+	}
+
 	return CELL_OK;
 }
 
@@ -1079,11 +1087,30 @@ error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, 
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_prx.todo("_sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", name, flags, pOpt);
+	sys_prx.warning("_sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", name, flags, pOpt);
 
-	//if (realName == "?") ...
+	std::string module_name;
+	if (!vm::read_string(name.addr(), 28, module_name))
+	{
+		return CELL_EINVAL;
+	}
 
-	return not_an_error(CELL_PRX_ERROR_UNKNOWN_MODULE);
+	const auto [prx, id] = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx) -> u32
+	{
+		if (strncmp(module_name.c_str(), prx.module_info_name, sizeof(prx.module_info_name)) == 0)
+		{
+			return id;
+		}
+
+		return 0;
+	});
+
+	if (!id)
+	{
+		return CELL_PRX_ERROR_UNKNOWN_MODULE;
+	}
+
+	return not_an_error(id);
 }
 
 error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)

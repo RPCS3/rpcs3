@@ -76,10 +76,22 @@ struct sys_prx_module_info_t
 	be_t<u32> segments_num; // 0x44
 };
 
+struct sys_prx_module_info_v2_t : sys_prx_module_info_t
+{
+	be_t<u32> exports_addr; // 0x48
+	be_t<u32> exports_size; // 0x4C
+	be_t<u32> imports_addr; // 0x50
+	be_t<u32> imports_size; // 0x54
+};
+
 struct sys_prx_module_info_option_t
 {
 	be_t<u64> size; // 0x10
-	vm::bptr<sys_prx_module_info_t> info;
+	union
+	{
+		vm::bptr<sys_prx_module_info_t> info;
+		vm::bptr<sys_prx_module_info_v2_t> info_v2;
+	};
 };
 
 struct sys_prx_start_module_option_t
@@ -191,6 +203,9 @@ struct lv2_prx final : ppu_module<lv2_obj>
 	char module_info_name[28]{};
 	u8 module_info_version[2]{};
 	be_t<u16> module_info_attributes{};
+
+	u32 imports_start = umax;
+	u32 imports_end = 0;
 
 	u32 exports_start = umax;
 	u32 exports_end = 0;

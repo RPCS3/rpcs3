@@ -221,7 +221,7 @@ error_code sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<s
 	opt->info = info;
 
 	// Call the syscall
-	return _sys_prx_get_module_info(ppu, id, 0, opt);
+	return _sys_prx_get_module_info(ppu, id, flags, opt);
 }
 
 error_code sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)

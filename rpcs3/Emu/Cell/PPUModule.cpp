@@ -1816,6 +1816,9 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 		prx->module_info_version[1] = lib_info->version[1];
 		prx->module_info_attributes = lib_info->attributes;
 
+		prx->imports_start = lib_info->imports_start;
+		prx->imports_end = lib_info->imports_end;
+
 		prx->exports_start = lib_info->exports_start;
 		prx->exports_end = lib_info->exports_end;
 
