@@ -1890,6 +1890,12 @@ public:
 					// Initialize registers and build PHI nodes if necessary
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
+						if (bb.reg_const[i])
+						{
+							m_block->reg[i] = make_const_vector(v128::from32p(bb.reg_val32[i]), get_type<u32[4]>());
+							continue;
+						}
+
 						const u32 src = m_finfo->fn ? bb.reg_origin_abs[i] : bb.reg_origin[i];
 
 						if (src > 0x40000)
