@@ -248,7 +248,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_infinity  = false;
-	bool found_dimension = false;	
+	bool found_dimension = false;
 	bool found_usj       = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
@@ -844,6 +844,7 @@ void usb_handler_thread::connect_usb_device(std::shared_ptr<usb_device> dev, boo
 			handled_devices.emplace(dev->assigned_number, std::pair(UsbInternalDevice{0x00, narrow<u8>(dev->assigned_number), 0x02, 0x40}, dev));
 			send_message(SYS_USBD_ATTACH, dev->assigned_number);
 			sys_usbd.success("USB device(VID=0x%04x, PID=0x%04x) matches up with LDD <%s>, assigned as handled_device=0x%x", dev->device._device.idVendor, dev->device._device.idProduct, name, dev->assigned_number);
+			return;
 		}
 	}
 }
