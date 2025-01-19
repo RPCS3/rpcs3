@@ -678,7 +678,7 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 
 		write_to_ptr(output.crc32, crcCalc);
 
-		return hid_write_control(device->hidDevice, &output.report_id, sizeof(ds4_output_report_bt));
+		return hid_write(device->hidDevice, &output.report_id, sizeof(ds4_output_report_bt));
 	}
 
 	ds4_output_report_usb output{};
