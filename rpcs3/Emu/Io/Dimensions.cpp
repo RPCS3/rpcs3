@@ -573,6 +573,16 @@ usb_device_dimensions::~usb_device_dimensions()
 {
 }
 
+std::shared_ptr<usb_device> usb_device_dimensions::make_instance(u32, const std::array<u8, 7>& location)
+{
+	return std::make_shared<usb_device_dimensions>(location);
+}
+
+u16 usb_device_dimensions::get_num_emu_devices()
+{
+	return 1;
+}
+
 void usb_device_dimensions::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
