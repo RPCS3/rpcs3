@@ -4,6 +4,7 @@
 #include "GHLtar.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Io/ghltar_config.h"
+#include "Emu/system_config.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(ghltar_log, "GHLTAR");
@@ -50,6 +51,16 @@ usb_device_ghltar::usb_device_ghltar(u32 controller_index, const std::array<u8, 
 
 usb_device_ghltar::~usb_device_ghltar()
 {
+}
+
+std::shared_ptr<usb_device> usb_device_ghltar::make_instance(u32 controller_index, const std::array<u8, 7>& location)
+{
+	return std::make_shared<usb_device_ghltar>(controller_index, location);
+}
+
+u16 usb_device_ghltar::get_num_emu_devices()
+{
+	return static_cast<u16>(g_cfg.io.ghltar.get());
 }
 
 void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)

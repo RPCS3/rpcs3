@@ -637,6 +637,8 @@ void pad_thread::UnregisterLddPad(u32 handle)
 	ensure(handle < m_pads.size());
 
 	m_pads[handle]->ldd = false;
+	m_pads[handle]->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+	m_pads[handle]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 	num_ldd_pad--;
 }
