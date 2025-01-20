@@ -21,7 +21,6 @@ void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case ppu_attr::known_addr: return "known_addr";
 		case ppu_attr::known_size: return "known_size";
 		case ppu_attr::no_return: return "no_return";
 		case ppu_attr::no_size: return "no_size";
@@ -549,12 +548,22 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
 
+	struct ppu_function_ext : ppu_function
+	{
+		//u32 stack_frame = 0;
+		u32 single_target = 0;
+		u32 trampoline = 0;
+		bs_t<ppu_attr> attr{};
+
+		std::set<u32> callers{};
+	};
+
 	// Known functions
-	std::map<u32, ppu_function> fmap;
+	std::map<u32, ppu_function_ext> fmap;
 	std::set<u32> known_functions;
 
 	// Function analysis workload
-	std::vector<std::reference_wrapper<ppu_function>> func_queue;
+	std::vector<std::reference_wrapper<ppu_function_ext>> func_queue;
 
 	// Known references (within segs, addr and value alignment = 4)
 	std::set<u32> addr_heap;
@@ -564,7 +573,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		addr_heap.emplace(entry);
 	}
 
-	auto verify_func = [&](u32 addr)
+	auto verify_ref = [&](u32 addr)
 	{
 		if (entry)
 		{
@@ -573,9 +582,14 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		}
 
 		// Check if the storage address exists within relocations
+		constexpr auto compare = [](const ppu_reloc& a, u32 addr) { return a.addr < addr; };
+		auto it = std::lower_bound(this->relocs.begin(), this->relocs.end(), (addr & -8), compare);
+		auto end = std::lower_bound(it, this->relocs.end(), (addr & -8) + 8, compare);
 
-		for (auto& rel : this->relocs)
+		for (; it != end; it++)
 		{
+			const ppu_reloc& rel = *it;
+
 			if ((rel.addr & -8) == (addr & -8))
 			{
 				if (rel.type != 38 && rel.type != 44 && (rel.addr & -4) != (addr & -4))
@@ -608,9 +622,17 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	};
 
 	// Register new function
-	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function&
+	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function_ext&
 	{
-		ppu_function& func = fmap[addr];
+		if (addr < start || addr >= end || s_ppu_itype.decode(*get_ptr<u32>(addr)) == ppu_itype::UNK)
+		{
+			if (!fmap.contains(addr))
+			{
+				ppu_log.error("Potentially invalid function has been added: 0x%x", addr);
+			}
+		}
+
+		ppu_function_ext& func = fmap[addr];
 
 		if (caller)
 		{
@@ -668,7 +690,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			for (; _ptr <= seg_end;)
 			{
-				if (ptr[1] == toc && FN(x >= start && x < end && x % 4 == 0)(ptr[0]) && verify_func(_ptr.addr()))
+				if (ptr[1] == toc && FN(x >= start && x < end && x % 4 == 0)(ptr[0]) && verify_ref(_ptr.addr()))
 				{
 					// New function
 					ppu_log.trace("OPD*: [0x%x] 0x%x (TOC=0x%x)", _ptr, ptr[0], ptr[1]);
@@ -703,7 +725,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		{
 			const u32 value = *ptr;
 
-			if (value % 4)
+			if (value % 4 || !verify_ref(_ptr.addr()))
 			{
 				continue;
 			}
@@ -762,7 +784,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				break;
 			}
 
-			if (addr % 4 || addr < start || addr >= end || !verify_func(_ptr.addr()))
+			if (addr % 4 || addr < start || addr >= end || !verify_ref(_ptr.addr()))
 			{
 				sec_end.set(0);
 				break;
@@ -786,7 +808,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			TOCs.emplace(toc);
 			auto& func = add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
-			func.attr += ppu_attr::known_addr;
 			known_functions.emplace(addr);
 		}
 	}
@@ -924,7 +945,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 
 				//auto& func = add_func(addr, 0, 0);
-				//func.attr += ppu_attr::known_addr;
 				//func.attr += ppu_attr::known_size;
 				//func.size = size;
 				//known_functions.emplace(func);
@@ -975,7 +995,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			const ppu_opcode_t op{*ptr};
 			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
 
-			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_func(iaddr)))
+			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_ref(iaddr)))
 			{
 				const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
@@ -1001,14 +1021,15 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			return false;
 		}
 
-		ppu_function& func = func_queue[i];
+		ppu_function_ext& func = func_queue[i];
 
 		// Fixup TOCs
 		if (func.toc && func.toc != umax)
 		{
+			// Fixup callers
 			for (u32 addr : func.callers)
 			{
-				ppu_function& caller = fmap[addr];
+				ppu_function_ext& caller = fmap[addr];
 
 				if (!caller.toc)
 				{
@@ -1016,13 +1037,52 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 			}
 
-			for (u32 addr : func.calls)
+			// Fixup callees
+			for (const auto [addr, _] : func.blocks)
 			{
-				ppu_function& callee = fmap[addr];
+				if (addr < func.addr || addr > func.addr + func.size)
+				{
+					continue;
+				}
+
+				u32 iaddr = addr;
+
+				if (func.addr != addr && addr != func.addr + func.size - 4)
+				{
+					// Branch instruction is expected before the instruction
+					iaddr -= 4;
+				}
+
+				const ppu_opcode_t op{get_ref<u32>(iaddr)};
+				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+
+				if (type == ppu_itype::B || type == ppu_itype::BC)
+				{
+					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
+
+					if (target >= start && target < end && (!op.aa || verify_ref(iaddr)))
+					{
+						if (target < func.addr || target >= func.addr + func.size)
+						{
+							ppu_function_ext& callee = fmap[target];
+
+							if (!callee.toc)
+							{
+								add_func(target, func.toc + func.trampoline, 0);
+							}
+						}
+					}
+				}
+			}
+
+			// For trampoline functions
+			if (func.single_target)
+			{
+				ppu_function_ext& callee = fmap[func.single_target];
 
 				if (!callee.toc)
 				{
-					add_func(addr, func.toc + func.trampoline, 0);
+					add_func(func.single_target, func.toc + func.trampoline, 0);
 				}
 			}
 		}
@@ -1050,7 +1110,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					continue;
 				}
 
-				if (target >= start && target < end && (~ptr[0] & 0x2 || verify_func(_ptr.addr())))
+				if (target >= start && target < end && (~ptr[0] & 0x2 || verify_ref(_ptr.addr())))
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
 
@@ -1063,7 +1123,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x4;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
 					func.trampoline = 0;
 					continue;
 				}
@@ -1078,7 +1137,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Simple trampoline
 				const u32 target = (ptr[0] << 16) + ppu_opcode_t{ptr[1]}.simm16;
 
-				if (target >= start && target < end && verify_func(_ptr.addr()))
+				if (target >= start && target < end && verify_ref(_ptr.addr()))
 				{
 					auto& new_func = add_func(target, func.toc, func.addr);
 
@@ -1091,7 +1150,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = 0;
 					continue;
 				}
@@ -1109,7 +1168,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				func.toc = -1;
 				func.size = 0x1C;
 				func.blocks.emplace(func.addr, func.size);
-				func.attr += ppu_attr::known_addr;
 				func.attr += ppu_attr::known_size;
 
 				// Look for another imports to fill gaps (hack)
@@ -1128,7 +1186,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x1C;
 					next.blocks.emplace(next.addr, next.size);
-					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
 					advance(_p2, p2, 7);
 				}
@@ -1148,8 +1205,9 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Trampoline with TOC
 				const u32 target = (ptr[3] << 16) + s16(ptr[4]);
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
+				constexpr u32 func_size = 0x1C;
 
-				if (target >= start && target < end && verify_func((_ptr + 3).addr()))
+				if (target >= start && target < end && verify_ref((_ptr + 3).addr()) && target - func.addr >= func_size)
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1180,7 +1238,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x1C;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = toc_add;
 					continue;
 				}
@@ -1196,7 +1254,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
 				const u32 target = (ptr[3] & 0x2 ? 0 : (_ptr + 3).addr()) + ppu_opcode_t{ptr[3]}.bt24;
 
-				if (target >= start && target < end && (~ptr[3] & 0x2 || verify_func((_ptr + 3).addr())))
+				if (target >= start && target < end && (~ptr[3] & 0x2 || verify_ref((_ptr + 3).addr())))
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1227,7 +1285,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					func.size = 0x10;
 					func.blocks.emplace(func.addr, func.size);
 					func.attr += new_func.attr & ppu_attr::no_return;
-					func.calls.emplace(target);
+					func.single_target = target;
 					func.trampoline = toc_add;
 					continue;
 				}
@@ -1247,7 +1305,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				func.toc = -1;
 				func.size = 0x20;
 				func.blocks.emplace(func.addr, func.size);
-				func.attr += ppu_attr::known_addr;
 				known_functions.emplace(func.addr);
 				func.attr += ppu_attr::known_size;
 
@@ -1268,7 +1325,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					auto& next = add_func(_p2.addr(), -1, func.addr);
 					next.size = 0x20;
 					next.blocks.emplace(next.addr, next.size);
-					next.attr += ppu_attr::known_addr;
 					next.attr += ppu_attr::known_size;
 					advance(_p2, p2, 8);
 					known_functions.emplace(next.addr);
@@ -1564,11 +1620,10 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				{
 					const u32 target = (op.aa ? 0 : iaddr) + (type == ppu_itype::B ? +op.bt24 : +op.bt14);
 
-					if (target >= start && target < end && (!op.aa || verify_func(iaddr)))
+					if (target >= start && target < end && (!op.aa || verify_ref(iaddr)))
 					{
 						if (target < func.addr || target >= func.addr + func.size)
 						{
-							func.calls.emplace(target);
 							add_func(target, func.toc ? func.toc + func.trampoline : 0, func.addr);
 						}
 					}
@@ -1711,7 +1766,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 	u32 per_instruction_bytes = 0;
 
-	for (auto&& [_, func] : as_rvalue(fmap))
+	for (auto&& [_, func] : fmap)
 	{
 		if (func.attr & ppu_attr::no_size && entry)
 		{
@@ -2086,8 +2141,10 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	}
 
 	// Convert map to vector (destructive)
-	for (auto&& [_, block] : as_rvalue(std::move(fmap)))
+	for (auto it = fmap.begin(); it != fmap.end(); it = fmap.begin())
 	{
+		ppu_function_ext block = std::move(fmap.extract(it).mapped());
+
 		if (block.attr & ppu_attr::no_size && block.size > 4 && !used_fallback)
 		{
 			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
@@ -2098,7 +2155,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				i.addr = addr;
 				i.size = 4;
 				i.toc  = block.toc;
-				i.attr = ppu_attr::no_size;
 			}
 
 			per_instruction_bytes += block.size;

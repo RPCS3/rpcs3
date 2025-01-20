@@ -514,8 +514,8 @@ class jit_compiler final
 	atomic_t<usz> m_disk_space = umax;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);
-	~jit_compiler();
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
+	~jit_compiler() noexcept;
 
 	// Get LLVM context
 	auto& get_context()
