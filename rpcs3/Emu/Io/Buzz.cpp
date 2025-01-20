@@ -146,7 +146,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	}
 
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pads   = handler->GetPads();
 	ensure(pads.size() > m_last_controller);
 	ensure(g_cfg_buzz.players.size() > m_last_controller);

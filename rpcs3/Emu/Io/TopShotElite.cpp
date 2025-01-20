@@ -315,7 +315,7 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
-		const auto gamepad_handler = pad::get_current_handler();
+		const auto gamepad_handler = pad::get_pad_thread();
 		const auto& pads = gamepad_handler->GetPads();
 		const auto& pad = ::at32(pads, m_controller_index);
 		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)

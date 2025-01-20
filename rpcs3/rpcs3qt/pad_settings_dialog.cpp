@@ -2017,7 +2017,7 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 	if (!Emu.IsStopped() && (m_title_id.empty() || m_title_id == Emu.GetTitleID()))
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
-		if (const auto handler = pad::get_current_handler(true))
+		if (const auto handler = pad::get_pad_thread(true))
 		{
 			ensure(index < handler->GetPads().size());
 
