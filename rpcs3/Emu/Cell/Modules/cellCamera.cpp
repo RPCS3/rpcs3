@@ -151,6 +151,21 @@ void camera_context::save(utils::serial& ar)
 	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellCamera);
 
 	ar(notify_data_map, start_timestamp_us, read_mode, is_streaming, is_attached, is_open, info, attr, frame_num);
+
+	if (!ar.is_writing())
+	{
+		if (is_open)
+		{
+			if (!open_camera())
+			{
+				cellCamera.error("Failed to open camera while loading savestate");
+			}
+			else if (is_streaming && !start_camera())
+			{
+				cellCamera.error("Failed to start camera while loading savestate");
+			}
+		}
+	}
 }
 
 static bool check_dev_num(s32 dev_num)
