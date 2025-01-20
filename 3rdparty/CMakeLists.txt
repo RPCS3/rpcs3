@@ -44,7 +44,7 @@ add_subdirectory(libpng EXCLUDE_FROM_ALL)
 
 # pugixml
 if (USE_SYSTEM_PUGIXML)
-	pkg_check_modules(PUGIXML REQUIRED IMPORTED_TARGET pugixml>=1.11)
+	pkg_check_modules(PUGIXML REQUIRED IMPORTED_TARGET pugixml>=1.15)
 	add_library(pugixml INTERFACE)
 	target_link_libraries(pugixml INTERFACE PkgConfig::PUGIXML)
 else()
