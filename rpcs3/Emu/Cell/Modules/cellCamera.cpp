@@ -1961,3 +1961,18 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 
 	return true;
 }
+
+gem_camera_shared::gem_camera_shared(utils::serial& ar)
+{
+	save(ar);
+}
+
+void gem_camera_shared::save(utils::serial& ar)
+{
+	const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellCamera);
+
+	if (ar.is_writing() || version >= 2)
+	{
+		ar(frame_timestamp_us, width, height, size, format);
+	}
+}

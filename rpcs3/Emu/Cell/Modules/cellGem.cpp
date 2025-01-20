@@ -292,6 +292,12 @@ public:
 
 	bool wait_for_result(ppu_thread& ppu)
 	{
+		// Notify gem thread that the initial state after loading a savestate can be updated.
+		if (m_done.compare_and_swap_test(2, 0))
+		{
+			m_done.notify_one();
+		}
+
 		while (!m_done && !ppu.is_stopped())
 		{
 			thread_ctrl::wait_on(m_done, 0);
@@ -540,7 +546,7 @@ public:
 		load_configs();
 	};
 
-	SAVESTATE_INIT_POS(15);
+	SAVESTATE_INIT_POS(16.1); // Depends on cellCamera
 
 	void save(utils::serial& ar)
 	{
@@ -581,6 +587,11 @@ public:
 		}
 
 		ar(connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
+
+		if (ar.is_writing() || version >= 3)
+		{
+			ar(video_conversion_in_progress, video_data_out_size);
+		}
 	}
 
 	gem_config_data(utils::serial& ar)
@@ -1252,6 +1263,18 @@ void gem_config_data::operator()()
 	cellGem.notice("Starting thread");
 
 	u64 last_update_us = 0;
+
+	// Handle initial state after loading a savestate
+	if (state && video_conversion_in_progress)
+	{
+		// Wait for cellGemConvertVideoFinish. The initial savestate loading may take a while.
+		m_done = 2; // Use special value 2 for this case
+		thread_ctrl::wait_on(m_done, 2, 5'000'000);
+
+		// Just mark this conversion as complete (there's no real downside to this, except for a black image)
+		video_conversion_in_progress = false;
+		done();
+	}
 
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
@@ -2646,7 +2669,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 	if (g_cfg.io.move != move_handler::null)
 	{
-		auto& shared_data = g_fxo->get<gem_camera_shared>();
+		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 		auto& controller = gem.controllers[gem_num];
 
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
