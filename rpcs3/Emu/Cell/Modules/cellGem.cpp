@@ -685,7 +685,7 @@ namespace gem
 
 	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
 	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                          u8* video_data_out, u32 video_data_out_size)
+	                          u8* video_data_out, u32 video_data_out_size, std::string_view caller)
 	{
 		if (output_format != CELL_GEM_NO_VIDEO_OUTPUT && !video_data_out)
 		{
@@ -697,13 +697,13 @@ namespace gem
 
 		if (video_data_in.size() != required_in_size)
 		{
-			cellGem.error("convert: in_size mismatch: required=%d, actual=%d", required_in_size, video_data_in.size());
+			cellGem.error("convert: in_size mismatch: required=%d, actual=%d (called from %s)", required_in_size, video_data_in.size(), caller);
 			return false;
 		}
 
 		if (required_out_size < 0 || video_data_out_size != static_cast<u32>(required_out_size))
 		{
-			cellGem.error("convert: out_size unknown: required=%d, format %d", required_out_size, output_format);
+			cellGem.error("convert: out_size unknown: required=%d, actual=%d, format %d (called from %s)", required_out_size, video_data_out_size, output_format, caller);
 			return false;
 		}
 
@@ -763,7 +763,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -778,7 +778,7 @@ namespace gem
 			}
 			else
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				return false;
 			}
 			break;
@@ -860,7 +860,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -950,7 +950,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1060,7 +1060,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1122,7 +1122,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1132,18 +1132,18 @@ namespace gem
 		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
 		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
 		{
-			cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+			cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 			std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 			return false;
 		}
 		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
 		{
-			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT");
+			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT (called from %s)", caller);
 			break;
 		}
 		default:
 		{
-			cellGem.error("Trying to convert %s to %s", input_format, output_format);
+			cellGem.error("Trying to convert %s to %s (called from %s)", input_format, output_format, caller);
 			return false;
 		}
 		}
@@ -1310,7 +1310,7 @@ void gem_config_data::operator()()
 
 		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size))
+		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size, "cellGem"))
 		{
 			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
 
