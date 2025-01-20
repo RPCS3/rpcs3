@@ -31,7 +31,7 @@ In order to build **RPCS3** with the `sln` solution (with **Visual Studio**), **
   **NOTE:** If you have issues with the **Visual Studio Qt Plugin**, you may want to uninstall it and install the [Legacy Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.LEGACYQtVisualStudioTools2022) instead.
 
 In order to build **RPCS3** with the `CMake` solution (with both **Visual Studio** and standalone **CMake** tool):
-- add and set the `CMAKE_PREFIX_PATH` environment variable to the **Qt** libs path, e.g. `<QtInstallFolder>\6.8.1\msvc2022_64\`
+- add and set the `Qt6_ROOT` environment variable to the **Qt** libs path, e.g. `<QtInstallFolder>\6.8.1\msvc2022_64\`
 
 ### Linux
 
