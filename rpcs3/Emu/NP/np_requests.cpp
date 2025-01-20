@@ -765,6 +765,21 @@ namespace np
 			cookie_vec.assign(cookie, cookie + cookie_size);
 		}
 
+		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			// TODO(InvoxiPlayGames): generate ticket data that is valid, for games that need to dig into the data
+			std::vector<u8> ticketdata = {0x41, 0x42, 0x43, 0x44};
+			current_ticket = ticket(std::move(ticketdata));
+			auto ticket_size = static_cast<s32>(current_ticket.size());
+
+			sysutil_register_cb([manager_cb = this->manager_cb, ticket_size, manager_cb_arg = this->manager_cb_arg](ppu_thread& cb_ppu) -> s32
+				{
+					manager_cb(cb_ppu, SCE_NP_MANAGER_EVENT_GOT_TICKET, ticket_size, manager_cb_arg);
+					return 0;
+				});
+			return;
+		}
+
 		if (!get_rpcn()->req_ticket(req_id, service_id_str, cookie_vec))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");

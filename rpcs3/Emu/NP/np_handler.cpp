@@ -1470,12 +1470,26 @@ namespace np
 
 	u32 np_handler::get_num_friends()
 	{
-		return get_rpcn()->get_num_friends();
+		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			return 0;
+		}
+		else
+		{
+			return get_rpcn()->get_num_friends();
+		}
 	}
 
 	u32 np_handler::get_num_blocks()
 	{
-		return get_rpcn()->get_num_blocks();
+		if (g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			return 0;
+		}
+		else
+		{
+			return get_rpcn()->get_num_blocks();
+		}
 	}
 
 	std::pair<error_code, std::optional<SceNpId>> np_handler::get_friend_by_index(u32 index)
