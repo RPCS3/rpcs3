@@ -329,7 +329,8 @@ public:
 			connected_controllers = 0;
 
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread(true);
+			if (!handler) break;
 
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
@@ -398,7 +399,7 @@ public:
 			if (g_cfg.io.move == move_handler::real)
 			{
 				std::lock_guard pad_lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 				if (pad && pad->m_pad_handler == pad_handler::move)
 				{
@@ -428,7 +429,7 @@ public:
 			if (g_cfg.io.move == move_handler::real)
 			{
 				std::lock_guard pad_lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 				if (pad && pad->m_pad_handler == pad_handler::move)
 				{
@@ -458,7 +459,7 @@ public:
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread();
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
@@ -479,7 +480,7 @@ public:
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread();
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
@@ -1482,7 +1483,7 @@ public:
 			// Update PS Move LED colors
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				auto& handlers = handler->get_handlers();
 				if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 				{
@@ -1744,7 +1745,7 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1837,7 +1838,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1868,7 +1869,7 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1913,7 +1914,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -2373,7 +2374,7 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad && pad->m_pad_handler == pad_handler::move)
@@ -2421,7 +2422,7 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad && pad->m_pad_handler == pad_handler::move)
@@ -2746,7 +2747,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 				if (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -3333,7 +3334,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 				if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -3417,7 +3418,7 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	if (g_cfg.io.move == move_handler::real)
 	{
 		std::lock_guard pad_lock(pad::g_pad_mutex);
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		auto& handlers = handler->get_handlers();
 		if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 		{
@@ -3647,7 +3648,7 @@ error_code cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PO
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))

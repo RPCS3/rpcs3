@@ -37,7 +37,7 @@ extern std::string g_input_config_override;
 
 namespace pad
 {
-	atomic_t<pad_thread*> g_current = nullptr;
+	atomic_t<pad_thread*> g_pad_thread = nullptr;
 	shared_mutex g_pad_mutex;
 	std::string g_title_id;
 	atomic_t<bool> g_started{false};
@@ -62,13 +62,13 @@ struct pad_setting
 pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_id) : m_curthread(curthread), m_curwindow(curwindow)
 {
 	pad::g_title_id = title_id;
-	pad::g_current = this;
+	pad::g_pad_thread = this;
 	pad::g_started = false;
 }
 
 pad_thread::~pad_thread()
 {
-	pad::g_current = nullptr;
+	pad::g_pad_thread = nullptr;
 }
 
 void pad_thread::Init()

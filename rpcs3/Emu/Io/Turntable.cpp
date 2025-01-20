@@ -151,7 +151,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	// All other bufs are always 0x00
 
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pads   = handler->GetPads();
 	const auto& pad    = ::at32(pads, m_controller_index);
 
