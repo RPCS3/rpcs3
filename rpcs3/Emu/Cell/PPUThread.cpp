@@ -4729,8 +4729,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 	}
 
-	u32 total_compile = 0;
-
 	// Limit how many modules are per JIt instance
 	// Advantage to lower the limit:
 	// 1. Lowering contoniues memory requirements for allocations
@@ -5110,8 +5108,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		if (!check_only)
 		{
-			total_compile++;
-
 			link_workload.emplace_back(obj_name, false);
 		}
 
@@ -5121,10 +5117,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			if (!is_being_used_in_emulation && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
-
-				// Done already, revert total amount increase
-				// Avoid incrementing "pdone" instead because it creates false appreciation for both the progress dialog and the user
-				total_compile--;
 				link_workload.pop_back();
 			}
 
@@ -5151,12 +5143,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		return false;
 	}
 
-	// Update progress dialog
-	if (total_compile)
-	{
-		g_progr_ptotal += total_compile;
-	}
-
 	if (g_progr_ftotal_bits && file_size)
 	{
 		g_progr_fknown_bits += file_size;
@@ -5165,6 +5151,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
+		// Update progress dialog
+		g_progr_ptotal += workload.size();
+
 		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
 		u32 thread_count = rpcs3::utils::get_max_threads();
@@ -5301,11 +5290,13 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			return compiled_new;
 		}
 
-		if (workload.size() < link_workload.size())
-		{
-			// Only show this message if this task is relevant
-			*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_LINKING_PPU_MODULES);
-		}
+		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_LINKING_PPU_MODULES);
+
+		// Because linking is faster than compiling, consider each module linkages as a single module compilation in time
+		const bool divide_by_twenty = !workload.empty();
+		const usz increment_link_count_at = (divide_by_twenty ? 20 : 1);
+
+		g_progr_ptotal += utils::aligned_div<u64>(link_workload.size(), increment_link_count_at);
 
 		usz mod_index = umax;
 
@@ -5324,20 +5315,20 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				failed_to_load = true;
 			}
 
+			if (mod_index % increment_link_count_at == (link_workload.size() - 1) % increment_link_count_at)
+			{
+				// Incremenet 'pdone' Nth times where N is link workload size ceil-divided by increment_link_count_at
+				g_progr_pdone++;
+			}
+
 			if (failed_to_load)
 			{
-				if (!is_compiled)
-				{
-					g_progr_pdone++;
-				}
-
 				continue;
 			}
 
 			if (!is_compiled)
 			{
 				ppu_log.success("LLVM: Loaded module %s", obj_name);
-				g_progr_pdone++;
 			}
 		}
 	}
