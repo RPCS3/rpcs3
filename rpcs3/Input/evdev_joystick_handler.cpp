@@ -1271,10 +1271,8 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 		return;
 
 	// Handle vibration
-	const int idx_l      = cfg->switch_vibration_motors ? 1 : 0;
-	const int idx_s      = cfg->switch_vibration_motors ? 0 : 1;
-	const u8 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : 0;
-	const u8 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : 0;
+	const u8 force_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 force_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
 	SetRumble(evdev_device, force_large, force_small);
 }
 
