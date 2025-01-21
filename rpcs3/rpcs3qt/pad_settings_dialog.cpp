@@ -332,33 +332,25 @@ void pad_settings_dialog::InitButtons()
 		}
 	});
 
-	connect(ui->chb_vibration_large, &QCheckBox::clicked, this, [this](bool checked)
+	connect(ui->sb_vibration_large, &QSpinBox::valueChanged, this, [this](int value)
 	{
-		if (!checked)
-		{
-			return;
-		}
+		const u8 force = static_cast<u8>(std::clamp(m_max_force * (value / 100.0f), 0.0f, 255.0f));
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, force)
+		                                      : SetPadData(force, m_min_force);
 
-		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, m_max_force)
-		                                      : SetPadData(m_max_force, m_min_force);
-
-		QTimer::singleShot(300, [this]()
+		QTimer::singleShot(300, this, [this]()
 		{
 			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
-	connect(ui->chb_vibration_small, &QCheckBox::clicked, this, [this](bool checked)
+	connect(ui->sb_vibration_small, &QSpinBox::valueChanged, this, [this](int value)
 	{
-		if (!checked)
-		{
-			return;
-		}
+		const u8 force = static_cast<u8>(std::clamp(m_max_force * (value / 100.0f), 0.0f, 255.0f));
+		ui->chb_vibration_switch->isChecked() ? SetPadData(force, m_min_force)
+		                                      : SetPadData(m_min_force, force);
 
-		ui->chb_vibration_switch->isChecked() ? SetPadData(m_max_force, m_min_force)
-		                                      : SetPadData(m_min_force, m_max_force);
-
-		QTimer::singleShot(300, [this]()
+		QTimer::singleShot(300, this, [this]()
 		{
 			SetPadData(m_min_force, m_min_force);
 		});
@@ -369,12 +361,12 @@ void pad_settings_dialog::InitButtons()
 		checked ? SetPadData(m_min_force, m_max_force)
 		        : SetPadData(m_max_force, m_min_force);
 
-		QTimer::singleShot(200, [this, checked]()
+		QTimer::singleShot(200, this, [this, checked]()
 		{
 			checked ? SetPadData(m_max_force, m_min_force)
 			        : SetPadData(m_min_force, m_max_force);
 
-			QTimer::singleShot(200, [this]()
+			QTimer::singleShot(200, this, [this]()
 			{
 				SetPadData(m_min_force, m_min_force);
 			});
@@ -618,12 +610,12 @@ void pad_settings_dialog::RefreshPads()
 	}
 }
 
-void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator)
+void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_battery_indicator)
 {
-	ensure(m_handler);
 	const cfg_pad& cfg = GetPlayerConfig();
 
 	std::lock_guard lock(m_handler_mutex);
+	ensure(m_handler);
 	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, cfg.player_led_enabled.get(), led_battery_indicator, cfg.led_battery_indicator_brightness);
 }
 
@@ -1116,8 +1108,12 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 			}
 		}
 
-		ui->chb_vibration_large->setChecked(cfg.enable_vibration_motor_large.get());
-		ui->chb_vibration_small->setChecked(cfg.enable_vibration_motor_small.get());
+		ui->sb_vibration_large->setRange(cfg.multiplier_vibration_motor_large.min, cfg.multiplier_vibration_motor_large.max);
+		ui->sb_vibration_large->setValue(cfg.multiplier_vibration_motor_large.get());
+
+		ui->sb_vibration_small->setRange(cfg.multiplier_vibration_motor_small.min, cfg.multiplier_vibration_motor_small.max);
+		ui->sb_vibration_small->setValue(cfg.multiplier_vibration_motor_small.get());
+
 		ui->chb_vibration_switch->setChecked(cfg.switch_vibration_motors.get());
 
 		// Update Trigger Thresholds
@@ -1447,10 +1443,6 @@ void pad_settings_dialog::ChangeHandler()
 #endif
 	}
 	ui->l_description->setText(m_description);
-
-	// Update parameters
-	m_min_force = 0;
-	m_max_force = 255;
 
 	// Reset parameters
 	m_lx = 0;
@@ -1873,8 +1865,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	if (m_handler->has_rumble())
 	{
-		cfg.enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
-		cfg.enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
+		cfg.multiplier_vibration_motor_large.set(ui->sb_vibration_large->value());
+		cfg.multiplier_vibration_motor_small.set(ui->sb_vibration_small->value());
 		cfg.switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
 	}
 

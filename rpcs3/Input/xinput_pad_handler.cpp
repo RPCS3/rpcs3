@@ -575,11 +575,8 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	const usz idx_l = cfg->switch_vibration_motors ? 1 : 0;
-	const usz idx_s = cfg->switch_vibration_motors ? 0 : 1;
-
-	const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
-	const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
+	const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
 
 	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 

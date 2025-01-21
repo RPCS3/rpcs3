@@ -139,8 +139,8 @@ private:
 	int m_ry = 0;
 
 	// Rumble
-	s32 m_min_force = 0;
-	s32 m_max_force = 0;
+	static constexpr u8 m_min_force = 0;
+	static constexpr u8 m_max_force = 255;
 
 	// Backup for standard button palette
 	QPalette m_palette;
@@ -190,7 +190,7 @@ private:
 	void CancelExit();
 
 	// Set vibrate data while keeping the current color
-	void SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator = false);
+	void SetPadData(u8 large_motor, u8 small_motor, bool led_battery_indicator = false);
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabels(bool is_reset = false);
