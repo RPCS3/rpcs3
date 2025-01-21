@@ -498,6 +498,8 @@ namespace llvm
 	class StringRef;
 }
 
+enum class thread_state : u32;
+
 // Temporary compiler interface
 class jit_compiler final
 {
@@ -515,6 +517,7 @@ class jit_compiler final
 
 public:
 	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
+	jit_compiler& operator=(thread_state) noexcept;
 	~jit_compiler() noexcept;
 
 	// Get LLVM context

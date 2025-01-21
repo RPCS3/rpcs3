@@ -1,5 +1,6 @@
 #include "util/types.hpp"
 #include "util/sysinfo.hpp"
+#include "Utilities/Thread.h"
 #include "JIT.h"
 #include "StrFmt.h"
 #include "File.h"
@@ -716,6 +717,18 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	{
 		m_disk_space = stats.avail_free / 4;
 	}
+}
+
+jit_compiler& jit_compiler::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::destroying_context)
+	{
+		// Release resources explicitly
+		m_engine.reset();
+		m_context.reset();
+	}
+
+	return *this;
 }
 
 jit_compiler::~jit_compiler() noexcept
