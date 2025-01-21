@@ -5228,7 +5228,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 					std::shared_lock rlock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
 					std::unique_lock lock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
 
-					if (part.jit_bounds && part.parent->funcs.size() >= 0x8000)
+					if (false && part.jit_bounds && part.parent->funcs.size() >= 0x8000)
 					{
 						// Make a large symbol-resolving function compile alone because it has massive memory requirements
 						lock.lock();
