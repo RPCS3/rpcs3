@@ -2440,7 +2440,7 @@ error_code cellGemEnd(ppu_thread& ppu)
 
 	auto& gem = g_fxo->get<gem_config>();
 
-	std::scoped_lock lock(gem.mtx);
+	std::unique_lock lock(gem.mtx);
 
 	if (gem.state.compare_and_swap_test(1, 0))
 	{
@@ -2451,6 +2451,8 @@ error_code cellGemEnd(ppu_thread& ppu)
 
 		return CELL_OK;
 	}
+
+	lock.unlock();
 
 	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
 	if (!tracker.wait_for_tracker_result(ppu))
@@ -2488,7 +2490,7 @@ error_code cellGemFilterState(u32 gem_num, u32 enable)
 
 error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 {
-	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
+	cellGem.warning("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -3557,8 +3559,6 @@ error_code cellGemUpdateFinish(ppu_thread& ppu)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	std::scoped_lock lock(gem.mtx);
-
 	if (!gem.updating)
 	{
 		return CELL_GEM_ERROR_UPDATE_NOT_STARTED;
@@ -3569,6 +3569,8 @@ error_code cellGemUpdateFinish(ppu_thread& ppu)
 	{
 		return {};
 	}
+
+	std::scoped_lock lock(gem.mtx);
 
 	gem.updating = false;
 
