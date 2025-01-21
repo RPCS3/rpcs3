@@ -3736,6 +3736,25 @@ namespace
 
 			bucket.map.erase(found);
 		}
+
+		jit_module_manager& operator=(thread_state s) noexcept
+		{
+			if (s == thread_state::destroying_context)
+			{
+				for (auto& buck : buckets)
+				{
+					for (auto& mod : buck.map)
+					{
+						for (auto& jit : mod.second.pjit)
+						{
+							*jit = s;
+						}
+					}
+				}
+			}
+
+			return *this;
+		}
 	};
 }
 #endif

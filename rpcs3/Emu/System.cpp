@@ -3337,6 +3337,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 		static_cast<void>(init_mtx->init());
 
+		// Call explcit semi-destructors (free memory before savestate)
+		for (const auto& [type, data] : *g_fxo)
+		{
+			if (type.thread_op)
+			{
+				type.thread_op(data, thread_state::destroying_context);
+			}
+		}
+
 		auto set_progress_message = [&](std::string_view text)
 		{
 			*verbose_message = stx::make_single<std::string>(text);
