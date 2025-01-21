@@ -427,6 +427,7 @@ public:
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
 	atomic_t<bool> is_attached{false};
+	atomic_t<bool> is_attached_dirty{false};
 	atomic_t<bool> is_open{false};
 
 	CellCameraInfoEx info{};
