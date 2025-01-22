@@ -93,6 +93,10 @@ struct jit_runtime final : jit_runtime_base
 	// Allocate memory
 	static u8* alloc(usz size, usz align, bool exec = true) noexcept;
 
+	// Allocate 0 bytes, observe memory location
+	// Same as alloc(0, 1, exec)
+	static u8* peek(bool exec = true) noexcept;
+
 	// Should be called at least once after global initialization
 	static void initialize();
 
