@@ -77,7 +77,7 @@ struct jit_runtime_base
 	jit_runtime_base& operator=(const jit_runtime_base&) = delete;
 
 	const asmjit::Environment& environment() const noexcept;
-	void* _add(asmjit::CodeHolder* code) noexcept;
+	void* _add(asmjit::CodeHolder* code, usz align = 64) noexcept;
 	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
 };
 
@@ -432,7 +432,7 @@ namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename Asm = native_asm, typename F>
-inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr)
+inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr, bool reduced_size = false)
 {
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
@@ -484,7 +484,7 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 		compiler();
 	}
 
-	const auto result = rt._add(&code);
+	const auto result = rt._add(&code, reduced_size ? 16 : 64);
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }

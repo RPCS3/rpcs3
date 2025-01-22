@@ -211,7 +211,7 @@ const asmjit::Environment& jit_runtime_base::environment() const noexcept
 	return g_env;
 }
 
-void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
+void* jit_runtime_base::_add(asmjit::CodeHolder* code, usz align) noexcept
 {
 	ensure(!code->flatten());
 	ensure(!code->resolveUnresolvedLinks());
@@ -219,7 +219,7 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 	if (!codeSize)
 		return nullptr;
 
-	auto p = ensure(this->_alloc(codeSize, 64));
+	auto p = ensure(this->_alloc(codeSize, align));
 	ensure(!code->relocateToBase(uptr(p)));
 
 	{
