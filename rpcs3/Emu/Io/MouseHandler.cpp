@@ -31,12 +31,12 @@ void MouseHandlerBase::save(utils::serial& ar)
 	ar(inited ? m_info.max_connect : 0);
 }
 
-bool MouseHandlerBase::is_time_for_update(double elapsed_time)
+bool MouseHandlerBase::is_time_for_update(double elapsed_time_ms)
 {
 	steady_clock::time_point now = steady_clock::now();
-	double elapsed = (now - last_update).count() / 1000'000.;
+	const double elapsed_ms = (now - last_update).count() / 1'000'000.;
 
-	if (elapsed > elapsed_time)
+	if (elapsed_ms > elapsed_time_ms)
 	{
 		last_update = now;
 		return true;

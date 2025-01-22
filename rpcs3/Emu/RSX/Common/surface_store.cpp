@@ -18,7 +18,21 @@ namespace rsx
 			case surface_target::surfaces_a_b_c: return{ 0, 1, 2 };
 			case surface_target::surfaces_a_b_c_d: return{ 0, 1, 2, 3 };
 			}
-			fmt::throw_exception("Wrong color_target");
+			fmt::throw_exception("Invalid color target %d", static_cast<int>(color_target));
+		}
+
+		u8 get_mrt_buffers_count(surface_target color_target)
+		{
+			switch (color_target)
+			{
+			case surface_target::none: return 0;
+			case surface_target::surface_a: return 1;
+			case surface_target::surface_b: return 1;
+			case surface_target::surfaces_a_b: return 2;
+			case surface_target::surfaces_a_b_c: return 3;
+			case surface_target::surfaces_a_b_c_d: return 4;
+			}
+			fmt::throw_exception("Invalid color target %d", static_cast<int>(color_target));
 		}
 
 		usz get_aligned_pitch(surface_color_format format, u32 width)

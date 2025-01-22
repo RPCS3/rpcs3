@@ -58,6 +58,7 @@ ds3_pad_handler::ds3_pad_handler()
 	b_has_rgb = false;
 	b_has_player_led = true;
 	b_has_pressure_intensity_button = false; // The DS3 obviously already has this feature natively.
+	b_has_orientation = true;
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -199,6 +200,7 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, DS3KeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, DS3KeyCodes::None);
+	cfg->orientation_reset_button.def = ::at32(button_list, DS3KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = 0;
@@ -462,6 +464,9 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 	//pad->m_sensors[1].m_value = polish_value(pad->m_sensors[1].m_value, 226, 226, 512, 512, 0, 1023);
 	//pad->m_sensors[2].m_value = polish_value(pad->m_sensors[2].m_value, 113, 113, 512, 512, 0, 1023);
 	//pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
+
+	// Set raw orientation
+	set_raw_orientation(*pad);
 }
 
 bool ds3_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
@@ -546,11 +551,8 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const int idx_l = config->switch_vibration_motors ? 1 : 0;
-	const int idx_s = config->switch_vibration_motors ? 0 : 1;
-
-	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
-	const u8 speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
 
 	const bool wireless    = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 25;

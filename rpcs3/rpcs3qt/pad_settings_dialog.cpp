@@ -312,6 +312,7 @@ void pad_settings_dialog::InitButtons()
 
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
 	insert_button(button_ids::id_analog_limiter, ui->b_analog_limiter);
+	insert_button(button_ids::id_orientation_reset, ui->b_orientation_reset);
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
@@ -331,33 +332,25 @@ void pad_settings_dialog::InitButtons()
 		}
 	});
 
-	connect(ui->chb_vibration_large, &QCheckBox::clicked, this, [this](bool checked)
+	connect(ui->sb_vibration_large, &QSpinBox::valueChanged, this, [this](int value)
 	{
-		if (!checked)
-		{
-			return;
-		}
+		const u8 force = static_cast<u8>(std::clamp(m_max_force * (value / 100.0f), 0.0f, 255.0f));
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, force)
+		                                      : SetPadData(force, m_min_force);
 
-		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, m_max_force)
-		                                      : SetPadData(m_max_force, m_min_force);
-
-		QTimer::singleShot(300, [this]()
+		QTimer::singleShot(300, this, [this]()
 		{
 			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
-	connect(ui->chb_vibration_small, &QCheckBox::clicked, this, [this](bool checked)
+	connect(ui->sb_vibration_small, &QSpinBox::valueChanged, this, [this](int value)
 	{
-		if (!checked)
-		{
-			return;
-		}
+		const u8 force = static_cast<u8>(std::clamp(m_max_force * (value / 100.0f), 0.0f, 255.0f));
+		ui->chb_vibration_switch->isChecked() ? SetPadData(force, m_min_force)
+		                                      : SetPadData(m_min_force, force);
 
-		ui->chb_vibration_switch->isChecked() ? SetPadData(m_max_force, m_min_force)
-		                                      : SetPadData(m_min_force, m_max_force);
-
-		QTimer::singleShot(300, [this]()
+		QTimer::singleShot(300, this, [this]()
 		{
 			SetPadData(m_min_force, m_min_force);
 		});
@@ -368,12 +361,12 @@ void pad_settings_dialog::InitButtons()
 		checked ? SetPadData(m_min_force, m_max_force)
 		        : SetPadData(m_max_force, m_min_force);
 
-		QTimer::singleShot(200, [this, checked]()
+		QTimer::singleShot(200, this, [this, checked]()
 		{
 			checked ? SetPadData(m_max_force, m_min_force)
 			        : SetPadData(m_min_force, m_max_force);
 
-			QTimer::singleShot(200, [this]()
+			QTimer::singleShot(200, this, [this]()
 			{
 				SetPadData(m_min_force, m_min_force);
 			});
@@ -617,12 +610,12 @@ void pad_settings_dialog::RefreshPads()
 	}
 }
 
-void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator)
+void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_battery_indicator)
 {
-	ensure(m_handler);
 	const cfg_pad& cfg = GetPlayerConfig();
 
 	std::lock_guard lock(m_handler_mutex);
+	ensure(m_handler);
 	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, cfg.player_led_enabled.get(), led_battery_indicator, cfg.led_battery_indicator_brightness);
 }
 
@@ -720,6 +713,7 @@ void pad_settings_dialog::ReloadButtons()
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 	updateButton(button_ids::id_analog_limiter, ui->b_analog_limiter, &cfg.analog_limiter_button);
+	updateButton(button_ids::id_orientation_reset, ui->b_orientation_reset, &cfg.orientation_reset_button);
 
 	UpdateLabels(true);
 }
@@ -996,25 +990,26 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 	}
 	else
 	{
+		constexpr int delta_threshold = 20;
 		const QPoint mouse_pos = QCursor::pos();
 		const int delta_x = mouse_pos.x() - m_last_pos.x();
 		const int delta_y = mouse_pos.y() - m_last_pos.y();
 
 		u32 key = 0;
 
-		if (delta_x > 100)
+		if (delta_x > delta_threshold)
 		{
 			key = mouse::move_right;
 		}
-		else if (delta_x < -100)
+		else if (delta_x < -delta_threshold)
 		{
 			key = mouse::move_left;
 		}
-		else if (delta_y > 100)
+		else if (delta_y > delta_threshold)
 		{
 			key = mouse::move_down;
 		}
-		else if (delta_y < -100)
+		else if (delta_y < -delta_threshold)
 		{
 			key = mouse::move_up;
 		}
@@ -1113,8 +1108,12 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 			}
 		}
 
-		ui->chb_vibration_large->setChecked(cfg.enable_vibration_motor_large.get());
-		ui->chb_vibration_small->setChecked(cfg.enable_vibration_motor_small.get());
+		ui->sb_vibration_large->setRange(cfg.multiplier_vibration_motor_large.min, cfg.multiplier_vibration_motor_large.max);
+		ui->sb_vibration_large->setValue(cfg.multiplier_vibration_motor_large.get());
+
+		ui->sb_vibration_small->setRange(cfg.multiplier_vibration_motor_small.min, cfg.multiplier_vibration_motor_small.max);
+		ui->sb_vibration_small->setValue(cfg.multiplier_vibration_motor_small.get());
+
 		ui->chb_vibration_switch->setChecked(cfg.switch_vibration_motors.get());
 
 		// Update Trigger Thresholds
@@ -1194,6 +1193,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, cfg.lpadsquircling, cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 
+		// Update orientation toggle
+		ui->cb_orientation_toggle->setChecked(cfg.orientation_enabled.get());
+
 		// Update analog limiter toggle mode
 		ui->cb_analog_limiter_toggle_mode->setChecked(cfg.analog_limiter_toggle_mode.get());
 
@@ -1248,6 +1250,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_pressure_intensity_deadzone->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_analog_limiter->setEnabled(is_enabled && m_enable_analog_limiter_button);
+	ui->gb_orientation_reset->setEnabled(is_enabled && m_enable_orientation_reset_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
 	ui->gb_stick_deadzones->setEnabled(is_enabled && m_enable_deadzones);
@@ -1441,10 +1444,6 @@ void pad_settings_dialog::ChangeHandler()
 	}
 	ui->l_description->setText(m_description);
 
-	// Update parameters
-	m_min_force = 0;
-	m_max_force = 255;
-
 	// Reset parameters
 	m_lx = 0;
 	m_ly = 0;
@@ -1466,11 +1465,15 @@ void pad_settings_dialog::ChangeHandler()
 	// Enable Analog Limiter Settings
 	m_enable_analog_limiter_button = m_handler->has_analog_limiter_button();
 
+	// Enable Orientation Reset Settings
+	m_enable_orientation_reset_button = m_handler->has_orientation();
+
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->gb_pressure_intensity->setVisible(m_handler->has_pressure_intensity_button());
 	ui->gb_analog_limiter->setVisible(m_handler->has_analog_limiter_button());
+	ui->gb_orientation_reset->setVisible(m_handler->has_orientation());
 
 	// Update device dropdown and block signals while doing so
 	ui->chooseDevice->blockSignals(true);
@@ -1828,8 +1831,11 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
-			if ((id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter) && m_handler->m_type != pad_handler::keyboard)
+			if (m_handler->m_type != pad_handler::keyboard &&
+				(id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter || id == button_ids::id_orientation_reset))
+			{
 				continue;
+			}
 
 			for (const std::string& key : cfg_pad::get_buttons(button.keys))
 			{
@@ -1859,8 +1865,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	if (m_handler->has_rumble())
 	{
-		cfg.enable_vibration_motor_large.set(ui->chb_vibration_large->isChecked());
-		cfg.enable_vibration_motor_small.set(ui->chb_vibration_small->isChecked());
+		cfg.multiplier_vibration_motor_large.set(ui->sb_vibration_large->value());
+		cfg.multiplier_vibration_motor_small.set(ui->sb_vibration_small->value());
 		cfg.switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
 	}
 
@@ -1883,6 +1889,11 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	{
 		cfg.pressure_intensity.set(ui->sb_pressure_intensity->value());
 		cfg.pressure_intensity_toggle_mode.set(ui->cb_pressure_intensity_toggle_mode->isChecked());
+	}
+
+	if (m_handler->has_orientation())
+	{
+		cfg.orientation_enabled.set(ui->cb_orientation_toggle->isChecked());
 	}
 
 	cfg.pressure_intensity_deadzone.set(ui->pressure_intensity_deadzone->value());
@@ -2006,7 +2017,7 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 	if (!Emu.IsStopped() && (m_title_id.empty() || m_title_id == Emu.GetTitleID()))
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
-		if (const auto handler = pad::get_current_handler(true))
+		if (const auto handler = pad::get_pad_thread(true))
 		{
 			ensure(index < handler->GetPads().size());
 
@@ -2076,6 +2087,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	// Localized tooltips
 	const Tooltips tooltips;
 
+	SubscribeTooltip(ui->gb_orientation_reset, tooltips.gamepad_settings.orientation_reset);
 	SubscribeTooltip(ui->gb_analog_limiter, tooltips.gamepad_settings.analog_limiter);
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);

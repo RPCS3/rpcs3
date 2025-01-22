@@ -21,7 +21,7 @@ using namespace std::literals::string_literals;
 #include <cwchar>
 #include <Windows.h>
 
-static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
+static std::unique_ptr<wchar_t[]> to_wchar(std::string_view source)
 {
 	// String size + null terminator
 	const usz buf_size = source.size() + 1;
@@ -44,7 +44,7 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 		std::memcpy(buffer.get() + 32768 + 4, L"UNC\\", 4 * sizeof(wchar_t));
 	}
 
-	ensure(MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size)); // "to_wchar"
+	ensure(MultiByteToWideChar(CP_UTF8, 0, source.data(), size, buffer.get() + 32768 + (unc ? 8 : 4), size)); // "to_wchar"
 
 	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
 	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
@@ -2021,7 +2021,7 @@ std::string fs::get_executable_dir()
 	return s_exe_dir;
 }
 
-const std::string& fs::get_config_dir()
+const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirectory)
 {
 	// Use magic static
 	static const std::string s_dir = []
@@ -2103,6 +2103,14 @@ const std::string& fs::get_config_dir()
 		return dir;
 	}();
 
+#ifdef _WIN32
+	if (get_config_subdirectory)
+	{
+		static const std::string subdir = s_dir + "config/";
+		return subdir;
+	}
+#endif
+
 	return s_dir;
 }
 
@@ -2142,6 +2150,16 @@ const std::string& fs::get_cache_dir()
 	}();
 
 	return s_dir;
+}
+
+const std::string& fs::get_log_dir()
+{
+#ifdef _WIN32
+	static const std::string s_dir = fs::get_config_dir() + "log/";
+	return s_dir;
+#else
+	return fs::get_cache_dir();
+#endif
 }
 
 const std::string& fs::get_temp_dir()

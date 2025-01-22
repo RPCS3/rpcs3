@@ -735,7 +735,7 @@ namespace rsx
 		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
-	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase& prog) const
+	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase* prog) const
 	{
 		auto& draw_call = REGS(m_ctx)->current_draw_clause;
 
@@ -745,8 +745,9 @@ namespace rsx
 		// Temp indirection table. Used to track "running" updates.
 		rsx::simple_array<u32> instancing_indirection_table;
 		// indirection table size
-		const auto reloc_table = prog.has_indexed_constants ? decltype(prog.constant_ids){} : prog.constant_ids;
-		const auto redirection_table_size = prog.has_indexed_constants ? 468u : ::size32(prog.constant_ids);
+		const auto full_reupload = !prog || prog->has_indexed_constants;
+		const auto reloc_table = full_reupload ? decltype(prog->constant_ids){} : prog->constant_ids;
+		const auto redirection_table_size = full_reupload ? 468u : ::size32(prog->constant_ids);
 		instancing_indirection_table.resize(redirection_table_size);
 
 		// Temp constants data
@@ -787,9 +788,9 @@ namespace rsx
 				continue;
 			}
 
-			const int translated_offset = prog.has_indexed_constants
+			const int translated_offset = full_reupload
 				? instance_config.patch_load_offset
-				: prog.TranslateConstantsRange(instance_config.patch_load_offset, instance_config.patch_load_count);
+				: prog->translate_constants_range(instance_config.patch_load_offset, instance_config.patch_load_count);
 
 			if (translated_offset >= 0)
 			{
@@ -809,14 +810,14 @@ namespace rsx
 				continue;
 			}
 
-			ensure(!prog.has_indexed_constants);
+			ensure(!full_reupload);
 
 			// Sparse update. Update records individually instead of bulk
 			// FIXME: Range batching optimization
 			const auto load_end = instance_config.patch_load_offset + instance_config.patch_load_count;
 			for (u32 i = 0; i < redirection_table_size; ++i)
 			{
-				const auto read_index = prog.constant_ids[i];
+				const auto read_index = prog->constant_ids[i];
 				if (read_index < instance_config.patch_load_offset || read_index >= load_end)
 				{
 					// Reading outside "hot" range.

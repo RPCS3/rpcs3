@@ -2590,6 +2590,9 @@ void main_window::CreateConnects()
 			{
 				Emu.Restart();
 			};
+
+			// Make sure we keep the game window opened
+			Emu.SetContinuousMode(true);
 		}
 
 		Emu.Kill(false, true);
@@ -2673,8 +2676,8 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		const std::string archived_path = fs::get_cache_dir() + "RPCS3.log.gz";
-		const std::string raw_file_path = fs::get_cache_dir() + "RPCS3.log";
+		const std::string archived_path = fs::get_log_dir() + "RPCS3.log.gz";
+		const std::string raw_file_path = fs::get_log_dir() + "RPCS3.log";
 
 		fs::stat_t raw_stat{};
 		fs::stat_t archived_stat{};
@@ -2905,6 +2908,12 @@ void main_window::CreateConnects()
 	connect(ui->confUSIOAct, &QAction::triggered, this, [this]
 	{
 		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::usio, this);
+		dlg->show();
+	});
+
+	connect(ui->confPSMoveMouseAct, &QAction::triggered, this, [this]
+	{
+		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::mousegem, this);
 		dlg->show();
 	});
 

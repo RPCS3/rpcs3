@@ -49,12 +49,11 @@ std::string rXmlNode::GetName()
 	return {};
 }
 
-std::string rXmlNode::GetAttribute(const std::string& name)
+std::string rXmlNode::GetAttribute(std::string_view name)
 {
 	if (handle)
 	{
-		const auto pred = [&name](const pugi::xml_attribute& attr) { return (name == attr.name()); };
-		if (const pugi::xml_attribute attr = handle.find_attribute(pred))
+		if (const pugi::xml_attribute attr = handle.attribute(name))
 		{
 			if (const pugi::char_t* value = attr.value())
 			{
@@ -86,7 +85,7 @@ rXmlDocument::rXmlDocument()
 {
 }
 
-pugi::xml_parse_result rXmlDocument::Read(const std::string& data)
+pugi::xml_parse_result rXmlDocument::Read(std::string_view data)
 {
 	if (handle)
 	{

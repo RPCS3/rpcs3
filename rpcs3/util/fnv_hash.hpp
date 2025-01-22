@@ -61,4 +61,29 @@ namespace rpcs3
 
 		return hash_struct_base<T, u8>(value);
 	}
+
+	template <typename T, size_t N>
+		requires std::is_integral_v<T>
+	static inline usz hash_array(const T(&arr)[N])
+	{
+		usz hash = fnv_seed;
+		for (size_t i = 0; i < N; ++i)
+		{
+			hash = hash64(hash, arr[i]);
+		}
+		return hash;
+	}
+
+	template <typename T, size_t N>
+		requires std::is_class_v<T>
+	static inline usz hash_array(const T(&arr)[N])
+	{
+		usz hash = fnv_seed;
+		for (size_t i = 0; i < N; ++i)
+		{
+			const u64 item_hash = hash_struct(arr[i]);
+			hash = hash64(hash, item_hash);
+		}
+		return hash;
+	}
 }

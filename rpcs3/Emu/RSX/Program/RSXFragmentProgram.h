@@ -300,8 +300,10 @@ struct RSXFragmentProgram
 	u32 ucode_length = 0;
 	u32 total_length = 0;
 	u32 ctrl = 0;
-	bool two_sided_lighting = false;
 	u32 texcoord_control_mask = 0;
+	u32 mrt_buffers_count = 0;
+
+	bool two_sided_lighting = false;
 
 	rsx::fragment_program_texture_state texture_state;
 	rsx::fragment_program_texture_config texture_params;

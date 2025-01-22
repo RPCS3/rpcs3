@@ -21,11 +21,14 @@ class GSRender : public rsx::thread
 protected:
 	GSFrameBase* m_frame;
 	draw_context_t m_context = nullptr;
+	bool m_continuous_mode = false;
 
 public:
 	~GSRender() override;
 
 	GSRender(utils::serial* ar) noexcept;
+
+	void set_continuous_mode(bool continuous_mode) { m_continuous_mode = continuous_mode; }
 
 	void on_init_thread() override;
 	void on_exit() override;

@@ -22,6 +22,15 @@ namespace rsx
 
 using namespace rsx::fragment_program;
 
+// SIMD vector lanes
+enum VectorLane : u8
+{
+	X = 0,
+	Y = 1,
+	Z = 2,
+	W = 3,
+};
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
@@ -141,8 +150,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		AddCode(m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(src0.cond_mod_reg_index)) + "$m = " + dest + ";");
 	}
 
-	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
-
+	const u32 reg_index = dst.fp16 ? (dst.dest_reg >> 1) : dst.dest_reg;
 	ensure(reg_index < temp_registers.size());
 
 	if (dst.opcode == RSX_FP_OPCODE_MOV &&
@@ -754,14 +762,26 @@ std::string FragmentProgramDecompiler::BuildCode()
 	const std::string init_value = float4_type + "(0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
-	bool shader_is_valid = false;
+
+	// Holder for any "cleanup" before exiting main
+	std::stringstream main_epilogue;
 
 	// Check depth export
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
 		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
-		shader_is_valid = (!!temp_registers[1].h1_writes);
+
+		auto& r1 = temp_registers[1];
+		if (r1.requires_gather(VectorLane::Z))
+		{
+			// r1.zw was not written to
+			properties.has_gather_op = true;
+			main_epilogue << "	r1.z = " << float4_type << r1.gather_r() << ".z;\n";
+
+			// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+			rsx_log.warning("ROP reads from shader depth without writing to it. Final value will be gathered.");
+		}
 	}
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
@@ -775,28 +795,49 @@ std::string FragmentProgramDecompiler::BuildCode()
 		output_register_names = { "h0", "h4", "h6", "h8" };
 	}
 
-	for (int n = 0; n < 4; ++n)
+	for (u32 n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, output_register_names[n]))
+		const auto& reg_name = output_register_names[n];
+		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, reg_name))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, float4_type, output_register_names[n], init_value);
+			m_parr.AddParam(PF_PARAM_NONE, float4_type, reg_name, init_value);
+		}
+
+		if (n >= m_prog.mrt_buffers_count)
+		{
+			// Skip gather
 			continue;
 		}
 
 		const auto block_index = ouput_register_indices[n];
-		shader_is_valid |= (!!temp_registers[block_index].h0_writes);
-	}
+		auto& r = temp_registers[block_index];
 
-	if (!shader_is_valid)
-	{
-		properties.has_no_output = true;
-
-		if (!properties.has_discard_op)
+		if (fp16_out)
 		{
-			// NOTE: Discard operation overrides output
-			rsx_log.warning("Shader does not write to any output register and will be NOPed");
-			main = "/*" + main + "*/";
+			// Check if we need a split/extract op
+			if (r.requires_split(0))
+			{
+				main_epilogue << "	" << reg_name << " = " << float4_type << r.split_h0() << ";\n";
+
+				// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+				rsx_log.warning("ROP reads from %s without writing to it. Final value will be extracted from the 32-bit register.", reg_name);
+			}
+
+			continue;
 		}
+
+		if (!r.requires_gather128())
+		{
+			// Nothing to do
+			continue;
+		}
+
+		// We need to gather the data from existing registers
+		main_epilogue << "	" << reg_name << " = " << float4_type << r.gather_r() << ";\n";
+		properties.has_gather_op = true;
+
+		// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
+		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", reg_name);
 	}
 
 	if (properties.has_dynamic_register_load)
@@ -822,6 +863,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << "#endif\n";
 		OS << "	discard;\n";
 		OS << "}\n";
+
+		// Don't consume any args
+		m_parr.Clear();
 		return OS.str();
 	}
 
@@ -1019,6 +1063,12 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	insertMainStart(OS);
 	OS << main << std::endl;
+
+	if (const auto epilogue = main_epilogue.str(); !epilogue.empty())
+	{
+		OS << "	// Epilogue\n";
+		OS << epilogue << std::endl;
+	}
 	insertMainEnd(OS);
 
 	return OS.str();
@@ -1360,12 +1410,12 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		switch (opcode)
 		{
-		case RSX_FP_OPCODE_NOP: break;
+		case RSX_FP_OPCODE_NOP:
+			break;
 		case RSX_FP_OPCODE_KIL:
 			properties.has_discard_op = true;
 			AddFlowOp("_kill()");
 			break;
-
 		default:
 			int prev_force_unit = forced_unit;
 

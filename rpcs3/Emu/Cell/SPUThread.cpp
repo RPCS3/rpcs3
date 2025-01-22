@@ -5481,7 +5481,7 @@ bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_
 
 usz spu_thread::register_cache_line_waiter(u32 addr)
 {
-	const u64 value = u64{compute_rdata_hash32(rdata)} << 32 | raddr;
+	const u64 value = u64{compute_rdata_hash32(rdata)} << 32 | addr;
 
 	for (usz i = 0; i < std::size(g_spu_waiters_by_value); i++)
 	{

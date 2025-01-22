@@ -32,6 +32,20 @@ std::string cfg_pad::get_buttons(std::vector<std::string> vec)
 	return fmt::merge(vec, ",");
 }
 
+u8 cfg_pad::get_large_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const
+{
+	const u8 idx = switch_vibration_motors ? 1 : 0;
+	const f32 multiplier = multiplier_vibration_motor_large / 100.0f;
+	return static_cast<u8>(std::clamp(motor_speed[idx].m_value * multiplier, 0.0f, 255.0f));
+}
+
+u8 cfg_pad::get_small_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const
+{
+	const u8 idx = switch_vibration_motors ? 0 : 1;
+	const f32 multiplier = multiplier_vibration_motor_small / 100.0f;
+	return static_cast<u8>(std::clamp(motor_speed[idx].m_value * multiplier, 0.0f, 255.0f));
+}
+
 bool cfg_input::load(const std::string& title_id, const std::string& config_file, bool strict)
 {
 	input_log.notice("Loading pad config (title_id='%s', config_file='%s', strict=%d)", title_id, config_file, strict);

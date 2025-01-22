@@ -271,7 +271,7 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
-	if (!Emu.GetTitleID().length())
+	if (Emu.GetTitleID().empty())
 	{
 		return CELL_ENOENT;
 	}
@@ -498,6 +498,9 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 		};
 
 		signal_system_cache_can_stay();
+
+		// Make sure we keep the game window opened
+		Emu.SetContinuousMode(true);
 		Emu.Kill(false);
 	});
 

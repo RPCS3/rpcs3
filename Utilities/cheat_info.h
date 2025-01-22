@@ -14,6 +14,7 @@ enum class cheat_type : u8
 	signed_16_cheat,
 	signed_32_cheat,
 	signed_64_cheat,
+	float_32_cheat,
 	max
 };
 

@@ -138,7 +138,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	}
 
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -147,7 +147,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	}
 
 	const auto& cfg = ::at32(g_cfg_ghltar.players, m_controller_index);
-	cfg->handle_input(pad, true, [&buf](ghltar_btn btn, u16 value, bool pressed)
+	cfg->handle_input(pad, true, [&buf](ghltar_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
 		{
 			if (!pressed)
 				return;

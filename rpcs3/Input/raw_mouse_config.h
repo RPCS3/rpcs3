@@ -5,9 +5,21 @@
 
 #include <array>
 
-LOG_CHANNEL(cfg_log, "CFG");
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
-std::string mouse_button_id(int code);
+static const std::map<std::string_view, int> raw_mouse_button_map
+{
+	{ "", 0 },
+#ifdef _WIN32
+	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
+	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
+	{ "Button 3", RI_MOUSE_BUTTON_3_UP },
+	{ "Button 4", RI_MOUSE_BUTTON_4_UP },
+	{ "Button 5", RI_MOUSE_BUTTON_5_UP },
+#endif
+};
 
 struct raw_mouse_config : cfg::node
 {
@@ -29,6 +41,12 @@ public:
 
 	cfg::string& get_button_by_index(int index);
 	cfg::string& get_button(int code);
+
+	static constexpr std::string_view key_prefix = "Key ";
+
+	static std::string get_button_name(std::string_view value);
+	static std::string get_button_name(s32 button_code);
+	static std::string get_key_name(s32 scan_code);
 };
 
 struct raw_mice_config : cfg::node

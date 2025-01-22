@@ -5,6 +5,7 @@
 #include "VKAsyncScheduler.h"
 #include "VKCommandStream.h"
 #include "VKCommonDecompiler.h"
+#include "VKCommonPipelineLayout.h"
 #include "VKCompute.h"
 #include "VKGSRender.h"
 #include "VKHelpers.h"
@@ -401,148 +402,6 @@ namespace vk
 	}
 }
 
-namespace
-{
-	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
-	{
-		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
-
-		u32 idx = 0;
-
-		// Vertex stream, one stream for cacheable data, one stream for transient data
-		for (int i = 0; i < 3; i++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = binding_table.vertex_buffers_first_bind_slot + i;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_state_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.fragment_texture_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.vertex_constant_buffers_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = binding_table.vertex_params_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.conditional_render_predicate_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.rasterizer_env_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.instancing_lookup_table_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.instancing_constants_buffer_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		for (auto binding = binding_table.textures_first_bind_slot;
-			 binding < binding_table.vertex_textures_first_bind_slot;
-			 binding++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[idx].binding = binding;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		for (int i = 0; i < rsx::limits::vertex_textures_count; i++)
-		{
-			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[idx].descriptorCount = 1;
-			bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[idx].binding = binding_table.vertex_textures_first_bind_slot + i;
-			bindings[idx].pImmutableSamplers = nullptr;
-			idx++;
-		}
-
-		ensure(idx == binding_table.total_descriptor_bindings);
-
-		std::array<VkPushConstantRange, 1> push_constants;
-		push_constants[0].offset = 0;
-		push_constants[0].size = 16;
-		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		if (vk::emulate_conditional_rendering())
-		{
-			// Conditional render toggle
-			push_constants[0].size = 20;
-		}
-
-		const auto set_layout = vk::descriptors::create_layout(bindings);
-
-		VkPipelineLayoutCreateInfo layout_info = {};
-		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layout_info.setLayoutCount = 1;
-		layout_info.pSetLayouts = &set_layout;
-		layout_info.pushConstantRangeCount = 1;
-		layout_info.pPushConstantRanges = push_constants.data();
-
-		VkPipelineLayout result;
-		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
-		return std::make_tuple(result, set_layout);
-	}
-}
-
 u64 VKGSRender::get_cycles()
 {
 	return thread_ctrl::get_cycles(static_cast<named_thread<VKGSRender>&>(*this));
@@ -633,7 +492,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
 
 	//Precalculated stuff
-	std::tie(m_pipeline_layout, m_descriptor_layouts) = get_shared_pipeline_layout(*m_device);
+	std::tie(m_pipeline_layout, m_descriptor_layouts) = vk::get_common_pipeline_layout(*m_device);
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
@@ -688,10 +547,10 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	// Initialize optional allocation information with placeholders
-	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 32 };
-	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 32 };
-	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 32 };
-	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 32 };
+	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 16 };
+	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 16 };
+	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 16 };
+	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
 	const auto limits = m_device->gpu().get_limits();
@@ -730,7 +589,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.94");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.95");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -2192,7 +2051,7 @@ void VKGSRender::load_program_env()
 			return std::make_pair(m_instancing_buffer_ring_info.map(constants_data_table_offset, size), size);
 		});
 
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, *m_vertex_prog);
+		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
 		m_instancing_buffer_ring_info.unmap();
 
 		m_instancing_indirection_buffer_info = { m_instancing_buffer_ring_info.heap->value, indirection_table_offset, indirection_table_buf.size() };
@@ -2219,7 +2078,7 @@ void VKGSRender::load_program_env()
 		}
 	}
 
-	if (update_fragment_constants && !update_instruction_buffers)
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
 	{
 		check_heap_status(VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE);
 
@@ -2350,9 +2209,9 @@ void VKGSRender::load_program_env()
 	}
 
 	// Clear flags
-	u32 handled_flags = rsx::pipeline_state::fragment_state_dirty |
+	rsx::flags32_t handled_flags =
+		rsx::pipeline_state::fragment_state_dirty |
 		rsx::pipeline_state::vertex_state_dirty |
-		rsx::pipeline_state::fragment_constants_dirty |
 		rsx::pipeline_state::fragment_texture_state_dirty;
 
 	if (!update_instancing_data)
@@ -2360,7 +2219,17 @@ void VKGSRender::load_program_env()
 		handled_flags |= rsx::pipeline_state::transform_constants_dirty;
 	}
 
+	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
+	{
+		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
+	}
+
 	m_graphics_state.clear(handled_flags);
+}
+
+bool VKGSRender::is_current_program_interpreted() const
+{
+	return m_program && m_shader_interpreter.is_interpreter(m_program);
 }
 
 void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
@@ -2433,10 +2302,16 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
 {
-	if (!m_vertex_prog)
+	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
 		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		return;
+	}
+
+	if (!m_vertex_prog->overlaps_constants_range(index, count))
+	{
+		// Nothing meaningful to us
 		return;
 	}
 
@@ -2453,7 +2328,7 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
 		data_source = &REGS(ctx)->transform_constants[index];
 	}
-	else if (auto xform_id = m_vertex_prog->TranslateConstantsRange(index, count); xform_id >= 0)
+	else if (auto xform_id = m_vertex_prog->translate_constants_range(index, count); xform_id >= 0)
 	{
 		const auto write_offset = xform_id * 16;
 		const auto byte_count = count * 16;

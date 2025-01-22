@@ -36,9 +36,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-71</y>
-        <width>1290</width>
-        <height>907</height>
+        <y>0</y>
+        <width>1292</width>
+        <height>902</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
@@ -670,6 +670,57 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_orientation_reset">
+              <property name="title">
+               <string>Orientation Reset</string>
+              </property>
+              <layout class="QHBoxLayout" name="orientation_reset_layout" stretch="2,1,1">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QPushButton" name="b_orientation_reset">
+                 <property name="text">
+                  <string>-</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="spacer_orientation_reset">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Policy::MinimumExpanding</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="cb_orientation_toggle">
+                 <property name="text">
+                  <string>Orientation</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_analog_limiter">
               <property name="title">
                <string>Analog Limiter</string>
@@ -695,12 +746,12 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer">
+                <spacer name="spacer_analog_limiter">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                  <property name="sizeType">
-                  <enum>QSizePolicy::MinimumExpanding</enum>
+                  <enum>QSizePolicy::Policy::MinimumExpanding</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -886,7 +937,7 @@
                   <property name="title">
                    <string>Enable Vibration</string>
                   </property>
-                  <layout class="QHBoxLayout" name="gb_vibration_layout">
+                  <layout class="QHBoxLayout" name="gb_vibration_layout" stretch="1,1,1">
                    <property name="leftMargin">
                     <number>5</number>
                    </property>
@@ -900,22 +951,22 @@
                     <number>5</number>
                    </property>
                    <item>
-                    <widget class="QCheckBox" name="chb_vibration_large">
-                     <property name="text">
-                      <string>Large</string>
+                    <widget class="QSpinBox" name="sb_vibration_large">
+                     <property name="suffix">
+                      <string>%</string>
                      </property>
-                     <property name="checked">
-                      <bool>true</bool>
+                     <property name="prefix">
+                      <string>Large </string>
                      </property>
                     </widget>
                    </item>
                    <item>
-                    <widget class="QCheckBox" name="chb_vibration_small">
-                     <property name="text">
-                      <string>Small</string>
+                    <widget class="QSpinBox" name="sb_vibration_small">
+                     <property name="suffix">
+                      <string>%</string>
                      </property>
-                     <property name="checked">
-                      <bool>true</bool>
+                     <property name="prefix">
+                      <string>Small </string>
                      </property>
                     </widget>
                    </item>
@@ -2286,7 +2337,7 @@
                <item>
                 <spacer name="spacer_squircle_left">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -2316,7 +2367,7 @@
                <item>
                 <spacer name="spacer_squircle_right">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -2364,7 +2415,7 @@
                <item>
                 <spacer name="spacer_stick_multi_left">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>
@@ -2391,7 +2442,7 @@
                <item>
                 <spacer name="spacer_stick_multi_right">
                  <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                  <enum>Qt::Orientation::Horizontal</enum>
                  </property>
                  <property name="sizeHint" stdset="0">
                   <size>

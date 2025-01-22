@@ -143,10 +143,10 @@ public:
 		const QString hide_mouse_on_idle           = tr("Hides the mouse cursor if no mouse movement is detected for the configured time.");
 		const QString show_shader_compilation_hint = tr("Shows 'Compiling shaders' hint using the native overlay.");
 		const QString show_ppu_compilation_hint    = tr("Shows 'Compiling PPU modules' hint using the native overlay.");
+		const QString show_autosave_autoload_hint  = tr("Shows autosave/autoload hint using the native overlay.");
 		const QString show_pressure_intensity_toggle_hint = tr("Shows pressure intensity toggle hint using the native overlay.");
 		const QString show_analog_limiter_toggle_hint = tr("Shows analog limiter toggle hint using the native overlay.");
 		const QString show_mouse_and_keyboard_toggle_hint = tr("Shows mouse and keyboard toggle hint using the native overlay.");
-		const QString show_autosave_autoload_hint  = tr("Shows autosave/autoload hint using the native overlay.");
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
 		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
 
@@ -287,6 +287,7 @@ public:
 		const QString mmjoy       = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");
 		const QString sdl         = tr("The SDL handler supports a variety of controllers across different platforms.");
 
+		const QString orientation_reset  = tr("Resets the sensor orientation when pressed.<br>Toggle the checkbox to enable or disable the orientation feature.<br>Currently only used for PS Move interactions.");
 		const QString analog_limiter     = tr("Applies the stick multipliers while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the analog limiter on button press instead.");
 		const QString pressure_intensity = tr("Controls the intensity of pressure sensitive buttons while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the intensity on button press instead.<br>Use the percentage to change how hard you want to press a button.");
 		const QString pressure_deadzone  = tr("Controls the deadzone of pressure sensitive buttons. It determines how far the button has to be pressed until it is recognized by the game. The resulting range will be projected onto the full button sensitivity range.");

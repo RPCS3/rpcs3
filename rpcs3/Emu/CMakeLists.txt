@@ -172,6 +172,7 @@ target_link_libraries(rpcs3_emu
 
 # Cell
 target_sources(rpcs3_emu PRIVATE
+    Cell/ErrorCodes.cpp
     Cell/MFC.cpp
     Cell/PPUAnalyser.cpp
     Cell/PPUDisAsm.cpp
@@ -557,6 +558,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
     RSX/Program/FragmentProgramDecompiler.cpp
+    RSX/Program/FragmentProgramRegister.cpp
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
@@ -593,6 +595,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKAsyncScheduler.cpp
         RSX/VK/VKCommandStream.cpp
         RSX/VK/VKCommonDecompiler.cpp
+        RSX/VK/VKCommonPipelineLayout.cpp
         RSX/VK/VKCompute.cpp
         RSX/VK/VKDMA.cpp
         RSX/VK/VKDraw.cpp

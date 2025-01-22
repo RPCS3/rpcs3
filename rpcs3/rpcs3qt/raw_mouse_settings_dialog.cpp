@@ -11,6 +11,8 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
+LOG_CHANNEL(cfg_log, "CFG");
+
 constexpr u32 button_count = 8;
 
 raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
@@ -66,11 +68,15 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	constexpr u32 max_devices = 16;
 
 	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>();
-	g_raw_mouse_handler->SetIsForGui(true);
+	g_raw_mouse_handler->set_is_for_gui(true);
 	g_raw_mouse_handler->Init(std::max(max_devices, ::size32(g_cfg_raw_mouse.players)));
-	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 cell_code, bool pressed)
+	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 button_code, bool pressed)
 	{
-		mouse_press(device_name, cell_code, pressed);
+		mouse_press(device_name, button_code, pressed);
+	});
+	g_raw_mouse_handler->set_key_press_callback([this](const std::string& device_name, s32 scan_code, bool pressed)
+	{
+		key_press(device_name, scan_code, pressed);
 	});
 
 	m_buttons = new QButtonGroup(this);
@@ -89,7 +95,7 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 				if (const int button_id = m_buttons->id(button); button_id >= 0)
 				{
 					auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
-					const std::string name = config->get_button_by_index(button_id % button_count).to_string();
+					const std::string name = raw_mouse_config::get_button_name(config->get_button_by_index(button_id % button_count).to_string());
 					button->setText(name.empty() ? QStringLiteral("-") : QString::fromStdString(name));
 				}
 			}
@@ -253,7 +259,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 			insert_button(static_cast<int>(player * button_count + i), pb);
 
-			const std::string saved_btn = config->get_button(cell_code);
+			const std::string saved_btn = raw_mouse_config::get_button_name(config->get_button(cell_code).to_string());
 
 			pb->setText(saved_btn.empty() ? QStringLiteral("-") : QString::fromStdString(saved_btn));
 
@@ -328,8 +334,8 @@ void raw_mouse_settings_dialog::reset_config()
 			if (!pb)
 				continue;
 
-			const QString text = QString::fromStdString(config->get_button(cell_code).def);
-			pb->setText(text.isEmpty() ? QStringLiteral("-") : text);
+			const std::string text = raw_mouse_config::get_button_name(config->get_button(cell_code).def);
+			pb->setText(text.empty() ? QStringLiteral("-") : QString::fromStdString(text));
 		}
 
 		if (QComboBox* combo = ::at32(m_device_combos, player))
@@ -344,7 +350,7 @@ void raw_mouse_settings_dialog::reset_config()
 	}
 }
 
-void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 cell_code, bool pressed)
+void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 button_code, bool pressed)
 {
 	if (m_button_id < 0 || pressed) // Let's only react to mouse releases
 	{
@@ -359,12 +365,40 @@ void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 
 		return;
 	}
 
-	auto& config = ::at32(g_cfg_raw_mouse.players, m_tab_widget->currentIndex());
-	config->get_button_by_index(m_button_id % button_count).from_string(mouse_button_id(cell_code));
+	const std::string button_name = raw_mouse_config::get_button_name(button_code);
+
+	auto& config = ::at32(g_cfg_raw_mouse.players, player);
+	config->get_button_by_index(m_button_id % button_count).from_string(button_name);
 
 	if (auto button = m_buttons->button(m_button_id))
 	{
-		button->setText(localized_emu::translated_mouse_button(cell_code));
+		button->setText(QString::fromStdString(button_name));
+	}
+
+	reactivate_buttons();
+}
+
+void raw_mouse_settings_dialog::key_press(const std::string& device_name, s32 scan_code, bool pressed)
+{
+	if (m_button_id < 0 || !pressed) // Let's only react to key presses
+	{
+		return;
+	}
+
+	const int player = m_tab_widget->currentIndex();
+	const std::string current_device_name = get_current_device_name(player);
+
+	if (device_name != current_device_name)
+	{
+		return;
+	}
+
+	auto& config = ::at32(g_cfg_raw_mouse.players, player);
+	config->get_button_by_index(m_button_id % button_count).from_string(fmt::format("%s%d", raw_mouse_config::key_prefix, scan_code));
+
+	if (auto button = m_buttons->button(m_button_id))
+	{
+		button->setText(QString::fromStdString(raw_mouse_config::get_key_name(scan_code)));
 	}
 
 	reactivate_buttons();

@@ -73,6 +73,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	, m_initial_geometry(geometry)
 	, m_gui_settings(std::move(gui_settings))
 	, m_start_games_fullscreen(force_fullscreen)
+	, m_renderer(g_cfg.video.renderer)
 {
 	load_gui_settings();
 
@@ -328,6 +329,9 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 				{
 					Emu.Restart();
 				};
+
+				// Make sure we keep the game window opened
+				Emu.SetContinuousMode(true);
 			}
 
 			Emu.Kill(false, true);
@@ -602,6 +606,11 @@ void gs_frame::close()
 
 	gui_log.notice("Closing game window");
 
+	if (m_ignore_stop_events)
+	{
+		return;
+	}
+
 	Emu.CallFromMainThread([this]()
 	{
 		// Hide window if necessary
@@ -621,6 +630,10 @@ void gs_frame::close()
 			deleteLater();
 		}
 	});
+}
+
+void gs_frame::reset()
+{
 }
 
 bool gs_frame::shown()
@@ -1133,6 +1146,11 @@ bool gs_frame::event(QEvent* ev)
 		}
 
 		gui_log.notice("Game window close event issued");
+
+		if (m_ignore_stop_events)
+		{
+			return QWindow::event(ev);
+		}
 
 		if (Emu.IsStopped())
 		{

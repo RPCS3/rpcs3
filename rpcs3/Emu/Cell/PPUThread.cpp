@@ -4898,6 +4898,30 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
+			if (!workload.empty() && fpos >= info.funcs.size())
+			{
+				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
+				// Potentially occuring during patches
+				// Avoid doing it for files with a single module such as most PRX
+
+				std::vector<be_t<u32>> addrs;
+
+				for (const ppu_function& func : info.funcs)
+				{
+					if (func.size == 0)
+					{
+						continue;
+					}
+
+					addrs.emplace_back(func.addr - reloc);
+				}
+
+				// Hash its size too
+				addrs.emplace_back(::size32(addrs));
+
+				sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
+			}
+
 			if (false)
 			{
 				const be_t<u64> forced_upd = 3;

@@ -64,6 +64,7 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	b_has_deadzones = true;
 	b_has_battery = true;
 	b_has_battery_led = false;
+	b_has_orientation = false;
 
 	m_name_string = "XInput Pad #";
 	m_max_devices = XUSER_MAX_COUNT;
@@ -119,6 +120,7 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, XInputKeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, XInputKeyCodes::None);
+	cfg->orientation_reset_button.def = ::at32(button_list, XInputKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%
@@ -413,6 +415,8 @@ bool xinput_pad_handler::Init()
 		}
 	}
 
+	b_has_orientation = !!xinputGetCustomData;
+
 	if (!m_is_init)
 		return false;
 
@@ -551,6 +555,8 @@ void xinput_pad_handler::get_extended_info(const pad_ensemble& binding)
 			pad->m_sensors[1].m_value = sensors.SCP_ACCEL_Y;
 			pad->m_sensors[2].m_value = sensors.SCP_ACCEL_Z;
 			pad->m_sensors[3].m_value = sensors.SCP_GYRO;
+
+			set_raw_orientation(*pad);
 		}
 	}
 }
@@ -569,11 +575,8 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	const usz idx_l = cfg->switch_vibration_motors ? 1 : 0;
-	const usz idx_s = cfg->switch_vibration_motors ? 0 : 1;
-
-	const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
-	const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
+	const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
 
 	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 

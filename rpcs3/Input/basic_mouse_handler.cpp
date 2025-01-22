@@ -108,10 +108,10 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 		switch (ev->type())
 		{
 		case QEvent::MouseButtonPress:
-			MouseButtonDown(static_cast<QMouseEvent*>(ev));
+			MouseButton(static_cast<QMouseEvent*>(ev), true);
 			break;
 		case QEvent::MouseButtonRelease:
-			MouseButtonUp(static_cast<QMouseEvent*>(ev));
+			MouseButton(static_cast<QMouseEvent*>(ev), false);
 			break;
 		case QEvent::MouseMove:
 			MouseMove(static_cast<QMouseEvent*>(ev));
@@ -119,6 +119,24 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 		case QEvent::Wheel:
 			MouseScroll(static_cast<QWheelEvent*>(ev));
 			break;
+		case QEvent::KeyPress:
+			Key(static_cast<QKeyEvent*>(ev), true);
+			break;
+		case QEvent::KeyRelease:
+			Key(static_cast<QKeyEvent*>(ev), false);
+			break;
+		case QEvent::Leave:
+		{
+			// Issue mouse move on leave. Otherwise we may not get any mouse event at the screen borders.
+			const QPoint window_pos = m_target->mapToGlobal(m_target->position()) / m_target->devicePixelRatio();
+			const QPoint cursor_pos = QCursor::pos() - window_pos;
+
+			if (cursor_pos.x() <= 0 || cursor_pos.x() >= m_target->width() || cursor_pos.y() <= 0 || cursor_pos.y() >= m_target->height())
+			{
+				MouseMove(cursor_pos);
+			}
+			break;
+		}
 		default:
 			return false;
 		}
@@ -126,22 +144,22 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 	return false;
 }
 
-void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
+void basic_mouse_handler::Key(QKeyEvent* event, bool pressed)
 {
 	if (!event) [[unlikely]]
 	{
 		return;
 	}
 
-	const int button = event->button();
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
+	const int key = event->key();
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [key](const auto& entry){ return entry.second.code == key && entry.second.is_key; });
 		it != m_buttons.cend())
 	{
-		MouseHandlerBase::Button(0, it->first, true);
+		MouseHandlerBase::Button(0, it->first, pressed);
 	}
 }
 
-void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
+void basic_mouse_handler::MouseButton(QMouseEvent* event, bool pressed)
 {
 	if (!event) [[unlikely]]
 	{
@@ -149,10 +167,10 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 	}
 
 	const int button = event->button();
-	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second == button; });
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [button](const auto& entry){ return entry.second.code == button && !entry.second.is_key; });
 		it != m_buttons.cend())
 	{
-		MouseHandlerBase::Button(0, it->first, false);
+		MouseHandlerBase::Button(0, it->first, pressed);
 	}
 }
 
@@ -176,17 +194,31 @@ bool basic_mouse_handler::get_mouse_lock_state() const
 	return false;
 }
 
-int basic_mouse_handler::get_mouse_button(const cfg::string& button)
+basic_mouse_handler::mouse_button basic_mouse_handler::get_mouse_button(const cfg::string& button)
 {
 	const std::string name = button.to_string();
 	const auto it = std::find_if(mouse_list.cbegin(), mouse_list.cend(), [&name](const auto& entry){ return entry.second == name; });
 
 	if (it != mouse_list.cend())
 	{
-		return it->first;
+		return mouse_button{
+			.code = static_cast<int>(it->first),
+			.is_key = false
+		};
 	}
 
-	return Qt::MouseButton::NoButton;
+	if (const u32 key = keyboard_pad_handler::GetKeyCode(QString::fromStdString(name)))
+	{
+		return mouse_button{
+			.code = static_cast<int>(key),
+			.is_key = true
+		};
+	}
+
+	return mouse_button{
+		.code = Qt::MouseButton::NoButton,
+		.is_key = false
+	};
 }
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)
@@ -198,38 +230,44 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 
 	if (is_time_for_update())
 	{
-		// get the screen dimensions
-		const QSize screen = m_target->size();
-		const QPoint e_pos = event->pos();
+		MouseMove(event->pos());
+	}
+}
 
-		if (m_target && m_target->isActive() && get_mouse_lock_state())
-		{
-			// get the center of the screen in global coordinates
-			QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+void basic_mouse_handler::MouseMove(const QPoint& e_pos)
+{
+	if (!m_target) return;
 
-			// reset the mouse to the center for consistent results since edge movement won't be registered
-			QCursor::setPos(m_target->screen(), p_center);
+	// get the screen dimensions
+	const QSize screen = m_target->size();
 
-			// convert the center into screen coordinates
-			p_center = m_target->mapFromGlobal(p_center);
+	if (m_target->isActive() && get_mouse_lock_state())
+	{
+		// get the center of the screen in global coordinates
+		QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
 
-			// current mouse position, starting at the center
-			static QPoint p_real(p_center);
+		// reset the mouse to the center for consistent results since edge movement won't be registered
+		QCursor::setPos(m_target->screen(), p_center);
 
-			// get the delta of the mouse position to the screen center
-			const QPoint p_delta = e_pos - p_center;
+		// convert the center into screen coordinates
+		p_center = m_target->mapFromGlobal(p_center);
 
-			// update the current position without leaving the screen borders
-			p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
-			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
+		// current mouse position, starting at the center
+		static QPoint p_real(p_center);
 
-			// pass the 'real' position and the current delta to the screen center
-			MouseHandlerBase::Move(0, p_real.x(), p_real.y(), screen.width(), screen.height(), true, p_delta.x(), p_delta.y());
-		}
-		else
-		{
-			// pass the absolute position
-			MouseHandlerBase::Move(0, e_pos.x(), e_pos.y(), screen.width(), screen.height());
-		}
+		// get the delta of the mouse position to the screen center
+		const QPoint p_delta = e_pos - p_center;
+
+		// update the current position without leaving the screen borders
+		p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
+		p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
+
+		// pass the 'real' position and the current delta to the screen center
+		MouseHandlerBase::Move(0, p_real.x(), p_real.y(), screen.width(), screen.height(), true, p_delta.x(), p_delta.y());
+	}
+	else
+	{
+		// pass the absolute position
+		MouseHandlerBase::Move(0, e_pos.x(), e_pos.y(), screen.width(), screen.height());
 	}
 }

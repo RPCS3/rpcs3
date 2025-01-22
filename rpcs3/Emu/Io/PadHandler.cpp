@@ -2,6 +2,7 @@
 #include "PadHandler.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
+#include "Emu/Cell/timers.hpp"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 
@@ -494,6 +495,12 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
+	if (b_has_orientation)
+	{
+		pad->m_buttons.emplace_back(special_button_offset, mapping[button::orientation_reset_button], special_button_value::orientation_reset);
+		pad->m_orientation_reset_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	}
+
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::left], CELL_PAD_CTRL_LEFT);
@@ -598,6 +605,11 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::
 	if (b_has_analog_limiter_button)
 	{
 		mapping[button::analog_limiter_button] = FindKeyCodes<u32, u32>(button_list, cfg->analog_limiter_button);
+	}
+
+	if (b_has_orientation)
+	{
+		mapping[button::orientation_reset_button] = FindKeyCodes<u32, u32>(button_list, cfg->orientation_reset_button);
 	}
 
 	return mapping;
@@ -739,6 +751,8 @@ void PadHandlerBase::process()
 		if (!device || !pad)
 			continue;
 
+		pad->move_data.orientation_enabled = b_has_orientation && device->config && device->config->orientation_enabled.get();
+
 		const connection status = update_connection(device);
 
 		switch (status)
@@ -754,6 +768,11 @@ void PadHandlerBase::process()
 
 				last_connection_status[i] = true;
 				connected_devices++;
+
+				if (b_has_orientation)
+				{
+					device->reset_orientation();
+				}
 			}
 
 			if (status == connection::no_data)
@@ -790,6 +809,11 @@ void PadHandlerBase::process()
 
 				last_connection_status[i] = false;
 				connected_devices--;
+
+				if (b_has_orientation)
+				{
+					device->reset_orientation();
+				}
 			}
 			continue;
 		}
@@ -797,6 +821,142 @@ void PadHandlerBase::process()
 
 		get_mapping(m_bindings[i]);
 		get_extended_info(m_bindings[i]);
+		get_orientation(m_bindings[i]);
 		apply_pad_data(m_bindings[i]);
 	}
+}
+
+void PadHandlerBase::set_raw_orientation(ps_move_data& move_data, f32 accel_x, f32 accel_y, f32 accel_z, f32 gyro_x, f32 gyro_y, f32 gyro_z)
+{
+	if (!move_data.orientation_enabled)
+	{
+		move_data.reset_sensors();
+		return;
+	}
+
+	// This function expects DS3 sensor accel values in linear velocity (m/s²) and gyro values in angular velocity (degree/s)
+	// The default position is flat on the ground, pointing forward.
+	// The accelerometers constantly measure G forces.
+	// The gyros measure changes in orientation and will reset when the device isn't moved anymore.
+	move_data.accelerometer_x = -accel_x;      // move_data: Increases if the device is rolled to the left
+	move_data.accelerometer_y = accel_z;       // move_data: Increases if the device is pitched upwards
+	move_data.accelerometer_z = accel_y;       // move_data: Increases if the device is moved upwards
+	move_data.gyro_x = degree_to_rad(-gyro_x); // move_data: Increases if the device is pitched upwards
+	move_data.gyro_y = degree_to_rad(gyro_z);  // move_data: Increases if the device is rolled to the right
+	move_data.gyro_z = degree_to_rad(-gyro_y); // move_data: Increases if the device is yawed to the left
+}
+
+void PadHandlerBase::set_raw_orientation(Pad& pad)
+{
+	if (!pad.move_data.orientation_enabled)
+	{
+		pad.move_data.reset_sensors();
+		return;
+	}
+
+	// acceleration (linear velocity in m/s²)
+	const f32 accel_x = (pad.m_sensors[0].m_value - 512) / static_cast<f32>(MOTION_ONE_G);
+	const f32 accel_y = (pad.m_sensors[1].m_value - 512) / static_cast<f32>(MOTION_ONE_G);
+	const f32 accel_z = (pad.m_sensors[2].m_value - 512) / static_cast<f32>(MOTION_ONE_G);
+
+	// gyro (angular velocity in degree/s)
+	constexpr f32 gyro_x = 0.0f;
+	const f32 gyro_y = (pad.m_sensors[3].m_value - 512) / (123.f / 90.f);
+	constexpr f32 gyro_z = 0.0f;
+
+	set_raw_orientation(pad.move_data, accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z);
+}
+
+void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
+{
+	if (!b_has_orientation) return;
+
+	const auto& pad = binding.pad;
+	const auto& device = binding.device;
+	if (!pad || !device) return;
+
+	if (pad->move_data.calibration_requested)
+	{
+		device->reset_orientation();
+		pad->move_data.quaternion = ps_move_data::default_quaternion;
+		pad->move_data.calibration_succeeded = true;
+		return;
+	}
+
+	if (!pad->move_data.orientation_enabled || pad->get_orientation_reset_button_active())
+	{
+		// This can be called extensively in quick succession, so let's just reset the pointer instead of creating a new object.
+		device->ahrs.reset();
+		pad->move_data.quaternion = ps_move_data::default_quaternion;
+		return;
+	}
+
+	device->update_orientation(pad->move_data);
+}
+
+void PadDevice::reset_orientation()
+{
+	// Initialize Fusion
+	ahrs = std::make_shared<FusionAhrs>();
+	FusionAhrsInitialise(ahrs.get());
+	ahrs->settings.convention = FusionConvention::FusionConventionEnu;
+	ahrs->settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
+	FusionAhrsSetSettings(ahrs.get(), &ahrs->settings);
+	FusionAhrsReset(ahrs.get());
+}
+
+void PadDevice::update_orientation(ps_move_data& move_data)
+{
+	if (!ahrs)
+	{
+		reset_orientation();
+	}
+
+	// Get elapsed time since last update
+	const u64 now_us = get_system_time();
+	const float elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
+	last_ahrs_update_time_us = now_us;
+
+	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
+	// Don't ask how the axis work. It's basically been trial and error.
+	ensure(ahrs->settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
+
+	const FusionVector accelerometer{
+		.axis {
+			.x = -move_data.accelerometer_x,
+			.y = +move_data.accelerometer_y,
+			.z = +move_data.accelerometer_z
+		}
+	};
+
+	const FusionVector gyroscope{
+		.axis {
+			.x = +PadHandlerBase::rad_to_degree(move_data.gyro_x),
+			.y = +PadHandlerBase::rad_to_degree(move_data.gyro_z),
+			.z = -PadHandlerBase::rad_to_degree(move_data.gyro_y)
+		}
+	};
+
+	FusionVector magnetometer {};
+
+	if (move_data.magnetometer_enabled)
+	{
+		magnetometer = FusionVector{
+			.axis {
+				.x = move_data.magnetometer_x,
+				.y = move_data.magnetometer_y,
+				.z = move_data.magnetometer_z
+			}
+		};
+	}
+
+	// Update Fusion
+	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer, elapsed_sec);
+
+	// Get quaternion
+	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(ahrs.get());
+	move_data.quaternion[0] = quaternion.array[1];
+	move_data.quaternion[1] = quaternion.array[2];
+	move_data.quaternion[2] = quaternion.array[3];
+	move_data.quaternion[3] = quaternion.array[0];
 }

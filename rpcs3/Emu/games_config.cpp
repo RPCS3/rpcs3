@@ -123,7 +123,7 @@ bool games_config::save_nl()
 	YAML::Emitter out;
 	out << m_games;
 
-	fs::pending_file temp(fs::get_config_dir() + "/games.yml");
+	fs::pending_file temp(fs::get_config_dir(true) + "games.yml");
 
 	if (temp.file && temp.file.write(out.c_str(), out.size()) >= out.size() && temp.commit())
 	{
@@ -147,7 +147,24 @@ void games_config::load()
 
 	m_games.clear();
 
-	if (fs::file f{fs::get_config_dir() + "/games.yml", fs::read + fs::create})
+	const std::string path = fs::get_config_dir(true) + "games.yml";
+
+	// Move file from deprecated location to new location
+#ifdef _WIN32
+	const std::string old_path = fs::get_config_dir(false) + "games.yml";
+
+	if (fs::is_file(old_path))
+	{
+		cfg_log.notice("Found deprecated games.yml file: '%s'", old_path);
+
+		if (!fs::rename(old_path, path, false))
+		{
+			(fs::g_tls_error == fs::error::exist ? cfg_log.warning : cfg_log.error)("Failed to move '%s' to '%s' (error='%s')", old_path, path, fs::g_tls_error);
+		}
+	}
+#endif
+
+	if (fs::file f{path, fs::read + fs::create})
 	{
 		auto [result, error] = yaml_load(f.to_string());
 

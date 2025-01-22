@@ -66,6 +66,7 @@ class pad_settings_dialog : public QDialog
 
 		id_pressure_intensity, // Special button for pressure intensity
 		id_analog_limiter, // Special button for analog limiter
+		id_orientation_reset, // Special button for orientation reset
 
 		id_pad_end, // end
 
@@ -123,6 +124,7 @@ private:
 	bool m_enable_motion{ false };
 	bool m_enable_pressure_intensity_button{ true };
 	bool m_enable_analog_limiter_button{ true };
+	bool m_enable_orientation_reset_button{ true };
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;
@@ -137,8 +139,8 @@ private:
 	int m_ry = 0;
 
 	// Rumble
-	s32 m_min_force = 0;
-	s32 m_max_force = 0;
+	static constexpr u8 m_min_force = 0;
+	static constexpr u8 m_max_force = 255;
 
 	// Backup for standard button palette
 	QPalette m_palette;
@@ -188,7 +190,7 @@ private:
 	void CancelExit();
 
 	// Set vibrate data while keeping the current color
-	void SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator = false);
+	void SetPadData(u8 large_motor, u8 small_motor, bool led_battery_indicator = false);
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabels(bool is_reset = false);

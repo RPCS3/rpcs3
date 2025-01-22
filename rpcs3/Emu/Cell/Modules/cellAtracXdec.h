@@ -20,7 +20,6 @@ constexpr int averror_eof = AVERROR_EOF; // Workaround for old-style-cast error
 #pragma GCC diagnostic pop
 #endif
 
-#include "Utilities/cond.h"
 #include "cellPamf.h"
 #include "cellAdec.h"
 
@@ -215,16 +214,28 @@ struct AtracXdecDecoder
 
 CHECK_SIZE(AtracXdecDecoder, 0xa8);
 
+// HLE exclusive, for savestates
+enum class atracxdec_state : u8
+{
+	initial,
+	waiting_for_cmd,
+	checking_run_thread_1,
+	executing_cmd,
+	waiting_for_output,
+	checking_run_thread_2,
+	decoding
+};
+
 struct AtracXdecContext
 {
 	be_t<u64> thread_id; // sys_ppu_thread_t
 
-	shared_mutex queue_mutex;      // sys_mutex_t
-	cond_variable queue_not_empty; // sys_cond_t
+	be_t<u32> queue_mutex;     // sys_mutex_t
+	be_t<u32> queue_not_empty; // sys_cond_t
 	AdecCmdQueue<AtracXdecCmd> cmd_queue;
 
-	shared_mutex output_mutex;     // sys_mutex_t
-	cond_variable output_consumed; // sys_cond_t
+	be_t<u32> output_mutex;    // sys_mutex_t
+	be_t<u32> output_consumed; // sys_cond_t
 	be_t<u32> output_locked = false;
 
 	be_t<u32> run_thread_mutex; // sys_mutex_t
@@ -239,10 +250,10 @@ struct AtracXdecContext
 	const vm::bptr<u8> work_mem;
 
 	// HLE exclusive
-	u64 cmd_counter = 0;             // For debugging
-	AtracXdecCmd cmd;                // For savestates; if savestate was created while processing a decode command, we need to save the current command
-	b8 skip_getting_command = false; // For savestates; skips getting a new command from the queue
-	b8 skip_next_frame;              // Needed to emulate behavior of LLE SPU program, it doesn't output the first frame after a sequence reset or error
+	u64 cmd_counter = 0;         // For debugging
+	AtracXdecCmd cmd;            // For savestates; if savestate was created while processing a decode command, we need to save the current command
+	atracxdec_state savestate{}; // For savestates
+	b8 skip_next_frame;          // Needed to emulate behavior of LLE SPU program, it doesn't output the first frame after a sequence reset or error
 
 	u8 spurs_stuff[58]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
 

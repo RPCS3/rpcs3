@@ -15,7 +15,7 @@ namespace gem
 {
 	extern bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
 	                                 const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                                 u8* video_data_out, u32 video_data_out_size);
+	                                 u8* video_data_out, u32 video_data_out_size, std::string_view caller);
 }
 
 template <bool DiagnosticsEnabled>
@@ -238,7 +238,7 @@ void ps_move_tracker<DiagnosticsEnabled>::convert_image(s32 output_format)
 		m_image_binary[index].resize(size);
 	}
 
-	if (gem::convert_image_format(CellCameraFormat{m_format}, CellGemVideoConvertFormatEnum{output_format}, m_image_data, width, height, m_image_rgba.data(), ::size32(m_image_rgba)))
+	if (gem::convert_image_format(CellCameraFormat{m_format}, CellGemVideoConvertFormatEnum{output_format}, m_image_data, width, height, m_image_rgba.data(), ::size32(m_image_rgba), "gemTracker"))
 	{
 		ps_move.trace("Converted video frame of format %s to %s", CellCameraFormat{m_format}, CellGemVideoConvertFormatEnum{output_format});
 	}

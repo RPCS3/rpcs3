@@ -125,19 +125,15 @@ patch_engine::patch_engine()
 
 std::string patch_engine::get_patch_config_path()
 {
-#ifdef _WIN32
-	const std::string config_dir = fs::get_config_dir() + "config/";
+	const std::string config_dir = fs::get_config_dir(true);
 	const std::string patch_path = config_dir + "patch_config.yml";
-
+#ifdef _WIN32
 	if (!fs::create_path(config_dir))
 	{
 		patch_log.error("Could not create path: %s (%s)", patch_path, fs::g_tls_error);
 	}
-
-	return patch_path;
-#else
-	return fs::get_config_dir() + "patch_config.yml";
 #endif
+	return patch_path;
 }
 
 std::string patch_engine::get_patches_path()
@@ -1449,6 +1445,8 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 void patch_engine::apply(std::vector<u32>& applied_total, const std::string& name, std::function<u8*(u32, u32)> mem_translate, u32 filesz, u32 min_addr)
 {
+	// applied_total may be non-empty, do not clear it
+
 	if (!m_map.contains(name))
 	{
 		return;
@@ -1597,6 +1595,9 @@ void patch_engine::apply(std::vector<u32>& applied_total, const std::string& nam
 			}
 		}
 	}
+
+	// Ensure consistent order
+	std::sort(applied_total.begin(), applied_total.end());
 }
 
 void patch_engine::unload(const std::string& name)

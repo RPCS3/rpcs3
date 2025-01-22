@@ -43,6 +43,7 @@ void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
 		case cheat_type::signed_16_cheat: return "Signed 16 bits";
 		case cheat_type::signed_32_cheat: return "Signed 32 bits";
 		case cheat_type::signed_64_cheat: return "Signed 64 bits";
+		case cheat_type::float_32_cheat: return "Float 32 bits";
 		case cheat_type::max: break;
 		}
 
@@ -612,8 +613,9 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			return;
 		}
 
-		bool success;
-		u64 result_value;
+		bool success = false;
+		u64 result_value {};
+		f64 result_value_f {};
 
 		switch (cheat->type)
 		{
@@ -625,6 +627,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		case cheat_type::signed_16_cheat: result_value = cheat_engine::get_value<s16>(final_offset, success); break;
 		case cheat_type::signed_32_cheat: result_value = cheat_engine::get_value<s32>(final_offset, success); break;
 		case cheat_type::signed_64_cheat: result_value = cheat_engine::get_value<s64>(final_offset, success); break;
+		case cheat_type::float_32_cheat: result_value_f = cheat_engine::get_value<f32>(final_offset, success); break;
 		default: log_cheat.fatal("Unsupported cheat type"); return;
 		}
 
@@ -632,6 +635,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		{
 			if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
 				edt_value_final->setText(tr("%1").arg(static_cast<s64>(result_value)));
+			else if (cheat->type == cheat_type::float_32_cheat)
+				edt_value_final->setText(tr("%1").arg(result_value_f));
 			else
 				edt_value_final->setText(tr("%1").arg(result_value));
 		}
@@ -795,6 +800,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		case cheat_type::signed_16_cheat: results = convert_and_set<s16>(final_offset); break;
 		case cheat_type::signed_32_cheat: results = convert_and_set<s32>(final_offset); break;
 		case cheat_type::signed_64_cheat: results = convert_and_set<s64>(final_offset); break;
+		case cheat_type::float_32_cheat: results = convert_and_set<f32>(final_offset); break;
 		default: log_cheat.fatal("Unsupported cheat type"); return;
 		}
 
@@ -888,8 +894,6 @@ cheat_manager_dialog* cheat_manager_dialog::get_dlg(QWidget* parent)
 template <typename T>
 T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 {
-	T result;
-
 	if constexpr (std::is_same_v<T, u8>)
 	{
 		const u16 result_16 = str.toUShort(&success);
@@ -897,17 +901,17 @@ T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 		if (result_16 > 0xFF)
 			success = false;
 
-		result = static_cast<T>(result_16);
+		return static_cast<T>(result_16);
 	}
 
 	if constexpr (std::is_same_v<T, u16>)
-		result = str.toUShort(&success);
+		return str.toUShort(&success);
 
 	if constexpr (std::is_same_v<T, u32>)
-		result = str.toUInt(&success);
+		return str.toUInt(&success);
 
 	if constexpr (std::is_same_v<T, u64>)
-		result = str.toULongLong(&success);
+		return str.toULongLong(&success);
 
 	if constexpr (std::is_same_v<T, s8>)
 	{
@@ -915,28 +919,31 @@ T cheat_manager_dialog::convert_from_QString(const QString& str, bool& success)
 		if (result_16 < -128 || result_16 > 127)
 			success = false;
 
-		result = static_cast<T>(result_16);
+		return static_cast<T>(result_16);
 	}
 
 	if constexpr (std::is_same_v<T, s16>)
-		result = str.toShort(&success);
+		return str.toShort(&success);
 
 	if constexpr (std::is_same_v<T, s32>)
-		result = str.toInt(&success);
+		return str.toInt(&success);
 
 	if constexpr (std::is_same_v<T, s64>)
-		result = str.toLongLong(&success);
+		return str.toLongLong(&success);
 
-	return result;
+	if constexpr (std::is_same_v<T, f32>)
+		return str.toFloat(&success);
+
+	return {};
 }
 
 template <typename T>
 bool cheat_manager_dialog::convert_and_search()
 {
-	bool res_conv;
+	bool res_conv = false;
 	const QString to_search = edt_cheat_search_value->text();
 
-	T value = convert_from_QString<T>(to_search, res_conv);
+	const T value = convert_from_QString<T>(to_search, res_conv);
 
 	if (!res_conv)
 		return false;
@@ -948,10 +955,10 @@ bool cheat_manager_dialog::convert_and_search()
 template <typename T>
 std::pair<bool, bool> cheat_manager_dialog::convert_and_set(u32 offset)
 {
-	bool res_conv;
+	bool res_conv = false;
 	const QString to_set = edt_value_final->text();
 
-	T value = convert_from_QString<T>(to_set, res_conv);
+	const T value = convert_from_QString<T>(to_set, res_conv);
 
 	if (!res_conv)
 		return {false, false};
@@ -974,6 +981,7 @@ void cheat_manager_dialog::do_the_search()
 	case cheat_type::signed_16_cheat: res_conv = convert_and_search<s16>(); break;
 	case cheat_type::signed_32_cheat: res_conv = convert_and_search<s32>(); break;
 	case cheat_type::signed_64_cheat: res_conv = convert_and_search<s64>(); break;
+	case cheat_type::float_32_cheat: res_conv = convert_and_search<f32>(); break;
 	default: log_cheat.fatal("Unsupported cheat type"); break;
 	}
 
@@ -1065,6 +1073,7 @@ QString cheat_manager_dialog::get_localized_cheat_type(cheat_type type)
 	case cheat_type::signed_16_cheat: return tr("Signed 16 bits");
 	case cheat_type::signed_32_cheat: return tr("Signed 32 bits");
 	case cheat_type::signed_64_cheat: return tr("Signed 64 bits");
+	case cheat_type::float_32_cheat: return tr("Float 32 bits");
 	case cheat_type::max: break;
 	}
 	std::string type_formatted;

@@ -71,8 +71,8 @@ SERIALIZATION_VER(sceNp, 11)
 
 SERIALIZATION_VER(cellVdec, 12,                                 1)
 SERIALIZATION_VER(cellAudio, 13,                                1)
-SERIALIZATION_VER(cellCamera, 14,                               1)
-SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/)
+SERIALIZATION_VER(cellCamera, 14,                               1, 2/*gem_camera_shared*/)
+SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/, 3/*video_conversion*/)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
 SERIALIZATION_VER(cellMusic, 17,                                1)
 SERIALIZATION_VER(cellVoice, 18,                                1)
@@ -322,7 +322,10 @@ bool boot_last_savestate(bool testing)
 		if (result)
 		{
 			sys_log.success("Booting the most recent savestate \'%s\' using the Reload shortcut.", savestate_path);
-			Emu.GracefulShutdown(false);
+
+			// Make sure we keep the game window opened
+			Emu.SetContinuousMode(true);
+			Emu.GracefulShutdown(false, false, false, true);
 
 			if (game_boot_result error = Emu.BootGame(savestate_path, "", true); error != game_boot_result::no_errors)
 			{

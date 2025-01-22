@@ -347,7 +347,7 @@ namespace gl
 		return data;
 	}
 
-	bool shader_interpreter::is_interpreter(const glsl::program* program)
+	bool shader_interpreter::is_interpreter(const glsl::program* program) const
 	{
 		return (program == &m_current_interpreter->prog);
 	}
