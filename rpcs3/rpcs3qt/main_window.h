@@ -175,17 +175,22 @@ private:
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void AddGamesFromDirs(QStringList&& paths);
 
-	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
-	void BootRecentAction(const QAction* act);
-	void AddRecentAction(const q_string_pair& entry);
+	QAction* CreateRecentAction(const q_string_pair& entry, u32 sc_idx, bool is_savestate);
+	void BootRecentAction(const QAction* act, bool is_savestate);
+	void AddRecentAction(const q_string_pair& entry, bool is_savestate);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
 	void UpdateFilterActions();
 
 	static QString GetCurrentTitle();
 
-	q_pair_list m_rg_entries;
-	QList<QAction*> m_recent_game_acts;
+	struct recent_game_wrapper
+	{
+		q_pair_list entries;
+		QList<QAction*> actions;
+	};
+	recent_game_wrapper m_recent_game {};
+	recent_game_wrapper m_recent_save {};
 
 	std::shared_ptr<gui_game_info> m_selected_game;
 

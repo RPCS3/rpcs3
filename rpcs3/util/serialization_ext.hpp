@@ -187,7 +187,6 @@ private:
 	void initialize(utils::serial& ar);
 	void stream_data_prepare_thread_op();
 	void file_writer_thread_op();
-	void blocked_compressed_write(const std::vector<u8>& data);
 };
 
 template <typename File> requires (std::is_same_v<std::remove_cvref_t<File>, fs::file>)
