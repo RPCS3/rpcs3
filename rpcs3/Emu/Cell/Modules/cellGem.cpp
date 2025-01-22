@@ -1605,6 +1605,10 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
 
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
+
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
 	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
@@ -1653,6 +1657,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
+
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
@@ -1744,7 +1752,7 @@ extern bool is_input_allowed();
  *        Unavoidably buttons conflict with DS3 mappings, which is problematic for some games.
  * \param gem_num gem index to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
- * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
+ * \param analog_t Analog value of Move's Trigger.
  * \return true on success, false if controller is disconnected
  */
 static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
@@ -1824,22 +1832,17 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 
 	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
 	cfg->handle_input(pad, true, [&](gem_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
-		{
-			if (!pressed)
-				return;
+	{
+		if (!pressed)
+			return;
 
-			switch (btn)
-			{
-			case gem_btn::x_axis:
-				x_pos = value;
-				break;
-			case gem_btn::y_axis:
-				y_pos = value;
-				break;
-			default:
-				break;
-			}
-		});
+		switch (btn)
+		{
+		case gem_btn::x_axis: x_pos = value; break;
+		case gem_btn::y_axis: y_pos = value; break;
+		default: break;
+		}
+	});
 }
 
 template <typename T>
