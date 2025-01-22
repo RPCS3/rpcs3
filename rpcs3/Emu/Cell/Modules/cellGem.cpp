@@ -2109,7 +2109,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 		}
 	});
 
-	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 0xFFFF : 0;
+	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 255 : 0;
 
 	return true;
 }
@@ -2182,7 +2182,7 @@ static bool gun_input_to_pad(u32 gem_no, be_t<u16>& digital_buttons, be_t<u16>& 
 	if (gun.handler.get_button(gem_no, gun_button::btn_6) == 1)
 		digital_buttons |= CELL_GEM_CTRL_SQUARE;
 
-	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 0xFFFF : 0;
+	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 255 : 0;
 
 	return true;
 }
