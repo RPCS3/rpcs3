@@ -4856,7 +4856,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			// Execute LLE call
 			c.br(call_target);
 #endif
-		}, runtime.get());
+		}, runtime.get(), true);
 
 		code_ptr = reinterpret_cast<u64>(func);
 		return code_ptr;
