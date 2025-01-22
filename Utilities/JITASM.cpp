@@ -147,6 +147,12 @@ static u8* add_jit_memory(usz size, usz align)
 		return pointer;
 	}
 
+	if (!size && align == 1)
+	{
+		// Return memory top address
+		return pointer + (Ctr.load() & 0xffff'ffff);
+	}
+
 	u64 olda, newa;
 
 	// Simple allocation by incrementing pointer to the next free data
@@ -270,6 +276,18 @@ u8* jit_runtime::alloc(usz size, usz align, bool exec) noexcept
 	else
 	{
 		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(size, align);
+	}
+}
+
+u8* jit_runtime::peek(bool exec) noexcept
+{
+	if (exec)
+	{
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(0, 1);
+	}
+	else
+	{
+		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(0, 1);
 	}
 }
 

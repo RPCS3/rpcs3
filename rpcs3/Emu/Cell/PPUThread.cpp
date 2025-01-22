@@ -4762,9 +4762,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	const auto shared_runtime = make_shared<jit_runtime>();
 	const auto shared_map = make_shared<std::unordered_map<u32, u64>>();
+	const auto full_sample = make_shared<u64>(0);
 	const auto shared_mtx = make_shared<shared_mutex>();
 
-	auto symbols_cement = [runtime = shared_runtime, reloc, bound = info.segs[0].addr + info.segs[0].size - reloc, func_map = shared_map, shared_mtx](const std::string& name) -> u64
+	auto symbols_cement = [runtime = shared_runtime, reloc, seg0 = info.segs[0].addr, bound = info.segs[0].addr + info.segs[0].size - reloc, func_map = shared_map, shared_mtx, full_sample](const std::string& name) -> u64
 	{
 		u32 func_addr = umax;
 
@@ -4800,16 +4801,130 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			return +code_ptr;
 		}
 
+		constexpr auto abs_diff = [](u64 a, u64 b) { return a <= b ? b - a : a - b; };
+
+		auto write_le = [](u8*& code, auto value)
+		{
+			write_to_ptr<le_t<std::remove_cvref_t<decltype(value)>>>(code, value);
+			code += sizeof(value);
+		};
+
+#if defined(ARCH_X64)
+		// Try to make the code fit in 16 bytes, may fail and fallback
+		if (*full_sample && (*full_sample <= s32{smax} || abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true))) <= s32{smax}))
+		{
+			u8* code = jit_runtime::alloc(16, 8, true);
+			code_ptr = reinterpret_cast<u64>(code);
+
+			// mov edx, func_addr
+			*code++ = 0xba;
+			write_le(code, func_addr - seg0);
+
+			const u64 diff_for_jump = abs_diff(reinterpret_cast<u64>(code + 5), *full_sample);
+
+			if (diff_for_jump <= s32{smax})
+			{
+				// jmp (rel32) full_sample
+				*code++ = 0xe9;
+
+				write_le(code, static_cast<s32>(*full_sample - reinterpret_cast<u64>(code + 4)));
+				return code_ptr;
+			}
+			else if (*full_sample <= s32{smax})
+			{
+				// mov eax, full_sample
+				*code++ = 0xb8;
+
+				write_le(code, static_cast<s32>(*full_sample));
+
+				// jmp rax
+				*code++ = 0xff;
+				*code++ = 0xea;
+				return code_ptr;
+			}
+			else // fallback (requiring more than 16 bytes)
+			{
+				// movabs rax, full_sample
+				// *code++ = 0x48;
+				// *code++ = 0xb8;
+
+				// write_le(code, *full_sample);
+
+				// // jmp rax
+				// *code++ = 0xff;
+				// *code++ = 0xea;
+				// return code_ptr;
+				ppu_log.error("JIT symbol trampoline failed.");
+			}
+		}
+#else
+		// Try to make the code fit in 16 bytes, may fail and fallback
+		if (*full_sample && abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true) + 3 * 4)) < (128u << 20))
+		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
+			u8* code = jit_runtime::alloc(12, 4, true);
+			code_ptr = reinterpret_cast<u64>(code);
+
+			union arm_op
+			{
+				u32 op;
+				bf_t<u32, 0, 26> b_target;
+				bf_t<u32, 5, 16> mov_imm16;
+			};
+
+			const u64 diff_for_jump = abs_diff(reinterpret_cast<u64>(code + 3 * 4), *full_sample);
+
+			if (diff_for_jump < (128u << 20))
+			{
+				// MOVZ w15, func_addr
+				arm_op mov_pcl{0x5280000F};
+				mov_pcl.mov_imm16 = func_addr & 0xffff;
+
+				write_le(code, mov_pcl.op);
+
+				// MOVK w15, func_addr >> 16, LSL #16
+				arm_op mov_pch{0x72A0000F};
+				mov_pch.mov_imm16 = func_addr >> 16;
+
+				write_le(code, mov_pch.op);
+
+				const s64 branch_offset = (*full_sample - reinterpret_cast<u64>(code + 4));
+
+				// B full_sample
+				arm_op b_sample{0x14000000};
+				b_sample.b_target = static_cast<s32>(branch_offset / 4);
+
+				write_le(code, b_sample.op);
+				return code_ptr;
+			}
+			else // fallback
+			{
+				ppu_log.error("JIT symbol trampoline failed.");
+			}
+		}
+#endif
+
 		using namespace asmjit;
+
+		usz code_size_until_jump = umax;
 
 		auto func = build_function_asm<u8*(*)(ppu_thread&, u64, u8*, u64, u64, u64)>(name, [&](native_asm& c, auto& args)
 		{
 #if defined(ARCH_X64)
+			c.mov(x86::edx, func_addr - seg0); // Load PC
+
+			const auto buf_start = reinterpret_cast<const u8*>(c.bufferData());
+			const auto buf_end = reinterpret_cast<const u8*>(c.bufferPtr());
+
+			code_size_until_jump = buf_end - buf_start;
+
+			c.add(x86::edx, seg0);
 			c.mov(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
-			c.mov(x86::edx, func_addr); // Load PC
 			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
 
-			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::edx, 1, 0)); // Load call target
+			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
 			c.mov(x86::rdx, x86::rax);
 			c.shl(x86::rax, 16);
 			c.shr(x86::rax, 16);
@@ -4829,11 +4944,18 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			const arm::GpX pc = a64::x15;
 			const arm::GpX cia_addr_reg = a64::x11;
 
+			// Load CIA
+			c.mov(pc.w(), func_addr);
+
+			const auto buf_start = reinterpret_cast<const u8*>(c.bufferData());
+			const auto buf_end = reinterpret_cast<const u8*>(c.bufferPtr());
+
+			code_size_until_jump = buf_end - buf_start;
+
 			// Load offset value
 			c.mov(cia_addr_reg, static_cast<u64>(::offset32(&ppu_thread::cia)));
 
 			// Update CIA
-			c.mov(pc.w(), func_addr);
 			c.str(pc.w(), arm::Mem(ppu_t_base, cia_addr_reg));
 
 			// Multiply by 2 to index into ptr table
@@ -4857,6 +4979,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			c.br(call_target);
 #endif
 		}, runtime.get(), true);
+
+		// Full sample may exist already, but is very far away
+		// So in this case, a new sample is written
+		ensure(code_size_until_jump != umax);
+		*full_sample = reinterpret_cast<u64>(func) + code_size_until_jump;
 
 		code_ptr = reinterpret_cast<u64>(func);
 		return code_ptr;
