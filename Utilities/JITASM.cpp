@@ -231,6 +231,11 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code, usz align) noexcept
 
 		for (asmjit::Section* section : code->_sections)
 		{
+			if (section->offset() + section->bufferSize() > utils::align<usz>(codeSize, align))
+			{
+				fmt::throw_exception("CodeHolder section exceeds range: Section->offset: 0x%x, Section->bufferSize: 0x%x, alloted-memory=0x%x", section->offset(), section->bufferSize(), utils::align<usz>(codeSize, align));
+			}
+
 			std::memcpy(p + section->offset(), section->data(), section->bufferSize());
 		}
 	}
