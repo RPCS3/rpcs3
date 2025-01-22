@@ -40,6 +40,8 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+atomic_t<bool> gui_pad_thread::m_reset = false;
+
 gui_pad_thread::gui_pad_thread()
 {
 	m_thread = std::make_unique<std::thread>(&gui_pad_thread::run, this);
@@ -144,6 +146,11 @@ bool gui_pad_thread::init()
 
 		gui_log.notice("gui_pad_thread: Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
 			i, cfg->device.to_string(), m_pad->m_pad_handler, m_pad->m_vendor_id, m_pad->m_product_id, m_pad->m_class_type, m_pad->m_class_profile);
+
+		if (handler_type != pad_handler::null)
+		{
+			input_log.notice("gui_pad_thread %d: config=\n%s", i, cfg->to_string());
+		}
 
 		// We only use one pad
 		break;
@@ -251,14 +258,19 @@ void gui_pad_thread::run()
 
 	gui_log.notice("gui_pad_thread: Pad thread started");
 
-	if (!init())
-	{
-		gui_log.warning("gui_pad_thread: Pad thread stopped (init failed)");
-		return;
-	}
+	m_reset = true;
 
 	while (!m_terminate)
 	{
+		if (m_reset && m_reset.exchange(false))
+		{
+			if (!init())
+			{
+				gui_log.warning("gui_pad_thread: Pad thread stopped (init failed during reset)");
+				return;
+			}
+		}
+
 		// Only process input if there is an active window
 		if (m_handler && m_pad && (m_allow_global_input || QApplication::activeWindow()))
 		{
