@@ -1033,7 +1033,7 @@ void handle_hotplug_event(bool connected)
 {
 	if (auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>())
 	{
-		usbh.usb_hotplug_timeout = get_system_time() + (connected ? 500'000ull : 0);
+		usbh->usb_hotplug_timeout = get_system_time() + (connected ? 500'000ull : 0);
 	}
 }
 
