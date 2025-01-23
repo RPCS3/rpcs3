@@ -321,13 +321,28 @@ public:
 
 	void update_connections()
 	{
+		connected_controllers = 0;
+
+		const auto update_connection = [this](u32 i, bool connected)
+		{
+			if (connected)
+			{
+				connected_controllers++;
+				controllers[i].status = CELL_GEM_STATUS_READY;
+				controllers[i].port = port_num(i);
+			}
+			else
+			{
+				controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
+				controllers[i].port = 0;
+			}
+		};
+
 		switch (g_cfg.io.move)
 		{
 		case move_handler::real:
 		case move_handler::fake:
 		{
-			connected_controllers = 0;
-
 			std::lock_guard lock(pad::g_pad_mutex);
 			const auto handler = pad::get_pad_thread(true);
 			if (!handler) break;
@@ -335,51 +350,41 @@ public:
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				const bool connected = (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect);
+				const bool connected = pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect;
 				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
 
-				if (connected && is_real_move)
-				{
-					connected_controllers++;
-					controllers[i].status = CELL_GEM_STATUS_READY;
-					controllers[i].port = port_num(i);
-				}
-				else
-				{
-					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-					controllers[i].port = 0;
-				}
+				update_connection(i, connected && is_real_move);
 			}
 			break;
 		}
+		case move_handler::mouse:
 		case move_handler::raw_mouse:
 		{
-			connected_controllers = 0;
-
 			auto& handler = g_fxo->get<MouseHandlerBase>();
 			std::lock_guard mouse_lock(handler.mutex);
-
 			const MouseInfo& info = handler.GetInfo();
 
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
-				const bool connected = i < attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED;
-
-				if (connected)
-				{
-					connected_controllers++;
-					controllers[i].status = CELL_GEM_STATUS_READY;
-					controllers[i].port = port_num(i);
-				}
-				else
-				{
-					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-					controllers[i].port = 0;
-				}
+				update_connection(i, i < attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED);
 			}
 			break;
 		}
-		default:
+#ifdef HAVE_LIBEVDEV
+		case move_handler::gun:
+		{
+			gun_thread& gun = g_fxo->get<gun_thread>();
+			std::scoped_lock lock(gun.handler.mutex);
+			gun.num_devices = gun.handler.init() ? gun.handler.get_num_guns() : 0;
+
+			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+			{
+				update_connection(i, i < attribute.max_connect && i < gun.num_devices);
+			}
+			break;
+		}
+#endif
+		case move_handler::null:
 		{
 			break;
 		}
