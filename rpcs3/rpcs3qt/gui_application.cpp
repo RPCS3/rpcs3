@@ -1201,26 +1201,31 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
 {
 #ifdef _WIN32
-	if (!Emu.IsRunning() && !Emu.IsStarting())
+	if (!Emu.IsRunning() && !Emu.IsStarting() && !g_raw_mouse_handler)
 	{
 		return false;
 	}
 
 	if (eventType == "windows_generic_MSG")
 	{
-		if (MSG* msg = static_cast<MSG*>(message); msg)
+		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE))
 		{
-			if (g_raw_mouse_handler && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP)) {
-				if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
-				{
-					static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
-				}
-				g_raw_mouse_handler->handle_native_event(*msg);
-			}
 			if (msg->message == WM_DEVICECHANGE)
 			{
-				handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+				if (Emu.IsRunning() || Emu.IsStarting())
+				{
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+				}
 				return false;
+			}
+			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
+			{
+				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
+			}
+
+			if (g_raw_mouse_handler)
+			{
+				g_raw_mouse_handler->handle_native_event(*msg);
 			}
 		}
 	}
