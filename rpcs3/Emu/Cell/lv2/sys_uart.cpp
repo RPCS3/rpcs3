@@ -1968,7 +1968,7 @@ void vuart_av_thread::operator()()
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (Emu.IsPaused())
+		if (Emu.IsPausedOrReady())
 		{
 			thread_ctrl::wait_for(5000);
 			continue;

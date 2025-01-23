@@ -825,7 +825,7 @@ void rsxaudio_data_thread::extract_audio_data()
 		return rsxaudio_obj_ptr;
 	}();
 
-	if (Emu.IsPaused() || !rsxaudio_obj)
+	if (Emu.IsPausedOrReady() || !rsxaudio_obj)
 	{
 		advance_all_timers();
 		return;
@@ -1533,7 +1533,7 @@ void rsxaudio_backend_thread::operator()()
 			backend_failed = false;
 		}
 
-		if (!Emu.IsPaused() || !use_aux_ringbuf) // Don't pause if thread is in direct mode
+		if (!Emu.IsPausedOrReady() || !use_aux_ringbuf) // Don't pause if thread is in direct mode
 		{
 			if (!backend_playing())
 			{

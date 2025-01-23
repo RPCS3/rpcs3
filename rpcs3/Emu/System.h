@@ -426,7 +426,8 @@ public:
 	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state >= system_state::paused; } // ready/starting are also considered paused by this function
+	bool IsPaused() const { system_state state = m_state; return state >= system_state::paused && state <= system_state::frozen; }
+	bool IsPausedOrReady() const { return m_state >= system_state::paused; }
 	bool IsStopped(bool test_fully = false) const { return test_fully ? m_state == system_state::stopped : m_state <= system_state::stopping; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	bool IsStarting() const { return m_state == system_state::starting; }

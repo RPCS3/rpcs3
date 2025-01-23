@@ -704,7 +704,7 @@ void cell_audio_thread::operator()()
 
 	thread_ctrl::scoped_priority high_prio(+1);
 
-	while (Emu.IsPaused())
+	while (Emu.IsPausedOrReady())
 	{
 		thread_ctrl::wait_for(5000);
 	}
