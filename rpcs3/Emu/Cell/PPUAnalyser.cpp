@@ -534,7 +534,7 @@ namespace ppu_patterns
 template <>
 bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::vector<u32>& applied, const std::vector<u32>& exported_funcs, std::function<bool()> check_aborted)
 {
-	if (segs.empty())
+	if (segs.empty() || !segs[0].addr)
 	{
 		return false;
 	}
