@@ -145,7 +145,7 @@ public:
 	shared_mutex mutex_sq;
 	ppu_thread* sq{};
 
-	atomic_t<u64> usb_hotplug_timeout = UINT64_MAX;
+	atomic_t<u64> usb_hotplug_timeout = umax;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
