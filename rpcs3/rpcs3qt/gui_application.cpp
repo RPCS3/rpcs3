@@ -1210,7 +1210,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 	{
 		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE))
 		{
-			if (msg->message == WM_DEVICECHANGE)
+			if (msg->message == WM_DEVICECHANGE && (msg->wParam == DBT_DEVICEARRIVAL || msg->wParam == DBT_DEVICEREMOVECOMPLETE)
 			{
 				if (Emu.IsRunning() || Emu.IsStarting())
 				{
