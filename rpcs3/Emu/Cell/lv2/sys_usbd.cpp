@@ -613,7 +613,7 @@ void usb_handler_thread::operator()()
 			// every 4 seconds.
 			// On systems where hotplug is native, we wait a little bit for devices to settle before we start the scan
 			perform_scan();
-			usb_hotplug_timeout = hotplug_supported ? UINT64_MAX : get_system_time() + 4'000'000ull;
+			usb_hotplug_timeout = hotplug_supported ? umax : get_system_time() + 4'000'000ull;
 		}
 
 		// Process asynchronous requests that are pending
