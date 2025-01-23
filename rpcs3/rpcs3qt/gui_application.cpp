@@ -1218,6 +1218,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 				}
 				return false;
 			}
+
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
 				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
