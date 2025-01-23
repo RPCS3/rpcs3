@@ -56,6 +56,9 @@ struct pad_setting
 	u32 port_status = 0;
 	u32 device_capability = 0;
 	u32 device_type = 0;
+	u32 class_type = 0;
+	u16 vendor_id = 0;
+	u16 product_id = 0;
 	bool is_ldd_pad = false;
 };
 
@@ -86,6 +89,9 @@ void pad_thread::Init()
 				m_pads[i]->m_port_status,
 				m_pads[i]->m_device_capability,
 				m_pads[i]->m_device_type,
+				m_pads[i]->m_class_type,
+				m_pads[i]->m_vendor_id,
+				m_pads[i]->m_product_id,
 				m_pads[i]->ldd
 			};
 		}
@@ -96,6 +102,9 @@ void pad_thread::Init()
 				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 				CELL_PAD_DEV_TYPE_STANDARD,
+				CELL_PAD_PCLASS_TYPE_STANDARD,
+				0,
+				0,
 				false
 			};
 		}
@@ -197,6 +206,12 @@ void pad_thread::Init()
 			{
 				input_log.notice("Pad %d: config=\n%s", i, cfg->to_string());
 			}
+
+			// If the user changes the emulated controller, then simulate unplugging and plugging in a new controller
+			if (m_pads_connected[i] && (pad_settings[i].class_type != pad->m_class_type || pad_settings[i].vendor_id != pad->m_vendor_id || pad_settings[i].product_id != pad->m_product_id))
+			{
+				pad->m_disconnection_timer = get_system_time() + 30'000ull;
+			}
 		}
 
 		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
@@ -235,6 +250,25 @@ void pad_thread::update_pad_states()
 	for (usz i = 0; i < m_pads.size(); i++)
 	{
 		const auto& pad = m_pads[i];
+
+		// Simulate unplugging and plugging in a new controller
+		if (pad && pad->m_disconnection_timer > 0)
+		{
+			const bool is_connected = pad->m_port_status & CELL_PAD_STATUS_CONNECTED;
+			const u64 now = get_system_time();
+
+			if (is_connected && now < pad->m_disconnection_timer)
+			{
+				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			}
+			else if (!is_connected && now >= pad->m_disconnection_timer)
+			{
+				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED + CELL_PAD_STATUS_ASSIGN_CHANGES;
+				pad->m_disconnection_timer = 0;
+			}
+		}
+
 		const bool connected = pad && !pad->is_fake_pad && !!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED);
 
 		if (m_pads_connected[i] == connected)
@@ -603,6 +637,8 @@ void pad_thread::UnregisterLddPad(u32 handle)
 	ensure(handle < m_pads.size());
 
 	m_pads[handle]->ldd = false;
+	m_pads[handle]->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+	m_pads[handle]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 	num_ldd_pad--;
 }

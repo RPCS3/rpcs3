@@ -247,7 +247,7 @@ public:
 		u32 hue = 0;                                       // Tracking hue of the motion controller
 		f32 distance_mm{3000.0f};                          // Distance from the camera in mm
 		f32 radius{5.0f};                                  // Radius of the sphere in camera pixels
-		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
+		bool radius_valid = false;                         // If the radius and distance of the sphere was computed. Also used for visibility.
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
@@ -321,13 +321,28 @@ public:
 
 	void update_connections()
 	{
+		connected_controllers = 0;
+
+		const auto update_connection = [this](u32 i, bool connected)
+		{
+			if (connected)
+			{
+				connected_controllers++;
+				controllers[i].status = CELL_GEM_STATUS_READY;
+				controllers[i].port = port_num(i);
+			}
+			else
+			{
+				controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
+				controllers[i].port = 0;
+			}
+		};
+
 		switch (g_cfg.io.move)
 		{
 		case move_handler::real:
 		case move_handler::fake:
 		{
-			connected_controllers = 0;
-
 			std::lock_guard lock(pad::g_pad_mutex);
 			const auto handler = pad::get_pad_thread(true);
 			if (!handler) break;
@@ -335,51 +350,41 @@ public:
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				const bool connected = (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect);
+				const bool connected = pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect;
 				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
 
-				if (connected && is_real_move)
-				{
-					connected_controllers++;
-					controllers[i].status = CELL_GEM_STATUS_READY;
-					controllers[i].port = port_num(i);
-				}
-				else
-				{
-					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-					controllers[i].port = 0;
-				}
+				update_connection(i, connected && is_real_move);
 			}
 			break;
 		}
+		case move_handler::mouse:
 		case move_handler::raw_mouse:
 		{
-			connected_controllers = 0;
-
 			auto& handler = g_fxo->get<MouseHandlerBase>();
 			std::lock_guard mouse_lock(handler.mutex);
-
 			const MouseInfo& info = handler.GetInfo();
 
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
-				const bool connected = i < attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED;
-
-				if (connected)
-				{
-					connected_controllers++;
-					controllers[i].status = CELL_GEM_STATUS_READY;
-					controllers[i].port = port_num(i);
-				}
-				else
-				{
-					controllers[i].status = CELL_GEM_STATUS_DISCONNECTED;
-					controllers[i].port = 0;
-				}
+				update_connection(i, i < attribute.max_connect && info.status[i] == CELL_MOUSE_STATUS_CONNECTED);
 			}
 			break;
 		}
-		default:
+#ifdef HAVE_LIBEVDEV
+		case move_handler::gun:
+		{
+			gun_thread& gun = g_fxo->get<gun_thread>();
+			std::scoped_lock lock(gun.handler.mutex);
+			gun.num_devices = gun.handler.init() ? gun.handler.get_num_guns() : 0;
+
+			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+			{
+				update_connection(i, i < attribute.max_connect && i < gun.num_devices);
+			}
+			break;
+		}
+#endif
+		case move_handler::null:
 		{
 			break;
 		}
@@ -1598,12 +1603,16 @@ static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_contro
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
 }
 
-static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
+
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
@@ -1629,6 +1638,13 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	gem_image_state->projectionx = camera_x / controller.distance_mm;
 	gem_image_state->projectiony = camera_y / controller.distance_mm;
 
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
+
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
@@ -1646,6 +1662,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
+
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
@@ -1712,6 +1732,13 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[3] = q_w;
 	}
 
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
+
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
@@ -1730,7 +1757,7 @@ extern bool is_input_allowed();
  *        Unavoidably buttons conflict with DS3 mappings, which is problematic for some games.
  * \param gem_num gem index to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
- * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
+ * \param analog_t Analog value of Move's Trigger.
  * \return true on success, false if controller is disconnected
  */
 static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
@@ -1810,22 +1837,17 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 
 	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
 	cfg->handle_input(pad, true, [&](gem_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
-		{
-			if (!pressed)
-				return;
+	{
+		if (!pressed)
+			return;
 
-			switch (btn)
-			{
-			case gem_btn::x_axis:
-				x_pos = value;
-				break;
-			case gem_btn::y_axis:
-				y_pos = value;
-				break;
-			default:
-				break;
-			}
-		});
+		switch (btn)
+		{
+		case gem_btn::x_axis: x_pos = value; break;
+		case gem_btn::y_axis: y_pos = value; break;
+		default: break;
+		}
+	});
 }
 
 template <typename T>
@@ -2095,7 +2117,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 		}
 	});
 
-	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 0xFFFF : 0;
+	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 255 : 0;
 
 	return true;
 }
@@ -2168,7 +2190,7 @@ static bool gun_input_to_pad(u32 gem_no, be_t<u16>& digital_buttons, be_t<u16>& 
 	if (gun.handler.get_button(gem_no, gun_button::btn_6) == 1)
 		digital_buttons |= CELL_GEM_CTRL_SQUARE;
 
-	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 0xFFFF : 0;
+	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 255 : 0;
 
 	return true;
 }
@@ -2657,6 +2679,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	cellGem.warning("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	auto& gem = g_fxo->get<gem_config>();
+	std::scoped_lock lock(gem.mtx);
 
 	if (!gem.state)
 	{
@@ -2677,10 +2700,6 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
-		gem_image_state->r = controller.radius; // Radius in camera pixels
-		gem_image_state->distance = controller.distance_mm;
-		gem_image_state->visible = gem.is_controller_ready(gem_num);
-		gem_image_state->r_valid = controller.radius_valid;
 
 		switch (g_cfg.io.move)
 		{
@@ -2702,6 +2721,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		case move_handler::null:
 			fmt::throw_exception("Unreachable");
 		}
+
+		gem_image_state->r = controller.radius; // Radius in camera pixels
+		gem_image_state->distance = controller.distance_mm;
+		gem_image_state->visible = controller.radius_valid && gem.is_controller_ready(gem_num);
+		gem_image_state->r_valid = controller.radius_valid;
 	}
 
 	return CELL_OK;

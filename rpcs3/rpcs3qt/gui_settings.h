@@ -120,6 +120,9 @@ namespace gui
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
 
+	const gui_save rs_freeze  = gui_save(main_window, "recentSavestatesFrozen", false);
+	const gui_save rs_entries = gui_save(main_window, "recentSavestatesNames",  QVariant::fromValue(q_pair_list()));
+
 	const gui_save ib_skip_version = gui_save(main_window, "infoBoxSkipVersion",       "");
 	const gui_save ib_pkg_success  = gui_save(main_window, "infoBoxEnabledInstallPKG", true);
 	const gui_save ib_pup_success  = gui_save(main_window, "infoBoxEnabledInstallPUP", true);

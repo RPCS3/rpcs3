@@ -63,6 +63,7 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
+#include "Emu/savestate_utils.hpp"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -234,9 +235,9 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	show(); // needs to be done before creating the thumbnail toolbar
 
 	// enable play options if a recent game exists
-	const bool enable_play_last = !m_recent_game_acts.isEmpty() && m_recent_game_acts.first();
+	const bool enable_play_last = !m_recent_game.actions.isEmpty() && m_recent_game.actions.first();
 
-	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game_acts.first()->text()) : tr("Play");
+	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game.actions.first()->text()) : tr("Play");
 
 	if (enable_play_last)
 	{
@@ -510,9 +511,9 @@ void main_window::OnPlayOrPause()
 				show_boot_error(error);
 			}
 		}
-		else if (!m_recent_game_acts.isEmpty())
+		else if (!m_recent_game.actions.isEmpty())
 		{
-			BootRecentAction(m_recent_game_acts.first());
+			BootRecentAction(m_recent_game.actions.first(), false);
 		}
 
 		return;
@@ -607,7 +608,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	{
 		gui_log.success("Boot successful.");
 
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
+		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())), is_savestate_compatible(path));
 
 		if (refresh_list)
 		{
@@ -2190,55 +2191,59 @@ void main_window::OnEnableDiscInsert(bool enabled) const
 	ui->insertDiscAct->setEnabled(enabled);
 }
 
-void main_window::BootRecentAction(const QAction* act)
+void main_window::BootRecentAction(const QAction* act, bool is_savestate)
 {
 	if (Emu.IsRunning())
 	{
 		return;
 	}
 
+	recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
+	QMenu* menu = is_savestate ? ui->bootRecentSavestatesMenu : ui->bootRecentMenu;
+
 	const QString pth = act->data().toString();
-	const std::string path = sstr(pth);
+	const std::string path = pth.toStdString();
 	QString name;
 	bool contains_path = false;
 
 	int idx = -1;
-	for (int i = 0; i < m_rg_entries.count(); i++)
+	for (int i = 0; i < rgw.entries.count(); i++)
 	{
-		if (::at32(m_rg_entries, i).first == pth)
+		const auto& entry = rgw.entries[i];
+		if (entry.first == pth)
 		{
 			idx = i;
 			contains_path = true;
-			name = ::at32(m_rg_entries, idx).second;
+			name = entry.second;
 			break;
 		}
 	}
 
 	// path is invalid: remove action from list return
-	if ((contains_path && name.isEmpty()) || (!QFileInfo(pth).isDir() && !QFileInfo(pth).isFile()))
+	if ((contains_path && name.isEmpty()) || !fs::exists(path))
 	{
 		if (contains_path)
 		{
 			// clear menu of actions
-			for (QAction* action : m_recent_game_acts)
+			for (QAction* action : rgw.actions)
 			{
-				ui->bootRecentMenu->removeAction(action);
+				menu->removeAction(action);
 			}
 
 			// remove action from list
-			m_rg_entries.removeAt(idx);
-			m_recent_game_acts.removeAt(idx);
+			rgw.entries.removeAt(idx);
+			rgw.actions.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
+			m_gui_settings->SetValue(is_savestate ? gui::rs_entries : gui::rg_entries, gui_settings::List2Var(rgw.entries));
 
 			gui_log.error("Recent Game not valid, removed from Boot Recent list: %s", path);
 
 			// refill menu with actions
-			for (int i = 0; i < m_recent_game_acts.count(); i++)
+			for (int i = 0; i < rgw.actions.count(); i++)
 			{
-				m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-				m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
-				ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
+				rgw.actions[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
+				rgw.actions[i]->setToolTip(::at32(rgw.entries, i).second);
+				menu->addAction(rgw.actions[i]);
 			}
 
 			gui_log.warning("Boot Recent list refreshed");
@@ -2253,19 +2258,21 @@ void main_window::BootRecentAction(const QAction* act)
 	Boot(path, "", true);
 }
 
-QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
+QAction* main_window::CreateRecentAction(const q_string_pair& entry, u32 sc_idx, bool is_savestate)
 {
+	recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
+
 	// if path is not valid remove from list
 	if (entry.second.isEmpty() || (!QFileInfo(entry.first).isDir() && !QFileInfo(entry.first).isFile()))
 	{
-		if (m_rg_entries.contains(entry))
+		if (rgw.entries.contains(entry))
 		{
 			gui_log.warning("Recent Game not valid, removing from Boot Recent list: %s", entry.first);
 
-			const int idx = m_rg_entries.indexOf(entry);
-			m_rg_entries.removeAt(idx);
+			const int idx = rgw.entries.indexOf(entry);
+			rgw.entries.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
+			m_gui_settings->SetValue(is_savestate ? gui::rs_entries : gui::rg_entries, gui_settings::List2Var(rgw.entries));
 		}
 		return nullptr;
 	}
@@ -2290,69 +2297,74 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	}
 
 	// connect boot
-	connect(act, &QAction::triggered, this, [act, this]() {BootRecentAction(act); });
+	connect(act, &QAction::triggered, this, [this, act, is_savestate](){ BootRecentAction(act, is_savestate); });
 
 	return act;
 }
 
-void main_window::AddRecentAction(const q_string_pair& entry)
+void main_window::AddRecentAction(const q_string_pair& entry, bool is_savestate)
 {
+	QAction* freezeAction = is_savestate ? ui->freezeRecentSavestatesAct : ui->freezeRecentAct;
+
 	// don't change list on freeze
-	if (ui->freezeRecentAct->isChecked())
+	if (freezeAction->isChecked())
 	{
 		return;
 	}
 
 	// create new action, return if not valid
-	QAction* act = CreateRecentAction(entry, 1);
+	QAction* act = CreateRecentAction(entry, 1, is_savestate);
 	if (!act)
 	{
 		return;
 	}
 
+	recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
+	QMenu* menu = is_savestate ? ui->bootRecentSavestatesMenu : ui->bootRecentMenu;
+
 	// clear menu of actions
-	for (QAction* action : m_recent_game_acts)
+	for (QAction* action : rgw.actions)
 	{
-		ui->bootRecentMenu->removeAction(action);
+		menu->removeAction(action);
 	}
 
 	// If path already exists, remove it in order to get it to beginning. Also remove duplicates.
-	for (int i = m_rg_entries.count() - 1; i >= 0; --i)
+	for (int i = rgw.entries.count() - 1; i >= 0; --i)
 	{
-		if (m_rg_entries[i].first == entry.first)
+		if (rgw.entries[i].first == entry.first)
 		{
-			m_rg_entries.removeAt(i);
-			m_recent_game_acts.removeAt(i);
+			rgw.entries.removeAt(i);
+			rgw.actions.removeAt(i);
 		}
 	}
 
 	// remove oldest action at the end if needed
-	if (m_rg_entries.count() == 9)
+	if (rgw.entries.count() == 9)
 	{
-		m_rg_entries.removeLast();
-		m_recent_game_acts.removeLast();
+		rgw.entries.removeLast();
+		rgw.actions.removeLast();
 	}
-	else if (m_rg_entries.count() > 9)
+	else if (rgw.entries.count() > 9)
 	{
 		gui_log.error("Recent games entrylist too big");
 	}
 
-	if (m_rg_entries.count() < 9)
+	if (rgw.entries.count() < 9)
 	{
 		// add new action at the beginning
-		m_rg_entries.prepend(entry);
-		m_recent_game_acts.prepend(act);
+		rgw.entries.prepend(entry);
+		rgw.actions.prepend(act);
 	}
 
 	// refill menu with actions
-	for (int i = 0; i < m_recent_game_acts.count(); i++)
+	for (int i = 0; i < rgw.actions.count(); i++)
 	{
-		m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-		m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
-		ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
+		rgw.actions[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
+		rgw.actions[i]->setToolTip(::at32(rgw.entries, i).second);
+		menu->addAction(rgw.actions[i]);
 	}
 
-	m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
+	m_gui_settings->SetValue(is_savestate ? gui::rs_entries : gui::rg_entries, gui_settings::List2Var(rgw.entries));
 }
 
 void main_window::UpdateLanguageActions(const QStringList& language_codes, const QString& language_code)
@@ -2638,24 +2650,57 @@ void main_window::CreateConnects()
 		}
 	});
 
+	connect(ui->bootRecentSavestatesMenu, &QMenu::aboutToShow, this, [this]()
+	{
+		// Enable/Disable Recent Savestates List
+		const bool stopped = Emu.IsStopped();
+		for (QAction* act : ui->bootRecentSavestatesMenu->actions())
+		{
+			if (act != ui->freezeRecentSavestatesAct && act != ui->clearRecentSavestatesAct)
+			{
+				act->setEnabled(stopped);
+			}
+		}
+	});
+
 	connect(ui->clearRecentAct, &QAction::triggered, this, [this]()
 	{
 		if (ui->freezeRecentAct->isChecked())
 		{
 			return;
 		}
-		m_rg_entries.clear();
-		for (QAction* act : m_recent_game_acts)
+		m_recent_game.entries.clear();
+		for (QAction* act : m_recent_game.actions)
 		{
 			ui->bootRecentMenu->removeAction(act);
 		}
-		m_recent_game_acts.clear();
+		m_recent_game.actions.clear();
 		m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(q_pair_list()));
+	});
+
+	connect(ui->clearRecentSavestatesAct, &QAction::triggered, this, [this]()
+	{
+		if (ui->freezeRecentSavestatesAct->isChecked())
+		{
+			return;
+		}
+		m_recent_save.entries.clear();
+		for (QAction* act : m_recent_save.actions)
+		{
+			ui->bootRecentSavestatesMenu->removeAction(act);
+		}
+		m_recent_save.actions.clear();
+		m_gui_settings->SetValue(gui::rs_entries, gui_settings::List2Var(q_pair_list()));
 	});
 
 	connect(ui->freezeRecentAct, &QAction::triggered, this, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::rg_freeze, checked);
+	});
+
+	connect(ui->freezeRecentSavestatesAct, &QAction::triggered, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::rs_freeze, checked);
 	});
 
 	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(); });
@@ -3530,9 +3575,9 @@ void main_window::CreateDockWindows()
 					ui->toolbar_start->setIcon(m_icon_restart);
 					ui->toolbar_start->setText(tr("Restart"));
 				}
-				else if (!m_recent_game_acts.isEmpty()) // Get last played game
+				else if (!m_recent_game.actions.isEmpty()) // Get last played game
 				{
-					tooltip = tr("Play %0").arg(m_recent_game_acts.first()->text());
+					tooltip = tr("Play %0").arg(m_recent_game.actions.first()->text());
 				}
 				else
 				{
@@ -3584,35 +3629,45 @@ void main_window::ConfigureGuiFromSettings()
 	m_mw->restoreState(m_gui_settings->GetValue(gui::mw_mwState).toByteArray());
 
 	ui->freezeRecentAct->setChecked(m_gui_settings->GetValue(gui::rg_freeze).toBool());
-	m_rg_entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
+	ui->freezeRecentSavestatesAct->setChecked(m_gui_settings->GetValue(gui::rs_freeze).toBool());
+	m_recent_game.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
+	m_recent_save.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rs_entries));
 
-	// clear recent games menu of actions
-	for (QAction* act : m_recent_game_acts)
+	const auto update_recent_games_menu = [this](bool is_savestate)
 	{
-		ui->bootRecentMenu->removeAction(act);
-	}
-	m_recent_game_acts.clear();
+		recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
+		QMenu* menu = is_savestate ? ui->bootRecentSavestatesMenu : ui->bootRecentMenu;
 
-	// Fill the recent games menu
-	for (int i = 0; i < m_rg_entries.count(); i++)
-	{
-		// adjust old unformatted entries (avoid duplication)
-		m_rg_entries[i] = gui::Recent_Game(m_rg_entries[i].first, m_rg_entries[i].second);
-
-		// create new action
-		QAction* act = CreateRecentAction(m_rg_entries[i], i + 1);
-
-		// add action to menu
-		if (act)
+		// clear recent games menu of actions
+		for (QAction* act : rgw.actions)
 		{
-			m_recent_game_acts.append(act);
-			ui->bootRecentMenu->addAction(act);
+			menu->removeAction(act);
 		}
-		else
+		rgw.actions.clear();
+
+		// Fill the recent games menu
+		for (int i = 0; i < rgw.entries.count(); i++)
 		{
-			i--; // list count is now an entry shorter so we have to repeat the same index in order to load all other entries
+			// adjust old unformatted entries (avoid duplication)
+			rgw.entries[i] = gui::Recent_Game(rgw.entries[i].first, rgw.entries[i].second);
+
+			// create new action
+			QAction* act = CreateRecentAction(rgw.entries[i], i + 1, is_savestate);
+
+			// add action to menu
+			if (act)
+			{
+				rgw.actions.append(act);
+				menu->addAction(act);
+			}
+			else
+			{
+				i--; // list count is now an entry shorter so we have to repeat the same index in order to load all other entries
+			}
 		}
-	}
+	};
+	update_recent_games_menu(false);
+	update_recent_games_menu(true);
 
 	ui->showLogAct->setChecked(m_gui_settings->GetValue(gui::mw_logger).toBool());
 	ui->showGameListAct->setChecked(m_gui_settings->GetValue(gui::mw_gamelist).toBool());
@@ -4147,14 +4202,19 @@ void main_window::dropEvent(QDropEvent* event)
 
 		Emu.GracefulShutdown(false);
 
-		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
+		const std::string path = drop_paths.first().toStdString();
+
+		if (const auto error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
 		{
-			gui_log.error("Boot failed: reason: %s, path: %s", error, drop_paths.first());
+			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 			show_boot_error(error);
 		}
 		else
 		{
-			gui_log.success("Elf Boot from drag and drop done: %s", drop_paths.first());
+			gui_log.success("Elf Boot from drag and drop done: %s", path);
+
+			AddRecentAction(gui::Recent_Game(QString::fromStdString(path), QString::fromStdString(Emu.GetTitleAndTitleID())), is_savestate_compatible(path));
+
 			m_game_list_frame->Refresh(true);
 		}
 		break;

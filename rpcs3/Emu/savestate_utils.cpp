@@ -162,6 +162,60 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 	return ver_data;
 }
 
+std::shared_ptr<utils::serial> make_savestate_reader(const std::string& path)
+{
+	std::shared_ptr<utils::serial> ar;
+
+	fs::file save{path, fs::isfile + fs::read};
+
+	if (!save)
+	{
+		return ar;
+	}
+
+	if (path.ends_with(".SAVESTAT") && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+	{
+		ar = std::make_shared<utils::serial>();
+		ar->set_reading_state();
+
+		ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
+	}
+	else if (path.ends_with(".zst"))
+	{
+		ar = std::make_shared<utils::serial>();
+		ar->set_reading_state();
+
+		ar->m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(save));
+
+		if (ar->try_read<u64>().second != "RPCS3SAV"_u64)
+		{
+			ar.reset();
+		}
+		else
+		{
+			ar->pos = 0;
+		}
+	}
+	else if (path.ends_with(".gz"))
+	{
+		ar = std::make_shared<utils::serial>();
+		ar->set_reading_state();
+
+		ar->m_file_handler = make_compressed_serialization_file_handler(std::move(save));
+
+		if (ar->try_read<u64>().second != "RPCS3SAV"_u64)
+		{
+			ar.reset();
+		}
+		else
+		{
+			ar->pos = 0;
+		}
+	}
+
+	return ar;
+}
+
 bool is_savestate_version_compatible(const std::vector<version_entry>& data, bool is_boot_check)
 {
 	if (data.empty())
@@ -254,6 +308,15 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 bool is_savestate_compatible(fs::file&& file, std::string_view filepath)
 {
 	return is_savestate_version_compatible(get_savestate_versioning_data(std::move(file), filepath), false);
+}
+
+bool is_savestate_compatible(const std::string& filepath)
+{
+	if (fs::file file{filepath, fs::isfile + fs::read})
+	{
+		return is_savestate_compatible(std::move(file), filepath);
+	}
+	return false;
 }
 
 std::vector<version_entry> read_used_savestate_versions()

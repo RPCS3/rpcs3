@@ -202,10 +202,19 @@
      <addaction name="createFirmwareCacheAct"/>
      <addaction name="removeFirmwareCacheAct"/>
     </widget>
+    <widget class="QMenu" name="bootRecentSavestatesMenu">
+     <property name="title">
+      <string>Boot Recent Savestate</string>
+     </property>
+     <addaction name="clearRecentSavestatesAct"/>
+     <addaction name="freezeRecentSavestatesAct"/>
+     <addaction name="separator"/>
+    </widget>
     <addaction name="bootGameAct"/>
     <addaction name="bootVSHAct"/>
     <addaction name="bootElfMenu"/>
     <addaction name="bootSavestateAct"/>
+    <addaction name="bootRecentSavestatesMenu"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
@@ -1385,6 +1394,16 @@
    </property>
    <property name="text">
     <string>Operating System</string>
+   </property>
+  </action>
+  <action name="clearRecentSavestatesAct">
+   <property name="text">
+    <string>List Clear</string>
+   </property>
+  </action>
+  <action name="freezeRecentSavestatesAct">
+   <property name="text">
+    <string>List Freeze</string>
    </property>
   </action>
  </widget>
