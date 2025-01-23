@@ -122,7 +122,7 @@ private:
 	typename Emulator::stop_counter_t m_emu_focus_out_emulation_id{};
 	bool m_is_pause_on_focus_loss_active = false;
 #ifdef _WIN32
-	HDEVNOTIFY m_device_notification_handle;
+	HDEVNOTIFY m_device_notification_handle {};
 #endif
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
