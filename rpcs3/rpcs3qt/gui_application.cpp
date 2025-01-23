@@ -21,6 +21,7 @@
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
+#include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
@@ -54,7 +55,8 @@
 #endif
 
 #ifdef _WIN32
-#include "Windows.h"
+#include <Usbiodef.h>
+#include <Dbt.h>
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -72,6 +74,12 @@ gui_application::~gui_application()
 {
 #ifdef WITH_DISCORD_RPC
 	discord::shutdown();
+#endif
+#ifdef _WIN32
+	if (m_device_notification_handle && !UnregisterDeviceNotification(m_device_notification_handle))
+	{
+		gui_log.error("UnregisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
 #endif
 }
 
@@ -196,6 +204,19 @@ bool gui_application::Init()
 	// Install native event filter
 #ifdef _WIN32 // Currently only needed for raw mouse input on windows
 	installNativeEventFilter(&m_native_event_filter);
+
+	// Enable usb device hotplug events
+	// Currently only needed for hotplug on windows, as libusb handles other platforms
+	DEV_BROADCAST_DEVICEINTERFACE notification_filter {};
+	notification_filter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+	notification_filter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+	notification_filter.dbcc_classguid = GUID_DEVINTERFACE_USB_DEVICE;
+
+	m_device_notification_handle = RegisterDeviceNotification(reinterpret_cast<HWND>(m_main_window->winId()), &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
+	if (!m_device_notification_handle )
+	{
+		gui_log.error("RegisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
 #endif
 
 	return true;
@@ -1180,15 +1201,24 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
 {
 #ifdef _WIN32
-	if (!Emu.IsRunning() && !g_raw_mouse_handler)
+	if (!Emu.IsRunning() && !Emu.IsStarting() && !g_raw_mouse_handler)
 	{
 		return false;
 	}
 
 	if (eventType == "windows_generic_MSG")
 	{
-		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP))
+		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE))
 		{
+			if (msg->message == WM_DEVICECHANGE && (msg->wParam == DBT_DEVICEARRIVAL || msg->wParam == DBT_DEVICEREMOVECOMPLETE))
+			{
+				if (Emu.IsRunning() || Emu.IsStarting())
+				{
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+				}
+				return false;
+			}
+
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
 				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);

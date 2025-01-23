@@ -89,3 +89,4 @@ error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<cha
 error_code sys_usbd_unregister_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product);
 
 void connect_usb_controller(u8 index, input::product_type);
+void handle_hotplug_event(bool connected);

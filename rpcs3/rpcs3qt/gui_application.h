@@ -19,6 +19,10 @@
 #include <functional>
 #include <deque>
 
+#ifdef _WIN32
+#include "Windows.h"
+#endif
+
 class gs_frame;
 class main_window;
 class gui_settings;
@@ -117,7 +121,9 @@ private:
 	u64 m_pause_delayed_tag = 0;
 	typename Emulator::stop_counter_t m_emu_focus_out_emulation_id{};
 	bool m_is_pause_on_focus_loss_active = false;
-
+#ifdef _WIN32
+	HDEVNOTIFY m_device_notification_handle {};
+#endif
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
 	void OnShortcutChange();
