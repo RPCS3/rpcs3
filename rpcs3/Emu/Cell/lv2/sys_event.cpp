@@ -420,10 +420,8 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	while (count < size && !queue->events.empty())
 	{
 		auto& dest = events[count++];
-		const auto event = queue->events.front();
+		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = queue->events.front();
 		queue->events.pop_front();
-
-		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
 	}
 
 	lock.unlock();

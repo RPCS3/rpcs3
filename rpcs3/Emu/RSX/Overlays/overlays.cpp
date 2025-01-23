@@ -193,7 +193,7 @@ namespace rsx
 
 				// Get gamepad input
 				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const PadInfo& rinfo = handler->GetInfo();
 
 				const bool ignore_gamepad_input = (!rinfo.now_connect || !input::g_pads_intercepted);

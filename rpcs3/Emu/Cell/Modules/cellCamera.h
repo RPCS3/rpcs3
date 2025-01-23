@@ -427,6 +427,7 @@ public:
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
 	atomic_t<bool> is_attached{false};
+	atomic_t<bool> is_attached_dirty{false};
 	atomic_t<bool> is_open{false};
 
 	CellCameraInfoEx info{};
@@ -471,6 +472,13 @@ using camera_thread = named_thread<camera_context>;
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared
 {
+	gem_camera_shared() {}
+	gem_camera_shared(utils::serial& ar);
+
+	void save(utils::serial& ar);
+
+	SAVESTATE_INIT_POS(7);
+
 	atomic_t<u64> frame_timestamp_us{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
 	atomic_t<s32> width{640};
 	atomic_t<s32> height{480};

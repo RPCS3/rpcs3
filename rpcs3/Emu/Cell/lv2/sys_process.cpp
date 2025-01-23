@@ -271,7 +271,7 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
-	if (!Emu.GetTitleID().length())
+	if (Emu.GetTitleID().empty())
 	{
 		return CELL_ENOENT;
 	}

@@ -189,7 +189,7 @@ void usb_device_usio::save_backup()
 void usb_device_usio::translate_input_taiko()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 
 	std::vector<u8> input_buf(0x60);
 	constexpr le_t<u16> c_hit = 0x1800;
@@ -273,7 +273,7 @@ void usb_device_usio::translate_input_taiko()
 void usb_device_usio::translate_input_tekken()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 
 	std::vector<u8> input_buf(0x180);
 	le_t<u64> digital_input[2]{};

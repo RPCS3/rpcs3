@@ -417,7 +417,7 @@ void Emulator::Init()
 
 		if (!fs::rename(old_path, cfg_path, false))
 		{
-			sys_log.error("Failed to move '%s' to '%s' (error='%s')", old_path, cfg_path, fs::g_tls_error);
+			(fs::g_tls_error == fs::error::exist ? sys_log.warning : sys_log.error)("Failed to move '%s' to '%s' (error='%s')", old_path, cfg_path, fs::g_tls_error);
 		}
 	}
 #endif

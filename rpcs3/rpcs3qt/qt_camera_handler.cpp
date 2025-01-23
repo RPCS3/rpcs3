@@ -113,6 +113,7 @@ void qt_camera_handler::handle_camera_active(bool is_active)
 void qt_camera_handler::handle_camera_error(QCamera::Error error, const QString& errorString)
 {
 	camera_log.error("Error event: \"%s\" (error=%d)", errorString, static_cast<int>(error));
+	set_state(camera_handler_state::closed);
 }
 
 void qt_camera_handler::open_camera()

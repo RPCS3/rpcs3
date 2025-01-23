@@ -247,7 +247,7 @@ public:
 		u32 hue = 0;                                       // Tracking hue of the motion controller
 		f32 distance_mm{3000.0f};                          // Distance from the camera in mm
 		f32 radius{5.0f};                                  // Radius of the sphere in camera pixels
-		bool radius_valid = true;                          // If the radius and distance of the sphere was computed.
+		bool radius_valid = false;                         // If the radius and distance of the sphere was computed. Also used for visibility.
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
@@ -292,6 +292,12 @@ public:
 
 	bool wait_for_result(ppu_thread& ppu)
 	{
+		// Notify gem thread that the initial state after loading a savestate can be updated.
+		if (m_done.compare_and_swap_test(2, 0))
+		{
+			m_done.notify_one();
+		}
+
 		while (!m_done && !ppu.is_stopped())
 		{
 			thread_ctrl::wait_on(m_done, 0);
@@ -323,7 +329,8 @@ public:
 			connected_controllers = 0;
 
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread(true);
+			if (!handler) break;
 
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
@@ -392,7 +399,7 @@ public:
 			if (g_cfg.io.move == move_handler::real)
 			{
 				std::lock_guard pad_lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 				if (pad && pad->m_pad_handler == pad_handler::move)
 				{
@@ -422,7 +429,7 @@ public:
 			if (g_cfg.io.move == move_handler::real)
 			{
 				std::lock_guard pad_lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 				if (pad && pad->m_pad_handler == pad_handler::move)
 				{
@@ -452,7 +459,7 @@ public:
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread();
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
@@ -473,7 +480,7 @@ public:
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
-			const auto handler = pad::get_current_handler();
+			const auto handler = pad::get_pad_thread();
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
@@ -540,7 +547,7 @@ public:
 		load_configs();
 	};
 
-	SAVESTATE_INIT_POS(15);
+	SAVESTATE_INIT_POS(16.1); // Depends on cellCamera
 
 	void save(utils::serial& ar)
 	{
@@ -581,6 +588,11 @@ public:
 		}
 
 		ar(connected_controllers, updating, camera_frame, memory_ptr, start_timestamp_us);
+
+		if (ar.is_writing() || version >= 3)
+		{
+			ar(video_conversion_in_progress, video_data_out_size);
+		}
 	}
 
 	gem_config_data(utils::serial& ar)
@@ -685,7 +697,7 @@ namespace gem
 
 	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
 	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                          u8* video_data_out, u32 video_data_out_size)
+	                          u8* video_data_out, u32 video_data_out_size, std::string_view caller)
 	{
 		if (output_format != CELL_GEM_NO_VIDEO_OUTPUT && !video_data_out)
 		{
@@ -697,13 +709,13 @@ namespace gem
 
 		if (video_data_in.size() != required_in_size)
 		{
-			cellGem.error("convert: in_size mismatch: required=%d, actual=%d", required_in_size, video_data_in.size());
+			cellGem.error("convert: in_size mismatch: required=%d, actual=%d (called from %s)", required_in_size, video_data_in.size(), caller);
 			return false;
 		}
 
 		if (required_out_size < 0 || video_data_out_size != static_cast<u32>(required_out_size))
 		{
-			cellGem.error("convert: out_size unknown: required=%d, format %d", required_out_size, output_format);
+			cellGem.error("convert: out_size unknown: required=%d, actual=%d, format %d (called from %s)", required_out_size, video_data_out_size, output_format, caller);
 			return false;
 		}
 
@@ -763,7 +775,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -778,7 +790,7 @@ namespace gem
 			}
 			else
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				return false;
 			}
 			break;
@@ -860,7 +872,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -950,7 +962,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1060,7 +1072,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1122,7 +1134,7 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
@@ -1132,18 +1144,18 @@ namespace gem
 		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
 		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
 		{
-			cellGem.error("Unimplemented: Converting %s to %s", input_format, output_format);
+			cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
 			std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
 			return false;
 		}
 		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
 		{
-			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT");
+			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT (called from %s)", caller);
 			break;
 		}
 		default:
 		{
-			cellGem.error("Trying to convert %s to %s", input_format, output_format);
+			cellGem.error("Trying to convert %s to %s (called from %s)", input_format, output_format, caller);
 			return false;
 		}
 		}
@@ -1253,6 +1265,18 @@ void gem_config_data::operator()()
 
 	u64 last_update_us = 0;
 
+	// Handle initial state after loading a savestate
+	if (state && video_conversion_in_progress)
+	{
+		// Wait for cellGemConvertVideoFinish. The initial savestate loading may take a while.
+		m_done = 2; // Use special value 2 for this case
+		thread_ctrl::wait_on(m_done, 2, 5'000'000);
+
+		// Just mark this conversion as complete (there's no real downside to this, except for a black image)
+		video_conversion_in_progress = false;
+		done();
+	}
+
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
 		u64 timeout = umax;
@@ -1310,7 +1334,7 @@ void gem_config_data::operator()()
 
 		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size))
+		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size, "cellGem"))
 		{
 			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
 
@@ -1459,7 +1483,7 @@ public:
 			// Update PS Move LED colors
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				auto& handlers = handler->get_handlers();
 				if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 				{
@@ -1574,12 +1598,16 @@ static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_contro
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
 }
 
-static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
+
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
@@ -1605,6 +1633,13 @@ static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_con
 	gem_image_state->projectionx = camera_x / controller.distance_mm;
 	gem_image_state->projectiony = camera_y / controller.distance_mm;
 
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
+
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
@@ -1622,6 +1657,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	if (x_max <= 0) x_max = shared_data.width;
 	if (y_max <= 0) y_max = shared_data.height;
+
+	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
+	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
+	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
@@ -1688,6 +1727,13 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[3] = q_w;
 	}
 
+	// Update visibility for fake handlers
+	if (g_cfg.io.move != move_handler::real)
+	{
+		// Let's say the sphere is not visible if the position is at the edge of the screen
+		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
+
 	if (g_cfg.io.show_move_cursor)
 	{
 		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
@@ -1706,7 +1752,7 @@ extern bool is_input_allowed();
  *        Unavoidably buttons conflict with DS3 mappings, which is problematic for some games.
  * \param gem_num gem index to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
- * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
+ * \param analog_t Analog value of Move's Trigger.
  * \return true on success, false if controller is disconnected
  */
 static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
@@ -1721,7 +1767,7 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1786,22 +1832,17 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 
 	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
 	cfg->handle_input(pad, true, [&](gem_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
-		{
-			if (!pressed)
-				return;
+	{
+		if (!pressed)
+			return;
 
-			switch (btn)
-			{
-			case gem_btn::x_axis:
-				x_pos = value;
-				break;
-			case gem_btn::y_axis:
-				y_pos = value;
-				break;
-			default:
-				break;
-			}
-		});
+		switch (btn)
+		{
+		case gem_btn::x_axis: x_pos = value; break;
+		case gem_btn::y_axis: y_pos = value; break;
+		default: break;
+		}
+	});
 }
 
 template <typename T>
@@ -1814,7 +1855,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1845,7 +1886,7 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -1890,7 +1931,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -2071,7 +2112,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 		}
 	});
 
-	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 0xFFFF : 0;
+	analog_t = (digital_buttons & CELL_GEM_CTRL_T) ? 255 : 0;
 
 	return true;
 }
@@ -2144,7 +2185,7 @@ static bool gun_input_to_pad(u32 gem_no, be_t<u16>& digital_buttons, be_t<u16>& 
 	if (gun.handler.get_button(gem_no, gun_button::btn_6) == 1)
 		digital_buttons |= CELL_GEM_CTRL_SQUARE;
 
-	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 0xFFFF : 0;
+	analog_t = gun.handler.get_button(gem_no, gun_button::btn_left) ? 255 : 0;
 
 	return true;
 }
@@ -2350,7 +2391,7 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad && pad->m_pad_handler == pad_handler::move)
@@ -2398,7 +2439,7 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad && pad->m_pad_handler == pad_handler::move)
@@ -2416,7 +2457,7 @@ error_code cellGemEnd(ppu_thread& ppu)
 
 	auto& gem = g_fxo->get<gem_config>();
 
-	std::scoped_lock lock(gem.mtx);
+	std::unique_lock lock(gem.mtx);
 
 	if (gem.state.compare_and_swap_test(1, 0))
 	{
@@ -2427,6 +2468,8 @@ error_code cellGemEnd(ppu_thread& ppu)
 
 		return CELL_OK;
 	}
+
+	lock.unlock();
 
 	auto& tracker = g_fxo->get<named_thread<gem_tracker>>();
 	if (!tracker.wait_for_tracker_result(ppu))
@@ -2464,7 +2507,7 @@ error_code cellGemFilterState(u32 gem_num, u32 enable)
 
 error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 {
-	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
+	cellGem.warning("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -2631,6 +2674,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	cellGem.warning("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	auto& gem = g_fxo->get<gem_config>();
+	std::scoped_lock lock(gem.mtx);
 
 	if (!gem.state)
 	{
@@ -2646,15 +2690,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 	if (g_cfg.io.move != move_handler::null)
 	{
-		auto& shared_data = g_fxo->get<gem_camera_shared>();
+		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 		auto& controller = gem.controllers[gem_num];
 
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
-		gem_image_state->r = controller.radius; // Radius in camera pixels
-		gem_image_state->distance = controller.distance_mm;
-		gem_image_state->visible = gem.is_controller_ready(gem_num);
-		gem_image_state->r_valid = controller.radius_valid;
 
 		switch (g_cfg.io.move)
 		{
@@ -2676,6 +2716,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		case move_handler::null:
 			fmt::throw_exception("Unreachable");
 		}
+
+		gem_image_state->r = controller.radius; // Radius in camera pixels
+		gem_image_state->distance = controller.distance_mm;
+		gem_image_state->visible = controller.radius_valid && gem.is_controller_ready(gem_num);
+		gem_image_state->r_valid = controller.radius_valid;
 	}
 
 	return CELL_OK;
@@ -2723,7 +2768,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 				if (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -3310,7 +3355,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 			{
 				std::lock_guard lock(pad::g_pad_mutex);
 
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 				if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
@@ -3394,7 +3439,7 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	if (g_cfg.io.move == move_handler::real)
 	{
 		std::lock_guard pad_lock(pad::g_pad_mutex);
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		auto& handlers = handler->get_handlers();
 		if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
 		{
@@ -3533,8 +3578,6 @@ error_code cellGemUpdateFinish(ppu_thread& ppu)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	std::scoped_lock lock(gem.mtx);
-
 	if (!gem.updating)
 	{
 		return CELL_GEM_ERROR_UPDATE_NOT_STARTED;
@@ -3545,6 +3588,8 @@ error_code cellGemUpdateFinish(ppu_thread& ppu)
 	{
 		return {};
 	}
+
+	std::scoped_lock lock(gem.mtx);
 
 	gem.updating = false;
 
@@ -3624,7 +3669,7 @@ error_code cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PO
 	{
 		std::lock_guard lock(pad::g_pad_mutex);
 
-		const auto handler = pad::get_current_handler();
+		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
 		if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
