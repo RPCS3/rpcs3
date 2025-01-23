@@ -213,6 +213,10 @@ bool gui_application::Init()
 	notification_filter.dbcc_classguid = GUID_DEVINTERFACE_USB_DEVICE;
 
 	m_device_notification_handle = RegisterDeviceNotification(reinterpret_cast<HWND>(m_main_window->winId()), &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
+	if (!m_device_notification_handle )
+	{
+		gui_log.error("RegisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
 #endif
 
 	return true;
