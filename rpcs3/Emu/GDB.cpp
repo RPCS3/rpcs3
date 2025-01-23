@@ -830,7 +830,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		{
 			Emu.Run(true);
 		}
-		if (Emu.IsPaused())
+		else if (Emu.IsPaused())
 		{
 			Emu.Resume();
 		}
