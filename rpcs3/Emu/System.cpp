@@ -62,6 +62,10 @@
 
 #include "Emu/RSX/GSRender.h"
 
+#ifdef LLVM_AVAILABLE
+#include "llvm/Config/llvm-config.h"
+#endif
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB
@@ -345,6 +349,19 @@ extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>*
 
 void Emulator::Init()
 {
+	// Log LLVM version
+	if (static bool logged_llvm = false; !logged_llvm)
+	{
+#ifndef LLVM_AVAILABLE
+		sys_log.always()("LLVM version: Compiled without LLVM");
+#elif defined (LLVM_VERSION_STRING)
+		sys_log.always()("LLVM version: %s", LLVM_VERSION_STRING);
+#else
+		sys_log.always()("LLVM version: Unknown");
+#endif
+		logged_llvm = true;
+	}
+
 	jit_runtime::initialize();
 
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();

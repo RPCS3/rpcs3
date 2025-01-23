@@ -665,6 +665,7 @@ int main(int argc, char** argv)
 		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};
 		qt.text = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
+		// Write current time
 		logs::stored_message time{sys_log.always()};
 		time.text = fmt::format("Current Time: %s", std::chrono::system_clock::now());
 
