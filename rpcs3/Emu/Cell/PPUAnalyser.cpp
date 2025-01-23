@@ -2115,6 +2115,138 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	}
 
 	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
+
+	std::unordered_map<std::string_view, std::pair<u32, u32>> duplicate_data_map;
+	duplicate_map.clear();
+
+	for (auto& func : funcs)
+	{
+		if (func.size == 0 || func.size > 10000u)
+		{
+			continue;
+		}
+
+		auto& data = duplicate_data_map[std::string_view{get_ptr<char>(func.addr), func.size}];
+
+		const usz count = data.first;
+
+		if (!count)
+		{
+			data.first++;
+			data.second = func.addr;
+			continue;
+		}
+		
+		if (!data.second)
+		{
+			continue;
+		}
+
+		if (count == 1)
+		{
+			const u32 faddr = func.addr;
+			const u32 fend = func.addr + func.size;
+
+			bool fail = false;
+
+			//for (const auto [addr, size] : func.blocks)
+			const u32 addr = func.addr;
+			const u32 size = func.size;
+			{
+				if (size == 0)
+				{
+					continue;
+				}
+
+				auto i_ptr = ensure(get_ptr<u32>(addr));
+
+				for (u32 i = addr; i < fend; i += 4, i_ptr++)
+				{
+/					const ppu_opcode_t op{*i_ptr};
+					const auto itype = s_ppu_itype.decode(op.opcode);
+
+					if (itype != ppu_itype::BC && itype != ppu_itype::B)
+					{
+						if (i == fend - 4)
+						{
+							if (!(itype & ppu_itype::branch))
+							{
+								// Inserts a branch to following code
+								fail = true;
+								break;
+							}
+						}
+
+						continue;
+					}
+
+					if (!op.aa)
+					{
+						fail = true;
+						break;
+					}
+
+					if (itype == ppu_itype::BC && (op.bo & 0x14) != 0x14)
+					{
+						if (i == fend - 4)
+						{
+							// Can branch to next
+							fail = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if (fail)
+			{
+				data.first = 1;
+				data.second = 0;
+				continue;
+			}
+		}
+
+		data.first++;
+
+		// Choose the lowest function as the source
+		data.second = std::min<u32>(data.second, func.addr);
+	}
+
+	usz dups_count = 0;
+
+	for (auto& func : funcs)
+	{
+		if (func.size == 0 || func.size > 10000u)
+		{
+			continue;
+		}
+
+		const auto data = ::at32(duplicate_data_map, std::string_view{get_ptr<char>(func.addr), func.size});
+
+		if (data.first > 1)
+		{
+			duplicate_map[func.addr] = data.second;
+
+			for (const auto [addr, size] : func.blocks)
+			{
+				if (size == 0 || addr >= func.addr + func.size)
+				{
+					continue;
+				}
+
+				duplicate_map[addr] = data.second + (addr - func.addr);
+			}
+
+			if (func.addr != data.second)
+			{
+				dups_count++;
+			}
+
+			ppu_log.trace("Found PPU function duplicate: func 0x%x vs 0x%x (%d times) (size=%d)", func.addr, data.second, data.first, func.size);
+		}
+	}
+
+	ppu_log.success("Function duplication count: %d/%d (%g%)", dups_count, duplicate_data_map.size(), dups_count * 100.0 / duplicate_data_map.size());
 	return true;
 }
 
