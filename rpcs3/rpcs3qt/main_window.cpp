@@ -3,6 +3,7 @@
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
 #include "trophy_manager_dialog.h"
+#include "savestate_manager_dialog.h"
 #include "user_manager_dialog.h"
 #include "screenshot_manager_dialog.h"
 #include "kernel_explorer.h"
@@ -3052,6 +3053,14 @@ void main_window::CreateConnects()
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(m_gui_settings);
 		connect(this, &main_window::RequestDialogRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
+	});
+
+	connect(ui->actionManage_Savestates, &QAction::triggered, this, [this]
+	{
+		savestate_manager_dialog* manager = new savestate_manager_dialog(m_gui_settings, m_game_list_frame->GetGameInfo());
+		connect(this, &main_window::RequestDialogRepaint, manager, &savestate_manager_dialog::HandleRepaintUiRequest);
+		connect(manager, &savestate_manager_dialog::RequestBoot, this, [this](const std::string& path) { Boot(path, "", true); });
+		manager->show();
 	});
 
 	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, this, [this]

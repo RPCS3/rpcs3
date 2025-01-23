@@ -20,42 +20,53 @@ namespace gui
 	QString stylesheet;
 	bool custom_stylesheet_active = false;
 
+	QString get_savestate_list_column_name(savestate_list_columns col)
+	{
+		switch (col)
+		{
+		case gui::savestate_list_columns::name: return "savestate_column_name";
+		case gui::savestate_list_columns::compatible: return "savestate_column_compatible";
+		case gui::savestate_list_columns::date: return "savestate_column_date";
+		case gui::savestate_list_columns::path: return "savestate_column_path";
+		case gui::savestate_list_columns::count: return "";
+		}
+
+		fmt::throw_exception("get_savestate_list_column_name: Invalid column");
+	}
+
+	QString get_savestate_game_list_column_name(savestate_game_list_columns col)
+	{
+		switch (col)
+		{
+		case gui::savestate_game_list_columns::icon: return "savestate_game_column_icon";
+		case gui::savestate_game_list_columns::name: return "savestate_game_column_name";
+		case gui::savestate_game_list_columns::savestates: return "savestate_game_column_savestates";
+		case gui::savestate_game_list_columns::count: return "";
+		}
+
+		fmt::throw_exception("get_savestate_game_list_column_name: Invalid column");
+	}
+
 	QString get_game_list_column_name(game_list_columns col)
 	{
 		switch (col)
 		{
-		case game_list_columns::icon:
-			return "column_icon";
-		case game_list_columns::name:
-			return "column_name";
-		case game_list_columns::serial:
-			return "column_serial";
-		case game_list_columns::firmware:
-			return "column_firmware";
-		case game_list_columns::version:
-			return "column_version";
-		case game_list_columns::category:
-			return "column_category";
-		case game_list_columns::path:
-			return "column_path";
-		case game_list_columns::move:
-			return "column_move";
-		case game_list_columns::resolution:
-			return "column_resolution";
-		case game_list_columns::sound:
-			return "column_sound";
-		case game_list_columns::parental:
-			return "column_parental";
-		case game_list_columns::last_play:
-			return "column_last_play";
-		case game_list_columns::playtime:
-			return "column_playtime";
-		case game_list_columns::compat:
-			return "column_compat";
-		case game_list_columns::dir_size:
-			return "column_dir_size";
-		case game_list_columns::count:
-			return "";
+		case game_list_columns::icon: return "column_icon";
+		case game_list_columns::name: return "column_name";
+		case game_list_columns::serial: return "column_serial";
+		case game_list_columns::firmware: return "column_firmware";
+		case game_list_columns::version: return "column_version";
+		case game_list_columns::category: return "column_category";
+		case game_list_columns::path: return "column_path";
+		case game_list_columns::move: return "column_move";
+		case game_list_columns::resolution: return "column_resolution";
+		case game_list_columns::sound: return "column_sound";
+		case game_list_columns::parental: return "column_parental";
+		case game_list_columns::last_play: return "column_last_play";
+		case game_list_columns::playtime: return "column_playtime";
+		case game_list_columns::compat: return "column_compat";
+		case game_list_columns::dir_size: return "column_dir_size";
+		case game_list_columns::count: return "";
 		}
 	
 		fmt::throw_exception("get_game_list_column_name: Invalid column");
@@ -65,24 +76,15 @@ namespace gui
 	{
 		switch (col)
 		{
-		case trophy_list_columns::icon:
-			return "trophy_column_icon";
-		case trophy_list_columns::name:
-			return "trophy_column_name";
-		case trophy_list_columns::description:
-			return "trophy_column_description";
-		case trophy_list_columns::type:
-			return "trophy_column_type";
-		case trophy_list_columns::is_unlocked:
-			return "trophy_column_is_unlocked";
-		case trophy_list_columns::id:
-			return "trophy_column_id";
-		case trophy_list_columns::platinum_link:
-			return "trophy_column_platinum_link";
-		case trophy_list_columns::time_unlocked:
-			return "trophy_column_time_unlocked";
-		case trophy_list_columns::count:
-			return "";
+		case trophy_list_columns::icon: return "trophy_column_icon";
+		case trophy_list_columns::name: return "trophy_column_name";
+		case trophy_list_columns::description: return "trophy_column_description";
+		case trophy_list_columns::type: return "trophy_column_type";
+		case trophy_list_columns::is_unlocked: return "trophy_column_is_unlocked";
+		case trophy_list_columns::id: return "trophy_column_id";
+		case trophy_list_columns::platinum_link: return "trophy_column_platinum_link";
+		case trophy_list_columns::time_unlocked: return "trophy_column_time_unlocked";
+		case trophy_list_columns::count: return "";
 		}
 	
 		fmt::throw_exception("get_trophy_list_column_name: Invalid column");
@@ -92,16 +94,11 @@ namespace gui
 	{
 		switch (col)
 		{
-		case trophy_game_list_columns::icon:
-			return "trophy_game_column_icon";
-		case trophy_game_list_columns::name:
-			return "trophy_game_column_name";
-		case trophy_game_list_columns::progress:
-			return "trophy_game_column_progress";
-		case trophy_game_list_columns::trophies:
-			return "trophy_game_column_trophies";
-		case trophy_game_list_columns::count:
-			return "";
+		case trophy_game_list_columns::icon: return "trophy_game_column_icon";
+		case trophy_game_list_columns::name: return "trophy_game_column_name";
+		case trophy_game_list_columns::progress: return "trophy_game_column_progress";
+		case trophy_game_list_columns::trophies: return "trophy_game_column_trophies";
+		case trophy_game_list_columns::count: return "";
 		}
 	
 		fmt::throw_exception("get_trophy_game_list_column_name: Invalid column");
@@ -115,21 +112,21 @@ gui_settings::gui_settings(QObject* parent) : settings(parent)
 
 QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
 {
-	QStringList filterList;
+	QStringList filters;
 
-	if (GetCategoryVisibility(Category::HDD_Game, is_list_mode)) filterList.append(cat::cat_hdd_game);
-	if (GetCategoryVisibility(Category::Disc_Game, is_list_mode)) filterList.append(cat::cat_disc_game);
-	if (GetCategoryVisibility(Category::PS1_Game, is_list_mode)) filterList.append(cat::cat_ps1_game);
-	if (GetCategoryVisibility(Category::PS2_Game, is_list_mode)) filterList.append(cat::ps2_games);
-	if (GetCategoryVisibility(Category::PSP_Game, is_list_mode)) filterList.append(cat::psp_games);
-	if (GetCategoryVisibility(Category::Home, is_list_mode)) filterList.append(cat::cat_home);
-	if (GetCategoryVisibility(Category::Media, is_list_mode)) filterList.append(cat::media);
-	if (GetCategoryVisibility(Category::Data, is_list_mode)) filterList.append(cat::data);
-	if (GetCategoryVisibility(Category::OS, is_list_mode)) filterList.append(cat::os);
-	if (GetCategoryVisibility(Category::Unknown_Cat, is_list_mode)) filterList.append(cat::cat_unknown);
-	if (GetCategoryVisibility(Category::Others, is_list_mode)) filterList.append(cat::others);
+	if (GetCategoryVisibility(Category::HDD_Game, is_list_mode)) filters.append(cat::cat_hdd_game);
+	if (GetCategoryVisibility(Category::Disc_Game, is_list_mode)) filters.append(cat::cat_disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game, is_list_mode)) filters.append(cat::cat_ps1_game);
+	if (GetCategoryVisibility(Category::PS2_Game, is_list_mode)) filters.append(cat::ps2_games);
+	if (GetCategoryVisibility(Category::PSP_Game, is_list_mode)) filters.append(cat::psp_games);
+	if (GetCategoryVisibility(Category::Home, is_list_mode)) filters.append(cat::cat_home);
+	if (GetCategoryVisibility(Category::Media, is_list_mode)) filters.append(cat::media);
+	if (GetCategoryVisibility(Category::Data, is_list_mode)) filters.append(cat::data);
+	if (GetCategoryVisibility(Category::OS, is_list_mode)) filters.append(cat::os);
+	if (GetCategoryVisibility(Category::Unknown_Cat, is_list_mode)) filters.append(cat::cat_unknown);
+	if (GetCategoryVisibility(Category::Others, is_list_mode)) filters.append(cat::others);
 
-	return filterList;
+	return filters;
 }
 
 bool gui_settings::GetCategoryVisibility(int cat, bool is_list_mode) const
@@ -243,6 +240,16 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	return true;
 }
 
+void gui_settings::SetSavestateGamelistColVisibility(gui::savestate_game_list_columns col, bool val) const
+{
+	SetValue(GetGuiSaveForSavestateGameColumn(col), val);
+}
+
+void gui_settings::SetSavestateListColVisibility(gui::savestate_list_columns col, bool val) const
+{
+	SetValue(GetGuiSaveForSavestateColumn(col), val);
+}
+
 void gui_settings::SetTrophyGamelistColVisibility(gui::trophy_game_list_columns col, bool val) const
 {
 	SetValue(GetGuiSaveForTrophyGameColumn(col), val);
@@ -266,6 +273,16 @@ void gui_settings::SetCustomColor(int col, const QColor& val) const
 logs::level gui_settings::GetLogLevel() const
 {
 	return logs::level(GetValue(gui::l_level).toUInt());
+}
+
+bool gui_settings::GetSavestateGamelistColVisibility(gui::savestate_game_list_columns col) const
+{
+	return GetValue(GetGuiSaveForSavestateGameColumn(col)).toBool();
+}
+
+bool gui_settings::GetSavestateListColVisibility(gui::savestate_list_columns col) const
+{
+	return GetValue(GetGuiSaveForSavestateColumn(col)).toBool();
 }
 
 bool gui_settings::GetTrophyGamelistColVisibility(gui::trophy_game_list_columns col) const
@@ -314,6 +331,16 @@ QStringList gui_settings::GetStylesheetEntries() const
 QSize gui_settings::SizeFromSlider(int pos)
 {
 	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (1.f * pos / gui::gl_max_slider_pos);
+}
+
+gui_save gui_settings::GetGuiSaveForSavestateGameColumn(gui::savestate_game_list_columns col)
+{
+	return gui_save{ gui::savestate, "visibility_" + gui::get_savestate_game_list_column_name(col), true };
+}
+
+gui_save gui_settings::GetGuiSaveForSavestateColumn(gui::savestate_list_columns col)
+{
+	return gui_save{ gui::savestate, "visibility_" + gui::get_savestate_list_column_name(col), true };
 }
 
 gui_save gui_settings::GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col)
