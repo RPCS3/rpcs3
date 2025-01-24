@@ -165,9 +165,6 @@
      <addaction name="bootTestAct"/>
     </widget>
     <widget class="QMenu" name="bootRecentMenu">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
      <property name="title">
       <string>Boot Recent</string>
      </property>
@@ -205,6 +202,9 @@
     <widget class="QMenu" name="bootRecentSavestatesMenu">
      <property name="title">
       <string>Boot Recent Savestate</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="clearRecentSavestatesAct"/>
      <addaction name="freezeRecentSavestatesAct"/>
@@ -1403,6 +1403,9 @@
    </property>
   </action>
   <action name="freezeRecentSavestatesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>List Freeze</string>
    </property>
