@@ -522,10 +522,11 @@ usb_handler_thread::usb_handler_thread()
 		}
 	}
 
-	for (const auto& [entry, count] : emulate_device_check)
+	for (const auto& entry : device_allow_list)
 	{
 		if (entry.max_device_count && entry.make_instance)
 		{
+			auto count = emulate_device_check[entry];
 			for (int i = count; i < entry.max_device_count(); i++)
 			{
 				sys_usbd.success("Emulating device: %s (%d)", std::basic_string(entry.device_name), i);
