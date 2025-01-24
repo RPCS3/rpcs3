@@ -678,11 +678,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
-#if LLVM_VERSION_MAJOR < 18
-			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-#else
 			.setOptLevel(llvm::CodeGenOptLevel::Aggressive)
-#endif
 			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 #ifdef __APPLE__
 			//.setCodeModel(llvm::CodeModel::Large)

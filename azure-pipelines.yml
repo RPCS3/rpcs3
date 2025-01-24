@@ -134,7 +134,7 @@ jobs:
     ARTDIR: $(Build.ArtifactStagingDirectory)
     QT_VER: '6.7.3'
     QT_VER_MAIN: '6'
-    LLVM_COMPILER_VER: '16'
+    LLVM_COMPILER_VER: '18'
 
   pool:
     vmImage: "macOS-13"
@@ -195,7 +195,7 @@ jobs:
     ARTDIR: $(Build.ArtifactStagingDirectory)
     QT_VER: '6.7.3'
     QT_VER_MAIN: '6'
-    LLVM_COMPILER_VER: '16'
+    LLVM_COMPILER_VER: '18'
 
   pool:
     vmImage: "macOS-13"

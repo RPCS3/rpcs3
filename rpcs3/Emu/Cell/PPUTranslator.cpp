@@ -2774,12 +2774,7 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 	if (op.l11)
 	{
 		// MFOCRF
-
-#if LLVM_VERSION_MAJOR < 17
-		const u64 pos = countLeadingZeros<u32>(op.crm) - 24;
-#else
 		const u64 pos = countl_zero<u32>(op.crm) - 24;
-#endif
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
@@ -3066,11 +3061,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 	if (op.l11)
 	{
 		// MTOCRF
-#if LLVM_VERSION_MAJOR < 17
-		const u64 pos = countLeadingZeros<u32>(op.crm) - 24;
-#else
 		const u64 pos = countl_zero<u32>(op.crm) - 24;
-#endif
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{

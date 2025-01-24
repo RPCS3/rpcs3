@@ -41,7 +41,7 @@ if(WITH_LLVM)
 
 		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
-		find_package(LLVM 16.0 CONFIG)
+		find_package(LLVM 18.1 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -59,8 +59,8 @@ if(WITH_LLVM)
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
-		if (LLVM_VERSION VERSION_LESS 16)
-			message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 16 or above. \
+		if (LLVM_VERSION VERSION_LESS 18)
+			message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 18 or above. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
 	endif()
@@ -68,7 +68,7 @@ if(WITH_LLVM)
 	if (STATIC_LINK_LLVM)
 		if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
 			if(COMPILER_ARM)
-				set(LLVM_TARGETS_TO_BUILD "AArch64;X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+				set(LLVM_TARGETS_TO_BUILD "AArch64" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 			else()
 				set(LLVM_TARGETS_TO_BUILD "X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 			endif()

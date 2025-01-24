@@ -43,11 +43,6 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #include <llvm/IR/Verifier.h>
 #include <llvm/TargetParser/Host.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if LLVM_VERSION_MAJOR < 17
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Transforms/Scalar.h>
-#include <llvm/Analysis/AliasAnalysis.h>
-#else
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/IR/PassManager.h>
@@ -58,7 +53,6 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #include <llvm/Transforms/Scalar/LICM.h>
 #include <llvm/Transforms/Scalar/LoopPassManager.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
-#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -2567,21 +2561,6 @@ public:
 			m_function_table->eraseFromParent();
 		}
 
-#if LLVM_VERSION_MAJOR < 17
-		// Initialize pass manager
-		legacy::FunctionPassManager pm(_module.get());
-
-		// Basic optimizations
-		pm.add(createEarlyCSEPass());
-		pm.add(createCFGSimplificationPass());
-		//pm.add(createNewGVNPass());
-		pm.add(createDeadStoreEliminationPass());
-		pm.add(createLICMPass());
-		pm.add(createAggressiveDCEPass());
-		pm.add(createDeadCodeEliminationPass());
-		//pm.add(createLintPass()); // Check
-#else
-
 		// Create the analysis managers.
 		// These must be declared in this order so that they are destroyed in the
 		// correct order due to inter-analysis-manager references.
@@ -2610,7 +2589,6 @@ public:
 		fpm.addPass(DSEPass());
 		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
 		fpm.addPass(ADCEPass());
-#endif
 
 		for (auto& f : *m_module)
 		{
@@ -2620,11 +2598,7 @@ public:
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
-#if LLVM_VERSION_MAJOR < 17
-			pm.run(*f);
-#else
 			fpm.run(*f, fam);
-#endif
 		}
 
 		// Clear context (TODO)
