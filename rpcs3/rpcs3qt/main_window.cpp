@@ -2242,7 +2242,7 @@ void main_window::BootRecentAction(const QAction* act, bool is_savestate)
 			// refill menu with actions
 			for (int i = 0; i < rgw.actions.count(); i++)
 			{
-				rgw.actions[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
+				rgw.actions[i]->setShortcut(QString("%0+%1").arg(is_savestate ? "Alt" : "Ctrl").arg(i + 1));
 				rgw.actions[i]->setToolTip(::at32(rgw.entries, i).second);
 				menu->addAction(rgw.actions[i]);
 			}
@@ -2289,7 +2289,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, u32 sc_idx,
 	QAction* act = new QAction(shown_name, this);
 	act->setData(entry.first);
 	act->setToolTip(entry.second);
-	act->setShortcut(tr("Ctrl+%1").arg(sc_idx));
+	act->setShortcut(QString("%0+%1").arg(is_savestate ? "Alt" : "Ctrl").arg(sc_idx));
 
 	// truncate if too long
 	if (shown_name.length() > 60)
@@ -2360,7 +2360,7 @@ void main_window::AddRecentAction(const q_string_pair& entry, bool is_savestate)
 	// refill menu with actions
 	for (int i = 0; i < rgw.actions.count(); i++)
 	{
-		rgw.actions[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
+		rgw.actions[i]->setShortcut(QString("%0+%1").arg(is_savestate ? "Alt" : "Ctrl").arg(i + 1));
 		rgw.actions[i]->setToolTip(::at32(rgw.entries, i).second);
 		menu->addAction(rgw.actions[i]);
 	}
