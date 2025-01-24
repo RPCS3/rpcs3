@@ -529,7 +529,7 @@ usb_handler_thread::usb_handler_thread()
 			const int count = passthrough_usb_device_counts[entry];
 			for (int i = count; i < entry.max_device_count(); i++)
 			{
-				sys_usbd.success("Emulating device: %s (%d)", std::basic_string(entry.device_name), i+1);
+				sys_usbd.success("Emulating device: %s (%d)", std::basic_string(entry.device_name), i + 1);
 				auto usb_dev = entry.make_instance(i, get_new_location());
 				connect_usb_device(usb_dev, true);
 			}
