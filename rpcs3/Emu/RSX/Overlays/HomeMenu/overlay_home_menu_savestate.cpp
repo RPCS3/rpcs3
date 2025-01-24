@@ -2,8 +2,8 @@
 #include "overlay_home_menu_savestate.h"
 #include "overlay_home_menu_components.h"
 #include "Emu/system_config.h"
+#include "Emu/savestate_utils.hpp"
 
-extern bool boot_last_savestate(bool testing);
 
 namespace rsx
 {
@@ -35,7 +35,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			if (!suspend_mode && boot_last_savestate(true)) {
+			if (!suspend_mode && boot_current_game_savestate(true, 1)) {
 				std::unique_ptr<overlay_element> reload_state = std::make_unique<home_menu_entry>(
 					get_localized_string(localized_string_id::HOME_MENU_RELOAD_SAVESTATE));
 
@@ -43,7 +43,7 @@ namespace rsx
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 					rsx_log.notice("User selected reload savestate in home menu");
-					Emu.CallFromMainThread([]() { boot_last_savestate(false); });
+					Emu.CallFromMainThread([]() { boot_current_game_savestate(true, 1); });
 					return page_navigation::exit;
 				});
 			}
