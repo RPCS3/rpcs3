@@ -508,7 +508,7 @@ usb_handler_thread::usb_handler_thread()
 	perform_scan();
 
 	// Set up emulated devices for any devices that are not already being passed through
-	std::map<usb_allow_list_entry, int> emulate_device_check;
+	std::map<usb_allow_list_entry, int> passthrough_usb_device_counts;
 	for (const auto& dev : usb_devices)
 	{
 		for (const auto& entry : device_allow_list)
@@ -517,7 +517,7 @@ usb_handler_thread::usb_handler_thread()
 			const u16 idProduct = dev->device._device.idProduct;
 			if (entry.max_device_count != nullptr && (idVendor == entry.id_vendor && idProduct >= entry.id_product_min && idProduct <= entry.id_product_max))
 			{
-				emulate_device_check[entry]++;
+				passthrough_usb_device_counts[entry]++;
 			}
 		}
 	}
@@ -526,8 +526,8 @@ usb_handler_thread::usb_handler_thread()
 	{
 		if (entry.max_device_count && entry.make_instance)
 		{
-			const int real_device_count = emulate_device_check[entry];
-			for (int i = real_device_count; i < entry.max_device_count(); i++)
+			const int count = passthrough_usb_device_counts[entry];
+			for (int i = count; i < entry.max_device_count(); i++)
 			{
 				sys_usbd.success("Emulating device: %s (%d)", std::basic_string(entry.device_name), i);
 				auto usb_dev = entry.make_instance(i, get_new_location());
