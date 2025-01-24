@@ -44,4 +44,6 @@ std::vector<version_entry> get_savestate_versioning_data(fs::file&& file, std::s
 bool is_savestate_compatible(fs::file&& file, std::string_view filepath);
 bool is_savestate_compatible(const std::string& filepath);
 std::vector<version_entry> read_used_savestate_versions();
-std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id);
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 rel_id, u64 aggregate_file_size = umax);
+bool boot_current_game_savestate(bool testing, u32 index);
+void clean_savestates(std::string_view title_id, std::string_view boot_path, usz max_files, usz max_files_size);

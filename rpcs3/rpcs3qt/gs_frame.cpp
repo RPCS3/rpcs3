@@ -9,6 +9,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
+#include "Emu/savestate_utils.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
@@ -315,6 +316,10 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_restart:
+	case gui::shortcuts::shortcut::gw_savestate_1:
+	case gui::shortcuts::shortcut::gw_savestate_2:
+	case gui::shortcuts::shortcut::gw_savestate_3:
+	case gui::shortcuts::shortcut::gw_savestate_4:
 	{
 		if (Emu.IsStopped())
 		{
@@ -322,8 +327,18 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 			return;
 		}
 
-		extern bool boot_last_savestate(bool testing);
-		boot_last_savestate(false);
+		u32 index = 1;
+
+		switch (shortcut_key)
+		{
+		case gui::shortcuts::shortcut::gw_restart: index = 1; break;
+		case gui::shortcuts::shortcut::gw_savestate_1: index = 1; break;
+		case gui::shortcuts::shortcut::gw_savestate_2: index = 2; break;
+		case gui::shortcuts::shortcut::gw_savestate_3: index = 3; break;
+		case gui::shortcuts::shortcut::gw_savestate_4: index = 4; break;
+		}
+
+		boot_current_game_savestate(false, index);
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_savestate:

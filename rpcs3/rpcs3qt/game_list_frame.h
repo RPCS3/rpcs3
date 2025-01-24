@@ -95,6 +95,7 @@ Q_SIGNALS:
 	void NotifyEmuSettingsChange();
 	void FocusToSearchBar();
 	void Refreshed();
+	void RequestSaveStateManager(const game_info& game);
 
 public:
 	template <typename KeyType>

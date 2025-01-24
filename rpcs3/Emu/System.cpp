@@ -2529,7 +2529,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, 0, 0)})
+				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, -1)})
 				{
 					if (old_path.empty())
 					{
@@ -3390,7 +3390,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		{
 			set_progress_message("Creating File");
 
-			path = get_savestate_file(m_title_id, m_path, 0, 0);
+			path = get_savestate_file(m_title_id, m_path, 0, umax);
 
 			// The function is meant for reading files, so if there is no ZST file it would not return compressed file path
 			// So this is the only place where the result is edited if need to be
@@ -3630,13 +3630,20 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					sys_log.success("Old savestate has been removed: path='%s'", old_path2);
 				}
 
-				sys_log.success("Saved savestate! path='%s' (file_size=0x%x, time_to_save=%gs)", path, file_stat.size, (get_system_time() - start_time) / 1000000.);
+				sys_log.success("Saved savestate! path='%s' (file_size=0x%x (%d MiB), time_to_save=%gs)", path, file_stat.size, utils::aligned_div<u64>(file_stat.size, 1u << 20), (get_system_time() - start_time) / 1000000.);
 
 				if (!g_cfg.savestate.suspend_emu)
 				{
 					// Allow to reboot from GUI
 					m_path = path;
 				}
+
+				// Clean savestates
+				// Cap by number and aggregate file size
+				const u64 max_files = g_cfg.savestate.max_files;
+				const u64 max_files_size_mb = g_cfg.savestate.max_files_size;
+
+				clean_savestates(m_title_id, m_path, max_files, max_files_size_mb << 20);
 			}
 		}
 

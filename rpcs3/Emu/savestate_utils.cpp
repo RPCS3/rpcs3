@@ -270,17 +270,146 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 	return ok;
 }
 
-std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id)
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 rel_id, u64 aggregate_file_size)
 {
 	const std::string title = std::string{title_id.empty() ? boot_path.substr(boot_path.find_last_of(fs::delim) + 1) : title_id};
 
-	if (abs_id == -1 && rel_id == -1)
+	// Internal functionality ATM
+	constexpr s64 abs_id = 0;
+
+	if (aggregate_file_size == umax && rel_id == -1)
 	{
 		// Return directory
 		return fs::get_config_dir() + "savestates/" + title + "/";
 	}
 
-	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
+	if (rel_id >= 0)
+	{
+		std::string dir_path = fs::get_config_dir() + "savestates/" + title + "/";
+
+		fs::dir dir_view{dir_path};
+
+		std::map<std::string, usz, std::greater<>> save_files;
+
+		for (auto&& dir_entry : dir_view)
+		{
+			if (dir_entry.is_directory || dir_entry.size <= 1024)
+			{
+				continue;
+			}
+
+			const std::string& entry = dir_entry.name;
+
+			if (!title_id.empty() && !entry.starts_with(title + "_"))
+			{
+				// Check prefix only for certified applications
+				// Because ELF file names can be long and unhelpful
+				continue;
+			}
+
+			if (entry.ends_with(".SAVESTAT.zst") || entry.ends_with(".SAVESTAT.gz") || entry.ends_with(".SAVESTAT"))
+			{
+				if (usz dot_idx = entry.rfind(".SAVESTAT"); dot_idx && dot_idx != umax)
+				{
+					if (usz uc_pos = entry.rfind("_", dot_idx - 1); uc_pos != umax && uc_pos + 1 < dot_idx)
+					{
+						if (std::all_of(entry.begin() + uc_pos + 1, entry.begin() + dot_idx, [](char c) { return c >= '0' && c <= '9'; }))
+						{
+							save_files.emplace(entry, dir_entry.size);	
+						}
+					}
+				}
+			}
+		}
+
+		std::string rel_path;
+		std::string size_based_path;
+
+		auto prepare_return_value = [](std::string& dir_path, std::string& filename) -> std::string&&
+		{
+			dir_path.append(filename);
+			filename = std::move(dir_path);
+			return std::move(filename);
+		};
+
+		if (rel_id > 0)
+		{
+			if (static_cast<usz>(rel_id - 1) < save_files.size())
+			{
+				rel_path = std::next(save_files.begin(), rel_id - 1)->first;
+			}
+		}
+
+		if (aggregate_file_size != umax)
+		{
+			usz size_sum = 0;
+
+			for (auto&& [path, size] : save_files)
+			{
+				if (size_sum >= aggregate_file_size)
+				{
+					size_based_path = path;
+					break;
+				}
+
+				size_sum += size;
+			}
+		}
+
+		if (!rel_path.empty() || !size_based_path.empty())
+		{
+			if (rel_path > size_based_path)
+			{
+				return prepare_return_value(dir_path, rel_path);
+			}
+			else
+			{
+				return prepare_return_value(dir_path, size_based_path);
+			}
+		}
+
+		if (rel_id > 0 || aggregate_file_size != umax)
+		{
+			return {};
+		}
+
+		// Increment number in string in reverse
+		// Return index of new character if appended a character, umax otherwise
+		auto increment_string = [](std::string& out, usz pos) -> usz
+		{
+			while (pos != umax && out[pos] == '9')
+			{
+				out[pos] = '0';
+				pos--;
+			}
+
+			if (pos == umax || (out[pos] < '0' || out[pos] > '9'))
+			{
+				out.insert(out.begin() + (pos + 1), '1');
+				return pos + 1;
+			}
+
+			out[pos]++;
+			return umax;
+		};
+
+		if (!save_files.empty())
+		{
+			std::string last_entry = save_files.begin()->first;
+
+			// Increment entry ID
+			if (usz inc_pos = increment_string(last_entry, last_entry.rfind(".SAVESTAT") - 1); inc_pos != umax)
+			{
+				// Increment entry suffix - ID has become wider in length (keeps the string in alphbetic ordering)
+				ensure(inc_pos >= 2);
+				ensure(last_entry[inc_pos - 2]++ != 'z');
+			}
+
+			return prepare_return_value(dir_path, last_entry);
+		}
+
+		// Fallback - create new file
+	}
 
 	const std::string save_id = fmt::format("%d", abs_id);
 
@@ -335,48 +464,22 @@ std::vector<version_entry> read_used_savestate_versions()
 	return used_serial;
 }
 
-bool boot_last_savestate(bool testing)
+bool boot_current_game_savestate(bool testing, u32 index)
 {
+	if (index == 0 || index > g_cfg.savestate.max_files.get())
+	{
+		return false;
+	}
+
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
-		const std::string save_dir = get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), -1, -1);
-
-		std::string savestate_path;
-		s64 mtime = smin;
-
-		for (auto&& entry : fs::dir(save_dir))
-		{
-			if (entry.is_directory)
-			{
-				continue;
-			}
-
-			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
-			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
-			{
-				if (std::string path = save_dir + entry.name + ".zst"; is_savestate_compatible(fs::file(path), path))
-				{
-					savestate_path = std::move(path);
-					mtime = entry.mtime;
-				}
-				else if (std::string path = save_dir + entry.name + ".gz"; is_savestate_compatible(fs::file(path), path))
-				{
-					savestate_path = std::move(path);
-					mtime = entry.mtime;
-				}
-				else if (std::string path = save_dir + entry.name; is_savestate_compatible(fs::file(path), path))
-				{
-					savestate_path = std::move(path);
-					mtime = entry.mtime;
-				}
-			}
-		}
+		const std::string savestate_path = get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), index);
 
 		const bool result = fs::is_file(savestate_path);
 
 		if (testing)
 		{
-			sys_log.trace("boot_last_savestate(true) returned %s.", result);
+			sys_log.trace("boot_current_game_savestate(true, %d) returned %s.", index, result);
 			return result;
 		}
 
@@ -398,10 +501,46 @@ bool boot_last_savestate(bool testing)
 			}
 		}
 
-		sys_log.error("No compatible savestate file found in \'%s\''", save_dir);
+		sys_log.error("No compatible savestate file found in \'%s\''", get_savestate_file(Emu.GetTitleID(), Emu.GetBoot(), -1));
 	}
 
 	return false;
+}
+
+void clean_savestates(std::string_view title_id, std::string_view boot_path, usz max_files, usz max_files_size)
+{
+	ensure(max_files && max_files != umax);
+
+	bool logged_limits = false;
+
+	while (true)
+	{
+		const std::string to_remove = get_savestate_file(title_id, boot_path, max_files + 1, max_files_size == 0 ? u64{umax} : max_files_size);
+
+		if (to_remove.empty())
+		{
+			break;
+		}	
+
+		if (!fs::remove_file(to_remove))
+		{
+			sys_log.error("Failed to remove savestate file at '%s'! (error: %s)", to_remove, fs::g_tls_error);
+			break;
+		}
+		else
+		{
+			if (!logged_limits)
+			{
+				sys_log.success("Maximum save state files set: %d.\nMaximum save state disk space set: %d (MiB).\nRemoved old savestate file at '%s'.\n"
+					, max_files, max_files_size, to_remove);
+				logged_limits = true;
+			}
+			else
+			{
+				sys_log.success("Removed old savestate file at '%s'.", to_remove);
+			}
+		}
+	}
 }
 
 bool load_and_check_reserved(utils::serial& ar, usz size)
