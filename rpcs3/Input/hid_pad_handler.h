@@ -39,7 +39,6 @@ public:
 	hid_device* bt_device{nullptr}; // Used in ps move handler
 #endif
 	std::string path;
-	bool enable_player_leds{false};
 	u8 led_delay_on{0};
 	u8 led_delay_off{0};
 	u8 battery_level{0};

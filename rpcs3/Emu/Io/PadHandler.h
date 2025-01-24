@@ -50,6 +50,9 @@ public:
 	color color_override{};
 	bool color_override_active{};
 
+	bool enable_player_leds{};
+	bool update_player_leds{true};
+
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
 

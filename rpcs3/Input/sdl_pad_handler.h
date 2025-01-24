@@ -1,9 +1,18 @@
 #pragma once
 
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 
 #include "Emu/Io/PadHandler.h"
-#include "SDL.h"
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+#include "SDL3/SDL.h"
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 
 class SDLDevice : public PadDevice
 {
@@ -24,11 +33,10 @@ public:
 
 	struct sdl_info
 	{
-		SDL_GameController* game_controller = nullptr;
-		SDL_GameControllerType type = SDL_GameControllerType::SDL_CONTROLLER_TYPE_UNKNOWN;
-		SDL_Joystick* joystick = nullptr;
-		SDL_JoystickPowerLevel power_level = SDL_JoystickPowerLevel::SDL_JOYSTICK_POWER_UNKNOWN;
-		SDL_JoystickPowerLevel last_power_level = SDL_JoystickPowerLevel::SDL_JOYSTICK_POWER_UNKNOWN;
+		SDL_Gamepad* gamepad = nullptr;
+		SDL_GamepadType type = SDL_GamepadType::SDL_GAMEPAD_TYPE_UNKNOWN;
+		int power_level = 0;
+		int last_power_level = 0;
 
 		std::string name;
 		std::string path;
@@ -41,6 +49,8 @@ public:
 		bool is_virtual_device = false;
 
 		bool has_led = false;
+		bool has_mono_led = false;
+		bool has_player_led = false;
 		bool has_rumble = false;
 		bool has_rumble_triggers = false;
 		bool has_accel = false;
@@ -49,8 +59,8 @@ public:
 		f32 data_rate_accel = 0.0f;
 		f32 data_rate_gyro = 0.0f;
 
-		std::set<SDL_GameControllerButton> button_ids;
-		std::set<SDL_GameControllerAxis> axis_ids;
+		std::set<SDL_GamepadButton> button_ids;
+		std::set<SDL_GamepadAxis> axis_ids;
 
 		std::vector<touchpad> touchpads;
 	};
@@ -72,10 +82,10 @@ class sdl_pad_handler : public PadHandlerBase
 	{
 		None = 0,
 
-		A,
-		B,
-		X,
-		Y,
+		South,
+		East,
+		West,
+		North,
 		Left,
 		Right,
 		Up,
@@ -88,10 +98,10 @@ class sdl_pad_handler : public PadHandlerBase
 		Back,
 		Guide,
 		Misc1,
-		Paddle1,
-		Paddle2,
-		Paddle3,
-		Paddle4,
+		RPaddle1,
+		LPaddle1,
+		RPaddle2,
+		LPaddle2,
 		Touchpad,
 
 		Touch_L,
@@ -116,7 +126,7 @@ public:
 	sdl_pad_handler();
 	~sdl_pad_handler();
 
-	SDLDevice::sdl_info get_sdl_info(int i);
+	SDLDevice::sdl_info get_sdl_info(SDL_JoystickID id);
 
 	bool Init() override;
 	void process() override;
@@ -132,7 +142,7 @@ private:
 	std::map<std::string, std::shared_ptr<SDLDevice>> m_controllers;
 
 	void enumerate_devices();
-	std::shared_ptr<SDLDevice> get_device_by_game_controller(SDL_GameController* game_controller) const;
+	std::shared_ptr<SDLDevice> get_device_by_gamepad(SDL_Gamepad* gamepad) const;
 
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
@@ -146,13 +156,13 @@ private:
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 
-	u32 get_battery_color(SDL_JoystickPowerLevel power_level, u32 brightness) const;
+	u32 get_battery_color(int power_level, u32 brightness) const;
 	void set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small);
 
-	static std::string button_to_string(SDL_GameControllerButton button);
-	static std::string axis_to_string(SDL_GameControllerAxis axis);
+	static std::string button_to_string(SDL_GamepadButton button);
+	static std::string axis_to_string(SDL_GamepadAxis axis);
 
-	static SDLKeyCodes get_button_code(SDL_GameControllerButton button);
+	static SDLKeyCodes get_button_code(SDL_GamepadButton button);
 };
 
 #endif

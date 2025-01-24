@@ -39,7 +39,7 @@ mv RPCS3_.app RPCS3.app
 install_name_tool \
 -delete_rpath /usr/local/lib \
 -delete_rpath /usr/local/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3
-#-delete_rpath /usr/local/Cellar/sdl2/2.30.3/lib
+#-delete_rpath /usr/local/Cellar/sdl3/3.2.8/lib
 
 # NOTE: "--deep" is deprecated
 codesign --deep -fs - RPCS3.app

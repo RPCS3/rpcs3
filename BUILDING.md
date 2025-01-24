@@ -40,17 +40,17 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 - [CMake 3.28.0+](https://www.cmake.org/download/)
 - [Qt 6.8.2](https://www.qt.io/download-qt-installer)
 - [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
-- [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
+- [SDL3](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia qt6-svg sdl2 sndio jack2 base-devel
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia qt6-svg sdl3 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 
-    sudo apt-get install build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl2-2.0 libsdl2-dev libjack-dev libsndio-dev
+    sudo apt-get install build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-3.2 libsdl3-dev libjack-dev libsndio-dev
 
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 
