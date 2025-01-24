@@ -15,4 +15,4 @@ pkg install llvm19
 pkg install git ccache cmake ninja qt6-multimedia qt6-svg glew openal-soft ffmpeg
 
 # Optional dependencies (libevdev is pulled by qt6-base)
-pkg install pkgconf alsa-lib pulseaudio sdl2 evdev-proto vulkan-headers vulkan-loader
+pkg install pkgconf alsa-lib pulseaudio sdl3 evdev-proto vulkan-headers vulkan-loader
