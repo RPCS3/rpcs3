@@ -58,7 +58,7 @@ env:
 
 # linux_task:
 #   container:
-#     image: rpcs3/rpcs3-ci-jammy:1.1
+#     image: rpcs3/rpcs3-ci-jammy:1.2
 #     cpu: 4
 #     memory: 16G
 #   env:
@@ -134,7 +134,7 @@ freebsd_task:
 #   matrix:
 #     - name: Cirrus Linux AArch64 Clang
 #       arm_container:
-#         image: 'docker.io/rpcs3/rpcs3-ci-jammy-aarch64:1.1'
+#         image: 'docker.io/rpcs3/rpcs3-ci-jammy-aarch64:1.2'
 #         cpu: 8
 #         memory: 8G
 #       clang_script:

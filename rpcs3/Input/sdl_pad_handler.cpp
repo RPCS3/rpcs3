@@ -1,4 +1,4 @@
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 
 #include "stdafx.h"
 #include "sdl_pad_handler.h"
@@ -46,14 +46,14 @@ public:
 			sdl_log.error("Could not set SDL_HINT_JOYSTICK_THREAD: %s", SDL_GetError());
 		}
 
-		if (SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_GAMECONTROLLER) < 0)
+		if (!SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD))
 		{
 			sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
 			return false;
 		}
 
-		SDL_LogSetAllPriority(SDL_LOG_PRIORITY_VERBOSE);
-		SDL_LogSetOutputFunction([](void*, int category, SDL_LogPriority priority, const char* message)
+		SDL_SetLogPriorities(SDL_LOG_PRIORITY_VERBOSE);
+		SDL_SetLogOutputFunction([](void*, int category, SDL_LogPriority priority, const char* message)
 		{
 			std::string category_name;
 			switch (category)
@@ -126,10 +126,10 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 	button_list =
 	{
 		{ SDLKeyCodes::None,     ""         },
-		{ SDLKeyCodes::A,        "A"        },
-		{ SDLKeyCodes::B,        "B"        },
-		{ SDLKeyCodes::X,        "X"        },
-		{ SDLKeyCodes::Y,        "Y"        },
+		{ SDLKeyCodes::South,    "South"    },
+		{ SDLKeyCodes::East,     "East"     },
+		{ SDLKeyCodes::West,     "West"     },
+		{ SDLKeyCodes::North,    "North"    },
 		{ SDLKeyCodes::Left,     "Left"     },
 		{ SDLKeyCodes::Right,    "Right"    },
 		{ SDLKeyCodes::Up,       "Up"       },
@@ -142,10 +142,10 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 		{ SDLKeyCodes::RS,       "RS"       },
 		{ SDLKeyCodes::Guide,    "Guide"    },
 		{ SDLKeyCodes::Misc1,    "Misc 1"   },
-		{ SDLKeyCodes::Paddle1,  "Paddle 1" },
-		{ SDLKeyCodes::Paddle2,  "Paddle 2" },
-		{ SDLKeyCodes::Paddle3,  "Paddle 3" },
-		{ SDLKeyCodes::Paddle4,  "Paddle 4" },
+		{ SDLKeyCodes::RPaddle1, "R Paddle 1" },
+		{ SDLKeyCodes::LPaddle1, "L Paddle 1" },
+		{ SDLKeyCodes::RPaddle2, "R Paddle 2" },
+		{ SDLKeyCodes::LPaddle2, "L Paddle 2" },
 		{ SDLKeyCodes::Touchpad, "Touchpad" },
 		{ SDLKeyCodes::Touch_L,  "Touch Left" },
 		{ SDLKeyCodes::Touch_R,  "Touch Right" },
@@ -176,6 +176,7 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 	b_has_rumble = true;
 	b_has_motion = true;
 	b_has_led = true;
+	b_has_player_led = true;
 	b_has_rgb = true;
 	b_has_battery = true;
 	b_has_battery_led = true;
@@ -192,11 +193,11 @@ sdl_pad_handler::~sdl_pad_handler()
 
 	for (auto& controller : m_controllers)
 	{
-		if (controller.second && controller.second->sdl.game_controller)
+		if (controller.second && controller.second->sdl.gamepad)
 		{
 			set_rumble(controller.second.get(), 0, 0);
-			SDL_GameControllerClose(controller.second->sdl.game_controller);
-			controller.second->sdl.game_controller = nullptr;
+			SDL_CloseGamepad(controller.second->sdl.gamepad);
+			controller.second->sdl.gamepad = nullptr;
 		}
 	}
 }
@@ -217,10 +218,10 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->start.def    = ::at32(button_list, SDLKeyCodes::Start);
 	cfg->select.def   = ::at32(button_list, SDLKeyCodes::Back);
 	cfg->ps.def       = ::at32(button_list, SDLKeyCodes::Guide);
-	cfg->square.def   = ::at32(button_list, SDLKeyCodes::X);
-	cfg->cross.def    = ::at32(button_list, SDLKeyCodes::A);
-	cfg->circle.def   = ::at32(button_list, SDLKeyCodes::B);
-	cfg->triangle.def = ::at32(button_list, SDLKeyCodes::Y);
+	cfg->square.def   = ::at32(button_list, SDLKeyCodes::West);
+	cfg->cross.def    = ::at32(button_list, SDLKeyCodes::South);
+	cfg->circle.def   = ::at32(button_list, SDLKeyCodes::East);
+	cfg->triangle.def = ::at32(button_list, SDLKeyCodes::North);
 	cfg->left.def     = ::at32(button_list, SDLKeyCodes::Left);
 	cfg->down.def     = ::at32(button_list, SDLKeyCodes::Down);
 	cfg->right.def    = ::at32(button_list, SDLKeyCodes::Right);
@@ -282,7 +283,7 @@ bool sdl_pad_handler::Init()
 
 		if (fs::is_file(db_path))
 		{
-			if (SDL_GameControllerAddMappingsFromFile(db_path.c_str()) < 0)
+			if (SDL_AddGamepadMappingsFromFile(db_path.c_str()) < 0)
 			{
 				sdl_log.error("Could not add mappings from file '%s'! SDL Error: %s", db_path, SDL_GetError());
 			}
@@ -293,16 +294,13 @@ bool sdl_pad_handler::Init()
 		}
 	}
 
-	SDL_version version{};
-	SDL_GetVersion(&version);
-
 	if (const char* revision = SDL_GetRevision(); revision && strlen(revision) > 0)
 	{
-		sdl_log.notice("Using version: %d.%d.%d (revision='%s')", version.major, version.minor, version.patch, revision);
+		sdl_log.notice("Using version: %d.%d.%d (revision='%s')", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION, revision);
 	}
 	else
 	{
-		sdl_log.notice("Using version: %d.%d.%d", version.major, version.minor, version.patch);
+		sdl_log.notice("Using version: %d.%d.%d", SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION);
 	}
 
 	m_is_init = true;
@@ -321,45 +319,52 @@ void sdl_pad_handler::process()
 	PadHandlerBase::process();
 }
 
-SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(int i)
+SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 {
 	SDLDevice::sdl_info info{};
-	info.game_controller = SDL_GameControllerOpen(i);
+	info.gamepad = SDL_OpenGamepad(id);
 
-	if (!info.game_controller)
+	if (!info.gamepad)
 	{
-		sdl_log.error("Could not open device %d! SDL Error: %s", i, SDL_GetError());
+		sdl_log.error("Could not open device %d! SDL Error: %s", id, SDL_GetError());
 		return {};
 	}
 
-	if (const char* name = SDL_GameControllerName(info.game_controller))
+	if (const char* name = SDL_GetGamepadName(info.gamepad))
 	{
 		info.name = name;
 	}
 
-	if (const char* path = SDL_GameControllerPath(info.game_controller))
+	if (const char* path = SDL_GetGamepadPath(info.gamepad))
 	{
 		info.path = path;
 	}
 
-	if (const char* serial = SDL_GameControllerGetSerial(info.game_controller))
+	if (const char* serial = SDL_GetGamepadSerial(info.gamepad))
 	{
 		info.serial = serial;
 	}
 
-	info.joystick = SDL_GameControllerGetJoystick(info.game_controller);
-	info.type = SDL_GameControllerGetType(info.game_controller);
-	info.vid = SDL_GameControllerGetVendor(info.game_controller);
-	info.pid = SDL_GameControllerGetProduct(info.game_controller);
-	info.product_version= SDL_GameControllerGetProductVersion(info.game_controller);
-	info.firmware_version = SDL_GameControllerGetFirmwareVersion(info.game_controller);
-	info.has_led = SDL_GameControllerHasLED(info.game_controller);
-	info.has_rumble = SDL_GameControllerHasRumble(info.game_controller);
-	info.has_rumble_triggers = SDL_GameControllerHasRumbleTriggers(info.game_controller);
-	info.has_accel = SDL_GameControllerHasSensor(info.game_controller, SDL_SENSOR_ACCEL);
-	info.has_gyro = SDL_GameControllerHasSensor(info.game_controller, SDL_SENSOR_GYRO);
+	const SDL_PropertiesID property_id = SDL_GetGamepadProperties(info.gamepad);
+	if (!property_id)
+	{
+		sdl_log.error("Could not get properties of device %d! SDL Error: %s", id, SDL_GetError());
+	}
 
-	if (const int num_touchpads = SDL_GameControllerGetNumTouchpads(info.game_controller); num_touchpads > 0)
+	info.type = SDL_GetGamepadType(info.gamepad);
+	info.vid = SDL_GetGamepadVendor(info.gamepad);
+	info.pid = SDL_GetGamepadProduct(info.gamepad);
+	info.product_version = SDL_GetGamepadProductVersion(info.gamepad);
+	info.firmware_version = SDL_GetGamepadFirmwareVersion(info.gamepad);
+	info.has_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RGB_LED_BOOLEAN);
+	info.has_mono_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_MONO_LED_BOOLEAN);
+	info.has_player_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_PLAYER_LED_BOOLEAN);
+	info.has_rumble = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN);
+	info.has_rumble_triggers = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_TRIGGER_RUMBLE_BOOLEAN);
+	info.has_accel = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_ACCEL);
+	info.has_gyro = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_GYRO);
+
+	if (const int num_touchpads = SDL_GetNumGamepadTouchpads(info.gamepad); num_touchpads > 0)
 	{
 		info.touchpads.resize(num_touchpads);
 
@@ -368,7 +373,7 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(int i)
 			SDLDevice::touchpad& touchpad = ::at32(info.touchpads, i);
 			touchpad.index = i;
 
-			if (const int num_fingers = SDL_GameControllerGetNumTouchpadFingers(info.game_controller, touchpad.index); num_fingers > 0)
+			if (const int num_fingers = SDL_GetNumGamepadTouchpadFingers(info.gamepad, touchpad.index); num_fingers > 0)
 			{
 				touchpad.fingers.resize(num_fingers);
 
@@ -380,52 +385,52 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(int i)
 		}
 	}
 
-	sdl_log.notice("Found game controller %d: type=%d, name='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
-		i, static_cast<int>(info.type), info.name, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
+	sdl_log.notice("Found game pad %d: type=%d, name='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_player_led=%d, has_mono_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
+		id, static_cast<int>(info.type), info.name, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_player_led, info.has_mono_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
 
 	if (info.has_accel)
 	{
-		if (SDL_GameControllerSetSensorEnabled(info.game_controller, SDL_SENSOR_ACCEL, SDL_TRUE) != 0 ||
-			!SDL_GameControllerIsSensorEnabled(info.game_controller, SDL_SENSOR_ACCEL))
+		if (!SDL_SetGamepadSensorEnabled(info.gamepad, SDL_SENSOR_ACCEL, true) ||
+			!SDL_GamepadSensorEnabled(info.gamepad, SDL_SENSOR_ACCEL))
 		{
-			sdl_log.error("Could not activate acceleration sensor of device %d! SDL Error: %s", i, SDL_GetError());
+			sdl_log.error("Could not activate acceleration sensor of device %d! SDL Error: %s", id, SDL_GetError());
 			info.has_accel = false;
 		}
 		else
 		{
-			info.data_rate_accel = SDL_GameControllerGetSensorDataRate(info.game_controller, SDL_SENSOR_ACCEL);
-			sdl_log.notice("Acceleration sensor data rate of device %d = %.2f/s", i, info.data_rate_accel);
+			info.data_rate_accel = SDL_GetGamepadSensorDataRate(info.gamepad, SDL_SENSOR_ACCEL);
+			sdl_log.notice("Acceleration sensor data rate of device %d = %.2f/s", id, info.data_rate_accel);
 		}
 	}
 
 	if (info.has_gyro)
 	{
-		if (SDL_GameControllerSetSensorEnabled(info.game_controller, SDL_SENSOR_GYRO, SDL_TRUE) != 0 ||
-			!SDL_GameControllerIsSensorEnabled(info.game_controller, SDL_SENSOR_GYRO))
+		if (!SDL_SetGamepadSensorEnabled(info.gamepad, SDL_SENSOR_GYRO, true) ||
+			!SDL_GamepadSensorEnabled(info.gamepad, SDL_SENSOR_GYRO))
 		{
-			sdl_log.error("Could not activate gyro sensor of device %d! SDL Error: %s", i, SDL_GetError());
+			sdl_log.error("Could not activate gyro sensor of device %d! SDL Error: %s", id, SDL_GetError());
 			info.has_gyro = false;
 		}
 		else
 		{
-			info.data_rate_gyro = SDL_GameControllerGetSensorDataRate(info.game_controller, SDL_SENSOR_GYRO);
-			sdl_log.notice("Gyro sensor data rate of device %d = %.2f/s", i, info.data_rate_accel);
+			info.data_rate_gyro = SDL_GetGamepadSensorDataRate(info.gamepad, SDL_SENSOR_GYRO);
+			sdl_log.notice("Gyro sensor data rate of device %d = %.2f/s", id, info.data_rate_accel);
 		}
 	}
 
-	for (int i = 0; i < SDL_CONTROLLER_BUTTON_MAX; i++)
+	for (int i = 0; i < SDL_GAMEPAD_BUTTON_COUNT; i++)
 	{
-		const SDL_GameControllerButton button_id = static_cast<SDL_GameControllerButton>(i);
-		if (SDL_GameControllerHasButton(info.game_controller, button_id))
+		const SDL_GamepadButton button_id = static_cast<SDL_GamepadButton>(i);
+		if (SDL_GamepadHasButton(info.gamepad, button_id))
 		{
 			info.button_ids.insert(button_id);
 		}
 	}
 
-	for (int i = 0; i < SDL_CONTROLLER_AXIS_MAX; i++)
+	for (int i = 0; i < SDL_GAMEPAD_AXIS_COUNT; i++)
 	{
-		const SDL_GameControllerAxis axis_id = static_cast<SDL_GameControllerAxis>(i);
-		if (SDL_GameControllerHasAxis(info.game_controller, axis_id))
+		const SDL_GamepadAxis axis_id = static_cast<SDL_GamepadAxis>(i);
+		if (SDL_GamepadHasAxis(info.gamepad, axis_id))
 		{
 			info.axis_ids.insert(axis_id);
 		}
@@ -454,15 +459,11 @@ void sdl_pad_handler::enumerate_devices()
 	if (!m_is_init)
 		return;
 
-	for (int i = 0; i < SDL_NumJoysticks(); i++)
+	int count = 0;
+	SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
+	for (int i = 0; i < count && gamepads; i++)
 	{
-		if (!SDL_IsGameController(i))
-		{
-			sdl_log.error("Joystick %d is not game controller interface compatible! SDL Error: %s", i, SDL_GetError());
-			continue;
-		}
-
-		if (SDLDevice::sdl_info info = get_sdl_info(i); info.game_controller)
+		if (SDLDevice::sdl_info info = get_sdl_info(gamepads[i]); info.gamepad)
 		{
 			std::shared_ptr<SDLDevice> dev = std::make_shared<SDLDevice>();
 			dev->sdl = std::move(info);
@@ -482,16 +483,17 @@ void sdl_pad_handler::enumerate_devices()
 			m_controllers[device_name] = std::move(dev);
 		}
 	}
+	SDL_free(gamepads);
 }
 
-std::shared_ptr<SDLDevice> sdl_pad_handler::get_device_by_game_controller(SDL_GameController* game_controller) const
+std::shared_ptr<SDLDevice> sdl_pad_handler::get_device_by_gamepad(SDL_Gamepad* gamepad) const
 {
-	if (!game_controller)
+	if (!gamepad)
 		return nullptr;
 
-	const char* name = SDL_GameControllerName(game_controller);
-	const char* path = SDL_GameControllerPath(game_controller);
-	const char* serial = SDL_GameControllerGetSerial(game_controller);
+	const char* name = SDL_GetGamepadName(gamepad);
+	const char* path = SDL_GetGamepadPath(gamepad);
+	const char* serial = SDL_GetGamepadSerial(gamepad);
 
 	// Try to find a real device
 	for (const auto& controller : m_controllers)
@@ -551,17 +553,13 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 {
 	if (SDLDevice* dev = static_cast<SDLDevice*>(device.get()))
 	{
-		if (dev->sdl.game_controller)
+		if (dev->sdl.gamepad)
 		{
-			if (SDL_GameControllerGetAttached(dev->sdl.game_controller))
+			if (SDL_GamepadConnected(dev->sdl.gamepad))
 			{
-				if (SDL_HasEvent(SDL_EventType::SDL_CONTROLLERBUTTONDOWN) ||
-					SDL_HasEvent(SDL_EventType::SDL_CONTROLLERBUTTONUP) ||
-					SDL_HasEvent(SDL_EventType::SDL_CONTROLLERAXISMOTION) ||
-					SDL_HasEvent(SDL_EventType::SDL_CONTROLLERSENSORUPDATE) ||
-					SDL_HasEvent(SDL_EventType::SDL_CONTROLLERTOUCHPADUP) ||
-					SDL_HasEvent(SDL_EventType::SDL_CONTROLLERTOUCHPADDOWN) ||
-					SDL_HasEvent(SDL_EventType::SDL_JOYBATTERYUPDATED))
+				if (SDL_HasEvents(SDL_EventType::SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EventType::SDL_EVENT_GAMEPAD_BUTTON_UP) ||
+					SDL_HasEvents(SDL_EventType::SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN, SDL_EventType::SDL_EVENT_GAMEPAD_SENSOR_UPDATE) ||
+					SDL_HasEvent(SDL_EventType::SDL_EVENT_JOYSTICK_BATTERY_UPDATED))
 				{
 					return connection::connected;
 				}
@@ -569,52 +567,49 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 				return connection::no_data;
 			}
 
-			SDL_GameControllerClose(dev->sdl.game_controller);
-			dev->sdl.game_controller = nullptr;
-			dev->sdl.joystick = nullptr;
+			SDL_CloseGamepad(dev->sdl.gamepad);
+			dev->sdl.gamepad = nullptr;
 		}
 
 		// Try to reconnect
 
-		for (int i = 0; i < SDL_NumJoysticks(); i++)
+		int count = 0;
+		SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
+		for (int i = 0; i < count; i++)
 		{
-			if (!SDL_IsGameController(i))
-			{
-				continue;
-			}
-
-			// Get game controller
-			SDL_GameController* game_controller = SDL_GameControllerOpen(i);
-			if (!game_controller)
+			// Get game pad
+			SDL_Gamepad* gamepad = SDL_OpenGamepad(gamepads[i]);
+			if (!gamepad)
 			{
 				continue;
 			}
 
 			// Find out if we already know this controller
-			std::shared_ptr<SDLDevice> sdl_device = get_device_by_game_controller(game_controller);
+			std::shared_ptr<SDLDevice> sdl_device = get_device_by_gamepad(gamepad);
 			if (!sdl_device)
 			{
-				// Close the game controller if we don't know it.
-				SDL_GameControllerClose(game_controller);
+				// Close the game pad if we don't know it.
+				SDL_CloseGamepad(gamepad);
 				continue;
 			}
 
 			// Re-attach the controller if the device matches the current one
 			if (sdl_device.get() == dev)
 			{
-				if (SDLDevice::sdl_info info = get_sdl_info(i); info.game_controller)
+				if (SDLDevice::sdl_info info = get_sdl_info(gamepads[i]); info.gamepad)
 				{
 					dev->sdl = std::move(info);
 				}
 				break;
 			}
 		}
+		SDL_free(gamepads);
 	}
 
 	return connection::disconnected;
 }
 
-void sdl_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool /*player_led*/, bool battery_led, u32 battery_led_brightness)
+void sdl_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<PadDevice> device = get_device(padId);
 	SDLDevice* dev = static_cast<SDLDevice*>(device.get());
@@ -627,6 +622,9 @@ void sdl_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 	ensure(dev->config);
 
 	set_rumble(dev, large_motor, small_motor);
+
+	dev->update_player_leds = true;
+	dev->config->player_led_enabled.set(player_led);
 
 	if (battery_led)
 	{
@@ -642,27 +640,26 @@ void sdl_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 		dev->config->colorB.set(b);
 	}
 
-	if (dev->sdl.has_led && SDL_GameControllerSetLED(dev->sdl.game_controller, r, g, b) != 0)
+	if ((dev->sdl.has_led || dev->sdl.has_mono_led) && !SDL_SetGamepadLED(dev->sdl.gamepad, r, g, b))
 	{
 		sdl_log.error("Could not set LED of device %d! SDL Error: %s", player_id, SDL_GetError());
 	}
+
+	if (dev->sdl.has_player_led && !SDL_SetGamepadPlayerIndex(dev->sdl.gamepad, player_led ? player_id : -1))
+	{
+		sdl_log.error("Could not set player LED of device %d! SDL Error: %s", player_id, SDL_GetError());
+	}
 }
 
-u32 sdl_pad_handler::get_battery_color(SDL_JoystickPowerLevel power_level, u32 brightness) const
+u32 sdl_pad_handler::get_battery_color(int power_level, u32 brightness) const
 {
 	u32 combined_color{};
 
-	switch (power_level)
-	{
-	default:                         combined_color = 0xFF00; break;
-	case SDL_JOYSTICK_POWER_UNKNOWN: combined_color = 0xFF00; break;
-	case SDL_JOYSTICK_POWER_EMPTY:   combined_color = 0xFF33; break;
-	case SDL_JOYSTICK_POWER_LOW:     combined_color = 0xFFCC; break;
-	case SDL_JOYSTICK_POWER_MEDIUM:  combined_color = 0x66FF; break;
-	case SDL_JOYSTICK_POWER_FULL:    combined_color = 0x00FF; break;
-	case SDL_JOYSTICK_POWER_WIRED:   combined_color = 0x00FF; break;
-	case SDL_JOYSTICK_POWER_MAX:     combined_color = 0x00FF; break;
-	}
+	if (power_level < 20)      combined_color = 0xFF00;
+	else if (power_level < 40) combined_color = 0xFF33;
+	else if (power_level < 60) combined_color = 0xFFCC;
+	else if (power_level < 80) combined_color = 0x66FF;
+	else                       combined_color = 0x00FF;
 
 	const u32 red = (combined_color >> 8) * brightness / 100;
 	const u32 green = (combined_color & 0xff) * brightness / 100;
@@ -676,20 +673,16 @@ u32 sdl_pad_handler::get_battery_level(const std::string& padId)
 	if (!dev)
 		return 0;
 
-	if (dev->sdl.joystick)
+	if (dev->sdl.gamepad)
 	{
-		dev->sdl.power_level = SDL_JoystickCurrentPowerLevel(dev->sdl.joystick);
-
-		switch (dev->sdl.power_level)
+		const SDL_PowerState power_state = SDL_GetGamepadPowerInfo(dev->sdl.gamepad, &dev->sdl.power_level);
+		switch (power_state)
 		{
-		case SDL_JOYSTICK_POWER_UNKNOWN: return 0;
-		case SDL_JOYSTICK_POWER_EMPTY:   return 5;
-		case SDL_JOYSTICK_POWER_LOW:     return 20;
-		case SDL_JOYSTICK_POWER_MEDIUM:  return 70;
-		case SDL_JOYSTICK_POWER_FULL:    return 100;
-		case SDL_JOYSTICK_POWER_WIRED:   return 100;
-		case SDL_JOYSTICK_POWER_MAX:     return 100;
-		default:                         return 0;
+		case SDL_PowerState::SDL_POWERSTATE_ERROR:
+		case SDL_PowerState::SDL_POWERSTATE_UNKNOWN:
+			return 0;
+		default:
+			return std::clamp(dev->sdl.power_level, 0, 100);
 		}
 	}
 
@@ -700,24 +693,28 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
 	const auto& pad = binding.pad;
 	SDLDevice* dev = static_cast<SDLDevice*>(binding.device.get());
-	if (!dev || !dev->sdl.game_controller || !pad)
+	if (!dev || !dev->sdl.gamepad || !pad)
 		return;
 
-	if (dev->sdl.joystick)
+	if (dev->sdl.gamepad)
 	{
-		dev->sdl.power_level = SDL_JoystickCurrentPowerLevel(dev->sdl.joystick);
-		pad->m_cable_state = dev->sdl.power_level == SDL_JOYSTICK_POWER_WIRED;
-
-		switch (dev->sdl.power_level)
+		const SDL_PowerState power_state = SDL_GetGamepadPowerInfo(dev->sdl.gamepad, &dev->sdl.power_level);
+		switch (power_state)
 		{
-		case SDL_JOYSTICK_POWER_UNKNOWN: pad->m_battery_level = 0; break;
-		case SDL_JOYSTICK_POWER_EMPTY:   pad->m_battery_level = 5; break;
-		case SDL_JOYSTICK_POWER_LOW:     pad->m_battery_level = 20; break;
-		case SDL_JOYSTICK_POWER_MEDIUM:  pad->m_battery_level = 70; break;
-		case SDL_JOYSTICK_POWER_FULL:    pad->m_battery_level = 100; break;
-		case SDL_JOYSTICK_POWER_WIRED:   pad->m_battery_level = 100; break;
-		case SDL_JOYSTICK_POWER_MAX:     pad->m_battery_level = 100; break;
-		default:                         pad->m_battery_level = 0; break;
+		case SDL_PowerState::SDL_POWERSTATE_ON_BATTERY:
+			pad->m_battery_level = std::clamp(dev->sdl.power_level, 0, 100);
+			pad->m_cable_state = 0;
+			break;
+		case SDL_PowerState::SDL_POWERSTATE_NO_BATTERY:
+		case SDL_PowerState::SDL_POWERSTATE_CHARGING:
+		case SDL_PowerState::SDL_POWERSTATE_CHARGED:
+			pad->m_battery_level = std::clamp(dev->sdl.power_level, 0, 100);
+			pad->m_cable_state = 1;
+			break;
+		default:
+			pad->m_battery_level = 0;
+			pad->m_cable_state = 0;
+			break;
 		}
 	}
 	else
@@ -728,7 +725,7 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->sdl.has_accel)
 	{
-		if (SDL_GameControllerGetSensorData(dev->sdl.game_controller, SDL_SENSOR_ACCEL, dev->values_accel.data(), 3) != 0)
+		if (!SDL_GetGamepadSensorData(dev->sdl.gamepad, SDL_SENSOR_ACCEL, dev->values_accel.data(), 3))
 		{
 			sdl_log.error("Could not get acceleration sensor data of device %d! SDL Error: %s", dev->player_id, SDL_GetError());
 		}
@@ -747,7 +744,7 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->sdl.has_gyro)
 	{
-		if (SDL_GameControllerGetSensorData(dev->sdl.game_controller, SDL_SENSOR_GYRO, dev->values_gyro.data(), 3) != 0)
+		if (!SDL_GetGamepadSensorData(dev->sdl.gamepad, SDL_SENSOR_GYRO, dev->values_gyro.data(), 3))
 		{
 			sdl_log.error("Could not get gyro sensor data of device %d! SDL Error: %s", dev->player_id, SDL_GetError());
 		}
@@ -823,7 +820,7 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		}
 	}
 
-	if (dev->sdl.has_led)
+	if (dev->sdl.has_led || dev->sdl.has_mono_led)
 	{
 		// Use LEDs to indicate battery level
 		if (cfg->led_battery_indicator)
@@ -879,7 +876,7 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 			const u8 g = dev->led_is_on ? cfg->colorG : 0;
 			const u8 b = dev->led_is_on ? cfg->colorB : 0;
 
-			if (SDL_GameControllerSetLED(dev->sdl.game_controller, r, g, b) != 0)
+			if (!SDL_SetGamepadLED(dev->sdl.gamepad, r, g, b))
 			{
 				sdl_log.error("Could not set LED of device %d! SDL Error: %s", dev->player_id, SDL_GetError());
 			}
@@ -887,19 +884,30 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 			dev->led_needs_update = false;
 		}
 	}
+
+	if (dev->sdl.has_player_led && (dev->update_player_leds || dev->enable_player_leds != cfg->player_led_enabled.get()))
+	{
+		dev->enable_player_leds = cfg->player_led_enabled.get();
+		dev->update_player_leds = false;
+
+		if (!SDL_SetGamepadPlayerIndex(dev->sdl.gamepad, dev->enable_player_leds ? dev->player_id : -1))
+		{
+			sdl_log.error("Could not set player LED of device %d! SDL Error: %s", dev->player_id, SDL_GetError());
+		}
+	}
 }
 
 void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 {
-	if (!dev || !dev->sdl.game_controller) return;
+	if (!dev || !dev->sdl.gamepad) return;
 
 	constexpr u32 rumble_duration_ms = static_cast<u32>((min_output_interval + 100ms).count()); // Some number higher than the min_output_interval.
 
 	if (dev->sdl.has_rumble)
 	{
-		if (SDL_GameControllerRumble(dev->sdl.game_controller, speed_large * 257, speed_small * 257, rumble_duration_ms) != 0)
+		if (!SDL_RumbleGamepad(dev->sdl.gamepad, speed_large * 257, speed_small * 257, rumble_duration_ms))
 		{
-			sdl_log.error("Unable to play game controller rumble of player %d! SDL Error: %s", dev->player_id, SDL_GetError());
+			sdl_log.error("Unable to play game pad rumble of player %d! SDL Error: %s", dev->player_id, SDL_GetError());
 		}
 	}
 
@@ -909,9 +917,9 @@ void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 	if (false && dev->sdl.has_rumble_triggers)
 	{
 		// Only the large motor shall control both triggers. It wouldn't make sense to differentiate here.
-		if (SDL_GameControllerRumbleTriggers(dev->sdl.game_controller, speed_large * 257, speed_large * 257, rumble_duration_ms) != 0)
+		if (!SDL_RumbleGamepadTriggers(dev->sdl.gamepad, speed_large * 257, speed_large * 257, rumble_duration_ms))
 		{
-			sdl_log.error("Unable to play game controller trigger rumble of player %d! SDL Error: %s", dev->player_id, SDL_GetError());
+			sdl_log.error("Unable to play game pad trigger rumble of player %d! SDL Error: %s", dev->player_id, SDL_GetError());
 		}
 	}
 }
@@ -972,43 +980,43 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 {
 	std::unordered_map<u64, u16> values;
 	SDLDevice* dev = static_cast<SDLDevice*>(device.get());
-	if (!dev || !dev->sdl.game_controller)
+	if (!dev || !dev->sdl.gamepad)
 		return values;
 
-	for (SDL_GameControllerButton button_id : dev->sdl.button_ids)
+	for (SDL_GamepadButton button_id : dev->sdl.button_ids)
 	{
-		const u8 value = SDL_GameControllerGetButton(dev->sdl.game_controller, button_id);
+		const u8 value = SDL_GetGamepadButton(dev->sdl.gamepad, button_id);
 		const SDLKeyCodes key_code = get_button_code(button_id);
 
 		// TODO: SDL does not support DS3 button intensity in the current version
 		values[key_code] = value ? 255 : 0;
 	}
 
-	for (SDL_GameControllerAxis axis_id : dev->sdl.axis_ids)
+	for (SDL_GamepadAxis axis_id : dev->sdl.axis_ids)
 	{
-		const s16 value = SDL_GameControllerGetAxis(dev->sdl.game_controller, axis_id);
+		const s16 value = SDL_GetGamepadAxis(dev->sdl.gamepad, axis_id);
 
 		switch (axis_id)
 		{
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERLEFT:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
 			values[SDLKeyCodes::LT] = std::max<u16>(0, value);
 			break;
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_TRIGGERRIGHT:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
 			values[SDLKeyCodes::RT] = std::max<u16>(0, value);
 			break;
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTX:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_LEFTX:
 			values[SDLKeyCodes::LSXNeg] = value < 0 ? std::abs(value) - 1 : 0;
 			values[SDLKeyCodes::LSXPos] = value > 0 ? value : 0;
 			break;
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_LEFTY:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_LEFTY:
 			values[SDLKeyCodes::LSYNeg] = value > 0 ? value : 0;
 			values[SDLKeyCodes::LSYPos] = value < 0 ? std::abs(value) - 1 : 0;
 			break;
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_RIGHTX:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_RIGHTX:
 			values[SDLKeyCodes::RSXNeg] = value < 0 ? std::abs(value) - 1 : 0;
 			values[SDLKeyCodes::RSXPos] = value > 0 ? value : 0;
 			break;
-		case SDL_GameControllerAxis::SDL_CONTROLLER_AXIS_RIGHTY:
+		case SDL_GamepadAxis::SDL_GAMEPAD_AXIS_RIGHTY:
 			values[SDLKeyCodes::RSYNeg] = value > 0 ? value : 0;
 			values[SDLKeyCodes::RSYPos] = value < 0 ? std::abs(value) - 1 : 0;
 			break;
@@ -1021,20 +1029,20 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 	{
 		for (const SDLDevice::touch_point& finger : touchpad.fingers)
 		{
-			u8 state = 0; // 1 means the finger is touching the pad
+			bool down = false; // true means the finger is touching the pad
 			f32 x = 0.0f; // 0 = left, 1 = right
 			f32 y = 0.0f; // 0 = top, 1 = bottom
 			f32 pressure = 0.0f; // In the current SDL version the pressure is always 1 if the state is 1
 
-			if (SDL_GameControllerGetTouchpadFinger(dev->sdl.game_controller, touchpad.index, finger.index, &state, &x, &y, &pressure) != 0)
+			if (!SDL_GetGamepadTouchpadFinger(dev->sdl.gamepad, touchpad.index, finger.index, &down, &x, &y, &pressure))
 			{
 				sdl_log.error("Could not get touchpad %d finger %d data of device %d! SDL Error: %s", touchpad.index, finger.index, dev->player_id, SDL_GetError());
 			}
 			else
 			{
-				sdl_log.trace("touchpad=%d, finger=%d, state=%d, x=%f, y=%f, pressure=%f", touchpad.index, finger.index, state, x, y, pressure);
+				sdl_log.trace("touchpad=%d, finger=%d, state=%d, x=%f, y=%f, pressure=%f", touchpad.index, finger.index, down, x, y, pressure);
 
-				if (state == 0)
+				if (!down)
 				{
 					continue;
 				}
@@ -1066,9 +1074,9 @@ pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<
 	};
 }
 
-std::string sdl_pad_handler::button_to_string(SDL_GameControllerButton button)
+std::string sdl_pad_handler::button_to_string(SDL_GamepadButton button)
 {
-	if (const char* name = SDL_GameControllerGetStringForButton(button))
+	if (const char* name = SDL_GetGamepadStringForButton(button))
 	{
 		return name;
 	}
@@ -1076,9 +1084,9 @@ std::string sdl_pad_handler::button_to_string(SDL_GameControllerButton button)
 	return {};
 }
 
-std::string sdl_pad_handler::axis_to_string(SDL_GameControllerAxis axis)
+std::string sdl_pad_handler::axis_to_string(SDL_GamepadAxis axis)
 {
-	if (const char* name = SDL_GameControllerGetStringForAxis(axis))
+	if (const char* name = SDL_GetGamepadStringForAxis(axis))
 	{
 		return name;
 	}
@@ -1086,33 +1094,33 @@ std::string sdl_pad_handler::axis_to_string(SDL_GameControllerAxis axis)
 	return {};
 }
 
-sdl_pad_handler::SDLKeyCodes sdl_pad_handler::get_button_code(SDL_GameControllerButton button)
+sdl_pad_handler::SDLKeyCodes sdl_pad_handler::get_button_code(SDL_GamepadButton button)
 {
 	switch (button)
 	{
 	default:
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_INVALID: return SDLKeyCodes::None;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_A: return SDLKeyCodes::A;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_B: return SDLKeyCodes::B;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_X: return SDLKeyCodes::X;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_Y: return SDLKeyCodes::Y;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_LEFT: return SDLKeyCodes::Left;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_RIGHT: return SDLKeyCodes::Right;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_UP: return SDLKeyCodes::Up;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_DPAD_DOWN: return SDLKeyCodes::Down;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_LEFTSHOULDER: return SDLKeyCodes::LB;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_RIGHTSHOULDER: return SDLKeyCodes::RB;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_BACK: return SDLKeyCodes::Back;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_START: return SDLKeyCodes::Start;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_LEFTSTICK: return SDLKeyCodes::LS;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_RIGHTSTICK: return SDLKeyCodes::RS;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_GUIDE: return SDLKeyCodes::Guide;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_MISC1: return SDLKeyCodes::Misc1;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE1: return SDLKeyCodes::Paddle1;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE2: return SDLKeyCodes::Paddle2;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE3: return SDLKeyCodes::Paddle3;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_PADDLE4: return SDLKeyCodes::Paddle4;
-	case SDL_GameControllerButton::SDL_CONTROLLER_BUTTON_TOUCHPAD: return SDLKeyCodes::Touchpad;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_INVALID: return SDLKeyCodes::None;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_SOUTH: return SDLKeyCodes::South;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_EAST: return SDLKeyCodes::East;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_WEST: return SDLKeyCodes::West;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_NORTH: return SDLKeyCodes::North;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_DPAD_LEFT: return SDLKeyCodes::Left;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_DPAD_RIGHT: return SDLKeyCodes::Right;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_DPAD_UP: return SDLKeyCodes::Up;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_DPAD_DOWN: return SDLKeyCodes::Down;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_LEFT_SHOULDER: return SDLKeyCodes::LB;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER: return SDLKeyCodes::RB;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_BACK: return SDLKeyCodes::Back;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_START: return SDLKeyCodes::Start;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_LEFT_STICK: return SDLKeyCodes::LS;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_STICK: return SDLKeyCodes::RS;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_GUIDE: return SDLKeyCodes::Guide;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC1: return SDLKeyCodes::Misc1;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1: return SDLKeyCodes::RPaddle1;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_LEFT_PADDLE1: return SDLKeyCodes::LPaddle1;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2: return SDLKeyCodes::RPaddle2;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_LEFT_PADDLE2: return SDLKeyCodes::LPaddle2;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_TOUCHPAD: return SDLKeyCodes::Touchpad;
 	}
 }
 

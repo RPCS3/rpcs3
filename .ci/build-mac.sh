@@ -13,7 +13,7 @@ arch -x86_64 /usr/local/bin/brew install -f --overwrite python || arch -x86_64 /
 arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
 arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg@5
 arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetype
-arch -x86_64 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl2 vulkan-headers coreutils
+arch -x86_64 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl3 vulkan-headers coreutils
 arch -x86_64 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5
 
 # moltenvk based on commit for 1.2.11 release
@@ -53,7 +53,7 @@ cd "$WORKDIR"
 ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
-export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
+export SDL3_DIR="$BREW_X64_PATH/opt/sdl3/lib/cmake/SDL3"
 
 export PATH="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
