@@ -5298,16 +5298,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	if (!workload.empty())
 	{
 		// Update progress dialog
-		g_progr_ptotal += workload.size();
+		g_progr_ptotal += ::size32(workload);
 
 		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
-		u32 thread_count = rpcs3::utils::get_max_threads();
-
-		if (workload.size() < thread_count)
-		{
-			thread_count = ::size32(workload);
-		}
+		const u32 thread_count = std::min(::size32(workload), rpcs3::utils::get_max_threads());
 
 		struct thread_index_allocator
 		{
@@ -5442,7 +5437,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		const bool divide_by_twenty = !workload.empty();
 		const usz increment_link_count_at = (divide_by_twenty ? 20 : 1);
 
-		g_progr_ptotal += utils::aligned_div<u64>(link_workload.size(), increment_link_count_at);
+		g_progr_ptotal += static_cast<u32>(utils::aligned_div<u64>(link_workload.size(), increment_link_count_at));
 
 		usz mod_index = umax;
 
