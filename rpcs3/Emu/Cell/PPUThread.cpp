@@ -4857,7 +4857,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				ppu_log.error("JIT symbol trampoline failed.");
 			}
 		}
-#else
+#elif 0
 		// Try to make the code fit in 16 bytes, may fail and fallback
 		if (*full_sample && abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true) + 3 * 4)) < (128u << 20))
 		{
