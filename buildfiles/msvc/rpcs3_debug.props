@@ -26,6 +26,7 @@
         LLVMBitWriter.lib;
         LLVMCFGuard.lib;
         LLVMCodeGen.lib;
+        LLVMCodeGenData.lib;
         LLVMCodeGenTypes.lib;
         LLVMCore.lib;
         LLVMCoroutines.lib;
@@ -59,6 +60,7 @@
         LLVMInstCombine.lib;
         LLVMInstrumentation.lib;
         LLVMIntelJITEvents.lib;
+        LLVMIntelJITProfiling.lib;
         LLVMInterfaceStub.lib;
         LLVMInterpreter.lib;
         LLVMipo.lib;
@@ -88,13 +90,14 @@
         LLVMProfileData.lib;
         LLVMRemarks.lib;
         LLVMRuntimeDyld.lib;
+        LLVMSandboxIR.lib;
         LLVMScalarOpts.lib;
         LLVMSelectionDAG.lib;
         LLVMSupport.lib;
         LLVMSymbolize.lib;
         LLVMTableGen.lib;
+        LLVMTableGenBasic.lib;
         LLVMTableGenCommon.lib;
-        LLVMTableGenGlobalISel.lib;
         LLVMTarget.lib;
         LLVMTargetParser.lib;
         LLVMTextAPI.lib;
