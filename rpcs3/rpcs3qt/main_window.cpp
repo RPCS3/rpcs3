@@ -604,17 +604,23 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
+		return;
+	}
+
+	if (is_savestate_compatible(path))
+	{
+		gui_log.success("Boot of savestate successful.");
+		AddRecentAction(gui::Recent_Game(QString::fromStdString(path), QString::fromStdString(Emu.GetTitleAndTitleID())), true);
 	}
 	else
 	{
 		gui_log.success("Boot successful.");
+		AddRecentAction(gui::Recent_Game(QString::fromStdString(Emu.GetBoot()), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
+	}
 
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())), is_savestate_compatible(path));
-
-		if (refresh_list)
-		{
-			m_game_list_frame->Refresh(true);
-		}
+	if (refresh_list)
+	{
+		m_game_list_frame->Refresh(true);
 	}
 }
 
@@ -4217,15 +4223,21 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 			show_boot_error(error);
+			return;
+		}
+
+		if (is_savestate_compatible(path))
+		{
+			gui_log.success("Savestate Boot from drag and drop done: %s", path);
+			AddRecentAction(gui::Recent_Game(QString::fromStdString(path), QString::fromStdString(Emu.GetTitleAndTitleID())), true);
 		}
 		else
 		{
 			gui_log.success("Elf Boot from drag and drop done: %s", path);
-
-			AddRecentAction(gui::Recent_Game(QString::fromStdString(path), QString::fromStdString(Emu.GetTitleAndTitleID())), is_savestate_compatible(path));
-
-			m_game_list_frame->Refresh(true);
+			AddRecentAction(gui::Recent_Game(QString::fromStdString(Emu.GetBoot()), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
 		}
+
+		m_game_list_frame->Refresh(true);
 		break;
 	}
 	case drop_type::drop_rrc: // replay a rsx capture file
