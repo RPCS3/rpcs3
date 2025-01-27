@@ -16,8 +16,8 @@ movie_item_base::~movie_item_base()
 
 void movie_item_base::init_pointers()
 {
-	m_icon_loading_aborted.reset(new atomic_t<bool>(false));
-	m_size_on_disk_loading_aborted.reset(new atomic_t<bool>(false));
+	m_icon_loading_aborted = std::make_shared<atomic_t<bool>>(false);
+	m_size_on_disk_loading_aborted = std::make_shared<atomic_t<bool>>(false);
 }
 
 void movie_item_base::call_icon_load_func(int index)
