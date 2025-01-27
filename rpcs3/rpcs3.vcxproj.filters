@@ -1248,6 +1248,12 @@
     <ClCompile Include="Input\camera_video_sink.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
+    <ClCompile Include="Input\sdl_camera_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\sdl_camera_video_sink.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1479,6 +1485,12 @@
       <Filter>Gui\widgets</Filter>
     </ClInclude>
     <ClInclude Include="Input\camera_video_sink.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_handler.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_video_sink.h">
       <Filter>Io\camera</Filter>
     </ClInclude>
   </ItemGroup>
