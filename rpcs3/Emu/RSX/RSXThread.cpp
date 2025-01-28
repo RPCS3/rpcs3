@@ -961,7 +961,7 @@ namespace rsx
 		}
 
 		// Wait for startup (TODO)
-		while (!rsx_thread_running || Emu.IsPaused())
+		while (!rsx_thread_running || Emu.IsPausedOrReady())
 		{
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);

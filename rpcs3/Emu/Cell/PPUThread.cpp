@@ -2438,11 +2438,6 @@ void ppu_thread::serialize_common(utils::serial& ar)
 		fmt::throw_exception("Failed to serialize PPU thread ID=0x%x (cia=0x%x, ar=%s)", this->id, cia, ar);
 	}
 
-	if (ar.is_writing())
-	{
-		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
-	}
-
 	ar(optional_savestate_state, vr);
 
 	if (!ar.is_writing())
@@ -2514,7 +2509,9 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		}
 	};
 
-	switch (const u32 status = ar.pop<u32>())
+	const u32 status = ar.pop<u32>();
+
+	switch (status)
 	{
 	case PPU_THREAD_STATUS_IDLE:
 	{
@@ -2645,11 +2642,14 @@ ppu_thread::ppu_thread(utils::serial& ar)
 
 	ppu_tname = make_single<std::string>(ar.pop<std::string>());
 
-	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
+	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s, status=%s", id, *ppu_tname.load(), cia, +state, ppu_thread_status{status});
 }
 
 void ppu_thread::save(utils::serial& ar)
 {
+	// For debugging purposes, load this as soon as this function enters
+	const bs_t<cpu_flag> state_flags = state;
+
 	USING_SERIALIZATION_VERSION(ppu);
 
 	const u64 entry = std::bit_cast<u64>(entry_func);
@@ -2699,6 +2699,15 @@ void ppu_thread::save(utils::serial& ar)
 	}
 
 	ar(*ppu_tname.load());
+
+	if (current_module && current_module[0])
+	{
+		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s, statu=%s (at function: %s)", id, *ppu_tname.load(), cia, state_flags, ppu_thread_status{status}, last_function);
+	}
+	else
+	{
+		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s, statu=%s", id, *ppu_tname.load(), cia, state_flags, ppu_thread_status{status});
+	}
 }
 
 ppu_thread::thread_name_t::operator std::string() const
