@@ -3038,6 +3038,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	if (!IsStopped() && savestate)
 	{
+		if (IsStarting())
+		{
+			return;
+		}
+
 		if (!save_stage || !save_stage->prepared)
 		{
 			if (m_emu_state_close_pending.exchange(true))
