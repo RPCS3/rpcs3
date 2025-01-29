@@ -386,10 +386,6 @@ void usb_handler_thread::perform_scan()
 			libusb_device_handle* lusb_handle;
 			if (libusb_open(dev, &lusb_handle) == LIBUSB_SUCCESS)
 			{
-#ifdef __linux__
-				libusb_set_auto_detach_kernel_driver(lusb_handle, true);
-				libusb_claim_interface(lusb_handle, 2);
-#endif
 				libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_CLASS | +LIBUSB_RECIPIENT_INTERFACE, 0x01, 0x03f2, 2, nullptr, 0, 5000);
 				libusb_close(lusb_handle);
 			}
