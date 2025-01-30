@@ -299,6 +299,8 @@ public:
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 	const char* current_module{}; // Current module name, for savestates.
+	std::string last_module_storage{}; // Possible storage for current_module
+	std::string last_function_storage{}; // Possible storage for last_function
 
 	const bool is_interrupt_thread; // True for interrupts-handler threads
 

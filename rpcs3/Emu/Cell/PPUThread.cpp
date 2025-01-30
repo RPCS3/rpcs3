@@ -2482,12 +2482,18 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		ar(lv2_obj::g_priority_order_tag);
 	}
 
+	u32 hle_cia = umax;
+
 	if (version >= 3)
 	{
 		// Function and module for HLE function relocation
-		// TODO: Use it
-		ar.pop<std::string>();
-		ar.pop<std::string>();
+		ar(last_module_storage);
+		ar(last_function_storage);
+
+		if (!last_module_storage.empty() && !last_function_storage.empty())
+		{
+			hle_cia = ppu_symbol_addr(last_module_storage, last_function_storage);
+		}
 	}
 
 	serialize_common(ar);
@@ -2641,6 +2647,12 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	}
 
 	ppu_tname = make_single<std::string>(ar.pop<std::string>());
+
+	if (hle_cia != cia)
+	{
+		ppu_log.success("PPU HLE function has been relocated: OG-CIA: 0x%x, NEW-CIA=0x%x (function: %s)", cia, hle_cia, last_function_storage);
+		cia = hle_cia;
+	}
 
 	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s, status=%s", id, *ppu_tname.load(), cia, +state, ppu_thread_status{status});
 }

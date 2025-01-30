@@ -94,25 +94,33 @@ void ppu_module_manager::register_module(ppu_static_module* _module)
 	ppu_module_manager::get().emplace(_module->name, _module);
 }
 
-ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid)
+ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid, bool for_creation)
 {
 	auto& res = ::at32(ppu_module_manager::get(), _module)->functions[fnid];
 
-	if (res.name)
+	if (for_creation && res.name)
 	{
 		fmt::throw_exception("PPU FNID duplication in module %s (%s, 0x%x)", _module, res.name, fnid);
+	}
+	else if (!for_creation && !res.name)
+	{
+		fmt::throw_exception("PPU FNID unregistered in module %s (%s, 0x%x)", _module, res.name, fnid);
 	}
 
 	return res;
 }
 
-ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid)
+ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid, bool for_creation)
 {
 	auto& res = ::at32(ppu_module_manager::get(), _module)->variables[vnid];
 
-	if (res.name)
+	if (for_creation && res.name)
 	{
 		fmt::throw_exception("PPU VNID duplication in module %s (%s, 0x%x)", _module, res.name, vnid);
+	}
+	else if (!for_creation && !res.name)
+	{
+		fmt::throw_exception("PPU VNID unregistered in module %s (%s, 0x%x)", _module, res.name, vnid);
 	}
 
 	return res;
@@ -131,6 +139,11 @@ void ppu_module_manager::initialize_modules()
 	{
 		_module.second->initialize();
 	}
+}
+
+u32 ppu_symbol_addr(std::string_view _module, std::string_view nid) noexcept
+{
+	return *ppu_module_manager::find_static_function(_module.data(), ppu_generate_id(nid)).export_addr;
 }
 
 // Global linkage information
