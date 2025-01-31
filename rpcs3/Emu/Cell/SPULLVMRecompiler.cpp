@@ -1652,7 +1652,7 @@ public:
 			u32 elements;
 			u32 dwords;
 
-			if (m_use_avx512 && g_cfg.core.full_width_avx512)
+			if (m_use_avx512)
 			{
 				stride = 64;
 				elements = 16;
@@ -1677,94 +1677,177 @@ public:
 
 			llvm::Value* acc = nullptr;
 
-			for (u32 j = starta; j < end; j += stride)
+			// Use 512bit xorsum to verify integrity if size is atleast 512b * 3
+			// This code uses a 512bit vector for all hardware to ensure behavior matches.
+			// The xorsum path is still faster even on narrow hardware.
+			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
 			{
-				int indices[16];
-				bool holes = false;
-				bool data = false;
-
-				for (u32 i = 0; i < elements; i++)
+				for (u32 j = starta; j < end; j += 64)
 				{
-					const u32 k = j + i * 4;
+					int indices[16];
+					bool holes = false;
+					bool data = false;
 
-					if (k < start || k >= end || !func.data[(k - start) / 4])
+					for (u32 i = 0; i < 16; i++)
 					{
-						indices[i] = elements;
-						holes      = true;
+						const u32 k = j + i * 4;
+
+						if (k < start || k >= end || !func.data[(k - start) / 4])
+						{
+							indices[i] = 16;
+							holes      = true;
+						}
+						else
+						{
+							indices[i] = i;
+							data       = true;
+						}
 					}
-					else
+
+					if (!data)
 					{
-						indices[i] = i;
-						data       = true;
+						// Skip full-sized holes
+						continue;
 					}
-				}
 
-				if (!data)
-				{
-					// Skip full-sized holes
-					continue;
-				}
+					llvm::Value* vls = nullptr;
 
-				llvm::Value* vls = nullptr;
-
-				// Load unaligned code block from LS
-				if (m_use_avx512 && g_cfg.core.full_width_avx512)
-				{
+					// Load unaligned code block from LS
 					vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
+
+					// Mask if necessary
+					if (holes)
+					{
+						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 16));
+					}
+
+					acc = acc ? m_ir->CreateXor(acc, vls) : vls;
+					check_iterations++;
 				}
-				else if (m_use_avx)
+
+				// Create the Xorsum
+				u32 xorsum[16] = {0};
+
+				for (u32 j = 0; j < func.data.size(); j += 16) // Process 16 elements per iteration
 				{
-					vls = m_ir->CreateAlignedLoad(get_type<u32[8]>(), _ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
-				}
-				else
-				{
-					vls = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr<u32[4]>(data_addr, j - starta), llvm::MaybeAlign{4});
-				}
-
-				// Mask if necessary
-				if (holes)
-				{
-					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, elements));
+					for (u32 i = 0; i < 16; i++)
+					{
+						if (j + i < func.data.size())
+						{
+							xorsum[i] ^= func.data[j + i];
+						}
+					}
 				}
 
-				// Perform bitwise comparison and accumulate
-				u32 words[16];
+				auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(xorsum, 16));
+				acc = m_ir->CreateXor(acc, const_vector);
 
-				for (u32 i = 0; i < elements; i++)
-				{
-					const u32 k = j + i * 4;
-					words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
-				}
-
-				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::ArrayRef(words, elements)));
-				acc = acc ? m_ir->CreateOr(acc, vls) : vls;
-				check_iterations++;
-			}
-
-			// Pattern for PTEST
-			if (m_use_avx512 && g_cfg.core.full_width_avx512)
-			{
+				// Pattern for PTEST
 				acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
-			}
-			else if (m_use_avx)
-			{
-				acc = m_ir->CreateBitCast(acc, get_type<u64[4]>());
+
+				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
+
+				for (u32 i = 1; i < 8; i++)
+				{
+					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
+				}
+
+				spu_log.error("end");
+
+				// Compare result with zero
+				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 			}
 			else
 			{
-				acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+				for (u32 j = starta; j < end; j += stride)
+				{
+					int indices[16];
+					bool holes = false;
+					bool data = false;
+
+					for (u32 i = 0; i < elements; i++)
+					{
+						const u32 k = j + i * 4;
+
+						if (k < start || k >= end || !func.data[(k - start) / 4])
+						{
+							indices[i] = elements;
+							holes      = true;
+						}
+						else
+						{
+							indices[i] = i;
+							data       = true;
+						}
+					}
+
+					if (!data)
+					{
+						// Skip full-sized holes
+						continue;
+					}
+
+					llvm::Value* vls = nullptr;
+
+					// Load unaligned code block from LS
+					if (m_use_avx512)
+					{
+						vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					}
+					else if (m_use_avx)
+					{
+						vls = m_ir->CreateAlignedLoad(get_type<u32[8]>(), _ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					}
+					else
+					{
+						vls = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr<u32[4]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					}
+
+					// Mask if necessary
+					if (holes)
+					{
+						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, elements));
+					}
+
+					// Perform bitwise comparison and accumulate
+					u32 words[16];
+
+					for (u32 i = 0; i < elements; i++)
+					{
+						const u32 k = j + i * 4;
+						words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
+					}
+
+					vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::ArrayRef(words, elements)));
+					acc = acc ? m_ir->CreateOr(acc, vls) : vls;
+					check_iterations++;
+				}
+				// Pattern for PTEST
+				if (m_use_avx512)
+				{
+					acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
+				}
+				else if (m_use_avx)
+				{
+					acc = m_ir->CreateBitCast(acc, get_type<u64[4]>());
+				}
+				else
+				{
+					acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+				}
+
+				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
+
+				for (u32 i = 1; i < dwords; i++)
+				{
+					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
+				}
+
+				// Compare result with zero
+				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 			}
-
-			llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
-
-			for (u32 i = 1; i < dwords; i++)
-			{
-				elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
-			}
-
-			// Compare result with zero
-			const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 
 		// Increase block counter with statistics
