@@ -4713,7 +4713,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	usz module_counter = 0;
 
 	// Difference between function name and current location
-	const u32 reloc = info.relocs.empty() ? 0 : ::at32(info.segs, 0).addr;
+	const u32 reloc = info.is_relocatable ? ::at32(info.segs, 0).addr : 0;
 
 	// Info sent to threads
 	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
@@ -5622,7 +5622,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		}, false);
 
 	// Difference between function name and current location
-	const u32 reloc = module_part.get_relocs().empty() ? 0 : ::at32(module_part.segs, 0).addr;
+	const u32 reloc = module_part.is_relocatable ? ::at32(module_part.segs, 0).addr : 0;
 
 	// Initialize function list
 	for (const auto& func : module_part.get_funcs())

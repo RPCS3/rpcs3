@@ -1951,6 +1951,7 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 	}
 
 	prx->applied_patches = applied;
+	prx->is_relocatable = true;
 	prx->analyse(toc, 0, end, applied, exported_funcs);
 
 	if (!ar && !virtual_load)

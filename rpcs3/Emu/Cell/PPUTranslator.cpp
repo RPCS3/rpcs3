@@ -162,7 +162,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		}
 	}
 
-	if (!m_info.get_relocs().empty())
+	if (m_info.is_relocatable)
 	{
 		m_reloc = &m_info.segs[0];
 	}
