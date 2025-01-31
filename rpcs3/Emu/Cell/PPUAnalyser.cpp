@@ -566,6 +566,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	std::vector<std::reference_wrapper<ppu_function_ext>> func_queue;
 
 	// Known references (within segs, addr and value alignment = 4)
+	// For seg0, must be valid code
 	std::set<u32> addr_heap;
 
 	if (entry)
@@ -616,6 +617,49 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		{
 			// Logically greater or equal to 0
 			return false;
+		}
+
+		return true;
+	};
+
+	auto is_valid_code = [](std::span<const be_t<u32>> range, bool is_fixed_addr, u32 /*cia*/)
+	{
+		for (usz index = 0; index < std::min<usz>(range.size(), 10); index++)
+		{
+			const ppu_opcode_t op{+range[index]};
+
+			switch (g_ppu_itype.decode(op.opcode))
+			{
+			case ppu_itype::UNK:
+			{
+				return false;
+			}
+			case ppu_itype::BC:
+			case ppu_itype::B:
+			{
+				if (!is_fixed_addr && op.aa)
+				{
+					return false;
+				}
+
+				return true;
+			}
+			case ppu_itype::BCCTR:
+			case ppu_itype::BCLR:
+			{
+				if (op.opcode & 0xe000)
+				{
+					// Garbage filter
+					return false;
+				}
+
+				return true;
+			}
+			default:
+			{
+				continue;
+			}
+			}
 		}
 
 		return true;
@@ -713,6 +757,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	};
 
 	// Find references indiscriminately
+	// For seg0, must be valid code
 	for (const auto& seg : segs)
 	{
 		if (seg.size < 4) continue;
@@ -732,10 +777,15 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			for (const auto& _seg : segs)
 			{
-				if (!_seg.addr) continue;
+				if (!_seg.size) continue;
 
 				if (value >= start && value < end)
 				{
+					if (is_valid_code({ ptr, ptr + (end - value) }, entry != 0, _ptr.addr()))
+					{
+						continue;
+					}
+
 					addr_heap.emplace(value);
 					break;
 				}
@@ -1001,8 +1051,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 				if (target >= start && target < end && target != iaddr && target != iaddr + 4)
 				{
-					// TODO: Check full executability
-					if (s_ppu_itype.decode(get_ref<u32>(target)) != ppu_itype::UNK)
+					if (is_valid_code({ get_ptr<u32>(target), get_ptr<u32>(end - 4) }, entry != 0, target))
 					{
 						ppu_log.trace("Enqueued PPU function 0x%x using a caller at 0x%x", target, iaddr);
 						add_func(target, 0, 0);
