@@ -524,7 +524,7 @@ std::string utils::get_system_info()
 	}
 	else
 	{
-		fmt::append(result, " | TSC: Bad");
+		fmt::append(result, " | TSC: Disabled");
 	}
 
 	if (has_avx())
@@ -772,15 +772,26 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 #endif
 
 		if (!utils::has_invariant_tsc())
+		{
 			return 0;
+		}
+
+		if (utils::get_cpu_brand().find("Ryzen") != umax)
+		{
+			return 0;
+		}
 
 #ifdef _WIN32
 		LARGE_INTEGER freq;
 		if (!QueryPerformanceFrequency(&freq))
+		{
 			return 0;
+		}
 
 		if (freq.QuadPart <= 9'999'999)
+		{
 			return 0;
+		}
 
 		const ullong timer_freq = freq.QuadPart;
 #else
@@ -880,7 +891,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		return round_tsc(res, utils::mul_saturate<u64>(utils::add_saturate<u64>(rdtsc_diff[0], rdtsc_diff[1]), utils::aligned_div(timer_freq, timer_data[1] - timer_data[0])));
 	}();
 
-	atomic_storage<u64>::release(utils::s_tsc_freq, cal_tsc);
+	atomic_storage<u64>::store(utils::s_tsc_freq, cal_tsc);
 	return true;
 }();
 
