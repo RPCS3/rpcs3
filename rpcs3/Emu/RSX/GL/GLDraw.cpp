@@ -694,6 +694,7 @@ void GLGSRender::begin()
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		// Shaders need to be reloaded.
+		m_prev_program = m_program;
 		m_program = nullptr;
 	}
 }

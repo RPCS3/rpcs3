@@ -1982,14 +1982,32 @@ bool VKGSRender::load_program()
 		m_program = nullptr;
 	}
 
-	if (!m_program && (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only))
+	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
-		if (!m_shader_interpreter.is_interpreter(m_prev_program))
+		const bool is_interpreter = !m_program;
+		const bool was_interpreter = m_shader_interpreter.is_interpreter(m_prev_program);
+
+		// First load the next program if not available
+		if (!m_program)
 		{
+			m_program = m_shader_interpreter.get(m_pipeline_properties, current_fp_metadata);
+
+			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
 		}
 
-		m_program = m_shader_interpreter.get(m_pipeline_properties, current_fp_metadata);
+		// If swapping between interpreter and recompiler, we need to adjust some flags to reupload data as needed.
+		if (is_interpreter != was_interpreter)
+		{
+			// Always reupload transform constants when going between interpreter and recompiler
+			m_graphics_state |= rsx::transform_constants_dirty;
+
+			// Always reload fragment constansts when moving from interpreter back to recompiler.
+			if (was_interpreter)
+			{
+				m_graphics_state |= rsx::fragment_constants_dirty;
+			}
+		}
 	}
 
 	return m_program != nullptr;
@@ -2051,7 +2069,8 @@ void VKGSRender::load_program_env()
 			return std::make_pair(m_instancing_buffer_ring_info.map(constants_data_table_offset, size), size);
 		});
 
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
+		const auto bound_vertex_prog = m_shader_interpreter.is_interpreter(m_program) ? nullptr : m_vertex_prog;
+		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, bound_vertex_prog);
 		m_instancing_buffer_ring_info.unmap();
 
 		m_instancing_indirection_buffer_info = { m_instancing_buffer_ring_info.heap->value, indirection_table_offset, indirection_table_buf.size() };
@@ -2224,6 +2243,11 @@ void VKGSRender::load_program_env()
 		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
 	}
 
+	if (m_shader_interpreter.is_interpreter(m_program))
+	{
+		ensure(m_vertex_constants_buffer_info.range >= 468 * 16);
+	}
+
 	m_graphics_state.clear(handled_flags);
 }
 
@@ -2234,7 +2258,9 @@ bool VKGSRender::is_current_program_interpreted() const
 
 void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 {
-	const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
+	const usz transform_constants_size = (is_interpreter || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+
 	if (transform_constants_size)
 	{
 		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);

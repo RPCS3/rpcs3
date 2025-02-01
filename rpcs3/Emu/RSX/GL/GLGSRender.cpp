@@ -767,7 +767,6 @@ bool GLGSRender::load_program()
 		}
 	}
 
-	const bool was_interpreter = m_shader_interpreter.is_interpreter(m_program);
 	m_vertex_prog = nullptr;
 	m_fragment_prog = nullptr;
 
@@ -796,14 +795,31 @@ bool GLGSRender::load_program()
 		m_program = nullptr;
 	}
 
-	if (!m_program && (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only))
+	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
-		// Fall back to interpreter
-		m_program = m_shader_interpreter.get(current_fp_metadata);
-		if (was_interpreter != m_shader_interpreter.is_interpreter(m_program))
+		const bool is_interpreter = !m_program;
+		const bool was_interpreter = m_shader_interpreter.is_interpreter(m_prev_program);
+
+		// First load the next program if not available
+		if (!m_program)
 		{
+			m_program = m_shader_interpreter.get(current_fp_metadata);
+
 			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
+		}
+
+		// If swapping between interpreter and recompiler, we need to adjust some flags to reupload data as needed.
+		if (is_interpreter != was_interpreter)
+		{
+			// Always reupload transform constants when going between interpreter and recompiler
+			m_graphics_state |= rsx::transform_constants_dirty;
+
+			// Always reload fragment constansts when moving from interpreter back to recompiler.
+			if (was_interpreter)
+			{
+				m_graphics_state |= rsx::fragment_constants_dirty;
+			}
 		}
 	}
 
@@ -989,6 +1005,11 @@ void GLGSRender::load_program_env()
 		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
 	}
 
+	if (m_shader_interpreter.is_interpreter(m_program))
+	{
+		ensure(m_transform_constants_buffer->bound_range().second >= 468 * 16);
+	}
+
 	m_graphics_state.clear(handled_flags);
 }
 
@@ -999,7 +1020,9 @@ bool GLGSRender::is_current_program_interpreted() const
 
 void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 {
-	const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
+	const usz transform_constants_size = (is_interpreter || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+
 	if (transform_constants_size)
 	{
 		const auto constant_ids = (transform_constants_size == 8192)
