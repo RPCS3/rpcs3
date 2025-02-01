@@ -20,6 +20,8 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#pragma optimize("", off)
+
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -1594,10 +1596,11 @@ public:
 		init_luts();
 
 		// Start compilation
-		const auto label_test = BasicBlock::Create(m_context, "", m_function);
-		const auto label_diff = BasicBlock::Create(m_context, "", m_function);
-		const auto label_body = BasicBlock::Create(m_context, "", m_function);
-		const auto label_stop = BasicBlock::Create(m_context, "", m_function);
+		usz label_test_count = 0;
+		auto label_test = BasicBlock::Create(m_context, "label_test_0", m_function);
+		const auto label_diff = BasicBlock::Create(m_context, "label_diff", m_function);
+		const auto label_body = BasicBlock::Create(m_context, "label_body", m_function);
+		const auto label_stop = BasicBlock::Create(m_context, "label_stop", m_function);
 
 		// Load PC, which will be the actual value of 'm_base'
 		m_base_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::pc));
@@ -1618,18 +1621,21 @@ public:
 		{
 			// Disable check (unsafe)
 			m_ir->CreateBr(label_body);
+			m_ir->SetInsertPoint(label_body);
 		}
 		else if (func.data.size() == 1)
 		{
 			const auto pu32 = m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+			m_ir->SetInsertPoint(label_body);
 		}
 		else if (func.data.size() == 2)
 		{
 			const auto pu64 = m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+			m_ir->SetInsertPoint(label_body);
 		}
 		else
 		{
@@ -1648,9 +1654,9 @@ public:
 				}
 			}
 
-			u32 stride;
-			u32 elements;
-			u32 dwords;
+			u32 stride{};
+			u32 elements{};
+			u32 dwords{};
 
 			if (m_use_avx512)
 			{
@@ -1672,97 +1678,279 @@ public:
 			}
 
 			// Get actual pc corresponding to the found beginning of the data
-			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
+			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), SPU_LS_SIZE - 4);
 			llvm::Value* data_addr = m_ir->CreateGEP(get_type<u8>(), m_lsptr, starta_pc);
 
 			llvm::Value* acc = nullptr;
 
-			// Use 512bit xorsum to verify integrity if size is atleast 512b * 3
-			// This code uses a 512bit vector for all hardware to ensure behavior matches.
-			// The xorsum path is still faster even on narrow hardware.
-			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
+			// Exempt interrupt handler
+			bool has_sync_or_channel_sync = func.entry_point == 0;
+
+			for (u32 i = 0; !has_sync_or_channel_sync && i < func.data.size(); i++)
 			{
-				for (u32 j = starta; j < end; j += 64)
+				const spu_opcode_t op{std::bit_cast<be_t<u32>>(func.data[i])};
+
+				switch (g_spu_itype.decode(op.opcode))
 				{
-					int indices[16];
+				case spu_itype::RDCH:
+				{
+					if (op.ra == MFC_RdTagStat)
+					{
+						//has_sync_or_channel_sync = true;
+					}
+
+					break;
+				}
+				case spu_itype::RCHCNT:
+				{
+					if (op.ra == MFC_RdTagStat || op.ra == SPU_WrOutIntrMbox || op.ra == SPU_WrOutMbox)
+					{
+						// Actually this is fine and is quite common
+						break;
+					}
+
+					has_sync_or_channel_sync = true;
+					break;
+				}
+				case spu_itype::SYNC:
+				case spu_itype::IRET:
+				case spu_itype::BISLED:
+				{
+					// Disable optimization if there is a SYNC or interrupt instruction
+					has_sync_or_channel_sync = true;
+					break;
+				}
+				case spu_itype::BI:
+				{
+					// Interrupt enabling instruction
+					has_sync_or_channel_sync = !!op.e;
+					break;
+				}
+				case spu_itype::STQR:
+				{
+					// Self-modifying code is likely
+					has_sync_or_channel_sync = (op.si16 >= 0 && op.i16 < func.data.size() - i) || (op.si16 < 0 && (0 - op.si16) + 0u < i);
+					break;
+				}
+				//case spu_itype::STQA:
+				default:
+				{
+					break;
+				}
+				}
+			}
+
+			// Use 512bit xorsum to verify integrity if size is atleast (stride * 2)
+			// The xorsum path is still faster even on narrow hardware.
+			if (!has_sync_or_channel_sync && (end - starta) >= std::max<u32>(stride, 32) * 2 && !g_cfg.core.precise_spu_verification)
+			{
+				if (stride < 32)
+				{
+					stride = 32;
+					elements = 8;
+					dwords = 4;
+				}
+
+				enum accum_type : usz
+				{
+					//_sub,
+					//_xor,
+					_add,
+					//_sub_reversed,
+					_end,
+				};
+
+				llvm::Value* acc_local = nullptr;
+
+				for (u32 j = starta, iter = 0, max_itrer = m_size / stride, reset_loop_at = 0; j < end; j += stride, iter++)
+				{
+					int indices[16]{};
 					bool holes = false;
 					bool data = false;
 
-					for (u32 i = 0; i < 16; i++)
+					const bool is_last_iteration = j + stride >= end;
+
+					auto shuffle_access = [](usz index, usz size, usz element_size) -> u32
+					{
+						ensure(index < size);
+
+						// TODO
+						return index;
+
+						if (size == element_size)
+						{
+							return index;
+						}
+
+						const usz index_rem = index % element_size;
+
+						const usz size_fixed = (size + element_size - 1) / element_size;
+						const usz index_fixed = (index) / element_size;
+
+						// Square root estimation via bitwise ops
+						const usz bit_mask_count = (std::bit_width(size_fixed) - 1);
+						const usz sqrt_est_bit = (bit_mask_count / 2);
+						const usz sqrt_est = 1ull << sqrt_est_bit;
+						const usz sqrt_est_moduleo_mask = sqrt_est - 1;
+						const usz partitioner = size_fixed >> sqrt_est_bit;
+						const usz max_regular = (sqrt_est * partitioner);
+						const usz error_partition = size_fixed - max_regular;
+
+						// Fallback for a special case (unaligned access at the end)
+						if (size % element_size && index_fixed == size_fixed - 1)
+						{
+							return ensure(index_fixed * element_size + index_rem, FN(x < size));
+						}
+
+						const usz tmp_partition_index1 = std::min(index_fixed & sqrt_est_moduleo_mask, error_partition);
+						const usz partitioned_index_first = tmp_partition_index1 * (partitioner + 1);
+						const usz tmp_partition_index2 = (index_fixed & sqrt_est_moduleo_mask) - tmp_partition_index1;
+						const usz partitioned_index_second = tmp_partition_index2 * (partitioner + 0);
+						const usz partitioned_index_third = index_fixed / partitioner;
+
+						const usz result_tmp = partitioned_index_first + partitioned_index_second + partitioned_index_third;
+
+						// Fallback for a special case (unaligned access at the end)
+						if (size % element_size && result_tmp == size_fixed - 1)
+						{
+							return ensure(index_fixed * element_size + index_rem, FN(x < size));
+						}
+
+						const usz result = result_tmp * element_size + index_rem;
+
+						ensure(result < size);
+						return result;
+					};
+
+					for (u32 i = 0; i < elements; i++)
 					{
 						const u32 k = j + i * 4;
 
-						if (k < start || k >= end || !func.data[(k - start) / 4])
+						if (k >= end || !func.data[shuffle_access((k - start) / 4, func.data.size(), elements)])
 						{
-							indices[i] = 16;
-							holes      = true;
+							indices[i] = elements;
+							holes = true;
 						}
 						else
 						{
 							indices[i] = i;
-							data       = true;
+							data = true;
 						}
-					}
-
-					if (!data)
-					{
-						// Skip full-sized holes
-						continue;
 					}
 
 					llvm::Value* vls = nullptr;
 
 					// Load unaligned code block from LS
-					vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					vls = !data ? nullptr : stride == 64 ? m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr<u32[16]>(data_addr, shuffle_access(j - starta, m_size, stride)), llvm::MaybeAlign{4}) :
+						stride == 32 ? m_ir->CreateAlignedLoad(get_type<u32[8]>(), _ptr<u32[8]>(data_addr, shuffle_access(j - starta, m_size, stride)), llvm::MaybeAlign{4})
+						: ensure(vls, FN(false), "Unreachable");
 
 					// Mask if necessary
-					if (holes)
+					if (holes && data)
 					{
-						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 16));
+						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, elements));
 					}
 
-					acc = acc ? m_ir->CreateXor(acc, vls) : vls;
-					check_iterations++;
-				}
-
-				// Create the Xorsum
-				u32 xorsum[16] = {0};
-
-				for (u32 j = 0; j < func.data.size(); j += 16) // Process 16 elements per iteration
-				{
-					for (u32 i = 0; i < 16; i++)
+					if (!data)
 					{
-						if (j + i < func.data.size())
+						//
+					}
+					else if (reset_loop_at == iter)
+					{
+						acc_local = vls;
+					}
+					else
+					{
+						switch (accum_type{(iter - 1) % accum_type::_end})
 						{
-							xorsum[i] ^= func.data[j + i];
+						//case accum_type::_xor: acc_local = m_ir->CreateXor(acc_local, vls); break;
+						case accum_type::_add: acc_local = m_ir->CreateAdd(acc_local, vls); break;
+						//case accum_type::_sub: acc_local = m_ir->CreateSub(acc_local, vls); break;
+						//case accum_type::_sub_reversed: acc_local = m_ir->CreateSub(vls, acc_local); break;
+						default: ensure(false);
 						}
 					}
+
+					check_iterations++;
+
+					constexpr usz num_of_full_repetitions_per_check = 2;
+					constexpr usz num_of_full_repetitions_per_jump = 8;
+
+					const usz iter_since_reset = iter - reset_loop_at;
+
+					if ((iter_since_reset && (iter_since_reset + 1) % (accum_type::_end * num_of_full_repetitions_per_check) == 0) || is_last_iteration)
+					{
+						// Create the Xorsum
+						u32 checksum[512 / 32]{};
+
+						for (usz i = reset_loop_at * elements, end_it = std::min<usz>(func.data.size(), (iter + 1) * elements); i < end_it; i++) // Process 16 elements per iteration
+						{
+							const usz sub_index = i % elements;
+							const usz group_index = (i - reset_loop_at) / elements;
+							const u32 fdata = func.data[shuffle_access(i, func.data.size(), elements)];
+							
+							if (!group_index)
+							{
+								checksum[sub_index] = fdata;
+								continue;
+							}
+
+							switch (accum_type{(group_index - 1) % accum_type::_end})
+							{
+							// case accum_type::_xor: checksum[sub_index] ^= fdata; break;
+							case accum_type::_add: checksum[sub_index] += fdata; break;
+							//case accum_type::_sub: checksum[sub_index] -= fdata; break;
+							//case accum_type::_sub_reversed: checksum[sub_index] = fdata - checksum[sub_index]; break;
+							default: ensure(false);
+							}
+						}
+
+						auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(checksum, elements));
+
+						acc_local = data ? acc_local : const_vector;
+
+						const auto xor_res = m_ir->CreateXor(acc_local, const_vector);
+
+						if ((iter_since_reset + 1) % (accum_type::_end * num_of_full_repetitions_per_jump) != 0 && !is_last_iteration)
+						{
+							reset_loop_at = iter + 1;
+							acc = acc ? m_ir->CreateOr(xor_res, acc) : xor_res;
+							acc_local = nullptr;
+							continue;
+						}
+
+						acc = acc ? m_ir->CreateOr(xor_res, acc) : xor_res;
+
+						// Pattern for PTEST
+						acc = stride == 64 ? m_ir->CreateBitCast(acc, get_type<u64[8]>()) :
+							stride == 32 ? m_ir->CreateBitCast(acc, get_type<u64[4]>())
+							: ensure(acc, FN(false), "Unreachable");
+
+						llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
+
+						for (u64 i = 1; i < (stride / sizeof(u64)); i++)
+						{
+							elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
+						}
+
+						spu_log.warning("Using checksum verification!");
+
+						// Compare result with zero
+						const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+						const auto label_check_next_or_body = is_last_iteration ? label_body : BasicBlock::Create(m_context, fmt::format("label_test_%d", ++label_test_count), m_function);
+						m_ir->CreateCondBr(cond, label_diff, label_check_next_or_body, m_md_unlikely);
+						m_ir->SetInsertPoint(label_check_next_or_body);
+						acc_local = nullptr;
+						acc = nullptr;
+						reset_loop_at = iter + 1;
+					}
 				}
-
-				auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(xorsum, 16));
-				acc = m_ir->CreateXor(acc, const_vector);
-
-				// Pattern for PTEST
-				acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
-
-				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
-
-				for (u32 i = 1; i < 8; i++)
-				{
-					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
-				}
-
-				spu_log.error("end");
-
-				// Compare result with zero
-				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 			}
 			else
 			{
 				for (u32 j = starta; j < end; j += stride)
 				{
-					int indices[16];
+					int indices[16]{};
 					bool holes = false;
 					bool data = false;
 
@@ -1770,15 +1958,15 @@ public:
 					{
 						const u32 k = j + i * 4;
 
-						if (k < start || k >= end || !func.data[(k - start) / 4])
+						if (k >= end || !func.data[(k - start) / 4])
 						{
 							indices[i] = elements;
-							holes      = true;
+							holes = true;
 						}
 						else
 						{
 							indices[i] = i;
-							data       = true;
+							data = true;
 						}
 					}
 
@@ -1811,7 +1999,7 @@ public:
 					}
 
 					// Perform bitwise comparison and accumulate
-					u32 words[16];
+					u32 words[16]{};
 
 					for (u32 i = 0; i < elements; i++)
 					{
@@ -1839,7 +2027,7 @@ public:
 
 				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
 
-				for (u32 i = 1; i < dwords; i++)
+				for (u64 i = 1; i < dwords; i++)
 				{
 					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
 				}
@@ -1847,11 +2035,11 @@ public:
 				// Compare result with zero
 				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
 				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+				m_ir->SetInsertPoint(label_body);
 			}
 		}
 
 		// Increase block counter with statistics
-		m_ir->SetInsertPoint(label_body);
 		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbcount), m_ir->getInt64(check_iterations)), pbcount);
 
