@@ -78,6 +78,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
 
 	gl::glsl::program *m_program = nullptr;
+	gl::glsl::program* m_prev_program = nullptr;
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
 
