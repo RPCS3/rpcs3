@@ -1677,9 +1677,9 @@ public:
 
 			llvm::Value* acc = nullptr;
 
-			// Use 512bit xorsum to verify integrity if size is atleast 512b * 3
+			// Use a 512bit simple checksum to verify integrity if size is atleast 512b * 3
 			// This code uses a 512bit vector for all hardware to ensure behavior matches.
-			// The xorsum path is still faster even on narrow hardware.
+			// The checksum path is still faster even on narrow hardware.
 			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
 			{
 				for (u32 j = starta; j < end; j += 64)
@@ -1721,12 +1721,12 @@ public:
 						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 16));
 					}
 
-					acc = acc ? m_ir->CreateXor(acc, vls) : vls;
+					acc = acc ? m_ir->CreateAdd(acc, vls) : vls;
 					check_iterations++;
 				}
 
-				// Create the Xorsum
-				u32 xorsum[16] = {0};
+				// Create the checksum
+				u32 checksum[16] = {0};
 
 				for (u32 j = 0; j < func.data.size(); j += 16) // Process 16 elements per iteration
 				{
@@ -1734,12 +1734,12 @@ public:
 					{
 						if (j + i < func.data.size())
 						{
-							xorsum[i] ^= func.data[j + i];
+							checksum[i] += func.data[j + i];
 						}
 					}
 				}
 
-				auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(xorsum, 16));
+				auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(checksum, 16));
 				acc = m_ir->CreateXor(acc, const_vector);
 
 				// Pattern for PTEST
@@ -1751,8 +1751,6 @@ public:
 				{
 					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
 				}
-
-				spu_log.error("end");
 
 				// Compare result with zero
 				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
