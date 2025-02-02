@@ -23,6 +23,7 @@
 #endif
 
 #include <thread>
+#include <fstream>
 
 #include "util/asm.hpp"
 #include "util/fence.hpp"
@@ -776,11 +777,6 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 			return 0;
 		}
 
-		if (utils::get_cpu_brand().find("Ryzen") != umax)
-		{
-			return 0;
-		}
-
 #ifdef _WIN32
 		LARGE_INTEGER freq;
 		if (!QueryPerformanceFrequency(&freq))
@@ -795,6 +791,50 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 
 		const ullong timer_freq = freq.QuadPart;
 #else
+
+#ifdef __linux__
+		// Check if system clocksource is TSC. If the kernel trusts the TSC, we should too.
+		// Some Ryzen laptops have broken firmware when running linux (requires a kernel patch). This is also a problem on some older intel CPUs.
+		const char* clocksource_file = "/sys/devices/system/clocksource/clocksource0/available_clocksource";
+		if (!fs::is_file(clocksource_file))
+		{
+			// OS doesn't support sysfs?
+			printf("[TSC calibration] Could not determine available clock sources. Disabling TSC.\n");
+			return 0;
+		}
+
+		std::string clock_sources;
+		std::ifstream file(clocksource_file);
+		std::getline(file, clock_sources);
+
+		if (file.fail())
+		{
+			printf("[TSC calibration] Could not read the available clock sources on this system. Disabling TSC.\n");
+			return 0;
+		}
+
+		printf("[TSC calibration] Available clock sources: '%s'\n", clock_sources.c_str());
+
+		// Check if the Kernel has blacklisted the TSC
+		const auto available_clocks = fmt::split(clock_sources, { " " });
+		const bool tsc_reliable = std::find(available_clocks.begin(), available_clocks.end(), "tsc") != available_clocks.end();
+
+		if (!tsc_reliable)
+		{
+			printf("[TSC calibration] TSC is not a supported clock source on this system.\n");
+			return 0;
+		}
+
+		printf("[TSC calibration] Kernel reports the TSC is reliable.\n");
+#else
+		if (utils::get_cpu_brand().find("Ryzen") != umax)
+		{
+			// MacOS is arm-native these days and I don't know much about BSD to fix this if it's an issue. (kd-11)
+			// Having this check only for Ryzen is broken behavior - other CPUs can also have this problem.
+			return 0;
+		}
+#endif
+
 		constexpr ullong timer_freq = 1'000'000'000;
 #endif
 
