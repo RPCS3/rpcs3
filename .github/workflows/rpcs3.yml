@@ -126,17 +126,13 @@ jobs:
         run: .ci/setup-windows.sh
 
       - name: Export Variables
+        shell: bash
         run: |
-          Get-Content ".ci/ci-vars.env" | ForEach-Object {
-              # Skip over lines containing comments.
-              if ($_ -notmatch '^\s*#')
-              {
-                  $line = $_ -split '='
-                  $key = $line[0]
-                  $val = $line[1]
-                  echo "$key=$val" >> $env:GITHUB_ENV
-              }
-          }
+          while IFS='=' read -r key val; do
+            # Skip lines that are empty or start with '#'
+            [[ -z "$key" || "$key" =~ ^# ]] && continue
+            echo "$key=$val" >> "${{ github.env }}"
+          done < .ci/ci-vars.env
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@main
