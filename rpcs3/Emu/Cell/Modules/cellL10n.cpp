@@ -574,9 +574,40 @@ s32 sjishan2zen()
 	return 0;
 }
 
-s32 UCS2toSBCS()
+s32 UCS2toSBCS(u16 src, vm::ptr<u8> dst, u32 code_page)
 {
-	cellL10n.todo("UCS2toSBCS()");
+	cellL10n.notice("UCS2toSBCS(src=0x%x, dst=*0x%x, code_page=0x%x)", src, dst, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return -1;
+	}
+
+	if (src < 0xfffe)
+	{
+		ensure(!!dst); // Not really checked
+
+		if (src < 0x80)
+		{
+			*dst = static_cast<u8>(src);
+			return 1;
+		}
+
+		vm::var<u32> dst_len = vm::make_var<u32>(0);
+		const s32 res = _L10nConvertChar(L10N_UCS2, &src, sizeof(src), code_page, dst, dst_len);
+
+		if (res == ConversionOK)
+		{
+			return 1;
+		}
+
+		if (res == ConverterUnknown)
+		{
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
@@ -1275,10 +1306,86 @@ s32 UCS2stoEUCCNs()
 	return ConversionOK;
 }
 
-s32 SBCSstoUTF8s(vm::cptr<u8> src, vm::cptr<u32> src_len, vm::ptr<u8> dst, vm::ptr<u32> dst_len, s32 enc)
+s32 SBCSstoUTF8s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::ptr<u32> dst_len, u32 code_page)
 {
-	cellL10n.warning("SBCSstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, enc=*0x%x)", src, src_len, dst, dst_len, enc);
-	return _L10nConvertStr(enc, src, src_len, L10N_UTF8, dst, dst_len); // Might not work in some scenarios
+	cellL10n.notice("SBCSstoUTF8s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, code_page=0x%x)", src, src_len, dst, dst_len, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return ConverterUnknown;
+	}
+
+	ensure(src_len && dst_len); // Not really checked
+
+	if (*src_len == 0u)
+	{
+		*dst_len = 0;
+		return ConversionOK;
+	}
+
+	ensure(src); // Not really checked
+
+	u32 len = 0;
+	u32 dst_pos = 0;
+
+	for (u32 src_pos = 0; src_pos < *src_len; src_pos++)
+	{
+		u8 src_val = src[src_pos];
+		u64 longval = static_cast<u64>(src_val);
+		s32 utf8_len = 1;
+
+		if (static_cast<s8>(src_val) < '\0')
+		{
+			u8 dst_tmp[4] = {};
+			s32 dst_len_tmp = 4;
+
+			const s32 res = _ConvertStr(code_page, &src_val, 1, L10N_UTF8, &dst_tmp, &dst_len_tmp, false);
+
+			if (res != ConversionOK)
+			{
+				*src_len -= src_pos;
+				*dst_len = len;
+				return SRCIllegal;
+			}
+
+			longval = *reinterpret_cast<u64*>(dst_tmp);
+			utf8_len = dst_len_tmp;
+		}
+
+		len += utf8_len;
+
+		if (dst)
+		{
+			if (*dst_len < len)
+			{
+				*src_len -= src_pos;
+				*dst_len = len - utf8_len;
+				return DSTExhausted;
+			}
+
+			src_val = static_cast<u8>(longval);
+
+			if (utf8_len == 3)
+			{
+				dst[dst_pos++] = static_cast<u8>((longval << 0x20) >> 0x2c) | 0xe0;
+				dst[dst_pos++] = (static_cast<u8>(longval >> 6) & 0x3f) | 0x80;
+				dst[dst_pos++] = (src_val & 0x3f) | 0x80;
+			}
+			else if (utf8_len == 1)
+			{
+				dst[dst_pos++] = src_val;
+			}
+			else
+			{
+				dst[dst_pos++] = static_cast<u8>(longval >> 6) | 0xc0;
+				dst[dst_pos++] = (src_val & 0x3f) | 0x80;
+			}
+		}
+	}
+
+	*dst_len = len;
+	return ConversionOK;
 }
 
 s32 SJISstoJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
@@ -1287,10 +1394,47 @@ s32 SJISstoJISs(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::pt
 	return 0;
 }
 
-s32 SBCStoUTF8()
+s32 SBCStoUTF8(u8 src, vm::ptr<u8> dst, u32 code_page)
 {
-	cellL10n.todo("SBCStoUTF8()");
-	return 0;
+	cellL10n.notice("SBCStoUTF8(src=0x%x, dst=*0x%x, code_page=0x%x)", src, *dst, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return -1;
+	}
+
+	ensure(!!dst); // Not really checked
+
+	if (static_cast<s8>(src) >= 0)
+	{
+		*dst = src;
+		return 1;
+	}
+
+	u8 dst_tmp = 0;
+	s32 dst_len_tmp = 1;
+
+	const s32 res = _ConvertStr(L10N_UTF8, &src, 1, code_page, &dst_tmp, &dst_len_tmp, false);
+	if (res != ConversionOK)
+	{
+		return 0;
+	}
+
+	const u64 longval = static_cast<u64>(dst_tmp);
+	const u8 val = static_cast<u8>(dst_tmp) & 0x3f;
+
+	if (longval < 0x800)
+	{
+		dst[0] = static_cast<u8>((longval << 0x20) >> 0x26) | 0xc0;
+		dst[1] = val | 0x80;
+		return 2;
+	}
+
+	dst[0] = static_cast<u8>((longval << 0x20) >> 0x2c) | 0xe0;
+	dst[1] = (static_cast<u8>(static_cast<u16>(dst_tmp) >> 6) & 0x3f) | 0x80;
+	dst[2] = val | 0x80;
+	return 3;
 }
 
 s32 UTF8toUTF32(vm::cptr<u8> src, vm::ptr<u32> dst)
@@ -1694,9 +1838,67 @@ s32 EUCCNstoUCS2s()
 	return ConversionOK;
 }
 
-s32 SBCSstoUCS2s()
+s32 SBCSstoUCS2s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm::ptr<u32> dst_len, u32 code_page)
 {
-	cellL10n.todo("SBCSstoUCS2s()");
+	cellL10n.notice("SBCSstoUCS2s(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, code_page=0x%x)", src, src_len, dst, dst_len, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return ConverterUnknown;
+	}
+
+	ensure(src_len && dst_len); // Not really checked
+
+	if (*src_len == 0u)
+	{
+		*dst_len = 0;
+		return ConversionOK;
+	}
+
+	ensure(src); // Not really checked
+
+	u32 len = 0;
+	u32 dst_pos = 0;
+
+	for (u32 src_pos = 0; src_pos < *src_len; src_pos++)
+	{
+		const u8 src_val = src[src_pos];
+		u16 val = static_cast<u16>(src_val);
+
+		if (static_cast<s8>(src_val) < '\0')
+		{
+			u16 dst_tmp = 0;
+			s32 dst_len_tmp = 2;
+
+			const s32 res = _ConvertStr(code_page, &src_val, 1, L10N_UCS2, &dst_tmp, &dst_len_tmp, false);
+
+			if (res != ConversionOK)
+			{
+				*src_len -= src_pos;
+				*dst_len = dst_pos;
+				return SRCIllegal;
+			}
+
+			val = dst_tmp;
+		}
+
+		len++;
+
+		if (dst)
+		{
+			if (*dst_len < len)
+			{
+				*src_len -= src_pos;
+				*dst_len = dst_pos;
+				return DSTExhausted;
+			}
+
+			dst[dst_pos++] = val;
+		}
+	}
+
+	*dst_len = len;
 	return ConversionOK;
 }
 
@@ -1853,9 +2055,24 @@ s32 kuten2sjis()
 	return 0;
 }
 
-s32 UTF8toSBCS()
+s32 UTF8toSBCS(vm::cptr<u8> src, vm::ptr<u8> dst, u32 code_page)
 {
-	cellL10n.todo("UTF8toSBCS()");
+	cellL10n.notice("UTF8toSBCS(src=*0x%x, dst=*0x%x, code_page=0x%x)", src, dst, code_page);
+
+	vm::var<u16> ucs2_tmp = vm::make_var<u16>(0);
+
+	const s32 utf8_len = UTF8toUCS2(src, ucs2_tmp);
+	if (utf8_len != 0)
+	{
+		const s32 len = UCS2toSBCS(*ucs2_tmp, dst, code_page);
+		if (1 < len + 1U)
+		{
+			return utf8_len;
+		}
+
+		return len;
+	}
+
 	return 0;
 }
 
@@ -1895,10 +2112,35 @@ s32 UCS2toEUCKR()
 	return 0;
 }
 
-s32 SBCStoUCS2()
+s32 SBCStoUCS2(u8 src, vm::ptr<u16> dst, u32 code_page)
 {
-	cellL10n.todo("SBCStoUCS2()");
-	return 0;
+	cellL10n.notice("SBCStoUCS2(src=0x%x, dst=*0x%x, code_page=0x%x)", src, dst, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return -1;
+	}
+
+	ensure(!!dst); // Not really checked
+
+	if (static_cast<s8>(src) >= 0)
+	{
+		*dst = static_cast<s16>(static_cast<s8>(src)) & 0xff;
+		return 1;
+	}
+
+	u16 dst_tmp = 0;
+	s32 dst_len_tmp = sizeof(u16);
+
+	const s32 res = _ConvertStr(code_page, &src, 1, L10N_UCS2, &dst_tmp, &dst_len_tmp, false);
+	if (res != ConversionOK)
+	{
+		return 0;
+	}
+
+	*dst = dst_tmp;
+	return 1;
 }
 
 s32 MSJISstoUCS2s()
@@ -1910,6 +2152,13 @@ s32 MSJISstoUCS2s()
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
 	cellL10n.warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
+	return (src_code << 16) | dst_code;
+
+	if (_L10N_CODE_ <= src_code || _L10N_CODE_ <= dst_code)
+	{
+		return 0xffffffff;
+	}
+
 	return (src_code << 16) | dst_code;
 }
 
@@ -1984,9 +2233,86 @@ s32 EUCCNtoUCS2()
 	return CELL_OK;
 }
 
-s32 UTF8stoSBCSs()
+s32 UTF8stoSBCSs(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::ptr<u32> dst_len, u32 code_page)
 {
-	cellL10n.todo("UTF8stoSBCSs()");
+	cellL10n.notice("UTF8stoSBCSs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, code_page=0x%x)", src, src_len, dst, dst_len, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return ConverterUnknown;
+	}
+
+	ensure(src_len && dst_len); // Not really checked
+
+	if (*src_len == 0u)
+	{
+		*dst_len = 0;
+		return ConversionOK;
+	}
+
+	ensure(src); // Not really checked
+
+	u32 len = 0;
+	u32 dst_pos = 0;
+
+	vm::var<u16> ucs2_tmp = vm::make_var<u16>(0);
+
+	for (u32 src_pos = 0; src_pos < *src_len;)
+	{
+		const s32 utf8_len = UTF8toUCS2(src + src_pos, ucs2_tmp);
+		if (utf8_len == 0)
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
+		u16 ucs2 = *ucs2_tmp;
+
+		if ((*src_len < (utf8_len + src_pos)) || (0xfffd < ucs2))
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
+		if (0x7f < ucs2)
+		{
+			const u8 src_tmp = src[src_pos];
+			u8 dst_tmp = 0;
+			s32 dst_len_tmp = 1;
+
+			const s32 res = _ConvertStr(L10N_UTF8, &src_tmp, 1, code_page, &dst_tmp, &dst_len_tmp, false);
+
+			if (res != ConversionOK)
+			{
+				*src_len -= src_pos;
+				*dst_len = dst_pos;
+				return SRCIllegal;
+			}
+
+			ucs2 = dst_tmp;
+		}
+
+		len++;
+
+		if (dst)
+		{
+			if (*dst_len < len)
+			{
+				*src_len -= src_pos;
+				*dst_len = dst_pos;
+				return DSTExhausted;
+			}
+
+			dst[dst_pos++] = static_cast<u8>(ucs2);
+		}
+
+		src_pos += utf8_len;
+	}
+
+	*dst_len = len;
 	return ConversionOK;
 }
 
@@ -2149,9 +2475,75 @@ s32 UCS2stoUTF32s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u32> dst, vm:
 	return ConversionOK;
 }
 
-s32 UCS2stoSBCSs()
+s32 UCS2stoSBCSs(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::ptr<u32> dst_len, u32 code_page)
 {
-	cellL10n.todo("UCS2stoSBCSs()");
+	cellL10n.notice("UCS2stoSBCSs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x, code_page=*0x%x)", src, src_len, dst, dst_len, code_page);
+
+	HostCode code = 0;
+	if ((code_page >= _L10N_CODE_) || !_L10nCodeParse(code_page, code))
+	{
+		return ConverterUnknown;
+	}
+
+	ensure(src_len && dst_len); // Not really checked
+
+	if (*src_len == 0u)
+	{
+		*dst_len = 0;
+		return ConversionOK;
+	}
+
+	ensure(src); // Not really checked
+
+	u32 len = 0;
+	u32 dst_pos = 0;
+
+	for (u32 src_pos = 0; src_pos < *src_len; src_pos++)
+	{
+		const s16 ucs2 = src[src_pos];
+
+		if (ucs2 >= 0xfffe)
+		{
+			*src_len -= src_pos;
+			*dst_len = src_pos;
+			return SRCIllegal;
+		}
+
+		u8 val = static_cast<u8>(ucs2);
+
+		if (0x7f < ucs2)
+		{
+			const u16 src_tmp = src[src_pos];
+			u8 dst_tmp = 0;
+			s32 dst_len_tmp = 1;
+
+			const s32 res = _ConvertStr(L10N_UCS2, &src_tmp, sizeof(u16), code_page, &dst_tmp, &dst_len_tmp, false);
+
+			if (res != ConversionOK)
+			{
+				*src_len -= src_pos;
+				*dst_len = dst_pos;
+				return SRCIllegal;
+			}
+
+			val = dst_tmp;
+		}
+
+		len++;
+
+		if (dst)
+		{
+			if (*dst_len < len)
+			{
+				*src_len -= src_pos;
+				*dst_len = src_pos;
+				return DSTExhausted;
+			}
+
+			dst[dst_pos++] = val;
+		}
+	}
+
 	return ConversionOK;
 }
 
