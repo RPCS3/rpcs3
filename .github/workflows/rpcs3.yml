@@ -54,7 +54,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Setup Cache
@@ -104,7 +103,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Setup env
