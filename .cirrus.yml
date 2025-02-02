@@ -56,7 +56,7 @@ env:
 
 # linux_task:
 #   container:
-#     image: rpcs3/rpcs3-ci-focal:1.9
+#     image: rpcs3/rpcs3-ci-jammy:1.0
 #     cpu: 4
 #     memory: 16G
 #   env:
@@ -132,7 +132,7 @@ linux_aarch64_task:
   matrix:
     - name: Cirrus Linux AArch64 Clang
       arm_container:
-        image: 'docker.io/rpcs3/rpcs3-ci-focal-aarch64:1.0'
+        image: 'docker.io/rpcs3/rpcs3-ci-jammy-aarch64:1.0'
         cpu: 8
         memory: 8G
       clang_script:
