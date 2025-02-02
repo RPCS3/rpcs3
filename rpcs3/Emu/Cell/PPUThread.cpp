@@ -440,7 +440,29 @@ const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& 
 	c.jmp(ppu_recompiler_fallback);
 });
 #elif defined(ARCH_ARM64)
-const auto ppu_recompiler_fallback_ghc = &ppu_recompiler_fallback;
+const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>("", [](native_asm& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fallback_fn = c.newLabel();
+	Label escape_fn = c.newLabel();
+
+	// This is called as GHC so the first arg is in x20.
+	// Fix up the arg registers and call the real function.
+	c.mov(args[0], a64::x20);
+	c.ldr(a64::x13, arm::ptr(fallback_fn));
+	c.blr(a64::x13);
+
+	// There is no call-stack to return to in arm64 GHC. Escape to host.
+	c.mov(a64::x0, a64::x20);
+	c.ldr(a64::x13, arm::ptr(escape_fn));
+	c.br(a64::x13);
+
+	c.bind(fallback_fn);
+	c.embedUInt64(reinterpret_cast<u64>(ppu_recompiler_fallback));
+	c.bind(escape_fn);
+	c.embedUInt64(reinterpret_cast<u64>(ppu_escape));
+});
 #endif
 
 // Get pointer to executable cache
