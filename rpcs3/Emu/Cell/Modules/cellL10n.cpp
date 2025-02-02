@@ -158,41 +158,36 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 #ifdef _WIN32
 
 // Use code page to transform std::string to std::wstring.
-s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
+s32 _OEM2Wide(HostCode oem_code, std::string_view src, std::wstring& dst)
 {
-	//Such length returned should include the '\0' character.
-	const s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, nullptr, 0);
-	wchar_t *store = new wchar_t[length]();
+	// Such length returned should include the '\0' character.
+	const s32 length = MultiByteToWideChar(oem_code, 0, src.data(), -1, nullptr, 0);
+	std::vector<wchar_t> store(length);
 
-	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, static_cast<LPWSTR>(store), length);
-	dst = std::wstring(store);
-
-	delete[] store;
-	store = nullptr;
+	MultiByteToWideChar(oem_code, 0, src.data(), -1, static_cast<LPWSTR>(store.data()), length);
+	dst = std::wstring(store.data());
 
 	return length - 1;
 }
 
 // Use Code page to transform std::wstring to std::string.
-s32 _Wide2OEM(HostCode oem_code, const std::wstring& src, std::string& dst)
+s32 _Wide2OEM(HostCode oem_code, std::wstring_view src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
-	const s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, nullptr, 0, nullptr, nullptr);
-	char *store = new char[length]();
+	const s32 length = WideCharToMultiByte(oem_code, 0, src.data(), -1, nullptr, 0, nullptr, nullptr);
+	std::vector<char> store(length);
 
-	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, nullptr, nullptr);
-	dst = std::string(store);
-
-	delete[] store;
-	store = nullptr;
+	WideCharToMultiByte(oem_code, 0, src.data(), -1, store.data(), length, nullptr, nullptr);
+	dst = std::string(store.data());
 
 	return length - 1;
 }
 
 // Convert Codepage to Codepage (all char*)
-std::string _OemToOem(HostCode src_code, HostCode dst_code, const std::string& str)
+std::string _OemToOem(HostCode src_code, HostCode dst_code, std::string_view str)
 {
-	std::wstring wide; std::string result;
+	std::wstring wide;
+	std::string result;
 	_OEM2Wide(src_code, str, wide);
 	_Wide2OEM(dst_code, wide, result);
 	return result;
@@ -203,21 +198,23 @@ std::string _OemToOem(HostCode src_code, HostCode dst_code, const std::string& s
 s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *dst, s32 *dst_len, [[maybe_unused]] bool allowIncomplete)
 {
 	HostCode srcCode = 0, dstCode = 0;	//OEM code pages
-	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
-	bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
+	const bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.
+	const bool dst_page_converted = _L10nCodeParse(dst_code, dstCode);
 
-	if (((!src_page_converted) && (srcCode == 0))
-		|| ((!dst_page_converted) && (dstCode == 0)))
+	if (((!src_page_converted) && (srcCode == 0)) ||
+		((!dst_page_converted) && (dstCode == 0)))
+	{
 		return ConverterUnknown;
+	}
 
 #ifdef _WIN32
-	const std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
+	const std::string_view wrapped_source = std::string_view(static_cast<const char *>(src), src_len);
 	const std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
 	if (dst)
 	{
 		if (target.length() > static_cast<usz>(*dst_len)) return DSTExhausted;
-		memcpy(dst, target.c_str(), target.length());
+		std::memcpy(dst, target.c_str(), target.length());
 	}
 	*dst_len = ::narrow<s32>(target.size());
 
@@ -290,13 +287,6 @@ s32 _L10nConvertChar(s32 src_code, const void *src, u32 src_len, s32 dst_code, v
 	s32 result = _ConvertStr(src_code, src, src_len, dst_code, dst.get_ptr(), &dstLen, true);
 	*dst_len = dstLen;
 	return result;
-}
-
-s32 _L10nConvertCharNoResult(s32 src_code, const void *src, s32 src_len, s32 dst_code, vm::ptr<void> dst)
-{
-	s32 dstLen = 0x7FFFFFFF;
-	[[maybe_unused]] s32 result = _ConvertStr(src_code, src, src_len, dst_code, dst.get_ptr(), &dstLen, true);
-	return dstLen;
 }
 
 s32 UCS2toEUCJP()
