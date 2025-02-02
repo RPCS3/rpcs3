@@ -1177,6 +1177,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				func.size = 0x1C;
 				func.blocks.emplace(func.addr, func.size);
 				func.attr += ppu_attr::known_size;
+				known_functions.emplace(func.addr);
 
 				// Look for another imports to fill gaps (hack)
 				auto _p2 = _ptr + 7;
@@ -1195,6 +1196,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					next.size = 0x1C;
 					next.blocks.emplace(next.addr, next.size);
 					next.attr += ppu_attr::known_size;
+					known_functions.emplace(_p2.addr());
 					advance(_p2, p2, 7);
 				}
 
@@ -1213,9 +1215,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				// Trampoline with TOC
 				const u32 target = (ptr[3] << 16) + s16(ptr[4]);
 				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
-				constexpr u32 func_size = 0x1C;
 
-				if (target >= start && target < end && verify_ref((_ptr + 3).addr()) && target - func.addr >= func_size)
+				if (target >= start && target < end && verify_ref((_ptr + 3).addr()))
 				{
 					auto& new_func = add_func(target, 0, func.addr);
 
@@ -1774,8 +1775,23 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 	u32 per_instruction_bytes = 0;
 
-	for (auto&& [_, func] : fmap)
+	// Iterate by address (fmap may grow)
+	for (u32 addr_next = start; addr_next != end;)
 	{
+		// Get next iterator
+		const auto it = fmap.lower_bound(addr_next);
+
+		if (it == fmap.end())
+		{
+			break;
+		}
+
+		// Save next function address as is as of this moment (ignoring added functions)
+		const auto it_next = std::next(it);
+		addr_next = it_next == fmap.end() ? end : it_next->first;
+
+		const ppu_function_ext& func = it->second;
+
 		if (func.attr & ppu_attr::no_size && entry)
 		{
 			// Disabled for PRX for now
@@ -1793,6 +1809,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			}
 
 			per_instruction_bytes += utils::sub_saturate<u32>(lim, func.addr);
+			addr_next = std::max<u32>(addr_next, lim);
 			continue;
 		}
 
@@ -1814,7 +1831,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			block.addr = addr;
 			block.size = size;
 			block.toc  = func.toc;
-			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, _, block.size, block.toc);
+			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, it->first, block.size, block.toc);
 
 			if (!entry && !sec_end)
 			{
