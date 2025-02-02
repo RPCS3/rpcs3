@@ -358,8 +358,6 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	// Create an array of function pointers
 	std::vector<llvm::Constant*> functions;
 
-	const auto [min_addr, max_addr] = *ensure(info.jit_bounds);
-
 	for (const auto& f : info.get_funcs(false, true))
 	{
 		if (!f.size)

@@ -49,11 +49,11 @@
   <PropertyGroup Label="UserMacros">
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="./Release" -DCMAKE_SYSTEM_VERSION=6.1 -DLIBTYPE=STATIC -DFORCE_STATIC_VCRT=true -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
+      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="./Release" -DCMAKE_SYSTEM_VERSION=10.0 -DLIBTYPE=STATIC -DFORCE_STATIC_VCRT=true -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_INSTALL_PREFIX="./Debug" -DCMAKE_SYSTEM_VERSION=6.1 -DLIBTYPE=STATIC -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
+      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_INSTALL_PREFIX="./Debug" -DCMAKE_SYSTEM_VERSION=10.0 -DLIBTYPE=STATIC -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
     </CmakeDebugCLI>
     <CmakeCopyCLI>
       echo Copying..

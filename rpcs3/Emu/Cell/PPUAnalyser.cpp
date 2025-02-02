@@ -807,7 +807,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			ppu_log.trace("OPD: [0x%x] 0x%x (TOC=0x%x)", _ptr, addr, toc);
 
 			TOCs.emplace(toc);
-			auto& func = add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
+			add_func(addr, addr_heap.count(_ptr.addr()) ? toc : 0, 0);
 			known_functions.emplace(addr);
 		}
 	}

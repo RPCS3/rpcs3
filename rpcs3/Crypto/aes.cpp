@@ -598,7 +598,10 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
     *RK++ = *SK++;
     *RK++ = *SK++;
 
+#if defined(__SSE2__) || defined(_M_X64)
 done:
+#endif
+
     // Wipe the stack buffer clean
     std::fill_n(reinterpret_cast<volatile char*>(&cty), sizeof(cty), 0);
 

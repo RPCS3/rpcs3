@@ -4932,7 +4932,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		usz code_size_until_jump = umax;
 
-		auto func = build_function_asm<u8*(*)(ppu_thread&, u64, u8*, u64, u64, u64)>(name, [&](native_asm& c, auto& args)
+		auto func = build_function_asm<u8*(*)(ppu_thread&, u64, u8*, u64, u64, u64)>(name, [&](native_asm& c, auto& /*args*/)
 		{
 #if defined(ARCH_X64)
 			c.mov(x86::edx, func_addr - seg0); // Load PC

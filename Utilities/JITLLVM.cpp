@@ -636,7 +636,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
 {
-	static const bool s_install_llvm_error_handler = []()
+	[[maybe_unused]] static const bool s_install_llvm_error_handler = []()
 	{
 		llvm::remove_fatal_error_handler();
 		llvm::install_fatal_error_handler([](void*, const char* msg, bool)
