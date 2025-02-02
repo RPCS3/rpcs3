@@ -117,24 +117,18 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_CODEPAGE_866:     retCode = "CP866";          return true;
 	case L10N_CODEPAGE_932:     retCode = "CP932";          return true;
 	case L10N_CODEPAGE_936:     retCode = "CP936";          return true;
-	case L10N_GBK:              retCode = "CP936";          return true;
 	case L10N_CODEPAGE_949:     retCode = "CP949";          return true;
-	case L10N_UHC:              retCode = "CP949";          return true;
 	case L10N_CODEPAGE_950:     retCode = "CP950";          return true;
-	case L10N_BIG5:             retCode = "CP950";          return true; // BIG5 = CodePage 950
 	case L10N_CODEPAGE_1251:    retCode = "CP1251";         return true; // CYRL
 	case L10N_CODEPAGE_1252:    retCode = "CP1252";         return true; // ANSI
 	case L10N_EUC_CN:           retCode = "EUC-CN";         return true; // GB2312
 	case L10N_EUC_JP:           retCode = "EUC-JP";         return true;
 	case L10N_EUC_KR:           retCode = "EUC-KR";         return true;
 	case L10N_ISO_2022_JP:      retCode = "ISO-2022-JP";    return true;
-	case L10N_JIS:              retCode = "ISO-2022-JP";    return true;
 	case L10N_ARIB:             retCode = "ARABIC";         return true; // TODO: think that should be ARABIC.
 	case L10N_HZ:               retCode = "HZ";             return true;
 	case L10N_GB18030:          retCode = "GB18030";        return true;
 	case L10N_RIS_506:          retCode = "Shift_JIS";      return true; // MS_KANJI
-	case L10N_SHIFT_JIS:        retCode = "Shift_JIS";      return true; // CP932 for Microsoft
-	case L10N_MUSIC_SHIFT_JIS:  retCode = "Shift_JIS";      return true; // MusicShiftJIS
 	// These are only supported with FW 3.10 and below
 	case L10N_CODEPAGE_852:     retCode = "CP852";          return true;
 	case L10N_CODEPAGE_1250:    retCode = "CP1250";         return true; // EE
@@ -385,7 +379,7 @@ u16 sjis2jis(u16 c)
 	u64 v0 = static_cast<u64>(static_cast<s64>(static_cast<s16>(c))) >> 8 & 0xff;
 	u64 v1 = v0 - 0x81;
 
-	if (((v1 & 0xffff) >= 0x7c) || (0x3f >= (v0 - 0xa0 & 0xffff)))
+	if (((v1 & 0xffff) >= 0x7c) || (0x3f >= ((v0 - 0xa0) & 0xffff)))
 	{
 		return 0;
 	}
@@ -527,7 +521,7 @@ s32 UTF32stoUTF8s(vm::cptr<u32> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -600,7 +594,7 @@ s32 UTF8toUCS2(vm::cptr<u8> src, vm::ptr<u16> dst)
 
 	if ((((src[0] & 0xf0) == 0xe0) && ((src[1] & 0xc0) == 0x80)) && ((src[2] & 0xc0) == 0x80))
 	{
-		const u64 ucs2 = (static_cast<u64>(src[1]) & 0x3f) << 6 | (static_cast<u64>(src[0]) & 0xf) << 0xc | static_cast<u64>(src[2]) & 0x3f;
+		const u64 ucs2 = (static_cast<u64>(src[1]) & 0x3f) << 6 | (static_cast<u64>(src[0]) & 0xf) << 0xc | (static_cast<u64>(src[2]) & 0x3f);
 
 		if (ucs2 < 0x800)
 		{
@@ -618,7 +612,7 @@ s32 UTF8toUCS2(vm::cptr<u8> src, vm::ptr<u16> dst)
 
 	if ((((src[0] & 0xe0) == 0xc0) && (0xc1 < static_cast<u64>(src[0]))) && ((src[1] & 0xc0) == 0x80))
 	{
-		*dst = (src[0] & 0x1f) << 6 | src[1] & 0x3f;
+		*dst = (src[0] & 0x1f) << 6 | (src[1] & 0x3f);
 		return 2;
 	}
 
@@ -639,7 +633,7 @@ s32 UCS2stoUTF8s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::p
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -700,7 +694,7 @@ s32 UTF16stoUTF32s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u32> dst, vm
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -766,9 +760,9 @@ s32 UTF16toUTF8(vm::cptr<u16> src, vm::ptr<u8> dst, vm::ptr<u32> dst_len)
 		{
 			const s64 lVar2 = (static_cast<u64>(src[0] >> 6) & 0xf) + 1;
 			dst[0] = static_cast<u8>(static_cast<u64>(lVar2 << 0x20) >> 0x22) | 0xf0;
-			dst[1] = static_cast<s8>(lVar2) * '\x10' & 0x30U | static_cast<u8>(src[0] >> 2) & 0xf | 0x80;
-			dst[2] = static_cast<u8>(src[1] >> 6) & 0xf | (static_cast<u8>(src[0]) & 3) << 4 | 0x80;
-			dst[3] = static_cast<u8>(src_raw[3]) & 0x3f | 0x80;
+			dst[1] = (static_cast<s8>(lVar2) * '\x10' & 0x30U) | (static_cast<u8>(src[0] >> 2) & 0xf) | 0x80;
+			dst[2] = (static_cast<u8>(src[1] >> 6) & 0xf) | (static_cast<u8>(src[0]) & 3) << 4 | 0x80;
+			dst[3] = (static_cast<u8>(src_raw[3]) & 0x3f) | 0x80;
 			*dst_len = 4;
 			return 2;
 		}
@@ -779,8 +773,8 @@ s32 UTF16toUTF8(vm::cptr<u16> src, vm::ptr<u8> dst, vm::ptr<u32> dst_len)
 	if (0x7ff < utf16_long)
 	{
 		dst[0] = static_cast<u8>((utf16_long << 0x20) >> 0x2c) | 0xe0;
-		dst[1] = static_cast<u8>(src[0] >> 6) & 0x3f | 0x80;
-		dst[2] = static_cast<u8>(src_raw[1]) & 0x3f | 0x80;
+		dst[1] = (static_cast<u8>(src[0] >> 6) & 0x3f) | 0x80;
+		dst[2] = (static_cast<u8>(src_raw[1]) & 0x3f) | 0x80;
 		*dst_len = 3;
 		return 1;
 	}
@@ -793,7 +787,7 @@ s32 UTF16toUTF8(vm::cptr<u16> src, vm::ptr<u8> dst, vm::ptr<u32> dst_len)
 	}
 
 	dst[0] = static_cast<u8>((utf16_long << 0x20) >> 0x26) | 0xc0;
-	dst[1] = static_cast<u8>(src_raw[1]) & 0x3f | 0x80;
+	dst[1] = (static_cast<u8>(src_raw[1]) & 0x3f) | 0x80;
 	*dst_len = 2;
 	return 1;
 }
@@ -900,7 +894,7 @@ s32 UTF16stoUCS2s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm:
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -1041,12 +1035,12 @@ s32 UTF8toUTF16(vm::cptr<u8> src, vm::ptr<u16> dst, vm::ptr<u32> dst_len)
 		{
 			if ((src[2] & 0xc0) == 0x80 && (src[3] & 0xc0) == 0x80)
 			{
-				longval = (longval & 7) << 2 | static_cast<u64>(src[1] >> 4) & 3;
+				longval = (longval & 7) << 2 | (static_cast<u64>(src[1] >> 4) & 3);
 
-				if ((longval - 1 & 0xffff) < 0x10)
+				if (((longval - 1) & 0xffff) < 0x10)
 				{
-					dst[0] = (src[1] & 0xf) << 2 | src[2] >> 4 & 3 | static_cast<u16>((longval - 1 & 0xffffffff) << 6) | UTF16_HIGH_SURROGATES;
-					dst[1] = (src[2] & 0xf) << 6 | src[3] & 0x3f | UTF16_LOW_SURROGATES;
+					dst[0] = (src[1] & 0xf) << 2 | (src[2] >> 4 & 3) | static_cast<u16>(((longval - 1) & 0xffffffff) << 6) | UTF16_HIGH_SURROGATES;
+					dst[1] = (src[2] & 0xf) << 6 | (src[3] & 0x3f) | UTF16_LOW_SURROGATES;
 					*dst_len = 2;
 					return 4;
 				}
@@ -1064,7 +1058,7 @@ s32 UTF8toUTF16(vm::cptr<u8> src, vm::ptr<u16> dst, vm::ptr<u32> dst_len)
 					return 0;
 				}
 
-				dst[0] = (src[0] & 0x1f) << 6 | src[1] & 0x3f;
+				dst[0] = (src[0] & 0x1f) << 6 | (src[1] & 0x3f);
 				*dst_len = 1;
 				return 2;
 			}
@@ -1081,7 +1075,7 @@ s32 UTF8toUTF16(vm::cptr<u8> src, vm::ptr<u16> dst, vm::ptr<u32> dst_len)
 
 		if ((src[1] & 0xc0) == 0x80 && (src[2] & 0xc0) == 0x80)
 		{
-			longval = (static_cast<u64>(src[1]) & 0x3f) << 6 | (longval & 0xf) << 0xc | static_cast<u64>(src[2]) & 0x3f;
+			longval = (static_cast<u64>(src[1]) & 0x3f) << 6 | (longval & 0xf) << 0xc | (static_cast<u64>(src[2]) & 0x3f);
 
 			if ((0x7ff < longval && ((static_cast<u32>(longval) & UTF16_SURROGATES_MASK1) != UTF16_HIGH_SURROGATES)))
 			{
@@ -1143,7 +1137,7 @@ u16 sjis2kuten(u16 c)
 	u64 v0 = static_cast<u64>(static_cast<s64>(static_cast<s16>(c))) >> 8 & 0xff;
 	u64 v1 = v0 - 0x81;
 
-	if ((((v1 & 0xffff) >= 0x7c) || (0x3f >= (v0 - 0xa0 & 0xffff))))
+	if (((v1 & 0xffff) >= 0x7c) || (0x3f >= ((v0 - 0xa0) & 0xffff)))
 	{
 		return 0;
 	}
@@ -1234,7 +1228,7 @@ s32 UCS2stoUTF16s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm:
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -1316,8 +1310,8 @@ s32 UTF8toUTF32(vm::cptr<u8> src, vm::ptr<u32> dst)
 			return 0;
 		}
 
-		longval = (static_cast<u64>(src[2]) & 0x3f) << 6 | (longval & 7) << 0x12 | (static_cast<u64>(src[1]) & 0x3f) << 0xc | static_cast<u64>(src[3]) & 0x3f;
-		if (0xfffff < (longval - 0x10000 & 0xffffffff))
+		longval = (static_cast<u64>(src[2]) & 0x3f) << 6 | (longval & 7) << 0x12 | (static_cast<u64>(src[1]) & 0x3f) << 0xc | (static_cast<u64>(src[3]) & 0x3f);
+		if (0xfffff < ((longval - 0x10000) & 0xffffffff))
 		{
 			return 0;
 		}
@@ -1334,8 +1328,8 @@ s32 UTF8toUTF32(vm::cptr<u8> src, vm::ptr<u32> dst)
 			return 0;
 		}
 
-		longval = (static_cast<u64>(src[1]) & 0x3f) << 6 | (longval & 0xf) << 0xc | static_cast<u64>(src[2]) & 0x3f;
-		if (longval < 0x800 || (longval - UTF16_HIGH_SURROGATES & 0xffffffff) < 0x800)
+		longval = (static_cast<u64>(src[1]) & 0x3f) << 6 | (longval & 0xf) << 0xc | (static_cast<u64>(src[2]) & 0x3f);
+		if (longval < 0x800 || ((longval - UTF16_HIGH_SURROGATES) & 0xffffffff) < 0x800)
 		{
 			return 0;
 		}
@@ -1351,7 +1345,7 @@ s32 UTF8toUTF32(vm::cptr<u8> src, vm::ptr<u32> dst)
 			return 0;
 		}
 
-		*dst = (src[0] & 0x1f) << 6 | src[1] & 0x3f;
+		*dst = (src[0] & 0x1f) << 6 | (src[1] & 0x3f);
 		return 2;
 	}
 
@@ -1410,7 +1404,7 @@ s32 UTF32stoUTF16s(vm::cptr<u32> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -1492,7 +1486,7 @@ s32 UTF8stoUTF32s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u32> dst, vm::
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -1578,7 +1572,7 @@ s32 UTF32toUTF8(u32 src, vm::ptr<u8> dst)
 	cellL10n.notice("UTF32toUTF8(src=0x%x, dst=*0x%x)", src, dst);
 
 	const u64 utf32 = static_cast<u64>(static_cast<s32>(src));
-	if (((utf32 & 0xffffffff) >= 0x110000) || (0x7ff >= (utf32 - UTF16_HIGH_SURROGATES & 0xffffffff)))
+	if (((utf32 & 0xffffffff) >= 0x110000) || (0x7ff >= ((utf32 - UTF16_HIGH_SURROGATES) & 0xffffffff)))
 	{
 		return 0;
 	}
@@ -1588,9 +1582,9 @@ s32 UTF32toUTF8(u32 src, vm::ptr<u8> dst)
 	if (0xffff < (utf32 & 0xffffffff))
 	{
 		dst[0] = static_cast<u8>((utf32 << 0x20) >> 0x32) | 0xf0;
-		dst[1] = static_cast<u8>(utf32 >> 0xc) & 0x3f | 0x80;
-		dst[2] = static_cast<u8>(utf32 >> 6) & 0x3f | 0x80;
-		dst[3] = static_cast<u8>(src) & 0x3f | 0x80;
+		dst[1] = (static_cast<u8>(utf32 >> 0xc) & 0x3f) | 0x80;
+		dst[2] = (static_cast<u8>(utf32 >> 6) & 0x3f) | 0x80;
+		dst[3] = (static_cast<u8>(src) & 0x3f) | 0x80;
 		return 4;
 	}
 
@@ -1603,13 +1597,13 @@ s32 UTF32toUTF8(u32 src, vm::ptr<u8> dst)
 	if ((utf32 & 0xffffffff) < 0x800)
 	{
 		dst[0] = static_cast<u8>((utf32 << 0x20) >> 0x26) | 0xc0;
-		dst[1] = static_cast<u8>(src) & 0x3f | 0x80;
+		dst[1] = (static_cast<u8>(src) & 0x3f) | 0x80;
 		return 2;
 	}
 
 	dst[0] = static_cast<u8>((utf32 << 0x20) >> 0x2c) | 0xe0;
-	dst[1] = static_cast<u8>(utf32 >> 6) & 0x3f | 0x80;
-	dst[2] = static_cast<u8>(src) & 0x3f | 0x80;
+	dst[1] = (static_cast<u8>(utf32 >> 6) & 0x3f) | 0x80;
+	dst[2] = (static_cast<u8>(src) & 0x3f) | 0x80;
 	return 3;
 }
 
@@ -1620,7 +1614,7 @@ u16 sjis2eucjp(u16 c)
 	u64 v0 = static_cast<u64>(static_cast<s64>(static_cast<s16>(c))) >> 8 & 0xff;
 	u64 v1 = v0 - 0x81;
 
-	if (((v1 & 0xffff) >= 0x7c) || (0x3f >= (v0 - 0xa0 & 0xffff)))
+	if (((v1 & 0xffff) >= 0x7c) || (0x3f >= ((v0 - 0xa0) & 0xffff)))
 	{
 		return 0;
 	}
@@ -1676,7 +1670,7 @@ s32 UTF32toUTF16(u32 src, vm::ptr<u16> dst)
 	cellL10n.notice("UTF32toUTF16(src=0x%x, dst=*0x%x)", src, dst);
 
 	const u64 utf32 = static_cast<s64>(static_cast<s32>(src));
-	if (((utf32 & 0xffffffff) >= 0x110000) || (0x7ff >= (utf32 - UTF16_HIGH_SURROGATES & 0xffffffff)))
+	if (((utf32 & 0xffffffff) >= 0x110000) || (0x7ff >= ((utf32 - UTF16_HIGH_SURROGATES) & 0xffffffff)))
 	{
 		return 0;
 	}
@@ -1686,7 +1680,7 @@ s32 UTF32toUTF16(u32 src, vm::ptr<u16> dst)
 	if (0xffff < (utf32 & 0xffffffff))
 	{
 		dst[0] = static_cast<u16>(((utf32 - 0x10000) << 0x20) >> 0x2a) | UTF16_HIGH_SURROGATES;
-		dst[1] = static_cast<u16>(src) & 0x3ff | UTF16_LOW_SURROGATES;
+		dst[1] = (static_cast<u16>(src) & 0x3ff) | UTF16_LOW_SURROGATES;
 		return 2;
 	}
 
@@ -1750,7 +1744,7 @@ s32 UTF16toUTF32(vm::cptr<u16> src, vm::ptr<u32> dst)
 
 	if (((src[0] & UTF16_SURROGATES_MASK2) == (src[0] & UTF16_SURROGATES_MASK1)) && ((src[1] & UTF16_SURROGATES_MASK2) == UTF16_LOW_SURROGATES))
 	{
-		*dst = (src[0] & 0x3ff) * 0x400 + 0x10000 | src[1] & 0x3ff;
+		*dst = ((src[0] & 0x3ff) * 0x400 + 0x10000) | (src[1] & 0x3ff);
 		return 2;
 	}
 
@@ -1761,8 +1755,8 @@ s32 l10n_convert_str(s32 cd, vm::cptr<void> src, vm::cptr<u32> src_len, vm::ptr<
 {
 	cellL10n.warning("l10n_convert_str(cd=%d, src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", cd, src, src_len, dst, dst_len);
 
-	s32 src_code = cd >> 16;
-	s32 dst_code = cd & 0xffff;
+	const s32 src_code = cd >> 16;
+	const s32 dst_code = cd & 0xffff;
 
 	return _L10nConvertStr(src_code, src, src_len, dst_code, dst, dst_len);
 }
@@ -1816,13 +1810,13 @@ s32 UCS2toUTF8(u16 ucs2, vm::ptr<u8> utf8)
 		if (val < 0x800)
 		{
 			utf8[0] = static_cast<u8>((val << 0x20) >> 0x26) | 0xc0;
-			utf8[1] = static_cast<u8>(ucs2) & 0x3f | 0x80;
+			utf8[1] = (static_cast<u8>(ucs2) & 0x3f) | 0x80;
 			return 2;
 		}
 
 		utf8[0] = static_cast<u8>((val << 0x20) >> 0x2c) | 0xe0;
-		utf8[1] = static_cast<u8>(val >> 6) & 0x3f | 0x80;
-		utf8[2] = static_cast<u8>(ucs2) & 0x3f | 0x80;
+		utf8[1] = (static_cast<u8>(val >> 6) & 0x3f) | 0x80;
+		utf8[2] = (static_cast<u8>(ucs2) & 0x3f) | 0x80;
 		return 3;
 	}
 
@@ -1937,7 +1931,7 @@ s32 UTF32stoUCS2s(vm::cptr<u32> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm:
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -2032,7 +2026,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -2114,7 +2108,7 @@ s32 UCS2stoUTF32s(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u32> dst, vm:
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -2185,7 +2179,7 @@ s32 UTF8stoUTF16s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm::
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
@@ -2254,7 +2248,7 @@ s32 UTF8stoUCS2s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm::p
 
 	ensure(src_len && dst_len); // Not really checked
 
-	if (*src_len == 0)
+	if (*src_len == 0u)
 	{
 		*dst_len = 0;
 		return ConversionOK;
