@@ -266,7 +266,7 @@ namespace gl
 				gl::texture* _dst = dst_image;
 				if (src_image->get_internal_format() != dst_image->get_internal_format() || slice.level != 0 || slice.dst_z != 0) [[ unlikely ]]
 				{
-					tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
+					tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
 					_dst = tmp.get();
 				}
 

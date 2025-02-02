@@ -115,7 +115,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	{
 		if (!flip_image || flip_image->size2D() != sizeu{ info->width, info->height })
 		{
-			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, expected_format);
+			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, 1, expected_format);
 		}
 	};
 
