@@ -449,7 +449,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	}
 	else
 	{
-		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
+		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
 		gl::upload_texture(cmd, tmp.get(), get_gcm_format(), is_swizzled, { subres });
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,

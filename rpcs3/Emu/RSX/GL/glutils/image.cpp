@@ -19,7 +19,7 @@ namespace gl
 		}
 	}
 
-	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLenum sized_format, rsx::format_class format_class)
+	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class)
 	{
 		glGenTextures(1, &m_id);
 
@@ -62,7 +62,10 @@ namespace gl
 			m_height = height;
 			m_depth = depth;
 			m_mipmaps = mipmaps;
+			m_samples = samples;
 			m_aspect_flags = image_aspect::color;
+
+			ensure(width > 0 && height > 0 && depth > 0 && mipmaps > 0 && samples > 0, "Invalid OpenGL texture definition.");
 
 			switch (storage_fmt)
 			{
@@ -223,7 +226,7 @@ namespace gl
 		{
 			// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
 			const auto target_ = static_cast<GLenum>(m_target);
-			texture tmp{ target_, region.width, region.height, region.depth, 1, static_cast<GLenum>(m_internal_format) };
+			texture tmp{ target_, region.width, region.height, region.depth, 1, 1, static_cast<GLenum>(m_internal_format) };
 			glCopyImageSubData(m_id, target_, level, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
 				region.width, region.height, region.depth);
 

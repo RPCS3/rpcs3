@@ -429,7 +429,7 @@ namespace gl
 				image_region.height *= dst_region.depth;
 				scratch = std::make_unique<gl::texture>(
 					GL_TEXTURE_2D,
-					image_region.x + image_region.width, image_region.y + image_region.height, 1, 1,
+					image_region.x + image_region.width, image_region.y + image_region.height, 1, 1, 1,
 					static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
 
 				scratch_view = std::make_unique<gl::nil_texture_view>(scratch.get());
@@ -445,7 +445,7 @@ namespace gl
 			{
 				scratch = std::make_unique<gl::texture>(
 					GL_TEXTURE_2D,
-					image_region.x + image_region.width, 1, 1, 1,
+					image_region.x + image_region.width, 1, 1, 1, 1,
 					static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
 
 				scratch_view = std::make_unique<gl::nil_texture_view>(scratch.get());
