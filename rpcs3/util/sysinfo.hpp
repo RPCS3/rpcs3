@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "util/types.hpp"
 #include <string>
@@ -67,7 +67,17 @@ namespace utils
 
 	std::string get_firmware_version();
 
-	std::string get_OS_version();
+	struct OS_version
+	{
+		std::string type;
+		std::string arch;
+		int version_major = 0;
+		int version_minor = 0;
+		int version_patch = 0;
+	};
+	OS_version get_OS_version();
+
+	std::string get_OS_version_string();
 
 	int get_maxfiles();
 
@@ -94,4 +104,6 @@ namespace utils
 	{
 		return s_tsc_freq;
 	}
+
+	std::pair<bool, usz> string_to_number(std::string_view str);
 }

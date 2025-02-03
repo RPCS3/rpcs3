@@ -74,45 +74,45 @@ namespace Darwin_ProcessInfo
 namespace utils
 {
 #ifdef _WIN32
+	// Some helpers for sanity
+	const auto read_reg_dword = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, DWORD>
+	{
+		DWORD val = 0;
+		DWORD len = sizeof(val);
+		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(&val), &len))
+		{
+			return { false, 0 };
+		}
+		return { true, val };
+	};
+
+	const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
+	{
+		constexpr usz MAX_SZ_LEN = 255;
+		char sz[MAX_SZ_LEN + 1] {};
+		DWORD sz_len = MAX_SZ_LEN;
+
+		// Safety; null terminate
+		sz[0] = 0;
+		sz[MAX_SZ_LEN] = 0;
+
+		// Read string
+		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
+		{
+			return { false, "" };
+		}
+
+		// Safety, force null terminator
+		if (sz_len < MAX_SZ_LEN)
+		{
+			sz[sz_len] = 0;
+		}
+		return { true, sz };
+	};
+
 	// Alternative way to read OS version using the registry.
 	static std::string get_fallback_windows_version()
 	{
-		// Some helpers for sanity
-		const auto read_reg_dword = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, DWORD>
-		{
-			DWORD val;
-			DWORD len = sizeof(val);
-			if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(&val), &len))
-			{
-				return { false, 0 };
-			}
-			return { true, val };
-		};
-
-		const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
-		{
-			constexpr usz MAX_SZ_LEN = 255;
-			char sz[MAX_SZ_LEN + 1];
-			DWORD sz_len = MAX_SZ_LEN;
-
-			// Safety; null terminate
-			sz[0] = 0;
-			sz[MAX_SZ_LEN] = 0;
-
-			// Read string
-			if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
-			{
-				return { false, "" };
-			}
-
-			// Safety, force null terminator
-			if (sz_len < MAX_SZ_LEN)
-			{
-				sz[sz_len] = 0;
-			}
-			return { true, sz };
-		};
-
 		HKEY hKey;
 		if (ERROR_SUCCESS != RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey))
 		{
@@ -661,14 +661,88 @@ std::string utils::get_firmware_version()
 	return {};
 }
 
-std::string utils::get_OS_version()
+utils::OS_version utils::get_OS_version()
+{
+	OS_version res {};
+
+#if _WIN32
+	res.type = "windows";
+#elif __linux__
+	res.type = "linux";
+#elif __APPLE__
+	res.type = "macos";
+#elif __FreeBSD__
+	res.type = "freebsd";
+#else
+	res.type = "unknown";
+#endif
+
+#if defined(ARCH_X64)
+	res.arch = "x64";
+#elif defined(ARCH_ARM64)
+	res.arch = "arm64";
+#else
+	res.arch = "unknown";
+#endif
+
+#ifdef _WIN32
+	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
+	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
+#if defined(ARCH_X64)
+	constexpr DWORD peb_offset = 0x60;
+	const INT_PTR peb = __readgsqword(peb_offset);
+	res.version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
+	res.version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
+	res.version_patch = *reinterpret_cast<const WORD*>(peb + 0x120);
+#else
+	HKEY hKey;
+	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+	{
+		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
+		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
+		const auto [check_build, version_patch] = read_reg_sz(hKey, "CurrentBuildNumber");
+
+		if (check_major) res.version_major = version_major;
+		if (check_minor) res.version_minor = version_minor;
+		if (check_build) res.version_patch = stoi(version_patch);
+
+		RegCloseKey(hKey);
+	}
+#endif
+#elif defined (__APPLE__)
+	res.version_major = Darwin_Version::getNSmajorVersion();
+	res.version_minor = Darwin_Version::getNSminorVersion();
+	res.version_patch = Darwin_Version::getNSpatchVersion();
+#else
+	if (struct utsname details = {}; !uname(&details))
+	{
+		const std::vector<std::string> version_list = fmt::split(details.release, { "." });
+		const auto get_version_part = [&version_list](usz i) -> usz
+		{
+			if (version_list.size() <= i) return 0;
+			if (const auto [success, version_part] = string_to_number(version_list[i]); success)
+			{
+				return version_part;
+			}
+			return 0;
+		};
+		res.version_major = get_version_part(0);
+		res.version_minor = get_version_part(1);
+		res.version_patch = get_version_part(2);
+	}
+#endif
+
+	return res;
+}
+
+std::string utils::get_OS_version_string()
 {
 	std::string output;
 #ifdef _WIN32
 	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
 	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
 #if defined(ARCH_X64)
-	const DWORD peb_offset = 0x60;
+	constexpr DWORD peb_offset = 0x60;
 	const INT_PTR peb = __readgsqword(peb_offset);
 	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
 	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
@@ -1014,10 +1088,20 @@ u32 utils::get_cpu_model()
 #endif
 }
 
-namespace utils
+u64 utils::_get_main_tid()
 {
-	u64 _get_main_tid()
+	return thread_ctrl::get_tid();
+}
+
+std::pair<bool, usz> utils::string_to_number(std::string_view str)
+{
+	std::add_pointer_t<char> eval;
+	const usz number = std::strtol(str.data(), &eval, 10);
+
+	if (str.data() + str.size() == eval)
 	{
-		return thread_ctrl::get_tid();
+		return { true, number };
 	}
+
+	return { false, 0 };
 }

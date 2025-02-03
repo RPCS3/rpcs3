@@ -61,15 +61,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
-#if defined (__x86_64__)
-// sysinfo_darwin.mm
-namespace Darwin_Version
-{
-	extern int getNSmajorVersion();
-	extern int getNSminorVersion();
-	extern int getNSpatchVersion();
-}
-#endif
 #endif
 
 #include "Utilities/Config.h"
@@ -618,12 +609,10 @@ int main(int argc, char** argv)
 #endif
 
 #if defined(__APPLE__) && defined(__x86_64__)
-	const int osx_ver_major = Darwin_Version::getNSmajorVersion();
-	const int osx_ver_minor = Darwin_Version::getNSminorVersion();
-	if ((osx_ver_major == 14 && osx_ver_minor < 3) && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
+	if (const utils::OS_version os = utils::get_OS_version();
+		os.version_major == 14 && os.version_minor < 3 && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
 	{
-		const int osx_ver_patch = Darwin_Version::getNSpatchVersion();
-		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", osx_ver_major, osx_ver_minor, osx_ver_patch));
+		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", os.version_major, os.version_minor, os.version_patch));
 	}
 #endif
 
@@ -659,7 +648,7 @@ int main(int argc, char** argv)
 
 		// Write OS version
 		logs::stored_message os{sys_log.always()};
-		os.text = utils::get_OS_version();
+		os.text = utils::get_OS_version_string();
 
 		// Write Qt version
 		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};

@@ -129,20 +129,6 @@ namespace utils
 		per_core_usage.resize(utils::get_thread_count());
 		std::fill(per_core_usage.begin(), per_core_usage.end(), 0.0);
 
-#if defined(_WIN32) || defined(__linux__)
-		const auto string_to_number = [](const std::string& str) -> std::pair<bool, size_t>
-		{
-			std::add_pointer_t<char> eval;
-			const size_t number = std::strtol(str.c_str(), &eval, 10);
-
-			if (str.c_str() + str.size() == eval)
-			{
-				return { true, number };
-			}
-
-			return { false, 0 };
-		};
-
 #ifdef _WIN32
 		if (!m_cpu_cores || !m_cpu_query)
 		{
@@ -304,7 +290,6 @@ namespace utils
 		{
 			perf_log.error("Failed to open /proc/stat (%s)", strerror(errno));
 		}
-#endif
 #else
 		total_usage = get_usage();
 #endif
