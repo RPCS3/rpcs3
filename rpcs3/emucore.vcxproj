@@ -1030,6 +1030,14 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\VideoOutCalibrationPass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\ColorResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\ColorUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthStencilResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthStencilUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\StencilResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\StencilUnresolvePass.glsl" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_a_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_fsr1_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ubershader.glsl" />
