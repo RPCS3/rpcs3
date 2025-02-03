@@ -3258,7 +3258,35 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 	max_exposure = std::clamp(max_exposure, static_cast<s32>(CELL_GEM_MIN_CAMERA_EXPOSURE), static_cast<s32>(CELL_GEM_MAX_CAMERA_EXPOSURE));
 	image_quality = std::clamp(image_quality, 0.0f, 1.0f);
 
-	// TODO: prepare camera
+	// TODO: prepare camera properly
+
+	extern error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2);
+	extern error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2);
+	extern error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info);
+
+	vm::var<CellCameraInfoEx> info = vm::make_var<CellCameraInfoEx>({});
+	vm::var<u32> arg1 = vm::make_var<u32>({});
+	vm::var<u32> arg2 = vm::make_var<u32>({});
+
+	cellCameraGetAttribute(0, 0x3e6, arg1, arg2);
+	cellCameraSetAttribute(0, 0x3e6, 0x3e, *arg2 | 0x80);
+	cellCameraGetBufferInfoEx(0, info);
+
+	if (info->width == 640)
+	{
+		// Disable some features
+		cellCameraSetAttribute(0, CELL_CAMERA_AGC, 0, 0);
+		cellCameraSetAttribute(0, CELL_CAMERA_AWB, 0, 0);
+		cellCameraSetAttribute(0, CELL_CAMERA_AEC, 0, 0);
+		cellCameraSetAttribute(0, CELL_CAMERA_GAMMA, 0, 0);
+		cellCameraSetAttribute(0, CELL_CAMERA_PIXELOUTLIERFILTER, 0, 0);
+
+		// Set new values for others
+		cellCameraSetAttribute(0, CELL_CAMERA_GREENGAIN, 96, 0);
+		cellCameraSetAttribute(0, CELL_CAMERA_REDBLUEGAIN, 64, 96);
+		cellCameraSetAttribute(0, CELL_CAMERA_GAIN, 0, 0); // TODO
+		cellCameraSetAttribute(0, CELL_CAMERA_EXPOSURE, 0, 0); // TODO
+	}
 
 	return CELL_OK;
 }
