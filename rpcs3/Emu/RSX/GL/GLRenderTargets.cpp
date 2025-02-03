@@ -564,3 +564,34 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 	// TODO: Preserve memory outside surface clip region
 	on_write(newest_tag);
 }
+
+// MSAA support
+gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_context& cmd)
+{
+	if (!resolve_surface)
+	{
+		// Create a resolve surface
+		const auto resolve_w = width() * samples_x;
+		const auto resolve_h = height() * samples_y;
+
+		resolve_surface.reset(new gl::viewable_image(
+			GL_TEXTURE_2D,
+			resolve_w, resolve_h,
+			1, 1, 1,
+			static_cast<GLenum>(get_internal_format()),
+			format_class()
+		));
+	}
+
+	return static_cast<gl::viewable_image*>(resolve_surface.get());
+}
+
+void gl::render_target::resolve(gl::command_context& cmd)
+{
+	// TODO
+}
+
+void gl::render_target::unresolve(gl::command_context& cmd)
+{
+	// TODO
+}
