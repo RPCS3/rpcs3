@@ -253,4 +253,90 @@ namespace vk
 		if (g_depthstencil_resolver) g_depthstencil_resolver->free_resources();
 		if (g_depthstencil_unresolver) g_depthstencil_unresolver->free_resources();
 	}
+
+
+	void cs_resolve_base::build(const std::string& format_prefix, bool unresolve, bool bgra_swap)
+	{
+		create();
+
+		switch (optimal_group_size)
+		{
+		default:
+		case 64:
+			cs_wave_x = 8;
+			cs_wave_y = 8;
+			break;
+		case 32:
+			cs_wave_x = 8;
+			cs_wave_y = 4;
+			break;
+		}
+
+		static const char* resolve_kernel =
+			#include "Emu/RSX/Program/MSAA/ColorResolvePass.glsl"
+			;
+
+		static const char* unresolve_kernel =
+			#include "Emu/RSX/Program/MSAA/ColorUnresolvePass.glsl"
+			;
+
+		const std::pair<std::string_view, std::string> syntax_replace[] =
+		{
+			{ "%WORKGROUP_SIZE_X", std::to_string(cs_wave_x) },
+			{ "%WORKGROUP_SIZE_Y", std::to_string(cs_wave_y) },
+			{ "%IMAGE_FORMAT", format_prefix },
+			{ "%BGRA_SWAP", bgra_swap ? "1" : "0" }
+		};
+
+		m_src = unresolve ? unresolve_kernel : resolve_kernel;
+		m_src = fmt::replace_all(m_src, syntax_replace);
+
+		rsx_log.notice("Compute shader:\n%s", m_src);
+	}
+
+	void depth_resolve_base::build(bool resolve_depth, bool resolve_stencil, bool is_unresolve)
+	{
+		vs_src =
+			#include "Emu/RSX/Program/GLSLSnippets/GenericVSPassthrough.glsl"
+			;
+
+		static const char* depth_resolver =
+			#include "Emu/RSX/Program/MSAA/DepthResolvePass.glsl"
+			;
+
+		static const char* depth_unresolver =
+			#include "Emu/RSX/Program/MSAA/DepthUnresolvePass.glsl"
+			;
+
+		static const char* stencil_resolver =
+			#include "Emu/RSX/Program/MSAA/StencilResolvePass.glsl"
+			;
+
+		static const char* stencil_unresolver =
+			#include "Emu/RSX/Program/MSAA/StencilUnresolvePass.glsl"
+			;
+
+		static const char* depth_stencil_resolver =
+			#include "Emu/RSX/Program/MSAA/DepthStencilResolvePass.glsl"
+			;
+
+		static const char* depth_stencil_unresolver =
+			#include "Emu/RSX/Program/MSAA/DepthStencilUnresolvePass.glsl"
+			;
+
+		if (resolve_depth && resolve_stencil)
+		{
+			fs_src = is_unresolve ? depth_stencil_unresolver : depth_stencil_resolver;
+		}
+		else if (resolve_depth)
+		{
+			fs_src = is_unresolve ? depth_unresolver : depth_resolver;
+		}
+		else if (resolve_stencil)
+		{
+			fs_src = is_unresolve ? stencil_unresolver : stencil_resolver;
+		}
+
+		rsx_log.notice("Resolve shader:\n%s", fs_src);
+	}
 }
