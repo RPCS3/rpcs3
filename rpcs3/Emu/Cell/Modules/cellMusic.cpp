@@ -556,7 +556,7 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 	auto& music = g_fxo->get<music_state>();
 
 	if (!music.func)
-		return CELL_MUSIC2_ERROR_GENERIC;
+		return { CELL_MUSIC2_ERROR_GENERIC, "Not initialized" };
 
 	error_code result = CELL_OK;
 
@@ -585,7 +585,7 @@ error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 	auto& music = g_fxo->get<music_state>();
 
 	if (!music.func)
-		return CELL_MUSIC_ERROR_GENERIC;
+		return { CELL_MUSIC_ERROR_GENERIC, "Not initialized" };
 
 	error_code result = CELL_OK;
 
