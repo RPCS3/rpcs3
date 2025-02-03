@@ -109,6 +109,8 @@ void music_selection_context::set_playlist(const std::string& path)
 		content_type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 		playlist.push_back(dir_path + path.substr(vfs_dir_path.length()));
 	}
+
+	valid = true;
 }
 
 void music_selection_context::create_playlist(const std::string& new_hash)
