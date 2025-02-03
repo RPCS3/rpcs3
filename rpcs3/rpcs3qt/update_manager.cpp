@@ -11,6 +11,7 @@
 #include "Crypto/utils.h"
 #include "util/logs.hpp"
 #include "util/types.hpp"
+#include "util/sysinfo.hpp"
 
 #include <QApplication>
 #include <QCheckBox>
@@ -43,16 +44,6 @@
 #else
 #include <unistd.h>
 #include <sys/stat.h>
-#endif
-
-#if defined(__APPLE__)
-// sysinfo_darwin.mm
-namespace Darwin_Version
-{
-	extern int getNSmajorVersion();
-	extern int getNSminorVersion();
-	extern int getNSpatchVersion();
-}
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
@@ -116,26 +107,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
-#if defined(__APPLE__)
-	const std::string url = fmt::format("https://update.rpcs3.net/"
-		"?api=v3"
-		"&c=%s"
-		"&os_type=macos"
-		"&os_arch="
-#if defined(ARCH_X64)
-		"x64"
-#elif defined(ARCH_ARM64)
-		"arm64"
-#endif
-		"&os_version=%i.%i.%i",
-		rpcs3::get_commit_and_hash().second,
-		Darwin_Version::getNSmajorVersion(),
-		Darwin_Version::getNSminorVersion(),
-		Darwin_Version::getNSpatchVersion());
-#else
-	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
-#endif
-	
+	const utils::OS_version os = utils::get_OS_version();
+
+	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
+		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
+
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
@@ -199,11 +175,25 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 #endif
 
 	// Check that every bit of info we need is there
-	if (!latest[os].isObject() || !latest[os]["download"].isString() || !latest[os]["size"].isDouble() || !latest[os]["checksum"].isString() || !latest["version"].isString() ||
-	    !latest["datetime"].isString() ||
-	    (hash_found && (!current.isObject() || !current["version"].isString() || !current["datetime"].isString())))
+	const auto check_json = [](bool cond, std::string_view msg) -> bool
 	{
-		update_log.error("Some information seems unavailable");
+		if (cond) return true;
+		update_log.error("%s", msg);
+		return false;
+	};
+	if (!(check_json(latest[os].isObject(), fmt::format("Node 'latest_build: %s' not found", os)) &&
+	      check_json(latest[os]["download"].isString(), fmt::format("Node 'latest_build: %s: download' not found or not a string", os)) &&
+	      check_json(latest[os]["size"].isDouble(), fmt::format("Node 'latest_build: %s: size' not found or not a double", os)) &&
+	      check_json(latest[os]["checksum"].isString(), fmt::format("Node 'latest_build: %s: checksum' not found or not a string", os)) &&
+	      check_json(latest["version"].isString(), "Node 'latest_build: version' not found or not a string") &&
+	      check_json(latest["datetime"].isString(), "Node 'latest_build: datetime' not found or not a string")
+	     ) ||
+	     (hash_found && !(
+	      check_json(current.isObject(), "JSON doesn't contain current_build section") &&
+	      check_json(current["version"].isString(), "Node 'current_build: datetime' not found or not a string") &&
+	      check_json(current["datetime"].isString(), "Node 'current_build: version' not found or not a string")
+	     )))
+	{
 		return false;
 	}
 
