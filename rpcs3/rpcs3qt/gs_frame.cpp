@@ -243,6 +243,11 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 {
 	gui_log.notice("Game window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString());
 
+	if (m_disable_kb_hotkeys)
+	{
+		return;
+	}
+
 	switch (shortcut_key)
 	{
 	case gui::shortcuts::shortcut::gw_toggle_fullscreen:
@@ -252,7 +257,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	}
 	case gui::shortcuts::shortcut::gw_exit_fullscreen:
 	{
-		if (visibility() == FullScreen && !m_disable_kb_hotkeys)
+		if (visibility() == FullScreen)
 		{
 			toggle_fullscreen();
 		}
@@ -281,70 +286,57 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	}
 	case gui::shortcuts::shortcut::gw_pause_play:
 	{
-		if (!m_disable_kb_hotkeys)
+		switch (Emu.GetStatus())
 		{
-			switch (Emu.GetStatus())
-			{
-			case system_state::ready:
-			{
-				Emu.Run(true);
-				return;
-			}
-			case system_state::paused:
-			{
-				Emu.Resume();
-				return;
-			}
-			default:
-			{
-				Emu.Pause();
-				return;
-			}
-			}
+		case system_state::ready:
+		{
+			Emu.Run(true);
+			return;
+		}
+		case system_state::paused:
+		{
+			Emu.Resume();
+			return;
+		}
+		default:
+		{
+			Emu.Pause();
+			return;
+		}
 		}
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_restart:
 	{
-		if (!m_disable_kb_hotkeys)
+		if (Emu.IsStopped())
 		{
-			if (Emu.IsStopped())
-			{
-				Emu.Restart();
-				return;
-			}
-
-			extern bool boot_last_savestate(bool testing);
-			boot_last_savestate(false);
+			Emu.Restart();
+			return;
 		}
+
+		extern bool boot_last_savestate(bool testing);
+		boot_last_savestate(false);
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_savestate:
 	{
-		if (!m_disable_kb_hotkeys)
+		if (!g_cfg.savestate.suspend_emu)
 		{
-			if (!g_cfg.savestate.suspend_emu)
+			Emu.after_kill_callback = []()
 			{
-				Emu.after_kill_callback = []()
-				{
-					Emu.Restart();
-				};
+				Emu.Restart();
+			};
 
-				// Make sure we keep the game window opened
-				Emu.SetContinuousMode(true);
-			}
-
-			Emu.Kill(false, true);
-			return;
+			// Make sure we keep the game window opened
+			Emu.SetContinuousMode(true);
 		}
-		break;
+
+		Emu.Kill(false, true);
+		return;
 	}
 	case gui::shortcuts::shortcut::gw_rsx_capture:
 	{
-		if (!m_disable_kb_hotkeys)
-		{
-			g_user_asked_for_frame_capture = true;
-		}
+		g_user_asked_for_frame_capture = true;
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_frame_limit:
