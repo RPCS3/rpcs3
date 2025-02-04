@@ -67,7 +67,7 @@ qt_music_handler::qt_music_handler()
 {
 	music_log.notice("Constructing Qt music handler...");
 
-	m_media_player = std::make_shared<QMediaPlayer>();
+	m_media_player = std::make_unique<QMediaPlayer>();
 	m_media_player->setAudioOutput(new QAudioOutput());
 
 	connect(m_media_player.get(), &QMediaPlayer::mediaStatusChanged, this, &qt_music_handler::handle_media_status);
@@ -164,7 +164,7 @@ void qt_music_handler::fast_reverse(const std::string& path)
 		}
 
 		music_log.notice("Fast-reversing music...");
-		m_media_player->setPlaybackRate(-2.0);
+		m_media_player->setPlaybackRate(-2.0); // NOTE: This doesn't work on the current Qt version
 		m_media_player->play();
 	});
 
@@ -177,8 +177,8 @@ void qt_music_handler::set_volume(f32 volume)
 
 	Emu.BlockingCallFromMainThread([&volume, this]()
 	{
-		const int new_volume = std::max<int>(0, std::min<int>(volume * 100, 100));
-		music_log.notice("Setting volume to %d%%", new_volume);
+		const f32 new_volume = std::clamp(volume, 0.0f, 1.0f);
+		music_log.notice("Setting volume to %f", new_volume);
 		m_media_player->audioOutput()->setVolume(new_volume);
 	});
 }
@@ -190,8 +190,8 @@ f32 qt_music_handler::get_volume() const
 
 	Emu.BlockingCallFromMainThread([&volume, this]()
 	{
-		volume = std::max(0.f, std::min(m_media_player->audioOutput()->volume(), 1.f));
-		music_log.notice("Getting volume: %d%%", volume);
+		volume = std::clamp(m_media_player->audioOutput()->volume(), 0.0f, 1.0f);
+		music_log.notice("Getting volume: %f", volume);
 	});
 
 	return volume;

@@ -29,6 +29,6 @@ private Q_SLOTS:
 
 private:
 	mutable std::mutex m_mutex;
-	std::shared_ptr<QMediaPlayer> m_media_player;
+	std::unique_ptr<QMediaPlayer> m_media_player;
 	std::string m_path;
 };
