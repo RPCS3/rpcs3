@@ -45,7 +45,8 @@ namespace gl
 	enum remap_constants : u32
 	{
 		GL_REMAP_IDENTITY = 0xCAFEBABE,
-		GL_REMAP_BGRA = 0x0000AA6C
+		GL_REMAP_BGRA = 0x0000AA6C,
+		GL_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF
 	};
 
 	struct subresource_range
