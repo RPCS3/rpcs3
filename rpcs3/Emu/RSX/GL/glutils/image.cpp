@@ -21,6 +21,22 @@ namespace gl
 
 	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class)
 	{
+		// Upgrade targets for MSAA
+		if (samples > 1)
+		{
+			switch (target)
+			{
+			case GL_TEXTURE_2D:
+				target = GL_TEXTURE_2D_MULTISAMPLE;
+				break;
+			case GL_TEXTURE_2D_ARRAY:
+				target = GL_TEXTURE_2D_MULTISAMPLE_ARRAY;
+				break;
+			default:
+				fmt::throw_exception("MSAA is only supported on 2D images. Target=0x%x", target);
+			}
+		}
+
 		glGenTextures(1, &m_id);
 
 		// Must bind to initialize the new texture
@@ -40,9 +56,18 @@ namespace gl
 			glTexStorage2D(target, mipmaps, storage_fmt, width, height);
 			depth = 1;
 			break;
+		case GL_TEXTURE_2D_MULTISAMPLE:
+			ensure(mipmaps == 1);
+			glTexStorage2DMultisample(target, samples, storage_fmt, width, height, GL_TRUE);
+			depth = 1;
+			break;
 		case GL_TEXTURE_3D:
 		case GL_TEXTURE_2D_ARRAY:
 			glTexStorage3D(target, mipmaps, storage_fmt, width, height, depth);
+			break;
+		case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+			ensure(mipmaps == 1);
+			glTexStorage3DMultisample(target, samples, storage_fmt, width, height, depth, GL_TRUE);
 			break;
 		case GL_TEXTURE_BUFFER:
 			break;
@@ -149,6 +174,8 @@ namespace gl
 
 	void texture::copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 	{
+		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+
 		pixel_settings.apply();
 
 		switch (const auto target_ = static_cast<GLenum>(m_target))
@@ -193,6 +220,8 @@ namespace gl
 
 	void texture::copy_from(buffer& buf, u32 gl_format_type, u32 offset, u32 length)
 	{
+		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+
 		if (get_target() != target::textureBuffer)
 			fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
 
@@ -206,6 +235,8 @@ namespace gl
 
 	void texture::copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 	{
+		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+
 		pixel_settings.apply();
 		const auto& caps = get_driver_caps();
 

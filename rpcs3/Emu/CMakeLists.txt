@@ -492,6 +492,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/GLPipelineCompiler.cpp
     RSX/GL/GLPresent.cpp
     RSX/GL/GLRenderTargets.cpp
+    RSX/GL/GLResolveHelper.cpp
     RSX/GL/GLShaderInterpreter.cpp
     RSX/GL/GLTexture.cpp
     RSX/GL/GLTextureCache.cpp
