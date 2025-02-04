@@ -49,7 +49,7 @@ namespace gl
 {
 	class render_target : public viewable_image, public rsx::render_target_descriptor<texture*>
 	{
-		void clear_memory(gl::command_context& cmd);
+		void clear_memory(gl::command_context& cmd, gl::texture* surface = nullptr);
 		void load_memory(gl::command_context& cmd);
 		void initialize_memory(gl::command_context& cmd, rsx::surface_access access);
 
@@ -89,11 +89,7 @@ namespace gl
 			return !!(aspect() & gl::image_aspect::depth);
 		}
 
-		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
-		{
-			// TODO
-			return static_cast<gl::viewable_image*>(this);
-		}
+		viewable_image* get_surface(rsx::surface_access /*access_type*/) override;
 
 		u32 raw_handle() const
 		{
@@ -289,8 +285,9 @@ struct gl_render_target_traits
 	}
 
 	static
-	void prepare_surface_for_drawing(gl::command_context&, gl::render_target* surface)
+	void prepare_surface_for_drawing(gl::command_context& cmd, gl::render_target* surface)
 	{
+		surface->memory_barrier(cmd, rsx::surface_access::gpu_reference);
 		surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 	}
 
