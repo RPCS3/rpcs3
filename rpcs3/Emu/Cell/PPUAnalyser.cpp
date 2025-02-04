@@ -1448,7 +1448,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 					if (!op.aa && target == _ptr.addr() && _ptr.addr() < func_end)
 					{
-						ppu_log.notice("[0x%x] Branch to next at 0x%x -> 0x%x", func.addr, iaddr, target);
+						(!!op.lk ? ppu_log.notice : ppu_log.trace)("[0x%x] Branch to next at 0x%x -> 0x%x", func.addr, iaddr, target);
 					}
 
 					const bool is_call = op.lk && target != iaddr && target != _ptr.addr() && _ptr.addr() < func_end;
@@ -1776,7 +1776,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	u32 per_instruction_bytes = 0;
 
 	// Iterate by address (fmap may grow)
-	for (u32 addr_next = start; addr_next != end;)
+	for (u32 addr_next = start; addr_next != umax;)
 	{
 		// Get next iterator
 		const auto it = fmap.lower_bound(addr_next);
@@ -1788,7 +1788,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 		// Save next function address as is as of this moment (ignoring added functions)
 		const auto it_next = std::next(it);
-		addr_next = it_next == fmap.end() ? end : it_next->first;
+		addr_next = it_next == fmap.end() ? u32{umax} : it_next->first;
 
 		const ppu_function_ext& func = it->second;
 
