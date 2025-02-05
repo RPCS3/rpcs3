@@ -23,7 +23,7 @@ struct generic_async_transaction_context
 	std::optional<s32> get_transaction_status();
 	void abort_transaction();
 	error_code wait_for_completion();
-	bool set_result_and_wake(error_code err);
+	void set_result_and_wake(error_code err);
 
 	shared_mutex mutex;
 	std::condition_variable_any wake_cond, completion_cond;

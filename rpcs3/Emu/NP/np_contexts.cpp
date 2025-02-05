@@ -45,11 +45,10 @@ error_code generic_async_transaction_context::wait_for_completion()
 	return *result;
 }
 
-bool generic_async_transaction_context::set_result_and_wake(error_code err)
+void generic_async_transaction_context::set_result_and_wake(error_code err)
 {
 	result = err;
 	wake_cond.notify_one();
-	return true;
 }
 
 tus_ctx::tus_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)

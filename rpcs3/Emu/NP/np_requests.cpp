@@ -1,3 +1,7 @@
+#include "Emu/Cell/Modules/sceNp.h"
+#include "Emu/Cell/Modules/sceNp2.h"
+#include "Emu/NP/rpcn_types.h"
+#include "Utilities/StrFmt.h"
 #include "stdafx.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -11,6 +15,7 @@
 #include "np_structs_extra.h"
 #include "fb_helpers.h"
 #include "Emu/NP/signaling_handler.h"
+#include "Emu/NP/ip_address.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -115,14 +120,14 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_world_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in GetWorldList reply");
 
 		std::vector<u32> world_list;
 		u32 num_worlds = reply.get<u32>();
@@ -131,10 +136,7 @@ namespace np
 			world_list.push_back(reply.get<u32>());
 		}
 
-		if (reply.is_error())
-		{
-			return error_and_disconnect("Malformed reply to GetWorldList command");
-		}
+		ensure(!reply.is_error(), "Malformed reply to GetWorldList command");
 
 		const u32 event_key = get_event_key();
 
@@ -153,8 +155,6 @@ namespace np
 
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::create_join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2CreateJoinRoomRequest* req)
@@ -175,18 +175,32 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_create_join_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomGroupMaxSlotMismatch: error_code = SCE_NP_MATCHING2_SERVER_ERROR_MAX_OVER_SLOT_GROUP; break;
+		case rpcn::ErrorType::RoomPasswordMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_PASSWORD; break;
+		case rpcn::ErrorType::RoomGroupNoJoinLabel: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_JOIN_GROUP_LABEL; break;
+		default: fmt::throw_exception("Unexpected error in reply to CreateRoom: %d", static_cast<u8>(error));
+		}
+
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
+
 		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to CreateRoom command");
+		ensure(!reply.is_error(), "Malformed reply to CreateRoom command");
 
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
@@ -203,8 +217,6 @@ namespace np
 		extra_nps::print_SceNpMatching2CreateJoinRoomResponse(room_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinRoomRequest* req)
@@ -222,55 +234,79 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_join_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
 		s32 error_code = 0;
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-			case rpcn::ErrorType::RoomAlreadyJoined: error_code = SCE_NP_MATCHING2_SERVER_ERROR_ALREADY_JOINED; break;
-			case rpcn::ErrorType::RoomFull: error_code = SCE_NP_MATCHING2_SERVER_ERROR_ROOM_FULL; break;
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::RoomAlreadyJoined: error_code = SCE_NP_MATCHING2_SERVER_ERROR_ALREADY_JOINED; break;
+		case rpcn::ErrorType::RoomFull: error_code = SCE_NP_MATCHING2_SERVER_ERROR_ROOM_FULL; break;
+		case rpcn::ErrorType::RoomPasswordMismatch: error_code = SCE_NP_MATCHING2_SERVER_ERROR_PASSWORD_MISMATCH; break;
+		case rpcn::ErrorType::RoomGroupFull: error_code = SCE_NP_MATCHING2_SERVER_ERROR_GROUP_FULL; break;
+		case rpcn::ErrorType::RoomGroupJoinLabelNotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_GROUP; break;
+		default: fmt::throw_exception("Unexpected error in reply to JoinRoom: %d", static_cast<u8>(error)); ;
 		}
 
 		if (error_code != 0)
 		{
 			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
-			return true;
+			return;
 		}
 
-		vec_stream reply(reply_data, 1);
-
-		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to JoinRoom command");
+		const auto* resp = reply.get_flatbuffer<JoinRoomResponse>();
+		ensure(!reply.is_error(), "Malformed reply to JoinRoom command");
+		ensure(resp->room_data());
 
 		const u32 event_key = get_event_key();
-		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2JoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid, include_onlinename, include_avatarurl);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp->room_data(), room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
 
 		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
-		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+		// We initiate signaling if necessary
+		if (const auto* signaling_data = resp->signaling_data())
+		{
+			const u64 room_id = resp->room_data()->roomId();
 
-		return true;
+			for (unsigned int i = 0; i < signaling_data->size(); i++)
+			{
+				const auto* signaling_info = signaling_data->Get(i);
+				ensure(signaling_info->addr());
+
+				const u32 addr_p2p = register_ip(signaling_info->addr()->ip());
+				const u16 port_p2p = signaling_info->addr()->port();
+
+				const u16 member_id = signaling_info->member_id();
+				const auto [npid_res, npid_p2p] = np_cache.get_npid(room_id, member_id);
+
+				if (npid_res != CELL_OK)
+					continue;
+
+				rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid_p2p->handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
+
+				// Attempt Signaling
+				auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+				const u32 conn_id = sigh.init_sig2(*npid_p2p, room_id, member_id);
+				sigh.start_sig(conn_id, addr_p2p, port_p2p);
+			}
+		}
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 	}
 
 	u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req)
@@ -286,24 +322,35 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_leave_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		default: fmt::throw_exception("Unexpected error in reply to LeaveRoom: %d", static_cast<u8>(error)); ;
+		}
+
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
+
 		u64 room_id = reply.get<u64>();
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to LeaveRoom command");
+		ensure(!reply.is_error(), "Malformed reply to LeaveRoom command");
 
 		// Disconnect all users from that room
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.disconnect_sig2_users(room_id);
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
-
-		return true;
 	}
 
 	u32 np_handler::search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SearchRoomRequest* req)
@@ -321,18 +368,17 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_search_room(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_search_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in SearchRoom reply");
+
 		const auto* resp = reply.get_flatbuffer<SearchRoomResponse>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to SearchRoom command");
+		ensure(!reply.is_error(), "Malformed reply to SearchRoom command");
 
 		const u32 event_key = get_event_key();
 
@@ -344,8 +390,6 @@ namespace np
 
 		extra_nps::print_SceNpMatching2SearchRoomResponse(search_resp);
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req)
@@ -363,18 +407,17 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_get_roomdata_external_list(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_roomdata_external_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in GetRoomDataExternalList reply");
+
 		const auto* resp = reply.get_flatbuffer<GetRoomDataExternalListResponse>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to GetRoomDataExternalList command");
+		ensure(!reply.is_error(), "Malformed reply to GetRoomDataExternalList command");
 
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
@@ -387,8 +430,6 @@ namespace np
 		extra_nps::print_SceNpMatching2GetRoomDataExternalListResponse(sce_get_room_ext_resp);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req)
@@ -406,16 +447,24 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& /*reply_data*/)
+	void np_handler::reply_set_roomdata_external(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+		s32 error_code = CELL_OK;
 
-		return true;
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
+		default: fmt::throw_exception("Unexpected error in reply to SetRoomDataExternal: %d", static_cast<u8>(error));
+		}
+
+		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 	}
 
 	u32 np_handler::get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req)
@@ -431,19 +480,30 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_roomdata_internal(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error));
+		}
+
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
 
 		const auto* resp = reply.get_flatbuffer<RoomDataInternal>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to GetRoomDataInternal command");
+		ensure(!reply.is_error(), "Malformed reply to GetRoomDataInternal command");
 
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
@@ -459,8 +519,6 @@ namespace np
 		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req)
@@ -478,16 +536,23 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
+	void np_handler::reply_set_roomdata_internal(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+		s32 error_code = CELL_OK;
 
-		return true;
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error)); ;
+		}
+
+		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 	}
 
 	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
@@ -504,34 +569,31 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_get_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_roommemberdata_internal(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		s32 error_code = CELL_OK;
+
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound:
-			{
-				rpcn_log.error("GetRoomMemberDataInternal: Room or User wasn't found");
-				cb_info_opt->queue_callback(req_id, 0, -1, 0);
-				return true;
-			}
-			default:
-				return error_and_disconnect(fmt::format("GetRoomMemberDataInternal failed with unknown error(%d)!", reply_data[0]));
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER; break;
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomMemberDataInternal: %d", static_cast<u8>(error)); ;
 		}
 
-		vec_stream reply(reply_data, 1);
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
 
 		const auto* resp = reply.get_flatbuffer<RoomMemberDataInternal>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to GetRoomMemberDataInternal command");
+		ensure(!reply.is_error(), "Malformed reply to GetRoomMemberDataInternal command");
 
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
@@ -543,7 +605,6 @@ namespace np
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-		return true;
 	}
 
 	u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
@@ -561,16 +622,25 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
+	void np_handler::reply_set_roommemberdata_internal(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+		s32 error_code = CELL_OK;
 
-		return true;
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER; break;
+		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
+		default: fmt::throw_exception("Unexpected error in reply to SetRoomMemberDataInternal: %d", static_cast<u8>(error));
+		}
+
+		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 	}
 
 	u32 np_handler::set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req)
@@ -586,21 +656,20 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_userinfo(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_set_userinfo(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			return error_and_disconnect(fmt::format("SetUserInfo failed with unknown error(%d)!", reply_data[0]));
+		case rpcn::ErrorType::NoError: break;
+		default: fmt::throw_exception("Unexpected error in reply to SetUserInfo: %d", static_cast<u8>(error));
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
-
-		return true;
 	}
 
 	u32 np_handler::get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req)
@@ -616,19 +685,30 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_ping_info(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		vec_stream reply(reply_data, 1);
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		default: fmt::throw_exception("Unexpected error in reply to PingRoomOwner: %d", static_cast<u8>(error));
+		}
+
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
 
 		const auto* resp = reply.get_flatbuffer<GetPingInfoResponse>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to PingRoomOwner command");
+		ensure(!reply.is_error(), "Malformed reply to PingRoomOwner command");
 
 		const u32 event_key = get_event_key();
 
@@ -637,8 +717,6 @@ namespace np
 		GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(resp, final_ping_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
-
-		return true;
 	}
 
 	u32 np_handler::send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req)
@@ -654,16 +732,24 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& /*reply_data*/)
+	void np_handler::reply_send_room_message(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
-			return true;
+			return;
 
-		cb_info_opt->queue_callback(req_id, 0, 0, 0);
+		s32 error_code = CELL_OK;
 
-		return true;
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
+		default: fmt::throw_exception("Unexpected error in reply to SendRoomMessage: %d", static_cast<u8>(error));
+		}
+
+		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 	}
 
 	void np_handler::req_sign_infos(const std::string& npid, u32 conn_id)
@@ -681,7 +767,7 @@ namespace np
 		}
 	}
 
-	bool np_handler::reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_req_sign_infos(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		u32 conn_id;
 		{
@@ -690,33 +776,23 @@ namespace np
 			pending_sign_infos_requests.erase(req_id);
 		}
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound:
-			{
-				rpcn_log.error("Signaling information was requested for a user that doesn't exist or is not online");
-				return true;
-			}
-			case rpcn::ErrorType::Malformed:
-				return error_and_disconnect("RequestSignalingInfos request was malformed!");
-			default:
-				return error_and_disconnect(fmt::format("RequestSignalingInfos failed with unknown error(%d)!", reply_data[0]));
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound:
+		{
+			rpcn_log.error("Signaling information was requested for a user that doesn't exist or is not online");
+			return;
+		}
+		default: fmt::throw_exception("Unexpected error in reply to RequestSignalingInfos: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
-		const u32 addr = reply.get<u32>();
-		const u16 port = reply.get<u16>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to RequestSignalingInfos command");
+		const auto* resp = reply.get_flatbuffer<SignalingAddr>();
+		ensure(!reply.is_error() && resp->ip(), "Malformed reply to RequestSignalingInfos command");
+		u32 addr = register_ip(resp->ip());
 
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.start_sig(conn_id, addr, port);
-
-		return true;
+		sigh.start_sig(conn_id, addr, resp->port());
 	}
 
 	u32 np_handler::get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req)
@@ -780,13 +856,11 @@ namespace np
 		return current_ticket;
 	}
 
-	bool np_handler::reply_req_ticket([[maybe_unused]] u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_req_ticket(u32 /* req_id */, rpcn::ErrorType error, vec_stream& reply)
 	{
-		vec_stream reply(reply_data, 1);
+		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in reply to RequestTicket");
 		auto ticket_raw = reply.get_rawdata();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to RequestTicket command");
+		ensure(!reply.is_error(), "Malformed reply to RequestTicket command");
 
 		current_ticket = ticket(std::move(ticket_raw));
 		auto ticket_size = static_cast<s32>(current_ticket.size());
@@ -799,8 +873,6 @@ namespace np
 					return 0;
 				});
 		}
-
-		return true;
 	}
 
 	void np_handler::transaction_async_handler(std::unique_lock<shared_mutex> lock, const shared_ptr<generic_async_transaction_context>& trans_ctx, u32 req_id, bool async)
@@ -854,14 +926,37 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_get_board_infos(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_board_infos(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		vec_stream reply(reply_data, 1);
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return;
+		}
+
+		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
+		ensure(score_trans);
+
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: error_code = SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_BOARD_MASTER_NOT_FOUND; break;
+		default: fmt::throw_exception("Unexpected error in reply to GetBoardInfos: %d", static_cast<u8>(error));
+		}
+
+		if (error_code != CELL_OK)
+		{
+			std::lock_guard lock(score_trans->mutex);
+			score_trans->result = error_code;
+			score_trans->wake_cond.notify_one();
+			return;
+		}
 
 		const auto* resp = reply.get_flatbuffer<BoardInfo>();
-
-		if (reply.is_error())
-			return error_and_disconnect("Malformed reply to GetBoardInfos command");
+		ensure(!reply.is_error(), "Malformed reply to GetBoardInfos command");
 
 		const SceNpScoreBoardInfo board_info{
 			.rankLimit = resp->rankLimit(),
@@ -871,16 +966,6 @@ namespace np
 			.uploadSizeLimit = resp->uploadSizeLimit()
 		};
 
-		std::lock_guard lock_trans(mutex_async_transactions);
-		if (!async_transactions.count(req_id))
-		{
-			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
-		}
-
-		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
-		ensure(score_trans);
-
 		std::lock_guard lock(score_trans->mutex);
 
 		const auto* tdata = std::get_if<tdata_get_board_infos>(&score_trans->tdata);
@@ -889,8 +974,6 @@ namespace np
 		memcpy(reinterpret_cast<u8*>(tdata->boardInfo.get_ptr()), &board_info, sizeof(SceNpScoreBoardInfo));
 		score_trans->result = CELL_OK;
 		score_trans->wake_cond.notify_one();
-
-		return true;
 	}
 
 	void np_handler::record_score(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
@@ -912,13 +995,13 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_record_score(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_record_score(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
@@ -926,28 +1009,20 @@ namespace np
 
 		std::lock_guard lock(score_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::ScoreNotBest:
-			{
-				score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE;
-				score_trans->wake_cond.notify_one();
-				return true;
-			}
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::ScoreNotBest:
+		{
+			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE;
+			score_trans->wake_cond.notify_one();
+			return;
+		}
+		default: fmt::throw_exception("Unexpected error in reply_record_score: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		auto tmp_rank = reply.get<u32>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in reply_record_score");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in reply_record_score");
 
 		const auto* tdata = std::get_if<tdata_record_score>(&score_trans->tdata);
 		ensure(tdata);
@@ -959,7 +1034,6 @@ namespace np
 
 		score_trans->result = CELL_OK;
 		score_trans->wake_cond.notify_one();
-		return true;
 	}
 
 	void np_handler::record_score_data(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, const u8* score_data, bool async)
@@ -989,37 +1063,26 @@ namespace np
 		}
 	}
 
-	bool np_handler::reply_record_score_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_record_score_data(u32 req_id, rpcn::ErrorType error)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto trans = ::at32(async_transactions, req_id);
 		std::lock_guard lock(trans->mutex);
 
-		auto set_result_and_wake = [&](error_code err) -> bool
+		switch (error)
 		{
-			trans->result = err;
-			trans->wake_cond.notify_one();
-			return true;
-		};
-
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
-		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_STORE_NOT_FOUND);
-			case rpcn::ErrorType::ScoreInvalid: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SCORE);
-			case rpcn::ErrorType::ScoreHasData: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_GAME_DATA_ALREADY_EXISTS);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: trans->set_result_and_wake(CELL_OK); break;
+		case rpcn::ErrorType::NotFound: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_STORE_NOT_FOUND); break;
+		case rpcn::ErrorType::ScoreInvalid: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SCORE); break;
+		case rpcn::ErrorType::ScoreHasData: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_GAME_DATA_ALREADY_EXISTS); break;
+		default: fmt::throw_exception("Unexpected error in reply to RecordScoreData: %d", static_cast<u8>(error)); ;
 		}
-
-		return set_result_and_wake(CELL_OK);
 	}
 
 	void np_handler::get_score_data(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const SceNpId& npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> score_data, bool async)
@@ -1054,40 +1117,31 @@ namespace np
 		trans_ctx->result = not_an_error(to_copy);
 	}
 
-	bool np_handler::reply_get_score_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_score_data(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 		std::lock_guard lock(score_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return score_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: score_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND); return;
+		default: fmt::throw_exception("Unexpected error in reply to GetScoreData: %d", static_cast<u8>(error)); ;
 		}
-
-		vec_stream reply(reply_data, 1);
 
 		auto* tdata = std::get_if<tdata_get_score_data>(&score_trans->tdata);
 		ensure(tdata);
 
 		tdata->game_data = reply.get_rawdata();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in reply_get_score_data");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in reply_get_score_data");
 
 		tdata->game_data_size = ::size32(tdata->game_data);
 
@@ -1096,7 +1150,7 @@ namespace np
 		tdata->game_data.erase(tdata->game_data.begin(), tdata->game_data.begin() + to_copy);
 		*tdata->totalSize = tdata->game_data_size;
 
-		return score_trans->set_result_and_wake(not_an_error(to_copy));
+		score_trans->set_result_and_wake(not_an_error(to_copy));
 	}
 
 	void np_handler::get_score_range(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
@@ -1144,32 +1198,27 @@ namespace np
 		cur_rank.recordDate.tick = fb_rankdata->recordDate();
 	}
 
-	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data, bool simple_result)
+	void np_handler::handle_GetScoreResponse(u32 req_id, rpcn::ErrorType error, vec_stream& reply, bool simple_result)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto score_trans = idm::get_unlocked<score_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(score_trans);
 		std::lock_guard lock(score_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			return false;
+		case rpcn::ErrorType::NoError: break;
+		default: fmt::throw_exception("Unexpected error in GetScoreResponse: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		const auto* resp = reply.get_flatbuffer<GetScoreResponse>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in handle_GetScoreResponse");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in handle_GetScoreResponse");
 
 		const auto* tdata = std::get_if<tdata_get_score_generic>(&score_trans->tdata);
 		ensure(tdata);
@@ -1273,12 +1322,11 @@ namespace np
 			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
 
 		score_trans->wake_cond.notify_one();
-		return true;
 	}
 
-	bool np_handler::reply_get_score_range(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_score_range(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_GetScoreResponse(req_id, reply_data);
+		handle_GetScoreResponse(req_id, error, reply);
 	}
 
 	void np_handler::get_score_friend(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
@@ -1305,9 +1353,9 @@ namespace np
 
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
-	bool np_handler::reply_get_score_friends(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_score_friends(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_GetScoreResponse(req_id, reply_data);
+		handle_GetScoreResponse(req_id, error, reply);
 	}
 
 	void np_handler::get_score_npid(shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async, bool deprecated)
@@ -1334,76 +1382,57 @@ namespace np
 
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
-	bool np_handler::reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_get_score_npid(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_GetScoreResponse(req_id, reply_data, true);
+		handle_GetScoreResponse(req_id, error, reply, true);
 	}
 
-	bool np_handler::handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::handle_tus_no_data(u32 req_id, rpcn::ErrorType error)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto trans = ::at32(async_transactions, req_id);
 		std::lock_guard lock(trans->mutex);
 
-		auto set_result_and_wake = [&](error_code err) -> bool
+		switch (error)
 		{
-			trans->result = err;
-			trans->wake_cond.notify_one();
-			return true;
-		};
-
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
-		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
-			case rpcn::ErrorType::Unauthorized: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
-			case rpcn::ErrorType::CondFail: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: trans->set_result_and_wake(CELL_OK); break;
+		case rpcn::ErrorType::NotFound: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED); break;
+		case rpcn::ErrorType::Unauthorized: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN); break;
+		case rpcn::ErrorType::CondFail: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED); break;
+		default: fmt::throw_exception("Unexpected error in handle_tus_no_data: %d", static_cast<u8>(error));
 		}
-
-		return set_result_and_wake(CELL_OK);
 	}
 
-	bool np_handler::handle_TusVarResponse(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::handle_TusVarResponse(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
-			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
-			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+		default: fmt::throw_exception("Unexpected error in handle_TusVarResponse: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		const auto* resp = reply.get_flatbuffer<TusVarResponse>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in handle_TusVarResponse");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in handle_TusVarResponse");
 
 		const auto* tdata = std::get_if<tdata_tus_get_variables_generic>(&tus_trans->tdata);
 		ensure(tdata);
@@ -1436,42 +1465,32 @@ namespace np
 
 		tus_trans->result = not_an_error(fb_vars->size());
 		tus_trans->wake_cond.notify_one();
-
-		return true;
 	}
 
-	bool np_handler::handle_TusVariable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::handle_TusVariable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
-			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
-			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+		default: fmt::throw_exception("Unexpected error in handle_TusVariable: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		const auto* fb_var = reply.get_flatbuffer<TusVariable>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in handle_TusVariable");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in handle_TusVariable");
 
 		const auto* tdata = std::get_if<tdata_tus_get_variable_generic>(&tus_trans->tdata);
 		ensure(tdata);
@@ -1494,42 +1513,32 @@ namespace np
 
 		tus_trans->result = CELL_OK;
 		tus_trans->wake_cond.notify_one();
-
-		return true;
 	}
 
-	bool np_handler::handle_TusDataStatusResponse(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::handle_TusDataStatusResponse(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
-			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
-			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+		default: fmt::throw_exception("Unexpected error in handle_TusDataStatusResponse: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		const auto* resp = reply.get_flatbuffer<TusDataStatusResponse>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in handle_TusDataStatusReponse");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in handle_TusDataStatusReponse");
 
 		const auto* tdata = std::get_if<tdata_tus_get_datastatus_generic>(&tus_trans->tdata);
 		ensure(tdata);
@@ -1565,8 +1574,6 @@ namespace np
 
 		tus_trans->result = not_an_error(fb_status->size());
 		tus_trans->wake_cond.notify_one();
-
-		return true;
 	}
 
 	void np_handler::tus_set_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async)
@@ -1578,9 +1585,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_set_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_set_multislot_variable(u32 req_id, rpcn::ErrorType error)
 	{
-		return handle_tus_no_data(req_id, reply_data);
+		return handle_tus_no_data(req_id, error);
 	}
 
 	void np_handler::tus_get_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
@@ -1597,9 +1604,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_multislot_variable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusVarResponse(req_id, reply_data);
+		return handle_TusVarResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_get_multiuser_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
@@ -1616,9 +1623,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_multiuser_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_multiuser_variable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusVarResponse(req_id, reply_data);
+		return handle_TusVarResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_get_friends_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async)
@@ -1635,9 +1642,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_friends_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_friends_variable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusVarResponse(req_id, reply_data);
+		return handle_TusVarResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_add_and_get_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
@@ -1653,9 +1660,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_add_and_get_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_add_and_get_variable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusVariable(req_id, reply_data);
+		return handle_TusVariable(req_id, error, reply);
 	}
 
 	void np_handler::tus_try_and_set_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
@@ -1671,9 +1678,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_try_and_set_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_try_and_set_variable(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusVariable(req_id, reply_data);
+		return handle_TusVariable(req_id, error, reply);
 	}
 
 	void np_handler::tus_delete_multislot_variable(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
@@ -1685,9 +1692,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_delete_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_delete_multislot_variable(u32 req_id, rpcn::ErrorType error)
 	{
-		return handle_tus_no_data(req_id, reply_data);
+		return handle_tus_no_data(req_id, error);
 	}
 
 	void np_handler::tus_set_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
@@ -1719,9 +1726,9 @@ namespace np
 		}
 	}
 
-	bool np_handler::reply_tus_set_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_set_data(u32 req_id, rpcn::ErrorType error)
 	{
-		return handle_tus_no_data(req_id, reply_data);
+		return handle_tus_no_data(req_id, error);
 	}
 
 	void np_handler::tus_get_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, bool vuser, bool async)
@@ -1754,45 +1761,38 @@ namespace np
 		trans_ctx->result = not_an_error(to_copy);
 	}
 
-	bool np_handler::reply_tus_get_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_data(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
 		std::lock_guard lock_trans(mutex_async_transactions);
 		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
-			return false;
+			return;
 		}
 
 		auto tus_trans = idm::get_unlocked<tus_transaction_ctx>(::at32(async_transactions, req_id)->idm_id);
 		ensure(tus_trans);
 		std::lock_guard lock(tus_trans->mutex);
 
-		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		switch (error)
 		{
-			switch (reply_data[0])
-			{
-			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
-			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
-			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-			default: return false;
-			}
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+		default: fmt::throw_exception("Unexpected error in reply to TusGetData: %d", static_cast<u8>(error));
 		}
 
-		vec_stream reply(reply_data, 1);
 		const auto* fb_data = reply.get_flatbuffer<TusData>();
-
-		if (reply.is_error())
-		{
-			rpcn_log.error("Error parsing response in reply_tus_get_data");
-			return false;
-		}
+		ensure(!reply.is_error(), "Error parsing response in reply_tus_get_data");
 
 		auto* tdata = std::get_if<tdata_tus_get_data>(&tus_trans->tdata);
 		ensure(tdata);
 
 		const auto* fb_status = fb_data->status();
 		ensure(fb_status && fb_status->ownerId());
-		if (!fb_status) return false; // Sanity check to make compiler happy
+		if (!fb_status)
+			return; // Sanity check to make compiler happy
 
 		auto* data_status = tdata->dataStatus.get_ptr();
 		auto* data = static_cast<u8 *>(tdata->data.get_ptr());
@@ -1833,7 +1833,6 @@ namespace np
 		}
 
 		tus_trans->wake_cond.notify_one();
-		return true;
 	}
 
 	void np_handler::tus_get_multislot_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
@@ -1850,9 +1849,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_multislot_data_status(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_multislot_data_status(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusDataStatusResponse(req_id, reply_data);
+		return handle_TusDataStatusResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_get_multiuser_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
@@ -1869,9 +1868,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_multiuser_data_status(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_multiuser_data_status(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusDataStatusResponse(req_id, reply_data);
+		return handle_TusDataStatusResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_get_friends_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async)
@@ -1888,9 +1887,9 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_get_friends_data_status(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_get_friends_data_status(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
-		return handle_TusDataStatusResponse(req_id, reply_data);
+		return handle_TusDataStatusResponse(req_id, error, reply);
 	}
 
 	void np_handler::tus_delete_multislot_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
@@ -1902,8 +1901,8 @@ namespace np
 		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
-	bool np_handler::reply_tus_delete_multislot_data(u32 req_id, std::vector<u8>& reply_data)
+	void np_handler::reply_tus_delete_multislot_data(u32 req_id, rpcn::ErrorType error)
 	{
-		return handle_tus_no_data(req_id, reply_data);
+		return handle_tus_no_data(req_id, error);
 	}
 } // namespace np

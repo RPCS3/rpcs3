@@ -40,7 +40,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 
 			error_code Exec(message_data& msg_data, std::set<std::string>& npids) override;
-			void callback_handler(u16 ntype, const std::string& username, bool status) override;
+			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status) override;
 		};
 	}
 }

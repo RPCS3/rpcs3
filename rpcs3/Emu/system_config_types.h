@@ -267,7 +267,7 @@ enum class np_internet_status
 	enabled,
 };
 
-enum np_psn_status
+enum class np_psn_status
 {
 	disabled,
 	psn_fake,

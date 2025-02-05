@@ -383,7 +383,7 @@ namespace rsx
 			}
 		}
 
-		void sendmessage_dialog::callback_handler(u16 ntype, const std::string& username, bool status)
+		void sendmessage_dialog::callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status)
 		{
 			std::lock_guard lock(m_mutex);
 

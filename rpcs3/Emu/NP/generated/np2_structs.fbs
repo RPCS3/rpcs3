@@ -1,3 +1,18 @@
+table SignalingAddr {
+	ip:[uint8];
+	port:uint16;
+}
+
+table MatchingSignalingInfo {
+	npid:string;
+	addr:SignalingAddr;
+}
+
+table Matching2SignalingInfo {
+	member_id:uint16;
+	addr:SignalingAddr;
+}
+
 table BinAttr {
 	id:uint16;
 	data:[uint8];
@@ -27,7 +42,6 @@ table OptParam {
 
 table GroupConfig {
 	slotNum:uint32;
-	withLabel:bool;
 	label:[uint8];
 	withPassword:bool;
 }
@@ -52,7 +66,6 @@ table RoomMemberDataInternal {
 table RoomGroup {
 	groupId:uint8;
 	withPassword:bool;
-	withLabel:bool;
 	label:[uint8];
 	slotNum:uint32;
 	curGroupMemberNum:uint32;
@@ -108,7 +121,7 @@ table PresenceOptionData {
 }
 
 table RoomGroupPasswordConfig {
-	groupId:[uint8];
+	groupId:uint8;
 	withPassword:bool;
 }
 
@@ -159,6 +172,11 @@ table JoinRoomRequest {
 	roomMemberBinAttrInternal:[BinAttr];
 	optData:PresenceOptionData;
 	teamId:uint8;
+}
+
+table JoinRoomResponse {
+	room_data: RoomDataInternal;
+	signaling_data: [Matching2SignalingInfo];
 }
 
 table LeaveRoomRequest {
@@ -219,6 +237,12 @@ table RoomMemberUpdateInfo {
 	roomMemberDataInternal:RoomMemberDataInternal;
 	eventCause:uint8;
 	optData:PresenceOptionData;
+}
+
+table NotificationUserJoinedRoom {
+	room_id:uint64;
+	update_info:RoomMemberUpdateInfo;
+	signaling:SignalingAddr;
 }
 
 table RoomUpdateInfo {

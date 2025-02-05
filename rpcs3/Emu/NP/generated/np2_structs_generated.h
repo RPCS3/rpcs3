@@ -13,6 +13,15 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 24 &&
               FLATBUFFERS_VERSION_REVISION == 25,
              "Non-compatible flatbuffers version included");
 
+struct SignalingAddr;
+struct SignalingAddrBuilder;
+
+struct MatchingSignalingInfo;
+struct MatchingSignalingInfoBuilder;
+
+struct Matching2SignalingInfo;
+struct Matching2SignalingInfoBuilder;
+
 struct BinAttr;
 struct BinAttrBuilder;
 
@@ -70,6 +79,9 @@ struct CreateJoinRoomRequestBuilder;
 struct JoinRoomRequest;
 struct JoinRoomRequestBuilder;
 
+struct JoinRoomResponse;
+struct JoinRoomResponseBuilder;
+
 struct LeaveRoomRequest;
 struct LeaveRoomRequestBuilder;
 
@@ -99,6 +111,9 @@ struct GetRoomDataInternalRequestBuilder;
 
 struct RoomMemberUpdateInfo;
 struct RoomMemberUpdateInfoBuilder;
+
+struct NotificationUserJoinedRoom;
+struct NotificationUserJoinedRoomBuilder;
 
 struct RoomUpdateInfo;
 struct RoomUpdateInfoBuilder;
@@ -255,6 +270,185 @@ struct SearchJoinRoomGUIRequestBuilder;
 
 struct MatchingSearchJoinRoomInfo;
 struct MatchingSearchJoinRoomInfoBuilder;
+
+struct SignalingAddr FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef SignalingAddrBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_IP = 4,
+    VT_PORT = 6
+  };
+  const ::flatbuffers::Vector<uint8_t> *ip() const {
+    return GetPointer<const ::flatbuffers::Vector<uint8_t> *>(VT_IP);
+  }
+  uint16_t port() const {
+    return GetField<uint16_t>(VT_PORT, 0);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_IP) &&
+           verifier.VerifyVector(ip()) &&
+           VerifyField<uint16_t>(verifier, VT_PORT, 2) &&
+           verifier.EndTable();
+  }
+};
+
+struct SignalingAddrBuilder {
+  typedef SignalingAddr Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_ip(::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> ip) {
+    fbb_.AddOffset(SignalingAddr::VT_IP, ip);
+  }
+  void add_port(uint16_t port) {
+    fbb_.AddElement<uint16_t>(SignalingAddr::VT_PORT, port, 0);
+  }
+  explicit SignalingAddrBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<SignalingAddr> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<SignalingAddr>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<SignalingAddr> CreateSignalingAddr(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> ip = 0,
+    uint16_t port = 0) {
+  SignalingAddrBuilder builder_(_fbb);
+  builder_.add_ip(ip);
+  builder_.add_port(port);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<SignalingAddr> CreateSignalingAddrDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *ip = nullptr,
+    uint16_t port = 0) {
+  auto ip__ = ip ? _fbb.CreateVector<uint8_t>(*ip) : 0;
+  return CreateSignalingAddr(
+      _fbb,
+      ip__,
+      port);
+}
+
+struct MatchingSignalingInfo FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef MatchingSignalingInfoBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NPID = 4,
+    VT_ADDR = 6
+  };
+  const ::flatbuffers::String *npid() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NPID);
+  }
+  const SignalingAddr *addr() const {
+    return GetPointer<const SignalingAddr *>(VT_ADDR);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NPID) &&
+           verifier.VerifyString(npid()) &&
+           VerifyOffset(verifier, VT_ADDR) &&
+           verifier.VerifyTable(addr()) &&
+           verifier.EndTable();
+  }
+};
+
+struct MatchingSignalingInfoBuilder {
+  typedef MatchingSignalingInfo Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_npid(::flatbuffers::Offset<::flatbuffers::String> npid) {
+    fbb_.AddOffset(MatchingSignalingInfo::VT_NPID, npid);
+  }
+  void add_addr(::flatbuffers::Offset<SignalingAddr> addr) {
+    fbb_.AddOffset(MatchingSignalingInfo::VT_ADDR, addr);
+  }
+  explicit MatchingSignalingInfoBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<MatchingSignalingInfo> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<MatchingSignalingInfo>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<MatchingSignalingInfo> CreateMatchingSignalingInfo(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> npid = 0,
+    ::flatbuffers::Offset<SignalingAddr> addr = 0) {
+  MatchingSignalingInfoBuilder builder_(_fbb);
+  builder_.add_addr(addr);
+  builder_.add_npid(npid);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<MatchingSignalingInfo> CreateMatchingSignalingInfoDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *npid = nullptr,
+    ::flatbuffers::Offset<SignalingAddr> addr = 0) {
+  auto npid__ = npid ? _fbb.CreateString(npid) : 0;
+  return CreateMatchingSignalingInfo(
+      _fbb,
+      npid__,
+      addr);
+}
+
+struct Matching2SignalingInfo FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef Matching2SignalingInfoBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_MEMBER_ID = 4,
+    VT_ADDR = 6
+  };
+  uint16_t member_id() const {
+    return GetField<uint16_t>(VT_MEMBER_ID, 0);
+  }
+  const SignalingAddr *addr() const {
+    return GetPointer<const SignalingAddr *>(VT_ADDR);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint16_t>(verifier, VT_MEMBER_ID, 2) &&
+           VerifyOffset(verifier, VT_ADDR) &&
+           verifier.VerifyTable(addr()) &&
+           verifier.EndTable();
+  }
+};
+
+struct Matching2SignalingInfoBuilder {
+  typedef Matching2SignalingInfo Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_member_id(uint16_t member_id) {
+    fbb_.AddElement<uint16_t>(Matching2SignalingInfo::VT_MEMBER_ID, member_id, 0);
+  }
+  void add_addr(::flatbuffers::Offset<SignalingAddr> addr) {
+    fbb_.AddOffset(Matching2SignalingInfo::VT_ADDR, addr);
+  }
+  explicit Matching2SignalingInfoBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<Matching2SignalingInfo> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<Matching2SignalingInfo>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<Matching2SignalingInfo> CreateMatching2SignalingInfo(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint16_t member_id = 0,
+    ::flatbuffers::Offset<SignalingAddr> addr = 0) {
+  Matching2SignalingInfoBuilder builder_(_fbb);
+  builder_.add_addr(addr);
+  builder_.add_member_id(member_id);
+  return builder_.Finish();
+}
 
 struct BinAttr FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef BinAttrBuilder Builder;
@@ -549,15 +743,11 @@ struct GroupConfig FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef GroupConfigBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SLOTNUM = 4,
-    VT_WITHLABEL = 6,
-    VT_LABEL = 8,
-    VT_WITHPASSWORD = 10
+    VT_LABEL = 6,
+    VT_WITHPASSWORD = 8
   };
   uint32_t slotNum() const {
     return GetField<uint32_t>(VT_SLOTNUM, 0);
-  }
-  bool withLabel() const {
-    return GetField<uint8_t>(VT_WITHLABEL, 0) != 0;
   }
   const ::flatbuffers::Vector<uint8_t> *label() const {
     return GetPointer<const ::flatbuffers::Vector<uint8_t> *>(VT_LABEL);
@@ -568,7 +758,6 @@ struct GroupConfig FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_SLOTNUM, 4) &&
-           VerifyField<uint8_t>(verifier, VT_WITHLABEL, 1) &&
            VerifyOffset(verifier, VT_LABEL) &&
            verifier.VerifyVector(label()) &&
            VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
@@ -582,9 +771,6 @@ struct GroupConfigBuilder {
   ::flatbuffers::uoffset_t start_;
   void add_slotNum(uint32_t slotNum) {
     fbb_.AddElement<uint32_t>(GroupConfig::VT_SLOTNUM, slotNum, 0);
-  }
-  void add_withLabel(bool withLabel) {
-    fbb_.AddElement<uint8_t>(GroupConfig::VT_WITHLABEL, static_cast<uint8_t>(withLabel), 0);
   }
   void add_label(::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> label) {
     fbb_.AddOffset(GroupConfig::VT_LABEL, label);
@@ -606,28 +792,24 @@ struct GroupConfigBuilder {
 inline ::flatbuffers::Offset<GroupConfig> CreateGroupConfig(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t slotNum = 0,
-    bool withLabel = false,
     ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> label = 0,
     bool withPassword = false) {
   GroupConfigBuilder builder_(_fbb);
   builder_.add_label(label);
   builder_.add_slotNum(slotNum);
   builder_.add_withPassword(withPassword);
-  builder_.add_withLabel(withLabel);
   return builder_.Finish();
 }
 
 inline ::flatbuffers::Offset<GroupConfig> CreateGroupConfigDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t slotNum = 0,
-    bool withLabel = false,
     const std::vector<uint8_t> *label = nullptr,
     bool withPassword = false) {
   auto label__ = label ? _fbb.CreateVector<uint8_t>(*label) : 0;
   return CreateGroupConfig(
       _fbb,
       slotNum,
-      withLabel,
       label__,
       withPassword);
 }
@@ -854,19 +1036,15 @@ struct RoomGroup FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_GROUPID = 4,
     VT_WITHPASSWORD = 6,
-    VT_WITHLABEL = 8,
-    VT_LABEL = 10,
-    VT_SLOTNUM = 12,
-    VT_CURGROUPMEMBERNUM = 14
+    VT_LABEL = 8,
+    VT_SLOTNUM = 10,
+    VT_CURGROUPMEMBERNUM = 12
   };
   uint8_t groupId() const {
     return GetField<uint8_t>(VT_GROUPID, 0);
   }
   bool withPassword() const {
     return GetField<uint8_t>(VT_WITHPASSWORD, 0) != 0;
-  }
-  bool withLabel() const {
-    return GetField<uint8_t>(VT_WITHLABEL, 0) != 0;
   }
   const ::flatbuffers::Vector<uint8_t> *label() const {
     return GetPointer<const ::flatbuffers::Vector<uint8_t> *>(VT_LABEL);
@@ -881,7 +1059,6 @@ struct RoomGroup FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_GROUPID, 1) &&
            VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
-           VerifyField<uint8_t>(verifier, VT_WITHLABEL, 1) &&
            VerifyOffset(verifier, VT_LABEL) &&
            verifier.VerifyVector(label()) &&
            VerifyField<uint32_t>(verifier, VT_SLOTNUM, 4) &&
@@ -899,9 +1076,6 @@ struct RoomGroupBuilder {
   }
   void add_withPassword(bool withPassword) {
     fbb_.AddElement<uint8_t>(RoomGroup::VT_WITHPASSWORD, static_cast<uint8_t>(withPassword), 0);
-  }
-  void add_withLabel(bool withLabel) {
-    fbb_.AddElement<uint8_t>(RoomGroup::VT_WITHLABEL, static_cast<uint8_t>(withLabel), 0);
   }
   void add_label(::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> label) {
     fbb_.AddOffset(RoomGroup::VT_LABEL, label);
@@ -927,7 +1101,6 @@ inline ::flatbuffers::Offset<RoomGroup> CreateRoomGroup(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint8_t groupId = 0,
     bool withPassword = false,
-    bool withLabel = false,
     ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> label = 0,
     uint32_t slotNum = 0,
     uint32_t curGroupMemberNum = 0) {
@@ -935,7 +1108,6 @@ inline ::flatbuffers::Offset<RoomGroup> CreateRoomGroup(
   builder_.add_curGroupMemberNum(curGroupMemberNum);
   builder_.add_slotNum(slotNum);
   builder_.add_label(label);
-  builder_.add_withLabel(withLabel);
   builder_.add_withPassword(withPassword);
   builder_.add_groupId(groupId);
   return builder_.Finish();
@@ -945,7 +1117,6 @@ inline ::flatbuffers::Offset<RoomGroup> CreateRoomGroupDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint8_t groupId = 0,
     bool withPassword = false,
-    bool withLabel = false,
     const std::vector<uint8_t> *label = nullptr,
     uint32_t slotNum = 0,
     uint32_t curGroupMemberNum = 0) {
@@ -954,7 +1125,6 @@ inline ::flatbuffers::Offset<RoomGroup> CreateRoomGroupDirect(
       _fbb,
       groupId,
       withPassword,
-      withLabel,
       label__,
       slotNum,
       curGroupMemberNum);
@@ -1565,16 +1735,15 @@ struct RoomGroupPasswordConfig FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::
     VT_GROUPID = 4,
     VT_WITHPASSWORD = 6
   };
-  const ::flatbuffers::Vector<uint8_t> *groupId() const {
-    return GetPointer<const ::flatbuffers::Vector<uint8_t> *>(VT_GROUPID);
+  uint8_t groupId() const {
+    return GetField<uint8_t>(VT_GROUPID, 0);
   }
   bool withPassword() const {
     return GetField<uint8_t>(VT_WITHPASSWORD, 0) != 0;
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_GROUPID) &&
-           verifier.VerifyVector(groupId()) &&
+           VerifyField<uint8_t>(verifier, VT_GROUPID, 1) &&
            VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
            verifier.EndTable();
   }
@@ -1584,8 +1753,8 @@ struct RoomGroupPasswordConfigBuilder {
   typedef RoomGroupPasswordConfig Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_groupId(::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> groupId) {
-    fbb_.AddOffset(RoomGroupPasswordConfig::VT_GROUPID, groupId);
+  void add_groupId(uint8_t groupId) {
+    fbb_.AddElement<uint8_t>(RoomGroupPasswordConfig::VT_GROUPID, groupId, 0);
   }
   void add_withPassword(bool withPassword) {
     fbb_.AddElement<uint8_t>(RoomGroupPasswordConfig::VT_WITHPASSWORD, static_cast<uint8_t>(withPassword), 0);
@@ -1603,23 +1772,12 @@ struct RoomGroupPasswordConfigBuilder {
 
 inline ::flatbuffers::Offset<RoomGroupPasswordConfig> CreateRoomGroupPasswordConfig(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> groupId = 0,
+    uint8_t groupId = 0,
     bool withPassword = false) {
   RoomGroupPasswordConfigBuilder builder_(_fbb);
-  builder_.add_groupId(groupId);
   builder_.add_withPassword(withPassword);
+  builder_.add_groupId(groupId);
   return builder_.Finish();
-}
-
-inline ::flatbuffers::Offset<RoomGroupPasswordConfig> CreateRoomGroupPasswordConfigDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<uint8_t> *groupId = nullptr,
-    bool withPassword = false) {
-  auto groupId__ = groupId ? _fbb.CreateVector<uint8_t>(*groupId) : 0;
-  return CreateRoomGroupPasswordConfig(
-      _fbb,
-      groupId__,
-      withPassword);
 }
 
 struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
@@ -2248,6 +2406,71 @@ inline ::flatbuffers::Offset<JoinRoomRequest> CreateJoinRoomRequestDirect(
       roomMemberBinAttrInternal__,
       optData,
       teamId);
+}
+
+struct JoinRoomResponse FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef JoinRoomResponseBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROOM_DATA = 4,
+    VT_SIGNALING_DATA = 6
+  };
+  const RoomDataInternal *room_data() const {
+    return GetPointer<const RoomDataInternal *>(VT_ROOM_DATA);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<Matching2SignalingInfo>> *signaling_data() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Matching2SignalingInfo>> *>(VT_SIGNALING_DATA);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_ROOM_DATA) &&
+           verifier.VerifyTable(room_data()) &&
+           VerifyOffset(verifier, VT_SIGNALING_DATA) &&
+           verifier.VerifyVector(signaling_data()) &&
+           verifier.VerifyVectorOfTables(signaling_data()) &&
+           verifier.EndTable();
+  }
+};
+
+struct JoinRoomResponseBuilder {
+  typedef JoinRoomResponse Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_room_data(::flatbuffers::Offset<RoomDataInternal> room_data) {
+    fbb_.AddOffset(JoinRoomResponse::VT_ROOM_DATA, room_data);
+  }
+  void add_signaling_data(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Matching2SignalingInfo>>> signaling_data) {
+    fbb_.AddOffset(JoinRoomResponse::VT_SIGNALING_DATA, signaling_data);
+  }
+  explicit JoinRoomResponseBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<JoinRoomResponse> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<JoinRoomResponse>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<JoinRoomResponse> CreateJoinRoomResponse(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<RoomDataInternal> room_data = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Matching2SignalingInfo>>> signaling_data = 0) {
+  JoinRoomResponseBuilder builder_(_fbb);
+  builder_.add_signaling_data(signaling_data);
+  builder_.add_room_data(room_data);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<JoinRoomResponse> CreateJoinRoomResponseDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<RoomDataInternal> room_data = 0,
+    const std::vector<::flatbuffers::Offset<Matching2SignalingInfo>> *signaling_data = nullptr) {
+  auto signaling_data__ = signaling_data ? _fbb.CreateVector<::flatbuffers::Offset<Matching2SignalingInfo>>(*signaling_data) : 0;
+  return CreateJoinRoomResponse(
+      _fbb,
+      room_data,
+      signaling_data__);
 }
 
 struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
@@ -2992,6 +3215,69 @@ inline ::flatbuffers::Offset<RoomMemberUpdateInfo> CreateRoomMemberUpdateInfo(
   builder_.add_optData(optData);
   builder_.add_roomMemberDataInternal(roomMemberDataInternal);
   builder_.add_eventCause(eventCause);
+  return builder_.Finish();
+}
+
+struct NotificationUserJoinedRoom FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef NotificationUserJoinedRoomBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROOM_ID = 4,
+    VT_UPDATE_INFO = 6,
+    VT_SIGNALING = 8
+  };
+  uint64_t room_id() const {
+    return GetField<uint64_t>(VT_ROOM_ID, 0);
+  }
+  const RoomMemberUpdateInfo *update_info() const {
+    return GetPointer<const RoomMemberUpdateInfo *>(VT_UPDATE_INFO);
+  }
+  const SignalingAddr *signaling() const {
+    return GetPointer<const SignalingAddr *>(VT_SIGNALING);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_ROOM_ID, 8) &&
+           VerifyOffset(verifier, VT_UPDATE_INFO) &&
+           verifier.VerifyTable(update_info()) &&
+           VerifyOffset(verifier, VT_SIGNALING) &&
+           verifier.VerifyTable(signaling()) &&
+           verifier.EndTable();
+  }
+};
+
+struct NotificationUserJoinedRoomBuilder {
+  typedef NotificationUserJoinedRoom Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_room_id(uint64_t room_id) {
+    fbb_.AddElement<uint64_t>(NotificationUserJoinedRoom::VT_ROOM_ID, room_id, 0);
+  }
+  void add_update_info(::flatbuffers::Offset<RoomMemberUpdateInfo> update_info) {
+    fbb_.AddOffset(NotificationUserJoinedRoom::VT_UPDATE_INFO, update_info);
+  }
+  void add_signaling(::flatbuffers::Offset<SignalingAddr> signaling) {
+    fbb_.AddOffset(NotificationUserJoinedRoom::VT_SIGNALING, signaling);
+  }
+  explicit NotificationUserJoinedRoomBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<NotificationUserJoinedRoom> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<NotificationUserJoinedRoom>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<NotificationUserJoinedRoom> CreateNotificationUserJoinedRoom(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t room_id = 0,
+    ::flatbuffers::Offset<RoomMemberUpdateInfo> update_info = 0,
+    ::flatbuffers::Offset<SignalingAddr> signaling = 0) {
+  NotificationUserJoinedRoomBuilder builder_(_fbb);
+  builder_.add_room_id(room_id);
+  builder_.add_signaling(signaling);
+  builder_.add_update_info(update_info);
   return builder_.Finish();
 }
 

@@ -7,6 +7,7 @@
 #include "Emu/NP/np_structs_extra.h"
 #include "Emu/NP/fb_helpers.h"
 #include "Emu/NP/signaling_handler.h"
+#include "Emu/NP/ip_address.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -15,8 +16,7 @@ namespace np
 	void np_handler::notif_user_joined_room(std::vector<u8>& data)
 	{
 		vec_stream noti(data);
-		u64 room_id       = noti.get<u64>();
-		const auto* update_info = noti.get_flatbuffer<RoomMemberUpdateInfo>();
+		const auto* notification = noti.get_flatbuffer<NotificationUserJoinedRoom>();
 
 		if (noti.is_error())
 		{
@@ -24,19 +24,43 @@ namespace np
 			return;
 		}
 
+		ensure(notification->update_info());
+
 		const u32 event_key = get_event_key();
-		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
+		const auto room_id = notification->room_id();
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
-		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
+		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, notification->update_info(), notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		// Ensures we do not call the callback if the room is not in the cache(ie we left the room already)
 		if (!np_cache.add_member(room_id, notif_data->roomMemberDataInternal.get_ptr()))
+		{
+			get_match2_event(event_key, 0, 0);
 			return;
+		}
 
 		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
+
+		// We initiate signaling if necessary
+		if (const auto* signaling_info = notification->signaling())
+		{
+			const u32 addr_p2p = register_ip(signaling_info->ip());
+			const u16 port_p2p = signaling_info->port();
+
+			const u16 member_id = notif_data->roomMemberDataInternal->memberId;
+			const SceNpId& npid = notif_data->roomMemberDataInternal->userInfo.npId;
+
+			rpcn_log.notice("Join notification told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid.handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
+
+			// Attempt Signaling
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			const u32 conn_id = sigh.init_sig2(npid, room_id, member_id);
+			sigh.start_sig(conn_id, addr_p2p, port_p2p);
+		}
 
 		if (room_event_cb)
 		{
@@ -68,8 +92,12 @@ namespace np
 		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		// Ensures we do not call the callback if the room is not in the cache(ie we left the room already)
 		if (!np_cache.del_member(room_id, notif_data->roomMemberDataInternal->memberId))
+		{
+			get_match2_event(event_key, 0, 0);
 			return;
+		}
 
 		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
@@ -175,7 +203,10 @@ namespace np
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		if (!np_cache.add_member(room_id, notif_data->newRoomMemberDataInternal.get_ptr()))
+		{
+			get_match2_event(event_key, 0, 0);
 			return;
+		}
 
 		rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", notif_data->newRoomMemberDataInternal->userInfo.npId.handle.data, notif_data->newRoomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->newRoomMemberDataInternal.get_ptr());
@@ -223,33 +254,7 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_p2p_connect(std::vector<u8>& data)
-	{
-		vec_stream noti(data);
-		const u64 room_id = noti.get<u64>();
-		const u16 member_id = noti.get<u16>();
-		const u16 port_p2p = noti.get<u16>();
-		const u32 addr_p2p = noti.get<u32>();
-
-		if (noti.is_error())
-		{
-			rpcn_log.error("Received faulty SignalP2PConnect notification");
-			return;
-		}
-
-		auto [res, npid] = np_cache.get_npid(room_id, member_id);
-		if (!npid)
-			return;
-
-		rpcn_log.notice("Received notification to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>((*npid).handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
-
-		// Attempt Signaling
-		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		const u32 conn_id = sigh.init_sig2(*npid, room_id, member_id);
-		sigh.start_sig(conn_id, addr_p2p, port_p2p);
-	}
-
-	void np_handler::notif_signaling_info(std::vector<u8>& data)
+	void np_handler::notif_signaling_helper(std::vector<u8>& data)
 	{
 		vec_stream noti(data);
 		const u32 addr_p2p = noti.get<u32>();
@@ -258,7 +263,7 @@ namespace np
 
 		if (noti.is_error())
 		{
-			rpcn_log.error("Received faulty SignalingInfo notification");
+			rpcn_log.error("Received faulty SignalingHelper notification");
 			return;
 		}
 

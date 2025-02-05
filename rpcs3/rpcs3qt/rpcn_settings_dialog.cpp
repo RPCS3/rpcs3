@@ -7,12 +7,14 @@
 #include <QGroupBox>
 #include <QMenu>
 #include <QDialogButtonBox>
+#include <QCheckBox>
 
 #include "qt_utils.h"
 
 #include "rpcn_settings_dialog.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/NP/ip_address.h"
 
 #include <wolfssl/ssl.h>
 #include <wolfssl/openssl/evp.h>
@@ -160,6 +162,9 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
+	QCheckBox* checkbox_disable_ipv6 = new QCheckBox("Disable IPv6");
+	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
+
 	const auto update_npid_label = [label_npid]()
 	{
 		const std::string npid = g_cfg_rpcn.get_npid();
@@ -178,6 +183,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_buttons->setLayout(vbox_buttons);
 
 	vbox_global->addWidget(grp_buttons);
+	vbox_global->addWidget(checkbox_disable_ipv6);
 
 	setLayout(vbox_global);
 
@@ -193,6 +199,10 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			g_cfg_rpcn.set_host(host.toString().toStdString());
 			g_cfg_rpcn.save();
+
+			// Resets the state in case the support was limited by the RPCN server
+			if (!np::is_ipv6_supported())
+				np::is_ipv6_supported(np::IPV6_SUPPORT::IPV6_UNKNOWN);
 		});
 
 	connect(btn_add_server, &QAbstractButton::clicked, this, [this]()
@@ -333,6 +343,12 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
+	
+	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
+	{
+		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
+		g_cfg_rpcn.save();
+	});
 }
 
 void rpcn_account_dialog::refresh_combobox()

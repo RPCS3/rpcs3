@@ -10,7 +10,8 @@
 
 #include "Emu/Cell/lv2/sys_net/nt_p2p_port.h"
 
-s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr);
+bool send_packet_from_p2p_port_ipv4(const std::vector<u8>& data, const sockaddr_in& addr);
+bool send_packet_from_p2p_port_ipv6(const std::vector<u8>& data, const sockaddr_in6& addr);
 std::vector<signaling_message> get_sign_msgs();
 std::vector<std::vector<u8>> get_rpcn_msgs();
 
