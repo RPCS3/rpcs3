@@ -23,7 +23,6 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <poll.h>
 #ifdef __clang__
 #pragma GCC diagnostic pop

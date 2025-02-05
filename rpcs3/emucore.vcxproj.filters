@@ -1029,6 +1029,9 @@
     <ClCompile Include="Emu\NP\rpcn_client.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\ip_address.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_config.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
@@ -2681,6 +2684,9 @@
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_gui_cache.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\ip_address.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXDrawCommands.h">

@@ -156,7 +156,7 @@ void sendmessage_dialog_frame::slot_remove_friend(QString name)
 	remove_friend(m_lst_friends, name);
 }
 
-void sendmessage_dialog_frame::callback_handler(u16 ntype, const std::string& username, bool status)
+void sendmessage_dialog_frame::callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status)
 {
 	QString qtr_username = QString::fromStdString(username);
 	switch (ntype)

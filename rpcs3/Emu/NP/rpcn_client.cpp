@@ -1,3 +1,5 @@
+#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
+#include "Emu/NP/ip_address.h"
 #include "stdafx.h"
 #include <string>
 #include <mutex>
@@ -5,6 +7,7 @@
 #include <chrono>
 #include "rpcn_client.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/StrFmt.h"
 #include "Utilities/Thread.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
@@ -41,6 +44,160 @@
 LOG_CHANNEL(rpcn_log, "rpcn");
 
 int get_native_error();
+
+template <>
+void fmt_class_string<rpcn::ErrorType>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case rpcn::ErrorType::NoError: return "NoError";
+			case rpcn::ErrorType::Malformed: return "Malformed";
+			case rpcn::ErrorType::Invalid: return "Invalid";
+			case rpcn::ErrorType::InvalidInput: return "InvalidInput";
+			case rpcn::ErrorType::TooSoon: return "TooSoon";
+			case rpcn::ErrorType::LoginError: return "LoginError";
+			case rpcn::ErrorType::LoginAlreadyLoggedIn: return "LoginAlreadyLoggedIn";
+			case rpcn::ErrorType::LoginInvalidUsername: return "LoginInvalidUsername";
+			case rpcn::ErrorType::LoginInvalidPassword: return "LoginInvalidPassword";
+			case rpcn::ErrorType::LoginInvalidToken: return "LoginInvalidToken";
+			case rpcn::ErrorType::CreationError: return "CreationError";
+			case rpcn::ErrorType::CreationExistingUsername: return "CreationExistingUsername";
+			case rpcn::ErrorType::CreationBannedEmailProvider: return "CreationBannedEmailProvider";
+			case rpcn::ErrorType::CreationExistingEmail: return "CreationExistingEmail";
+			case rpcn::ErrorType::RoomMissing: return "RoomMissing";
+			case rpcn::ErrorType::RoomAlreadyJoined: return "RoomAlreadyJoined";
+			case rpcn::ErrorType::RoomFull: return "RoomFull";
+			case rpcn::ErrorType::RoomPasswordMismatch: return "RoomPasswordMismatch";
+			case rpcn::ErrorType::RoomPasswordMissing: return "RoomPasswordMissing";
+			case rpcn::ErrorType::RoomGroupNoJoinLabel: return "RoomGroupNoJoinLabel";
+			case rpcn::ErrorType::RoomGroupFull: return "RoomGroupFull";
+			case rpcn::ErrorType::RoomGroupJoinLabelNotFound: return "RoomGroupJoinLabelNotFound";
+			case rpcn::ErrorType::RoomGroupMaxSlotMismatch: return "RoomGroupMaxSlotMismatch";
+			case rpcn::ErrorType::Unauthorized: return "Unauthorized";
+			case rpcn::ErrorType::DbFail: return "DbFail";
+			case rpcn::ErrorType::EmailFail: return "EmailFail";
+			case rpcn::ErrorType::NotFound: return "NotFound";
+			case rpcn::ErrorType::Blocked: return "Blocked";
+			case rpcn::ErrorType::AlreadyFriend: return "AlreadyFriend";
+			case rpcn::ErrorType::ScoreNotBest: return "ScoreNotBest";
+			case rpcn::ErrorType::ScoreInvalid: return "ScoreInvalid";
+			case rpcn::ErrorType::ScoreHasData: return "ScoreHasData";
+			case rpcn::ErrorType::CondFail: return "CondFail";
+			case rpcn::ErrorType::Unsupported: return "Unsupported";
+			default: break;
+			}
+
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case rpcn::CommandType::Login: return "Login";
+			case rpcn::CommandType::Terminate: return "Terminate";
+			case rpcn::CommandType::Create: return "Create";
+			case rpcn::CommandType::SendToken: return "SendToken";
+			case rpcn::CommandType::SendResetToken: return "SendResetToken";
+			case rpcn::CommandType::ResetPassword: return "ResetPassword";
+			case rpcn::CommandType::ResetState: return "ResetState";
+			case rpcn::CommandType::AddFriend: return "AddFriend";
+			case rpcn::CommandType::RemoveFriend: return "RemoveFriend";
+			case rpcn::CommandType::AddBlock: return "AddBlock";
+			case rpcn::CommandType::RemoveBlock: return "RemoveBlock";
+			case rpcn::CommandType::GetServerList: return "GetServerList";
+			case rpcn::CommandType::GetWorldList: return "GetWorldList";
+			case rpcn::CommandType::CreateRoom: return "CreateRoom";
+			case rpcn::CommandType::JoinRoom: return "JoinRoom";
+			case rpcn::CommandType::LeaveRoom: return "LeaveRoom";
+			case rpcn::CommandType::SearchRoom: return "SearchRoom";
+			case rpcn::CommandType::GetRoomDataExternalList: return "GetRoomDataExternalList";
+			case rpcn::CommandType::SetRoomDataExternal: return "SetRoomDataExternal";
+			case rpcn::CommandType::GetRoomDataInternal: return "GetRoomDataInternal";
+			case rpcn::CommandType::SetRoomDataInternal: return "SetRoomDataInternal";
+			case rpcn::CommandType::GetRoomMemberDataInternal: return "GetRoomMemberDataInternal";
+			case rpcn::CommandType::SetRoomMemberDataInternal: return "SetRoomMemberDataInternal";
+			case rpcn::CommandType::SetUserInfo: return "SetUserInfo";
+			case rpcn::CommandType::PingRoomOwner: return "PingRoomOwner";
+			case rpcn::CommandType::SendRoomMessage: return "SendRoomMessage";
+			case rpcn::CommandType::RequestSignalingInfos: return "RequestSignalingInfos";
+			case rpcn::CommandType::RequestTicket: return "RequestTicket";
+			case rpcn::CommandType::SendMessage: return "SendMessage";
+			case rpcn::CommandType::GetBoardInfos: return "GetBoardInfos";
+			case rpcn::CommandType::RecordScore: return "RecordScore";
+			case rpcn::CommandType::RecordScoreData: return "RecordScoreData";
+			case rpcn::CommandType::GetScoreData: return "GetScoreData";
+			case rpcn::CommandType::GetScoreRange: return "GetScoreRange";
+			case rpcn::CommandType::GetScoreFriends: return "GetScoreFriends";
+			case rpcn::CommandType::GetScoreNpid: return "GetScoreNpid";
+			case rpcn::CommandType::GetNetworkTime: return "GetNetworkTime";
+			case rpcn::CommandType::TusSetMultiSlotVariable: return "TusSetMultiSlotVariable";
+			case rpcn::CommandType::TusGetMultiSlotVariable: return "TusGetMultiSlotVariable";
+			case rpcn::CommandType::TusGetMultiUserVariable: return "TusGetMultiUserVariable";
+			case rpcn::CommandType::TusGetFriendsVariable: return "TusGetFriendsVariable";
+			case rpcn::CommandType::TusAddAndGetVariable: return "TusAddAndGetVariable";
+			case rpcn::CommandType::TusTryAndSetVariable: return "TusTryAndSetVariable";
+			case rpcn::CommandType::TusDeleteMultiSlotVariable: return "TusDeleteMultiSlotVariable";
+			case rpcn::CommandType::TusSetData: return "TusSetData";
+			case rpcn::CommandType::TusGetData: return "TusGetData";
+			case rpcn::CommandType::TusGetMultiSlotDataStatus: return "TusGetMultiSlotDataStatus";
+			case rpcn::CommandType::TusGetMultiUserDataStatus: return "TusGetMultiUserDataStatus";
+			case rpcn::CommandType::TusGetFriendsDataStatus: return "TusGetFriendsDataStatus";
+			case rpcn::CommandType::TusDeleteMultiSlotData: return "TusDeleteMultiSlotData";
+			case rpcn::CommandType::SetPresence: return "SetPresence";
+			case rpcn::CommandType::CreateRoomGUI: return "CreateRoomGUI";
+			case rpcn::CommandType::JoinRoomGUI: return "JoinRoomGUI";
+			case rpcn::CommandType::LeaveRoomGUI: return "LeaveRoomGUI";
+			case rpcn::CommandType::GetRoomListGUI: return "GetRoomListGUI";
+			case rpcn::CommandType::SetRoomSearchFlagGUI: return "SetRoomSearchFlagGUI";
+			case rpcn::CommandType::GetRoomSearchFlagGUI: return "GetRoomSearchFlagGUI";
+			case rpcn::CommandType::SetRoomInfoGUI: return "SetRoomInfoGUI";
+			case rpcn::CommandType::GetRoomInfoGUI: return "GetRoomInfoGUI";
+			case rpcn::CommandType::QuickMatchGUI: return "QuickMatchGUI";
+			case rpcn::CommandType::SearchJoinRoomGUI: return "SearchJoinRoomGUI";
+			}
+
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<rpcn::NotificationType>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case rpcn::NotificationType::UserJoinedRoom: return "UserJoinedRoom";
+			case rpcn::NotificationType::UserLeftRoom: return "UserLeftRoom";
+			case rpcn::NotificationType::RoomDestroyed: return "RoomDestroyed";
+			case rpcn::NotificationType::UpdatedRoomDataInternal: return "UpdatedRoomDataInternal";
+			case rpcn::NotificationType::UpdatedRoomMemberDataInternal: return "UpdatedRoomMemberDataInternal";
+			case rpcn::NotificationType::FriendQuery: return "FriendQuery";
+			case rpcn::NotificationType::FriendNew: return "FriendNew";
+			case rpcn::NotificationType::FriendLost: return "FriendLost";
+			case rpcn::NotificationType::FriendStatus: return "FriendStatus";
+			case rpcn::NotificationType::RoomMessageReceived: return "RoomMessageReceived";
+			case rpcn::NotificationType::MessageReceived: return "MessageReceived";
+			case rpcn::NotificationType::FriendPresenceChanged: return "FriendPresenceChanged";
+			case rpcn::NotificationType::SignalingHelper: return "SignalingHelper";
+			case rpcn::NotificationType::MemberJoinedRoomGUI: return "MemberJoinedRoomGUI";
+			case rpcn::NotificationType::MemberLeftRoomGUI: return "MemberLeftRoomGUI";
+			case rpcn::NotificationType::RoomDisappearedGUI: return "RoomDisappearedGUI";
+			case rpcn::NotificationType::RoomOwnerChangedGUI: return "RoomOwnerChangedGUI";
+			case rpcn::NotificationType::UserKickedGUI: return "UserKickedGUI";
+			case rpcn::NotificationType::QuickMatchCompleteGUI: return "QuickMatchCompleteGUI";
+			}
+
+			return unknown;
+		});
+}
 
 void vec_stream::dump() const
 {
@@ -99,51 +256,64 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 25;
-	constexpr usz RPCN_HEADER_SIZE      = 15;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 26;
+	constexpr usz RPCN_HEADER_SIZE = 15;
 
-	bool is_error(ErrorType err)
+	const char* error_to_explanation(rpcn::ErrorType error)
 	{
-		if (err >= ErrorType::__error_last)
+		switch (error)
 		{
-			rpcn_log.error("Invalid error returned!");
-			return true;
+		case rpcn::ErrorType::NoError: return "No error";
+		case rpcn::ErrorType::Malformed: return "Sent packet was malformed!";
+		case rpcn::ErrorType::Invalid: return "Sent command was invalid!";
+		case rpcn::ErrorType::InvalidInput: return "Sent data was invalid!";
+		case rpcn::ErrorType::TooSoon: return "Request happened too soon!";
+		case rpcn::ErrorType::LoginError: return "Unknown login error!";
+		case rpcn::ErrorType::LoginAlreadyLoggedIn: return "User is already logged in!";
+		case rpcn::ErrorType::LoginInvalidUsername: return "Login error: invalid username!";
+		case rpcn::ErrorType::LoginInvalidPassword: return "Login error: invalid password!";
+		case rpcn::ErrorType::LoginInvalidToken: return "Login error: invalid token!";
+		case rpcn::ErrorType::CreationError: return "Error creating an account!";
+		case rpcn::ErrorType::CreationExistingUsername: return "Error creating an account: existing username!";
+		case rpcn::ErrorType::CreationBannedEmailProvider: return "Error creating an account: banned email provider!";
+		case rpcn::ErrorType::CreationExistingEmail: return "Error creating an account: an account with that email already exist!";
+		case rpcn::ErrorType::RoomMissing: return "User tried to join a non-existent room!";
+		case rpcn::ErrorType::RoomAlreadyJoined: return "User has already joined!";
+		case rpcn::ErrorType::RoomFull: return "User tried to join a full room!";
+		case rpcn::ErrorType::RoomPasswordMismatch: return "Room password used was invalid";
+		case rpcn::ErrorType::RoomPasswordMissing: return "Room password was missing during room creation";
+		case rpcn::ErrorType::RoomGroupNoJoinLabel: return "Tried to join a group room without a label";
+		case rpcn::ErrorType::RoomGroupFull: return "Room group is full";
+		case rpcn::ErrorType::RoomGroupJoinLabelNotFound: return "Join label was invalid";
+		case rpcn::ErrorType::RoomGroupMaxSlotMismatch: return "Mismatch between max_slot and the listed slots in groups";
+		case rpcn::ErrorType::Unauthorized: return "User attempted an unauthorized operation!";
+		case rpcn::ErrorType::DbFail: return "A db query failed on the server!";
+		case rpcn::ErrorType::EmailFail: return "An email action failed on the server!";
+		case rpcn::ErrorType::NotFound: return "A request replied not found!";
+		case rpcn::ErrorType::Blocked: return "You're blocked!";
+		case rpcn::ErrorType::AlreadyFriend: return "You're already friends!";
+		case rpcn::ErrorType::ScoreNotBest: return "Attempted to register a score that is not better!";
+		case rpcn::ErrorType::ScoreInvalid: return "Score for player was found but wasn't what was expected!";
+		case rpcn::ErrorType::ScoreHasData: return "Score already has game data associated with it!";
+		case rpcn::ErrorType::CondFail: return "Condition related to the query failed!";
+		case rpcn::ErrorType::Unsupported: return "An unsupported operation was attempted!";
 		}
 
-		switch (err)
-		{
-		case NoError: return false;
-		case Malformed: rpcn_log.error("Sent packet was malformed!"); break;
-		case Invalid: rpcn_log.error("Sent command was invalid!"); break;
-		case InvalidInput: rpcn_log.error("Sent data was invalid!"); break;
-		case TooSoon: rpcn_log.error("Request happened too soon!"); break;
-		case LoginError: rpcn_log.error("Unknown login error!"); break;
-		case LoginAlreadyLoggedIn: rpcn_log.error("User is already logged in!"); break;
-		case LoginInvalidUsername: rpcn_log.error("Login error: invalid username!"); break;
-		case LoginInvalidPassword: rpcn_log.error("Login error: invalid password!"); break;
-		case LoginInvalidToken: rpcn_log.error("Login error: invalid token!"); break;
-		case CreationError: rpcn_log.error("Error creating an account!"); break;
-		case CreationExistingUsername: rpcn_log.error("Error creating an account: existing username!"); break;
-		case CreationBannedEmailProvider: rpcn_log.error("Error creating an account: banned email provider!"); break;
-		case CreationExistingEmail: rpcn_log.error("Error creating an account: an account with that email already exist!"); break;
-		case RoomMissing: rpcn_log.error("User tried to join a non-existent room!"); break;
-		case RoomAlreadyJoined: rpcn_log.error("User has already joined!"); break;
-		case RoomFull: rpcn_log.error("User tried to join a full room!"); break;
-		case Unauthorized: rpcn_log.error("User attempted an unauthorized operation!"); break;
-		case DbFail: rpcn_log.error("A db query failed on the server!"); break;
-		case EmailFail: rpcn_log.error("An email action failed on the server!"); break;
-		case NotFound: rpcn_log.error("A request replied not found!"); break;
-		case Blocked: rpcn_log.error("You're blocked!"); break;
-		case AlreadyFriend: rpcn_log.error("You're already friends!"); break;
-		case ScoreNotBest: rpcn_log.error("Attempted to register a score that is not better!"); break;
-		case ScoreInvalid: rpcn_log.error("Score for player was found but wasn't what was expected!"); break;
-		case ScoreHasData: rpcn_log.error("Score already has game data associated with it!"); break;
-		case CondFail: rpcn_log.error("Condition related to the query failed!"); break;
-		case Unsupported: rpcn_log.error("An unsupported operation was attempted!"); break;
-		default: rpcn_log.fatal("Unhandled ErrorType reached the switch?"); break;
-		}
+		fmt::throw_exception("Unknown error returned: %d", static_cast<u8>(error));
+	}
 
-		return true;
+	void print_error(rpcn::CommandType command, rpcn::ErrorType error)
+	{
+		const std::string error_message = fmt::format("command: %s result: %s, explanation: %s", command, error, error_to_explanation(error));
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			rpcn_log.trace("%s", error_message);
+		}
+		else
+		{
+			rpcn_log.warning("%s", error_message);
+		}
 	}
 
 	// Constructor, destructor & singleton manager
@@ -267,6 +437,10 @@ namespace rpcn
 	{
 		thread_base::set_name("RPCN Client");
 
+		// UDP Signaling related
+		steady_clock::time_point last_ping_time_ipv4{}, last_pong_time_ipv4{};
+		steady_clock::time_point last_ping_time_ipv6{}, last_pong_time_ipv6{};
+
 		while (true)
 		{
 			sem_rpcn.acquire();
@@ -321,16 +495,15 @@ namespace rpcn
 				if (authentified && !Emu.IsStopped())
 				{
 					// Ping the UDP Signaling Server if we're authentified & ingame
-					auto now = steady_clock::now();
-
-					auto rpcn_msgs = get_rpcn_msgs();
+					const auto now = steady_clock::now();
+					const auto rpcn_msgs = get_rpcn_msgs();
 
 					for (const auto& msg : rpcn_msgs)
 					{
 						if (msg.size() == 6)
 						{
 							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							const u32 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u16 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
 							const u32 old_addr_sig = addr_sig;
 							const u32 old_port_sig = port_sig;
 
@@ -352,7 +525,16 @@ namespace rpcn
 								}
 							}
 
-							last_pong_time = now;
+							last_pong_time_ipv4 = now;
+						}
+						else if (msg.size() == 18)
+						{
+							// We don't really need ipv6 info stored so we just update the pong data
+							// std::array<u8, 16> new_ipv6_addr;
+							// std::memcpy(new_ipv6_addr.data(), &msg[3], 16);
+							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(&msg[16]);
+
+							last_pong_time_ipv6 = now;
 						}
 						else
 						{
@@ -360,36 +542,64 @@ namespace rpcn
 						}
 					}
 
-					// Send a packet every 5 seconds and then every 500 ms until reply is received
-					if (now - last_pong_time >= 5s && now - last_ping_time > 500ms)
+					const std::chrono::nanoseconds time_since_last_ipv4_ping = now - last_ping_time_ipv4;
+					const std::chrono::nanoseconds time_since_last_ipv4_pong = now - last_pong_time_ipv4;
+					const std::chrono::nanoseconds time_since_last_ipv6_ping = now - last_ping_time_ipv6;
+					const std::chrono::nanoseconds time_since_last_ipv6_pong = now - last_pong_time_ipv6;
+
+					auto forge_ping_packet = [&]() -> std::vector<u8>
 					{
 						std::vector<u8> ping(13);
-						ping[0]                               = 1;
+						ping[0] = 1;
 						write_to_ptr<le_t<s64>>(ping, 1, user_id);
 						write_to_ptr<be_t<u32>>(ping, 9, +local_addr_sig);
-						if (send_packet_from_p2p_port(ping, addr_rpcn_udp) == -1)
-						{
-							rpcn_log.error("Failed to send ping to RPCN!");
-						}
-						last_ping_time = now;
-					}
-					else
+						return ping;
+					};
+
+					// Send a packet every 5 seconds and then every 500 ms until reply is received
+					if (time_since_last_ipv4_pong >= 5s && time_since_last_ipv4_ping > 500ms)
 					{
-						std::chrono::nanoseconds duration;
+						const auto ping = forge_ping_packet();
+
+						if (!send_packet_from_p2p_port_ipv4(ping, addr_rpcn_udp_ipv4))
+							rpcn_log.error("Failed to send IPv4 ping to RPCN!");
+
+						last_ping_time_ipv4 = now;
+						continue;
+					}
+
+					if (np::is_ipv6_supported() && time_since_last_ipv6_pong >= 5s && time_since_last_ipv6_ping > 500ms)
+					{
+						const auto ping = forge_ping_packet();
+
+						if (!send_packet_from_p2p_port_ipv6(ping, addr_rpcn_udp_ipv6))
+							rpcn_log.error("Failed to send IPv6 ping to RPCN!");
+
+						last_ping_time_ipv6 = now;
+						continue;
+					}
+
+					auto min_duration_for = [&](const auto last_ping_time, const auto last_pong_time) -> std::chrono::nanoseconds
+					{
 						if ((now - last_pong_time) < 5s)
 						{
-							duration = 5s - (now - last_pong_time);
+							return (5s - (now - last_pong_time));
 						}
 						else
 						{
-							duration = 500ms - (now - last_ping_time);
+							return (500ms - (now - last_ping_time));
 						}
+					};
 
-						if (!sem_rpcn.try_acquire_for(duration))
-						{
-							// TODO
-						}
+					auto duration = min_duration_for(last_ping_time_ipv4, last_pong_time_ipv4);
+
+					if (np::is_ipv6_supported())
+					{
+						const auto duration_ipv6 = min_duration_for(last_ping_time_ipv6, last_pong_time_ipv6);
+						duration = std::min(duration, duration_ipv6);
 					}
+
+					sem_rpcn.try_acquire_for(duration);
 				}
 			}
 		}
@@ -410,10 +620,10 @@ namespace rpcn
 		case recvn_result::recvn_terminate: return error_and_disconnect_notice("Recvn was forcefully aborted");
 		}
 
-		const u8 packet_type  = header[0];
-		const u16 command     = read_from_ptr<le_t<u16>>(&header[1]);
+		const u8 packet_type = header[0];
+		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(&header[1])));
 		const u32 packet_size = read_from_ptr<le_t<u32>>(&header[3]);
-		const u64 packet_id   = read_from_ptr<le_t<u64>>(&header[7]);
+		const u64 packet_id = read_from_ptr<le_t<u64>>(&header[7]);
 
 		if (packet_size < RPCN_HEADER_SIZE)
 			return error_and_disconnect("Invalid packet size");
@@ -434,6 +644,13 @@ namespace rpcn
 		{
 			if (data.empty())
 				return error_and_disconnect("Reply packet without result");
+
+			// Internal commands without feedback
+			if (command == CommandType::ResetState)
+			{
+				ensure(data[0] == static_cast<u8>(ErrorType::NoError));
+				break;
+			}
 
 			// Those commands are handled synchronously and won't be forwarded to NP Handler
 			if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create ||
@@ -463,7 +680,9 @@ namespace rpcn
 		}
 		case PacketType::Notification:
 		{
-			switch (command)
+			auto notif_type = static_cast<rpcn::NotificationType>(command);
+
+			switch (notif_type)
 			{
 			case NotificationType::FriendNew:
 			case NotificationType::FriendLost:
@@ -471,7 +690,7 @@ namespace rpcn
 			case NotificationType::FriendStatus:
 			case NotificationType::FriendPresenceChanged:
 			{
-				handle_friend_notification(command, std::move(data));
+				handle_friend_notification(notif_type, std::move(data));
 				break;
 			}
 			case NotificationType::MessageReceived:
@@ -482,7 +701,7 @@ namespace rpcn
 			default:
 			{
 				std::lock_guard lock(mutex_notifs);
-				notifications.emplace_back(std::make_pair(command, std::move(data)));
+				notifications.emplace_back(std::make_pair(notif_type, std::move(data)));
 				break;
 			}
 			}
@@ -493,7 +712,7 @@ namespace rpcn
 			if (data.size() != 4)
 				return error_and_disconnect("Invalid size of ServerInfo packet");
 
-			received_version     = reinterpret_cast<le_t<u32>&>(data[0]);
+			received_version = reinterpret_cast<le_t<u32>&>(data[0]);
 			server_info_received = true;
 			break;
 		}
@@ -623,7 +842,7 @@ namespace rpcn
 	bool rpcn_client::send_packet(const std::vector<u8>& packet)
 	{
 		u32 num_timeouts = 0;
-		usz n_sent       = 0;
+		usz n_sent = 0;
 		while (n_sent != packet.size())
 		{
 			if (terminate)
@@ -682,7 +901,7 @@ namespace rpcn
 
 	// Helper functions
 
-	bool rpcn_client::forge_send(u16 command, u64 packet_id, const std::vector<u8>& data)
+	bool rpcn_client::forge_send(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data)
 	{
 		// TODO: add a check for status?
 
@@ -691,7 +910,7 @@ namespace rpcn
 		return true;
 	}
 
-	bool rpcn_client::forge_send_reply(u16 command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data)
+	bool rpcn_client::forge_send_reply(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data)
 	{
 		if (!forge_send(command, packet_id, data))
 			return false;
@@ -738,8 +957,8 @@ namespace rpcn
 			sockfd = 0;
 		}
 
-		connected            = false;
-		authentified         = false;
+		connected = false;
+		authentified = false;
 		server_info_received = false;
 	}
 
@@ -811,28 +1030,63 @@ namespace rpcn
 
 			memset(&addr_rpcn, 0, sizeof(addr_rpcn));
 
-			addr_rpcn.sin_port   = std::bit_cast<u16, be_t<u16>>(port); // htons
+			addr_rpcn.sin_port = std::bit_cast<u16, be_t<u16>>(port); // htons
 			addr_rpcn.sin_family = AF_INET;
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#endif
-			hostent* host_addr = gethostbyname(splithost[0].c_str());
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-			if (!host_addr)
+			addrinfo* addr_info{};
+
+			if (getaddrinfo(splithost[0].c_str(), nullptr, nullptr, &addr_info))
 			{
-				rpcn_log.error("connect: Failed to resolve %s", host);
+				rpcn_log.error("connect: Failed to getaddrinfo %s", host);
 				state = rpcn_state::failure_resolve;
 				return false;
 			}
 
-			addr_rpcn.sin_addr.s_addr = *reinterpret_cast<u32*>(host_addr->h_addr_list[0]);
+			bool found_ipv4 = false, found_ipv6 = false;
+			addrinfo* found = addr_info;
 
-			memcpy(&addr_rpcn_udp, &addr_rpcn, sizeof(addr_rpcn_udp));
-			addr_rpcn_udp.sin_port = std::bit_cast<u16, be_t<u16>>(3657); // htons
+			while (found != nullptr)
+			{
+				switch (found->ai_family)
+				{
+				case AF_INET:
+				{
+					addr_rpcn.sin_addr = reinterpret_cast<sockaddr_in*>(found->ai_addr)->sin_addr;
+					found_ipv4 = true;
+					break;
+				}
+				case AF_INET6:
+				{
+					if (np::is_ipv6_supported())
+					{
+						addr_rpcn_udp_ipv6.sin6_family = AF_INET6;
+						addr_rpcn_udp_ipv6.sin6_port = std::bit_cast<u16, be_t<u16>>(3657);
+						addr_rpcn_udp_ipv6.sin6_addr = reinterpret_cast<sockaddr_in6*>(found->ai_addr)->sin6_addr;
+						found_ipv6 = true;
+					}
+					break;
+				}
+				default: break;
+				}
+
+				found = found->ai_next;
+			}
+
+			if (!found_ipv4)
+			{
+				rpcn_log.error("connect: Failed to find IPv4 for %s", host);
+				state = rpcn_state::failure_resolve;
+				return false;
+			}
+
+			if (np::is_ipv6_supported() && !found_ipv6)
+			{
+				rpcn_log.warning("IPv6 seems supported but no IPv6 could be found for the RPCN server, IPv6 is disabled!");
+				is_ipv6_supported(np::IPV6_SUPPORT::IPV6_UNSUPPORTED);
+			}
+
+			memcpy(&addr_rpcn_udp_ipv4, &addr_rpcn, sizeof(addr_rpcn_udp_ipv4));
+			addr_rpcn_udp_ipv4.sin_port = std::bit_cast<u16, be_t<u16>>(3657); // htons
 
 			sockfd = socket(AF_INET, SOCK_STREAM, 0);
 #ifdef _WIN32
@@ -926,10 +1180,6 @@ namespace rpcn
 		}
 
 		rpcn_log.notice("connect: Protocol version matches");
-
-		last_ping_time = steady_clock::now() - 5s;
-		last_pong_time = last_ping_time;
-
 		return true;
 	}
 
@@ -968,10 +1218,10 @@ namespace rpcn
 		}
 
 		vec_stream reply(packet_data);
-		auto error  = static_cast<ErrorType>(reply.get<u8>());
+		auto error = static_cast<ErrorType>(reply.get<u8>());
 		online_name = reply.get_string(false);
-		avatar_url  = reply.get_string(false);
-		user_id     = reply.get<s64>();
+		avatar_url = reply.get_string(false);
+		user_id = reply.get<s64>();
 
 		auto get_usernames_and_status = [](vec_stream& stream, std::map<std::string, friend_online_data>& friends)
 		{
@@ -1016,15 +1266,15 @@ namespace rpcn
 			get_usernames(reply, friend_infos.blocked);
 		}
 
-		if (is_error(error))
+		if (error != rpcn::ErrorType::NoError)
 		{
 			switch (error)
 			{
-			case LoginError: state = rpcn_state::failure_id; break;
-			case LoginAlreadyLoggedIn: state = rpcn_state::failure_id_already_logged_in; break;
-			case LoginInvalidUsername: state = rpcn_state::failure_id_username; break;
-			case LoginInvalidPassword: state = rpcn_state::failure_id_password; break;
-			case LoginInvalidToken: state = rpcn_state::failure_id_token; break;
+			case rpcn::ErrorType::LoginError: state = rpcn_state::failure_id; break;
+			case rpcn::ErrorType::LoginAlreadyLoggedIn: state = rpcn_state::failure_id_already_logged_in; break;
+			case rpcn::ErrorType::LoginInvalidUsername: state = rpcn_state::failure_id_username; break;
+			case rpcn::ErrorType::LoginInvalidPassword: state = rpcn_state::failure_id_password; break;
+			case rpcn::ErrorType::LoginInvalidToken: state = rpcn_state::failure_id_token; break;
 			default: state = rpcn_state::failure_id; break;
 			}
 
@@ -1056,6 +1306,15 @@ namespace rpcn
 		return true;
 	}
 
+	void rpcn_client::reset_state()
+	{
+		if (!connected || !authentified)
+			return;
+
+		std::vector<u8> data;
+		forge_send(CommandType::ResetState, rpcn_request_counter.fetch_add(1), data);
+	}
+
 	ErrorType rpcn_client::create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email)
 	{
 		std::vector<u8> data;
@@ -1082,14 +1341,12 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error == rpcn::ErrorType::NoError)
 		{
-			return error;
+			rpcn_log.success("You have successfully created a RPCN account(%s | %s)!", npid, online_name);
 		}
 
-		rpcn_log.success("You have successfully created a RPCN account(%s | %s)!", npid, online_name);
-
-		return ErrorType::NoError;
+		return error;
 	}
 
 	ErrorType rpcn_client::resend_token(const std::string& npid, const std::string& password)
@@ -1117,14 +1374,12 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error == rpcn::ErrorType::NoError)
 		{
-			return error;
+			rpcn_log.success("Token has successfully been resent!");
 		}
 
-		rpcn_log.success("Token has successfully been resent!");
-
-		return ErrorType::NoError;
+		return error;
 	}
 
 	ErrorType rpcn_client::send_reset_token(std::string_view npid, std::string_view email)
@@ -1152,14 +1407,12 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error == rpcn::ErrorType::NoError)
 		{
-			return error;
+			rpcn_log.success("Password reset token has successfully been sent!");
 		}
 
-		rpcn_log.success("Password reset token has successfully been sent!");
-
-		return ErrorType::NoError;
+		return error;
 	}
 
 	ErrorType rpcn_client::reset_password(std::string_view npid, std::string_view token, std::string_view password)
@@ -1189,14 +1442,12 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error == rpcn::ErrorType::NoError)
 		{
-			return error;
+			rpcn_log.success("Password has successfully been reset!");
 		}
 
-		rpcn_log.success("Password has successfully been reset!");
-
-		return ErrorType::NoError;
+		return error;
 	}
 
 	bool rpcn_client::add_friend(const std::string& friend_username)
@@ -1216,7 +1467,7 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error != rpcn::ErrorType::NoError)
 		{
 			return false;
 		}
@@ -1242,7 +1493,7 @@ namespace rpcn
 		vec_stream reply(packet_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error != rpcn::ErrorType::NoError)
 		{
 			return false;
 		}
@@ -1251,18 +1502,18 @@ namespace rpcn
 		return true;
 	}
 
-	std::vector<std::pair<u16, std::vector<u8>>> rpcn_client::get_notifications()
+	std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> rpcn_client::get_notifications()
 	{
 		std::lock_guard lock(mutex_notifs);
-		std::vector<std::pair<u16, std::vector<u8>>> notifs = std::move(notifications);
+		auto notifs = std::move(notifications);
 		notifications.clear();
 		return notifs;
 	}
 
-	std::unordered_map<u32, std::pair<u16, std::vector<u8>>> rpcn_client::get_replies()
+	std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> rpcn_client::get_replies()
 	{
 		std::lock_guard lock(mutex_replies);
-		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> ret_replies = std::move(replies);
+		auto ret_replies = std::move(replies);
 		replies.clear();
 		return ret_replies;
 	}
@@ -1331,7 +1582,7 @@ namespace rpcn
 		vec_stream reply(reply_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error != rpcn::ErrorType::NoError)
 		{
 			return false;
 		}
@@ -1364,7 +1615,7 @@ namespace rpcn
 		vec_stream reply(reply_data);
 		auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (is_error(error))
+		if (error != rpcn::ErrorType::NoError)
 		{
 			return 0;
 		}
@@ -1379,7 +1630,6 @@ namespace rpcn
 
 		return network_time;
 	}
-
 
 	bool rpcn_client::get_world_list(u32 req_id, const SceNpCommunicationId& communication_id, u16 server_id)
 	{
@@ -1447,7 +1697,7 @@ namespace rpcn
 			std::vector<flatbuffers::Offset<GroupConfig>> davec;
 			for (u32 i = 0; i < req->groupConfigNum; i++)
 			{
-				auto bin = CreateGroupConfig(builder, req->groupConfig[i].slotNum, req->groupConfig[i].withLabel, builder.CreateVector(req->groupConfig[i].label.data, 8), req->groupConfig[i].withPassword);
+				auto bin = CreateGroupConfig(builder, req->groupConfig[i].slotNum, req->groupConfig[i].withLabel ? builder.CreateVector(req->groupConfig[i].label.data, 8) : 0, req->groupConfig[i].withPassword);
 				davec.push_back(bin);
 			}
 			final_groupconfigs_vec = builder.CreateVector(davec);
@@ -1549,7 +1799,7 @@ namespace rpcn
 	{
 		flatbuffers::FlatBufferBuilder builder(1024);
 		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
-		auto req_finished                                     = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
+		auto req_finished = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
 		builder.Finish(req_finished);
 
 		return forge_request_with_com_id(builder, communication_id, CommandType::LeaveRoom, req_id);
@@ -1565,7 +1815,7 @@ namespace rpcn
 			for (u32 i = 0; i < req->intFilterNum; i++)
 			{
 				auto int_attr = CreateIntAttr(builder, req->intFilter[i].attr.id, req->intFilter[i].attr.num);
-				auto bin      = CreateIntSearchFilter(builder, req->intFilter[i].searchOperator, int_attr);
+				auto bin = CreateIntSearchFilter(builder, req->intFilter[i].searchOperator, int_attr);
 				davec.push_back(bin);
 			}
 			final_intfilter_vec = builder.CreateVector(davec);
@@ -1577,7 +1827,7 @@ namespace rpcn
 			for (u32 i = 0; i < req->binFilterNum; i++)
 			{
 				auto bin_attr = CreateBinAttr(builder, req->binFilter[i].attr.id, builder.CreateVector(req->binFilter[i].attr.ptr.get_ptr(), req->binFilter[i].attr.size));
-				auto bin      = CreateBinSearchFilter(builder, req->binFilter[i].searchOperator, bin_attr);
+				auto bin = CreateBinSearchFilter(builder, req->binFilter[i].searchOperator, bin_attr);
 				davec.push_back(bin);
 			}
 			final_binfilter_vec = builder.CreateVector(davec);
@@ -1892,7 +2142,7 @@ namespace rpcn
 		auto fb_sendmessage = CreateSendMessageRequest(builder, nested_flatbuffer_vector, npids_vector);
 
 		builder.Finish(fb_sendmessage);
-		const u8* buf     = builder.GetBufferPointer();
+		const u8* buf = builder.GetBufferPointer();
 		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(bufsize + sizeof(u32));
 
@@ -1963,7 +2213,7 @@ namespace rpcn
 		auto req_finished = CreateRecordScoreGameDataRequest(builder, board_id, pc_id, score);
 		builder.Finish(req_finished);
 
-		const u8* buf     = builder.GetBufferPointer();
+		const u8* buf = builder.GetBufferPointer();
 		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32) + score_data.size());
 
@@ -2385,11 +2635,7 @@ namespace rpcn
 				num = cur_attr->value.num;
 				break;
 			}
-			default:
-			{
-				fmt::throw_exception("Invalid attr type reached set_room_info_gui");
-				break;
-			}
+			default: fmt::throw_exception("Invalid attr type reached set_room_info_gui");
 			}
 
 			auto fb_attr = CreateMatchingAttr(builder, cur_attr->type, cur_attr->id, num, fb_vec_data);
@@ -2468,7 +2714,7 @@ namespace rpcn
 
 	bool rpcn_client::forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
 	{
-		const u8* buf     = builder.GetBufferPointer();
+		const u8* buf = builder.GetBufferPointer();
 		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
@@ -2492,13 +2738,13 @@ namespace rpcn
 		return forge_send(command, packet_id, data);
 	}
 
-	std::vector<u8> rpcn_client::forge_request(u16 command, u64 packet_id, const std::vector<u8>& data) const
+	std::vector<u8> rpcn_client::forge_request(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data) const
 	{
 		const usz packet_size = data.size() + RPCN_HEADER_SIZE;
 
 		std::vector<u8> packet(packet_size);
-		packet[0]                               = PacketType::Request;
-		reinterpret_cast<le_t<u16>&>(packet[1]) = command;
+		packet[0] = static_cast<u8>(PacketType::Request);
+		reinterpret_cast<le_t<u16>&>(packet[1]) = static_cast<u16>(command);
 		reinterpret_cast<le_t<u32>&>(packet[3]) = ::narrow<u32>(packet_size);
 		reinterpret_cast<le_t<u64>&>(packet[7]) = packet_id;
 
@@ -2601,11 +2847,10 @@ namespace rpcn
 		}
 	}
 
-	void rpcn_client::handle_friend_notification(u16 command, std::vector<u8> data)
+	void rpcn_client::handle_friend_notification(rpcn::NotificationType ntype, std::vector<u8> data)
 	{
 		std::lock_guard lock(mutex_friends);
 
-		NotificationType ntype = static_cast<NotificationType>(command);
 		vec_stream vdata(data);
 
 		const auto call_callbacks = [&](NotificationType ntype, const std::string& username, bool status)
@@ -2666,7 +2911,7 @@ namespace rpcn
 		case NotificationType::FriendStatus: // Set status of friend to Offline or Online
 		{
 			const bool online = !!vdata.get<u8>();
-			const u64 timestamp        = vdata.get<u64>();
+			const u64 timestamp = vdata.get<u64>();
 			const std::string username = vdata.get_string(false);
 			if (vdata.is_error())
 			{
@@ -2740,7 +2985,7 @@ namespace rpcn
 		// Unserialize the message
 		vec_stream sdata(data);
 		std::string sender = sdata.get_string(false);
-		auto* fb_mdata     = sdata.get_flatbuffer<MessageDetails>();
+		auto* fb_mdata = sdata.get_flatbuffer<MessageDetails>();
 
 		if (sdata.is_error())
 		{
@@ -2755,12 +3000,12 @@ namespace rpcn
 		}
 
 		message_data mdata = {
-			.msgId       = message_counter,
-			.mainType    = fb_mdata->mainType(),
-			.subType     = fb_mdata->subType(),
+			.msgId = message_counter,
+			.mainType = fb_mdata->mainType(),
+			.subType = fb_mdata->subType(),
 			.msgFeatures = fb_mdata->msgFeatures(),
-			.subject     = fb_mdata->subject()->str(),
-			.body        = fb_mdata->body()->str()};
+			.subject = fb_mdata->subject()->str(),
+			.body = fb_mdata->body()->str()};
 
 		strcpy_trunc(mdata.commId.data, fb_mdata->communicationId()->str());
 		mdata.data.assign(fb_mdata->data()->Data(), fb_mdata->data()->Data() + fb_mdata->data()->size());
@@ -2769,7 +3014,7 @@ namespace rpcn
 		{
 			std::lock_guard lock(mutex_messages);
 			const u64 msg_id = message_counter++;
-			auto id_and_msg  = stx::make_shared<std::pair<std::string, message_data>>(std::make_pair(std::move(sender), std::move(mdata)));
+			auto id_and_msg = stx::make_shared<std::pair<std::string, message_data>>(std::make_pair(std::move(sender), std::move(mdata)));
 			messages.emplace(msg_id, id_and_msg);
 			new_messages.push_back(msg_id);
 			active_messages.insert(msg_id);
@@ -2805,7 +3050,7 @@ namespace rpcn
 			for (auto id : active_messages)
 			{
 				const auto& entry = ::at32(messages, id);
-				const auto& msg   = entry->second;
+				const auto& msg = entry->second;
 				if (msg.mainType == type_filter && (include_bootable || !(msg.msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE)))
 				{
 					vec_messages.push_back(std::make_pair(id, entry));
@@ -2813,9 +3058,9 @@ namespace rpcn
 			}
 
 			message_cbs.insert(message_cb_t{
-				.cb_func      = cb_func,
-				.cb_param     = cb_param,
-				.type_filter  = type_filter,
+				.cb_func = cb_func,
+				.cb_param = cb_param,
+				.type_filter = type_filter,
 				.inc_bootable = include_bootable,
 			});
 		}

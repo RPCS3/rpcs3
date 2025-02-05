@@ -788,7 +788,14 @@ namespace np
 				break;
 
 			std::lock_guard lock(mutex_rpcn);
-			rpcn = rpcn::rpcn_client::get_instance();
+
+			bool was_already_started = true;
+
+			if (!rpcn)
+			{
+				rpcn = rpcn::rpcn_client::get_instance();
+				was_already_started = false;
+			}
 
 			// Make sure we're connected
 
@@ -808,7 +815,8 @@ namespace np
 				return;
 			}
 
-			rsx::overlays::queue_message(localized_string_id::RPCN_SUCCESS_LOGGED_ON);
+			if (!was_already_started)
+				rsx::overlays::queue_message(localized_string_id::RPCN_SUCCESS_LOGGED_ON);
 
 			string_to_online_name(rpcn->get_online_name(), online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), avatar_url);
@@ -836,11 +844,20 @@ namespace np
 	{
 		np_memory.release();
 
+		manager_cb = {};
+		manager_cb_arg = {};
+		basic_handler_registered = false;
+		room_event_cb = {};
+		room_event_cb_ctx = 0;
+		room_event_cb_arg = {};
+		room_msg_cb = {};
+		room_msg_cb_ctx = 0;
+		room_msg_cb_arg = {};
+
 		if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
 		{
-			rpcn_log.notice("Disconnecting from RPCN!");
-			std::lock_guard lock(mutex_rpcn);
-			rpcn.reset();
+			rpcn_log.notice("Setting RPCN state to disconnected!");
+			rpcn->reset_state();
 		}
 	}
 
@@ -854,10 +871,13 @@ namespace np
 		auto& data = ::at32(match2_req_results, event_key);
 		data.apply_relocations(dest_addr);
 
-		vm::ptr<void> dest = vm::cast(dest_addr);
+		const u32 size_copied = std::min(size, data.size());
 
-		u32 size_copied = std::min(size, data.size());
-		memcpy(dest.get_ptr(), data.data(), size_copied);
+		if (dest_addr && size_copied)
+		{
+			vm::ptr<void> dest = vm::cast(dest_addr);
+			memcpy(dest.get_ptr(), data.data(), size_copied);
+		}
 
 		np_memory.free(data.addr());
 		match2_req_results.erase(event_key);
@@ -1073,61 +1093,63 @@ namespace np
 				auto replies = rpcn->get_replies();
 				for (auto& reply : replies)
 				{
-					const u16 command     = reply.second.first;
+					const rpcn::CommandType command = static_cast<rpcn::CommandType>(reply.second.first);
 					const u32 req_id      = reply.first;
 					std::vector<u8>& data = reply.second.second;
 
 					// Every reply should at least contain a return value/error code
 					ensure(data.size() >= 1);
+					const auto error = static_cast<rpcn::ErrorType>(data[0]);
+					vec_stream reply_data(data, 1);
 
 					switch (command)
 					{
-					case rpcn::CommandType::GetWorldList: reply_get_world_list(req_id, data); break;
-					case rpcn::CommandType::CreateRoom: reply_create_join_room(req_id, data); break;
-					case rpcn::CommandType::JoinRoom: reply_join_room(req_id, data); break;
-					case rpcn::CommandType::LeaveRoom: reply_leave_room(req_id, data); break;
-					case rpcn::CommandType::SearchRoom: reply_search_room(req_id, data); break;
-					case rpcn::CommandType::GetRoomDataExternalList: reply_get_roomdata_external_list(req_id, data); break;
-					case rpcn::CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, data); break;
-					case rpcn::CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, data); break;
-					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, data); break;
-					case rpcn::CommandType::GetRoomMemberDataInternal: reply_get_roommemberdata_internal(req_id, data); break;
-					case rpcn::CommandType::SetRoomMemberDataInternal: reply_set_roommemberdata_internal(req_id, data); break;
-					case rpcn::CommandType::SetUserInfo: reply_set_userinfo(req_id, data); break;
-					case rpcn::CommandType::PingRoomOwner: reply_get_ping_info(req_id, data); break;
-					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, data); break;
-					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, data); break;
-					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, data); break;
-					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, data); break;
-					case rpcn::CommandType::RecordScore: reply_record_score(req_id, data); break;
-					case rpcn::CommandType::RecordScoreData: reply_record_score_data(req_id, data); break;
-					case rpcn::CommandType::GetScoreData: reply_get_score_data(req_id, data); break;
-					case rpcn::CommandType::GetScoreRange: reply_get_score_range(req_id, data); break;
-					case rpcn::CommandType::GetScoreFriends: reply_get_score_friends(req_id, data); break;
-					case rpcn::CommandType::GetScoreNpid: reply_get_score_npid(req_id, data); break;
-					case rpcn::CommandType::TusSetMultiSlotVariable: reply_tus_set_multislot_variable(req_id, data); break;
-					case rpcn::CommandType::TusGetMultiSlotVariable: reply_tus_get_multislot_variable(req_id, data); break;
-					case rpcn::CommandType::TusGetMultiUserVariable: reply_tus_get_multiuser_variable(req_id, data); break;
-					case rpcn::CommandType::TusGetFriendsVariable: reply_tus_get_friends_variable(req_id, data); break;
-					case rpcn::CommandType::TusAddAndGetVariable: reply_tus_add_and_get_variable(req_id, data); break;
-					case rpcn::CommandType::TusTryAndSetVariable: reply_tus_try_and_set_variable(req_id, data); break;
-					case rpcn::CommandType::TusDeleteMultiSlotVariable: reply_tus_delete_multislot_variable(req_id, data); break;
-					case rpcn::CommandType::TusSetData: reply_tus_set_data(req_id, data); break;
-					case rpcn::CommandType::TusGetData: reply_tus_get_data(req_id, data); break;
-					case rpcn::CommandType::TusGetMultiSlotDataStatus: reply_tus_get_multislot_data_status(req_id, data); break;
-					case rpcn::CommandType::TusGetMultiUserDataStatus: reply_tus_get_multiuser_data_status(req_id, data); break;
-					case rpcn::CommandType::TusGetFriendsDataStatus: reply_tus_get_friends_data_status(req_id, data); break;
-					case rpcn::CommandType::TusDeleteMultiSlotData: reply_tus_delete_multislot_data(req_id, data); break;
-					case rpcn::CommandType::CreateRoomGUI: reply_create_room_gui(req_id, data); break;
-					case rpcn::CommandType::JoinRoomGUI: reply_join_room_gui(req_id, data); break;
-					case rpcn::CommandType::LeaveRoomGUI: reply_leave_room_gui(req_id, data); break;
-					case rpcn::CommandType::GetRoomListGUI: reply_get_room_list_gui(req_id, data); break;
-					case rpcn::CommandType::SetRoomSearchFlagGUI: reply_set_room_search_flag_gui(req_id, data); break;
-					case rpcn::CommandType::GetRoomSearchFlagGUI: reply_get_room_search_flag_gui(req_id, data); break;
-					case rpcn::CommandType::SetRoomInfoGUI: reply_set_room_info_gui(req_id, data); break;
-					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, data); break;
-					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, data); break;
-					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, data); break;
+					case rpcn::CommandType::GetWorldList: reply_get_world_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::CreateRoom: reply_create_join_room(req_id, error, reply_data); break;
+					case rpcn::CommandType::JoinRoom: reply_join_room(req_id, error, reply_data); break;
+					case rpcn::CommandType::LeaveRoom: reply_leave_room(req_id, error, reply_data); break;
+					case rpcn::CommandType::SearchRoom: reply_search_room(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetRoomDataExternalList: reply_get_roomdata_external_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, error); break;
+					case rpcn::CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, error); break;
+					case rpcn::CommandType::GetRoomMemberDataInternal: reply_get_roommemberdata_internal(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetRoomMemberDataInternal: reply_set_roommemberdata_internal(req_id, error); break;
+					case rpcn::CommandType::SetUserInfo: reply_set_userinfo(req_id, error); break;
+					case rpcn::CommandType::PingRoomOwner: reply_get_ping_info(req_id, error, reply_data); break;
+					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, error); break;
+					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, error, reply_data); break;
+					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, error, reply_data); break;
+					case rpcn::CommandType::RecordScore: reply_record_score(req_id, error, reply_data); break;
+					case rpcn::CommandType::RecordScoreData: reply_record_score_data(req_id, error); break;
+					case rpcn::CommandType::GetScoreData: reply_get_score_data(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetScoreRange: reply_get_score_range(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetScoreFriends: reply_get_score_friends(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetScoreNpid: reply_get_score_npid(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusSetMultiSlotVariable: reply_tus_set_multislot_variable(req_id, error); break;
+					case rpcn::CommandType::TusGetMultiSlotVariable: reply_tus_get_multislot_variable(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusGetMultiUserVariable: reply_tus_get_multiuser_variable(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusGetFriendsVariable: reply_tus_get_friends_variable(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusAddAndGetVariable: reply_tus_add_and_get_variable(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusTryAndSetVariable: reply_tus_try_and_set_variable(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusDeleteMultiSlotVariable: reply_tus_delete_multislot_variable(req_id, error); break;
+					case rpcn::CommandType::TusSetData: reply_tus_set_data(req_id, error); break;
+					case rpcn::CommandType::TusGetData: reply_tus_get_data(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusGetMultiSlotDataStatus: reply_tus_get_multislot_data_status(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusGetMultiUserDataStatus: reply_tus_get_multiuser_data_status(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusGetFriendsDataStatus: reply_tus_get_friends_data_status(req_id, error, reply_data); break;
+					case rpcn::CommandType::TusDeleteMultiSlotData: reply_tus_delete_multislot_data(req_id, error); break;
+					case rpcn::CommandType::CreateRoomGUI: reply_create_room_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::JoinRoomGUI: reply_join_room_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::LeaveRoomGUI: reply_leave_room_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetRoomListGUI: reply_get_room_list_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetRoomSearchFlagGUI: reply_set_room_search_flag_gui(req_id, error); break;
+					case rpcn::CommandType::GetRoomSearchFlagGUI: reply_get_room_search_flag_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetRoomInfoGUI: reply_set_room_info_gui(req_id, error); break;
+					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, error, reply_data); break;
 					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
 					}
 				}
@@ -1142,9 +1164,8 @@ namespace np
 					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(notif.second); break;
 					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(notif.second); break;
 					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
-					case rpcn::NotificationType::SignalP2PConnect: notif_p2p_connect(notif.second); break;
 					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
-					case rpcn::NotificationType::SignalingInfo: notif_signaling_info(notif.second); break;
+					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(notif.second); break;
 					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(notif.second); break;
 					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(notif.second); break;
 					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(notif.second); break;
