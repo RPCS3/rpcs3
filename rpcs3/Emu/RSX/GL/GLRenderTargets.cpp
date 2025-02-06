@@ -466,6 +466,8 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 			msaa_flags = rsx::surface_state_flags::require_unresolve;
 		}
 	}
+
+	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 }
 
 void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access access)

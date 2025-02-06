@@ -174,7 +174,7 @@ namespace gl
 
 	void texture::copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 	{
-		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
 		pixel_settings.apply();
 
@@ -220,7 +220,7 @@ namespace gl
 
 	void texture::copy_from(buffer& buf, u32 gl_format_type, u32 offset, u32 length)
 	{
-		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
 		if (get_target() != target::textureBuffer)
 			fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
@@ -235,7 +235,7 @@ namespace gl
 
 	void texture::copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 	{
-		ensure(m_samples == 1, "Transfer operations are unsupported on multisampled textures.");
+		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
 		pixel_settings.apply();
 		const auto& caps = get_driver_caps();
@@ -257,7 +257,7 @@ namespace gl
 		{
 			// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
 			const auto target_ = static_cast<GLenum>(m_target);
-			texture tmp{ target_, region.width, region.height, region.depth, 1, 1, static_cast<GLenum>(m_internal_format) };
+			texture tmp{ target_, region.width, region.height, region.depth, 1, 1, static_cast<GLenum>(m_internal_format), m_format_class };
 			glCopyImageSubData(m_id, target_, level, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
 				region.width, region.height, region.depth);
 

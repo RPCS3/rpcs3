@@ -199,7 +199,7 @@ namespace gl
 		texture(const texture&) = delete;
 		texture(texture&& texture_) = delete;
 
-		texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class = rsx::RSX_FORMAT_CLASS_UNDEFINED);
+		texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class);
 		virtual ~texture();
 
 		// Getters/setters
