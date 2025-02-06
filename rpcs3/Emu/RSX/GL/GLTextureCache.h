@@ -305,7 +305,7 @@ namespace gl
 
 					if (!scaled_texture)
 					{
-						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, 1, static_cast<GLenum>(ifmt));
+						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, 1, static_cast<GLenum>(ifmt), vram_texture->format_class());
 					}
 
 					const bool linear_interp = is_depth_texture() ? false : true;

@@ -576,7 +576,7 @@ namespace gl
 		const GLenum internal_format = get_sized_internal_format(gcm_format);
 		const auto format_class = rsx::classify_format(gcm_format);
 
-		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format, format_class);
+		return new gl::viewable_image(target, width, height, depth, mipmaps, 1, internal_format, format_class);
 	}
 
 	void fill_texture(gl::command_context& cmd, texture* dst, int format,

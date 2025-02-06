@@ -26,7 +26,7 @@ namespace gl
 		{
 			const auto target = static_cast<GLenum>(visual->get_target());
 			const auto ifmt = static_cast<GLenum>(visual->get_internal_format());
-			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, ifmt, visual->format_class()));
+			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, 1, ifmt, visual->format_class()));
 			glCopyImageSubData(visual->id(), target, 0, 0, 0, 0, g_vis_texture->id(), target, 0, 0, 0, 0, visual->width(), visual->height(), 1);
 		}
 	}
@@ -115,7 +115,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	{
 		if (!flip_image || flip_image->size2D() != sizeu{ info->width, info->height })
 		{
-			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, 1, expected_format);
+			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, 1, expected_format, RSX_FORMAT_CLASS_COLOR);
 		}
 	};
 
