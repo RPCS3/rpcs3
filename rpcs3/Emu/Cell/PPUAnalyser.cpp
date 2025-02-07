@@ -2161,6 +2161,32 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				break;
 			}
 
+			if (is_good)
+			{
+				// Special opting-out: range of "instructions" is likely to be embedded floats
+				// Test this by testing if the lower 23 bits are 0
+				vm::cptr<u32> _ptr = vm::cast(exp);
+				auto ptr = get_ptr<const u32>(_ptr);
+
+				bool ok = false;
+
+				for (u32 it = exp; it < std::min(i_pos + 4, lim); it += 4, advance(_ptr, ptr, 1))
+				{
+					const u32 value_of_supposed_opcode = *ptr;
+
+					if (value_of_supposed_opcode == ppu_instructions::NOP() || (value_of_supposed_opcode << (32 - 23)))
+					{
+						ok = true;
+						break;
+					}
+				}
+
+				if (!ok)
+				{
+					is_good = false;
+				}
+			}
+
 			if (i_pos < lim)
 			{
 				i_pos += 4;
