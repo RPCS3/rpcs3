@@ -56,11 +56,14 @@ namespace gl
 			bool resolve_depth = false;
 			bool resolve_stencil = false;
 			bool is_unresolve = false;
+			color2i sample_count;
 		} m_config;
 
 		void build(bool depth, bool stencil, bool unresolve);
 
-		void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image);
+		void update_config();
+
+		virtual void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image);
 	};
 
 	struct depth_only_resolver : ds_resolve_pass_base
@@ -79,19 +82,33 @@ namespace gl
 		}
 	};
 
-	struct stencil_only_resolver : ds_resolve_pass_base
+	struct stencil_only_resolver_base : ds_resolve_pass_base
+	{
+		virtual ~stencil_only_resolver_base() = default;
+
+		void build(bool is_unresolver)
+		{
+			ds_resolve_pass_base::build(false, true, is_unresolver);
+		}
+
+		void emit_geometry(gl::command_context& cmd) override;
+
+		void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image) override;
+	};
+
+	struct stencil_only_resolver : stencil_only_resolver_base
 	{
 		stencil_only_resolver()
 		{
-			build(false, true, false);
+			build(false);
 		}
 	};
 
-	struct stencil_only_unresolver : ds_resolve_pass_base
+	struct stencil_only_unresolver : stencil_only_resolver_base
 	{
 		stencil_only_unresolver()
 		{
-			build(false, true, true);
+			build(true);
 		}
 	};
 

@@ -75,7 +75,7 @@ namespace gl
 		}
 	}
 
-	void overlay_pass::emit_geometry()
+	void overlay_pass::emit_geometry(gl::command_context& /*cmd*/)
 	{
 		int old_vao;
 		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
@@ -176,7 +176,7 @@ namespace gl
 			cmd->use_program(program_handle.id());
 			on_load();
 			bind_resources();
-			emit_geometry();
+			emit_geometry(cmd);
 
 			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 
@@ -350,7 +350,7 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::emit_geometry()
+	void ui_overlay_renderer::emit_geometry(gl::command_context& cmd)
 	{
 		if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 		{
@@ -378,7 +378,7 @@ namespace gl
 		}
 		else
 		{
-			overlay_pass::emit_geometry();
+			overlay_pass::emit_geometry(cmd);
 		}
 	}
 

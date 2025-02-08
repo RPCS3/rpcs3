@@ -40,7 +40,7 @@ namespace gl
 	{
 		ensure(src->samples() > 1 && dst->samples() == 1);
 
-		ensure(src->format_class() == RSX_FORMAT_CLASS_COLOR); // TODO
+		if (src->aspect() == gl::image_aspect::color) [[ likely ]]
 		{
 			auto& job = g_resolve_helpers[src->get_internal_format()];
 			if (!job)
@@ -50,7 +50,50 @@ namespace gl
 			}
 
 			job->run(cmd, src, dst);
+			return;
 		}
+
+		auto get_resolver_pass = [](GLuint aspect_bits) -> std::unique_ptr<ds_resolve_pass_base>&
+		{
+			auto& pass = g_depth_resolvers[aspect_bits];
+			if (!pass)
+			{
+				ds_resolve_pass_base* ptr = nullptr;
+				switch (aspect_bits)
+				{
+				case gl::image_aspect::depth:
+					ptr = new depth_only_resolver();
+					break;
+				case gl::image_aspect::stencil:
+					ptr = new stencil_only_resolver();
+					break;
+				case (gl::image_aspect::depth | gl::image_aspect::stencil):
+					ptr = new depth_stencil_resolver();
+					break;
+				default:
+					fmt::throw_exception("Unreachable");
+				}
+
+				pass.reset(ptr);
+			}
+
+			return pass;
+		};
+
+		if (src->aspect() == (gl::image_aspect::depth | gl::image_aspect::stencil) &&
+			!gl::get_driver_caps().ARB_shader_stencil_export_supported)
+		{
+			// Special case, NVIDIA-only fallback
+			auto& depth_pass = get_resolver_pass(gl::image_aspect::depth);
+			depth_pass->run(cmd, src, dst);
+
+			auto& stencil_pass = get_resolver_pass(gl::image_aspect::stencil);
+			stencil_pass->run(cmd, src, dst);
+			return;
+		}
+
+		auto& pass = get_resolver_pass(src->aspect());
+		pass->run(cmd, src, dst);
 	}
 
 	void unresolve_image(gl::command_context& cmd, gl::viewable_image* dst, gl::viewable_image* src)
@@ -100,8 +143,12 @@ namespace gl
 		if (src->aspect() == (gl::image_aspect::depth | gl::image_aspect::stencil) &&
 			!gl::get_driver_caps().ARB_shader_stencil_export_supported)
 		{
-			// Special handling
-			rsx_log.error("Unsupported.");
+			// Special case, NVIDIA-only fallback
+			auto& depth_pass = get_unresolver_pass(gl::image_aspect::depth);
+			depth_pass->run(cmd, dst, src);
+
+			auto& stencil_pass = get_unresolver_pass(gl::image_aspect::stencil);
+			stencil_pass->run(cmd, dst, src);
 			return;
 		}
 
@@ -227,8 +274,31 @@ namespace gl
 		rsx_log.notice("Resolve shader:\n%s", fs_src);
 	}
 
+	void ds_resolve_pass_base::update_config()
+	{
+		ensure(multisampled && multisampled->samples() > 1);
+		switch (multisampled->samples())
+		{
+		case 2:
+			m_config.sample_count.x = 2;
+			m_config.sample_count.y = 1;
+			break;
+		case 4:
+			m_config.sample_count.x = m_config.sample_count.y = 2;
+			break;
+		default:
+			fmt::throw_exception("Unsupported sample count %d", multisampled->samples());
+		}
+
+		program_handle.uniforms["sample_count"] = m_config.sample_count;
+	}
+
 	void ds_resolve_pass_base::run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image)
 	{
+		multisampled = msaa_image;
+		resolve = resolve_image;
+		update_config();
+
 		const auto read_resource = m_config.is_unresolve ? resolve_image : msaa_image;
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
 		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, read_resource->id());
@@ -241,5 +311,38 @@ namespace gl
 		viewport.x2 = msaa_image->width();
 		viewport.y2 = msaa_image->height();
 		overlay_pass::run(cmd, viewport, GL_NONE, image_aspect_bits, false);
+	}
+
+	void stencil_only_resolver_base::emit_geometry(gl::command_context& cmd)
+	{
+		// Modified version of the base overlay pass to emit 8 draws instead of 1
+		int old_vao;
+		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
+		m_vao.bind();
+
+		// Start our inner loop
+		for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
+		{
+			program_handle.uniforms["stencil_mask"] = write_mask;
+			cmd->stencil_mask(write_mask);
+
+			glDrawArrays(primitives, 0, num_drawable_elements);
+		}
+
+		glBindVertexArray(old_vao);
+	}
+
+	void stencil_only_resolver_base::run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image)
+	{
+		const auto read_resource = m_config.is_unresolve ? resolve_image : msaa_image;
+		auto stencil_view = read_resource->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
+
+		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
+		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, stencil_view->id());
+
+		areau viewport{};
+		viewport.x2 = msaa_image->width();
+		viewport.y2 = msaa_image->height();
+		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::stencil, false);
 	}
 }
