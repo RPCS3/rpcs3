@@ -259,15 +259,22 @@ namespace gl
 		if (m_config.resolve_depth && m_config.resolve_stencil)
 		{
 			fs_src = m_config.is_unresolve ? depth_stencil_unresolver : depth_stencil_resolver;
+			m_write_aspect_mask = gl::image_aspect::depth | gl::image_aspect::stencil;
 		}
 		else if (m_config.resolve_depth)
 		{
 			fs_src = m_config.is_unresolve ? depth_unresolver : depth_resolver;
+			m_write_aspect_mask = gl::image_aspect::depth;
 		}
 		else if (m_config.resolve_stencil)
 		{
 			fs_src = m_config.is_unresolve ? stencil_unresolver : stencil_resolver;
+			m_write_aspect_mask = gl::image_aspect::stencil;
 		}
+
+		enable_depth_writes = m_config.resolve_depth;
+		enable_stencil_writes = m_config.resolve_stencil;
+
 
 		create();
 
@@ -300,17 +307,25 @@ namespace gl
 		update_config();
 
 		const auto read_resource = m_config.is_unresolve ? resolve_image : msaa_image;
+		const auto write_resource = m_config.is_unresolve ? msaa_image : resolve_image;
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
-		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, read_resource->id());
+		saved_sampler_state saved2(GL_TEMP_IMAGE_SLOT(1), m_sampler);
 
-		GLuint image_aspect_bits = 0;
-		if (m_config.resolve_depth) image_aspect_bits |= gl::image_aspect::depth;
-		if (m_config.resolve_stencil) image_aspect_bits |= gl::image_aspect::stencil;
+		if (m_config.resolve_depth)
+		{
+			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), static_cast<GLenum>(read_resource->get_target()), read_resource->id(), GL_TRUE);
+		}
+
+		if (m_config.resolve_stencil)
+		{
+			auto stencil_view = read_resource->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
+			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(1), static_cast<GLenum>(read_resource->get_target()), stencil_view->id(), GL_TRUE);
+		}
 
 		areau viewport{};
 		viewport.x2 = msaa_image->width();
 		viewport.y2 = msaa_image->height();
-		overlay_pass::run(cmd, viewport, GL_NONE, image_aspect_bits, false);
+		overlay_pass::run(cmd, viewport, write_resource->id(), m_write_aspect_mask, false);
 	}
 
 	void stencil_only_resolver_base::emit_geometry(gl::command_context& cmd)
@@ -330,19 +345,5 @@ namespace gl
 		}
 
 		glBindVertexArray(old_vao);
-	}
-
-	void stencil_only_resolver_base::run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image)
-	{
-		const auto read_resource = m_config.is_unresolve ? resolve_image : msaa_image;
-		auto stencil_view = read_resource->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
-
-		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
-		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, stencil_view->id());
-
-		areau viewport{};
-		viewport.x2 = msaa_image->width();
-		viewport.y2 = msaa_image->height();
-		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::stencil, false);
 	}
 }

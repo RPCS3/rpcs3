@@ -175,7 +175,8 @@ namespace gl
 			texture3D = GL_TEXTURE_3D,
 			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER,
-			texture2DArray = GL_TEXTURE_2D_ARRAY
+			texture2DArray = GL_TEXTURE_2D_ARRAY,
+			texture2DMS = GL_TEXTURE_2D_MULTISAMPLE
 		};
 
 	protected:
