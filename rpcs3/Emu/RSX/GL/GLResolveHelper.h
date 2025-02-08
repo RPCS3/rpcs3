@@ -63,7 +63,7 @@ namespace gl
 
 		void update_config();
 
-		virtual void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image);
+		void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image);
 	};
 
 	struct depth_only_resolver : ds_resolve_pass_base
@@ -92,8 +92,6 @@ namespace gl
 		}
 
 		void emit_geometry(gl::command_context& cmd) override;
-
-		void run(gl::command_context& cmd, gl::viewable_image* msaa_image, gl::viewable_image* resolve_image) override;
 	};
 
 	struct stencil_only_resolver : stencil_only_resolver_base
