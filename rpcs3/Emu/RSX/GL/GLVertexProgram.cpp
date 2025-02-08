@@ -73,7 +73,31 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std:
 				continue;
 			}
 
-			OS << "uniform " << PT.type << " " << PI.name << ";\n";
+			auto type = PT.type;
+
+			if (PT.type == "sampler2D" ||
+				PT.type == "samplerCube" ||
+				PT.type == "sampler1D" ||
+				PT.type == "sampler3D")
+			{
+				if (m_prog.texture_state.multisampled_textures) [[ unlikely ]]
+				{
+					ensure(PI.name.length() > 3);
+					int index = atoi(&PI.name[3]);
+
+					if (m_prog.texture_state.multisampled_textures & (1 << index))
+					{
+						if (type != "sampler1D" && type != "sampler2D")
+						{
+							rsx_log.error("Unexpected multisampled sampler type '%s'", type);
+						}
+
+						type = "sampler2DMS";
+					}
+				}
+			}
+
+			OS << "uniform " << type << " " << PI.name << ";\n";
 		}
 	}
 }

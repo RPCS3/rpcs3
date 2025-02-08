@@ -578,6 +578,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		const auto src_bpp = src_texture->get_bpp();
 		rsx::typeless_xfer typeless_info{};
 
+		src_texture->memory_barrier(cmd, rsx::surface_access::transfer_read);
+
 		if (get_internal_format() == src_texture->get_internal_format())
 		{
 			// Copy data from old contents onto this one

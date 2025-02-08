@@ -7,7 +7,7 @@ layout(local_size_x=%WORKGROUP_SIZE_X, local_size_y=%WORKGROUP_SIZE_Y, local_siz
 layout(set=0, binding=0) uniform writeonly restrict image2DMS multisampled;
 layout(set=0, binding=1, %IMAGE_FORMAT) uniform readonly restrict image2D resolve;
 #else
-layout(binding=0) uniform readonly restrict image2DMS multisampled;
+layout(binding=0) uniform writeonly restrict image2DMS multisampled;
 layout(binding=1, %IMAGE_FORMAT) uniform readonly restrict image2D resolve;
 #endif
 

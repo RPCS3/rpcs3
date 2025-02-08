@@ -44,6 +44,21 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 		}
 	}
 
+	if (properties.multisampled_sampler_mask)
+	{
+		// Requires this extension or GLSL 450
+		const auto driver_caps = gl::get_driver_caps();
+		if (driver_caps.glsl_version.version >= 450)
+		{
+			gl_version = 450;
+		}
+		else
+		{
+			ensure(driver_caps.ARB_shader_texture_image_samples, "MSAA support on OpenGL requires a driver running OpenGL 4.5 or supporting GL_ARB_shader_texture_image_samples.");
+			required_extensions.push_back("GL_ARB_shader_texture_image_samples");
+		}
+	}
+
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
 	{
 		gl_version = std::max(gl_version, 450);
@@ -110,10 +125,14 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (properties.redirected_sampler_mask & mask)
+			if (properties.multisampled_sampler_mask & mask)
 			{
-				// Provide a stencil view of the main resource for the S channel
-				OS << "uniform u" << samplerType << " " << PI.name << "_stencil;\n";
+				if (samplerType != "sampler1D" && samplerType != "sampler2D")
+				{
+					rsx_log.error("Unexpected multisampled image type '%s'", samplerType);
+				}
+
+				samplerType = "sampler2DMS";
 			}
 			else if (properties.shadow_sampler_mask & mask)
 			{
@@ -125,6 +144,12 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 				{
 					samplerType += "Shadow";
 				}
+			}
+
+			if (properties.redirected_sampler_mask & mask)
+			{
+				// Provide a stencil view of the main resource for the S channel
+				OS << "uniform u" << samplerType << " " << PI.name << "_stencil;\n";
 			}
 
 			OS << "uniform " << samplerType << " " << PI.name << ";\n";
@@ -188,6 +213,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
 	m_shader_props.require_tex_shadow_ops = properties.shadow_sampler_mask != 0;
+	m_shader_props.require_msaa_ops = properties.multisampled_sampler_mask != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;

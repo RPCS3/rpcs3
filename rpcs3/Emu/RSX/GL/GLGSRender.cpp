@@ -50,6 +50,12 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_a2one = false;
 	backend_config.supports_multidraw = true;
 	backend_config.supports_normalized_barycentrics = true;
+
+	if (g_cfg.video.antialiasing_level != msaa_level::none)
+	{
+		backend_config.supports_hw_msaa = true;
+		backend_config.supports_hw_a2c = true;
+	}
 }
 
 GLGSRender::~GLGSRender()
