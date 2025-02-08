@@ -305,7 +305,7 @@ namespace gl
 					}
 
 					const bool linear_interp = is_depth_texture() ? false : true;
-					g_hw_blitter->scale_image(cmd, vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, {});
+					g_hw_blitter->scale_image(cmd, target_texture, scaled_texture.get(), src_area, dst_area, linear_interp, {});
 					target_texture = scaled_texture.get();
 				}
 			}
