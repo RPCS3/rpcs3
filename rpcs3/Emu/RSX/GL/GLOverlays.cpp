@@ -23,6 +23,8 @@ namespace gl
 	{
 		if (!compiled)
 		{
+			ensure(!fs_src.empty() && !vs_src.empty(), "Shaders have not been initialized.");
+
 			fs.create(::glsl::program_domain::glsl_fragment_program, fs_src);
 			fs.compile();
 
@@ -33,6 +35,8 @@ namespace gl
 			program_handle.attach(vs);
 			program_handle.attach(fs);
 			program_handle.link();
+
+			ensure(program_handle.id());
 
 			fbo.create();
 
@@ -88,11 +92,7 @@ namespace gl
 
 	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending)
 	{
-		if (!compiled)
-		{
-			rsx_log.error("You must initialize overlay passes with create() before calling run()");
-			return;
-		}
+		ensure(compiled && program_handle.id() != GL_NONE, "You must initialize overlay passes with create() before calling run()");
 
 		GLint viewport[4];
 		std::unique_ptr<fbo::save_binding_state> save_fbo;
