@@ -171,6 +171,7 @@ struct gl_render_target_traits
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
 		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		result->sample_layout = sample_layout;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;
@@ -213,6 +214,7 @@ struct gl_render_target_traits
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
 		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		result->sample_layout = sample_layout;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;

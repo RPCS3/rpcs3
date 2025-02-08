@@ -75,13 +75,16 @@ namespace gl
 
 		if (target != GL_TEXTURE_BUFFER)
 		{
-			glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_REPEAT);
-			glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
+			if (samples == 1)
+			{
+				glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_REPEAT);
+				glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+				glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
+			}
 
 			m_width = width;
 			m_height = height;
