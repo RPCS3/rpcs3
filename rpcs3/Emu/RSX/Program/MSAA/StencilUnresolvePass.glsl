@@ -8,7 +8,7 @@ layout(push_constant) uniform static_data
 {
 	layout(offset=0) ivec2 sample_count;
 	layout(offset=8) int stencil_mask;
-}
+};
 #else
 layout(binding=31) uniform usampler2D fs0;
 uniform ivec2 sample_count;

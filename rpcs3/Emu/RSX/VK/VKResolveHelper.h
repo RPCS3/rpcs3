@@ -109,6 +109,9 @@ namespace vk
 
 			// Depth-stencil buffers are almost never filterable, and we do not need it here (1:1 mapping)
 			m_sampler_filter = VK_FILTER_NEAREST;
+
+			// Do not use UBOs
+			m_num_uniform_buffers = 0;
 		}
 
 		void build(bool resolve_depth, bool resolve_stencil, bool unresolve);
