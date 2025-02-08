@@ -566,7 +566,7 @@ struct reg_state_t
 	// Get maximum bound
 	u64 operator()(max_value_tag) const
 	{
-		return value_range ? (ge_than | bit_range) + value_range : u64{umax};
+		return value_range ? (ge_than | bit_range) + value_range : 0;
 	}
 
 	u64 operator()(load_addr_tag) const
@@ -703,7 +703,7 @@ struct reg_state_t
 	// Bitwise shift left
 	bool shift_left(u64 value, u32& reg_tag_allocator)
 	{
-		if (!value)
+		if (!value || !value_range)
 		{
 			return true;
 		}
@@ -727,8 +727,8 @@ struct reg_state_t
 		}
 
 		ge_than <<= value;
-		value_range <<= value;
 		bit_range <<= value;
+		value_range = ((value_range - 1) << value) + 1;
 		return true;
 	}
 
@@ -1360,6 +1360,18 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Make sure to re-initialize this for every function!
 	std::vector<reg_state_t> reg_state_storage(64 * (is_relocatable ? 256 : 1024));
 
+	struct block_local_info_t
+	{
+		u32 addr = 0;
+		u32 size = 0;
+		u32 parent_block_idx = umax;
+		u64 mapped_registers_mask = 0;
+		u64 moved_registers_mask = 0;
+	};
+
+	// Block analysis workload
+	std::vector<block_local_info_t> block_queue_storage;
+
 	// Main loop (func_queue may grow)
 	for (usz i = 0; i < func_queue.size(); i++)
 	{
@@ -1719,17 +1731,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		// Get function limit
 		const u32 func_end = std::min<u32>(get_limit(func.addr + 1), func.attr & ppu_attr::known_size ? func.addr + func.size : end);
 
-		struct block_local_info_t
-		{
-			u32 addr = 0;
-			u32 size = 0;
-			u32 parent_block_idx = umax;
-			u64 mapped_registers_mask = 0;
-			u64 moved_registers_mask = 0;
-		};
-
-		// Block analysis workload
-		std::vector<block_local_info_t> block_queue;
+		auto& block_queue = block_queue_storage;
+		block_queue.clear();
 		u32 reg_tag_allocator = 1;
 
 		auto make_unknown_reg_state = [&]()
@@ -1751,12 +1754,13 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			if (_pair.second)
 			{
-				block_queue.emplace_back(block_local_info_t{addr});
-				block_queue.back().parent_block_idx = parent_block;
+				auto& block = block_queue.emplace_back(block_local_info_t{addr});
+				block.parent_block_idx = parent_block;
 	
 				if (parent_block != umax)
 				{
-					block_queue.back().mapped_registers_mask = ::at32(block_queue, parent_block).mapped_registers_mask;
+					// Inherit loaded registers mask (lazily)
+					block.mapped_registers_mask = ::at32(block_queue, parent_block).mapped_registers_mask;
 				}
 
 				return static_cast<u32>(block_queue.size() - 1);
@@ -1786,10 +1790,10 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			std::for_each(addr_heap.lower_bound(func.addr), addr_heap.lower_bound(func_end2), [&](auto a) { add_block(a.first, umax); });
 		}
 
-		const bool was_empty = block_queue.empty();
+		bool postpone_analysis = false;
 
 		// Block loop (block_queue may grow, may be aborted via clearing)
-		for (u32 j = 0; j < block_queue.size(); [&]()
+		for (u32 j = 0; !postpone_analysis && j < block_queue.size(); [&]()
 		{
 			if (u32 size = block_queue[j].size)
 			{
@@ -1934,7 +1938,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					if (pfunc && pfunc->blocks.empty())
 					{
 						// Postpone analysis (no info)
-						block_queue.clear();
+						postpone_analysis = true;
 						break;
 					}
 
@@ -2098,6 +2102,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 									jt_addr = jumpatble_off.addr();
 
+									jt_end = segs_end;
+
 									for (const auto& seg : segs)
 									{
 										if (seg.size)
@@ -2110,7 +2116,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 										}
 									}
 
-									jt_end = static_cast<u32>(std::min<u64>(jt_end, ctr(maxv)));
+									jt_end = utils::align<u32>(static_cast<u32>(std::min<u64>(jt_end - 1, ctr(maxv) - 1) + 1), 4);
 
 									get_jumptable_end(jumpatble_off, jumpatble_ptr, false);
 
@@ -2160,7 +2166,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 							func.attr += ppu_attr::no_size;
 							add_block(jt_addr, j);
-							block_queue.clear();
+							postpone_analysis = true;
 						}
 						else
 						{
@@ -2312,9 +2318,14 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 							rd.ge_than = const_reg(minv);
 
-							if (off_reg.value_range != 0 && off_reg(minv) < segs_end && rd(minv) < segs_end - off_reg(minv))
+							if (off_reg.value_range != 0 && off_reg(minv) < segs_end && const_reg(minv) < segs_end - off_reg(minv))
 							{
 								rd.ge_than += off_reg(minv);
+
+								if (off_reg(maxv) - 1 < segs_end - 1 && const_reg(minv) <= segs_end - off_reg(maxv))
+								{
+									rd.value_range = off_reg.value_range;
+								}
 							}
 						}
 					}
@@ -2440,7 +2451,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			}
 		}
 
-		if (block_queue.empty() && !was_empty)
+		if (postpone_analysis)
 		{
 			// Block aborted: abort function, postpone
 			func_queue.emplace_back(func);
