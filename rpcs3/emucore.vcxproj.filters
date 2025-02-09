@@ -1222,6 +1222,9 @@
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\unzip.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
