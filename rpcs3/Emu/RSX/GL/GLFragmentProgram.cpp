@@ -5,6 +5,7 @@
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
 #include "../Program/GLSLCommon.h"
+#include "../RSXThread.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -218,7 +219,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
-	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
+	m_shader_props.emulate_coverage_tests = !rsx::get_renderer_backend_config().supports_hw_a2c_1spp;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
