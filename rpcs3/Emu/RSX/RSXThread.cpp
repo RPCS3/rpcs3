@@ -1637,6 +1637,10 @@ namespace rsx
 		layout.aa_factors[0] = aa_factor_u;
 		layout.aa_factors[1] = aa_factor_v;
 
+		// Log this to frame stats
+		m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+
+		// Check if anything has changed
 		bool really_changed = false;
 
 		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
