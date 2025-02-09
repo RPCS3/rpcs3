@@ -764,6 +764,15 @@ namespace vk
 			device.pNext = &conditional_rendering_info;
 		}
 
+		VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
+		if (pgpu->optional_features_support.barycentric_coords)
+		{
+			shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+			shader_barycentric_info.pNext = const_cast<void*>(device.pNext);
+			shader_barycentric_info.fragmentShaderBarycentric = VK_TRUE;
+			device.pNext = &shader_barycentric_info;
+		}
+
 		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))
 		{
 			dump_debug_info(requested_extensions, enabled_features);
