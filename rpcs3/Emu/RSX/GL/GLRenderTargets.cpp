@@ -671,7 +671,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 }
 
 // MSAA support
-gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_context& cmd)
+gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_context& /*cmd*/)
 {
 	if (!resolve_surface)
 	{
