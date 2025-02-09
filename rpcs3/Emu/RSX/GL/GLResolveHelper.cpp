@@ -10,6 +10,14 @@ namespace gl
 	std::unordered_map<GLuint, std::unique_ptr<ds_resolve_pass_base>> g_depth_resolvers;
 	std::unordered_map<GLuint, std::unique_ptr<ds_resolve_pass_base>> g_depth_unresolvers;
 
+	void clear_resolve_helpers()
+	{
+		g_resolve_helpers.clear();
+		g_unresolve_helpers.clear();
+		g_depth_resolvers.clear();
+		g_depth_unresolvers.clear();
+	}
+
 	static const char* get_format_string(gl::texture::internal_format format)
 	{
 		switch (format)

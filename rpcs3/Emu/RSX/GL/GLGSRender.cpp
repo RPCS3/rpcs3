@@ -4,6 +4,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLDMA.h"
+#include "GLResolveHelper.h"
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -429,6 +430,7 @@ void GLGSRender::on_exit()
 	gl::destroy_compute_tasks();
 	gl::destroy_overlay_passes();
 	gl::clear_dma_resources();
+	gl::clear_resolve_helpers();
 
 	gl::destroy_global_texture_resources();
 
