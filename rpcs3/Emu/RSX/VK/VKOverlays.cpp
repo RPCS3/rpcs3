@@ -69,7 +69,7 @@ namespace vk
 
 		const auto num_bindings = m_num_uniform_buffers + m_num_usable_samplers + m_num_input_attachments;
 		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-		int binding_slot = 0;
+		u32 binding_slot = 0;
 
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding_slot)
 		{
