@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "GLResolveHelper.h"
+#include "GLTexture.h"
 
 #include <unordered_map>
+#include <stack>
 
 namespace gl
 {
@@ -316,23 +318,39 @@ namespace gl
 
 		const auto read_resource = m_config.is_unresolve ? resolve_image : msaa_image;
 		const auto write_resource = m_config.is_unresolve ? msaa_image : resolve_image;
-		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
-		saved_sampler_state saved2(GL_TEMP_IMAGE_SLOT(1), m_sampler);
+
+		// Resource binding
+		std::stack<int> bind_slots;
+		std::vector<std::unique_ptr<saved_sampler_state>> saved_sampler_states;
+		auto allocate_slot = [&]() -> int
+		{
+			ensure(!bind_slots.empty());
+			const int slot = bind_slots.top();
+			bind_slots.pop();
+			saved_sampler_states.emplace_back(std::make_unique<gl::saved_sampler_state>(slot, m_sampler));
+			return slot;
+		};
+
+		// Reserve 2 slots max
+		bind_slots.push(GL_TEMP_IMAGE_SLOT(1));
+		bind_slots.push(GL_TEMP_IMAGE_SLOT(0));
 
 		if (m_config.resolve_depth)
 		{
-			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), static_cast<GLenum>(read_resource->get_target()), read_resource->id(), GL_TRUE);
+			const int bind_slot = allocate_slot();
+			cmd->bind_texture(bind_slot, static_cast<GLenum>(read_resource->get_target()), read_resource->id(), GL_TRUE);
 		}
 
 		if (m_config.resolve_stencil)
 		{
+			const int bind_slot = allocate_slot();
 			auto stencil_view = read_resource->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
-			cmd->bind_texture(GL_TEMP_IMAGE_SLOT(1), static_cast<GLenum>(read_resource->get_target()), stencil_view->id(), GL_TRUE);
+			cmd->bind_texture(bind_slot, static_cast<GLenum>(read_resource->get_target()), stencil_view->id(), GL_TRUE);
 		}
 
 		areau viewport{};
-		viewport.x2 = msaa_image->width();
-		viewport.y2 = msaa_image->height();
+		viewport.x2 = write_resource->width();
+		viewport.y2 = write_resource->height();
 		overlay_pass::run(cmd, viewport, write_resource->id(), m_write_aspect_mask, false);
 	}
 
@@ -342,6 +360,22 @@ namespace gl
 		int old_vao;
 		glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
 		m_vao.bind();
+
+		// Clear the target
+		gl::clear_cmd_info clear_info
+		{
+			.aspect_mask = gl::image_aspect::stencil,
+			.clear_stencil = {
+				.mask = 0xFF,
+				.value = 0
+			}
+		};
+		gl::clear_attachments(cmd, clear_info);
+
+		// Override stencil settings. Always pass, reference is all one, compare mask doesn't matter.
+		// For each pass the write mask will be overriden to commit output bitwise
+		cmd->stencil_func(GL_ALWAYS, 0xFF, 0xFF);
+		cmd->stencil_op(GL_REPLACE, GL_REPLACE, GL_REPLACE);
 
 		// Start our inner loop
 		for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)

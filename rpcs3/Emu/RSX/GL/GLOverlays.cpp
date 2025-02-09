@@ -111,6 +111,10 @@ namespace gl
 				fbo.draw_buffer(fbo.no_color);
 				fbo.depth = target_texture;
 				break;
+			case gl::image_aspect::stencil:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth_stencil = target_texture;
+				break;
 			case gl::image_aspect::depth | gl::image_aspect::stencil:
 				fbo.draw_buffer(fbo.no_color);
 				fbo.depth_stencil = target_texture;
