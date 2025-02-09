@@ -667,7 +667,23 @@ namespace rsx
 			rop_control.enable_polygon_stipple();
 		}
 
-		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled() && !RSX(m_ctx)->get_backend_config().supports_hw_a2c)
+		auto can_use_hw_a2c = [&]() -> bool
+		{
+			const auto& config = RSX(m_ctx)->get_backend_config();
+			if (!config.supports_hw_a2c)
+			{
+				return false;
+			}
+
+			if (config.supports_hw_a2c_1spp)
+			{
+				return true;
+			}
+
+			return REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+		};
+
+		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled() && !can_use_hw_a2c())
 		{
 			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending

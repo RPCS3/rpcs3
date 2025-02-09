@@ -3,6 +3,8 @@
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace gl
 {
 	GLenum comparison_op(rsx::comparison_function op)
@@ -256,6 +258,32 @@ void GLGSRender::update_draw_state()
 			gl_state.enablei(mrt_blend_enabled[2], GL_BLEND, 2);
 			gl_state.enablei(mrt_blend_enabled[3], GL_BLEND, 3);
 		}
+
+		// Antialias control
+		if (backend_config.supports_hw_msaa)
+		{
+			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/GL_MULTISAMPLE);
+
+			gl_state.enable(GL_SAMPLE_MASK);
+			gl_state.sample_mask(REGS(m_ctx)->msaa_sample_mask());
+
+			gl_state.enable(GL_SAMPLE_SHADING);
+			gl_state.min_sample_shading_rate(1.f);
+
+			gl_state.enable(GL_SAMPLE_COVERAGE);
+			gl_state.sample_coverage(1.f);
+		}
+
+		if (backend_config.supports_hw_a2c)
+		{
+			const bool hw_enable = backend_config.supports_hw_a2c_1spp || REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			gl_state.enable(hw_enable && REGS(m_ctx)->msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
+		}
+
+		if (backend_config.supports_hw_a2one)
+		{
+			gl_state.enable(REGS(m_ctx)->msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
+		}
 	}
 
 	switch (rsx::method_registers.current_draw_clause.primitive)
@@ -306,12 +334,6 @@ void GLGSRender::update_draw_state()
 
 	// Clip planes
 	gl_state.clip_planes((current_vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
-
-	// Sample control
-	// TODO: MinSampleShading
-	//gl_state.enable(rsx::method_registers.msaa_enabled(), GL_MULTISAMPLE);
-	//gl_state.enable(rsx::method_registers.msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
-	//gl_state.enable(rsx::method_registers.msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD

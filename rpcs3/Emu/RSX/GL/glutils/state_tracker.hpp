@@ -309,6 +309,32 @@ namespace gl
 			}
 		}
 
+		void sample_mask(GLbitfield mask)
+		{
+			if (!test_and_set_property(GL_SAMPLE_MASK_VALUE, mask))
+			{
+				glSampleMaski(0, mask);
+			}
+		}
+
+		void sample_coverage(GLclampf coverage)
+		{
+			const u32 value = std::bit_cast<u32>(coverage);
+			if (!test_and_set_property(GL_SAMPLE_COVERAGE_VALUE, value))
+			{
+				glSampleCoverage(coverage, GL_FALSE);
+			}
+		}
+
+		void min_sample_shading_rate(GLclampf rate)
+		{
+			const u32 value = std::bit_cast<u32>(rate);
+			if (!test_and_set_property(GL_MIN_SAMPLE_SHADING_VALUE, value))
+			{
+				glMinSampleShading(rate);
+			}
+		}
+
 		void clip_planes(GLuint mask)
 		{
 			if (!test_and_set_property(CLIP_PLANES, mask))
