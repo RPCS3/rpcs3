@@ -23,16 +23,14 @@ public:
 		emu_settings_type type = emu_settings_type::VulkanAdapter;
 		bool supported = true;
 		bool has_adapters = true;
-		bool has_msaa = false;
 
 		render_info()
 			: has_adapters(false) {}
 
-		render_info(QStringList adapters, bool supported, emu_settings_type type, bool has_msaa)
+		render_info(QStringList adapters, bool supported, emu_settings_type type)
 			: adapters(std::move(adapters))
 			, type(type)
-			, supported(supported)
-			, has_msaa(has_msaa) {}
+			, supported(supported) {}
 	};
 
 	bool abort_requested = false;
