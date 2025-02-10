@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKFormats.h"
+#include "VKHelpers.h"
 #include "vkutils/device.h"
 #include "vkutils/image.h"
 
@@ -193,6 +194,7 @@ namespace vk
 
 	VkFormat get_compatible_sampler_format(const gpu_formats_support& support, u32 format)
 	{
+		const bool supports_dxt = vk::get_current_renderer()->get_texture_compression_bc_support();
 		switch (format)
 		{
 #ifndef __APPLE__
@@ -213,9 +215,9 @@ namespace vk
 #endif
 		case CELL_GCM_TEXTURE_B8: return VK_FORMAT_R8_UNORM;
 		case CELL_GCM_TEXTURE_A8R8G8B8: return VK_FORMAT_B8G8R8A8_UNORM;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return VK_FORMAT_BC2_UNORM_BLOCK;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return VK_FORMAT_BC3_UNORM_BLOCK;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return supports_dxt ? VK_FORMAT_BC1_RGBA_UNORM_BLOCK : VK_FORMAT_B8G8R8A8_UNORM;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return supports_dxt ? VK_FORMAT_BC2_UNORM_BLOCK : VK_FORMAT_B8G8R8A8_UNORM;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return supports_dxt ? VK_FORMAT_BC3_UNORM_BLOCK : VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_G8B8: return VK_FORMAT_R8G8_UNORM;
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return support.d24_unorm_s8? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:	return VK_FORMAT_D32_SFLOAT_S8_UINT;

@@ -134,6 +134,10 @@ namespace vk
 			// So far only AMD is known to remap image view and border color together. Mark as not required.
 			custom_border_color_support.require_border_color_remap = get_driver_vendor() != driver_vendor::AMD;
 		}
+
+		// v3dv and PanVK support BC1-BC3 which is all we require, support is reported as false since not all formats are supported
+		optional_features_support.texture_compression_bc = features.textureCompressionBC
+				|| get_driver_vendor() == driver_vendor::V3DV || get_driver_vendor() == driver_vendor::PANVK;
 	}
 
 	void physical_device::get_physical_device_properties(bool allow_extensions)
@@ -303,8 +307,12 @@ namespace vk
 			}
 
 			if (gpu_name.find("Panfrost") != umax)
-			{
+			{ // e.g. "Mali-G610 (Panfrost)"
 				return driver_vendor::PANVK;
+			}
+			else if (gpu_name.find("Mali") != umax)
+			{ // e.g. "Mali-G610", hence "else"
+				return driver_vendor::ARM_MALI;
 			}
 
 			return driver_vendor::unknown;
@@ -336,6 +344,8 @@ namespace vk
 				return driver_vendor::HONEYKRISP;
 			case VK_DRIVER_ID_MESA_PANVK:
 				return driver_vendor::PANVK;
+			case VK_DRIVER_ID_ARM_PROPRIETARY:
+				return driver_vendor::ARM_MALI;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
@@ -471,8 +481,7 @@ namespace vk
 		// Enable hardware features manually
 		// Currently we require:
 		// 1. Anisotropic sampling
-		// 2. DXT support
-		// 3. Indexable storage buffers
+		// 2. Indexable storage buffers
 		VkPhysicalDeviceFeatures enabled_features{};
 		if (pgpu->shader_types_support.allow_float16)
 		{
@@ -566,7 +575,7 @@ namespace vk
 		// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
 
 		enabled_features.samplerAnisotropy = VK_TRUE;
-		enabled_features.textureCompressionBC = VK_TRUE;
+		enabled_features.textureCompressionBC = pgpu->optional_features_support.texture_compression_bc;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 		// Optionally disable unsupported stuff
@@ -657,19 +666,6 @@ namespace vk
 		{
 			rsx_log.error("Your GPU does not support framebuffer logical operations. Graphics may not render correctly.");
 			enabled_features.logicOp = VK_FALSE;
-		}
-
-		if (!pgpu->features.textureCompressionBC && pgpu->get_driver_vendor() == driver_vendor::V3DV)
-		{
-			// v3dv supports BC1-BC3 which is all we require, support is reported as false since not all formats are supported
-			rsx_log.error("Your GPU running on the V3DV driver does not support full texture block compression. Graphics may not render correctly.");
-			enabled_features.textureCompressionBC = VK_FALSE;
-		}
-
-		if (!pgpu->features.textureCompressionBC && pgpu->get_driver_vendor() == driver_vendor::PANVK)
-		{
-			rsx_log.error("Your GPU running on the PANVK driver does not support full texture block compression. Graphics may not render correctly.");
-			enabled_features.textureCompressionBC = VK_FALSE;
 		}
 
 		VkDeviceCreateInfo device = {};
