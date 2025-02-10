@@ -33,7 +33,7 @@ namespace gl
 
 	void capabilities::initialize()
 	{
-		int find_count = 18;
+		int find_count = 19;
 		int ext_count = 0;
 		glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -175,6 +175,13 @@ namespace gl
 			if (check(ext_name, "GL_ARB_shader_texture_image_samples"))
 			{
 				ARB_shader_texture_image_samples = true;
+				find_count--;
+				continue;
+			}
+
+			if (check(ext_name, "GL_EXT_texture_compression_s3tc"))
+			{
+				EXT_texture_compression_s3tc_supported = true;
 				find_count--;
 				continue;
 			}
