@@ -632,7 +632,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl
     PRIVATE
-        3rdparty::xxhash
+        3rdparty::glslang 3rdparty::xxhash
 )
 
 if(APPLE)
