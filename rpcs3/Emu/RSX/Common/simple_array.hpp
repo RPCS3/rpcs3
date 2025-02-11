@@ -404,21 +404,36 @@ namespace rsx
 			return ret;
 		}
 
-		void sort(std::predicate<const Ty&, const Ty&> auto predicate)
+		simple_array<Ty>& sort(std::predicate<const Ty&, const Ty&> auto predicate)
 		{
 			if (_size < 2)
 			{
-				return;
+				return *this;
 			}
 
 			std::sort(begin(), end(), predicate);
+			return *this;
 		}
 
 		template <typename F, typename U = std::invoke_result_t<F, const Ty&>>
-			requires std::is_invocable_v<F, const Ty&>
+			requires (std::is_invocable_v<F, const Ty&> && std::is_trivially_destructible_v<U>)
 		simple_array<U> map(F&& xform) const
 		{
 			simple_array<U> result;
+			result.reserve(size());
+
+			for (auto it = begin(); it != end(); ++it)
+			{
+				result.push_back(xform(*it));
+			}
+			return result;
+		}
+
+		template <typename F, typename U = std::invoke_result_t<F, const Ty&>>
+			requires (std::is_invocable_v<F, const Ty&> && !std::is_trivially_destructible_v<U>)
+		std::vector<U> map(F&& xform) const
+		{
+			std::vector<U> result;
 			result.reserve(size());
 
 			for (auto it = begin(); it != end(); ++it)

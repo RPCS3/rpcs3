@@ -838,12 +838,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				}
 			}
 
-			// Enable/disable MSAA depending on renderer
-			ui->antiAliasing->setEnabled(renderer.has_msaa);
-			ui->antiAliasing->blockSignals(true);
-			ui->antiAliasing->setCurrentText(renderer.has_msaa ? qstr(m_emu_settings->GetSetting(emu_settings_type::MSAA)) : tr("Disabled", "MSAA"));
-			ui->antiAliasing->blockSignals(false);
-
 			ui->graphicsAdapterBox->clear();
 
 			// Fill combobox with placeholder if no adapters needed
@@ -1070,7 +1064,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		get_audio_output_devices(false);
 		change_audio_output_device(0); // Set device to 'Default'
 	});
-	
+
 	m_emu_settings->EnhanceComboBox(ui->combo_audio_channel_layout, emu_settings_type::AudioChannelLayout);
 	SubscribeTooltip(ui->gb_audio_channel_layout, tooltips.settings.audio_channel_layout);
 
@@ -1512,7 +1506,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		m_emu_settings->SetSetting(emu_settings_type::PSNCountry, country_code.toString().toStdString());
 	});
-	
+
 	SubscribeTooltip(ui->gb_psnCountryBox, tooltips.settings.psn_country);
 
 	if (!game)

@@ -831,6 +831,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				: 0;
 
 			rsx::overlays::set_debug_overlay_text(fmt::format(
+				"Internal Resolution:      %s\n"
 				"RSX Load:                 %3d%%\n"
 				"draw calls: %17d\n"
 				"submits: %20d\n"
@@ -845,6 +846,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				"Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)\n"
 				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
 				"Vertex cache hits: %10u/%u (%u%%)",
+				info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
 				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
 				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
 				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,

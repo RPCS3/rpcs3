@@ -998,7 +998,7 @@ namespace vk
 			return;
 		}
 
-			// Memory transfers
+		// Memory transfers
 		vk::image* target_image = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 		vk::blitter hw_blitter;
 		const auto dst_bpp = get_bpp();

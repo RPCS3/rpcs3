@@ -262,28 +262,24 @@ namespace gl
 				baseclass::on_miss();
 			}
 
+			gl::texture* target_texture = vram_texture;
+			u32 transfer_width = width;
+			u32 transfer_height = height;
+
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
-				auto as_rtt = static_cast<gl::render_target*>(vram_texture);
-				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
+				auto surface = gl::as_rtt(vram_texture);
+				surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+				target_texture = surface->get_surface(rsx::surface_access::transfer_read);
+				transfer_width *= surface->samples_x;
+				transfer_height *= surface->samples_y;
 			}
 
-			gl::texture* target_texture = vram_texture;
 			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
 				(vram_texture->pitch() != rsx_pitch))
 			{
-				u32 real_width = width;
-				u32 real_height = height;
-
-				if (context == rsx::texture_upload_context::framebuffer_storage)
-				{
-					auto surface = gl::as_rtt(vram_texture);
-					real_width *= surface->samples_x;
-					real_height *= surface->samples_y;
-				}
-
 				areai src_area = { 0, 0, 0, 0 };
-				const areai dst_area = { 0, 0, static_cast<s32>(real_width), static_cast<s32>(real_height) };
+				const areai dst_area = { 0, 0, static_cast<s32>(transfer_width), static_cast<s32>(transfer_height) };
 
 				auto ifmt = vram_texture->get_internal_format();
 				src_area.x2 = vram_texture->width();
@@ -294,22 +290,22 @@ namespace gl
 					if (scaled_texture)
 					{
 						auto sfmt = scaled_texture->get_internal_format();
-						if (scaled_texture->width() != real_width ||
-							scaled_texture->height() != real_height ||
+						if (scaled_texture->width() != transfer_width ||
+							scaled_texture->height() != transfer_height ||
 							sfmt != ifmt)
 						{
-							//Discard current scaled texture
+							// Discard current scaled texture
 							scaled_texture.reset();
 						}
 					}
 
 					if (!scaled_texture)
 					{
-						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, static_cast<GLenum>(ifmt));
+						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, transfer_width, transfer_height, 1, 1, 1, static_cast<GLenum>(ifmt), vram_texture->format_class());
 					}
 
 					const bool linear_interp = is_depth_texture() ? false : true;
-					g_hw_blitter->scale_image(cmd, vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, {});
+					g_hw_blitter->scale_image(cmd, target_texture, scaled_texture.get(), src_area, dst_area, linear_interp, {});
 					target_texture = scaled_texture.get();
 				}
 			}
