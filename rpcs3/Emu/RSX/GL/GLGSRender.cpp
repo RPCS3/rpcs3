@@ -4,6 +4,7 @@
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLDMA.h"
+#include "GLResolveHelper.h"
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -46,10 +47,16 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
-	backend_config.supports_hw_a2c = false;
-	backend_config.supports_hw_a2one = false;
 	backend_config.supports_multidraw = true;
 	backend_config.supports_normalized_barycentrics = true;
+
+	if (g_cfg.video.antialiasing_level != msaa_level::none)
+	{
+		backend_config.supports_hw_msaa = true;
+		backend_config.supports_hw_a2c = true;
+		backend_config.supports_hw_a2c_1spp = false; // In OGL A2C is implicitly disabled at 1spp
+		backend_config.supports_hw_a2one = true;
+	}
 }
 
 GLGSRender::~GLGSRender()
@@ -229,13 +236,13 @@ void GLGSRender::on_init_thread()
 
 	// Array stream buffer
 	{
-		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
+		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, 0, GL_R8UI, RSX_FORMAT_CLASS_DONT_CARE);
 		gl_state.bind_texture(GL_STREAM_BUFFER_START + 0, GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
 	}
 
 	// Register stream buffer
 	{
-		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
+		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, 0, GL_R8UI, RSX_FORMAT_CLASS_DONT_CARE);
 		gl_state.bind_texture(GL_STREAM_BUFFER_START + 1, GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
 	}
 
@@ -244,19 +251,19 @@ void GLGSRender::on_init_thread()
 		std::array<u32, 8> pixeldata = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 		// 1D
-		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
+		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// 2D
-		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
+		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// 3D
-		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
+		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// CUBE
-		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
+		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
@@ -423,6 +430,7 @@ void GLGSRender::on_exit()
 	gl::destroy_compute_tasks();
 	gl::destroy_overlay_passes();
 	gl::clear_dma_resources();
+	gl::clear_resolve_helpers();
 
 	gl::destroy_global_texture_resources();
 

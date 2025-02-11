@@ -57,7 +57,7 @@ namespace gl
 			m_vertex_data_buffer.data(elements_count * sizeof(T), data);
 		}
 
-		virtual void emit_geometry();
+		virtual void emit_geometry(gl::command_context& cmd);
 
 		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending = false);
 	};
@@ -87,7 +87,7 @@ namespace gl
 
 		void set_primitive_type(rsx::overlays::primitive_type type);
 
-		void emit_geometry() override;
+		void emit_geometry(gl::command_context& cmd) override;
 
 		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
 	};

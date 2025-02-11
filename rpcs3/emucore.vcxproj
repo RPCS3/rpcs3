@@ -112,6 +112,7 @@
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
@@ -1030,6 +1031,14 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXVertexPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\VideoOutCalibrationPass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\ColorResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\ColorUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthStencilResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthStencilUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\DepthUnresolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\StencilResolvePass.glsl" />
+    <None Include="Emu\RSX\Program\MSAA\StencilUnresolvePass.glsl" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_a_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ffx_fsr1_flattened.inc" />
     <None Include="Emu\RSX\Program\Upscalers\FSR1\fsr_ubershader.glsl" />

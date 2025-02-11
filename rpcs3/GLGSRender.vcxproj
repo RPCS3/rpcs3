@@ -60,6 +60,7 @@
     <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\blitter.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h" />
@@ -95,6 +96,7 @@
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\blitter.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp" />

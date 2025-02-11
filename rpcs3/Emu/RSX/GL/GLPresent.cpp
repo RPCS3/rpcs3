@@ -26,7 +26,7 @@ namespace gl
 		{
 			const auto target = static_cast<GLenum>(visual->get_target());
 			const auto ifmt = static_cast<GLenum>(visual->get_internal_format());
-			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, ifmt, visual->format_class()));
+			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, 1, ifmt, visual->format_class()));
 			glCopyImageSubData(visual->id(), target, 0, 0, 0, 0, g_vis_texture->id(), target, 0, 0, 0, 0, visual->width(), visual->height(), 1);
 		}
 	}
@@ -115,7 +115,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	{
 		if (!flip_image || flip_image->size2D() != sizeu{ info->width, info->height })
 		{
-			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, expected_format);
+			flip_image = std::make_unique<gl::texture>(GL_TEXTURE_2D, info->width, info->height, 1, 1, 1, expected_format, RSX_FORMAT_CLASS_COLOR);
 		}
 	};
 
@@ -402,6 +402,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			: 0;
 
 		rsx::overlays::set_debug_overlay_text(fmt::format(
+			"Internal Resolution:     %s\n"
 			"RSX Load:                %3d%%\n"
 			"draw calls: %16d\n"
 			"draw call setup: %11dus\n"
@@ -413,6 +414,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			"Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)\n"
 			"Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)\n"
 			"Vertex cache hits: %9u/%u (%u%%)",
+			info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
 			get_load(), info.stats.draw_calls, info.stats.setup_time, info.stats.vertex_upload_time,
 			info.stats.textures_upload_time, info.stats.draw_exec_time, num_dirty_textures, texture_memory_size,
 			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,

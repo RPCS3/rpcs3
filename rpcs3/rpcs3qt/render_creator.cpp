@@ -98,7 +98,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 #endif
 
 	// Graphics Adapter
-	Vulkan = render_info(vulkan_adapters, supports_vulkan, emu_settings_type::VulkanAdapter, true);
+	Vulkan = render_info(vulkan_adapters, supports_vulkan, emu_settings_type::VulkanAdapter);
 	OpenGL = render_info();
 	NullRender = render_info();
 

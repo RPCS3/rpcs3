@@ -47,9 +47,11 @@ namespace vk
 
 	void overlay_pass::init_descriptors()
 	{
-		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes =
+		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes = {};
+
+		if (m_num_uniform_buffers)
 		{
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_num_uniform_buffers });
 		};
 
 		if (m_num_usable_samplers)
@@ -65,35 +67,38 @@ namespace vk
 		// Reserve descriptor pools
 		m_descriptor_pool.create(*m_device, descriptor_pool_sizes);
 
-		const auto num_bindings = 1 + m_num_usable_samplers + m_num_input_attachments;
+		const auto num_bindings = m_num_uniform_buffers + m_num_usable_samplers + m_num_input_attachments;
 		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+		u32 binding_slot = 0;
 
-		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[0].descriptorCount = 1;
-		bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[0].binding = 0;
-		bindings[0].pImmutableSamplers = nullptr;
-
-		u32 descriptor_index = 1;
-		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++descriptor_index)
+		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding_slot)
 		{
-			bindings[descriptor_index].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[descriptor_index].descriptorCount = 1;
-			bindings[descriptor_index].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[descriptor_index].binding = descriptor_index;
-			bindings[descriptor_index].pImmutableSamplers = nullptr;
+			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			bindings[binding_slot].descriptorCount = 1;
+			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[binding_slot].binding = binding_slot;
+			bindings[binding_slot].pImmutableSamplers = nullptr;
 		}
 
-		for (u32 n = 0; n < m_num_input_attachments; ++n, ++descriptor_index)
+		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding_slot)
 		{
-			bindings[descriptor_index].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-			bindings[descriptor_index].descriptorCount = 1;
-			bindings[descriptor_index].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[descriptor_index].binding = descriptor_index;
-			bindings[descriptor_index].pImmutableSamplers = nullptr;
+			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[binding_slot].descriptorCount = 1;
+			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[binding_slot].binding = binding_slot;
+			bindings[binding_slot].pImmutableSamplers = nullptr;
 		}
 
-		ensure(descriptor_index == num_bindings);
+		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding_slot)
+		{
+			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+			bindings[binding_slot].descriptorCount = 1;
+			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[binding_slot].binding = binding_slot;
+			bindings[binding_slot].pImmutableSamplers = nullptr;
+		}
+
+		ensure(binding_slot == num_bindings);
 		m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
@@ -120,9 +125,14 @@ namespace vk
 	std::vector<vk::glsl::program_input> overlay_pass::get_fragment_inputs()
 	{
 		std::vector<vk::glsl::program_input> fs_inputs;
-		fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, "static_data" });
+		u32 binding = 0;
 
-		u32 binding = 1;
+		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
+		{
+			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, name });
+		}
+
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
 			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "fs" + std::to_string(n) });
@@ -231,7 +241,10 @@ namespace vk
 
 		update_uniforms(cmd, program);
 
-		program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
+		if (m_num_uniform_buffers > 0)
+		{
+			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
+		}
 
 		for (uint n = 0; n < src.size(); ++n)
 		{

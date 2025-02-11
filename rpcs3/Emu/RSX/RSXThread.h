@@ -87,6 +87,7 @@ namespace rsx
 	{
 		bool supports_multidraw;               // Draw call batching
 		bool supports_hw_a2c;                  // Alpha to coverage
+		bool supports_hw_a2c_1spp;             // Alpha to coverage at 1 sample per pixel
 		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
 		bool supports_hw_msaa;                 // MSAA support
 		bool supports_hw_a2one;                // Alpha to one
@@ -465,5 +466,10 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->try_get<rsx::thread>();
+	}
+
+	inline const backend_configuration& get_renderer_backend_config()
+	{
+		return g_fxo->get<rsx::thread>().get_backend_config();
 	}
 }
