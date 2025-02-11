@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "sysPrxForUser.h"
-
 LOG_CHANNEL(sysPrxForUser);
 
 error_code sys_rsxaudio_close_connection()

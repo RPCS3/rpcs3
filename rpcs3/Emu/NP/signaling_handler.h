@@ -1,9 +1,8 @@
 #pragma once
-#include "Emu/Memory/vm.h"
-#include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
 #include <unordered_map>
 #include <chrono>
 #include <optional>

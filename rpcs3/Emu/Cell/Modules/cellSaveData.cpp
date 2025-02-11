@@ -8,6 +8,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
@@ -19,6 +20,7 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/date_time.h"
+#include "Utilities/sema.h"
 
 #include <mutex>
 #include <algorithm>

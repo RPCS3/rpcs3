@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include <span>
 #include "np_structs_extra.h"
 

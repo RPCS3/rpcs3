@@ -7,7 +7,6 @@
 #include "Emu/Cell/PPUThread.h" // for vm_var
 #include "Emu/Memory/vm_var.h"
 #include "Emu/Io/interception.h"
-#include "Utilities/Thread.h"
 
 namespace rsx
 {

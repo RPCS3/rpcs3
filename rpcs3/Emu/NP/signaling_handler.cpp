@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "signaling_handler.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellSysutil.h"

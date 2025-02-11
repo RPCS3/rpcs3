@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "overlays.h"
 #include "overlay_message.h"
 #include "overlay_loading_icon.hpp"
 

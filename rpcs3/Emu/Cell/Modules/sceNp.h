@@ -2,6 +2,7 @@
 
 #include "cellRtc.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "util/shared_ptr.hpp"
 
 #include <set>
 

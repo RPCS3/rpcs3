@@ -1,8 +1,6 @@
 #include "gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
-#include "Utilities/Thread.h"
-
 using namespace rsx;
 
 template <>

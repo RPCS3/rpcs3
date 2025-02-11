@@ -1,7 +1,6 @@
 #pragma once
 #ifdef HAVE_LIBEVDEV
 
-#include <array>
 #include <map>
 #include "Utilities/mutex.h"
 

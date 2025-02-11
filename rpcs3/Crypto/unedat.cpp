@@ -4,6 +4,7 @@
 #include "sha1.h"
 #include "lz.h"
 #include "ec.h"
+#include "utils.h"
 
 #include "Emu/system_utils.hpp"
 

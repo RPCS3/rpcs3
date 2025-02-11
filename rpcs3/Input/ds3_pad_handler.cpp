@@ -2,8 +2,6 @@
 #include "ds3_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 
-#include "util/asm.hpp"
-
 LOG_CHANNEL(ds3_log, "DS3");
 
 using namespace reports;

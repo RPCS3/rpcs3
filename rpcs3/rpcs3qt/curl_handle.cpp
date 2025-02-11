@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "curl_handle.h"
-#include "Emu/system_utils.hpp"
 #include "util/logs.hpp"
 
 #ifdef _WIN32

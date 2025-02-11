@@ -9,7 +9,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Cell/MFC.h"
 #include "sys_sync.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
@@ -56,7 +55,7 @@
 #include <algorithm>
 #include <optional>
 #include <deque>
-#include <shared_mutex>
+#include <thread>
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
 #include "util/init_mutex.hpp"

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Utilities/Timer.h"
-#include "Emu/Cell/lv2/sys_memory.h"
 #include "Utilities/Thread.h"
 #include "Emu/Io/camera_handler_base.h"
+#include "Emu/Memory/vm_ptr.h"
+#include "Utilities/mutex.h"
 
 #include <map>
 

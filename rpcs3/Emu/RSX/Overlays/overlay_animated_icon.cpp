@@ -2,7 +2,8 @@
 #include "overlay_animated_icon.h"
 
 #include "Utilities/File.h"
-#include "../Common/time.hpp"
+
+#include "Emu/Cell/timers.hpp"
 
 namespace rsx
 {

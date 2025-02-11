@@ -1,6 +1,7 @@
 #pragma once
 
-#include "util/types.hpp"
+#include <string_view>
+using namespace std::literals;
 
 struct perf_monitor
 {

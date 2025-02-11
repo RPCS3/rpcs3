@@ -1,11 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/IdManager.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/np_structs_extra.h"
 #include "Emu/NP/fb_helpers.h"
+#include "Emu/NP/signaling_handler.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 

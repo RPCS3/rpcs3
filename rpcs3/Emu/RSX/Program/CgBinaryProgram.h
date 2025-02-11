@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/Memory/vm.h"
+#include "util/endian.hpp"
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
 #include "Emu/RSX/Program/ProgramStateCache.h"

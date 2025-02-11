@@ -8,8 +8,6 @@
 #include <QMenu>
 #include <QDialogButtonBox>
 
-#include <thread>
-
 #include "qt_utils.h"
 
 #include "rpcn_settings_dialog.h"

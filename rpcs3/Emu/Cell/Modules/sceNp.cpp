@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
 #include "Emu/Io/interception.h"
@@ -15,6 +14,7 @@
 #include "sceNp.h"
 #include "cellSysutil.h"
 
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -22,6 +22,7 @@
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/np_structs_extra.h"
+#include "Emu/NP/signaling_handler.h"
 #include "Emu/system_config.h"
 
 #include "Emu/RSX/Overlays/overlay_manager.h"

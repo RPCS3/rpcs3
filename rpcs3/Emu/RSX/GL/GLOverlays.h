@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/system_config_types.h"
+#include "Emu/IdManager.h"
 #include "util/types.hpp"
 #include "../Common/simple_array.hpp"
 #include "../Overlays/overlays.h"

@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/IdManager.h"
-
 #include "sys_net_.h"
 
 LOG_CHANNEL(libnet);

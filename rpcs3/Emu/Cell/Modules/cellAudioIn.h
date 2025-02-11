@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "util/endian.hpp"
 
 // Error codes
 enum CellAudioInError : u32

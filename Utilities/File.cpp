@@ -1,8 +1,6 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
-#include "StrUtil.h"
-#include "Crypto/sha1.h"
 
 #include <span>
 #include <unordered_map>
@@ -17,6 +15,8 @@
 using namespace std::literals::string_literals;
 
 #ifdef _WIN32
+
+#include "Utilities/StrUtil.h"
 
 #include <cwchar>
 #include <Windows.h>

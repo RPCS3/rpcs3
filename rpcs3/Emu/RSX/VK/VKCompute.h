@@ -1,5 +1,5 @@
 #pragma once
-#include "VKPipelineCompiler.h"
+#include "Emu/RSX/VK/VKProgramPipeline.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/buffer_object.h"
 

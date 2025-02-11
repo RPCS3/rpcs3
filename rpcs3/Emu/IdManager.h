@@ -5,8 +5,6 @@
 
 #include <memory>
 #include <vector>
-#include <map>
-#include <typeinfo>
 #include <span>
 
 #include "util/serialization.hpp"

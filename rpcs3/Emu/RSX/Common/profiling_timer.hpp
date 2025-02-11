@@ -1,7 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
-#include "time.hpp"
+#include "Emu/Cell/timers.hpp"
 
 namespace rsx
 {

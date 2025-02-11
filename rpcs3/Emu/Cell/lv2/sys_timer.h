@@ -1,8 +1,6 @@
 #pragma once
 
 #include "sys_event.h"
-
-#include "Utilities/Thread.h"
 #include "Emu/Memory/vm_ptr.h"
 
 

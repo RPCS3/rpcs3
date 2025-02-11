@@ -2,10 +2,7 @@
 #include "ps_move_handler.h"
 #include "ps_move_calibration.h"
 #include "Emu/Io/pad_config.h"
-#include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Emu/Cell/Modules/cellGem.h"
-#include "Input/ps_move_config.h"
 
 LOG_CHANNEL(move_log, "Move");
 

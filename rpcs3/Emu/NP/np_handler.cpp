@@ -1,17 +1,18 @@
 #include "stdafx.h"
 #include "Emu/system_config.h"
 #include "Emu/NP/np_handler.h"
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/cellNetCtl.h"
+#include "Emu/Cell/timers.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
-#include "Emu/NP/np_structs_extra.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/NP/signaling_handler.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Cell/lv2/sys_net/network_context.h"
 #include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
@@ -42,7 +43,6 @@
 #include <net/if_dl.h>
 #endif
 
-#include "util/asm.hpp"
 #include "util/yaml.hpp"
 
 #include <span>

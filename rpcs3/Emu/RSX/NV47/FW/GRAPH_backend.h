@@ -2,8 +2,6 @@
 
 #include "../HW/context.h"
 
-#include <span>
-
 namespace rsx
 {
 	// GRAPH backend class. Wraps RSX acceleration capabilities for the host.

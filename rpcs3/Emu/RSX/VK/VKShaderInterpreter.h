@@ -1,5 +1,7 @@
 #pragma once
-#include "VKProgramBuffer.h"
+#include "Emu/RSX/VK/VKProgramPipeline.h"
+#include "Emu/RSX/Program/ProgramStateCache.h"
+#include "Emu/RSX/VK/VKPipelineCompiler.h"
 #include "vkutils/descriptors.h"
 #include <unordered_map>
 

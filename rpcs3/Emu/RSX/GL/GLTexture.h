@@ -1,11 +1,8 @@
 #pragma once
 
 #include "OpenGL.h"
-#include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "GLHelpers.h"
-
-#include <unordered_map>
 
 namespace rsx
 {

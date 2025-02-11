@@ -1,11 +1,8 @@
 #pragma once
 
-#include <map>
-#include <list>
-
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
-
+#include "Emu/Cell/timers.hpp"
 
 /*
  * sys_config is a "subscription-based data storage API"

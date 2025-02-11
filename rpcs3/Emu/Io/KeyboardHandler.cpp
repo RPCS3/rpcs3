@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "KeyboardHandler.h"
-#include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(input_log, "Input");
 

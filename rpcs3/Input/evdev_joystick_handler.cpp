@@ -8,7 +8,6 @@
 #include "evdev_joystick_handler.h"
 #include "util/logs.hpp"
 
-#include <functional>
 #include <algorithm>
 #include <unistd.h>
 #include <fcntl.h>

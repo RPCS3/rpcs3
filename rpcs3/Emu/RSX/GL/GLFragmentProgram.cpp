@@ -3,7 +3,6 @@
 
 #include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
-#include "../GCM.h"
 #include "../Program/GLSLCommon.h"
 #include "../RSXThread.h"
 

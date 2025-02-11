@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -10,6 +10,7 @@
 #include "np_helpers.h"
 #include "np_structs_extra.h"
 #include "fb_helpers.h"
+#include "Emu/NP/signaling_handler.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 

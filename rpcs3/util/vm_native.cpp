@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "util/logs.hpp"
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #ifdef _WIN32
