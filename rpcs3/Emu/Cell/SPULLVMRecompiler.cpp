@@ -1675,7 +1675,9 @@ public:
 			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
 			llvm::Value* data_addr = m_ir->CreateGEP(get_type<u8>(), m_lsptr, starta_pc);
 
-			llvm::Value* acc = nullptr;
+			llvm::Value* acc0 = nullptr;
+			llvm::Value* acc1 = nullptr;
+			bool toggle = true;
 
 			// Use a 512bit simple checksum to verify integrity if size is atleast 512b * 3
 			// This code uses a 512bit vector for all hardware to ensure behavior matches.
@@ -1721,9 +1723,20 @@ public:
 						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 16));
 					}
 
-					acc = acc ? m_ir->CreateAdd(acc, vls) : vls;
+					// Interleave accumulators for more performance
+					if (toggle)
+					{
+						acc0 = acc0 ? m_ir->CreateAdd(acc0, vls) : vls;
+					}
+					else
+					{
+						acc1 = acc1 ? m_ir->CreateAdd(acc1, vls) : vls;
+					}
+					toggle = !toggle;
 					check_iterations++;
 				}
+
+				llvm::Value* acc = (acc0 && acc1) ? m_ir->CreateAdd(acc0, acc1): (acc0 ? acc0 : acc1);
 
 				// Create the checksum
 				u32 checksum[16] = {0};
@@ -1818,9 +1831,21 @@ public:
 					}
 
 					vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::ArrayRef(words, elements)));
-					acc = acc ? m_ir->CreateOr(acc, vls) : vls;
+					
+					// Interleave accumulators for more performance
+					if (toggle)
+					{
+						acc0 = acc0 ? m_ir->CreateAdd(acc0, vls) : vls;
+					}
+					else
+					{
+						acc1 = acc1 ? m_ir->CreateAdd(acc1, vls) : vls;
+					}
+					toggle = !toggle;
 					check_iterations++;
 				}
+				llvm::Value* acc = (acc0 && acc1) ? m_ir->CreateAdd(acc0, acc1): (acc0 ? acc0 : acc1);
+
 				// Pattern for PTEST
 				if (m_use_avx512)
 				{
