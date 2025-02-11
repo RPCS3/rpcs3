@@ -15,6 +15,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_prx.h"

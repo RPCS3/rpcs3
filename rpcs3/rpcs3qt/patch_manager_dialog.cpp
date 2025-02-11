@@ -14,7 +14,6 @@
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
-#include "table_item_delegate.h"
 #include "gui_settings.h"
 #include "downloader.h"
 #include "qt_utils.h"

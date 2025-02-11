@@ -2,8 +2,7 @@
 
 #include "vkutils/commands.h"
 #include "vkutils/sync.h"
-
-#include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
 
 #define VK_MAX_ASYNC_COMPUTE_QUEUES 256
 

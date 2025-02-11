@@ -9,8 +9,6 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellJpgDec.h"
 
-#include "util/asm.hpp"
-
 LOG_CHANNEL(cellJpgDec);
 
 // Temporarily

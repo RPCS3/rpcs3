@@ -4,12 +4,13 @@
 #include "breakpoint_handler.h"
 
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/System.h"
+
+#include "util/asm.hpp"
 
 #include <QMouseEvent>
 #include <QWheelEvent>

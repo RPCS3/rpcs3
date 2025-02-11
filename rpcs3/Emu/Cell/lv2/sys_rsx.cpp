@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "sys_rsx.h"
 
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"

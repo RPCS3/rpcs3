@@ -1,9 +1,6 @@
 #pragma once
 
 #include <array>
-
-#include "utils.h"
-
 #include "Utilities/File.h"
 
 constexpr u32 SDAT_FLAG = 0x01000000;

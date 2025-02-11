@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/RSX/RSXThread.h"
 #include "GLTexture.h"
 #include "GLTextureCache.h"
 #include "../Common/BufferUtils.h"

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_cursor.h"
 #include "overlay_manager.h"
+#include "Emu/Cell/timers.hpp"
 
 namespace rsx
 {

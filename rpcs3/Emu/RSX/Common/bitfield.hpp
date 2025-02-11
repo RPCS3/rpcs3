@@ -1,5 +1,6 @@
 #pragma once
 
+#include "util/atomic.hpp"
 #include <util/types.hpp>
 #include <bitset>
 

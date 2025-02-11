@@ -3,20 +3,15 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
-#include <queue>
 #include "rpcn_client.h"
-#include "np_structs_extra.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
-#include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/vport0.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
-
-#include "util/asm.hpp"
 
 #include "generated/np2_structs_generated.h"
 
@@ -28,7 +23,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>

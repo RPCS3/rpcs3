@@ -2,8 +2,6 @@
 #include "Skylander.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 
-#include "util/asm.hpp"
-
 LOG_CHANNEL(skylander_log, "skylander");
 
 sky_portal g_skyportal;

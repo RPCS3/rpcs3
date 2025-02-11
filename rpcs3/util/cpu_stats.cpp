@@ -2,12 +2,12 @@
 #include "util/cpu_stats.hpp"
 #include "util/sysinfo.hpp"
 #include "util/logs.hpp"
-#include "util/asm.hpp"
 #include "Utilities/StrUtil.h"
 
 #include <algorithm>
 
 #ifdef _WIN32
+#include "util/asm.hpp"
 #include "windows.h"
 #include "tlhelp32.h"
 #ifdef _MSC_VER
@@ -18,8 +18,6 @@
 #include "sstream"
 #include "stdlib.h"
 #include "sys/times.h"
-#include "sys/types.h"
-#include "unistd.h"
 #endif
 
 #ifdef __APPLE__

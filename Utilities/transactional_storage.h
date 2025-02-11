@@ -1,6 +1,7 @@
 #include "util/types.hpp"
 #include <vector>
 #include <mutex>
+#include "Emu/Cell/timers.hpp"
 
 // Thread-safe object pool with garbage collection
 class universal_pool

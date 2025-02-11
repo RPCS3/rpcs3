@@ -39,12 +39,10 @@
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
 #include "basic_mouse_settings_dialog.h"
-#include "raw_mouse_settings_dialog.h"
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 
 #include <thread>
-#include <charconv>
 #include <unordered_set>
 
 #include <QScreen>
@@ -65,6 +63,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
 #include "Emu/savestate_utils.hpp"
+#include "Emu/Cell/timers.hpp"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -90,6 +89,10 @@
 #if QT_CONFIG(permissions)
 #include <QGuiApplication>
 #include <QPermissions>
+#endif
+
+#ifdef _WIN32
+#include "raw_mouse_settings_dialog.h"
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");

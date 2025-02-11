@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "Emu/VFS.h"

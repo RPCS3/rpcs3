@@ -21,7 +21,6 @@
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
-#include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
@@ -57,6 +56,8 @@
 #ifdef _WIN32
 #include <Usbiodef.h>
 #include <Dbt.h>
+
+#include "Emu/Cell/lv2/sys_usbd.h"
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");

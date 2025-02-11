@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include <string>
-#include <functional>
 
 namespace rsx
 {

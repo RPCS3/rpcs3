@@ -14,11 +14,12 @@
 
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUAnalyser.h"
-#include "Emu/Cell/PPUFunction.h"
+#include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 
 #include "util/yaml.hpp"
 #include "util/asm.hpp"
+#include "util/logs.hpp"
 #include "util/to_endian.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"

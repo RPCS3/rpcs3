@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Cell/Modules/cellGem.h"
+
 #ifdef HAVE_OPENCV
 	constexpr bool g_ps_move_tracking_supported = true;
 #else

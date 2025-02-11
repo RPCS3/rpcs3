@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "shortcut_handler.h"
-#include "Emu/System.h"
 
 LOG_CHANNEL(shortcut_log, "Shortcuts");
 

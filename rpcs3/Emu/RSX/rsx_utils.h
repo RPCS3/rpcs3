@@ -5,10 +5,6 @@
 #include "Utilities/geometry.h"
 #include "gcm_enums.h"
 
-#include <memory>
-#include <bitset>
-#include <chrono>
-
 extern "C"
 {
 #include <libavutil/pixfmt.h>

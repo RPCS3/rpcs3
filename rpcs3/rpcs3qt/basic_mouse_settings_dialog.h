@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Emu/Io/MouseHandler.h"
-
 #include <QButtonGroup>
 #include <QPushButton>
 #include <QDialog>

@@ -10,6 +10,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
 #include "Emu/savestate_utils.hpp"
+#include "Emu/cache_utils.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -41,14 +42,12 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
-#include "../Crypto/unzip.h"
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
+#include "util/sysinfo.hpp"
 
-#include <fstream>
 #include <memory>
 #include <regex>
-#include <optional>
 
 #include "Utilities/JIT.h"
 

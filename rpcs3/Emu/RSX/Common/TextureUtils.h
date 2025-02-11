@@ -4,7 +4,6 @@
 #include "../color_utils.h"
 #include "../RSXTexture.h"
 
-#include <span>
 #include <stack>
 #include <vector>
 

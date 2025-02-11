@@ -8,6 +8,7 @@
 #include "Loader/ELF.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -23,7 +24,6 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
-#include "Emu/RSX/RSXThread.h"
 
 #include <cmath>
 #include <cfenv>

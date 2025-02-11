@@ -1,9 +1,6 @@
 #include "stdafx.h"
 #include "GLPipelineCompiler.h"
 #include "Utilities/Thread.h"
-
-#include <thread>
-
 #include "util/sysinfo.hpp"
 
 namespace gl

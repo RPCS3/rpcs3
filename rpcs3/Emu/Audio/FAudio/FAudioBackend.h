@@ -4,8 +4,6 @@
 #error "FAudio support disabled but still being built."
 #endif
 
-#include <memory>
-#include "Utilities/mutex.h"
 #include "Emu/Audio/AudioBackend.h"
 
 #include "FAudio.h"

@@ -26,6 +26,7 @@
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Cell/Modules/cellGem.h"
+#include "Emu/Cell/timers.hpp"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 

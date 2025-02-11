@@ -8,7 +8,6 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Keyboard.h"

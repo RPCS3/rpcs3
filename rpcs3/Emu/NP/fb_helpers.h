@@ -1,5 +1,10 @@
 #pragma once
 
+#include "Emu/Cell/Modules/sceNp.h"
+#include "Emu/Cell/Modules/sceNp2.h"
+#include "np_event_data.h"
+#include "generated/np2_structs_generated.h"
+
 namespace np
 {
 	void BinAttr_to_SceNpMatching2BinAttr(event_data& edata, const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info);

@@ -1,13 +1,10 @@
 #include "stdafx.h"
 #include "aes.h"
-#include "utils.h"
 #include "unself.h"
-#include "Emu/VFS.h"
+#include "util/asm.hpp"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Crypto/unzip.h"
-
-#include <algorithm>
 
 inline u8 Read8(const fs::file& f)
 {

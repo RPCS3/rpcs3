@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "nv406e.h"
-#include "common.h"
 #include "nv47_sync.hpp"
 
 #include "Emu/RSX/RSXThread.h"

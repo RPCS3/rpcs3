@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 
 #include <random>
+#include <thread>
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)

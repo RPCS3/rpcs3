@@ -2,8 +2,6 @@
 #include "qt_utils.h"
 #include "gui_settings.h"
 
-#include "rpcs3_version.h"
-#include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
 #include "util/asm.hpp"
 
@@ -14,7 +12,6 @@
 #include <QTimer>
 #include <QStringBuilder>
 
-#include <sstream>
 #include <deque>
 #include <mutex>
 

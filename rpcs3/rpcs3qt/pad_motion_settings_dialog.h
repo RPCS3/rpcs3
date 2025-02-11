@@ -13,6 +13,7 @@
 #include <QSpinBox>
 
 #include <unordered_map>
+#include <mutex>
 
 namespace Ui
 {

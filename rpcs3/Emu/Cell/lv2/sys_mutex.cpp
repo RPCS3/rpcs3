@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"

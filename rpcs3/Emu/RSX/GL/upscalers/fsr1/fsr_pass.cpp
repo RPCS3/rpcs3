@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "../../glutils/fbo.h"
 #include "../fsr_pass.h"
 
 #if defined(__GNUC__)

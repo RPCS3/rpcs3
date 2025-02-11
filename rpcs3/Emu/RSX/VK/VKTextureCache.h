@@ -1,6 +1,5 @@
 #pragma once
 
-#include "VKAsyncScheduler.h"
 #include "VKDMA.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
@@ -9,8 +8,6 @@
 
 #include "../Common/texture_cache.h"
 #include "../Common/tiled_dma_copy.hpp"
-
-#include "Emu/Cell/timers.hpp"
 
 #include <memory>
 #include <vector>

@@ -1,10 +1,5 @@
 #include "VKAsyncScheduler.h"
 #include "VKHelpers.h"
-#include "VKResourceManager.h"
-
-#include "Emu/IdManager.h"
-#include "Utilities/lockless.h"
-#include "Utilities/mutex.h"
 
 #include <vector>
 

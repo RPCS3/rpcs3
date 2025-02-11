@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "image_helpers.h"
 #include "image.h"
-#include "util/logs.hpp"
 #include "../VKRenderPass.h"
 #include "../../color_utils.h"
-#include "../../gcm_enums.h"
 
 namespace vk
 {

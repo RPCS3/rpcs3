@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "game_list_grid.h"
 #include "game_list_grid_item.h"
-#include "movie_item.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"

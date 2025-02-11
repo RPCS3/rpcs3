@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/Thread.h"
-#include <memory>
 #include <string>
 
 struct gdb_cmd;

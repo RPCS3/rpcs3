@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/MouseHandler.h"

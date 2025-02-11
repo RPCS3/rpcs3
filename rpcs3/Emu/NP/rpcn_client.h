@@ -5,9 +5,7 @@
 #include <thread>
 #include <semaphore>
 #include "Utilities/mutex.h"
-#include "Emu/localized_string.h"
-
-#include "util/asm.hpp"
+#include "Emu/localized_string_id.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -27,8 +25,7 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpTus.h"
-
-#include "generated/np2_structs_generated.h"
+#include <flatbuffers/flatbuffers.h>
 
 #ifdef __clang__
 #pragma GCC diagnostic push

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-#include "Utilities/mutex.h"
 #include "util/atomic.hpp"
 #include "Emu/Audio/AudioBackend.h"
 

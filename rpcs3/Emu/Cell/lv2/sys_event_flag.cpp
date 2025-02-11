@@ -2,12 +2,9 @@
 #include "sys_event_flag.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-
-#include <algorithm>
 
 #include "util/asm.hpp"
 

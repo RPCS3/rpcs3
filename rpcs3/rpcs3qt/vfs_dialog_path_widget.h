@@ -1,6 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
 #include "gui_settings.h"
 
 #include <QListWidget>

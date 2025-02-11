@@ -5,7 +5,6 @@
 
 #include "Crypto/aes.h"
 #include "Crypto/sha1.h"
-#include "util/asm.hpp"
 
 LOG_CHANNEL(infinity_log, "infinity");
 

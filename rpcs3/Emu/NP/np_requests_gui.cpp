@@ -1,12 +1,9 @@
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/IdManager.h"
 #include "np_handler.h"
 #include "np_contexts.h"
-#include "np_helpers.h"
 #include "np_structs_extra.h"
 #include "fb_helpers.h"
 

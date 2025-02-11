@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKRenderPass.h"
 #include "vkutils/buffer_object.h"
+#include "VKPipelineCompiler.h"
 
 #define VK_MAX_COMPUTE_TASKS 8192   // Max number of jobs per frame
 

@@ -3,7 +3,6 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_spu.h"
-#include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "sysPrxForUser.h"
 

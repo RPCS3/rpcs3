@@ -1,7 +1,5 @@
 #pragma once
 #include "../Program/VertexProgramDecompiler.h"
-#include "Utilities/Thread.h"
-#include "VulkanAPI.h"
 #include "VKProgramPipeline.h"
 #include "vkutils/pipeline_binding_table.h"
 

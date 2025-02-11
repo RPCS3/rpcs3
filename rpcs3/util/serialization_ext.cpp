@@ -1,9 +1,8 @@
 #include "util/types.hpp"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
-#include "util/simd.hpp"
+#include "util/sysinfo.hpp"
 #include "util/endian.hpp"
-
 #include "Utilities/lockless.h"
 #include "Utilities/File.h"
 #include "Utilities/StrFmt.h"

@@ -3,7 +3,7 @@
 #include "Loader/ELF.h"
 #include "util/asm.hpp"
 
-#include "Emu/Cell/RawSPUThread.h"
+#include "SPUThread.h"
 
 inline void try_start(spu_thread& spu)
 {

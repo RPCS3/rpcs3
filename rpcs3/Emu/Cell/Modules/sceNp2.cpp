@@ -7,6 +7,7 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/NP/signaling_handler.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(sceNp2);

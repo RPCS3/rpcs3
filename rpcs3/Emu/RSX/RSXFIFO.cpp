@@ -1,9 +1,9 @@
 #include "stdafx.h"
 
+#include "Emu/System.h"
 #include "RSXFIFO.h"
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
-#include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
@@ -11,6 +11,7 @@
 
 #include "util/asm.hpp"
 
+#include <thread>
 #include <bitset>
 
 using spu_rdata_t = std::byte[128];

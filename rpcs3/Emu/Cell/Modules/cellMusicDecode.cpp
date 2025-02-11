@@ -12,9 +12,6 @@
 #include "cellSysutil.h"
 #include "util/media_utils.h"
 
-#include <deque>
-
-
 LOG_CHANNEL(cellMusicDecode);
 
 template<>

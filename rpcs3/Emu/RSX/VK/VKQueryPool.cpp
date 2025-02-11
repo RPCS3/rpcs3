@@ -1,9 +1,11 @@
 #include "stdafx.h"
+#include "vkutils/query_pool.hpp"
 #include "VKHelpers.h"
 #include "VKQueryPool.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "util/asm.hpp"
+#include "VKGSRender.h"
 
 namespace vk
 {

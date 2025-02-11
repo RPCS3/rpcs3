@@ -1,7 +1,6 @@
 #pragma once
 #include "../Program/FragmentProgramDecompiler.h"
 #include "../Program/GLSLTypes.h"
-#include "GLHelpers.h"
 #include "glutils/program.h"
 
 namespace glsl

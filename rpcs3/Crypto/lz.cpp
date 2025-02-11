@@ -2,6 +2,7 @@
 // Licensed under the terms of the GNU GPL, version 2.0 or later versions.
 // http://www.gnu.org/licenses/gpl-2.0.txt
 
+#include <string.h>
 #include "lz.h"
 
 void decode_range(unsigned int *range, unsigned int *code, unsigned char **src)

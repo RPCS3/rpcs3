@@ -1,16 +1,13 @@
 #include "stdafx.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
-#include "GLRenderTargets.h"
 #include "GLOverlays.h"
 #include "GLGSRender.h"
 
 #include "glutils/blitter.h"
 #include "glutils/ring_buffer.h"
 
-#include "../GCM.h"
 #include "../RSXThread.h"
-#include "../RSXTexture.h"
 
 #include "util/asm.hpp"
 

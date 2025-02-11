@@ -3,7 +3,6 @@
 
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
-#include "Emu/perf_meter.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -16,6 +15,8 @@
 #include "sys_memory.h"
 
 #include "util/asm.hpp"
+
+#include <thread>
 
 LOG_CHANNEL(sys_ppu_thread);
 

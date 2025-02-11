@@ -5,7 +5,6 @@
 // http://www.gnu.org/licenses/gpl-2.0.txt
 
 #include "util/types.hpp"
-#include "util/asm.hpp"
 
 #include <stdlib.h>
 

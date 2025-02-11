@@ -4,9 +4,6 @@
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPURecompiler.h"
-#include "Emu/Cell/lv2/sys_lwmutex.h"
-#include "Emu/Cell/lv2/sys_lwcond.h"
-#include "Emu/Cell/lv2/sys_spu.h"
 #include "cellSpurs.h"
 
 #include "util/asm.hpp"

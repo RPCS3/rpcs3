@@ -2,8 +2,6 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
-#include "Emu/system_config.h"
-#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
@@ -13,7 +11,6 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "sys_interrupt.h"

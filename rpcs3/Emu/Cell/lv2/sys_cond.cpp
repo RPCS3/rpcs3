@@ -2,7 +2,6 @@
 
 #include "util/serialization.hpp"
 #include "Emu/IdManager.h"
-#include "Emu/IPC.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
