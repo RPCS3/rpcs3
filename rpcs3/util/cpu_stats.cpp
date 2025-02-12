@@ -32,6 +32,7 @@
 
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
 # include <sys/sysctl.h>
+# include <unistd.h>
 # if defined(__DragonFly__) || defined(__FreeBSD__)
 #  include <sys/user.h>
 # endif
