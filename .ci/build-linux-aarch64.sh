@@ -12,8 +12,16 @@ git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 
 
 mkdir build && cd build || exit 1
 
-export CC="${CLANG_BINARY}"
-export CXX="${CLANGXX_BINARY}"
+if [ "$COMPILER" = "gcc" ]; then
+    # These are set in the dockerfile
+    export CC="${GCC_BINARY}"
+    export CXX="${GXX_BINARY}"
+    export LINKER=gold
+    export CFLAGS="-fuse-linker-plugin -fuse-ld=${LINKER}"
+else
+    export CC="${CLANG_BINARY}"
+    export CXX="${CLANGXX_BINARY}"
+fi
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
