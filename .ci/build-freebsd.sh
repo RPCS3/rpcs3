@@ -12,7 +12,9 @@ tar xf llvm*.tar.xz
 export CC=clang19 CXX=clang++19
 cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
       -DLLVM_CCACHE_BUILD=ON \
+      -DLIBCXX_CXX_ABI=libcxxrt \
       -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
+      -DPython3_EXECUTABLE:FILEPATH="$(pkg query -x %Fp python3 | grep -Fm1 bin/python)" \
       -DCMAKE_INSTALL_PREFIX:PATH="$PWD/libcxx_prefix"
 cmake --build libcxx_build
 cmake --install libcxx_build
