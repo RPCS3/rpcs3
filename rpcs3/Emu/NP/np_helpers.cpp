@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "util/types.hpp"
 #include "Utilities/StrUtil.h"
-#include "np_handler.h"
+#include "rpcn_client.h"
 
 #ifdef _WIN32
 #include <WS2tcpip.h>

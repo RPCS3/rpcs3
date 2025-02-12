@@ -5,7 +5,6 @@
 #include "vkutils/device.h"
 #include "Emu/system_config.h"
 #include "../Program/GLSLCommon.h"
-#include "../GCM.h"
 
 std::string VKFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {

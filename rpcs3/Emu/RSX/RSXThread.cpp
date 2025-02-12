@@ -2,11 +2,7 @@
 #include "RSXThread.h"
 
 #include "Capture/rsx_capture.h"
-#include "Common/BufferUtils.h"
-#include "Common/buffer_stream.hpp"
-#include "Common/texture_cache.h"
 #include "Common/surface_store.h"
-#include "Common/time.hpp"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
 #include "Host/MM.h"
@@ -18,8 +14,8 @@
 #include "gcm_printing.h"
 #include "RSXDisAsm.h"
 
-#include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/SPUThread.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
@@ -27,19 +23,15 @@
 #include "util/serialization_ext.hpp"
 #include "Overlays/overlay_perf_metrics.h"
 #include "Overlays/overlay_debug_overlay.h"
-#include "Overlays/overlay_message.h"
+#include "Overlays/overlay_manager.h"
 
 #include "Utilities/date_time.h"
-#include "Utilities/StrUtil.h"
-#include "Crypto/unzip.h"
 
 #include "util/asm.hpp"
 
 #include <span>
-#include <sstream>
 #include <thread>
 #include <unordered_set>
-#include <cfenv>
 
 class GSRender;
 
@@ -1638,7 +1630,10 @@ namespace rsx
 		layout.aa_factors[1] = aa_factor_v;
 
 		// Log this to frame stats
-		m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+		if (layout.target != rsx::surface_target::none)
+		{
+			m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+		}
 
 		// Check if anything has changed
 		bool really_changed = false;

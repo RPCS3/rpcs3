@@ -2,7 +2,6 @@
 
 #include "game_list.h"
 #include "custom_dock_widget.h"
-#include "gui_save.h"
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"

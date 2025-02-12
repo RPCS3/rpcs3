@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Emu/System.h"
 #include "texture_cache_types.h"
 #include "texture_cache_predictor.h"
 #include "TextureUtils.h"

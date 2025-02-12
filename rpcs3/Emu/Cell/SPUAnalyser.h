@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
-
 // SPU Instruction Type
 struct spu_itype
 {

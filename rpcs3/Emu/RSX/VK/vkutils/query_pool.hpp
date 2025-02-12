@@ -2,6 +2,7 @@
 
 #include "../VulkanAPI.h"
 #include "../../rsx_utils.h"
+#include "shared.h"
 
 namespace vk
 {

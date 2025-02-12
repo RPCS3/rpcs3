@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/RSX/GCM.h"
+#include "Emu/RSX/gcm_enums.h"
 #include "cellResc.h"
 #include "cellVideoOut.h"
 

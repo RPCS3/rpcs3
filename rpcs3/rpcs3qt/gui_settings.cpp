@@ -1,15 +1,13 @@
 #include "gui_settings.h"
 
 #include "qt_utils.h"
-#include "localized.h"
+#include "category.h"
 
 #include "Emu/System.h"
 
 #include <QCheckBox>
 #include <QCoreApplication>
 #include <QMessageBox>
-
-#include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
 

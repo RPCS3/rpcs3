@@ -2,8 +2,8 @@
 #include "sys_sync.h"
 #include "sys_fs.h"
 #include "sys_memory.h"
+#include "util/asm.hpp"
 
-#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
 #include "Emu/System.h"

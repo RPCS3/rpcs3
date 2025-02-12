@@ -10,8 +10,6 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "Emu/NP/rpcn_client.h"
-#include "Emu/NP/generated/np2_structs_generated.h"
-#include "Emu/NP/signaling_handler.h"
 #include "Emu/NP/np_allocator.h"
 #include "Emu/NP/np_cache.h"
 #include "Emu/NP/np_gui_cache.h"

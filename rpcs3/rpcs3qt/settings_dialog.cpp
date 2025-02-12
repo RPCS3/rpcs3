@@ -36,8 +36,6 @@
 #include "Loader/PSF.h"
 
 #include <set>
-#include <unordered_set>
-#include <thread>
 
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"

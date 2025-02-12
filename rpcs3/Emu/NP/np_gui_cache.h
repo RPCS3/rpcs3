@@ -1,12 +1,8 @@
 #pragma once
 
 #include <map>
-#include <optional>
-
 #include "Utilities/mutex.h"
-
 #include "Emu/Cell/Modules/sceNp.h"
-#include "Emu/Cell/Modules/sceNp2.h"
 
 template <>
 struct std::less<SceNpRoomId>

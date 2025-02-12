@@ -5,7 +5,6 @@
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
-#include "Utilities/mutex.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"

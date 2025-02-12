@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "cheat_info.h"
-#include "Config.h"
 #include "StrUtil.h"
 
 LOG_CHANNEL(log_cheat, "Cheat");

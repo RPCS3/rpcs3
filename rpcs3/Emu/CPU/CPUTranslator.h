@@ -21,7 +21,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/ModRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -37,7 +36,6 @@
 #include "util/types.hpp"
 #include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BitField.h"
 #include "Utilities/JIT.h"
 
 #include "util/v128.hpp"

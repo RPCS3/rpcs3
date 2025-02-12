@@ -3,7 +3,6 @@
 #endif
 
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
-#include <array>
 #include <algorithm>
 #include "Utilities/StrUtil.h"
 #include "util/logs.hpp"

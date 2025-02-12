@@ -10,6 +10,8 @@
 #include "util/logs.hpp"
 #include "util/to_endian.hpp"
 
+#include "Utilities/mutex.h"
+
 #include "Loader/ELF.h"
 
 #include <span>

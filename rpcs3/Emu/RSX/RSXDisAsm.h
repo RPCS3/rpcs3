@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/PPCDisAsm.h"
+#include "Emu/CPU/CPUDisAsm.h"
 
 class RSXDisAsm final : public CPUDisAsm
 {

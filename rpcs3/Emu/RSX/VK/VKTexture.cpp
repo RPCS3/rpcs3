@@ -5,7 +5,6 @@
 #include "VKHelpers.h"
 #include "VKFormats.h"
 #include "VKRenderPass.h"
-#include "VKRenderTargets.h"
 
 #include "vkutils/data_heap.h"
 #include "vkutils/image_helpers.h"

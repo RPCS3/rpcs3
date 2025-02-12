@@ -7,12 +7,10 @@
 #include "VKResolveHelper.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
-#include "VKCommandStream.h"
 #include "VKRenderPass.h"
 
 #include "vkutils/scratch.h"
 #include "vkutils/device.h"
-#include "Emu/RSX/rsx_methods.h"
 #include <unordered_map>
 
 namespace vk

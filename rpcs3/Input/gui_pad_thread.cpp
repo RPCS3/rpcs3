@@ -14,7 +14,6 @@
 #include "sdl_pad_handler.h"
 #endif
 #include "Emu/Io/PadHandler.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/Thread.h"
 #include "rpcs3qt/gui_settings.h"

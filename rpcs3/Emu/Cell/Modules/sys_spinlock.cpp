@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "sysPrxForUser.h"
-
 LOG_CHANNEL(sysPrxForUser);
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)

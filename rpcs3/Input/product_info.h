@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "Emu/Io/pad_types.h"
+#include "util/types.hpp"
 
 namespace input
 {

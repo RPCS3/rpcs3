@@ -3,7 +3,6 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "sys_sync.h"
-#include <vector>
 
 struct lv2_overlay final : ppu_module<lv2_obj>
 {

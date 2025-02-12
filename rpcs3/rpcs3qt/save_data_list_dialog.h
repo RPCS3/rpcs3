@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/RSX/Overlays/overlays.h"
 

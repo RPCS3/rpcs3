@@ -16,8 +16,6 @@ typedef const char *HostCode;
 
 #include "cellL10n.h"
 
-#include "util/asm.hpp"
-
 LOG_CHANNEL(cellL10n);
 
 // Translate code id to code name. some codepage may has another name.

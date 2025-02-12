@@ -1,13 +1,14 @@
 #include "stdafx.h"
+
 #include "VKShaderInterpreter.h"
 #include "VKCommonPipelineLayout.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
-#include "VKGSRender.h"
-
 #include "../Program/GLSLCommon.h"
 #include "../Program/ShaderInterpreter.h"
 #include "../rsx_methods.h"
+#include "VKHelpers.h"
+#include "VKRenderPass.h"
 
 namespace vk
 {

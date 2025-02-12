@@ -34,6 +34,8 @@
 #endif
 #endif
 
+#include "Emu/Cell/timers.hpp"
+
 #include <charconv>
 #include <regex>
 #include <string_view>

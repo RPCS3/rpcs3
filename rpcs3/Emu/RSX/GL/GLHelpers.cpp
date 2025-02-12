@@ -1,10 +1,7 @@
 #include "stdafx.h"
 #include "GLHelpers.h"
-#include "GLTexture.h"
 #include "GLCompute.h"
 #include "util/logs.hpp"
-
-#include "../Common/simple_array.hpp"
 #include <unordered_map>
 
 namespace gl

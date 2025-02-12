@@ -5,7 +5,6 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/auto_typemap.hpp"
-#include "Utilities/StrFmt.h"
 
 #include "util/to_endian.hpp"
 

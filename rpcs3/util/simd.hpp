@@ -24,7 +24,6 @@
 #include <algorithm>
 #include <cmath>
 #include <math.h>
-#include <cfenv>
 
 #if defined(__clang__)
 #pragma clang diagnostic push

@@ -15,7 +15,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -33,9 +32,7 @@
 
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
-#include "Emu/NP/np_dnshook.h"
-
-#include <chrono>
+#include "Emu/Cell/timers.hpp"
 #include <shared_mutex>
 
 #include "sys_net/network_context.h"

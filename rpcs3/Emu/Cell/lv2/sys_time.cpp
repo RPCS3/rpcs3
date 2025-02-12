@@ -5,12 +5,16 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
+#include "util/tsc.hpp"
 
-#include "util/asm.hpp"
 #include "util/sysinfo.hpp"
 
 static u64 timebase_offset;
 static u64 systemtime_offset;
+
+#ifndef __linux__
+#include "util/asm.hpp"
+#endif
 
 #ifdef _WIN32
 

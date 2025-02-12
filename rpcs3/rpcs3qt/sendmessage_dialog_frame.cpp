@@ -6,6 +6,7 @@
 
 #include "sendmessage_dialog_frame.h"
 #include "Emu/IdManager.h"
+#include "Emu/NP/rpcn_client.h"
 #include "Emu/System.h"
 
 #include "util/logs.hpp"

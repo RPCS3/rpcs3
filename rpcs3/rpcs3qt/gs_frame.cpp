@@ -12,7 +12,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
-#include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/rsx_utils.h"

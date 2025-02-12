@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Utilities/mutex.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 

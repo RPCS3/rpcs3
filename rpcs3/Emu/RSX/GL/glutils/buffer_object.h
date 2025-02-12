@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.h"
+#include "Emu/RSX/GL/OpenGL.h"
 
 namespace gl
 {

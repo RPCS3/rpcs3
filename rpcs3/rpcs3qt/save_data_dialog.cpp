@@ -8,7 +8,6 @@
 #include "Emu/RSX/Overlays/overlay_save_dialog.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
-#include "Utilities/Thread.h"
 #include "util/logs.hpp"
 
 LOG_CHANNEL(cellSaveData);

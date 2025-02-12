@@ -9,7 +9,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include "3rdparty/fusion/fusion/Fusion/Fusion.h"
+extern "C" {
+#include "3rdparty/fusion/fusion/Fusion/FusionAhrs.h"
+}
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif

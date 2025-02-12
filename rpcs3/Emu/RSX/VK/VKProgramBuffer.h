@@ -1,11 +1,8 @@
 #pragma once
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
-#include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
 #include "../Program/ProgramStateCache.h"
-
-#include "util/fnv_hash.hpp"
 
 namespace vk
 {

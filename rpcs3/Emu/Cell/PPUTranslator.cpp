@@ -1,4 +1,3 @@
-#include <bit>
 #ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"

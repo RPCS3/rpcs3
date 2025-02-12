@@ -11,7 +11,6 @@
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
-#include <thread>
 #include <util/logs.hpp>
 
 LOG_CHANNEL(cfg_log, "CFG");

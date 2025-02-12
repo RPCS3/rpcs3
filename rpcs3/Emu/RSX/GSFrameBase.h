@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "util/atomic.hpp"
 #include <vector>
 
 #include "display.h"

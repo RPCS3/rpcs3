@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/StrUtil.h"
@@ -9,6 +8,8 @@
 #include <Emu/Cell/lv2/sys_event.h>
 
 #include <numeric>
+
+#include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
 
 LOG_CHANNEL(cellMic);
 

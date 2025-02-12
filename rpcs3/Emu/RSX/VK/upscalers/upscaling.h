@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include "../vkutils/commands.h"
 #include "../vkutils/image.h"
 

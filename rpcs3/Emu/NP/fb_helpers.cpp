@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "np_handler.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "fb_helpers.h"
 
