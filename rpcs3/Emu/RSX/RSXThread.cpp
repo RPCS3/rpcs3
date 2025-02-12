@@ -1630,7 +1630,10 @@ namespace rsx
 		layout.aa_factors[1] = aa_factor_v;
 
 		// Log this to frame stats
-		m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+		if (layout.target != rsx::surface_target::none)
+		{
+			m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+		}
 
 		// Check if anything has changed
 		bool really_changed = false;
