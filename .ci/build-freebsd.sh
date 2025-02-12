@@ -13,7 +13,7 @@ export CC=clang19 CXX=clang++19
 cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
       -DLLVM_CCACHE_BUILD=ON \
       -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-      -DCMAKE_INSTALL_PREFIX:PATH=libcxx_prefix
+      -DCMAKE_INSTALL_PREFIX:PATH="$PWD/libcxx_prefix"
 cmake --build libcxx_build
 cmake --install libcxx_build
 export CXXFLAGS="$CXXFLAGS -nostdinc++ -isystem$PWD/libcxx_prefix/include/c++/v1"
