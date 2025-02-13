@@ -884,6 +884,8 @@ void rpcn_account_edit_dialog::change_password()
 				return;
 			}
 
+			g_cfg_rpcn.set_password(*password);
+			g_cfg_rpcn.save();
 			QMessageBox::information(this, tr("Password Successfully Changed!"), tr("Your password has been successfully changed!"), QMessageBox::Ok);
 		}
 		break;
