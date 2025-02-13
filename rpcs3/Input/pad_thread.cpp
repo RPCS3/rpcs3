@@ -12,7 +12,7 @@
 #elif HAVE_LIBEVDEV
 #include "evdev_joystick_handler.h"
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 #include "sdl_pad_handler.h"
 #endif
 #include "keyboard_pad_handler.h"
@@ -668,7 +668,7 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::mm:
 		return std::make_shared<mm_joystick_handler>();
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 	case pad_handler::sdl:
 		return std::make_shared<sdl_pad_handler>();
 #endif
