@@ -929,7 +929,7 @@ namespace vk
 		return *pcmd;
 	}
 
-	static const std::pair<u32, u32> calculate_upload_pitch(int format, u32 heap_align, vk::image* dst_image, const rsx::subresource_layout& layout)
+	static const std::pair<u32, u32> calculate_upload_pitch(int format, u32 heap_align, vk::image* dst_image, const rsx::subresource_layout& layout, const rsx::texture_uploader_capabilities& caps)
 	{
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
@@ -950,7 +950,7 @@ namespace vk
 
 			// We have row_pitch in source coordinates. But some formats have a software decode step which can affect this packing!
 			// For such formats, the packed pitch on src does not match packed pitch on dst
-			if (!rsx::is_compressed_host_format(format))
+			if (!rsx::is_compressed_host_format(caps, format))
 			{
 				const auto host_texel_width = vk::get_format_texel_width(dst_image->format());
 				const auto host_packed_pitch = host_texel_width * layout.width_in_texel;
@@ -977,7 +977,8 @@ namespace vk
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
-		rsx::texture_uploader_capabilities caps{ .alignment = heap_align };
+		auto pdev = vk::get_current_renderer();
+		rsx::texture_uploader_capabilities caps{ .supports_dxt = pdev->get_texture_compression_bc_support(), .alignment = heap_align };
 		rsx::texture_memory_info opt{};
 		bool check_caps = true;
 
@@ -997,11 +998,11 @@ namespace vk
 
 		for (const rsx::subresource_layout &layout : subresource_layout)
 		{
-			const auto [row_pitch, upload_pitch_in_texel] = calculate_upload_pitch(format, heap_align, dst_image, layout);
+			const auto [row_pitch, upload_pitch_in_texel] = calculate_upload_pitch(format, heap_align, dst_image, layout, caps);
 			caps.alignment = row_pitch;
 
 			// Calculate estimated memory utilization for this subresource
-			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+			image_linear_size = row_pitch * layout.depth * (rsx::is_compressed_host_format(caps, format) ? layout.height_in_block : layout.height_in_texel);
 
 			// Only do GPU-side conversion if occupancy is good
 			if (check_caps)

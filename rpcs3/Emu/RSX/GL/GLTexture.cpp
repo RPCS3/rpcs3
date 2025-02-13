@@ -70,6 +70,7 @@ namespace gl
 
 	GLenum get_sized_internal_format(u32 texture_format)
 	{
+		const bool supports_dxt = get_driver_caps().EXT_texture_compression_s3tc_supported;
 		switch (texture_format)
 		{
 		case CELL_GCM_TEXTURE_B8: return GL_R8;
@@ -92,9 +93,9 @@ namespace gl
 		case CELL_GCM_TEXTURE_D1R5G5B5: return GL_BGR5_A1;
 		case CELL_GCM_TEXTURE_D8R8G8B8: return GL_BGRA8;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return GL_RG16F;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_BGRA8;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT3_EXT : GL_BGRA8;
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_BGRA8;
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return GL_RG8;
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return GL_RG8_SNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return GL_BGRA8;
@@ -105,6 +106,7 @@ namespace gl
 
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format)
 	{
+		const bool supports_dxt = get_driver_caps().EXT_texture_compression_s3tc_supported;
 		switch (texture_format)
 		{
 		case CELL_GCM_TEXTURE_B8: return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE);
@@ -127,9 +129,9 @@ namespace gl
 		case CELL_GCM_TEXTURE_D1R5G5B5: return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV);
 		case CELL_GCM_TEXTURE_D8R8G8B8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV);
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return std::make_tuple(GL_RG, GL_HALF_FLOAT);
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return std::make_tuple(GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return std::make_tuple(GL_COMPRESSED_RGBA_S3TC_DXT3_EXT, GL_UNSIGNED_BYTE);
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return std::make_tuple(GL_COMPRESSED_RGBA_S3TC_DXT5_EXT, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return std::make_tuple(supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT1_EXT : GL_BGRA, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return std::make_tuple(supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT3_EXT : GL_BGRA, GL_UNSIGNED_BYTE);
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return std::make_tuple(supports_dxt ? GL_COMPRESSED_RGBA_S3TC_DXT5_EXT : GL_BGRA, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return std::make_tuple(GL_RG, GL_BYTE);
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_BYTE);
@@ -587,6 +589,7 @@ namespace gl
 			.supports_vtc_decoding = false,
 			.supports_hw_deswizzle = driver_caps.ARB_compute_shader_supported,
 			.supports_zero_copy = false,
+			.supports_dxt = driver_caps.EXT_texture_compression_s3tc_supported,
 			.alignment = 4
 		};
 
@@ -596,7 +599,7 @@ namespace gl
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-		if (rsx::is_compressed_host_format(format)) [[likely]]
+		if (rsx::is_compressed_host_format(caps, format)) [[likely]]
 		{
 			caps.supports_vtc_decoding = driver_caps.vendor_NVIDIA;
 			unpack_settings.apply();
@@ -687,13 +690,13 @@ namespace gl
 				if (driver_caps.ARB_compute_shader_supported)
 				{
 					u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
-					if (!rsx::is_compressed_host_format(format))
-					{
-						// Handle emulated compressed formats with host unpack (R8G8 compressed)
-						row_pitch = std::max<u64>(row_pitch, dst->pitch());
-					}
 
-					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+					// We're in the "else" branch, so "is_compressed_host_format()" is always false.
+					// Handle emulated compressed formats with host unpack (R8G8 compressed)
+					row_pitch = std::max<u64>(row_pitch, dst->pitch());
+
+					// FIXME: Double-check this logic; it seems like we should always use texels both here and for row_pitch.
+					image_linear_size = row_pitch * layout.height_in_texel * layout.depth;
 
 					compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
 					compute_scratch_mem.first = reinterpret_cast<void*>(static_cast<uintptr_t>(compute_scratch_mem.second));
@@ -815,7 +818,8 @@ namespace gl
 		// Calculate staging buffer size
 		rsx::simple_array<std::byte> data_upload_buf;
 
-		if (rsx::is_compressed_host_format(gcm_format))
+		rsx::texture_uploader_capabilities caps { .supports_dxt = gl::get_driver_caps().EXT_texture_compression_s3tc_supported };
+		if (rsx::is_compressed_host_format(caps, gcm_format))
 		{
 			const auto& desc = subresources_layout[0];
 			const u32 texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
