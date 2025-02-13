@@ -87,8 +87,10 @@ endif()
 add_subdirectory(hidapi)
 
 
-# Vulkan
+# glslang
 add_subdirectory(glslang EXCLUDE_FROM_ALL)
+add_library(3rdparty_glslang INTERFACE)
+target_link_libraries(3rdparty_glslang INTERFACE SPIRV)
 
 
 # yaml-cpp
@@ -190,7 +192,7 @@ if(USE_VULKAN)
 	if(VULKAN_FOUND)
 		add_library(3rdparty_vulkan INTERFACE)
 		target_compile_definitions(3rdparty_vulkan INTERFACE -DHAVE_VULKAN)
-		target_link_libraries(3rdparty_vulkan INTERFACE SPIRV Vulkan::Vulkan)
+		target_link_libraries(3rdparty_vulkan INTERFACE Vulkan::Vulkan)
 
 		if(UNIX AND NOT APPLE)
 			find_package(Wayland)
@@ -360,6 +362,7 @@ add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
 add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
 add_library(3rdparty::pugixml ALIAS pugixml)
+add_library(3rdparty::glslang ALIAS 3rdparty_glslang)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
 add_library(3rdparty::xxhash ALIAS xxhash)
 add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
