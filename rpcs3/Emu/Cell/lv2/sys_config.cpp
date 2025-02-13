@@ -418,7 +418,7 @@ error_code sys_config_register_service(u32 config_hdl, sys_config_service_id ser
 	sys_config.trace("sys_config_register_service(config_hdl=0x%x, service_id=0x%llx, user_id=0x%llx, verbosity=0x%llx, data_but=*0x%llx, size=%lld, out_service_hdl=*0x%llx)", config_hdl, service_id, user_id, verbosity, data_buf, size, out_service_hdl);
 
 	// Find sys_config handle object with the given ID
-	const auto cfg = idm::withdraw<lv2_config_handle>(config_hdl);
+	const auto cfg = idm::get_unlocked<lv2_config_handle>(config_hdl);
 	if (!cfg)
 	{
 		return CELL_ESRCH;
@@ -444,7 +444,7 @@ error_code sys_config_unregister_service(u32 config_hdl, u32 service_hdl)
 	sys_config.trace("sys_config_unregister_service(config_hdl=0x%x, service_hdl=0x%x)", config_hdl, service_hdl);
 
 	// Remove listener from IDM
-	auto service = idm::get_unlocked<lv2_config_service>(service_hdl);
+	auto service = idm::withdraw<lv2_config_service>(service_hdl);
 	if (!service)
 	{
 		return CELL_ESRCH;
