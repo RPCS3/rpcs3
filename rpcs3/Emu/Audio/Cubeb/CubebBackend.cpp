@@ -574,12 +574,12 @@ void CubebBackend::device_collection_changed_cb(cubeb* context, void* user_ptr)
 
 void CubebBackend::log_cb(const char* fmt, ...)
 {
-	char buf[256] = "Cubeb log msg: ";
-	static constexpr size_t prefix_size = sizeof("Cubeb log msg: ") - 1;
+	char buf[256]{};
 
 	va_list va;
 	va_start(va, fmt);
-	vsnprintf(buf + prefix_size, sizeof(buf) - prefix_size, fmt, va);
+	vsnprintf(buf, sizeof(buf) - 1, fmt, va);
 	va_end(va);
-	Cubeb.notice(buf);
+
+	Cubeb.notice("Cubeb log: %s", buf);
 }
