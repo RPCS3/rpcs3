@@ -8,7 +8,7 @@ sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
 export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
-# Prefer newer Clang than in base system (see also .ci/build-freebsd.sh)
+# WITH_LLVM
 pkg install llvm19
 
 # Mandatory dependencies (qt6-base is pulled via qt6-multimedia)

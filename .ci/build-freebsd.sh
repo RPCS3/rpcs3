@@ -5,22 +5,6 @@
 # shellcheck disable=SC2046
 git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
 
-# Prefer newer Clang than in base system (see also .ci/install-freebsd.sh)
-# libc++ isn't in llvm* packages, so download manually
-fetch https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/llvm-project-19.1.7.src.tar.xz
-tar xf llvm*.tar.xz
-export CC=clang19 CXX=clang++19
-cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
-      -DLLVM_CCACHE_BUILD=ON \
-      -DLIBCXX_CXX_ABI=libcxxrt \
-      -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-      -DPython3_EXECUTABLE:FILEPATH="$(pkg query -x %Fp python3 | grep -Fm1 bin/python)" \
-      -DCMAKE_INSTALL_PREFIX:PATH="$PWD/libcxx_prefix"
-cmake --build libcxx_build
-cmake --install libcxx_build
-export CXXFLAGS="$CXXFLAGS -nostdinc++ -isystem$PWD/libcxx_prefix/include/c++/v1"
-#export LDFLAGS="$LDFLAGS -nostdlib++ -L$PWD/libcxx_prefix/lib -l:libc++.a -lcxxrt"
-
 CONFIGURE_ARGS="
 	-DWITH_LLVM=ON
 	-DUSE_SDL=OFF
@@ -31,6 +15,9 @@ CONFIGURE_ARGS="
 	-DUSE_SYSTEM_LIBPNG=ON
 	-DUSE_SYSTEM_OPENCV=ON
 "
+
+# base Clang workaround (missing clang-scan-deps)
+CONFIGURE_ARGS="$CONFIGURE_ARGS -DCMAKE_CXX_SCAN_FOR_MODULES=OFF"
 
 # shellcheck disable=SC2086
 cmake -B build -G Ninja $CONFIGURE_ARGS
