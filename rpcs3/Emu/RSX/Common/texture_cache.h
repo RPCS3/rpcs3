@@ -9,8 +9,6 @@
 
 #include <unordered_map>
 
-#include "Emu/Cell/timers.hpp"
-
 #define RSX_GCM_FORMAT_IGNORED 0
 
 namespace rsx

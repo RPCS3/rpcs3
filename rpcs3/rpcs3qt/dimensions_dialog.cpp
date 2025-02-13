@@ -3,10 +3,6 @@
 #include "dimensions_dialog.h"
 #include "Emu/Io/Dimensions.h"
 
-#include "util/asm.hpp"
-
-#include <locale>
-
 #include <QLabel>
 #include <QGroupBox>
 #include <QFileDialog>

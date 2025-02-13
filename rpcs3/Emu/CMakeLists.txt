@@ -462,6 +462,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/rpcn_countries.cpp
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
+    NP/ip_address.cpp
 )
 
 # Memory

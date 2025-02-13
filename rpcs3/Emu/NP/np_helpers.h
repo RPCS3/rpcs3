@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include "Emu/Cell/Modules/sceNp.h"
-#include "Emu/Cell/Modules/sceNp2.h"
 #include "rpcn_client.h"
 
 namespace np

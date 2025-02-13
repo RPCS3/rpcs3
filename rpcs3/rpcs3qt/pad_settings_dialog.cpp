@@ -16,8 +16,6 @@
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/Io/Null/NullPadHandler.h"
-#include "Utilities/File.h"
 
 #include "Input/pad_thread.h"
 #include "Input/gui_pad_thread.h"

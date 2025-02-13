@@ -4,8 +4,6 @@
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/System.h"
-#include "Utilities/StrUtil.h"
-#include "Utilities/Thread.h"
 
 namespace rsx
 {

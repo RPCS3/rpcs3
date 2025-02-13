@@ -1,17 +1,9 @@
 #pragma once
 
 #include "util/types.hpp"
-#include <string>
-#include <functional>
 #include <vector>
-#include <memory>
-#include <unordered_map>
-#include <variant>
-#include <stack>
-#include <deque>
 
 #include "VulkanAPI.h"
-#include "vkutils/chip_class.h"
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/rsx_utils.h"

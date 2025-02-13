@@ -3,9 +3,9 @@
 #include "Emu/system_config.h"
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
-#include "Emu/Cell/Modules/cellAudioOut.h"
 #include "cellAudio.h"
 #include "util/video_provider.h"
 

@@ -15,6 +15,8 @@
 
 #include "util/fnv_hash.hpp"
 
+#include "Emu/Cell/timers.hpp"
+
 namespace vk
 {
 	overlay_pass::overlay_pass()

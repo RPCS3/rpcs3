@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "util/asm.hpp"
 
 #if defined(ARCH_X64)
 #include "emmintrin.h"

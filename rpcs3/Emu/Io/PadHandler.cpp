@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "PadHandler.h"
-#include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
 #include "Emu/Cell/timers.hpp"
 #include "Input/pad_thread.h"

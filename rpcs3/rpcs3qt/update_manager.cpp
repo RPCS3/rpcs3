@@ -4,10 +4,8 @@
 #include "rpcs3_version.h"
 #include "downloader.h"
 #include "gui_settings.h"
-#include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "Emu/System.h"
-#include "Emu/system_utils.hpp"
 #include "Crypto/utils.h"
 #include "util/logs.hpp"
 #include "util/types.hpp"
@@ -41,6 +39,7 @@
 #define PATH_MAX MAX_PATH
 #endif
 
+#include "Utilities/StrUtil.h"
 #else
 #include <unistd.h>
 #include <sys/stat.h>

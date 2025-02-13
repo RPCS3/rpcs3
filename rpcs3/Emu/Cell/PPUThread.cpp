@@ -12,9 +12,9 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/VFS.h"
-#include "Emu/vfs_config.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
@@ -64,6 +64,8 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
+
+#include "Utilities/sema.h"
 
 #ifdef __APPLE__
 #include <libkern/OSCacheControl.h>

@@ -1,11 +1,7 @@
 #include "stdafx.h"
-
-#include <fcntl.h>
-
+#include "Emu/NP/ip_address.h"
 #include "nt_p2p_port.h"
-#include "lv2_socket_native.h"
 #include "lv2_socket_p2ps.h"
-#include "util/asm.hpp"
 #include "sys_net_helpers.h"
 #include "Emu/NP/signaling_handler.h"
 #include "sys_net_helpers.h"
@@ -44,9 +40,10 @@ namespace sys_net_helpers
 nt_p2p_port::nt_p2p_port(u16 port)
 	: port(port)
 {
-	// Creates and bind P2P Socket
-	p2p_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	is_ipv6 = np::is_ipv6_supported();
 
+	// Creates and bind P2P Socket
+	p2p_socket = is_ipv6 ? ::socket(AF_INET6, SOCK_DGRAM, 0) : ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 #ifdef _WIN32
 	if (p2p_socket == INVALID_SOCKET)
 #else
@@ -54,22 +51,30 @@ nt_p2p_port::nt_p2p_port(u16 port)
 #endif
 		fmt::throw_exception("Failed to create DGRAM socket for P2P socket: %s!", get_last_error(true));
 
-#ifdef _WIN32
-	u_long _true = 1;
-	::ioctlsocket(p2p_socket, FIONBIO, &_true);
-#else
-	::fcntl(p2p_socket, F_SETFL, ::fcntl(p2p_socket, F_GETFL, 0) | O_NONBLOCK);
-#endif
+	np::set_socket_non_blocking(p2p_socket);
 
 	u32 optval = 131072; // value obtained from DECR for a SOCK_DGRAM_P2P socket(should maybe be bigger for actual socket?)
 	if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
 		fmt::throw_exception("Error setsockopt SO_RCVBUF on P2P socket: %s", get_last_error(true));
 
-	::sockaddr_in p2p_saddr{};
-	p2p_saddr.sin_family      = AF_INET;
-	p2p_saddr.sin_port        = std::bit_cast<u16, be_t<u16>>(port); // htons(port);
-	p2p_saddr.sin_addr.s_addr = 0;                                   // binds to 0.0.0.0
-	const auto ret_bind       = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_saddr), sizeof(p2p_saddr));
+	int ret_bind = 0;
+	const u16 be_port = std::bit_cast<u16, be_t<u16>>(port);
+
+	if (is_ipv6)
+	{
+		// Some OS(Windows, maybe more) will only support IPv6 adressing by default and we need IPv4 over IPv6
+		optval = 0;
+		if (setsockopt(p2p_socket, IPPROTO_IPV6, IPV6_V6ONLY, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
+			fmt::throw_exception("Error setsockopt IPV6_V6ONLY on P2P socket: %s", get_last_error(true));
+
+		::sockaddr_in6 p2p_ipv6_addr{.sin6_family = AF_INET6, .sin6_port = be_port};
+		ret_bind = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_ipv6_addr), sizeof(p2p_ipv6_addr));
+	}
+	else
+	{
+		::sockaddr_in p2p_ipv4_addr{.sin_family = AF_INET, .sin_port = be_port};
+		ret_bind = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr));
+	}
 
 	if (ret_bind == -1)
 		fmt::throw_exception("Failed to bind DGRAM socket to %d for P2P: %s!", port, get_last_error(true));
@@ -82,14 +87,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 
 nt_p2p_port::~nt_p2p_port()
 {
-	if (p2p_socket)
-	{
-#ifdef _WIN32
-		::closesocket(p2p_socket);
-#else
-		::close(p2p_socket);
-#endif
-	}
+	np::close_socket(p2p_socket);
 }
 
 void nt_p2p_port::dump_packet(p2ps_encapsulated_tcp* tcph)
@@ -153,7 +151,7 @@ bool nt_p2p_port::recv_data()
 	{
 		auto lerr = get_last_error(false);
 		if (lerr != SYS_NET_EINPROGRESS && lerr != SYS_NET_EWOULDBLOCK)
-			sys_net.error("Error recvfrom on P2P socket: %d", lerr);
+			sys_net.error("Error recvfrom on %s P2P socket: %d", is_ipv6 ? "IPv6" : "IPv4", lerr);
 
 		return false;
 	}
@@ -165,6 +163,14 @@ bool nt_p2p_port::recv_data()
 	}
 
 	u16 dst_vport = reinterpret_cast<le_t<u16>&>(p2p_recv_data[0]);
+
+	if (is_ipv6)
+	{
+		const auto* addr_ipv6 = reinterpret_cast<sockaddr_in6*>(&native_addr);
+		const auto addr_ipv4 = np::sockaddr6_to_sockaddr(*addr_ipv6);
+		native_addr = {};
+		std::memcpy(&native_addr, &addr_ipv4, sizeof(addr_ipv4));
+	}
 
 	if (dst_vport == 0)
 	{
@@ -339,7 +345,7 @@ bool nt_p2p_port::recv_data()
 			send_hdr.flags = p2ps_tcp_flags::RST;
 			auto packet = generate_u2s_packet(send_hdr, nullptr, 0);
 
-			if (::sendto(p2p_socket, reinterpret_cast<char*>(packet.data()), ::size32(packet), 0, reinterpret_cast<const sockaddr*>(&native_addr), sizeof(sockaddr_in)) == -1)
+			if (np::sendto_possibly_ipv6(p2p_socket, reinterpret_cast<char*>(packet.data()), ::size32(packet), reinterpret_cast<const sockaddr_in*>(&native_addr), 0) == -1)
 			{
 				sys_net.error("[P2PS] Error sending RST to sender to unbound P2PS: %s", get_last_error(false));
 				return true;

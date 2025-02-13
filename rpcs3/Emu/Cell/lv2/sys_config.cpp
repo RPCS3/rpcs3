@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/lv2/sys_event.h"

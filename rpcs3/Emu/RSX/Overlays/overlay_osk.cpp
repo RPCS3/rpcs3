@@ -2,10 +2,10 @@
 #include "overlay_manager.h"
 #include "overlay_osk.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
-#include "Emu/Cell/Modules/cellKb.h"
+#include "Emu/Io/Keyboard.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/timers.hpp"
 
 LOG_CHANNEL(osk, "OSK");
 

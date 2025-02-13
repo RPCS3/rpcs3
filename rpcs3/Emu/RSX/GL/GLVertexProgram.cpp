@@ -1,13 +1,10 @@
 #include "stdafx.h"
 #include "GLVertexProgram.h"
 
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 
 #include "GLCommonDecompiler.h"
 #include "../Program/GLSLCommon.h"
-
-#include <algorithm>
 
 std::string GLVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {

@@ -3,6 +3,7 @@
 #include "cellCamera.h"
 
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/MouseHandler.h"

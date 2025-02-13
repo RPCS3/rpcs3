@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "Emu/System.h"
-
 #include "VertexProgramDecompiler.h"
 
 #include <sstream>

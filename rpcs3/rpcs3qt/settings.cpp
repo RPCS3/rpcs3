@@ -1,7 +1,5 @@
 #include "settings.h"
 
-#include "qt_utils.h"
-
 #include "Utilities/File.h"
 
 settings::settings(QObject* parent) : QObject(parent),

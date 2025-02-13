@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
-#include "Emu/RSX/GCM.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
-#include "Overlays/overlays.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)

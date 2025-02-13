@@ -1,8 +1,8 @@
 #include "GLOverlays.h"
 
-#include "Emu/system_config.h"
-#include "../rsx_utils.h"
+#include "Utilities/StrUtil.h"
 #include "../Program/RSXOverlay.h"
+#include "Emu/Cell/timers.hpp"
 
 namespace gl
 {

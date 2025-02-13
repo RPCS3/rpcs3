@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "util/types.hpp"
 #include "util/logs.hpp"
-#include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "Utilities/File.h"
@@ -12,7 +11,6 @@
 #include "System.h"
 
 #include <set>
-#include <any>
 #include <span>
 
 LOG_CHANNEL(sys_log, "SYS");

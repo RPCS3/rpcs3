@@ -3,7 +3,6 @@
 #include "state_tracker.hpp"
 
 #include "../GLTexture.h" // TODO: This system also needs to be refactored
-#include "../GLOverlays.h"
 
 namespace gl
 {

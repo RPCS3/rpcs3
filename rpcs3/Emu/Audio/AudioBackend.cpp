@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "AudioBackend.h"
-#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu//Cell/Modules/cellAudioOut.h"
 

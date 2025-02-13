@@ -5,6 +5,7 @@
 #include "util/logs.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
+#include "Emu/Cell/timers.hpp"
 
 #ifndef _WIN32
 #include <unistd.h>

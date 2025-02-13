@@ -12,8 +12,6 @@
 #include <vector>
 #include <set>
 
-#include "Emu/Cell/timers.hpp"
-
 void init_fxo_for_exec(utils::serial*, bool);
 
 enum class localized_string_id;

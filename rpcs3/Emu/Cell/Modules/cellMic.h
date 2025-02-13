@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Utilities/Thread.h"
-#include "Emu/Cell/timers.hpp"
-
-#include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
+#include "3rdparty/OpenAL/openal-soft/include/AL/alc.h"
+#include "Utilities/mutex.h"
 
 // Error Codes
 enum CellMicInError : u32

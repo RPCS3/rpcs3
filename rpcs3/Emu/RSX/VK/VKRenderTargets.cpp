@@ -1,5 +1,4 @@
-#include "VKCompute.h"
-#include "VKDMA.h"
+#include "vkutils/data_heap.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"

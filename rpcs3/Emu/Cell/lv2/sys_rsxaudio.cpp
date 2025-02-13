@@ -4,10 +4,8 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu//Audio/audio_utils.h"
-#include "Emu//Cell/Modules/cellAudioOut.h"
 #include "util/video_provider.h"
 
-#include "sys_process.h"
 #include "sys_rsxaudio.h"
 
 #include <cmath>

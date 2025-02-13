@@ -3,7 +3,6 @@
 #include "overlay_recvmessage_dialog.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_client.h"
-#include "Utilities/Thread.h"
 
 namespace rsx
 {

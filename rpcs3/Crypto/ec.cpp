@@ -2,7 +2,7 @@
 // Licensed under the terms of the GNU GPL, version 2
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
-#include "utils.h"
+#include "util/types.hpp"
 #include <cstring>
 
 static inline int bn_compare(u8* a, u8* b, u32 n)

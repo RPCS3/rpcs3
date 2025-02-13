@@ -7,7 +7,6 @@
 #include <QKeyEvent>
 
 #include "game_list_base.h"
-#include "util/atomic.hpp"
 
 #include <functional>
 

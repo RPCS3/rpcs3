@@ -1,5 +1,6 @@
+#include "Emu/NP/ip_address.h"
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUCallback.h"
 #include "signaling_handler.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -547,6 +548,13 @@ void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& s
 {
 	ensure(si);
 
+	// If the address given to us by op is a translation IP, just replace it with our public ip(v4)
+	if (np::is_ipv6_supported() && np::ip_address_translator::is_ipv6(new_addr))
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		new_addr = nph.get_public_ip_addr();
+	}
+
 	if (si->mapped_addr != new_addr || si->mapped_port != new_port)
 	{
 		if (sign_log.trace)
@@ -640,7 +648,15 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 
 	sign_log.trace("Sending %s packet to %s:%d", sp.command, ip_str, port);
 
-	if (send_packet_from_p2p_port(packet, dest) == -1)
+	if (np::is_ipv6_supported() && np::ip_address_translator::is_ipv6(dest.sin_addr.s_addr))
+	{
+		auto& translator = g_fxo->get<np::ip_address_translator>();
+		const auto addr6 = translator.get_ipv6_sockaddr(dest.sin_addr.s_addr, dest.sin_port);
+
+		if (!send_packet_from_p2p_port_ipv6(packet, addr6))
+			sign_log.error("Failed to send signaling packet to %s:%d", ip_str, port);
+	}
+	else if (!send_packet_from_p2p_port_ipv4(packet, dest))
 	{
 		sign_log.error("Failed to send signaling packet to %s:%d", ip_str, port);
 	}

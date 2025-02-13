@@ -12,18 +12,12 @@
 #include <Windows.h>
 #include <ctime>
 #elif __linux__
-#include <errno.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #endif
-#include <algorithm>
-#include <chrono>
-#include <mutex>
-#include <condition_variable>
-#include <unordered_map>
 
 #ifdef _WIN32
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
@@ -60,6 +54,9 @@ struct futex_waitv
 };
 #endif
 #else
+
+#include <condition_variable>
+
 enum
 {
 	FUTEX_PRIVATE_FLAG = 0,

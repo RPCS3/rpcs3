@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu/IdManager.h"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/SPUThread.h"

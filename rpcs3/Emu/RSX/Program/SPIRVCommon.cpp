@@ -20,7 +20,7 @@
 #endif
 
 #include "SPIRVCommon.h"
-#include "GLSLCommon.h"
+#include "Emu/RSX/Program/GLSLTypes.h"
 
 namespace spirv
 {

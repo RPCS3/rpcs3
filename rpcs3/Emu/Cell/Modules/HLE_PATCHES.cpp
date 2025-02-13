@@ -4,7 +4,6 @@
 #include "Utilities/Thread.h"
 
 #include "Emu/Cell/lv2/sys_spu.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 
 #include <thread>
 

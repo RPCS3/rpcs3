@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "np_handler.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "fb_helpers.h"
 
@@ -46,7 +45,7 @@ namespace np
 	{
 		sce_group->groupId      = fb_group->groupId();
 		sce_group->withPassword = fb_group->withPassword();
-		sce_group->withLabel    = fb_group->withLabel();
+		sce_group->withLabel = fb_group->label() ? 1 : 0;
 		if (fb_group->label())
 		{
 			for (flatbuffers::uoffset_t l_index = 0; l_index < fb_group->label()->size(); l_index++)

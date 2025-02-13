@@ -2,7 +2,6 @@
 #include "sampler.h"
 
 #include "Emu/RSX/gcm_enums.h"
-#include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Common/TextureUtils.h"
 
 //GLenum wrap_mode(rsx::texture_wrap_mode wrap);

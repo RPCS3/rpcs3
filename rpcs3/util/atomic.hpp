@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include <functional>
-#include <mutex>
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push

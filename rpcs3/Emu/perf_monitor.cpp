@@ -2,6 +2,7 @@
 #include "perf_monitor.hpp"
 
 #include "Emu/System.h"
+#include "Emu/Cell/timers.hpp"
 #include "util/cpu_stats.hpp"
 #include "Utilities/Thread.h"
 

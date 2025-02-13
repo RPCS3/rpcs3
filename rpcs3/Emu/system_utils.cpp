@@ -6,7 +6,6 @@
 #include "Emu/System.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
-#include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"

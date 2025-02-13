@@ -1,8 +1,5 @@
 #pragma once
 
-#include <unordered_map>
-#include <deque>
-
 // libvoice = 0x80310801 - 0x803108ff
 // libvoice version 100
 

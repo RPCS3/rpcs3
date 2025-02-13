@@ -1,14 +1,8 @@
 #pragma once
 
-#include <thread>
 #include <queue>
 #include <deque>
-#include <variant>
-#include <stack>
-#include <unordered_map>
 
-#include "GCM.h"
-#include "rsx_cache.h"
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "RSXZCULL.h"
@@ -32,7 +26,6 @@
 #include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
 #include "Core/RSXContext.h"
-#include "Core/RSXIOMap.hpp"
 #include "Core/RSXVertexTypes.h"
 
 #include "NV47/FW/GRAPH_backend.h"

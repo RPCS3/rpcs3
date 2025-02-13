@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "recording_config.h"
-#include <charconv>
 
 LOG_CHANNEL(cfg_log, "CFG");
 

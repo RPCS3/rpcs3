@@ -4,7 +4,6 @@
 
 #include "VKAsyncScheduler.h"
 #include "VKCommandStream.h"
-#include "VKCommonDecompiler.h"
 #include "VKCommonPipelineLayout.h"
 #include "VKCompute.h"
 #include "VKGSRender.h"

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include <QDialog>
 #include <QComboBox>
 #include <QLineEdit>

@@ -2,7 +2,6 @@
 #include "rsx_capture.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/TextureUtils.h"
-#include "Emu/RSX/Common/surface_store.h"
 #include "Emu/RSX/GCM.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Memory/vm.h"

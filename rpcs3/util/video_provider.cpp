@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "video_provider.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Cell/timers.hpp"
 
 extern "C"
 {

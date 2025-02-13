@@ -1,10 +1,10 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "util/endian.hpp"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include <vector>
+#include <mutex>
 
 // Error codes
 enum SceNpTrophyError : u32

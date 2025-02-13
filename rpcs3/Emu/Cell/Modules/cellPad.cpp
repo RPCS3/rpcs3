@@ -3,7 +3,6 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Io/pad_types.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Input/pad_thread.h"

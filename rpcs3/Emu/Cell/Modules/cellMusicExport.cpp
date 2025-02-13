@@ -2,7 +2,6 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
-#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(cellMusicExport);
