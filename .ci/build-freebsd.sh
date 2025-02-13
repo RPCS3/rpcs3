@@ -19,7 +19,7 @@ cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
 cmake --build libcxx_build
 cmake --install libcxx_build
 export CXXFLAGS="$CXXFLAGS -nostdinc++ -isystem$PWD/libcxx_prefix/include/c++/v1"
-export LDFLAGS="$LDFLAGS -nostdlib++ -L$PWD/libcxx_prefix/lib -l:libc++.a -lcxxrt"
+#export LDFLAGS="$LDFLAGS -nostdlib++ -L$PWD/libcxx_prefix/lib -l:libc++.a -lcxxrt"
 
 CONFIGURE_ARGS="
 	-DWITH_LLVM=ON
