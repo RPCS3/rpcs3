@@ -3,6 +3,7 @@
 #include "../overlay_manager.h"
 #include "../overlay_message_dialog.h"
 #include "../../GSRender.h"
+#include "Emu/System.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 namespace rsx

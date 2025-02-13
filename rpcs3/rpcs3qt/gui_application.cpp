@@ -54,7 +54,10 @@
 #endif
 
 #ifdef _WIN32
-#include "Windows.h"
+#include <Usbiodef.h>
+#include <Dbt.h>
+
+#include "Emu/Cell/lv2/sys_usbd.h"
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -72,6 +75,9 @@ gui_application::~gui_application()
 {
 #ifdef WITH_DISCORD_RPC
 	discord::shutdown();
+#endif
+#ifdef _WIN32
+	unregister_device_notification();
 #endif
 }
 
@@ -196,6 +202,11 @@ bool gui_application::Init()
 	// Install native event filter
 #ifdef _WIN32 // Currently only needed for raw mouse input on windows
 	installNativeEventFilter(&m_native_event_filter);
+
+	if (m_main_window)
+	{
+		register_device_notification(m_main_window->winId());
+	}
 #endif
 
 	return true;
@@ -470,11 +481,26 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	}
 
 	m_game_window = frame;
+	ensure(m_game_window);
+
+#ifdef _WIN32
+	if (!m_show_gui)
+	{
+		register_device_notification(m_game_window->winId());
+	}
+#endif
 
 	connect(m_game_window, &gs_frame::destroyed, this, [this]()
 	{
 		gui_log.notice("gui_application: Deleting old game window");
 		m_game_window = nullptr;
+
+#ifdef _WIN32
+		if (!m_show_gui)
+		{
+			unregister_device_notification();
+		}
+#endif
 	});
 
 	return std::unique_ptr<gs_frame>(frame);
@@ -1180,15 +1206,24 @@ void gui_application::OnAppStateChanged(Qt::ApplicationState state)
 bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] const QByteArray& eventType, [[maybe_unused]] void* message, [[maybe_unused]] qintptr* result)
 {
 #ifdef _WIN32
-	if (!Emu.IsRunning() && !g_raw_mouse_handler)
+	if (!Emu.IsRunning() && !Emu.IsStarting() && !g_raw_mouse_handler)
 	{
 		return false;
 	}
 
 	if (eventType == "windows_generic_MSG")
 	{
-		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP))
+		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE))
 		{
+			if (msg->message == WM_DEVICECHANGE && (msg->wParam == DBT_DEVICEARRIVAL || msg->wParam == DBT_DEVICEREMOVECOMPLETE))
+			{
+				if (Emu.IsRunning() || Emu.IsStarting())
+				{
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+				}
+				return false;
+			}
+
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
 			{
 				static_cast<raw_mouse_handler*>(handler)->handle_native_event(*msg);
@@ -1204,3 +1239,40 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 
 	return false;
 }
+
+#ifdef _WIN32
+void gui_application::register_device_notification(WId window_id)
+{
+	if (m_device_notification_handle) return;
+
+	gui_log.notice("Registering device notifications...");
+
+	// Enable usb device hotplug events
+	// Currently only needed for hotplug on windows, as libusb handles other platforms
+	DEV_BROADCAST_DEVICEINTERFACE notification_filter {};
+	notification_filter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+	notification_filter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+	notification_filter.dbcc_classguid = GUID_DEVINTERFACE_USB_DEVICE;
+
+	m_device_notification_handle = RegisterDeviceNotification(reinterpret_cast<HWND>(window_id), &notification_filter, DEVICE_NOTIFY_WINDOW_HANDLE);
+	if (!m_device_notification_handle )
+	{
+		gui_log.error("RegisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
+}
+
+void gui_application::unregister_device_notification()
+{
+	if (m_device_notification_handle)
+	{
+		gui_log.notice("Unregistering device notifications...");
+
+		if (!UnregisterDeviceNotification(m_device_notification_handle))
+		{
+			gui_log.error("UnregisterDeviceNotification() failed: %s", fmt::win_error{GetLastError(), nullptr});
+		}
+
+		m_device_notification_handle = {};
+	}
+}
+#endif

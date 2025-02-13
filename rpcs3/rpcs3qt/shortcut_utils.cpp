@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "shortcut_utils.h"
 #include "qt_utils.h"
-#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
-#include "Emu/vfs_config.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 
@@ -16,6 +14,8 @@
 #include <objidl.h>
 #include <shlguid.h>
 #include <comdef.h>
+
+#include "Emu/system_utils.hpp"
 #else
 #include <sys/stat.h>
 #include <errno.h>

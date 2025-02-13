@@ -135,7 +135,7 @@ void lv2_timer_thread::operator()()
 
 		sleep_time = umax;
 
-		if (Emu.IsPaused())
+		if (Emu.IsPausedOrReady())
 		{
 			sleep_time = 10000;
 			continue;

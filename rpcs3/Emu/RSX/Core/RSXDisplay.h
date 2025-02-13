@@ -3,9 +3,48 @@
 #include <util/types.hpp>
 #include <util/logs.hpp>
 #include <deque>
+#include <unordered_map>
+
+template <typename T>
+class named_thread;
 
 namespace rsx
 {
+	enum class surface_antialiasing : u8;
+
+	struct framebuffer_dimensions_t
+	{
+		u16 width;
+		u16 height;
+		u8 samples_x;
+		u8 samples_y;
+
+		inline u32 samples_total() const
+		{
+			return static_cast<u32>(width) * height * samples_x * samples_y;
+		}
+
+		inline bool operator > (const framebuffer_dimensions_t& that) const
+		{
+			return samples_total() > that.samples_total();
+		}
+
+		std::string to_string(bool skip_aa_suffix = false) const;
+
+		static framebuffer_dimensions_t make(u16 width, u16 height, rsx::surface_antialiasing aa);
+	};
+
+	struct framebuffer_statistics_t
+	{
+		std::unordered_map<rsx::surface_antialiasing, framebuffer_dimensions_t> data;
+
+		// Replace the existing data with this input if it is greater than what is already known
+		void add(u16 width, u16 height, rsx::surface_antialiasing aa);
+
+		// Returns a formatted string representing the statistics collected over the frame.
+		std::string to_string(bool squash) const;
+	};
+
 	struct frame_statistics_t
 	{
 		u32 draw_calls;
@@ -19,6 +58,8 @@ namespace rsx
 
 		u32 vertex_cache_request_count;
 		u32 vertex_cache_miss_count;
+
+		framebuffer_statistics_t framebuffer_stats;
 	};
 
 	struct frame_time_t

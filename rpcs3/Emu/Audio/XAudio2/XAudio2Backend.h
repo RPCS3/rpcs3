@@ -4,8 +4,6 @@
 #error "XAudio2 can only be built on Windows."
 #endif
 
-#include <memory>
-#include "Utilities/mutex.h"
 #include "Emu/Audio/AudioBackend.h"
 
 #include <initguid.h>

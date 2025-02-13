@@ -21,70 +21,7 @@ namespace vk
 		virtual ~cs_resolve_base()
 		{}
 
-		// FIXME: move body to cpp
-		void build(const std::string& kernel, const std::string& format_prefix, int direction)
-		{
-			create();
-
-			// TODO: Tweak occupancy
-			switch (optimal_group_size)
-			{
-			default:
-			case 64:
-				cs_wave_x = 8;
-				cs_wave_y = 8;
-				break;
-			case 32:
-				cs_wave_x = 8;
-				cs_wave_y = 4;
-				break;
-			}
-
-			const std::pair<std::string_view, std::string> syntax_replace[] =
-			{
-				{ "%wx", std::to_string(cs_wave_x) },
-				{ "%wy", std::to_string(cs_wave_y) },
-			};
-
-			m_src =
-			"#version 430\n"
-			"layout(local_size_x=%wx, local_size_y=%wy, local_size_z=1) in;\n"
-			"\n";
-
-			m_src = fmt::replace_all(m_src, syntax_replace);
-
-			if (direction == 0)
-			{
-				m_src +=
-				"layout(set=0, binding=0, " + format_prefix + ") uniform readonly restrict image2DMS multisampled;\n"
-				"layout(set=0, binding=1) uniform writeonly restrict image2D resolve;\n";
-			}
-			else
-			{
-				m_src +=
-				"layout(set=0, binding=0) uniform writeonly restrict image2DMS multisampled;\n"
-				"layout(set=0, binding=1, " + format_prefix + ") uniform readonly restrict image2D resolve;\n";
-			}
-
-			m_src +=
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	ivec2 resolve_size = imageSize(resolve);\n"
-			"	ivec2 aa_size = imageSize(multisampled);\n"
-			"	ivec2 sample_count = resolve_size / aa_size;\n"
-			"\n"
-			"	if (any(greaterThanEqual(gl_GlobalInvocationID.xy, uvec2(resolve_size)))) return;"
-			"\n"
-			"	ivec2 resolve_coords = ivec2(gl_GlobalInvocationID.xy);\n"
-			"	ivec2 aa_coords = resolve_coords / sample_count;\n"
-			"	ivec2 sample_loc = ivec2(resolve_coords % sample_count);\n"
-			"	int sample_index = sample_loc.x + (sample_loc.y * sample_count.y);\n"
-			+ kernel +
-			"}\n";
-
-			rsx_log.notice("Compute shader:\n%s", m_src);
-		}
+		void build(const std::string& format_prefix, bool unresolve, bool bgra_swap);
 
 		std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout() override
 		{
@@ -144,14 +81,8 @@ namespace vk
 	{
 		cs_resolve_task(const std::string& format_prefix, bool bgra_swap = false)
 		{
-			// Allow rgba->bgra transformation for old GeForce cards
-			const std::string swizzle = bgra_swap? ".bgra" : "";
-
-			std::string kernel =
-			"	vec4 aa_sample = imageLoad(multisampled, aa_coords, sample_index);\n"
-			"	imageStore(resolve, resolve_coords, aa_sample" + swizzle + ");\n";
-
-			build(kernel, format_prefix, 0);
+			// BGRA-swap flag is a workaround to swap channels for old GeForce cards with broken compute image handling
+			build(format_prefix, false, bgra_swap);
 		}
 	};
 
@@ -159,14 +90,8 @@ namespace vk
 	{
 		cs_unresolve_task(const std::string& format_prefix, bool bgra_swap = false)
 		{
-			// Allow rgba->bgra transformation for old GeForce cards
-			const std::string swizzle = bgra_swap? ".bgra" : "";
-
-			std::string kernel =
-			"	vec4 resolved_sample = imageLoad(resolve, resolve_coords);\n"
-			"	imageStore(multisampled, aa_coords, sample_index, resolved_sample" + swizzle + ");\n";
-
-			build(kernel, format_prefix, 1);
+			// BGRA-swap flag is a workaround to swap channels for old GeForce cards with broken compute image handling
+			build(format_prefix, true, bgra_swap);
 		}
 	};
 
@@ -184,43 +109,12 @@ namespace vk
 
 			// Depth-stencil buffers are almost never filterable, and we do not need it here (1:1 mapping)
 			m_sampler_filter = VK_FILTER_NEAREST;
+
+			// Do not use UBOs
+			m_num_uniform_buffers = 0;
 		}
 
-		void build(const std::string& kernel, const std::string& extensions, const std::vector<const char*>& inputs)
-		{
-			vs_src =
-				"#version 450\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n\n"
-				"\n"
-				"void main()\n"
-				"{\n"
-				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"}\n";
-
-			fs_src =
-				"#version 420\n"
-				"#extension GL_ARB_separate_shader_objects : enable\n";
-			fs_src += extensions +
-				"\n"
-				"layout(push_constant) uniform static_data{ ivec" + std::to_string(static_parameters_width) + " regs[1]; };\n";
-
-				int binding = 1;
-				for (const auto& input : inputs)
-				{
-					fs_src += "layout(set=0, binding=" + std::to_string(binding++) + ") uniform " + input + ";\n";
-				}
-
-				fs_src +=
-				"//layout(pixel_center_integer) in vec4 gl_FragCoord;\n"
-				"\n"
-				"void main()\n"
-				"{\n";
-					fs_src += kernel +
-				"}\n";
-
-			rsx_log.notice("Resolve shader:\n%s", fs_src);
-		}
+		void build(bool resolve_depth, bool resolve_stencil, bool unresolve);
 
 		std::vector<VkPushConstantRange> get_push_constants() override
 		{
@@ -263,15 +157,7 @@ namespace vk
 	{
 		depthonly_resolve()
 		{
-			build(
-				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
-				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
-				"	ivec2 sample_loc = out_coord % regs[0].xy;\n"
-				"	int sample_index = sample_loc.x + (sample_loc.y * regs[0].y);\n"
-				"	float frag_depth = texelFetch(fs0, in_coord, sample_index).x;\n"
-				"	gl_FragDepth = frag_depth;\n",
-				"",
-				{ "sampler2DMS fs0" });
+			build(true, false, false);
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -291,15 +177,7 @@ namespace vk
 	{
 		depthonly_unresolve()
 		{
-			build(
-				"	ivec2 pixel_coord = ivec2(gl_FragCoord.xy);\n"
-				"	pixel_coord *= regs[0].xy;\n"
-				"	pixel_coord.x += (gl_SampleID % regs[0].x);\n"
-				"	pixel_coord.y += (gl_SampleID / regs[0].x);\n"
-				"	float frag_depth = texelFetch(fs0, pixel_coord, 0).x;\n"
-				"	gl_FragDepth = frag_depth;\n",
-				"",
-				{ "sampler2D fs0" });
+			build(true, false, true);
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -340,15 +218,7 @@ namespace vk
 
 			static_parameters_width = 3;
 
-			build(
-				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
-				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
-				"	ivec2 sample_loc = out_coord % regs[0].xy;\n"
-				"	int sample_index = sample_loc.x + (sample_loc.y * regs[0].y);\n"
-				"	uint frag_stencil = texelFetch(fs0, in_coord, sample_index).x;\n"
-				"	if ((frag_stencil & uint(regs[0].z)) == 0) discard;\n",
-				"",
-				{"usampler2DMS fs0"});
+			build(false, true, false);
 		}
 
 		void get_dynamic_state_entries(std::vector<VkDynamicState>& state_descriptors) override
@@ -407,15 +277,7 @@ namespace vk
 
 			static_parameters_width = 3;
 
-			build(
-				"	ivec2 pixel_coord = ivec2(gl_FragCoord.xy);\n"
-				"	pixel_coord *= regs[0].xy;\n"
-				"	pixel_coord.x += (gl_SampleID % regs[0].x);\n"
-				"	pixel_coord.y += (gl_SampleID / regs[0].x);\n"
-				"	uint frag_stencil = texelFetch(fs0, pixel_coord, 0).x;\n"
-				"	if ((frag_stencil & uint(regs[0].z)) == 0) discard;\n",
-				"",
-				{ "usampler2D fs0" });
+			build(false, true, false);
 		}
 
 		void get_dynamic_state_entries(std::vector<VkDynamicState>& state_descriptors) override
@@ -468,19 +330,7 @@ namespace vk
 			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
 
-			build(
-				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
-				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
-				"	ivec2 sample_loc = out_coord % ivec2(regs[0].xy);\n"
-				"	int sample_index = sample_loc.x + (sample_loc.y * regs[0].y);\n"
-				"	float frag_depth = texelFetch(fs0, in_coord, sample_index).x;\n"
-				"	uint frag_stencil = texelFetch(fs1, in_coord, sample_index).x;\n"
-				"	gl_FragDepth = frag_depth;\n"
-				"	gl_FragStencilRefARB = int(frag_stencil);\n",
-
-				"#extension GL_ARB_shader_stencil_export : enable\n",
-
-				{ "sampler2DMS fs0", "usampler2DMS fs1" });
+			build(true, true, false);
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -510,19 +360,7 @@ namespace vk
 			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
 
-			build(
-				"	ivec2 pixel_coord = ivec2(gl_FragCoord.xy);\n"
-				"	pixel_coord *= regs[0].xy;\n"
-				"	pixel_coord.x += (gl_SampleID % regs[0].x);\n"
-				"	pixel_coord.y += (gl_SampleID / regs[0].x);\n"
-				"	float frag_depth = texelFetch(fs0, pixel_coord, 0).x;\n"
-				"	uint frag_stencil = texelFetch(fs1, pixel_coord, 0).x;\n"
-				"	gl_FragDepth = frag_depth;\n"
-				"	gl_FragStencilRefARB = int(frag_stencil);\n",
-
-				"#extension GL_ARB_shader_stencil_export : enable\n",
-
-				{ "sampler2D fs0", "usampler2D fs1" });
+			build(true, true, true);
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)

@@ -2,28 +2,23 @@
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
-#include "custom_table_widget_item.h"
 #include "input_dialog.h"
 #include "localized.h"
 #include "progress_dialog.h"
 #include "persistent_settings.h"
 #include "emu_settings.h"
 #include "gui_settings.h"
-#include "game_list_delegate.h"
 #include "game_list_table.h"
 #include "game_list_grid.h"
 #include "game_list_grid_item.h"
 #include "patch_manager_dialog.h"
 
-#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
-#include "Utilities/mutex.h"
-#include "util/yaml.hpp"
 #include "util/sysinfo.hpp"
 #include "Input/pad_thread.h"
 
@@ -1197,9 +1192,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	extern bool is_savestate_compatible(fs::file&& file, std::string_view filepath);
+	extern bool is_savestate_compatible(const std::string& filepath);
 
-	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 0, 0); is_savestate_compatible(fs::file(sstate), sstate))
+	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 0, 0); is_savestate_compatible(sstate))
 	{
 		QAction* boot_state = menu.addAction(is_current_running_game
 			? tr("&Reboot with savestate")

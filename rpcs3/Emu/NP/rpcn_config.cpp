@@ -124,6 +124,11 @@ std::string cfg_rpcn::get_token() const
 	return token.to_string();
 }
 
+bool cfg_rpcn::get_ipv6_support() const
+{
+	return ipv6_support.get();
+}
+
 void cfg_rpcn::set_host(std::string_view host)
 {
 	this->host.from_string(host);
@@ -142,6 +147,11 @@ void cfg_rpcn::set_password(std::string_view password)
 void cfg_rpcn::set_token(std::string_view token)
 {
 	this->token.from_string(token);
+}
+
+void cfg_rpcn::set_ipv6_support(bool ipv6_support)
+{
+	this->ipv6_support.set(ipv6_support);
 }
 
 void cfg_rpcn::set_hosts(const std::vector<std::pair<std::string, std::string>>& vec_hosts)

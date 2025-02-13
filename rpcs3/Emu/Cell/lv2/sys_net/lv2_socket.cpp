@@ -35,7 +35,7 @@ std::size_t lv2_socket::get_queue_size() const
 }
 socket_type lv2_socket::get_socket() const
 {
-	return socket;
+	return native_socket;
 }
 
 #ifdef _WIN32

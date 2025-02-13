@@ -29,37 +29,24 @@ namespace vk
 		std::vector<u8> vendor_binary_data;
 		std::string fault_description;
 
-#ifdef _MSC_VER
-		__try
+		// Retrieve sizes
+		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
+
+		// Resize arrays and fill
+		address_info.resize(fault_counts.addressInfoCount);
+		vendor_info.resize(fault_counts.vendorInfoCount);
+		vendor_binary_data.resize(fault_counts.vendorBinarySize);
+
+		VkDeviceFaultInfoEXT fault_info
 		{
-#endif
-			// Retrieve sizes
-			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
+			.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
+			.pAddressInfos = address_info.data(),
+			.pVendorInfos = vendor_info.data(),
+			.pVendorBinaryData = vendor_binary_data.data()
+		};
+		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
 
-			// Resize arrays and fill
-			address_info.resize(fault_counts.addressInfoCount);
-			vendor_info.resize(fault_counts.vendorInfoCount);
-			vendor_binary_data.resize(fault_counts.vendorBinarySize);
-
-			VkDeviceFaultInfoEXT fault_info
-			{
-				.sType = VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT,
-				.pAddressInfos = address_info.data(),
-				.pVendorInfos = vendor_info.data(),
-				.pVendorBinaryData = vendor_binary_data.data()
-			};
-			g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
-
-			fault_description = fault_info.description;
-#ifdef _MSC_VER
-		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
-		{
-			rsx_log.error("Driver crashed retrieving extended crash information. Are you running on an NVIDIA card?");
-			return "Extended fault information is not available. The driver crashed when retrieving the details.";
-		}
-#endif
-
+		fault_description = fault_info.description;
 		std::string fault_message = fmt::format(
 			"Device Fault Information:\n"
 			"Fault Summary:\n"

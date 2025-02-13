@@ -2,8 +2,6 @@
 
 #include "emulated_pad_config.h"
 
-#include <array>
-
 enum class gem_btn : u32
 {
 	start,

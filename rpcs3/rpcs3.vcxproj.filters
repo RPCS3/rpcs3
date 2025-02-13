@@ -193,6 +193,9 @@
     <Filter Include="Darwin">
       <UniqueIdentifier>{f6b701aa-7f4a-4816-b05f-80d24cb70e13}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\savestates">
+      <UniqueIdentifier>{9b51636c-b371-425b-86d3-be003774a1b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -471,6 +474,9 @@
     <ClCompile Include="rpcs3qt\trophy_manager_dialog.cpp">
       <Filter>Gui\trophy</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\savestate_manager_dialog.cpp">
+      <Filter>Gui\savestates</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\progress_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
@@ -547,6 +553,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_savestate_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_savestate_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\input_dialog.cpp">
@@ -1479,6 +1491,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\trophy_manager_dialog.h">
       <Filter>Gui\trophy</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\savestate_manager_dialog.h">
+      <Filter>Gui\savestates</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\input_dialog.h">
       <Filter>Gui\misc dialogs</Filter>

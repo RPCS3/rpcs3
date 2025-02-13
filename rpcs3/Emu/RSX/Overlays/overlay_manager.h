@@ -5,10 +5,7 @@
 #include "Emu/IdManager.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
-#include "Utilities/Timer.h"
-
-#include <deque>
-#include <set>
+#include "Utilities/lockless.h"
 
 namespace rsx
 {

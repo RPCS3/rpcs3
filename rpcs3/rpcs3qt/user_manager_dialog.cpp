@@ -22,7 +22,6 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 
-#include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 

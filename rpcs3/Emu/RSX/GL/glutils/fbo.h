@@ -125,7 +125,9 @@ namespace gl
 
 			void operator = (const texture& rhs)
 			{
-				ensure(rhs.get_target() == texture::target::texture2D);
+				ensure(rhs.get_target() == texture::target::texture2D ||
+					rhs.get_target() == texture::target::texture2DMS);
+
 				m_parent.m_resource_bindings[m_id] = rhs.id();
 				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), 0);
 			}

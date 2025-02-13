@@ -132,22 +132,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 		switch (type)
 		{
 		case ppu_itype::ADDI:
-		{
-			if (op.rd != reg)
-			{
-				// Destination register is not relevant to us
-				break;
-			}
-
-			u64 reg_ra = 0;
-
-			if (op.ra)
-			{
-				GET_CONST_REG(reg_ra, op.ra);
-			}
-
-			return { form, reg_ra + op.simm16 };
-		}
+		case ppu_itype::ADDIC:
 		case ppu_itype::ADDIS:
 		{
 			if (op.rd != reg)
@@ -157,12 +142,12 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 			u64 reg_ra = 0;
 
-			if (op.ra)
+			if (op.ra || type == ppu_itype::ADDIC)
 			{
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { form, reg_ra + op.simm16 * 65536 };
+			return { form, reg_ra + (type == ppu_itype::ADDIS ? op.simm16 * 65536 : op.simm16) };
 		}
 		case ppu_itype::ORI:
 		{
@@ -1286,6 +1271,12 @@ void PPUDisAsm::CMPI(ppu_opcode_t op)
 void PPUDisAsm::ADDIC(ppu_opcode_t op)
 {
 	DisAsm_R2_IMM(op.main & 1 ? "addic." : "addic", op.rd, op.ra, op.simm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.ra); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value + op.simm16);
+	}
 }
 
 void PPUDisAsm::ADDI(ppu_opcode_t op)

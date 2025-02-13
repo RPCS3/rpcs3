@@ -1,5 +1,4 @@
-#include "VKCompute.h"
-#include "VKDMA.h"
+#include "vkutils/data_heap.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -998,7 +997,7 @@ namespace vk
 			return;
 		}
 
-			// Memory transfers
+		// Memory transfers
 		vk::image* target_image = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 		vk::blitter hw_blitter;
 		const auto dst_bpp = get_bpp();

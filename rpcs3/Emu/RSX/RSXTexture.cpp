@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "RSXTexture.h"
 
-#include "rsx_methods.h"
 #include "rsx_utils.h"
 
 #include "Emu/system_config.h"

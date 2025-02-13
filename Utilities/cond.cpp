@@ -1,5 +1,4 @@
 #include "cond.h"
-#include "sync.h"
 
 // use constants, increase signal space
 

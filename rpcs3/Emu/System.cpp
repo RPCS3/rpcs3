@@ -10,6 +10,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
 #include "Emu/savestate_utils.hpp"
+#include "Emu/cache_utils.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -41,14 +42,12 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
-#include "../Crypto/unzip.h"
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
+#include "util/sysinfo.hpp"
 
-#include <fstream>
 #include <memory>
 #include <regex>
-#include <optional>
 
 #include "Utilities/JIT.h"
 
@@ -61,6 +60,10 @@
 #endif
 
 #include "Emu/RSX/GSRender.h"
+
+#ifdef LLVM_AVAILABLE
+#include "llvm/Config/llvm-config.h"
+#endif
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -345,6 +348,19 @@ extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>*
 
 void Emulator::Init()
 {
+	// Log LLVM version
+	if (static bool logged_llvm = false; !logged_llvm)
+	{
+#ifndef LLVM_AVAILABLE
+		sys_log.always()("LLVM version: Compiled without LLVM");
+#elif defined (LLVM_VERSION_STRING)
+		sys_log.always()("LLVM version: %s", LLVM_VERSION_STRING);
+#else
+		sys_log.always()("LLVM version: Unknown");
+#endif
+		logged_llvm = true;
+	}
+
 	jit_runtime::initialize();
 
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
@@ -970,21 +986,26 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 			if (m_state == system_state::stopped)
 			{
 				std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+
+				if (result != game_boot_result::no_errors)
+				{
+					GetCallbacks().close_gs_frame();
+				}
 			}
 			else
 			{
 				ensure(m_state == system_state::stopping);
 
 				// Execute after Kill() is done
-				Emu.after_kill_callback = [save_args = std::move(save_args), this]() mutable
+				Emu.after_kill_callback = [this, result, save_args = std::move(save_args)]() mutable
 				{
 					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
-				};
-			}
 
-			if (result != game_boot_result::no_errors)
-			{
-				GetCallbacks().close_gs_frame();
+					if (result != game_boot_result::no_errors)
+					{
+						GetCallbacks().close_gs_frame();
+					}
+				};
 			}
 		}
 
@@ -1100,47 +1121,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 		else
 		{
-			fs::file save{m_path, fs::isfile + fs::read};
-
-			if (m_path.ends_with(".SAVESTAT") && save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
-			{
-				m_ar = std::make_shared<utils::serial>();
-				m_ar->set_reading_state();
-
-				m_ar->m_file_handler = make_uncompressed_serialization_file_handler(std::move(save));
-			}
-			else if (save && m_path.ends_with(".zst"))
-			{
-				m_ar = std::make_shared<utils::serial>();
-				m_ar->set_reading_state();
-
-				m_ar->m_file_handler = make_compressed_zstd_serialization_file_handler(std::move(save));
-
-				if (m_ar->try_read<u64>().second != "RPCS3SAV"_u64)
-				{
-					m_ar.reset();
-				}
-				else
-				{
-					m_ar->pos = 0;
-				}
-			}
-			else if (save && m_path.ends_with(".gz"))
-			{
-				m_ar = std::make_shared<utils::serial>();
-				m_ar->set_reading_state();
-
-				m_ar->m_file_handler = make_compressed_serialization_file_handler(std::move(save));
-
-				if (m_ar->try_read<u64>().second != "RPCS3SAV"_u64)
-				{
-					m_ar.reset();
-				}
-				else
-				{
-					m_ar->pos = 0;
-				}
-			}
+			m_ar = make_savestate_reader(m_path);
 
 			m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
 		}
@@ -1172,18 +1153,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		if (m_ar)
 		{
-			struct file_header
-			{
-				ENABLE_BITWISE_SERIALIZATION;
-
-				nse_t<u64, 1> magic;
-				bool LE_format;
-				bool state_inspection_support;
-				nse_t<u64, 1> offset;
-				b8 flag_versions_is_following_data;
-			};
-
-			const auto header = m_ar->try_read<file_header>().second;
+			const auto header = m_ar->try_read<savestate_header>().second;
 
 			if (header.magic != "RPCS3SAV"_u64)
 			{
@@ -1312,7 +1282,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					if (m_ar->m_max_data != m_ar->pos)
 					{
-						fmt::throw_exception("TAR desrialization failed: read bytes: 0x%x, expected: 0x%x, path='%s', ar: %s", m_ar->pos - (m_ar->m_max_data - size), size, path, *m_ar);
+						fmt::throw_exception("TAR deserialization failed: read bytes: 0x%x, expected: 0x%x, path='%s', ar: %s", m_ar->pos - (m_ar->m_max_data - size), size, path, *m_ar);
 					}
 
 					m_ar->m_max_data = umax;
@@ -3067,6 +3037,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	if (!IsStopped() && savestate)
 	{
+		if (IsStarting())
+		{
+			return;
+		}
+
 		if (!save_stage || !save_stage->prepared)
 		{
 			if (m_emu_state_close_pending.exchange(true))
@@ -3370,6 +3345,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		std::string path;
 
 		static_cast<void>(init_mtx->init());
+
+		// Call explcit semi-destructors (free memory before savestate)
+		for (const auto& [type, data] : *g_fxo)
+		{
+			if (type.thread_op)
+			{
+				type.thread_op(data, thread_state::destroying_context);
+			}
+		}
 
 		auto set_progress_message = [&](std::string_view text)
 		{

@@ -6,6 +6,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/timers.hpp"
 
 #include <cmath>
 
@@ -1640,14 +1641,14 @@ void camera_context::operator()()
 	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
 	{
 		// send ATTACH event
-		if (init && is_attached_dirty && !Emu.IsPaused())
+		if (init && is_attached_dirty && !Emu.IsPausedOrReady())
 		{
 			send_attach_state(is_attached);
 		}
 
 		const s32 fps = info.framerate;
 
-		if (!init || !fps || Emu.IsPaused() || g_cfg.io.camera == camera_handler::null)
+		if (!init || !fps || Emu.IsPausedOrReady() || g_cfg.io.camera == camera_handler::null)
 		{
 			thread_ctrl::wait_for(1000); // hack
 			continue;

@@ -12,9 +12,6 @@
 #include "cellSysutil.h"
 #include "util/media_utils.h"
 
-#include <deque>
-
-
 LOG_CHANNEL(cellMusicDecode);
 
 template<>
@@ -140,19 +137,29 @@ error_code cell_music_decode_select_contents()
 	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::audio, vfs_dir_path, title,
 		[&dec](s32 status, utils::media_info info)
 		{
-			sysutil_register_cb([&dec, info, status](ppu_thread& ppu) -> s32
+			sysutil_register_cb([&dec, info = std::move(info), status](ppu_thread& ppu) -> s32
 			{
 				std::lock_guard lock(dec.mutex);
 				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_CANCELED};
 				if (result == CELL_OK)
 				{
+					// Let's always choose the whole directory for now
+					std::string track;
+					std::string dir = info.path;
+					if (fs::is_file(info.path))
+					{
+						track = std::move(dir);
+						dir = fs::get_parent_dir(track);
+					}
+
 					music_selection_context context{};
-					context.set_playlist(info.path);
+					context.set_playlist(dir);
+					context.set_track(track);
 					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
 					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
-					dec.current_selection_context = context;
+					dec.current_selection_context = std::move(context);
 					dec.current_selection_context.create_playlist(music_selection_context::get_next_hash());
-					cellMusicDecode.success("Media list dialog: selected entry '%s'", context.playlist.front());
+					cellMusicDecode.success("Media list dialog: selected entry '%s'", dec.current_selection_context.playlist.front());
 				}
 				else
 				{

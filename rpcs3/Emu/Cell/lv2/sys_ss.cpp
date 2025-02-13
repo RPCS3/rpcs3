@@ -3,7 +3,6 @@
 
 #include "sys_process.h"
 #include "Emu/IdManager.h"
-#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/system_config.h"
 #include "util/sysinfo.hpp"

@@ -3,7 +3,6 @@
 #include "CPUTranslator.h"
 
 #include "util/v128.hpp"
-#include "util/simd.hpp"
 #include "util/logs.hpp"
 
 LOG_CHANNEL(llvm_log, "LLVM");

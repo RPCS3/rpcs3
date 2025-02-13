@@ -14,6 +14,9 @@ mkdir build && cd build || exit 1
 
 export CC="${CLANG_BINARY}"
 export CXX="${CLANGXX_BINARY}"
+export LINKER="${LLD_BINARY}"
+export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
+export CXXFLAGS="$CXXFLAGS -fuse-ld=${LINKER}"
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \

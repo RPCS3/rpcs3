@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
+#include "GLResolveHelper.h"
 #include "Emu/RSX/rsx_methods.h"
 
 #include <span>
@@ -417,15 +418,16 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 }
 
 // Render target helpers
-void gl::render_target::clear_memory(gl::command_context& cmd)
+void gl::render_target::clear_memory(gl::command_context& cmd, gl::texture* surface)
 {
+	auto dst = surface ? surface : this;
 	if (aspect() & gl::image_aspect::depth)
 	{
-		gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
+		gl::g_hw_blitter->fast_clear_image(cmd, dst, 1.f, 255);
 	}
 	else
 	{
-		gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+		gl::g_hw_blitter->fast_clear_image(cmd, dst, {});
 	}
 
 	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
@@ -449,18 +451,26 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	}
 	else
 	{
-		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
+		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
+		auto dst = samples() > 1 ? get_resolve_target_safe(cmd) : this;
 		gl::upload_texture(cmd, tmp.get(), get_gcm_format(), is_swizzled, { subres });
 
-		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
+		gl::g_hw_blitter->scale_image(cmd, tmp.get(), dst,
 			{ 0, 0, subres.width_in_block, subres.height_in_block },
 			{ 0, 0, static_cast<int>(width()), static_cast<int>(height()) },
 			!is_depth_surface(),
 			{});
+
+		if (samples() > 1)
+		{
+			msaa_flags = rsx::surface_state_flags::require_unresolve;
+		}
 	}
+
+	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 }
 
-void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access /*access*/)
+void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access access)
 {
 	const bool memory_load = is_depth_surface() ?
 		!!g_cfg.video.read_depth_buffer :
@@ -469,6 +479,14 @@ void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface
 	if (!memory_load)
 	{
 		clear_memory(cmd);
+
+		if (samples() > 1 && access.is_transfer_or_read())
+		{
+			// Only clear the resolve surface if reading from it, otherwise it's a waste
+			clear_memory(cmd, get_resolve_target_safe(cmd));
+		}
+
+		msaa_flags = rsx::surface_state_flags::ready;
 	}
 	else
 	{
@@ -476,8 +494,28 @@ void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface
 	}
 }
 
+gl::viewable_image* gl::render_target::get_surface(rsx::surface_access access_type)
+{
+	if (samples() == 1 || !access_type.is_transfer())
+	{
+		return this;
+	}
+
+	// A read barrier should have been called before this!
+	ensure(resolve_surface, "Read access without explicit barrier");
+	ensure(!(msaa_flags & rsx::surface_state_flags::require_resolve));
+	return static_cast<gl::viewable_image*>(resolve_surface.get());
+}
+
 void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
 {
+	if (access == rsx::surface_access::gpu_reference)
+	{
+		// In OpenGL, resources are always assumed to be visible to the GPU.
+		// We don't manage memory spilling, so just return.
+		return;
+	}
+
 	const bool read_access = access.is_read();
 	const bool is_depth = is_depth_surface();
 	const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
@@ -504,12 +542,33 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 			on_write();
 		}
 
+		if (msaa_flags & rsx::surface_state_flags::require_resolve)
+		{
+			if (access.is_transfer())
+			{
+				// Only do this step when read access is required
+				get_resolve_target_safe(cmd);
+				resolve(cmd);
+			}
+		}
+		else if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+		{
+			if (access == rsx::surface_access::shader_write)
+			{
+				// Only do this step when it is needed to start rendering
+				ensure(resolve_surface);
+				unresolve(cmd);
+			}
+		}
+
 		return;
 	}
 
+	auto dst_img = (samples() > 1) ? get_resolve_target_safe(cmd) : this;
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	const auto dst_bpp = get_bpp();
 	unsigned first = prepare_rw_barrier_for_transfer(this);
+	bool optimize_copy = true;
 	u64 newest_tag = 0;
 
 	for (auto i = first; i < old_contents.size(); ++i)
@@ -518,6 +577,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		auto src_texture = gl::as_rtt(section.source);
 		const auto src_bpp = src_texture->get_bpp();
 		rsx::typeless_xfer typeless_info{};
+
+		src_texture->memory_barrier(cmd, rsx::surface_access::transfer_read);
 
 		if (get_internal_format() == src_texture->get_internal_format())
 		{
@@ -538,29 +599,106 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		}
 
 		section.init_transfer(this);
+		auto src_area = section.src_rect();
+		auto dst_area = section.dst_rect();
 
-		if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+		if (g_cfg.video.antialiasing_level != msaa_level::none)
 		{
-			const auto area = section.dst_rect();
-			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
-			{
-				initialize_memory(cmd, access);
-			}
-			else
-			{
-				state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
-			}
+			src_texture->transform_pixels_to_samples(src_area);
+			this->transform_pixels_to_samples(dst_area);
 		}
 
-		gl::g_hw_blitter->scale_image(cmd, section.source, this,
-			section.src_rect(),
-			section.dst_rect(),
+		bool memory_load = true;
+		if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
+			unsigned(dst_area.x2) == dst_img->width() && unsigned(dst_area.y2) == dst_img->height())
+		{
+			// Skip a bunch of useless work
+			state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
+			msaa_flags = rsx::surface_state_flags::ready;
+
+			memory_load = false;
+			stencil_init_flags = src_texture->stencil_init_flags;
+		}
+		else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+		{
+			// Might introduce MSAA flags
+			initialize_memory(cmd, rsx::surface_access::memory_write);
+			ensure(state_flags == rsx::surface_state_flags::ready);
+		}
+
+		if (msaa_flags & rsx::surface_state_flags::require_resolve)
+		{
+			// Need to forward resolve this
+			resolve(cmd);
+		}
+
+		if (src_texture->samples() > 1)
+		{
+			// Ensure a readable surface exists for the source
+			src_texture->get_resolve_target_safe(cmd);
+		}
+
+		gl::g_hw_blitter->scale_image(
+			cmd,
+			src_texture->get_surface(rsx::surface_access::transfer_read),
+			this->get_surface(rsx::surface_access::transfer_write),
+			src_area,
+			dst_area,
 			!dst_is_depth, typeless_info);
 
+		optimize_copy = optimize_copy && !memory_load;
 		newest_tag = src_texture->last_use_tag;
 	}
 
-	// Memory has been transferred, discard old contents and update memory flags
-	// TODO: Preserve memory outside surface clip region
-	on_write(newest_tag);
+	if (!newest_tag) [[unlikely]]
+	{
+		// Underlying memory has been modified and we could not find valid data to fill it
+		clear_rw_barrier();
+
+		state_flags |= rsx::surface_state_flags::erase_bkgnd;
+		initialize_memory(cmd, access);
+		ensure(state_flags == rsx::surface_state_flags::ready);
+	}
+
+	// NOTE: Optimize flag relates to stencil resolve/unresolve for NVIDIA.
+	on_write_copy(newest_tag, optimize_copy);
+
+	if (access == rsx::surface_access::shader_write && samples() > 1)
+	{
+		// Write barrier, must initialize
+		unresolve(cmd);
+	}
+}
+
+// MSAA support
+gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_context& /*cmd*/)
+{
+	if (!resolve_surface)
+	{
+		// Create a resolve surface
+		const auto resolve_w = width() * samples_x;
+		const auto resolve_h = height() * samples_y;
+
+		resolve_surface.reset(new gl::viewable_image(
+			GL_TEXTURE_2D,
+			resolve_w, resolve_h,
+			1, 1, 1,
+			static_cast<GLenum>(get_internal_format()),
+			format_class()
+		));
+	}
+
+	return static_cast<gl::viewable_image*>(resolve_surface.get());
+}
+
+void gl::render_target::resolve(gl::command_context& cmd)
+{
+	gl::resolve_image(cmd, get_resolve_target_safe(cmd), this);
+	msaa_flags &= ~(rsx::surface_state_flags::require_resolve);
+}
+
+void gl::render_target::unresolve(gl::command_context& cmd)
+{
+	gl::unresolve_image(cmd, this, get_resolve_target_safe(cmd));
+	msaa_flags &= ~(rsx::surface_state_flags::require_unresolve);
 }

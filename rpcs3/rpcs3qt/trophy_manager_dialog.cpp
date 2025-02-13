@@ -601,7 +601,6 @@ void trophy_manager_dialog::ResizeGameIcons()
 					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
 					{
 						// Load game icon
-						const std::string icon_path = m_trophies_db[trophy_index]->path + "ICON0.PNG";
 						if (!icon.load(QString::fromStdString(icon_path)))
 						{
 							gui_log.warning("Could not load trophy game icon from path %s", icon_path);
@@ -1110,6 +1109,8 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		return;
 
 	auto& data = m_trophies_db[m_game_combo->currentData().toInt()];
+	ensure(!!data);
+
 	gui_log.trace("Populating Trophy Manager UI with %s %s", data->game_name, data->path);
 
 	const int all_trophies = data->trop_usr->GetTrophiesCount();

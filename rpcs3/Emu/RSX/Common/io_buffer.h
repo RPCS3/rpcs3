@@ -2,7 +2,6 @@
 #include <util/types.hpp>
 #include <util/bless.hpp>
 #include <span>
-#include <vector>
 #include <functional>
 
 namespace rsx

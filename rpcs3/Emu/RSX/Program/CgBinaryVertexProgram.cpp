@@ -1,7 +1,5 @@
 #include "stdafx.h"
 #include "CgBinaryProgram.h"
-
-#include "Emu/System.h"
 #include "RSXVertexProgram.h"
 
 void CgBinaryDisasm::AddScaCodeDisasm(const std::string& code)

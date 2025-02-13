@@ -1,14 +1,8 @@
 #pragma once
 
-#include <thread>
 #include <queue>
 #include <deque>
-#include <variant>
-#include <stack>
-#include <unordered_map>
 
-#include "GCM.h"
-#include "rsx_cache.h"
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "RSXZCULL.h"
@@ -32,7 +26,6 @@
 #include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
 #include "Core/RSXContext.h"
-#include "Core/RSXIOMap.hpp"
 #include "Core/RSXVertexTypes.h"
 
 #include "NV47/FW/GRAPH_backend.h"
@@ -87,6 +80,7 @@ namespace rsx
 	{
 		bool supports_multidraw;               // Draw call batching
 		bool supports_hw_a2c;                  // Alpha to coverage
+		bool supports_hw_a2c_1spp;             // Alpha to coverage at 1 sample per pixel
 		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
 		bool supports_hw_msaa;                 // MSAA support
 		bool supports_hw_a2one;                // Alpha to one
@@ -465,5 +459,10 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->try_get<rsx::thread>();
+	}
+
+	inline const backend_configuration& get_renderer_backend_config()
+	{
+		return g_fxo->get<rsx::thread>().get_backend_config();
 	}
 }

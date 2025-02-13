@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "cellPamf.h"
 
 // Error Codes
 enum CellDmuxError :u32

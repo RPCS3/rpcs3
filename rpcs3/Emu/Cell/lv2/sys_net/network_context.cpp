@@ -1,35 +1,73 @@
+#include "Emu/NP/ip_address.h"
 #include "stdafx.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/Modules/sceNp.h" // for SCE_NP_PORT
 
 #include "network_context.h"
-#include "Emu/system_config.h"
 #include "sys_net_helpers.h"
 
 LOG_CHANNEL(sys_net);
 
 // Used by RPCN to send signaling packets to RPCN server(for UDP hole punching)
-s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr)
+bool send_packet_from_p2p_port_ipv4(const std::vector<u8>& data, const sockaddr_in& addr)
 {
-	s32 res{};
 	auto& nc = g_fxo->get<p2p_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
 		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
 			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
-			res = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
 
-			if (res == -1)
-				sys_net.error("Failed to send signaling packet: %s", get_last_error(false, false));
+			if (def_port.is_ipv6)
+			{
+				const auto addr6 = np::sockaddr_to_sockaddr6(addr);
+
+				if (::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr6), sizeof(sockaddr_in6)) == -1)
+				{
+					sys_net.error("Failed to send IPv4 signaling packet on IPv6 socket: %s", get_last_error(false, false));
+					return false;
+				}
+			}
+			else if (::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in)) == -1)
+			{
+				sys_net.error("Failed to send signaling packet on IPv4 socket: %s", get_last_error(false, false));
+				return false;
+			}
 		}
 		else
 		{
-			sys_net.error("send_packet_from_p2p_port: port %d not present", +SCE_NP_PORT);
+			sys_net.error("send_packet_from_p2p_port_ipv4: port %d not present", +SCE_NP_PORT);
+			return false;
 		}
 	}
 
-	return res;
+	return true;
+}
+
+bool send_packet_from_p2p_port_ipv6(const std::vector<u8>& data, const sockaddr_in6& addr)
+{
+	auto& nc = g_fxo->get<p2p_context>();
+	{
+		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
+		{
+			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
+			ensure(def_port.is_ipv6);
+
+			if (::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in6)) == -1)
+			{
+				sys_net.error("Failed to send signaling packet on IPv6 socket: %s", get_last_error(false, false));
+				return false;
+			}
+		}
+		else
+		{
+			sys_net.error("send_packet_from_p2p_port_ipv6: port %d not present", +SCE_NP_PORT);
+			return false;
+		}
+	}
+
+	return true;
 }
 
 std::vector<std::vector<u8>> get_rpcn_msgs()
@@ -241,13 +279,18 @@ void p2p_thread::operator()()
 		auto num_p2p_sockets = 0;
 		std::memset(p2p_fd.data(), 0, p2p_fd.size() * sizeof(::pollfd));
 		{
-			std::lock_guard lock(list_p2p_ports_mutex);
-			for (const auto& p2p_port : list_p2p_ports)
+			auto set_fd = [&](socket_type socket)
 			{
 				p2p_fd[num_p2p_sockets].events = POLLIN;
 				p2p_fd[num_p2p_sockets].revents = 0;
-				p2p_fd[num_p2p_sockets].fd = p2p_port.second.p2p_socket;
+				p2p_fd[num_p2p_sockets].fd = socket;
 				num_p2p_sockets++;
+			};
+
+			std::lock_guard lock(list_p2p_ports_mutex);
+			for (const auto& [_, p2p_port] : list_p2p_ports)
+			{
+				set_fd(p2p_port.p2p_socket);
 			}
 		}
 
@@ -260,14 +303,20 @@ void p2p_thread::operator()()
 		{
 			std::lock_guard lock(list_p2p_ports_mutex);
 			auto fd_index = 0;
-			for (auto& p2p_port : list_p2p_ports)
+
+			auto process_fd = [&](nt_p2p_port& p2p_port)
 			{
 				if ((p2p_fd[fd_index].revents & POLLIN) == POLLIN || (p2p_fd[fd_index].revents & POLLRDNORM) == POLLRDNORM)
 				{
-					while (p2p_port.second.recv_data())
+					while (p2p_port.recv_data())
 						;
 				}
 				fd_index++;
+			};
+
+			for (auto& [_, p2p_port] : list_p2p_ports)
+			{
+				process_fd(p2p_port);
 			}
 
 			wake_threads();

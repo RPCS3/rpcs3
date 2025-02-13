@@ -2,6 +2,7 @@
 #include "GLDMA.h"
 
 #include "Emu/Memory/vm.h"
+#include "Emu/RSX/GL/glutils/common.h"
 
 namespace gl
 {

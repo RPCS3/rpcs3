@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 #include "Input/pad_thread.h"
-#include "Emu/Cell/Modules/cellGem.h"
 
 #include <QDialog>
 #include <QPixmap>

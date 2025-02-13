@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include "Common/expected.hpp"
-#include "Utilities/StrFmt.h"
 
 namespace gcm
 {

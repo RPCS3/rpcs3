@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "../../glutils/fbo.h"
 #include "../fsr_pass.h"
 
 #if defined(__GNUC__)
@@ -177,7 +178,7 @@ namespace gl
 		{
 			return std::make_unique<gl::viewable_image>(
 				GL_TEXTURE_2D,
-				output_w, output_h, 1, 1,
+				output_w, output_h, 1, 1, 1,
 				GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		};
 

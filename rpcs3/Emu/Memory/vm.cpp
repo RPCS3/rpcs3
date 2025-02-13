@@ -4,10 +4,8 @@
 #include "vm_ref.h"
 #include "vm_reservation.h"
 
-#include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 #include "Utilities/address_range.h"
-#include "Utilities/JIT.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPURecompiler.h"
@@ -19,6 +17,8 @@
 #include "util/asm.hpp"
 #include "util/simd.hpp"
 #include "util/serialization.hpp"
+
+#include <thread>
 
 LOG_CHANNEL(vm_log, "VM");
 

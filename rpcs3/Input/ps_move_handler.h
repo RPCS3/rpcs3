@@ -2,15 +2,6 @@
 
 #include "hid_pad_handler.h"
 
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
-#include "3rdparty/fusion/fusion/Fusion/Fusion.h"
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
-
 #include <unordered_map>
 
 namespace reports

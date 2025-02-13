@@ -12,9 +12,9 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/VFS.h"
-#include "Emu/vfs_config.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
@@ -40,19 +40,10 @@
 #endif
 #include <llvm/IR/Verifier.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
-#if LLVM_VERSION_MAJOR < 17
-#include <llvm/Support/FormattedStream.h>
-#include <llvm/TargetParser/Host.h>
-#include <llvm/Object/ObjectFile.h>
-#include <llvm/IR/InstIterator.h>
-#include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Transforms/Scalar.h>
-#else
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/Scalar/EarlyCSE.h>
-#endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -66,12 +57,15 @@
 #include <cctype>
 #include <span>
 #include <optional>
+#include <charconv>
 
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
+
+#include "Utilities/sema.h"
 
 #ifdef __APPLE__
 #include <libkern/OSCacheControl.h>
@@ -176,7 +170,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release = false);
 extern bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only = false, u64 file_size = 0);
-static void ppu_initialize2(class jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module<lv2_obj>& whole_module);
+static void ppu_initialize2(class jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name);
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
@@ -342,11 +336,10 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// Load offset value
 	c.mov(cia_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::cia))));
 	// Load cia
-	c.ldr(a64::w15, arm::Mem(ppu_t_base, cia_addr_reg));
+	c.ldr(pc.w(), arm::Mem(ppu_t_base, cia_addr_reg));
+
 	// Multiply by 2 to index into ptr table
-	const arm::GpX index_shift = a64::x12;
-	c.mov(index_shift, Imm(2));
-	c.mul(pc, pc, index_shift);
+	c.add(pc, pc, pc);
 
 	// Load call target
 	const arm::GpX call_target = a64::x13;
@@ -355,7 +348,7 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	const arm::GpX reg_hp = a64::x21;
 	c.mov(reg_hp, call_target);
 	c.lsr(reg_hp, reg_hp, 48);
-	c.lsl(a64::w21, a64::w21, 13);
+	c.lsl(reg_hp.w(), reg_hp.w(), 13);
 
 	// Zero top 16 bits of call target
 	c.lsl(call_target, call_target, Imm(16));
@@ -449,7 +442,29 @@ const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& 
 	c.jmp(ppu_recompiler_fallback);
 });
 #elif defined(ARCH_ARM64)
-const auto ppu_recompiler_fallback_ghc = &ppu_recompiler_fallback;
+const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>("", [](native_asm& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label fallback_fn = c.newLabel();
+	Label escape_fn = c.newLabel();
+
+	// This is called as GHC so the first arg is in x20.
+	// Fix up the arg registers and call the real function.
+	c.mov(args[0], a64::x20);
+	c.ldr(a64::x13, arm::ptr(fallback_fn));
+	c.blr(a64::x13);
+
+	// There is no call-stack to return to in arm64 GHC. Escape to host.
+	c.mov(a64::x0, a64::x20);
+	c.ldr(a64::x13, arm::ptr(escape_fn));
+	c.br(a64::x13);
+
+	c.bind(fallback_fn);
+	c.embedUInt64(reinterpret_cast<u64>(ppu_recompiler_fallback));
+	c.bind(escape_fn);
+	c.embedUInt64(reinterpret_cast<u64>(ppu_escape));
+});
 #endif
 
 // Get pointer to executable cache
@@ -2447,11 +2462,6 @@ void ppu_thread::serialize_common(utils::serial& ar)
 		fmt::throw_exception("Failed to serialize PPU thread ID=0x%x (cia=0x%x, ar=%s)", this->id, cia, ar);
 	}
 
-	if (ar.is_writing())
-	{
-		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
-	}
-
 	ar(optional_savestate_state, vr);
 
 	if (!ar.is_writing())
@@ -2523,7 +2533,9 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		}
 	};
 
-	switch (const u32 status = ar.pop<u32>())
+	const u32 status = ar.pop<u32>();
+
+	switch (status)
 	{
 	case PPU_THREAD_STATUS_IDLE:
 	{
@@ -2654,11 +2666,14 @@ ppu_thread::ppu_thread(utils::serial& ar)
 
 	ppu_tname = make_single<std::string>(ar.pop<std::string>());
 
-	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s", id, *ppu_tname.load(), cia, +state);
+	ppu_log.notice("Loading PPU Thread [0x%x: %s]: cia=0x%x, state=%s, status=%s", id, *ppu_tname.load(), cia, +state, ppu_thread_status{status});
 }
 
 void ppu_thread::save(utils::serial& ar)
 {
+	// For debugging purposes, load this as soon as this function enters
+	const bs_t<cpu_flag> state_flags = state;
+
 	USING_SERIALIZATION_VERSION(ppu);
 
 	const u64 entry = std::bit_cast<u64>(entry_func);
@@ -2708,6 +2723,15 @@ void ppu_thread::save(utils::serial& ar)
 	}
 
 	ar(*ppu_tname.load());
+
+	if (current_module && current_module[0])
+	{
+		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s, statu=%s (at function: %s)", id, *ppu_tname.load(), cia, state_flags, ppu_thread_status{status}, last_function);
+	}
+	else
+	{
+		ppu_log.notice("Saving PPU Thread [0x%x: %s]: cia=0x%x, state=%s, statu=%s", id, *ppu_tname.load(), cia, state_flags, ppu_thread_status{status});
+	}
 }
 
 ppu_thread::thread_name_t::operator std::string() const
@@ -3665,6 +3689,9 @@ struct jit_core_allocator
 	// Initialize global semaphore with the max number of threads
 	::semaphore<0x7fff> sem{std::max<s16>(thread_count, 1)};
 
+	// Mutex for special extra-large modules to compile alone
+	shared_mutex shared_mtx;
+
 	static s16 limit()
 	{
 		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
@@ -3677,8 +3704,8 @@ namespace
 	// Compiled PPU module info
 	struct jit_module
 	{
-		void(*symbol_resolver)(u8*, u64) = nullptr;
-		std::shared_ptr<jit_compiler> pjit;
+		std::vector<void(*)(u8*, u64)> symbol_resolvers;
+		std::vector<std::shared_ptr<jit_compiler>> pjit;
 		bool init = false;
 	};
 
@@ -3729,8 +3756,28 @@ namespace
 			}
 
 			to_destroy.pjit = std::move(found->second.pjit);
+			to_destroy.symbol_resolvers = std::move(found->second.symbol_resolvers);
 
 			bucket.map.erase(found);
+		}
+
+		jit_module_manager& operator=(thread_state s) noexcept
+		{
+			if (s == thread_state::destroying_context)
+			{
+				for (auto& buck : buckets)
+				{
+					for (auto& mod : buck.map)
+					{
+						for (auto& jit : mod.second.pjit)
+						{
+							*jit = s;
+						}
+					}
+				}
+			}
+
+			return *this;
 		}
 	};
 }
@@ -4445,7 +4492,7 @@ extern void ppu_initialize()
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
-		if (_module.funcs.empty())
+		if (_module.get_funcs().empty())
 		{
 			return;
 		}
@@ -4556,7 +4603,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		auto& ppu_toc = toc_manager.toc_map;
 
-		for (const auto& func : info.funcs)
+		for (const auto& func : info.get_funcs())
 		{
 			if (func.size && func.blocks.empty())
 			{
@@ -4659,13 +4706,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 
 	// Compiler instance (deferred initialization)
-	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;
+	std::vector<std::shared_ptr<jit_compiler>>& jits = jit_mod.pjit;
 
 	// Split module into fragments <= 1 MiB
 	usz fpos = 0;
 
+	// Modules counted so far
+	usz module_counter = 0;
+
 	// Difference between function name and current location
-	const u32 reloc = info.relocs.empty() ? 0 : ::at32(info.segs, 0).addr;
+	const u32 reloc = info.is_relocatable ? ::at32(info.segs, 0).addr : 0;
 
 	// Info sent to threads
 	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
@@ -4684,14 +4734,14 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	const cpu_thread* cpu = cpu_thread::get_current();
 
-	for (auto& func : info.funcs)
+	for (auto& func : info.get_funcs())
 	{
 		if (func.size == 0)
 		{
 			continue;
 		}
 
-		for (const auto& [addr, size] : func.blocks)
+		for (const auto [addr, size] : func)
 		{
 			if (size == 0)
 			{
@@ -4722,28 +4772,265 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 	}
 
-	u32 total_compile = 0;
+	// Limit how many modules are per JIt instance
+	// Advantage to lower the limit:
+	// 1. Lowering contoniues memory requirements for allocations
+	// Its disadvantage:
+	// 1. B instruction can wander up to 16MB relatively to its range,
+	// each additional split of JIT instance results in a downgraded version of around (100% / N-1th) - (100% / Nth) percent of instructions
+	// where N is the total amunt of JIT instances
+	// Subject to change
+	constexpr u32 c_moudles_per_jit = 100;
 
-	while (!jit_mod.init && fpos < info.funcs.size())
+	std::shared_ptr<std::pair<u32, u32>> local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
+
+	const auto shared_runtime = make_shared<jit_runtime>();
+	const auto shared_map = make_shared<std::unordered_map<u32, u64>>();
+	const auto full_sample = make_shared<u64>(0);
+	const auto shared_mtx = make_shared<shared_mutex>();
+
+	auto symbols_cement = [runtime = shared_runtime, reloc, seg0 = info.segs[0].addr, bound = info.segs[0].addr + info.segs[0].size - reloc, func_map = shared_map, shared_mtx, full_sample](const std::string& name) -> u64
 	{
-		// Initialize compiler instance
-		if (!jit && is_being_used_in_emulation)
+		u32 func_addr = umax;
+
+		if (name.starts_with("__0x"))
 		{
-			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
+			u32 addr = umax;
+			auto res = std::from_chars(name.c_str() + 4, name.c_str() + name.size(), addr, 16);
+
+			if (res.ec == std::errc() && res.ptr == name.c_str() + name.size() && addr < bound)
+			{
+				func_addr = addr + reloc;
+			}
 		}
 
-		// Copy module information (TODO: optimize)
+		if (func_addr == umax)
+		{
+			return {};
+		}
+
+		reader_lock rlock(*shared_mtx);
+
+		if (auto it = func_map->find(func_addr); it != func_map->end())
+		{
+			return it->second;
+		}
+
+		rlock.upgrade();
+
+		u64& code_ptr = (*func_map)[func_addr];
+
+		if (code_ptr)
+		{
+			return +code_ptr;
+		}
+
+		constexpr auto abs_diff = [](u64 a, u64 b) { return a <= b ? b - a : a - b; };
+
+		auto write_le = [](u8*& code, auto value)
+		{
+			write_to_ptr<le_t<std::remove_cvref_t<decltype(value)>>>(code, value);
+			code += sizeof(value);
+		};
+
+#if defined(ARCH_X64)
+		// Try to make the code fit in 16 bytes, may fail and fallback
+		if (*full_sample && (*full_sample <= s32{smax} || abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true))) <= s32{smax}))
+		{
+			u8* code = jit_runtime::alloc(16, 8, true);
+			code_ptr = reinterpret_cast<u64>(code);
+
+			// mov edx, func_addr
+			*code++ = 0xba;
+			write_le(code, func_addr - seg0);
+
+			const u64 diff_for_jump = abs_diff(reinterpret_cast<u64>(code + 5), *full_sample);
+
+			if (diff_for_jump <= s32{smax})
+			{
+				// jmp (rel32) full_sample
+				*code++ = 0xe9;
+
+				write_le(code, static_cast<s32>(*full_sample - reinterpret_cast<u64>(code + 4)));
+				return code_ptr;
+			}
+			else if (*full_sample <= s32{smax})
+			{
+				// mov eax, full_sample
+				*code++ = 0xb8;
+
+				write_le(code, static_cast<s32>(*full_sample));
+
+				// jmp rax
+				*code++ = 0xff;
+				*code++ = 0xea;
+				return code_ptr;
+			}
+			else // fallback (requiring more than 16 bytes)
+			{
+				// movabs rax, full_sample
+				// *code++ = 0x48;
+				// *code++ = 0xb8;
+
+				// write_le(code, *full_sample);
+
+				// // jmp rax
+				// *code++ = 0xff;
+				// *code++ = 0xea;
+				// return code_ptr;
+				ppu_log.error("JIT symbol trampoline failed.");
+			}
+		}
+#elif 0
+		// Try to make the code fit in 16 bytes, may fail and fallback
+		if (*full_sample && abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true) + 3 * 4)) < (128u << 20))
+		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
+			u8* code = jit_runtime::alloc(12, 4, true);
+			code_ptr = reinterpret_cast<u64>(code);
+
+			union arm_op
+			{
+				u32 op;
+				bf_t<u32, 0, 26> b_target;
+				bf_t<u32, 5, 16> mov_imm16;
+			};
+
+			const u64 diff_for_jump = abs_diff(reinterpret_cast<u64>(code + 3 * 4), *full_sample);
+
+			if (diff_for_jump < (128u << 20))
+			{
+				// MOVZ w15, func_addr
+				arm_op mov_pcl{0x5280000F};
+				mov_pcl.mov_imm16 = func_addr & 0xffff;
+
+				write_le(code, mov_pcl.op);
+
+				// MOVK w15, func_addr >> 16, LSL #16
+				arm_op mov_pch{0x72A0000F};
+				mov_pch.mov_imm16 = func_addr >> 16;
+
+				write_le(code, mov_pch.op);
+
+				const s64 branch_offset = (*full_sample - reinterpret_cast<u64>(code + 4));
+
+				// B full_sample
+				arm_op b_sample{0x14000000};
+				b_sample.b_target = static_cast<s32>(branch_offset / 4);
+
+				write_le(code, b_sample.op);
+				return code_ptr;
+			}
+			else // fallback
+			{
+				ppu_log.error("JIT symbol trampoline failed.");
+			}
+		}
+#endif
+
+		using namespace asmjit;
+
+		usz code_size_until_jump = umax;
+
+		auto func = build_function_asm<u8*(*)(ppu_thread&, u64, u8*, u64, u64, u64)>(name, [&](native_asm& c, auto& /*args*/)
+		{
+#if defined(ARCH_X64)
+			c.mov(x86::edx, func_addr - seg0); // Load PC
+
+			const auto buf_start = reinterpret_cast<const u8*>(c.bufferData());
+			const auto buf_end = reinterpret_cast<const u8*>(c.bufferPtr());
+
+			code_size_until_jump = buf_end - buf_start;
+
+			c.add(x86::edx, seg0);
+			c.mov(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
+
+			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
+			c.mov(x86::rdx, x86::rax);
+			c.shl(x86::rax, 16);
+			c.shr(x86::rax, 16);
+			c.shr(x86::rdx, 48);
+			c.shl(x86::edx, 13);
+			c.mov(x86::r12d, x86::edx); // Load relocation base
+			c.jmp(x86::rax);
+#else
+			// Load REG_Base - use absolute jump target to bypass rel jmp range limits
+			// X19 contains vm::g_exec_addr
+			const arm::GpX exec_addr = a64::x19;
+
+			// X20 contains ppu_thread*
+			const arm::GpX ppu_t_base = a64::x20;
+
+			// Load PC
+			const arm::GpX pc = a64::x15;
+			const arm::GpX cia_addr_reg = a64::x11;
+
+			// Load CIA
+			c.mov(pc.w(), func_addr);
+
+			const auto buf_start = reinterpret_cast<const u8*>(c.bufferData());
+			const auto buf_end = reinterpret_cast<const u8*>(c.bufferPtr());
+
+			code_size_until_jump = buf_end - buf_start;
+
+			// Load offset value
+			c.mov(cia_addr_reg, static_cast<u64>(::offset32(&ppu_thread::cia)));
+
+			// Update CIA
+			c.str(pc.w(), arm::Mem(ppu_t_base, cia_addr_reg));
+
+			// Multiply by 2 to index into ptr table
+			c.add(pc, pc, pc);
+
+			// Load call target
+			const arm::GpX call_target = a64::x13;
+			c.ldr(call_target, arm::Mem(exec_addr, pc));
+
+			// Compute REG_Hp
+			const arm::GpX reg_hp = a64::x21;
+			c.mov(reg_hp, call_target);
+			c.lsr(reg_hp, reg_hp, 48);
+			c.lsl(reg_hp.w(), reg_hp.w(), 13);
+
+			// Zero top 16 bits of call target
+			c.lsl(call_target, call_target, 16);
+			c.lsr(call_target, call_target, 16);
+
+			// Execute LLE call
+			c.br(call_target);
+#endif
+		}, runtime.get(), true);
+
+		// Full sample may exist already, but is very far away
+		// So in this case, a new sample is written
+		ensure(code_size_until_jump != umax);
+		*full_sample = reinterpret_cast<u64>(func) + code_size_until_jump;
+
+		code_ptr = reinterpret_cast<u64>(func);
+		return code_ptr;
+	};
+
+	if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
+	{
+		info.attr += ppu_attr::has_mfvscr;
+	}
+
+	while (!jit_mod.init && fpos < info.get_funcs().size())
+	{
+		// Copy module information
 		ppu_module<lv2_obj> part;
 		part.copy_part(info);
-		part.funcs.reserve(16000);
 
 		// Overall block size in bytes
 		usz bsize = 0;
 		usz bcount = 0;
 
-		while (fpos < info.funcs.size())
+		while (fpos < info.get_funcs().size())
 		{
-			auto& func = info.funcs[fpos];
+			auto& func = info.get_funcs()[fpos];
 
 			if (!func.size)
 			{
@@ -4767,9 +5054,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				{
 					auto far_jump = ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump(source));
 
-					if (source == func.addr && jit)
+					if (source == func.addr)
 					{
-						jit->update_global_mapping(fmt::format("__0x%x", func.addr - reloc), reinterpret_cast<u64>(far_jump));
+						(*shared_map)[func.addr] = reinterpret_cast<u64>(far_jump);
 					}
 
 					ppu_register_function_at(source, 4, far_jump);
@@ -4783,22 +5070,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				}
 			}
 
-			// Copy block or function entry
-			ppu_function& entry = part.funcs.emplace_back(func);
+			local_jit_bounds->first = std::min<u32>(local_jit_bounds->first, func.addr);
+			local_jit_bounds->second = std::max<u32>(local_jit_bounds->second, func.addr + func.size);
 
-			// Fixup some information
-			entry.name = fmt::format("__0x%x", entry.addr - reloc);
-
-			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
-			{
-				// TODO
-				entry.attr += ppu_attr::has_mfvscr;
-			}
-
-			if (entry.blocks.empty())
-			{
-				entry.blocks.emplace(func.addr, func.size);
-			}
+			part.local_bounds.first = std::min<u32>(part.local_bounds.first, func.addr);
+			part.local_bounds.second = std::max<u32>(part.local_bounds.second, func.addr + func.size);
 
 			bsize += func.size;
 
@@ -4815,7 +5091,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			int has_dcbz = !!g_cfg.core.accurate_cache_line_stores;
 
-			for (const auto& func : part.funcs)
+			for (const auto& func : part.get_funcs())
 			{
 				if (func.size == 0)
 				{
@@ -4827,7 +5103,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&addr), sizeof(addr));
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&size), sizeof(size));
 
-				for (const auto& block : func.blocks)
+				for (const auto block : func)
 				{
 					if (block.second == 0 || reloc)
 					{
@@ -4898,7 +5174,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
-			if (!workload.empty() && fpos >= info.funcs.size())
+			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
 			{
 				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
 				// Potentially occuring during patches
@@ -4906,7 +5182,13 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 				std::vector<be_t<u32>> addrs;
 
-				for (const ppu_function& func : info.funcs)
+				constexpr auto compare = [](const ppu_function& a, u32 addr) { return a.addr < addr; };
+
+				const auto start = std::lower_bound(info.funcs.begin(), info.funcs.end(), local_jit_bounds->first, compare);
+
+				std::span<const ppu_function> span_range{ start, std::lower_bound(start, info.funcs.end(), local_jit_bounds->second, compare) };
+
+				for (const ppu_function& func : span_range)
 				{
 					if (func.size == 0)
 					{
@@ -4919,7 +5201,13 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				// Hash its size too
 				addrs.emplace_back(::size32(addrs));
 
-				sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
+				if (module_counter != 0)
+				{
+					sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
+				}
+
+				part.jit_bounds = std::move(local_jit_bounds); 
+				local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
 			}
 
 			if (false)
@@ -4974,7 +5262,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
-			if (fpos >= info.funcs.size())
+			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
@@ -4986,23 +5274,20 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			break;
 		}
 
+		module_counter++;
+
 		if (!check_only)
 		{
-			total_compile++;
-
 			link_workload.emplace_back(obj_name, false);
 		}
 
 		// Check object file
 		if (jit_compiler::check(cache_path + obj_name))
 		{
-			if (!jit && !check_only)
+			if (!is_being_used_in_emulation && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
-
-				// Done already, revert total amount increase
-				// Avoid incrementing "pdone" instead because it creates false appreciation for both the progress dialog and the user
-				total_compile--;
+				link_workload.pop_back();
 			}
 
 			continue;
@@ -5028,12 +5313,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		return false;
 	}
 
-	// Update progress dialog
-	if (total_compile)
-	{
-		g_progr_ptotal += total_compile;
-	}
-
 	if (g_progr_ftotal_bits && file_size)
 	{
 		g_progr_fknown_bits += file_size;
@@ -5042,14 +5321,12 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
+		// Update progress dialog
+		g_progr_ptotal += ::size32(workload);
+
 		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
-		u32 thread_count = rpcs3::utils::get_max_threads();
-
-		if (workload.size() < thread_count)
-		{
-			thread_count = ::size32(workload);
-		}
+		const u32 thread_count = std::min(::size32(workload), rpcs3::utils::get_max_threads());
 
 		struct thread_index_allocator
 		{
@@ -5113,11 +5390,26 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 					// Keep allocating workload
 					const auto& [obj_name, part] = std::as_const(workload)[i];
 
+					std::shared_lock rlock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
+					std::unique_lock lock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
+
+					if (false && part.jit_bounds && part.parent->funcs.size() >= 0x8000)
+					{
+						// Make a large symbol-resolving function compile alone because it has massive memory requirements
+						lock.lock();
+					}
+					else
+					{
+						rlock.lock();
+					}
+
 					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
-					// Use another JIT instance
-					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
-					ppu_initialize2(jit2, part, cache_path, obj_name, i == workload.size() - 1 ? main_module : part);
+					{
+						// Use another JIT instance
+						jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
+						ppu_initialize2(jit2, part, cache_path, obj_name);
+					}
 
 					ppu_log.success("LLVM: Compiled module %s", obj_name);
 				}
@@ -5145,6 +5437,22 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		g_watchdog_hold_ctr--;
 	}
 
+	// Initialize compiler instance
+	while (jits.size() < utils::aligned_div<u64>(module_counter, c_moudles_per_jit) && is_being_used_in_emulation)
+	{
+		jits.emplace_back(std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu, 0, symbols_cement));
+
+		for (const auto& [addr, func] : *shared_map)
+		{
+			jits.back()->update_global_mapping(fmt::format("__0x%x", addr - reloc), func);
+		}
+	}
+
+	if (jit_mod.symbol_resolvers.empty() && is_being_used_in_emulation)
+	{
+		jit_mod.symbol_resolvers.resize(jits.size());
+	}
+
 	bool failed_to_load = false;
 	{
 		if (!is_being_used_in_emulation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
@@ -5152,39 +5460,45 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			return compiled_new;
 		}
 
-		if (workload.size() < link_workload.size())
-		{
-			// Only show this message if this task is relevant
-			*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_LINKING_PPU_MODULES);
-		}
+		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_LINKING_PPU_MODULES);
+
+		// Because linking is faster than compiling, consider each module linkages as a single module compilation in time
+		const bool divide_by_twenty = !workload.empty();
+		const usz increment_link_count_at = (divide_by_twenty ? 20 : 1);
+
+		g_progr_ptotal += static_cast<u32>(utils::aligned_div<u64>(link_workload.size(), increment_link_count_at));
+
+		usz mod_index = umax;
 
 		for (const auto& [obj_name, is_compiled] : link_workload)
 		{
+			mod_index++;
+
 			if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 			{
 				break;
 			}
 
-			if (!failed_to_load && !jit->add(cache_path + obj_name))
+			if (!failed_to_load && !jits[mod_index / c_moudles_per_jit]->add(cache_path + obj_name))
 			{
 				ppu_log.error("LLVM: Failed to load module %s", obj_name);
 				failed_to_load = true;
 			}
 
+			if (mod_index % increment_link_count_at == (link_workload.size() - 1) % increment_link_count_at)
+			{
+				// Incremenet 'pdone' Nth times where N is link workload size ceil-divided by increment_link_count_at
+				g_progr_pdone++;
+			}
+
 			if (failed_to_load)
 			{
-				if (!is_compiled)
-				{
-					g_progr_pdone++;
-				}
-
 				continue;
 			}
 
 			if (!is_compiled)
 			{
 				ppu_log.success("LLVM: Loaded module %s", obj_name);
-				g_progr_pdone++;
 			}
 		}
 	}
@@ -5205,10 +5519,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_APPLYING_PPU_CODE);
 
-	if (!jit)
+	if (jits.empty())
 	{
 		// No functions - nothing to do
-		ensure(info.funcs.empty());
+		ensure(info.get_funcs().empty());
 		return compiled_new;
 	}
 
@@ -5216,25 +5530,27 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	if (is_first)
 	{
-		jit->fin();
-	}
-
-	if (is_first)
-	{
-		jit_mod.symbol_resolver = reinterpret_cast<void(*)(u8*, u64)>(jit->get("__resolve_symbols"));
-		ensure(jit_mod.symbol_resolver);
-	}
-	else
-	{
-		ensure(jit_mod.symbol_resolver);
+		for (auto& jit : jits)
+		{
+			jit->fin();
+		}
 	}
 
 #ifdef __APPLE__
 	// Symbol resolver is in JIT mem, so we must enable execution
 	pthread_jit_write_protect_np(true);
 #endif
+	{
+		usz index = umax;
 
-	jit_mod.symbol_resolver(vm::g_exec_addr, info.segs[0].addr);
+		for (auto& sim : jit_mod.symbol_resolvers)
+		{
+			index++;
+
+			sim = ensure(!is_first ? sim : reinterpret_cast<void(*)(u8*, u64)>(jits[index]->get("__resolve_symbols")));
+			sim(vm::g_exec_addr, info.segs[0].addr);
+		}
+	}
 
 #ifdef __APPLE__
 	// Symbol resolver is in JIT mem, so we must enable execution
@@ -5242,7 +5558,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 #endif
 
 	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
-	for (const auto& func : info.funcs)
+	for (const auto& func : info.get_funcs())
 	{
 		if (func.size == 4 && *info.get_ptr<u32>(func.addr) == ppu_instructions::BLR())
 		{
@@ -5281,7 +5597,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 #endif
 }
 
-static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name, const ppu_module<lv2_obj>& whole_module)
+static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name)
 {
 #ifdef LLVM_AVAILABLE
 	using namespace llvm;
@@ -5307,12 +5623,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		translator.get_type<u64>(), // r2
 		}, false);
 
+	// Difference between function name and current location
+	const u32 reloc = module_part.is_relocatable ? ::at32(module_part.segs, 0).addr : 0;
+
 	// Initialize function list
-	for (const auto& func : module_part.funcs)
+	for (const auto& func : module_part.get_funcs())
 	{
 		if (func.size)
 		{
-			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
+			const auto f = cast<Function>(_module->getOrInsertFunction(fmt::format("__0x%x", func.addr - reloc), _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
 			f->addFnAttr(Attribute::NoUnwind);
@@ -5325,29 +5644,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			translator.build_interpreter();
 		}
 
-#if LLVM_VERSION_MAJOR < 17
-		legacy::FunctionPassManager pm(_module.get());
-
-		// Basic optimizations
-		//pm.add(createCFGSimplificationPass());
-		//pm.add(createPromoteMemoryToRegisterPass());
-		pm.add(createEarlyCSEPass());
-		//pm.add(createTailCallEliminationPass());
-		//pm.add(createInstructionCombiningPass());
-		//pm.add(createBasicAAWrapperPass());
-		//pm.add(new MemoryDependenceAnalysis());
-		//pm.add(createLICMPass());
-		//pm.add(createLoopInstSimplifyPass());
-		//pm.add(createNewGVNPass());
-		//pm.add(createDeadStoreEliminationPass());
-		//pm.add(createSCCPPass());
-		//pm.add(createReassociatePass());
-		//pm.add(createInstructionCombiningPass());
-		//pm.add(createInstructionSimplifierPass());
-		//pm.add(createAggressiveDCEPass());
-		//pm.add(createCFGSimplificationPass());
-		//pm.add(createLintPass()); // Check
-#else
 		// Create the analysis managers.
 		// These must be declared in this order so that they are destroyed in the
 		// correct order due to inter-analysis-manager references.
@@ -5372,10 +5668,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		FunctionPassManager fpm;
 		// Basic optimizations
 		fpm.addPass(EarlyCSEPass());
-#endif
+
+		u32 guest_code_size = 0;
+		u32 min_addr = umax;
+		u32 max_addr = 0;
+		u32 num_func = 0;
 
 		// Translate functions
-		for (usz fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
+		// Start with the lowest bound of the module, function list is sorted
+		for (const auto& mod_func : module_part.get_funcs())
 		{
 			if (Emu.IsStopped())
 			{
@@ -5383,18 +5684,19 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 				return;
 			}
 
-			if (module_part.funcs[fi].size)
+			if (mod_func.size)
 			{
+				num_func++;
+				guest_code_size += mod_func.size;
+				max_addr = std::max<u32>(max_addr, mod_func.addr + mod_func.size);
+				min_addr = std::min<u32>(min_addr, mod_func.addr);
+
 				// Translate
-				if (const auto func = translator.Translate(module_part.funcs[fi]))
+				if (const auto func = translator.Translate(mod_func))
 				{
 #ifdef ARCH_X64 // TODO
 					// Run optimization passes
-#if LLVM_VERSION_MAJOR < 17
-					pm.run(*func);
-#else
 					fpm.run(*func, fam);
-#endif
 #endif // ARCH_X64
 				}
 				else
@@ -5405,18 +5707,14 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			}
 		}
 
-		// Run this only in one module for all functions
-		if (&whole_module != &module_part)
+		// Run this only in one module for all functions compiled
+		if (module_part.jit_bounds)
 		{
-			if (const auto func = translator.GetSymbolResolver(whole_module))
+			if (const auto func = translator.GetSymbolResolver(module_part))
 			{
 #ifdef ARCH_X64 // TODO
 				// Run optimization passes
-#if LLVM_VERSION_MAJOR < 17
-				pm.run(*func);
-#else
 				fpm.run(*func, fam);
-#endif
 #endif // ARCH_X64
 			}
 			else
@@ -5452,7 +5750,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			return;
 		}
 
-		ppu_log.notice("LLVM: %zu functions generated", _module->getFunctionList().size());
+		ppu_log.notice("LLVM: %zu functions generated (code_size=0x%x, num_func=%d, max_addr(-)min_addr=0x%x)", _module->getFunctionList().size(), guest_code_size, num_func, max_addr - min_addr);
 	}
 
 	// Load or compile module

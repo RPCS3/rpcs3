@@ -16,10 +16,9 @@
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/Io/Null/NullPadHandler.h"
-#include "Utilities/File.h"
 
 #include "Input/pad_thread.h"
+#include "Input/gui_pad_thread.h"
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 
@@ -244,6 +243,8 @@ pad_settings_dialog::~pad_settings_dialog()
 		m_input_thread_state = input_thread_state::pausing;
 		*m_input_thread = thread_state::finished;
 	}
+
+	gui_pad_thread::reset();
 
 	if (!Emu.IsStopped())
 	{

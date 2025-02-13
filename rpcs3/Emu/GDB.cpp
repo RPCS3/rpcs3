@@ -34,6 +34,8 @@
 #endif
 #endif
 
+#include "Emu/Cell/timers.hpp"
+
 #include <charconv>
 #include <regex>
 #include <string_view>
@@ -830,7 +832,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		{
 			Emu.Run(true);
 		}
-		if (Emu.IsPaused())
+		else if (Emu.IsPaused())
 		{
 			Emu.Resume();
 		}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "overlays.h"
+#include "Emu/RSX/Overlays/overlay_controls.h"
 
 namespace rsx
 {

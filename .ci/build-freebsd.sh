@@ -7,9 +7,9 @@ git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ {
 
 # Prefer newer Clang than in base system (see also .ci/install-freebsd.sh)
 # libc++ isn't in llvm* packages, so download manually
-fetch https://github.com/llvm/llvm-project/releases/download/llvmorg-16.0.1/llvm-project-16.0.1.src.tar.xz
+fetch https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/llvm-project-19.1.7.src.tar.xz
 tar xf llvm*.tar.xz
-export CC=clang16 CXX=clang++16
+export CC=clang19 CXX=clang++19
 cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
       -DLLVM_CCACHE_BUILD=ON \
       -DLIBCXX_INCLUDE_BENCHMARKS=OFF \

@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "IdManager.h"
-#include "Utilities/Thread.h"
 
 shared_mutex id_manager::g_mutex;
 

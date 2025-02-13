@@ -6,6 +6,7 @@
 
 #include "sendmessage_dialog_frame.h"
 #include "Emu/IdManager.h"
+#include "Emu/NP/rpcn_client.h"
 #include "Emu/System.h"
 
 #include "util/logs.hpp"
@@ -155,7 +156,7 @@ void sendmessage_dialog_frame::slot_remove_friend(QString name)
 	remove_friend(m_lst_friends, name);
 }
 
-void sendmessage_dialog_frame::callback_handler(u16 ntype, const std::string& username, bool status)
+void sendmessage_dialog_frame::callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status)
 {
 	QString qtr_username = QString::fromStdString(username);
 	switch (ntype)

@@ -1,12 +1,8 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
-#include "../rsx_methods.h"
-#include "../RSXThread.h"
-
 #include "util/to_endian.hpp"
 #include "util/sysinfo.hpp"
 #include "Utilities/JIT.h"
-#include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 

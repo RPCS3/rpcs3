@@ -45,7 +45,8 @@ namespace gl
 	enum remap_constants : u32
 	{
 		GL_REMAP_IDENTITY = 0xCAFEBABE,
-		GL_REMAP_BGRA = 0x0000AA6C
+		GL_REMAP_BGRA = 0x0000AA6C,
+		GL_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF
 	};
 
 	struct subresource_range
@@ -174,7 +175,8 @@ namespace gl
 			texture3D = GL_TEXTURE_3D,
 			textureCUBE = GL_TEXTURE_CUBE_MAP,
 			textureBuffer = GL_TEXTURE_BUFFER,
-			texture2DArray = GL_TEXTURE_2D_ARRAY
+			texture2DArray = GL_TEXTURE_2D_ARRAY,
+			texture2DMS = GL_TEXTURE_2D_MULTISAMPLE
 		};
 
 	protected:
@@ -183,6 +185,7 @@ namespace gl
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
 		GLuint m_mipmaps = 0;
+		GLubyte m_samples = 0;
 		GLuint m_pitch = 0;
 		GLuint m_compressed = GL_FALSE;
 		GLuint m_aspect_flags = 0;
@@ -197,7 +200,7 @@ namespace gl
 		texture(const texture&) = delete;
 		texture(texture&& texture_) = delete;
 
-		texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLenum sized_format, rsx::format_class format_class = rsx::RSX_FORMAT_CLASS_UNDEFINED);
+		texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class);
 		virtual ~texture();
 
 		// Getters/setters
@@ -276,9 +279,9 @@ namespace gl
 			return m_pitch;
 		}
 
-		constexpr GLubyte samples() const
+		GLubyte samples() const
 		{
-			return 1;
+			return m_samples;
 		}
 
 		GLboolean compressed() const

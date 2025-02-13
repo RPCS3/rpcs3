@@ -164,7 +164,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 		std::lock_guard lock(mutex);
 		port       = p2p_port;
 		vport      = p2p_vport;
-		socket     = real_socket;
+		native_socket = real_socket;
 		bound_addr = psa_in_p2p->sin_addr;
 	}
 
@@ -176,7 +176,7 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2p::getsockname()
 	std::lock_guard lock(mutex);
 
 	// Unbound socket
-	if (!socket)
+	if (!native_socket)
 	{
 		return {CELL_OK, {}};
 	}
@@ -299,7 +299,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 		native_flags |= MSG_WAITALL;
 	}
 
-	auto native_result = ::sendto(socket, reinterpret_cast<const char*>(p2p_data.data()), ::size32(p2p_data), native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), sizeof(native_addr));
+	auto native_result = np::sendto_possibly_ipv6(native_socket, reinterpret_cast<const char*>(p2p_data.data()), ::size32(p2p_data), &native_addr, native_flags);
 
 	if (native_result >= 0)
 	{
