@@ -114,8 +114,6 @@ target_link_libraries(rpcs3
         3rdparty::fusion
         ${ADDITIONAL_LIBS})
 
-set_target_properties(rpcs3_emu PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-
 # Unix display manager
 if(X11_FOUND)
     target_link_libraries(rpcs3 PRIVATE X11::X11)

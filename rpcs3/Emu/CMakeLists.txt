@@ -20,6 +20,10 @@ add_library(rpcs3_emu STATIC
     IPC_socket.cpp
 )
 
+if(USE_LTO)
+    set_target_properties(rpcs3_emu PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 if(USE_ASAN)
     set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
 endif()
