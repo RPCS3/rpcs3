@@ -280,6 +280,7 @@ namespace np
 
 		switch (error)
 		{
+		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_ROOM; break;
 		default: fmt::throw_exception("Unexpected error in LeaveRoomGUI reply: %d", static_cast<u8>(error));
 		}
@@ -489,6 +490,7 @@ namespace np
 
 		switch (error)
 		{
+		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING_SERVER_ERROR_NOT_ALLOWED; break;
 		default: fmt::throw_exception("Unexpected error in SetRoomInfoGUI reply: %d", static_cast<u8>(error));
@@ -643,6 +645,7 @@ namespace np
 
 		switch (error)
 		{
+		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING_ERROR_SEARCH_JOIN_ROOM_NOT_FOUND; break;
 		default: fmt::throw_exception("Unexpected error in SearchJoinRoomGUI reply: %d", static_cast<u8>(error));
 		}
