@@ -26,25 +26,26 @@ using namespace program_hash_util;
 
 usz vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &program)
 {
-	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	usz hash = 0xCBF29CE484222325ULL;
+	// Checksum as hash with rotated data
 	const void* instbuffer = program.data.data();
-	usz instIndex = 0;
+	u32 instIndex = 0;
+	usz acc0 = 0;
+	usz acc1 = 0;
 
-	for (unsigned i = 0; i < program.data.size() / 4; i++)
+	do
 	{
-		if (program.instruction_mask[i])
+		if (program.instruction_mask[instIndex])
 		{
 			const auto inst = v128::loadu(instbuffer, instIndex);
-			hash ^= inst._u64[0];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			hash ^= inst._u64[1];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+			usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
+			acc0 += tmp0;
+			usz tmp1 = std::rotr(inst._u64[1], (instIndex * 2) + 1);
+			acc1 += tmp1;
 		}
 
 		instIndex++;
-	}
-	return hash;
+	} while (instIndex < (program.data.size() / 4));
+	return acc0 + acc1;
 }
 
 vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog)
@@ -516,17 +517,18 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 
 usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
-	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	usz hash = 0xCBF29CE484222325ULL;
+	// Checksum as hash with rotated data
 	const void* instbuffer = program.get_data();
-	usz instIndex = 0;
+	u32 instIndex = 0;
+	usz acc0 = 0;
+	usz acc1 = 0;
 	while (true)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
-		hash ^= inst._u64[0];
-		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-		hash ^= inst._u64[1];
-		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+		usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
+		acc0 += tmp0;
+		usz tmp1 = std::rotr(inst._u64[1], (instIndex * 2) + 1);
+		acc1 += tmp1;
 		instIndex++;
 		// Skip constants
 		if (fragment_program_utils::is_constant(inst._u32[1]) ||
@@ -536,7 +538,7 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 
 		bool end = (inst._u32[0] >> 8) & 0x1;
 		if (end)
-			return hash;
+			return acc0 + acc1;
 	}
 	return 0;
 }
