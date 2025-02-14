@@ -11,7 +11,7 @@ namespace rsx
 	enum : u32
 	{
 		c_fc_magic = "RRC"_u32,
-		c_fc_version = 0x5,
+		c_fc_version = 0x6,
 	};
 
 	struct frame_capture_data
@@ -92,18 +92,59 @@ namespace rsx
 		u32 version = c_fc_version;
 		u32 LE_format = std::endian::little == std::endian::native;
 
-		// hashmap of holding various states for tile
-		std::unordered_map<u64, tile_state> tile_map;
-		// hashmap of various memory 'changes' that can be applied to ps3 memory
-		std::unordered_map<u64, memory_block> memory_map;
-		// hashmap of memory blocks that can be applied, this is split from above for size decrease
-		std::unordered_map<u64, memory_block_data> memory_data_map;
-		// display buffer state map
-		std::unordered_map<u64, display_buffers_state> display_buffers_map;
-		// actual command queue to hold everything above
+		struct bitwise_hasher
+		{
+			template <typename T>
+			usz operator()(const T& key) const noexcept
+			{
+				if constexpr (!!(requires (const T& a) { a.data[0]; }))
+				{
+					return std::hash<std::string_view>{}(std::string_view{ reinterpret_cast<const char*>(key.data.data()), key.data.size() * sizeof(key.data[0]) });
+				}
+
+				return std::hash<std::string_view>{}(std::string_view{ reinterpret_cast<const char*>(&key), sizeof(key) });
+			}
+
+			template <typename T>
+			bool operator()(const T& keya, const T& keyb) const noexcept
+			{
+				if constexpr (!!(requires (const T& a) { a.data[0]; }))
+				{
+					if (keya.data.size() != keyb.data.size())
+					{
+						return false;
+					}
+
+					return std::equal(keya.data.begin(), keya.data.end(), keyb.data.begin());
+				}
+
+				return std::equal(reinterpret_cast<const char*>(&keya), reinterpret_cast<const char*>(&keya) + sizeof(T), reinterpret_cast<const char*>(&keyb));
+			}
+		};
+
+		template <typename T, typename V>
+		using uno_bit_map = std::unordered_map<T, V, bitwise_hasher, bitwise_hasher>;
+
+		// Hashmap of holding various states for tile
+		uno_bit_map<tile_state, u64> tile_map;
+
+		// Hashmap of various memory 'changes' that can be applied to ps3 memory
+		uno_bit_map<memory_block, u64> memory_map;
+
+		// Hashmap of memory blocks that can be applied, this is split from above for size decrease
+		uno_bit_map<memory_block_data, u64> memory_data_map;
+
+		// Display buffer state map
+		uno_bit_map<display_buffers_state, u64> display_buffers_map;
+
+		// Actual command queue to hold everything above
 		std::vector<replay_command> replay_commands;
+
 		// Initial registers state at the beginning of the capture
 		rsx::rsx_state reg_state;
+
+		// Indexer for memory blocks
+		u64 memory_indexer = 0x1234;
 
 		void reset()
 		{
