@@ -48,6 +48,7 @@
       <Filter>upscalers\fsr1</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -120,6 +121,7 @@
       <Filter>upscalers</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
+    <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">

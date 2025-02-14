@@ -1,10 +1,8 @@
 #include "barriers.h"
 #include "buffer_object.h"
 #include "image.h"
-#include "sampler.h"
 
 #include "../VKResourceManager.h"
-#include "Utilities/address_range.h"
 
 #include <util/asm.hpp>
 

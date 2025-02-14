@@ -2,10 +2,7 @@
 #include "ps_move_handler.h"
 #include "ps_move_calibration.h"
 #include "Emu/Io/pad_config.h"
-#include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Emu/Cell/Modules/cellGem.h"
-#include "Input/ps_move_config.h"
 
 LOG_CHANNEL(move_log, "Move");
 
@@ -820,9 +817,7 @@ void ps_move_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const int idx_l = config->switch_vibration_motors ? 1 : 0;
-
-	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
 
 	dev->new_output_data |= dev->large_motor != speed_large;
 	dev->large_motor = speed_large;

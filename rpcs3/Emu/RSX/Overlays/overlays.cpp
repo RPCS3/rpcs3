@@ -1,12 +1,11 @@
 #include "stdafx.h"
 #include "overlays.h"
 #include "overlay_manager.h"
-#include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/Common/time.hpp"
+#include "Emu/System.h"
 
 LOG_CHANNEL(overlays);
 
@@ -193,7 +192,7 @@ namespace rsx
 
 				// Get gamepad input
 				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
+				const auto handler = pad::get_pad_thread();
 				const PadInfo& rinfo = handler->GetInfo();
 
 				const bool ignore_gamepad_input = (!rinfo.now_connect || !input::g_pads_intercepted);

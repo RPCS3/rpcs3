@@ -2,8 +2,6 @@
 
 #include "emulated_pad_config.h"
 
-#include <array>
-
 enum class topshotfearmaster_btn
 {
 	trigger,

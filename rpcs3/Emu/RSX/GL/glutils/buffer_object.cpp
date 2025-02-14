@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "buffer_object.h"
+#include "common.h"
 
 namespace gl
 {

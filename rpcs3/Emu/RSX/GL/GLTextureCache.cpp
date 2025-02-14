@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/RSX/RSXThread.h"
 #include "GLTexture.h"
 #include "GLTextureCache.h"
 #include "../Common/BufferUtils.h"
@@ -149,7 +148,7 @@ namespace gl
 
 		if (!dst)
 		{
-			std::unique_ptr<temporary_image_t> data = std::make_unique<temporary_image_t>(dst_target, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
+			std::unique_ptr<temporary_image_t> data = std::make_unique<temporary_image_t>(dst_target, width, height, depth, mipmaps, 1, sized_internal_fmt, rsx::classify_format(gcm_format));
 			dst = data.get();
 			dst->properties_encoding = match_key;
 			m_temporary_surfaces.emplace_back(std::move(data));
@@ -223,7 +222,12 @@ namespace gl
 			{
 				const auto src_bpp = slice.src->pitch() / slice.src->width();
 				const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-				tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()), dst_image->format_class());
+				tmp = std::make_unique<texture>(
+					GL_TEXTURE_2D,
+					convert_w, slice.src->height(),
+					1, 1, 1,
+					static_cast<GLenum>(dst_image->get_internal_format()),
+					dst_image->format_class());
 
 				src_image = tmp.get();
 
@@ -264,9 +268,17 @@ namespace gl
 				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
 				gl::texture* _dst = dst_image;
-				if (src_image->get_internal_format() != dst_image->get_internal_format() || slice.level != 0 || slice.dst_z != 0) [[ unlikely ]]
+				if (src_image->get_internal_format() != dst_image->get_internal_format() ||
+					slice.level != 0 ||
+					slice.dst_z != 0) [[ unlikely ]]
 				{
-					tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
+					tmp = std::make_unique<texture>(
+						GL_TEXTURE_2D,
+						dst_rect.x2, dst_rect.y2,
+						1, 1, 1,
+						static_cast<GLenum>(slice.src->get_internal_format()),
+						slice.src->format_class());
+
 					_dst = tmp.get();
 				}
 

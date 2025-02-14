@@ -4,17 +4,13 @@
 #include <condition_variable>
 #include <thread>
 #include <variant>
-#include <queue>
 
 #include "Utilities/mutex.h"
-
-#include "Emu/IdManager.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpCommerce2.h"
 #include "Emu/Cell/Modules/sceNpTus.h"
-#include "Emu/NP/np_event_data.h"
 #include "Utilities/Thread.h"
 
 // Used By Score and Tus
@@ -27,7 +23,7 @@ struct generic_async_transaction_context
 	std::optional<s32> get_transaction_status();
 	void abort_transaction();
 	error_code wait_for_completion();
-	bool set_result_and_wake(error_code err);
+	void set_result_and_wake(error_code err);
 
 	shared_mutex mutex;
 	std::condition_variable_any wake_cond, completion_cond;

@@ -1,7 +1,6 @@
 #pragma once
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
-#include "GLHelpers.h"
 #include "GLPipelineCompiler.h"
 #include "../Program/ProgramStateCache.h"
 #include "../rsx_utils.h"

@@ -7,6 +7,7 @@
 #include "recvmessage_dialog_frame.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/NP/rpcn_client.h"
 
 #include "util/logs.hpp"
 

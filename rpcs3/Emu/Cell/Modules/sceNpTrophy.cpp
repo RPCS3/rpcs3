@@ -4,6 +4,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Utilities/rXml.h"

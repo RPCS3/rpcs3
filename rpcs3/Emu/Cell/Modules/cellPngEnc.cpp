@@ -2,7 +2,6 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "cellPngEnc.h"
-#include "png.h"
 
 LOG_CHANNEL(cellPngEnc);
 

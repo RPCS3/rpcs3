@@ -1,9 +1,6 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
-#include "gcm_enums.h"
-#include "util/atomic.hpp"
-
 
 struct CellGcmControl
 {

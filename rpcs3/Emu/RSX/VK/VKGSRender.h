@@ -17,14 +17,9 @@
 #include "VKFramebuffer.h"
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
-#include "util/asm.hpp"
 
-#include "Emu/RSX/GCM.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
-
-#include <thread>
-#include <optional>
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto

@@ -78,7 +78,7 @@ error_code cellRtcGetCurrentTick(ppu_thread& ppu, vm::ptr<CellRtcTick> pTick)
 
 error_code cellRtcGetCurrentClock(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone)
 {
-	cellRtc.notice("cellRtcGetCurrentClock(pClock=*0x%x, iTimeZone=%d)", pClock, iTimeZone);
+	cellRtc.trace("cellRtcGetCurrentClock(pClock=*0x%x, iTimeZone=%d)", pClock, iTimeZone);
 
 	const vm::var<sys_page_attr_t> page_attr;
 
@@ -1505,7 +1505,7 @@ error_code cellRtcGetSystemTime(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDate
 
 error_code cellRtcGetTime_t(ppu_thread& ppu, vm::cptr<CellRtcDateTime> pDateTime, vm::ptr<s64> piTime)
 {
-	cellRtc.notice("cellRtcGetTime_t(pDateTime=*0x%x, piTime=*0x%x)", pDateTime, piTime);
+	cellRtc.trace("cellRtcGetTime_t(pDateTime=*0x%x, piTime=*0x%x)", pDateTime, piTime);
 
 	const vm::var<sys_page_attr_t> page_attr;
 

@@ -2,7 +2,6 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
-#include "cellPamf.h"
 #include "cellDmux.h"
 #include "cellDmuxPamf.h"
 

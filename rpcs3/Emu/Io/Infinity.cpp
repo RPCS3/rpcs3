@@ -5,7 +5,6 @@
 
 #include "Crypto/aes.h"
 #include "Crypto/sha1.h"
-#include "util/asm.hpp"
 
 LOG_CHANNEL(infinity_log, "infinity");
 
@@ -371,6 +370,16 @@ usb_device_infinity::usb_device_infinity(const std::array<u8, 7>& location)
 
 usb_device_infinity::~usb_device_infinity()
 {
+}
+
+std::shared_ptr<usb_device> usb_device_infinity::make_instance(u32, const std::array<u8, 7>& location)
+{
+	return std::make_shared<usb_device_infinity>(location);
+}
+
+u16 usb_device_infinity::get_num_emu_devices()
+{
+	return 1;
 }
 
 void usb_device_infinity::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)

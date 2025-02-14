@@ -2,10 +2,8 @@
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 
-#include "Emu/IdManager.h"
 #include "Emu/Io/pad_types.h"
 
-#include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
 
 #include "../Common/bitfield.hpp"

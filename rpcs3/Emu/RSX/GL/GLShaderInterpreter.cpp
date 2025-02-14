@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "GLShaderInterpreter.h"
-#include "GLGSRender.h"
+#include "GLTextureCache.h"
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "../rsx_methods.h"

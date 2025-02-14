@@ -7,7 +7,6 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/IdManager.h"
 
-#include "util/vm.hpp"
 #include "util/asm.hpp"
 
 LOG_CHANNEL(sys_memory);

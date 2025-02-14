@@ -1,8 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
-
-#include "../glutils/fbo.h"
 #include "../glutils/image.h"
 #include "../glutils/state_tracker.hpp"
 

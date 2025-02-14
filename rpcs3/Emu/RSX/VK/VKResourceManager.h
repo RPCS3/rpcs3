@@ -1,12 +1,11 @@
 #pragma once
-#include "vkutils/image.h"
+#include "Emu/RSX/VK/vkutils/sync.h"
 #include "vkutils/garbage_collector.h"
 #include "vkutils/query_pool.hpp"
 #include "vkutils/sampler.h"
 
 #include "Utilities/mutex.h"
 
-#include <unordered_map>
 #include <deque>
 #include <memory>
 

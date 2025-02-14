@@ -1,7 +1,8 @@
 #include "stdafx.h"
-#include "VKGSRender.h"
+#include "Emu/RSX/VK/VKGSRenderTypes.hpp"
 #include "VKTextureCache.h"
 #include "VKCompute.h"
+#include "VKAsyncScheduler.h"
 
 #include "util/asm.hpp"
 

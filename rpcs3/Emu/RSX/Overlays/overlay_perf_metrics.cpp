@@ -7,7 +7,6 @@
 
 #include <algorithm>
 #include <utility>
-#include <charconv>
 
 #include "util/cpu_stats.hpp"
 

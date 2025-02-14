@@ -3,7 +3,6 @@
 #include "state_tracker.hpp"
 
 #include "../GLTexture.h" // TODO: This system also needs to be refactored
-#include "../GLOverlays.h"
 
 namespace gl
 {
@@ -67,7 +66,7 @@ namespace gl
 			if (static_cast<gl::texture::internal_format>(internal_fmt) != src->get_internal_format())
 			{
 				const u16 internal_width = static_cast<u16>(src->width() * xfer_info.src_scaling_hint);
-				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
+				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, 1, internal_fmt, RSX_FORMAT_CLASS_DONT_CARE);
 				copy_typeless(cmd, typeless_src.get(), src);
 
 				real_src = typeless_src.get();
@@ -85,7 +84,7 @@ namespace gl
 			if (static_cast<gl::texture::internal_format>(internal_fmt) != dst->get_internal_format())
 			{
 				const auto internal_width = static_cast<u16>(dst->width() * xfer_info.dst_scaling_hint);
-				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
+				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, 1, internal_fmt, RSX_FORMAT_CLASS_DONT_CARE);
 				copy_typeless(cmd, typeless_dst.get(), dst);
 
 				real_dst = typeless_dst.get();

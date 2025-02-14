@@ -166,6 +166,7 @@ struct music_selection_context
 	void set_playlist(const std::string& path);
 	void create_playlist(const std::string& new_hash);
 	bool load_playlist();
+	void set_track(std::string_view track);
 	u32 step_track(bool next);
 
 	operator bool() const

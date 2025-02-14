@@ -1703,23 +1703,58 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 		cpu->state += cpu_flag::wait;
 	}
 
-	Emu.Pause(true);
-
-	if (!g_tls_access_violation_recovered)
-	{
-		vm_log.notice("\n%s", dump_useful_thread_info());
-	}
-
 	// Note: a thread may access violate more than once after hack_alloc recovery
 	// Do not log any further access violations in this case.
 	if (!g_tls_access_violation_recovered)
 	{
+		vm_log.notice("\n%s", dump_useful_thread_info());
 		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->get_class() == thread_class::ppu && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 	}
 
+	while (Emu.IsPausedOrReady())
+	{
+		if (cpu)
+		{
+			auto state = +cpu->state;
+
+			if (::is_paused(state) && !::is_stopped(state))
+			{
+				thread_ctrl::wait_on(cpu->state, state);
+			}
+			else
+			{
+				// Temporary until Emulator updates state
+				std::this_thread::yield();
+			}
+		}
+		else
+		{
+			thread_ctrl::wait_for(1000);
+		}
+	}
+
+	Emu.Pause(true);
+
 	while (Emu.IsPaused())
 	{
-		thread_ctrl::wait();
+		if (cpu)
+		{
+			auto state = +cpu->state;
+
+			if (::is_paused(state) && !::is_stopped(state))
+			{
+				thread_ctrl::wait_on(cpu->state, state);
+			}
+			else
+			{
+				// Temporary until Emulator updates state
+				std::this_thread::yield();
+			}
+		}
+		else
+		{
+			thread_ctrl::wait_for(1000);
+		}
 	}
 
 	if (Emu.IsStopped() && !hack_alloc())
@@ -1818,6 +1853,11 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 			pExp->ExceptionRecord->ExceptionInformation[0] == 1 ? "writing" : "reading";
 
 		fmt::append(msg, "Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
+
+		if (vm::try_get_addr(reinterpret_cast<u8*>(pExp->ExceptionRecord->ExceptionInformation[1])).second)
+		{
+			fmt::append(msg, "Sudo Addr: %p, VM Addr: %p\n", vm::g_sudo_addr, vm::g_base_addr);
+		}
 	}
 	else
 	{
@@ -1998,6 +2038,11 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	}
 
 	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
+
+	if (vm::try_get_addr(info->si_addr).second)
+	{
+		fmt::append(msg, "Sudo Addr: %p, VM Addr: %p\n", vm::g_sudo_addr, vm::g_base_addr);
+	}
 
 	append_thread_name(msg);
 

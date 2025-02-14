@@ -1,7 +1,7 @@
 #pragma once
 
 #include "VulkanAPI.h"
-#include "VKCommonDecompiler.h"
+#include "Emu/RSX/Program/GLSLTypes.h"
 
 #include "vkutils/descriptors.h"
 

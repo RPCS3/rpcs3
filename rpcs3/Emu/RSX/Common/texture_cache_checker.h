@@ -1,8 +1,9 @@
 #pragma once
 
+#ifdef TEXTURE_CACHE_DEBUG
+
 #include "../rsx_utils.h"
 
-#ifdef TEXTURE_CACHE_DEBUG
 namespace rsx {
 
 	class tex_cache_checker_t {

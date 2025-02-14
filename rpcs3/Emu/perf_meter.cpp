@@ -5,6 +5,7 @@
 #include "util/fence.hpp"
 #include "util/tsc.hpp"
 #include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
 
 #include <map>
 #include <mutex>

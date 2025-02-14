@@ -77,7 +77,7 @@ struct jit_runtime_base
 	jit_runtime_base& operator=(const jit_runtime_base&) = delete;
 
 	const asmjit::Environment& environment() const noexcept;
-	void* _add(asmjit::CodeHolder* code) noexcept;
+	void* _add(asmjit::CodeHolder* code, usz align = 64) noexcept;
 	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
 };
 
@@ -92,6 +92,10 @@ struct jit_runtime final : jit_runtime_base
 
 	// Allocate memory
 	static u8* alloc(usz size, usz align, bool exec = true) noexcept;
+
+	// Allocate 0 bytes, observe memory location
+	// Same as alloc(0, 1, exec)
+	static u8* peek(bool exec = true) noexcept;
 
 	// Should be called at least once after global initialization
 	static void initialize();
@@ -432,7 +436,7 @@ namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename Asm = native_asm, typename F>
-inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr)
+inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr, bool reduced_size = false)
 {
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
@@ -467,6 +471,7 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 
 	Asm compiler(&code);
 	compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
+	compiler.addEncodingOptions(EncodingOptions::kOptimizeForSize);
 	if constexpr (std::is_invocable_r_v<bool, F, Asm&, native_args&>)
 	{
 		if (!builder(compiler, args))
@@ -483,7 +488,7 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 		compiler();
 	}
 
-	const auto result = rt._add(&code);
+	const auto result = rt._add(&code, reduced_size ? 16 : 64);
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }
@@ -497,6 +502,8 @@ namespace llvm
 	class Module;
 	class StringRef;
 }
+
+enum class thread_state : u32;
 
 // Temporary compiler interface
 class jit_compiler final
@@ -514,8 +521,9 @@ class jit_compiler final
 	atomic_t<usz> m_disk_space = umax;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);
-	~jit_compiler();
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
+	jit_compiler& operator=(thread_state) noexcept;
+	~jit_compiler() noexcept;
 
 	// Get LLVM context
 	auto& get_context()

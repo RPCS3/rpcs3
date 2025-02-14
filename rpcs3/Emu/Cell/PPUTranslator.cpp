@@ -1,4 +1,3 @@
-#include <bit>
 #ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"
@@ -114,7 +113,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	const auto caddr = m_info.segs[0].addr;
 	const auto cend = caddr + m_info.segs[0].size;
 
-	for (const auto& rel : m_info.relocs)
+	for (const auto& rel : m_info.get_relocs())
 	{
 		if (rel.addr >= caddr && rel.addr < cend)
 		{
@@ -162,7 +161,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		}
 	}
 
-	if (!m_info.relocs.empty())
+	if (m_info.is_relocatable)
 	{
 		m_reloc = &m_info.segs[0];
 	}
@@ -185,18 +184,18 @@ bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts);
 
 Function* PPUTranslator::Translate(const ppu_function& info)
 {
-	m_function = m_module->getFunction(info.name);
+	// Instruction address is (m_addr + base)
+	const u64 base = m_reloc ? m_reloc->addr : 0;
+	m_addr = info.addr - base;
+	m_attr = m_info.attr;
+
+	m_function = m_module->getFunction(fmt::format("__0x%x", m_addr));
 
 	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
 	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
 	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &irb;
-
-	// Instruction address is (m_addr + base)
-	const u64 base = m_reloc ? m_reloc->addr : 0;
-	m_addr = info.addr - base;
-	m_attr = info.attr;
 
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
@@ -325,6 +324,9 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 {
+	ensure(m_module->getFunction("__resolve_symbols") == nullptr);
+	ensure(info.jit_bounds);
+
 	m_function = cast<Function>(m_module->getOrInsertFunction("__resolve_symbols", FunctionType::get(get_type<void>(), { get_type<u8*>(), get_type<u64>() }, false)).getCallee());
 
 	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
@@ -351,12 +353,11 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	// This is made in loop instead of inlined because it took tremendous amount of time to compile.
 
 	std::vector<u32> vec_addrs;
-	vec_addrs.reserve(info.funcs.size());
 
 	// Create an array of function pointers
 	std::vector<llvm::Constant*> functions;
 
-	for (const auto& f : info.funcs)
+	for (const auto& f : info.get_funcs(false, true))
 	{
 		if (!f.size)
 		{
@@ -379,7 +380,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
 
 	// Create an array of function pointers
-	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), info.funcs.size());
+	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), functions.size());
 	const auto init_func_table = ConstantArray::get(func_table_type, functions);
 	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
 
@@ -2770,12 +2771,7 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 	if (op.l11)
 	{
 		// MFOCRF
-
-#if LLVM_VERSION_MAJOR < 17
-		const u64 pos = countLeadingZeros<u32>(op.crm) - 24;
-#else
 		const u64 pos = countl_zero<u32>(op.crm) - 24;
-#endif
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
@@ -3062,11 +3058,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 	if (op.l11)
 	{
 		// MTOCRF
-#if LLVM_VERSION_MAJOR < 17
-		const u64 pos = countLeadingZeros<u32>(op.crm) - 24;
-#else
 		const u64 pos = countl_zero<u32>(op.crm) - 24;
-#endif
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{

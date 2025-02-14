@@ -1,6 +1,5 @@
 #pragma once
 #include "../Common/surface_store.h"
-#include "GLHelpers.h"
 #include "../rsx_utils.h"
 
 #include "glutils/fbo.h"
@@ -49,13 +48,21 @@ namespace gl
 {
 	class render_target : public viewable_image, public rsx::render_target_descriptor<texture*>
 	{
-		void clear_memory(gl::command_context& cmd);
+		void clear_memory(gl::command_context& cmd, gl::texture* surface = nullptr);
 		void load_memory(gl::command_context& cmd);
 		void initialize_memory(gl::command_context& cmd, rsx::surface_access access);
 
+		// MSAA support:
+		// Get the linear resolve target bound to this surface. Initialize if none exists
+		gl::viewable_image* get_resolve_target_safe(gl::command_context& cmd);
+		// Resolve the planar MSAA data into a linear block
+		void resolve(gl::command_context& cmd);
+		// Unresolve the linear data into planar MSAA data
+		void unresolve(gl::command_context& cmd);
+
 	public:
-		render_target(GLuint width, GLuint height, GLenum sized_format, rsx::format_class format_class)
-			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format, format_class)
+		render_target(GLuint width, GLuint height, GLubyte samples, GLenum sized_format, rsx::format_class format_class)
+			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, samples, sized_format, format_class)
 		{}
 
 		// Internal pitch is the actual row length in bytes of the openGL texture
@@ -81,11 +88,7 @@ namespace gl
 			return !!(aspect() & gl::image_aspect::depth);
 		}
 
-		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
-		{
-			// TODO
-			return static_cast<gl::viewable_image*>(this);
-		}
+		viewable_image* get_surface(rsx::surface_access /*access_type*/) override;
 
 		u32 raw_handle() const
 		{
@@ -141,7 +144,20 @@ struct gl_render_target_traits
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
 
-		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_,
+		u8 samples;
+		rsx::surface_sample_layout sample_layout;
+		if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+		{
+			samples = get_format_sample_count(antialias);
+			sample_layout = rsx::surface_sample_layout::ps3;
+		}
+		else
+		{
+			samples = 1;
+			sample_layout = rsx::surface_sample_layout::null;
+		}
+
+		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_, samples,
 			static_cast<GLenum>(format.internal_format), RSX_FORMAT_CLASS_COLOR));
 
 		result->set_aa_mode(antialias);
@@ -154,6 +170,7 @@ struct gl_render_target_traits
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
 		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		result->sample_layout = sample_layout;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;
@@ -170,7 +187,20 @@ struct gl_render_target_traits
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
 
-		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_,
+		u8 samples;
+		rsx::surface_sample_layout sample_layout;
+		if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+		{
+			samples = get_format_sample_count(antialias);
+			sample_layout = rsx::surface_sample_layout::ps3;
+		}
+		else
+		{
+			samples = 1;
+			sample_layout = rsx::surface_sample_layout::null;
+		}
+
+		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_, samples,
 			static_cast<GLenum>(format.internal_format), rsx::classify_format(surface_depth_format)));
 
 		result->set_aa_mode(antialias);
@@ -183,6 +213,7 @@ struct gl_render_target_traits
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
 		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		result->sample_layout = sample_layout;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;
@@ -200,7 +231,7 @@ struct gl_render_target_traits
 			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
 				ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
 
-			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format, ref->format_class());
+			sink = std::make_unique<gl::render_target>(new_w, new_h, ref->samples(), internal_format, ref->format_class());
 			sink->add_ref();
 
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;
@@ -255,8 +286,9 @@ struct gl_render_target_traits
 	}
 
 	static
-	void prepare_surface_for_drawing(gl::command_context&, gl::render_target* surface)
+	void prepare_surface_for_drawing(gl::command_context& cmd, gl::render_target* surface)
 	{
+		surface->memory_barrier(cmd, rsx::surface_access::gpu_reference);
 		surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 	}
 

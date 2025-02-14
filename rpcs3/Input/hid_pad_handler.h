@@ -6,6 +6,8 @@
 
 #include "hidapi.h"
 
+#include <mutex>
+
 struct CalibData
 {
 	s16 bias = 0;

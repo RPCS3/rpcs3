@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/overlay_list_view.hpp"
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_components.h"
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_message_box.h"

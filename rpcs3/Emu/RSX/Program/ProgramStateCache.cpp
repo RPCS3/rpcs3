@@ -4,8 +4,6 @@
 
 #include <stack>
 #include "util/v128.hpp"
-#include "util/asm.hpp"
-
 
 #if defined(ARCH_X64)
 #include "emmintrin.h"

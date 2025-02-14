@@ -1,14 +1,9 @@
 #include "stdafx.h"
 #include "Utilities/File.h"
-#include "Crypto/md5.h"
 #include "Crypto/aes.h"
 #include "Crypto/sha1.h"
 #include "infinity_dialog.h"
 #include "Emu/Io/Infinity.h"
-
-#include "util/asm.hpp"
-
-#include <locale>
 
 #include <QLabel>
 #include <QGroupBox>

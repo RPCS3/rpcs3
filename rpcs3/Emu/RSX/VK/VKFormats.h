@@ -1,7 +1,6 @@
 #pragma once
 #include "VulkanAPI.h"
 #include "../gcm_enums.h"
-#include <tuple>
 
 namespace vk
 {

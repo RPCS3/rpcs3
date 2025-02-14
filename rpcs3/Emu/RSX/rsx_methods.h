@@ -6,8 +6,6 @@
 #include "rsx_decode.h"
 #include "RSXTexture.h"
 #include "rsx_vertex_data.h"
-#include "Common/simple_array.hpp"
-#include "Emu/Cell/timers.hpp"
 #include "Program/program_util.h"
 
 #include "NV47/FW/draw_call.hpp"

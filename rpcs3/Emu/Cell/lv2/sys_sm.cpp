@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"

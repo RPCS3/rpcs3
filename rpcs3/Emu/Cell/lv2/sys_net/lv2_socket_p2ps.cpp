@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "Utilities/Thread.h"
-#include "util/asm.hpp"
 #include "util/atomic.hpp"
 #include "lv2_socket_p2ps.h"
 #include "Emu/NP/np_helpers.h"
@@ -275,10 +274,10 @@ lv2_socket_p2ps::lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type,
 	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
 }
 
-lv2_socket_p2ps::lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio)
+lv2_socket_p2ps::lv2_socket_p2ps(socket_type native_socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio)
 	: lv2_socket_p2p(SYS_NET_AF_INET, SYS_NET_SOCK_STREAM_P2P, SYS_NET_IPPROTO_IP)
 {
-	this->socket       = socket;
+	this->native_socket = native_socket;
 	this->port         = port;
 	this->vport        = vport;
 	this->op_addr      = op_addr;
@@ -467,7 +466,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 		const u16 new_op_vport     = tcp_header->src_port;
 		const u64 new_cur_seq      = send_hdr.seq + 1;
 		const u64 new_data_beg_seq = send_hdr.ack;
-		auto sock_lv2              = make_shared<lv2_socket_p2ps>(socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio);
+		auto sock_lv2 = make_shared<lv2_socket_p2ps>(native_socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio);
 		const s32 new_sock_id      = idm::import_existing<lv2_socket>(sock_lv2);
 		sock_lv2->set_lv2_id(new_sock_id);
 		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
@@ -518,8 +517,9 @@ void lv2_socket_p2ps::send_u2s_packet(std::vector<u8> data, const ::sockaddr_in*
 {
 	char ip_str[16];
 	inet_ntop(AF_INET, &dst->sin_addr, ip_str, sizeof(ip_str));
-	sys_net.trace("[P2PS] Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", socket, lv2_id, data.size(), seq, require_ack, ip_str, std::bit_cast<u16, be_t<u16>>(dst->sin_port));
-	while (::sendto(socket, reinterpret_cast<char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
+	sys_net.trace("[P2PS] Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", native_socket, lv2_id, data.size(), seq, require_ack, ip_str, std::bit_cast<u16, be_t<u16>>(dst->sin_port));
+
+	while (np::sendto_possibly_ipv6(native_socket, reinterpret_cast<char*>(data.data()), ::size32(data), dst, 0) == -1)
 	{
 		const sys_net_error err = get_last_error(false);
 		// concurrency on the socket can result in EAGAIN error in which case we try again
@@ -707,7 +707,7 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr)
 
 			port       = p2p_port;
 			vport      = p2p_vport;
-			socket     = real_socket;
+			native_socket = real_socket;
 			bound_addr = psa_in_p2p->sin_addr;
 		}
 	}
@@ -720,7 +720,7 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2ps::getsockname()
 	std::lock_guard lock(mutex);
 
 	// Unbound socket
-	if (!socket)
+	if (!native_socket)
 	{
 		return {CELL_OK, {}};
 	}
@@ -783,7 +783,7 @@ std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
 		}
 	}
 
-	socket = real_socket;
+	native_socket = real_socket;
 
 	send_hdr.src_port = vport;
 	send_hdr.dst_port = dst_vport;

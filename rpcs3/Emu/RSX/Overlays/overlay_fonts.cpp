@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "overlay_controls.h"
+#include "overlay_fonts.h"
 #include "Emu/System.h"
 #include "Emu/vfs_config.h"
 

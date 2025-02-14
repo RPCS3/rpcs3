@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "overlay_home_menu_settings.h"
-#include "overlay_home_menu_components.h"
 #include "Emu/system_config.h"
 
 namespace rsx

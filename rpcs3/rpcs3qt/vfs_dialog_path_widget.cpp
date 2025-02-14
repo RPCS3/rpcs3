@@ -1,5 +1,4 @@
 #include "vfs_dialog_path_widget.h"
-#include "Utilities/Config.h"
 
 #include <QFileDialog>
 #include <QCoreApplication>

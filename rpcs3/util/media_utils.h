@@ -2,13 +2,11 @@
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
-#include "util/video_provider.h"
+#include "util/video_sink.h"
 #include "Emu/Cell/Modules/cellMusic.h"
 
 #include <unordered_map>
 #include <deque>
-#include <mutex>
-#include <thread>
 
 namespace utils
 {

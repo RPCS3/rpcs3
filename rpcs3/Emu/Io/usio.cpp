@@ -127,6 +127,16 @@ usb_device_usio::~usb_device_usio()
 	save_backup();
 }
 
+std::shared_ptr<usb_device> usb_device_usio::make_instance(u32, const std::array<u8, 7>& location)
+{
+	return std::make_shared<usb_device_usio>(location);
+}
+
+u16 usb_device_usio::get_num_emu_devices()
+{
+	return 1;
+}
+
 void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	transfer->fake = true;
@@ -189,7 +199,7 @@ void usb_device_usio::save_backup()
 void usb_device_usio::translate_input_taiko()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 
 	std::vector<u8> input_buf(0x60);
 	constexpr le_t<u16> c_hit = 0x1800;
@@ -273,7 +283,7 @@ void usb_device_usio::translate_input_taiko()
 void usb_device_usio::translate_input_tekken()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
-	const auto handler = pad::get_current_handler();
+	const auto handler = pad::get_pad_thread();
 
 	std::vector<u8> input_buf(0x180);
 	le_t<u64> digital_input[2]{};

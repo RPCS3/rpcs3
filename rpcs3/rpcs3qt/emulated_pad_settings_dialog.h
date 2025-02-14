@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Emu/Io/pad_types.h"
-
 #include <QComboBox>
 #include <QDialog>
 #include <QTabWidget>

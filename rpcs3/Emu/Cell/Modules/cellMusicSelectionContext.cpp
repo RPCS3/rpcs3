@@ -109,6 +109,8 @@ void music_selection_context::set_playlist(const std::string& path)
 		content_type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 		playlist.push_back(dir_path + path.substr(vfs_dir_path.length()));
 	}
+
+	valid = true;
 }
 
 void music_selection_context::create_playlist(const std::string& new_hash)
@@ -244,6 +246,29 @@ bool music_selection_context::load_playlist()
 
 	valid = true;
 	return true;
+}
+
+void music_selection_context::set_track(std::string_view track)
+{
+	if (track.empty()) return;
+
+	if (playlist.empty())
+	{
+		cellMusicSelectionContext.error("No tracks to play... (requested path='%s')", track);
+		return;
+	}
+
+	for (usz i = 0; i < playlist.size(); i++)
+	{
+		cellMusicSelectionContext.error("Comparing track '%s' vs '%s'", track, playlist[i]);
+		if (track.ends_with(playlist[i]))
+		{
+			first_track = current_track = static_cast<u32>(i);
+			return;
+		}
+	}
+
+	cellMusicSelectionContext.error("Track '%s' not found...", track);
 }
 
 u32 music_selection_context::step_track(bool next)

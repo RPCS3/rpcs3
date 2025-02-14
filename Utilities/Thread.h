@@ -5,10 +5,6 @@
 #include "util/shared_ptr.hpp"
 
 #include <string>
-#include <concepts>
-
-#include "mutex.h"
-#include "lockless.h"
 
 // Hardware core layout
 enum class native_core_arrangement : u32
@@ -769,7 +765,7 @@ public:
 		}
 
 		// Move the context (if movable)
-		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count - 1), std::forward<Context>(f));
+		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count), std::forward<Context>(f));
 	}
 
 	// Constructor with a function performed before adding more threads

@@ -1,5 +1,9 @@
 #include "Input/product_info.h"
 
+#include <map>
+
+#include "Emu/Io/pad_types.h"
+
 namespace input
 {
 	static const std::map<product_type, product_info> input_products = {

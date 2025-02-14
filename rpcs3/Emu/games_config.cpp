@@ -159,7 +159,7 @@ void games_config::load()
 
 		if (!fs::rename(old_path, path, false))
 		{
-			cfg_log.error("Failed to move '%s' to '%s' (error='%s')", old_path, path, fs::g_tls_error);
+			(fs::g_tls_error == fs::error::exist ? cfg_log.warning : cfg_log.error)("Failed to move '%s' to '%s' (error='%s')", old_path, path, fs::g_tls_error);
 		}
 	}
 #endif

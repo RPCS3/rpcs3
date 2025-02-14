@@ -4,8 +4,9 @@
 #include <QListWidget>
 
 #include "util/types.hpp"
+#include "util/shared_ptr.hpp"
 #include "custom_dialog.h"
-#include "Emu/NP/rpcn_client.h"
+#include "Emu/Cell/Modules/sceNp.h"
 
 struct recvmessage_signal_struct
 {

@@ -752,7 +752,25 @@ namespace vk
 			device_fault_info.pNext = const_cast<void*>(device.pNext);
 			device_fault_info.deviceFault = VK_TRUE;
 			device_fault_info.deviceFaultVendorBinary = VK_FALSE;
-			device_fault_info.pNext = &device_fault_info;
+			device.pNext = &device_fault_info;
+		}
+
+		VkPhysicalDeviceConditionalRenderingFeaturesEXT conditional_rendering_info{};
+		if (pgpu->optional_features_support.conditional_rendering)
+		{
+			conditional_rendering_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONDITIONAL_RENDERING_FEATURES_EXT;
+			conditional_rendering_info.pNext = const_cast<void*>(device.pNext);
+			conditional_rendering_info.conditionalRendering = VK_TRUE;
+			device.pNext = &conditional_rendering_info;
+		}
+
+		VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
+		if (pgpu->optional_features_support.barycentric_coords)
+		{
+			shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+			shader_barycentric_info.pNext = const_cast<void*>(device.pNext);
+			shader_barycentric_info.fragmentShaderBarycentric = VK_TRUE;
+			device.pNext = &shader_barycentric_info;
 		}
 
 		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))

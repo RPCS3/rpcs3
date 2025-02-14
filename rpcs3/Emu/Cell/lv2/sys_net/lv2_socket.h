@@ -6,6 +6,7 @@
 #include "Utilities/mutex.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/lv2/sys_net.h"
+#include "Emu/NP/ip_address.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -19,12 +20,6 @@
 #ifdef __clang__
 #pragma GCC diagnostic pop
 #endif
-#endif
-
-#ifdef _WIN32
-using socket_type = uptr;
-#else
-using socket_type = int;
 #endif
 
 enum class thread_state : u32;
@@ -126,7 +121,7 @@ protected:
 	shared_mutex mutex;
 	s32 lv2_id = 0;
 
-	socket_type socket = 0;
+	socket_type native_socket = 0;
 
 	lv2_socket_family family{};
 	lv2_socket_type type{};

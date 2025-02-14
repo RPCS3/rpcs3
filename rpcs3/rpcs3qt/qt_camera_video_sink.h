@@ -7,6 +7,7 @@
 #include <QImage>
 
 #include <array>
+#include <mutex>
 
 class qt_camera_video_sink final : public QVideoSink
 {

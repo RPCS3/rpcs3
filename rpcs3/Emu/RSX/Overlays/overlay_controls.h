@@ -3,7 +3,6 @@
 #include "overlay_fonts.h"
 
 #include "Emu/localized_string.h"
-#include "Emu/Cell/timers.hpp"
 
 #include <memory>
 

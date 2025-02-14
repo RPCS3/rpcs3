@@ -147,6 +147,12 @@ static u8* add_jit_memory(usz size, usz align)
 		return pointer;
 	}
 
+	if (!size && align == 1)
+	{
+		// Return memory top address
+		return pointer + (Ctr.load() & 0xffff'ffff);
+	}
+
 	u64 olda, newa;
 
 	// Simple allocation by incrementing pointer to the next free data
@@ -211,7 +217,7 @@ const asmjit::Environment& jit_runtime_base::environment() const noexcept
 	return g_env;
 }
 
-void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
+void* jit_runtime_base::_add(asmjit::CodeHolder* code, usz align) noexcept
 {
 	ensure(!code->flatten());
 	ensure(!code->resolveUnresolvedLinks());
@@ -219,7 +225,7 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 	if (!codeSize)
 		return nullptr;
 
-	auto p = ensure(this->_alloc(codeSize, 64));
+	auto p = ensure(this->_alloc(codeSize, align));
 	ensure(!code->relocateToBase(uptr(p)));
 
 	{
@@ -231,6 +237,11 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 
 		for (asmjit::Section* section : code->_sections)
 		{
+			if (section->offset() + section->bufferSize() > utils::align<usz>(codeSize, align))
+			{
+				fmt::throw_exception("CodeHolder section exceeds range: Section->offset: 0x%x, Section->bufferSize: 0x%x, alloted-memory=0x%x", section->offset(), section->bufferSize(), utils::align<usz>(codeSize, align));
+			}
+
 			std::memcpy(p + section->offset(), section->data(), section->bufferSize());
 		}
 	}
@@ -265,6 +276,18 @@ u8* jit_runtime::alloc(usz size, usz align, bool exec) noexcept
 	else
 	{
 		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(size, align);
+	}
+}
+
+u8* jit_runtime::peek(bool exec) noexcept
+{
+	if (exec)
+	{
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(0, 1);
+	}
+	else
+	{
+		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(0, 1);
 	}
 }
 

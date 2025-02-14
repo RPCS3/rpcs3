@@ -1,5 +1,5 @@
+#include "Utilities/StrUtil.h"
 #include "stdafx.h"
-#include "Emu/System.h"
 #include <span>
 #include "np_structs_extra.h"
 
@@ -118,9 +118,13 @@ namespace extra_nps
 			print_SceNpMatching2BinAttr(&req->roomBinAttrExternal[i]);
 
 		sceNp2.warning("roomPassword: *0x%x", req->roomPassword);
+
+		if (req->roomPassword)
+			sceNp2.warning("data: %s", fmt::buf_to_hexstring(req->roomPassword->data, sizeof(req->roomPassword->data)));
+
 		sceNp2.warning("groupConfig: *0x%x", req->groupConfig);
 		sceNp2.warning("groupConfigNum: %d", req->groupConfigNum);
-		sceNp2.warning("passwordSlotMask: *0x%x", req->passwordSlotMask);
+		sceNp2.warning("passwordSlotMask: *0x%x, value: 0x%x", req->passwordSlotMask, req->passwordSlotMask ? static_cast<u64>(*req->passwordSlotMask) : 0ull);
 		sceNp2.warning("allowedUser: *0x%x", req->allowedUser);
 		sceNp2.warning("allowedUserNum: %d", req->allowedUserNum);
 		sceNp2.warning("blockedUser: *0x%x", req->blockedUser);

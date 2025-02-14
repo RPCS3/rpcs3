@@ -462,6 +462,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/rpcn_countries.cpp
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
+    NP/ip_address.cpp
 )
 
 # Memory
@@ -478,6 +479,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Core/RSXContext.cpp
+    RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
@@ -492,6 +494,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/GLPipelineCompiler.cpp
     RSX/GL/GLPresent.cpp
     RSX/GL/GLRenderTargets.cpp
+    RSX/GL/GLResolveHelper.cpp
     RSX/GL/GLShaderInterpreter.cpp
     RSX/GL/GLTexture.cpp
     RSX/GL/GLTextureCache.cpp
@@ -595,6 +598,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKAsyncScheduler.cpp
         RSX/VK/VKCommandStream.cpp
         RSX/VK/VKCommonDecompiler.cpp
+        RSX/VK/VKCommonPipelineLayout.cpp
         RSX/VK/VKCompute.cpp
         RSX/VK/VKDMA.cpp
         RSX/VK/VKDraw.cpp
@@ -633,7 +637,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl
     PRIVATE
-        3rdparty::xxhash
+        3rdparty::glslang 3rdparty::xxhash
 )
 
 if(APPLE)

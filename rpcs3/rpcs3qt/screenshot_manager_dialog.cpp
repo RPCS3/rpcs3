@@ -5,7 +5,6 @@
 #include "flow_widget.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
-#include "Emu/VFS.h"
 #include "Emu/system_utils.hpp"
 
 #include <QApplication>

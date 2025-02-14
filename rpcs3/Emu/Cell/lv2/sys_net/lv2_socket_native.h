@@ -9,7 +9,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -18,7 +17,6 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <fcntl.h>
 #include <poll.h>
 #ifdef __clang__
 #pragma GCC diagnostic pop
@@ -62,7 +60,7 @@ public:
 	s32 shutdown(s32 how) override;
 
 private:
-	void set_socket(socket_type socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
+	void set_socket(socket_type native_socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	void set_default_buffers();
 	void set_non_blocking();
 
