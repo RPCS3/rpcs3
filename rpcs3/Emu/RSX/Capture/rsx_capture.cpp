@@ -6,33 +6,33 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Memory/vm.h"
 
-#include "xxhash.h"
-
 namespace rsx
 {
 	namespace capture
 	{
-		void insert_mem_block_in_map(std::unordered_set<u64>& mem_changes, frame_capture_data::memory_block&& block, frame_capture_data::memory_block_data&& data)
+		void insert_mem_block_in_map(u64& indexer, std::unordered_set<u64>& mem_changes, frame_capture_data::memory_block&& block, frame_capture_data::memory_block_data&& data)
 		{
 			if (!data.data.empty())
 			{
-				u64 data_hash = XXH64(data.data.data(), data.data.size(), 0);
+				const auto [it, inserted] = frame_capture.memory_data_map.try_emplace(data, 0);
+				u64& data_hash = it->second;
+
+				if (inserted)
+				{
+					data_hash = ++indexer;
+				}
+
 				block.data_state = data_hash;
 
-				auto it = frame_capture.memory_data_map.find(data_hash);
-				if (it != frame_capture.memory_data_map.end())
-				{
-					if (it->second.data != data.data)
-						// screw this
-						fmt::throw_exception("Memory map hash collision detected...cant capture");
-				}
-				else
-					frame_capture.memory_data_map.insert(std::make_pair(data_hash, std::move(data)));
+				const auto [block_it, inserted_block] = frame_capture.memory_map.try_emplace(block, 0);
+				u64& block_hash = block_it->second;
 
-				u64 block_hash = XXH64(&block, sizeof(frame_capture_data::memory_block), 0);
+				if (inserted_block)
+				{
+					block_hash = ++indexer;
+				}
+
 				mem_changes.insert(block_hash);
-				if (frame_capture.memory_map.find(block_hash) == frame_capture.memory_map.end())
-					frame_capture.memory_map.insert(std::make_pair(block_hash, std::move(block)));
 			}
 		}
 
@@ -48,6 +48,7 @@ namespace rsx
 
 			// shove the mem_changes onto the last issued command
 			std::unordered_set<u64>& mem_changes = frame_capture.replay_commands.back().memory_state;
+			u64& mem_indexer = frame_capture.memory_indexer;
 
 			// capture fragment shader mem
 			const auto [program_offset, program_location] = method_registers.shader_program_address();
@@ -63,7 +64,7 @@ namespace rsx
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(ucode_size + program_start);
 			std::memcpy(block_data.data.data(), vm::base(addr), ucode_size + program_start);
-			insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+			insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 
 			// vertex shader is passed in registers, so it can be ignored
 
@@ -90,7 +91,7 @@ namespace rsx
 				frame_capture_data::memory_block_data block_data;
 				block_data.data.resize(texSize);
 				std::memcpy(block_data.data.data(), vm::base(texaddr), texSize);
-				insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+				insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 			}
 
 			// save vertex texture mem
@@ -116,7 +117,7 @@ namespace rsx
 				frame_capture_data::memory_block_data block_data;
 				block_data.data.resize(texSize);
 				std::memcpy(block_data.data.data(), vm::base(texaddr), texSize);
-				insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+				insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 			}
 
 			// save vertex buffer memory
@@ -154,7 +155,7 @@ namespace rsx
 						frame_capture_data::memory_block_data block_data;
 						block_data.data.resize(bufferSize);
 						std::memcpy(block_data.data.data(), vm::base(addr + (range.first * vertStride)), bufferSize);
-						insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+						insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 					}
 					while (method_registers.current_draw_clause.next());
 				}
@@ -193,7 +194,7 @@ namespace rsx
 					frame_capture_data::memory_block_data block_data;
 					block_data.data.resize(bufferSize);
 					std::memcpy(block_data.data.data(), vm::base(idxAddr), bufferSize);
-					insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+					insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 
 					switch (index_type)
 					{
@@ -256,7 +257,7 @@ namespace rsx
 						frame_capture_data::memory_block_data block_data;
 						block_data.data.resize(bufferSize);
 						std::memcpy(block_data.data.data(), vm::base(addr + (min_index * vertStride)), bufferSize);
-						insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
+						insert_mem_block_in_map(mem_indexer, mem_changes, std::move(block), std::move(block_data));
 					}
 				}
 			}
@@ -308,7 +309,7 @@ namespace rsx
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(src_size);
 			std::memcpy(block_data.data.data(), pixels_src, src_size);
-			insert_mem_block_in_map(replay_command.memory_state, std::move(block), std::move(block_data));
+			insert_mem_block_in_map(frame_capture.memory_indexer, replay_command.memory_state, std::move(block), std::move(block_data));
 
 			capture_display_tile_state(rsx, replay_command);
 		}
@@ -340,14 +341,17 @@ namespace rsx
 				src += in_pitch;
 			}
 
-			insert_mem_block_in_map(replay_command.memory_state, std::move(block), std::move(block_data));
+			insert_mem_block_in_map(frame_capture.memory_indexer, replay_command.memory_state, std::move(block), std::move(block_data));
 			capture_display_tile_state(rsx, replay_command);
 		}
 
 		void capture_display_tile_state(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
+			u64& mem_indexer = frame_capture.memory_indexer;
+
 			frame_capture_data::display_buffers_state dbstate;
 			dbstate.count = rsx->display_buffers_count;
+
 			// should this only happen on flip?
 			for (u32 i = 0; i < rsx->display_buffers_count; ++i)
 			{
@@ -358,9 +362,13 @@ namespace rsx
 				dbstate.buffers[i].pitch  = db.pitch;
 			}
 
-			const u64 dbnum = XXH64(&dbstate, sizeof(frame_capture_data::display_buffers_state), 0);
-			if (frame_capture.display_buffers_map.find(dbnum) == frame_capture.display_buffers_map.end())
-				frame_capture.display_buffers_map.insert(std::make_pair(dbnum, std::move(dbstate)));
+			const auto [db_it, db_inserted] = frame_capture.display_buffers_map.try_emplace(dbstate, 0);
+			u64& dbnum = db_it->second;
+
+			if (db_inserted)
+			{
+				dbnum = ++mem_indexer;
+			}
 
 			// todo: hook tile call sys_rsx call or something
 			frame_capture_data::tile_state tilestate;
@@ -386,10 +394,13 @@ namespace rsx
 				zcstate.status1 = rsx->zculls[i].bound ? u32{zc.status1} : 0;
 			}
 
-			const u64 tsnum = XXH64(&tilestate, sizeof(frame_capture_data::tile_state), 0);
+			const auto [ts_it, ts_inserted] = frame_capture.tile_map.try_emplace(tilestate, 0);
+			u64& tsnum = ts_it->second;
 
-			if (frame_capture.tile_map.find(tsnum) == frame_capture.tile_map.end())
-				frame_capture.tile_map.insert(std::make_pair(tsnum, std::move(tilestate)));
+			if (ts_inserted)
+			{
+				tsnum = ++mem_indexer;
+			}
 
 			replay_command.display_buffer_state = dbnum;
 			replay_command.tile_state           = tsnum;
