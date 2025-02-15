@@ -145,7 +145,7 @@ public:
 						ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
 						auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
 
-						while (::sendto(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), ::size32(msg.data), 0, reinterpret_cast<const sockaddr*>(&msg.dst_addr), sizeof(msg.dst_addr)) == -1)
+						while (np::sendto_possibly_ipv6(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), ::size32(msg.data), &msg.dst_addr, 0) == -1)
 						{
 							const sys_net_error err = get_last_error(false);
 							// concurrency on the socket(from a sendto for example) can result in EAGAIN error in which case we try again
