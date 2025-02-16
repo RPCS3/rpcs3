@@ -6,6 +6,7 @@
 #include "Utilities/mutex.h"
 #include "util/logs.hpp"
 #include "util/fnv_hash.hpp"
+#include "util/v128.hpp"
 
 #include <span>
 #include <unordered_map>
@@ -61,7 +62,8 @@ namespace program_hash_util
 		/**
 		* returns true if the given source Operand is a constant
 		*/
-		static bool is_constant(u32 sourceOperand);
+
+		static bool is_any_src_constant(v128 sourceOperand);
 
 		static usz get_fragment_program_ucode_size(const void* ptr);
 
