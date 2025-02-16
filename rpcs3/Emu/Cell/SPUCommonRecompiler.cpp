@@ -38,26 +38,9 @@ constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 template<typename T>
 struct span_less
 {
-	static int compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
+	static auto compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
 	{
-		// TODO: Replace with std::lexicographical_compare_three_way when it becomes available to all compilers
-		for (usz i = 0, last = std::min(lhs.size(), rhs.size()); i != last; i++)
-		{
-			const T vl = lhs[i];
-			const T vr = rhs[i];
-
-			if (vl != vr)
-			{
-				return vl < vr ? -1 : 1;
-			}
-		}
-
-		if (lhs.size() != rhs.size())
-		{
-			return lhs.size() < rhs.size() ? -1 : 1;
-		}
-
-		return 0;
+		return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 	}
 
 	bool operator()(const std::span<T>& lhs, const std::span<T>& rhs) const noexcept
@@ -1309,7 +1292,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
 	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
 
-	const int cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
+	const auto cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp0 < 0)
 		return true;
@@ -1320,7 +1303,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	lhs_data = {data.data(), lhs_offs};
 	rhs_data = {rhs.data.data(), rhs_offs};
 
-	const int cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
+	const auto cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp1 < 0)
 		return true;
