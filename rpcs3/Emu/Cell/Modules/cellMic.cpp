@@ -575,6 +575,27 @@ bool microphone_device::has_data() const
 	return mic_registered && mic_opened && mic_started && (rbuf_raw.has_data() || rbuf_dsp.has_data());
 }
 
+f32 microphone_device::calculate_energy_level()
+{
+	const auto& buffer = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
+
+	const be_t<s16>* samples = utils::bless<const be_t<s16>>(buffer.data());
+	const size_t num_samples = buffer.size() / sizeof(s16);
+
+	f32 sum_squares = 0.0f;
+	for (usz i = 0; i < num_samples; i++)
+	{
+		const f32 normalized_sample = static_cast<f32>(samples[i]) / std::numeric_limits<s16>::max();
+		sum_squares += normalized_sample * normalized_sample;
+	}
+
+	const f32 rms = std::sqrt(sum_squares / num_samples);
+	const f32 decibels_relative = 20.0f * std::log10(std::max(rms, 0.00001f));
+	const f32 decibels = 90.0f + (decibels_relative * 0.5f);
+
+	return std::clamp(decibels, 40.0f, 90.0f);
+}
+
 u32 microphone_device::capture_audio()
 {
 	ensure(sample_size > 0);
@@ -1089,7 +1110,7 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 		*fval = 1.0f; // No gain applied
 		break;
 	case CELLMIC_SIGSTATE_MICENG:
-		*fval = 40.0f; // 40 decibels
+		*fval = device.calculate_energy_level();
 		break;
 	case CELLMIC_SIGSTATE_SPKENG:
 		*fval = 10.0f; // 10 decibels
