@@ -1157,21 +1157,23 @@ namespace np
 				auto notifications = rpcn->get_notifications();
 				for (auto& notif : notifications)
 				{
+					vec_stream noti_data(notif.second);
+
 					switch (notif.first)
 					{
-					case rpcn::NotificationType::UserJoinedRoom: notif_user_joined_room(notif.second); break;
-					case rpcn::NotificationType::UserLeftRoom: notif_user_left_room(notif.second); break;
-					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(notif.second); break;
-					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(notif.second); break;
-					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
-					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
-					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(notif.second); break;
-					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(notif.second); break;
-					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(notif.second); break;
-					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(notif.second); break;
-					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(notif.second); break;
-					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(notif.second); break;
-					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(notif.second); break;
+					case rpcn::NotificationType::UserJoinedRoom: notif_user_joined_room(noti_data); break;
+					case rpcn::NotificationType::UserLeftRoom: notif_user_left_room(noti_data); break;
+					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(noti_data); break;
+					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(noti_data); break;
+					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(noti_data); break;
+					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(noti_data); break;
+					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(noti_data); break;
+					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(noti_data); break;
+					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(noti_data); break;
+					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(noti_data); break;
+					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(noti_data); break;
+					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(noti_data); break;
+					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(noti_data); break;
 					default: fmt::throw_exception("Unknown notification(%d) received!", notif.first); break;
 					}
 				}
