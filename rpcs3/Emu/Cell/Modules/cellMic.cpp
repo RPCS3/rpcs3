@@ -8,6 +8,7 @@
 #include <Emu/Cell/lv2/sys_event.h>
 
 #include <numeric>
+#include <cmath>
 
 #include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
 
