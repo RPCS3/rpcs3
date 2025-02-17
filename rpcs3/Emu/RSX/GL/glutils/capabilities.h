@@ -41,6 +41,7 @@ namespace gl
 		bool NV_depth_buffer_float_supported = false;
 		bool NV_fragment_shader_barycentric_supported = false;
 		bool ARB_shader_texture_image_samples = false;
+		bool EXT_texture_compression_s3tc_supported = false;
 
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw
