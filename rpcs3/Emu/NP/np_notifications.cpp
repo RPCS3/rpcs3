@@ -13,9 +13,8 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 namespace np
 {
-	void np_handler::notif_user_joined_room(std::vector<u8>& data)
+	void np_handler::notif_user_joined_room(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		const auto* notification = noti.get_flatbuffer<NotificationUserJoinedRoom>();
 
 		if (noti.is_error())
@@ -72,9 +71,8 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_user_left_room(std::vector<u8>& data)
+	void np_handler::notif_user_left_room(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		u64 room_id       = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomMemberUpdateInfo>();
 
@@ -112,9 +110,8 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_room_destroyed(std::vector<u8>& data)
+	void np_handler::notif_room_destroyed(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		u64 room_id       = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomUpdateInfo>();
 
@@ -146,9 +143,8 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_updated_room_data_internal(std::vector<u8>& data)
+	void np_handler::notif_updated_room_data_internal(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		SceNpMatching2RoomId room_id = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomDataInternalUpdateInfo>();
 
@@ -182,9 +178,8 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_updated_room_member_data_internal(std::vector<u8>& data)
+	void np_handler::notif_updated_room_member_data_internal(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		SceNpMatching2RoomId room_id = noti.get<u64>();
 		const auto* update_info = noti.get_flatbuffer<RoomMemberDataInternalUpdateInfo>();
 
@@ -221,9 +216,8 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_room_message_received(std::vector<u8>& data)
+	void np_handler::notif_room_message_received(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		u64 room_id        = noti.get<u64>();
 		u16 member_id      = noti.get<u16>();
 		const auto* message_info = noti.get_flatbuffer<RoomMessageInfo>();
@@ -254,29 +248,28 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_signaling_helper(std::vector<u8>& data)
+	void np_handler::notif_signaling_helper(vec_stream& noti)
 	{
-		vec_stream noti(data);
-		const u32 addr_p2p = noti.get<u32>();
-		const u32 port_p2p = noti.get<u16>();
-		const std::string str_npid = noti.get_string(false);
+		const auto* matching_info = noti.get_flatbuffer<MatchingSignalingInfo>();
 
-		if (noti.is_error())
+		if (noti.is_error() || !matching_info->addr() || !matching_info->npid() || !matching_info->addr()->ip())
 		{
 			rpcn_log.error("Received faulty SignalingHelper notification");
 			return;
 		}
 
 		SceNpId npid_p2p;
-		string_to_npid(str_npid, npid_p2p);
+		string_to_npid(matching_info->npid()->string_view(), npid_p2p);
+
+		const u32 addr_p2p = register_ip(matching_info->addr()->ip());
+		const u16 port_p2p = matching_info->addr()->port();
 
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.send_information_packets(addr_p2p, port_p2p, npid_p2p);
 	}
 
-	void np_handler::generic_gui_notification_handler(std::vector<u8>& data, std::string_view name, s32 notification_type)
+	void np_handler::generic_gui_notification_handler(vec_stream& noti, std::string_view name, s32 notification_type)
 	{
-		vec_stream noti(data);
 		const auto* update_info = noti.get_flatbuffer<MatchingRoomStatus>();
 
 		if (noti.is_error())
@@ -329,36 +322,35 @@ namespace np
 		ctx->queue_callback(req_id, notification_type, 0);
 	}
 
-	void np_handler::notif_member_joined_room_gui(std::vector<u8>& data)
+	void np_handler::notif_member_joined_room_gui(vec_stream& noti)
 	{
-		return generic_gui_notification_handler(data, "MemberJoinedRoomGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_NEW_MEMBER);
+		return generic_gui_notification_handler(noti, "MemberJoinedRoomGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_NEW_MEMBER);
 	}
 
-	void np_handler::notif_member_left_room_gui(std::vector<u8>& data)
+	void np_handler::notif_member_left_room_gui(vec_stream& noti)
 	{
-		return generic_gui_notification_handler(data, "MemberLeftRoomGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_MEMBER_LEAVE);
+		return generic_gui_notification_handler(noti, "MemberLeftRoomGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_MEMBER_LEAVE);
 	}
 
-	void np_handler::notif_room_disappeared_gui(std::vector<u8>& data)
+	void np_handler::notif_room_disappeared_gui(vec_stream& noti)
 	{
-		return generic_gui_notification_handler(data, "RoomDisappearedGUI", SCE_NP_MATCHING_EVENT_ROOM_DISAPPEARED);
+		return generic_gui_notification_handler(noti, "RoomDisappearedGUI", SCE_NP_MATCHING_EVENT_ROOM_DISAPPEARED);
 	}
 
-	void np_handler::notif_room_owner_changed_gui(std::vector<u8>& data)
+	void np_handler::notif_room_owner_changed_gui(vec_stream& noti)
 	{
-		return generic_gui_notification_handler(data, "RoomOwnerChangedGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_OWNER_CHANGE);
+		return generic_gui_notification_handler(noti, "RoomOwnerChangedGUI", SCE_NP_MATCHING_EVENT_ROOM_UPDATE_OWNER_CHANGE);
 	}
 
-	void np_handler::notif_user_kicked_gui(std::vector<u8>& data)
+	void np_handler::notif_user_kicked_gui(vec_stream& noti)
 	{
-		return generic_gui_notification_handler(data, "UserKickedGUI", SCE_NP_MATCHING_EVENT_ROOM_KICKED);
+		return generic_gui_notification_handler(noti, "UserKickedGUI", SCE_NP_MATCHING_EVENT_ROOM_KICKED);
 	}
 
 	void gui_epilog(const shared_ptr<matching_ctx>& ctx);
 
-	void np_handler::notif_quickmatch_complete_gui(std::vector<u8>& data)
+	void np_handler::notif_quickmatch_complete_gui(vec_stream& noti)
 	{
-		vec_stream noti(data);
 		const auto* update_info = noti.get_flatbuffer<MatchingRoomStatus>();
 
 		if (noti.is_error())

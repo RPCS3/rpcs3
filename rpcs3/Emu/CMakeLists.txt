@@ -20,6 +20,10 @@ add_library(rpcs3_emu STATIC
     IPC_socket.cpp
 )
 
+if(USE_LTO)
+    set_target_properties(rpcs3_emu PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+endif()
+
 if(USE_ASAN)
     set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
 endif()
@@ -623,6 +627,11 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKVertexProgram.cpp
         RSX/VK/VKTextureCache.cpp
     )
+    if(MSVC)
+        set_source_files_properties(RSX/VK/vkutils/shared.cpp PROPERTIES
+        COMPILE_FLAGS /EHs-
+        SKIP_PRECOMPILE_HEADERS ON)
+    endif()
 endif()
 
 target_link_libraries(rpcs3_emu
@@ -632,7 +641,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl
     PRIVATE
-        3rdparty::glslang 3rdparty::xxhash
+        3rdparty::glslang
 )
 
 if(APPLE)

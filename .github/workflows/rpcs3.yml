@@ -1,0 +1,165 @@
+name: Build RPCS3
+
+on:
+  push:
+    paths-ignore:
+      - '.cirrus.yml'
+      - '.azure-pipelines.yml'
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - '.cirrus.yml'
+      - '.azure-pipelines.yml'
+      - 'README.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  BUILD_REPOSITORY_NAME: ${{ github.repository }}
+  BUILD_SOURCEBRANCHNAME: ${{ github.ref_name }}
+  BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}/build
+
+jobs:
+  Linux_Build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.0"
+            build_sh: "/rpcs3/.ci/build-linux.sh"
+            compiler: clang
+          - os: ubuntu-24.04
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.0"
+            build_sh: "/rpcs3/.ci/build-linux.sh"
+            compiler: gcc
+          - os: ubuntu-24.04-arm
+            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.0"
+            build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
+            compiler: clang
+    runs-on: ${{ matrix.os }}
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/ccache
+      CI_HAS_ARTIFACTS: true
+      DEPLOY_APPIMAGE: true
+      APPDIR: "/rpcs3/build/appdir"
+      ARTDIR: "/root/artifacts"
+      RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
+      COMPILER: ${{ matrix.compiler }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}
+
+      - name: Docker setup and build
+        run: |
+          docker pull --quiet ${{ matrix.docker_img }}
+          docker run                      \
+            -v $PWD:/rpcs3              \
+            --env-file .ci/docker.env \
+            -v ${{ env.CCACHE_DIR }}:/root/.ccache  \
+            -v ${{ github.workspace }}/artifacts:/root/artifacts \
+            ${{ matrix.docker_img }} \
+            ${{ matrix.build_sh }}
+
+      - name: Upload artifacts
+        #TODO: Upload artifact to release repository
+        #condition for release
+        #if: |
+        #  github.event_name != 'pull_request' &&
+        #  github.repository == 'RPCS3/rpcs3' &&
+        #  github.ref == 'refs/heads/master' &&
+        #  matrix.compiler == 'clang'
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/*.AppImage
+          compression-level: 0
+
+  Windows_Build:
+    runs-on: windows-latest
+    env:
+      COMPILER: msvc
+      QT_VER_MAIN: '6'
+      QT_VER: '6.8.1'
+      QT_VER_MSVC: 'msvc2022'
+      QT_DATE: '202411221531'
+      VULKAN_VER: '1.3.268.0'
+      VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
+      CACHE_DIR: ./cache
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup env
+        run: |
+          echo "QTDIR=C:\Qt\${{ env.QT_VER }}\${{ env.QT_VER_MSVC }}_64" >> ${{ github.env }}
+          echo "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_VER }}" >> ${{ github.env }}
+
+      - name: Get Cache Keys
+        shell: bash
+        run: .ci/get_keys-windows.sh
+
+      - name: Setup Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.CACHE_DIR }}
+          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}"
+          restore-keys: ${{ runner.os }}-${{ env.COMPILER }}
+
+      - name: Download and unpack dependencies
+        shell: bash
+        run: .ci/setup-windows.sh
+
+      - name: Export Variables
+        shell: bash
+        run: |
+          while IFS='=' read -r key val; do
+            # Skip lines that are empty or start with '#'
+            [[ -z "$key" || "$key" =~ ^# ]] && continue
+            echo "$key=$val" >> "${{ github.env }}"
+          done < .ci/ci-vars.env
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@main
+
+      - name: Compile RPCS3
+        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64
+
+      - name: Pack up build artifacts
+        shell: bash
+        run: |
+          mkdir -p ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          .ci/deploy-windows.sh
+
+      - name: Upload artifacts (7z)
+        #TODO: Upload artifact to release repository
+        #condition for release
+        #if: |
+        #  github.event_name != 'pull_request' &&
+        #  github.repository == 'RPCS3/rpcs3' &&
+        #  github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (MSVC)
+          # 7z
+          # 7z.sha256
+          path: |
+            ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/${{ env.BUILD }}
+            ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/${{ env.BUILD }}.sha256
+          compression-level: 0
+          if-no-files-found: error

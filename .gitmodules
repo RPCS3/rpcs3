@@ -28,10 +28,6 @@
 	path = 3rdparty/pugixml
 	url = ../../zeux/pugixml.git
 	ignore = dirty
-[submodule "3rdparty/xxHash"]
-	path = 3rdparty/xxHash
-	url = ../../Cyan4973/xxHash.git
-	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp/yaml-cpp
 	url = ../../RPCS3/yaml-cpp.git

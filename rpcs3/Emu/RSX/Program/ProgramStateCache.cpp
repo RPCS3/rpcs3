@@ -3,7 +3,6 @@
 #include "Emu/system_config.h"
 
 #include <stack>
-#include "util/v128.hpp"
 
 #if defined(ARCH_X64)
 #include "emmintrin.h"
@@ -26,25 +25,26 @@ using namespace program_hash_util;
 
 usz vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &program)
 {
-	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	usz hash = 0xCBF29CE484222325ULL;
+	// Checksum as hash with rotated data
 	const void* instbuffer = program.data.data();
-	usz instIndex = 0;
+	u32 instIndex = 0;
+	usz acc0 = 0;
+	usz acc1 = 0;
 
-	for (unsigned i = 0; i < program.data.size() / 4; i++)
+	do
 	{
-		if (program.instruction_mask[i])
+		if (program.instruction_mask[instIndex])
 		{
 			const auto inst = v128::loadu(instbuffer, instIndex);
-			hash ^= inst._u64[0];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-			hash ^= inst._u64[1];
-			hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+			usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
+			acc0 += tmp0;
+			usz tmp1 = std::rotr(inst._u64[1], (instIndex * 2) + 1);
+			acc1 += tmp1;
 		}
 
 		instIndex++;
-	}
-	return hash;
+	} while (instIndex < (program.data.size() / 4));
+	return acc0 + acc1;
 }
 
 vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog)
@@ -368,13 +368,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	usz instIndex = 0;
 	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
-		const auto active = binary1.instruction_mask[instIndex];
-		if (active != binary2.instruction_mask[instIndex])
-		{
-			return false;
-		}
-
-		if (active)
+		if (binary1.instruction_mask[instIndex])
 		{
 			const auto inst1 = v128::loadu(instBuffer1, instIndex);
 			const auto inst2 = v128::loadu(instBuffer2, instIndex);
@@ -390,10 +384,10 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	return true;
 }
 
-
-bool fragment_program_utils::is_constant(u32 sourceOperand)
+bool fragment_program_utils::is_any_src_constant(v128 sourceOperand)
 {
-	return ((sourceOperand >> 8) & 0x3) == 2;
+	const u64 masked = sourceOperand._u64[1] & 0x30000000300;
+	return (sourceOperand._u32[1] & 0x300) == 0x200 || (static_cast<u32>(masked) == 0x200 || static_cast<u32>(masked >> 32) == 0x200);
 }
 
 usz fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
@@ -403,12 +397,9 @@ usz fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 	while (true)
 	{
 		const v128 inst = v128::loadu(instBuffer, instIndex);
-		bool isSRC0Constant = is_constant(inst._u32[1]);
-		bool isSRC1Constant = is_constant(inst._u32[2]);
-		bool isSRC2Constant = is_constant(inst._u32[3]);
 		bool end = (inst._u32[0] >> 8) & 0x1;
 
-		if (isSRC0Constant || isSRC1Constant || isSRC2Constant)
+		if (is_any_src_constant(inst))
 		{
 			instIndex += 2;
 			if (end)
@@ -482,7 +473,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 				}
 			}
 
-			if (is_constant(inst._u32[1]) || is_constant(inst._u32[2]) || is_constant(inst._u32[3]))
+		if (is_any_src_constant(inst))
 			{
 				//Instruction references constant, skip one slot occupied by data
 				index++;
@@ -516,27 +507,26 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 
 usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
-	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	usz hash = 0xCBF29CE484222325ULL;
+	// Checksum as hash with rotated data
 	const void* instbuffer = program.get_data();
-	usz instIndex = 0;
+	u32 instIndex = 0;
+	usz acc0 = 0;
+	usz acc1 = 0;
 	while (true)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
-		hash ^= inst._u64[0];
-		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
-		hash ^= inst._u64[1];
-		hash += (hash << 1) + (hash << 4) + (hash << 5) + (hash << 7) + (hash << 8) + (hash << 40);
+		usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
+		acc0 += tmp0;
+		usz tmp1 = std::rotr(inst._u64[1], (instIndex * 2) + 1);
+		acc1 += tmp1;
 		instIndex++;
 		// Skip constants
-		if (fragment_program_utils::is_constant(inst._u32[1]) ||
-			fragment_program_utils::is_constant(inst._u32[2]) ||
-			fragment_program_utils::is_constant(inst._u32[3]))
+		if (fragment_program_utils::is_any_src_constant(inst))
 			instIndex++;
 
 		bool end = (inst._u32[0] >> 8) & 0x1;
 		if (end)
-			return hash;
+			return acc0 + acc1;
 	}
 	return 0;
 }
@@ -586,12 +576,10 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 
 		instIndex++;
 		// Skip constants
-		if (fragment_program_utils::is_constant(inst1._u32[1]) ||
-			fragment_program_utils::is_constant(inst1._u32[2]) ||
-			fragment_program_utils::is_constant(inst1._u32[3]))
+		if (fragment_program_utils::is_any_src_constant(inst1))
 			instIndex++;
 
-		const bool end = ((inst1._u32[0] >> 8) & 0x1) && ((inst2._u32[0] >> 8) & 0x1);
+		const bool end = ((inst1._u32[0] >> 8) & 0x1);
 		if (end)
 		{
 			return true;
