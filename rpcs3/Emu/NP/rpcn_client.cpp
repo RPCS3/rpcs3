@@ -599,7 +599,11 @@ namespace rpcn
 						duration = std::min(duration, duration_ipv6);
 					}
 
-					sem_rpcn.try_acquire_for(duration);
+					// Expected to fail unless rpcn is terminated
+					// The check is there to nuke a msvc warning
+					if (!sem_rpcn.try_acquire_for(duration))
+					{
+					}
 				}
 			}
 		}
