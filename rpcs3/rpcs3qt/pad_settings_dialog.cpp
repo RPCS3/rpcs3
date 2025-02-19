@@ -1436,7 +1436,7 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::ds4: m_description = tooltips.gamepad_settings.ds4_other; break;
 	case pad_handler::dualsense: m_description = tooltips.gamepad_settings.dualsense_other; break;
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 	case pad_handler::sdl: m_description = tooltips.gamepad_settings.sdl; break;
 #endif
 #ifdef HAVE_LIBEVDEV
@@ -1976,7 +1976,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 		case pad_handler::sdl: return tr("SDL");
 #endif
 #ifdef HAVE_LIBEVDEV
@@ -2001,7 +2001,7 @@ QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QStr
 		case pad_handler::xinput: return tr("XInput Pad #%0").arg(index);
 		case pad_handler::mm: return tr("Joystick #%0").arg(index);
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 		case pad_handler::sdl: break; // Localization not feasible. Names differ for each device.
 #endif
 #ifdef HAVE_LIBEVDEV
