@@ -4603,7 +4603,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				bb.terminator = term_type::interrupt_call;
 			}
-			else if (last_inst != spu_itype::BISL && bb.targets[0] == tia + 4 && op.ra == s_reg_lr)
+			else if (last_inst != spu_itype::BISL && !bb.targets.empty() && bb.targets[0] == tia + 4 && op.ra == s_reg_lr)
 			{
 				// Conditional return (TODO)
 				bb.terminator = term_type::ret;
@@ -4728,9 +4728,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (is_ok && bb.terminator == term_type::fallthrough)
 			{
 				// Can't just fall out of the function
-				if (bb.targets.size() != 1 || bb.targets[0] >= flim)
+				const auto bb_target_value = bb.targets.empty() ? 0 : bb.targets[0];
+
+				if (bb.targets.size() != 1 || bb_target_value >= flim)
 				{
-					spu_log.error("Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb.targets[0]);
+					spu_log.error("Function 0x%05x: [0x%05x] bad fallthrough to 0x%x", f.first, addr, bb_target_value);
 					is_ok = false;
 				}
 			}
