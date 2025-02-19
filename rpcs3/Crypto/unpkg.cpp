@@ -478,30 +478,37 @@ bool package_reader::read_metadata()
 	return true;
 }
 
+
 bool package_reader::decrypt_data()
 {
-	if (!m_is_valid)
-	{
-		return false;
-	}
+    if (!m_is_valid)
+    {
+        return false;
+    }
 
-	if (m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA && m_metadata.content_type >= 0x15 && m_metadata.content_type <= 0x17)
-	{
-		// PSVita
+    // kiosk PKGs usually end up with -TE
+    if (m_path.size() > 7 && m_path.compare(m_path.size() - 7, 7, "-TE.pkg") == 0)
+    {
+        std::memcpy(m_dec_key.data(), PKG_AES_KEY_IDU, m_dec_key.size());
+        decrypt(0, m_header.file_count * sizeof(PKGEntry), m_dec_key.data());
+    }
+    else if (m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA && m_metadata.content_type >= 0x15 && m_metadata.content_type <= 0x17)
+    {
+        // PSVita
 		// TODO: Not all the keys seem to match the content types. I was only able to install a dlc (0x16) with PKG_AES_KEY_VITA_1
+		
+        aes_context ctx;
+        aes_setkey_enc(&ctx, m_metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : m_metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 : PKG_AES_KEY_VITA_3, 128);
+        aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&m_header.klicensee), m_dec_key.data());
+        decrypt(0, m_header.file_count * sizeof(PKGEntry), m_dec_key.data());
+    }
+    else
+    {
+        std::memcpy(m_dec_key.data(), PKG_AES_KEY, m_dec_key.size());
+        decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data());
+    }
 
-		aes_context ctx;
-		aes_setkey_enc(&ctx, m_metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : m_metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 : PKG_AES_KEY_VITA_3, 128);
-		aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&m_header.klicensee), m_dec_key.data());
-		decrypt(0, m_header.file_count * sizeof(PKGEntry), m_dec_key.data());
-	}
-	else
-	{
-		std::memcpy(m_dec_key.data(), PKG_AES_KEY, m_dec_key.size());
-		decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data());
-	}
-
-	return true;
+    return true;
 }
 
 bool package_reader::read_param_sfo()
