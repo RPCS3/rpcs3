@@ -854,6 +854,10 @@ namespace np
 		room_msg_cb_ctx = 0;
 		room_msg_cb_arg = {};
 
+		presence_self.pr_status = {};
+		presence_self.pr_data = {};
+		presence_self.advertised = false;
+
 		if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
 		{
 			rpcn_log.notice("Setting RPCN state to disconnected!");
@@ -1538,7 +1542,7 @@ namespace np
 			}
 		}
 
-		if (send_update && is_psn_active)
+		if (is_psn_active && (!presence_self.advertised || send_update))
 		{
 			std::lock_guard lock(mutex_rpcn);
 
@@ -1547,6 +1551,7 @@ namespace np
 				return;
 			}
 
+			presence_self.advertised = true;
 			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
 		}
 	}
