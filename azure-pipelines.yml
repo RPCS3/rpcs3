@@ -137,7 +137,7 @@ jobs:
     LLVM_COMPILER_VER: '19'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2
@@ -198,7 +198,7 @@ jobs:
     LLVM_COMPILER_VER: '19'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2
