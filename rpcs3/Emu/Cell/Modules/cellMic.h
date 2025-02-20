@@ -289,6 +289,8 @@ public:
 	void update_audio();
 	bool has_data() const;
 
+	f32 calculate_energy_level();
+
 	bool is_registered() const { return mic_registered; }
 	bool is_opened() const { return mic_opened; }
 	bool is_started() const { return mic_started; }

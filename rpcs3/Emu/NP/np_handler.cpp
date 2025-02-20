@@ -854,6 +854,10 @@ namespace np
 		room_msg_cb_ctx = 0;
 		room_msg_cb_arg = {};
 
+		presence_self.pr_status = {};
+		presence_self.pr_data = {};
+		presence_self.advertised = false;
+
 		if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
 		{
 			rpcn_log.notice("Setting RPCN state to disconnected!");
@@ -1157,21 +1161,23 @@ namespace np
 				auto notifications = rpcn->get_notifications();
 				for (auto& notif : notifications)
 				{
+					vec_stream noti_data(notif.second);
+
 					switch (notif.first)
 					{
-					case rpcn::NotificationType::UserJoinedRoom: notif_user_joined_room(notif.second); break;
-					case rpcn::NotificationType::UserLeftRoom: notif_user_left_room(notif.second); break;
-					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(notif.second); break;
-					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(notif.second); break;
-					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
-					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
-					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(notif.second); break;
-					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(notif.second); break;
-					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(notif.second); break;
-					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(notif.second); break;
-					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(notif.second); break;
-					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(notif.second); break;
-					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(notif.second); break;
+					case rpcn::NotificationType::UserJoinedRoom: notif_user_joined_room(noti_data); break;
+					case rpcn::NotificationType::UserLeftRoom: notif_user_left_room(noti_data); break;
+					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(noti_data); break;
+					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(noti_data); break;
+					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(noti_data); break;
+					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(noti_data); break;
+					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(noti_data); break;
+					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(noti_data); break;
+					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(noti_data); break;
+					case rpcn::NotificationType::RoomDisappearedGUI: notif_room_disappeared_gui(noti_data); break;
+					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(noti_data); break;
+					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(noti_data); break;
+					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(noti_data); break;
 					default: fmt::throw_exception("Unknown notification(%d) received!", notif.first); break;
 					}
 				}
@@ -1536,7 +1542,7 @@ namespace np
 			}
 		}
 
-		if (send_update && is_psn_active)
+		if (is_psn_active && (!presence_self.advertised || send_update))
 		{
 			std::lock_guard lock(mutex_rpcn);
 
@@ -1545,6 +1551,7 @@ namespace np
 				return;
 			}
 
+			presence_self.advertised = true;
 			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
 		}
 	}

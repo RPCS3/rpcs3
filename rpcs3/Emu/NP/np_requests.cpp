@@ -252,7 +252,7 @@ namespace np
 		case rpcn::ErrorType::RoomPasswordMismatch: error_code = SCE_NP_MATCHING2_SERVER_ERROR_PASSWORD_MISMATCH; break;
 		case rpcn::ErrorType::RoomGroupFull: error_code = SCE_NP_MATCHING2_SERVER_ERROR_GROUP_FULL; break;
 		case rpcn::ErrorType::RoomGroupJoinLabelNotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_GROUP; break;
-		default: fmt::throw_exception("Unexpected error in reply to JoinRoom: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to JoinRoom: %d", static_cast<u8>(error));
 		}
 
 		if (error_code != 0)
@@ -334,8 +334,9 @@ namespace np
 		switch (error)
 		{
 		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break; // Unsure if this should return another error(missing user in room has no appropriate error code)
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to LeaveRoom: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to LeaveRoom: %d", static_cast<u8>(error));
 		}
 
 		if (error_code != CELL_OK)
@@ -549,7 +550,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error));
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
@@ -583,7 +584,7 @@ namespace np
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetRoomMemberDataInternal: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomMemberDataInternal: %d", static_cast<u8>(error));
 		}
 
 		if (error_code != CELL_OK)
@@ -1081,7 +1082,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_STORE_NOT_FOUND); break;
 		case rpcn::ErrorType::ScoreInvalid: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SCORE); break;
 		case rpcn::ErrorType::ScoreHasData: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_GAME_DATA_ALREADY_EXISTS); break;
-		default: fmt::throw_exception("Unexpected error in reply to RecordScoreData: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to RecordScoreData: %d", static_cast<u8>(error));
 		}
 	}
 
@@ -1134,7 +1135,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::NotFound: score_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND); return;
-		default: fmt::throw_exception("Unexpected error in reply to GetScoreData: %d", static_cast<u8>(error)); ;
+		default: fmt::throw_exception("Unexpected error in reply to GetScoreData: %d", static_cast<u8>(error));
 		}
 
 		auto* tdata = std::get_if<tdata_get_score_data>(&score_trans->tdata);

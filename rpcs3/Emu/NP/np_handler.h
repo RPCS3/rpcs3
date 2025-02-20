@@ -293,22 +293,22 @@ namespace np
 		bool error_and_disconnect(const std::string& error_msg);
 
 		// Notification handlers
-		void notif_user_joined_room(std::vector<u8>& data);
-		void notif_user_left_room(std::vector<u8>& data);
-		void notif_room_destroyed(std::vector<u8>& data);
-		void notif_updated_room_data_internal(std::vector<u8>& data);
-		void notif_updated_room_member_data_internal(std::vector<u8>& data);
-		void notif_signaling_helper(std::vector<u8>& data);
-		void notif_room_message_received(std::vector<u8>& data);
+		void notif_user_joined_room(vec_stream& noti);
+		void notif_user_left_room(vec_stream& noti);
+		void notif_room_destroyed(vec_stream& noti);
+		void notif_updated_room_data_internal(vec_stream& noti);
+		void notif_updated_room_member_data_internal(vec_stream& noti);
+		void notif_signaling_helper(vec_stream& noti);
+		void notif_room_message_received(vec_stream& noti);
 
-		void generic_gui_notification_handler(std::vector<u8>& data, std::string_view name, s32 notification_type);
+		void generic_gui_notification_handler(vec_stream& noti, std::string_view name, s32 notification_type);
 
-		void notif_member_joined_room_gui(std::vector<u8>& data);
-		void notif_member_left_room_gui(std::vector<u8>& data);
-		void notif_room_disappeared_gui(std::vector<u8>& data);
-		void notif_room_owner_changed_gui(std::vector<u8>& data);
-		void notif_user_kicked_gui(std::vector<u8>& data);
-		void notif_quickmatch_complete_gui(std::vector<u8>& data);
+		void notif_member_joined_room_gui(vec_stream& noti);
+		void notif_member_left_room_gui(vec_stream& noti);
+		void notif_room_disappeared_gui(vec_stream& noti);
+		void notif_room_owner_changed_gui(vec_stream& noti);
+		void notif_user_kicked_gui(vec_stream& noti);
+		void notif_quickmatch_complete_gui(vec_stream& noti);
 
 		// Reply handlers
 		void reply_get_world_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
@@ -509,6 +509,7 @@ namespace np
 			std::string pr_status;
 			std::string pr_comment;
 			std::vector<u8> pr_data;
+			atomic_t<bool> advertised = false;
 		} presence_self;
 
 		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);

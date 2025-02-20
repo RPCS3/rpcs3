@@ -106,26 +106,26 @@ namespace rsx
 		// apply memory needed for command
 		for (const auto& state : replay_cmd.memory_state)
 		{
-			auto it = frame->memory_map.find(state);
+			auto it = std::find_if(frame->memory_map.begin(), frame->memory_map.end(), FN(x.second == state));
 			if (it == frame->memory_map.end())
 				fmt::throw_exception("requested memory state for command not found in memory_map");
 
-			const auto& memblock = it->second;
-			auto it_data = frame->memory_data_map.find(it->second.data_state);
+			const auto& memblock = it->first;
+			auto it_data = std::find_if(frame->memory_data_map.begin(), frame->memory_data_map.end(), FN(x.second == memblock.data_state));
 			if (it_data == frame->memory_data_map.end())
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
-			const auto& data_block = it_data->second;
+			const auto& data_block = it_data->first;
 			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
 		{
-			auto it = frame->display_buffers_map.find(replay_cmd.display_buffer_state);
+			auto it = std::find_if(frame->display_buffers_map.begin(), frame->display_buffers_map.end(), FN(x.second == replay_cmd.display_buffer_state));
 			if (it == frame->display_buffers_map.end())
 				fmt::throw_exception("requested display buffer for command not found");
 
-			const auto& dbstate = it->second;
+			const auto& dbstate = it->first;
 			for (u32 i = 0; i < dbstate.count; ++i)
 			{
 				const auto& buf = dbstate.buffers[i];
@@ -136,16 +136,17 @@ namespace rsx
 				sys_rsx_context_attribute(context_id, 0x104, i,
 					u64{dbstate.buffers[i].width} << 32 | dbstate.buffers[i].height, u64{dbstate.buffers[i].pitch} << 32 | dbstate.buffers[i].offset, 0);
 			}
+
 			cs.display_buffer_hash = replay_cmd.display_buffer_state;
 		}
 
 		if (replay_cmd.tile_state != 0 && replay_cmd.tile_state != cs.tile_hash)
 		{
-			auto it = frame->tile_map.find(replay_cmd.tile_state);
+			auto it = std::find_if(frame->tile_map.begin(), frame->tile_map.end(), FN(x.second == replay_cmd.tile_state));
 			if (it == frame->tile_map.end())
 				fmt::throw_exception("requested tile state command not found");
 
-			const auto& tstate = it->second;
+			const auto& tstate = it->first;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{
 				const auto& ti = tstate.tiles[i];
