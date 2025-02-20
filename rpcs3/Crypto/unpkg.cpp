@@ -505,8 +505,8 @@ bool package_reader::decrypt_data()
 	{
 		std::memcpy(m_dec_key.data(), PKG_AES_KEY, m_dec_key.size());
 		decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data());
-    }
-	
+	}
+
 	return true;
 }
 
