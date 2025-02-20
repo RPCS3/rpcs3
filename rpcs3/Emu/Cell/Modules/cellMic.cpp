@@ -579,22 +579,23 @@ bool microphone_device::has_data() const
 f32 microphone_device::calculate_energy_level()
 {
 	const auto& buffer = device_type == microphone_handler::real_singstar ? ::at32(devices, 0).buf : temp_buf;
-
-	const be_t<s16>* samples = utils::bless<const be_t<s16>>(buffer.data());
 	const size_t num_samples = buffer.size() / sizeof(s16);
 
-	f32 sum_squares = 0.0f;
+	f64 sum_squares = 0.0;
+
 	for (usz i = 0; i < num_samples; i++)
 	{
-		const f32 normalized_sample = static_cast<f32>(samples[i]) / std::numeric_limits<s16>::max();
+		const be_t<s16> sample = read_from_ptr<be_t<s16>>(buffer, i * sizeof(s16));
+		const f64 normalized_sample = static_cast<f64>(sample) / -std::numeric_limits<s16>::min();
 		sum_squares += normalized_sample * normalized_sample;
 	}
 
 	const f32 rms = std::sqrt(sum_squares / num_samples);
+	const f32 decibels_max = 90.0f;
 	const f32 decibels_relative = 20.0f * std::log10(std::max(rms, 0.00001f));
-	const f32 decibels = 90.0f + (decibels_relative * 0.5f);
+	const f32 decibels = decibels_max + (decibels_relative * 0.5f);
 
-	return std::clamp(decibels, 40.0f, 90.0f);
+	return std::clamp(decibels, 40.0f, decibels_max);
 }
 
 u32 microphone_device::capture_audio()
