@@ -39,6 +39,13 @@ package_reader::package_reader(const std::string& path)
 		return;
 	}
 
+	m_is_valid = set_decryption_key();
+
+	if (!m_is_valid)
+	{
+		return;
+	}
+
 	const bool param_sfo_found = read_param_sfo();
 
 	if (!param_sfo_found)
@@ -66,7 +73,7 @@ bool package_reader::read_header()
 	}
 
 	pkg_log.notice("Path: '%s'", m_path);
-	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +m_header.pkg_magic, std::string_view(reinterpret_cast<const char*>(&m_header.pkg_magic + 1), 3)); // Skip 0x7F
+	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +m_header.pkg_magic, std::string_view(reinterpret_cast<const char*>(&m_header.pkg_magic), 4).substr(1)); // Skip 0x7F
 	pkg_log.notice("Header: pkg_type = 0x%x = %d", m_header.pkg_type, m_header.pkg_type);
 	pkg_log.notice("Header: pkg_platform = 0x%x = %d", m_header.pkg_platform, m_header.pkg_platform);
 	pkg_log.notice("Header: meta_offset = 0x%x = %d", m_header.meta_offset, m_header.meta_offset);
@@ -93,7 +100,7 @@ bool package_reader::read_header()
 			return false;
 		}
 
-		pkg_log.notice("Extended header: magic = 0x%x = \"%s\"", +ext_header.magic, std::string_view(reinterpret_cast<const char*>(&ext_header.magic + 1), 3));
+		pkg_log.notice("Extended header: magic = 0x%x = \"%s\"", +ext_header.magic, std::string_view(reinterpret_cast<const char*>(&ext_header.magic), 4).substr(1));
 		pkg_log.notice("Extended header: unknown_1 = 0x%x = %d", ext_header.unknown_1, ext_header.unknown_1);
 		pkg_log.notice("Extended header: ext_hdr_size = 0x%x = %d", ext_header.ext_hdr_size, ext_header.ext_hdr_size);
 		pkg_log.notice("Extended header: ext_data_size = 0x%x = %d", ext_header.ext_data_size, ext_header.ext_data_size);
@@ -109,6 +116,12 @@ bool package_reader::read_header()
 	if (m_header.pkg_magic != std::bit_cast<le_t<u32>>("\x7FPKG"_u32))
 	{
 		pkg_log.error("Not a PKG file!");
+		return false;
+	}
+
+	if (u64{umax} / sizeof(PKGEntry) < m_header.file_count)
+	{
+		pkg_log.error("PKG file count is too large! (0x%x)", m_header.file_count);
 		return false;
 	}
 
@@ -187,11 +200,6 @@ bool package_reader::read_header()
 
 bool package_reader::read_metadata()
 {
-	if (!decrypt_data())
-	{
-		return false;
-	}
-
 	// Read title ID and use it as an installation directory
 	m_install_dir.resize(9);
 	archive_read_block(55, &m_install_dir.front(), m_install_dir.size());
@@ -306,7 +314,7 @@ bool package_reader::read_metadata()
 			if (packet.size == sizeof(m_metadata.qa_digest))
 			{
 				archive_read(&m_metadata.qa_digest, sizeof(m_metadata.qa_digest));
-				pkg_log.notice("Metadata: QA Digest = 0x%x", m_metadata.qa_digest);
+				pkg_log.notice("Metadata: QA Digest = %s", std::span<const u8>(m_metadata.qa_digest, sizeof(m_metadata.qa_digest)));
 				continue;
 			}
 			else
@@ -478,7 +486,7 @@ bool package_reader::read_metadata()
 	return true;
 }
 
-bool package_reader::decrypt_data()
+bool package_reader::set_decryption_key()
 {
 	if (!m_is_valid)
 	{
@@ -493,27 +501,59 @@ bool package_reader::decrypt_data()
 		aes_context ctx;
 		aes_setkey_enc(&ctx, m_metadata.content_type == 0x15u ? PKG_AES_KEY_VITA_1 : m_metadata.content_type == 0x16u ? PKG_AES_KEY_VITA_2 : PKG_AES_KEY_VITA_3, 128);
 		aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const uchar*>(&m_header.klicensee), m_dec_key.data());
-		decrypt(0, m_header.file_count * sizeof(PKGEntry), m_dec_key.data());
+		return true;
 	}
-	else
+
+	switch (m_metadata.package_revision.data.make_package_npdrm_ver[0])
+	{
+	case 0x15:
+	{
+		if (!!(read_from_ptr<u128>(m_metadata.qa_digest) | read_from_ptr<u64>(m_metadata.qa_digest + 16)))
+		{
+			pkg_log.error("IDU PKG contains QA Digest!");
+		}
+
+		std::memcpy(m_dec_key.data(), PKG_AES_KEY_IDU, m_dec_key.size());
+		break;
+	}
+	default:
+	{
+		pkg_log.error("Unknown NPDRM package version: 0x%x", read_from_ptr<be_t<u16>>(m_metadata.package_revision.data.make_package_npdrm_ver));
+		[[fallthrough]];
+	}
+	case 0x19:
 	{
 		std::memcpy(m_dec_key.data(), PKG_AES_KEY, m_dec_key.size());
-		decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data());
+		break;
+	}
 	}
 
 	return true;
 }
 
-bool package_reader::read_param_sfo()
+bool package_reader::read_entries(std::vector<PKGEntry>& entries)
 {
-	if (!decrypt_data())
+	const std::span<const char> data = decrypt(0, m_header.file_count * sizeof(PKGEntry), m_dec_key.data());
+
+	if (data.size() < m_header.file_count * sizeof(PKGEntry))
 	{
 		return false;
 	}
 
-	std::vector<PKGEntry> entries(m_header.file_count);
+	entries.resize(m_header.file_count);
 
-	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
+	std::memcpy(entries.data(), data.data(), data.size());
+	return true;
+}
+
+bool package_reader::read_param_sfo()
+{
+	std::vector<PKGEntry> entries;
+
+	if (!read_entries(entries))
+	{
+		return false;
+	}
 
 	for (const PKGEntry& entry : entries)
 	{
@@ -757,16 +797,14 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	m_entry_indexer = 0;
 	m_written_bytes = 0;
 
-	if (!decrypt_data())
+	usz num_failures = 0;
+
+	std::vector<PKGEntry> entries;
+
+	if (!read_entries(entries))
 	{
 		return false;
 	}
-
-	usz num_failures = 0;
-
-	std::vector<PKGEntry> entries(m_header.file_count);
-
-	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
 
 	// Create directories first
 	for (const auto& entry : entries)
