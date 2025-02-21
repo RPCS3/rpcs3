@@ -365,7 +365,8 @@ private:
 	bool read_header();
 	bool read_metadata();
 	bool read_param_sfo();
-	bool decrypt_data();
+	bool set_decryption_key();
+	bool read_entries(std::vector<PKGEntry>& entries);
 	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, u64 num_bytes);
 	bool set_install_path();
