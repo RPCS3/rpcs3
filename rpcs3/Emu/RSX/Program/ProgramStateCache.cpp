@@ -751,7 +751,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
 	usz instIndex = 0;
-	while (true)
+	while (instIndex < (binary1.ucode_length / 16))
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
@@ -765,13 +765,9 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		// Skip constants
 		if (fragment_program_utils::is_any_src_constant(inst1))
 			instIndex++;
-
-		const bool end = ((inst1._u32[0] >> 8) & 0x1);
-		if (end)
-		{
-			return true;
-		}
 	}
+	
+	return true;
 }
 
 namespace rsx
