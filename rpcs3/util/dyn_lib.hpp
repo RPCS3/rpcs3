@@ -31,26 +31,19 @@ namespace utils
 		~dynamic_library();
 
 		bool load(const std::string& path);
+#ifdef _WIN32
+		bool load(const std::wstring& path);
+#endif
 		void close();
 
 	private:
-		void* get_impl(const std::string& name) const;
+		void* get_impl(const char* name) const;
 
 	public:
 		template <typename Type = void>
-		Type* get(const std::string& name) const
+		Type get(const char* name) const
 		{
-			Type* result;
-			*reinterpret_cast<void**>(&result) = get_impl(name);
-			return result;
-		}
-
-		template <typename Type>
-		bool get(Type*& function, const std::string& name) const
-		{
-			*reinterpret_cast<void**>(&function) = get_impl(name);
-
-			return function != nullptr;
+			return reinterpret_cast<Type>(get_impl(name));
 		}
 
 		bool loaded() const;

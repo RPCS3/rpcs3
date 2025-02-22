@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/PadHandler.h"
+#include "util/dyn_lib.hpp"
 
 #include <unordered_map>
 
@@ -9,7 +10,6 @@
 #endif
 #include <Windows.h>
 #include <Xinput.h>
-#include <chrono>
 
 // ScpToolkit defined structure for pressure sensitive button query
 struct SCP_EXTN
@@ -116,22 +116,22 @@ public:
 	void init_config(cfg_pad* cfg) override;
 
 private:
-	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);
-	typedef DWORD (WINAPI * PFN_XINPUTGETCUSTOMDATA)(DWORD, DWORD, void *);
-	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
-	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
-	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
+	using PFN_XINPUTGETEXTENDED = DWORD(WINAPI*)(DWORD, SCP_EXTN*);
+	using PFN_XINPUTGETCUSTOMDATA = DWORD(WINAPI*)(DWORD, DWORD, void*);
+	using PFN_XINPUTGETSTATE = DWORD(WINAPI*)(DWORD, XINPUT_STATE*);
+	using PFN_XINPUTSETSTATE = DWORD(WINAPI*)(DWORD, XINPUT_VIBRATION*);
+	using PFN_XINPUTGETBATTERYINFORMATION = DWORD(WINAPI*)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION*);
 
 	int GetDeviceNumber(const std::string& padId);
 	static PadButtonValues get_button_values_base(const XINPUT_STATE& state, trigger_recognition_mode trigger_mode);
 	static PadButtonValues get_button_values_scp(const SCP_EXTN& state, trigger_recognition_mode trigger_mode);
 
-	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
 	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{ nullptr };
 	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
 	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
+	utils::dynamic_library library;
 
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;

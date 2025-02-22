@@ -29,6 +29,14 @@ namespace utils
 		return loaded();
 	}
 
+#ifdef _WIN32
+	bool dynamic_library::load(const std::wstring& path)
+	{
+		m_handle = LoadLibraryW(path.c_str());
+		return loaded();
+	}
+#endif
+
 	void dynamic_library::close()
 	{
 #ifdef _WIN32
@@ -39,12 +47,12 @@ namespace utils
 		m_handle = nullptr;
 	}
 
-	void* dynamic_library::get_impl(const std::string& name) const
+	void* dynamic_library::get_impl(const char* name) const
 	{
 #ifdef _WIN32
-		return reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(m_handle), name.c_str()));
+		return reinterpret_cast<void*>(GetProcAddress(reinterpret_cast<HMODULE>(m_handle), name));
 #else
-		return dlsym(m_handle, name.c_str());
+		return dlsym(m_handle, name);
 #endif
 	}
 
