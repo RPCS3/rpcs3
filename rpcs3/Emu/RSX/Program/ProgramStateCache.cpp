@@ -366,7 +366,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	const void* instBuffer1 = binary1.data.data();
 	const void* instBuffer2 = binary2.data.data();
 	usz instIndex = 0;
-	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
+	do 
 	{
 		if (binary1.instruction_mask[instIndex])
 		{
@@ -379,7 +379,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		}
 
 		instIndex++;
-	}
+	} while (instIndex < (binary1.data.size() / 4));
 
 	return true;
 }
@@ -564,7 +564,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
 	usz instIndex = 0;
-	while (true)
+	do 
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
@@ -578,13 +578,9 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		// Skip constants
 		if (fragment_program_utils::is_any_src_constant(inst1))
 			instIndex++;
-
-		const bool end = ((inst1._u32[0] >> 8) & 0x1);
-		if (end)
-		{
-			return true;
-		}
-	}
+	} while (instIndex < (binary1.ucode_length / 16));
+	
+	return true;
 }
 
 namespace rsx
