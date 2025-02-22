@@ -262,7 +262,7 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 		return info;
 	}
 
-	const psf::registry psf = reader.get_psf();
+	const psf::registry& psf = reader.get_psf();
 
 	// TODO: localization of title and changelog
 	const std::string title_key     = "TITLE";
