@@ -170,6 +170,8 @@ namespace
 		{
 #ifdef _WIN32
 			tid = GetCurrentThreadId();
+#elif defined(ANDROID)
+            tid = pthread_self();
 #else
 			tid = reinterpret_cast<u64>(pthread_self());
 #endif
