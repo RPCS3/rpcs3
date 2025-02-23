@@ -4214,9 +4214,17 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			// Some files may fail to decrypt due to the lack of klic
 			src = decrypt_self(std::move(src));
 
+			if (!src && Emu.klic.size() > 0 && src.open(path))
+			{
+				src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&Emu.klic[0]), nullptr, true);
+			}
+
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
@@ -4383,9 +4391,17 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			// Some files may fail to decrypt due to the lack of klic
 			src = decrypt_self(std::move(src), nullptr, nullptr, true);
 
+			if (!src && Emu.klic.size() > 0 && src.open(path))
+			{
+				src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&Emu.klic[0]), nullptr, true);
+			}
+
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
@@ -4554,7 +4570,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
+	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
