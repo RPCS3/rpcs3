@@ -77,7 +77,7 @@ int main()
 elseif (UNIX)
 	# Unix is for all *NIX systems including OSX
 	add_compile_definitions(PLATFORM_POSIX=1 HAVE_CLOCK_GETTIME)
-	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+	if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR ANDROID)
 		set(OS_LINUX 1)
 
 		set(PLATFORM_SRC
@@ -87,7 +87,9 @@ elseif (UNIX)
 			events_posix.c
 		)
 
-		list(APPEND LIBUSB_LIBRARIES rt)
+		if(NOT ANDROID)
+			list(APPEND LIBUSB_LIBRARIES rt)
+		endif()
 	endif()
 endif()
 

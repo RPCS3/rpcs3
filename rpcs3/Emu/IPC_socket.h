@@ -3,7 +3,7 @@
 #include "Utilities/Thread.h"
 #include "util/logs.hpp"
 #include "Emu/Memory/vm.h"
-#include "../pine/pine_server.h"
+#include "pine/pine_server.h"
 
 LOG_CHANNEL(IPC);
 

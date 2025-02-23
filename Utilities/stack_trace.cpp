@@ -126,15 +126,17 @@ namespace utils
 	std::vector<void*> get_backtrace(int max_depth)
 	{
 		std::vector<void*> result(max_depth);
+#ifndef ANDROID
 		int depth = backtrace(result.data(), max_depth);
-
 		result.resize(depth);
+#endif
 		return result;
 	}
 
 	std::vector<std::string> get_backtrace_symbols(const std::vector<void*>& stack)
 	{
 		std::vector<std::string> result;
+#ifndef ANDROID
 		result.reserve(stack.size());
 
 		const auto symbols = backtrace_symbols(stack.data(), static_cast<int>(stack.size()));
@@ -144,6 +146,7 @@ namespace utils
 		}
 
 		free(symbols);
+#endif
 		return result;
 	}
 #endif
