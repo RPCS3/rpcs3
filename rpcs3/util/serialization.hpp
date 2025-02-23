@@ -566,14 +566,14 @@ public:
 			}
 			else if constexpr (TupleAlike<T>)
 			{
-				constexpr usz tup_size = c_tup_size<type>;
+				constexpr int tup_size = c_tup_size<type>;
 
 				static_assert(tup_size == 2 || tup_size == 4, "Unimplemented tuple serialization!");
 
-				using first_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(0, tup_size - 1)>(std::declval<type&>()))>;
-				using second_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(1, tup_size - 1)>(std::declval<type&>()))>;
-				using third_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(2, tup_size - 1)>(std::declval<type&>()))>;
-				using fourth_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(3, tup_size - 1)>(std::declval<type&>()))>;
+				using first_t  = typename std::tuple_element<std::min(0, tup_size - 1), type>::type;
+				using second_t = typename std::tuple_element<std::min(1, tup_size - 1), type>::type;
+				using third_t  = typename std::tuple_element<std::min(2, tup_size - 1), type>::type;
+				using fourth_t = typename std::tuple_element<std::min(3, tup_size - 1), type>::type;
 
 				first_t first = this->operator first_t();
 

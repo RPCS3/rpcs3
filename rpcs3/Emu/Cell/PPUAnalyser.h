@@ -106,6 +106,11 @@ struct ppu_segment
 	void* ptr{};
 };
 
+struct ppua_reg_mask_t
+{
+	u64 mask;
+};
+
 // PPU Module Information
 template <typename Type>
 struct ppu_module : public Type
@@ -138,6 +143,8 @@ struct ppu_module : public Type
 	ppu_module* parent = nullptr; // For compilation: refers to original structure (is whole, not partitioned) 
 	std::pair<u32, u32> local_bounds{0, u32{umax}}; // Module addresses range
 	std::shared_ptr<std::pair<u32, u32>> jit_bounds; // JIT instance modules addresses range
+	std::unordered_map<u32, void*> imports; // Imports information for release upon unload (TODO: OVL implementation!) 
+	std::map<u32, std::vector<std::pair<ppua_reg_mask_t, u64>>> stub_addr_to_constant_state_of_registers; // Tells possible constant states of registers of functions
 	bool is_relocatable = false; // Is code relocatable(?)
 
 	template <typename T>

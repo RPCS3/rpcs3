@@ -192,7 +192,6 @@ struct lv2_prx final : ppu_module<lv2_obj>
 	shared_mutex mutex;
 
 	std::unordered_map<u32, u32> specials;
-	std::unordered_map<u32, void*> imports;
 
 	vm::ptr<s32(u32 argc, vm::ptr<void> argv)> start = vm::null;
 	vm::ptr<s32(u32 argc, vm::ptr<void> argv)> stop = vm::null;
