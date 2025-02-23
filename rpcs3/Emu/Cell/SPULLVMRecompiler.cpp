@@ -1990,9 +1990,15 @@ public:
 					// Initialize registers and build PHI nodes if necessary
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
+						if (bb.reg_const[i])
+						{
+							// m_block->reg[i] = make_const_vector(v128::from32p(bb.reg_val32[i]), get_type<u32[4]>());
+							// continue;
+						}
+
 						const u32 src = m_finfo->fn ? bb.reg_origin_abs[i] : bb.reg_origin[i];
 
-						if (src > 0x40000)
+						if (src > SPU_LS_SIZE)
 						{
 							// Use the xfloat hint to create 256-bit (4x double) PHI
 							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
@@ -2054,7 +2060,7 @@ public:
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
 						}
-						else if (src < 0x40000)
+						else if (src < SPU_LS_SIZE)
 						{
 							// Passthrough register value
 							const auto bfound = m_blocks.find(src);
@@ -2063,9 +2069,9 @@ public:
 							{
 								m_block->reg[i] = bfound->second.reg[i];
 							}
-							else
+							else if (func.data.size() < 20)
 							{
-								spu_log.error("[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
+								spu_log.error("[0x%05x] Value not found ($%u from 0x%05x, hash=%s)", baddr, i, src, m_hash);
 							}
 						}
 						else
