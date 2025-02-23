@@ -1747,7 +1747,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					fs::file src{path};
 
-					src = decrypt_self(std::move(src));
+					src = decrypt_self(src);
 
 					const ppu_exec_object obj = src;
 
@@ -1764,6 +1764,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
+				std::vector<ppu_module<lv2_obj>*> mod_list;
+
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
@@ -1773,6 +1775,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
+					mod_list.emplace_back(&_main);
 				}
 
 				if (Emu.IsStopped())
@@ -1780,7 +1783,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					return;
 				}
 
-				ppu_precompile(dir_queue, nullptr);
+				ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list);
 
 				if (Emu.IsStopped())
 				{
@@ -2238,7 +2241,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// Decrypt SELF
 			had_been_decrypted = true;
-			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
+			elf_file = decrypt_self(elf_file, klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
 		{

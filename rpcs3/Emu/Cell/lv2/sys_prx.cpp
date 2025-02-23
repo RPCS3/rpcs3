@@ -265,7 +265,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
 
 	if (!src)
 	{

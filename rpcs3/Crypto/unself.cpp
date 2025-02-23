@@ -1045,11 +1045,8 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	}
 	else if (npd->license == 3)  // Free license.
 	{
-		// Use klicensee if available.
-		if (key_v.GetKlicenseeKey())
-			memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
-		else
-			memcpy(npdrm_key, NP_KLIC_FREE, 0x10);
+		// Use klicensee if available. (may be set to NP_KLIC_FREE if none is set)
+		std::memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
 	}
 	else
 	{
@@ -1085,7 +1082,7 @@ const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
 	return nullptr;
 }
 
-bool SELFDecrypter::LoadMetadata(u8* klic_key)
+bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 {
 	aes_context aes;
 	const auto metadata_info = std::make_unique<u8[]>(sizeof(meta_info));
@@ -1319,11 +1316,11 @@ static bool IsDebugSelf(const fs::file& f)
 	return false;
 }
 
-static bool CheckDebugSelf(fs::file& s)
+static fs::file CheckDebugSelf(const fs::file& s)
 {
 	if (s.size() < 0x18)
 	{
-		return false;
+		return {};
 	}
 
 	// Get the key version.
@@ -1352,15 +1349,14 @@ static bool CheckDebugSelf(fs::file& s)
 			e.write(buf, size);
 		}
 
-		s = std::move(e);
-		return true;
+		return e;
 	}
 
 	// Leave the file untouched.
-	return false;
+	return {};
 }
 
-fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* out_info, bool require_encrypted)
+fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAdditionalInfo* out_info)
 {
 	if (out_info)
 	{
@@ -1377,10 +1373,10 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 	// Check SELF header first. Check for a debug SELF.
 	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32)
 	{
-		if (CheckDebugSelf(elf_or_self))
+		if (fs::file res = CheckDebugSelf(elf_or_self))
 		{
 			// TODO: Decrypt
-			return elf_or_self;
+			return res;
 		}
 
 		// Check the ELF file class (32 or 64 bit).
@@ -1399,14 +1395,14 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 		// Load and decrypt the SELF file metadata.
 		if (!self_dec.LoadMetadata(klic_key))
 		{
-			self_log.error("Failed to load SELF file metadata!");
+			(klic_key ? self_log.notice : self_log.error)("Failed to load SELF file metadata!");
 			return fs::file{};
 		}
 
 		// Decrypt the SELF file data.
 		if (!self_dec.DecryptData())
 		{
-			self_log.error("Failed to decrypt SELF file data!");
+			(klic_key ? self_log.notice : self_log.error)("Failed to decrypt SELF file data!");
 			return fs::file{};
 		}
 
@@ -1414,12 +1410,7 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 		return self_dec.MakeElf(isElf32);
 	}
 
-	if (require_encrypted)
-	{
-		return {};
-	}
-
-	return elf_or_self;
+	return {};
 }
 
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key, NPD_HEADER* npd_out)

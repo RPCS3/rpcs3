@@ -319,13 +319,13 @@ class KeyVault
 	std::vector<SELF_KEY> sk_LDR_arr{};
 	std::vector<SELF_KEY> sk_UNK7_arr{};
 	std::vector<SELF_KEY> sk_NPDRM_arr{};
-	std::unique_ptr<u8[]> klicensee_key{};
+	u8 klicensee_key[16]{};
 
 public:
 	KeyVault();
 	SELF_KEY FindSelfKey(u32 type, u16 revision, u64 version);
-	void SetKlicenseeKey(u8* key);
-	u8* GetKlicenseeKey() const;
+	void SetKlicenseeKey(const u8* key);
+	const u8* GetKlicenseeKey() const;
 
 private:
 	void LoadSelfLV0Keys();

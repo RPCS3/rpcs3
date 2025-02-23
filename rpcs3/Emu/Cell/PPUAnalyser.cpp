@@ -12,7 +12,7 @@
 
 LOG_CHANNEL(ppu_validator);
 
-const ppu_decoder<ppu_itype> s_ppu_itype;
+extern const ppu_decoder<ppu_itype> g_ppu_itype;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -535,6 +535,7 @@ static constexpr struct const_tag{} is_const;
 static constexpr struct range_tag{} is_range;
 static constexpr struct min_value_tag{} minv;
 static constexpr struct max_value_tag{} maxv;
+static constexpr struct sign_bit_tag{} sign_bitv;
 static constexpr struct load_addr_tag{} load_addrv;
 
 struct reg_state_t
@@ -548,13 +549,13 @@ struct reg_state_t
 	// Check if state is a constant value
 	bool operator()(const_tag) const
 	{
-		return value_range == 1 && bit_range == 0;
+		return !is_loaded && value_range == 1 && bit_range == 0;
 	}
 
 	// Check if state is a ranged value
 	bool operator()(range_tag) const
 	{
-		return bit_range == 0;
+		return !is_loaded && bit_range == 0;
 	}
 
 	// Get minimum bound
@@ -567,6 +568,11 @@ struct reg_state_t
 	u64 operator()(max_value_tag) const
 	{
 		return value_range ? (ge_than | bit_range) + value_range : 0;
+	}
+
+	u64 operator()(sign_bit_tag) const
+	{
+		return value_range == 0 || (bit_range >> 63) || (ge_than + value_range - 1) >> 63 != (ge_than >> 63) ? u64{umax} : (ge_than >> 63);
 	}
 
 	u64 operator()(load_addr_tag) const
@@ -922,7 +928,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		{
 			const ppu_opcode_t op{+range[index]};
 
-			switch (s_ppu_itype.decode(op.opcode))
+			switch (g_ppu_itype.decode(op.opcode))
 			{
 			case ppu_itype::UNK:
 			{
@@ -962,7 +968,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Register new function
 	auto add_func = [&](u32 addr, u32 toc, u32 caller) -> ppu_function_ext&
 	{
-		if (addr < start || addr >= end || s_ppu_itype.decode(*get_ptr<u32>(addr)) == ppu_itype::UNK)
+		if (addr < start || addr >= end || g_ppu_itype.decode(*get_ptr<u32>(addr)) == ppu_itype::UNK)
 		{
 			if (!fmap.contains(addr))
 			{
@@ -1337,7 +1343,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			const u32 iaddr = _ptr.addr();
 
 			const ppu_opcode_t op{*ptr};
-			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+			const ppu_itype::type type = g_ppu_itype.decode(op.opcode);
 
 			if ((type == ppu_itype::B || type == ppu_itype::BC) && op.lk && (!op.aa || verify_ref(iaddr)))
 			{
@@ -1365,25 +1371,68 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		u32 addr = 0;
 		u32 size = 0;
 		u32 parent_block_idx = umax;
-		u64 mapped_registers_mask = 0;
-		u64 moved_registers_mask = 0;
+		ppua_reg_mask_t mapped_registers_mask{0};
+		ppua_reg_mask_t moved_registers_mask{0};
 	};
 
 	// Block analysis workload
 	std::vector<block_local_info_t> block_queue_storage;
 
+	bool is_function_caller_analysis = false;
+
 	// Main loop (func_queue may grow)
-	for (usz i = 0; i < func_queue.size(); i++)
+	for (usz i = 0; i <= func_queue.size(); i++)
 	{
+		if (i == func_queue.size())
+		{
+			if (is_function_caller_analysis)
+			{
+				break;
+			}
+
+			// Add callers of imported functions to be analyzed
+			std::set<u32> added;
+
+			for (const auto& [stub_addr, _] : stub_addr_to_constant_state_of_registers)
+			{
+				auto it = fmap.upper_bound(stub_addr);
+
+				if (it == fmap.begin())
+				{
+					continue;
+				}
+
+				auto stub_func = std::prev(it);
+
+				for (u32 caller : stub_func->second.callers)
+				{
+					ppu_function_ext& func = ::at32(fmap, caller);
+
+					if (func.attr.none_of(ppu_attr::no_size) && !func.blocks.empty() && !added.contains(caller))
+					{
+						added.emplace(caller);
+						func_queue.emplace_back(::at32(fmap, caller));
+					}
+				}
+			}
+
+			if (added.empty())
+			{
+				break;
+			}
+
+			is_function_caller_analysis = true;
+		}
+
 		if (check_aborted && check_aborted())
 		{
 			return false;
 		}
 
-		ppu_function_ext& func = func_queue[i].get();
+		ppu_function_ext& func = func_queue[i];
 
 		// Fixup TOCs
-		if (func.toc && func.toc != umax)
+		if (!is_function_caller_analysis && func.toc && func.toc != umax)
 		{
 			// Fixup callers
 			for (u32 addr : func.callers)
@@ -1407,7 +1456,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				const u32 iaddr = addr;
 
 				const ppu_opcode_t op{get_ref<u32>(iaddr)};
-				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+				const ppu_itype::type type = g_ppu_itype.decode(op.opcode);
 
 				if (type == ppu_itype::B || type == ppu_itype::BC)
 				{
@@ -1453,7 +1502,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			}
 		}
 
-		if (func.blocks.empty())
+		if (!is_function_caller_analysis && func.blocks.empty())
 		{
 			// Special function analysis
 			const vm::cptr<u32> _ptr = vm::cast(func.addr);
@@ -1760,7 +1809,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				if (parent_block != umax)
 				{
 					// Inherit loaded registers mask (lazily)
-					block.mapped_registers_mask = ::at32(block_queue, parent_block).mapped_registers_mask;
+					block.mapped_registers_mask.mask = ::at32(block_queue, parent_block).mapped_registers_mask.mask;
 				}
 
 				return static_cast<u32>(block_queue.size() - 1);
@@ -1768,6 +1817,15 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			return umax;
 		};
+
+		std::map<u32, u32> preserve_blocks;
+
+		if (is_function_caller_analysis)
+		{
+			preserve_blocks = std::move(func.blocks);
+			func.blocks.clear();
+			func.blocks.emplace(preserve_blocks.begin()->first, 0);
+		}
 
 		for (auto& block : func.blocks)
 		{
@@ -1813,7 +1871,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			auto is_reg_mapped = [&](u32 index)
 			{
-				return !!(block_queue[j].mapped_registers_mask & (u64{1} << index));
+				return !!(block_queue[j].mapped_registers_mask.mask & (u64{1} << index));
 			};
 
 			reg_state_t dummy_state{};
@@ -1824,7 +1882,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 				const usz reg_mask = u64{1} << index;
 
-				if (~block->moved_registers_mask & reg_mask)
+				if (~block->moved_registers_mask.mask & reg_mask)
 				{
 					if ((j + 1) * 64 >= reg_state_storage.size())
 					{
@@ -1836,11 +1894,11 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					usz begin_block = umax;
 
 					// Try searching for register origin
-					if (block->mapped_registers_mask & reg_mask)
+					if (block->mapped_registers_mask.mask & reg_mask)
 				 	{
 				 		for (u32 i = block->parent_block_idx; i != umax; i = block_queue[i].parent_block_idx)
 						{
-							if (~block_queue[i].moved_registers_mask & reg_mask)
+							if (~block_queue[i].moved_registers_mask.mask & reg_mask)
 							{
 								continue;
 							}
@@ -1860,8 +1918,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						reg_state_storage[64 * j + index] = make_unknown_reg_state();
 					}
 
-					block->mapped_registers_mask |= reg_mask;
-					block->moved_registers_mask |= reg_mask;
+					block->mapped_registers_mask.mask |= reg_mask;
+					block->moved_registers_mask.mask |= reg_mask;
 				}
 
 				return reg_state_storage[64 * j + index];
@@ -1877,8 +1935,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				reg_state_storage[64 * block_index + index] = rhs;
 
 				const usz reg_mask = u64{1} << index;
-				block_queue[block_index].mapped_registers_mask |= reg_mask;
-				block_queue[block_index].moved_registers_mask |= reg_mask;
+				block_queue[block_index].mapped_registers_mask.mask |= reg_mask;
+				block_queue[block_index].moved_registers_mask.mask |= reg_mask;
 			};
 
 			const auto unmap_reg = [&](u32 index)
@@ -1887,8 +1945,8 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 				const usz reg_mask = u64{1} << index;
 
-				block->mapped_registers_mask &= ~reg_mask;
-				block->moved_registers_mask &= ~reg_mask;
+				block->mapped_registers_mask.mask &= ~reg_mask;
+				block->moved_registers_mask.mask &= ~reg_mask;
 			};
 
 			enum : u32
@@ -1907,7 +1965,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			{
 				const u32 iaddr = _ptr.addr();
 				const ppu_opcode_t op{*advance(_ptr, ptr, 1)};
-				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+				const ppu_itype::type type = g_ppu_itype.decode(op.opcode);
 
 				switch (type)
 				{
@@ -1935,11 +1993,53 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					const bool is_call = op.lk && target != iaddr && target != _ptr.addr() && _ptr.addr() < func_end;
 					const auto pfunc = is_call ? &add_func(target, 0, 0) : nullptr;
 
-					if (pfunc && pfunc->blocks.empty())
+					if (pfunc && pfunc->blocks.empty() && !is_function_caller_analysis)
 					{
 						// Postpone analysis (no info)
 						postpone_analysis = true;
 						break;
+					}
+
+					if (is_function_caller_analysis && is_call && !(pfunc->attr & ppu_attr::no_return))
+					{
+						while (is_function_caller_analysis)
+						{
+							// Verify that it is the call to the imported function (may be more than one)
+							const auto it = stub_addr_to_constant_state_of_registers.lower_bound(target);
+
+							if (it == stub_addr_to_constant_state_of_registers.end())
+							{
+								break;
+							}
+
+							const auto next_func = fmap.upper_bound(it->first);
+
+							if (next_func == fmap.begin())
+							{
+								break;
+							}
+
+							const auto stub_func = std::prev(next_func);
+
+							if (stub_func->first == target)
+							{
+								// It is
+								// Now, mine register state
+								// Currently only of R3
+
+								if (is_reg_mapped(3))
+								{
+									const reg_state_t& value = get_reg(3);
+
+									if (value(is_const))
+									{
+										it->second.emplace_back(ppua_reg_mask_t{ 1u << 3 }, value(minv) );
+									}
+								}
+							}
+
+							break;
+						}
 					}
 
 					// Add next block if necessary
@@ -1993,7 +2093,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 							store_block_reg(next_idx, lhs_cr_state, lhs_state);
 							store_block_reg(next_idx, rhs_cr_state, rhs_state);
 
-							const u64 reg_mask = block_queue[j].mapped_registers_mask;
+							const u64 reg_mask = block_queue[j].mapped_registers_mask.mask;
 
 							for (u32 bit = std::countr_zero(reg_mask); bit < 64 && reg_mask & (u64{1} << bit);
 								bit += 1, bit = std::countr_zero(reg_mask >> (bit % 64)) + bit)
@@ -2024,7 +2124,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 					else if (is_call || target < func.addr || target >= func_end)
 					{
 						// Add function call (including obvious tail call)
-						add_func(target, 0, 0);
+						add_func(target, 0, func.addr);
 					}
 					else
 					{
@@ -2291,6 +2391,65 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 					continue;
 				}
+				case ppu_itype::LWZ:
+				{
+					const bool is_load_from_toc = (is_function_caller_analysis && op.ra == 2u && func.toc && func.toc != umax);
+
+					if (is_load_from_toc || is_reg_mapped(op.rd) || is_reg_mapped(op.ra))
+					{
+						const reg_state_t ra = get_reg(op.ra);
+						auto& rd = get_reg(op.rd);
+
+						rd = {};
+						rd.tag = reg_tag_allocator++;
+						rd.is_loaded = true;
+
+						reg_state_t const_offs{};
+						const_offs.load_const(op.simm16);
+
+						reg_state_t toc_offset{};
+						toc_offset.load_const(func.toc);
+
+						const reg_state_t& off_ra = is_load_from_toc ? toc_offset : ra;
+
+						rd.ge_than = const_offs(minv);
+
+						const bool is_negative = const_offs(sign_bitv) == 1u;
+
+						const bool is_offset_test_ok = is_negative
+							? (0 - const_offs(minv) <= off_ra(minv) && off_ra(minv) + const_offs(minv) < segs_end)
+							: (off_ra(minv) < segs_end && const_offs(minv) < segs_end - off_ra(minv));
+
+						if (off_ra(minv) < off_ra(maxv) && is_offset_test_ok)
+						{
+							rd.ge_than += off_ra(minv);
+
+							const bool is_range_end_test_ok = is_negative
+								? (off_ra(maxv) + const_offs(minv) <= segs_end)
+								: (off_ra(maxv) - 1 < segs_end - 1 && const_offs(minv) <= segs_end - off_ra(maxv));
+
+							if (is_range_end_test_ok)
+							{
+								rd.value_range = off_ra.value_range;
+							}
+						}
+
+						if (is_load_from_toc)
+						{
+							if (rd.value_range == 1)
+							{
+								// Try to load a constant value from data segment
+								if (auto val_ptr = get_ptr<u32>(static_cast<u32>(rd.ge_than)))
+								{
+									rd = {};
+									rd.load_const(*val_ptr);
+								}
+							}
+						}
+					}
+
+					continue;
+				}
 				case ppu_itype::LWZX:
 				case ppu_itype::LDX: // TODO: Confirm if LDX can appear in jumptable branching (probably in LV1 applications such as ps2_emu)
 				{
@@ -2311,6 +2470,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 							// Register possible jumptable offset
 							auto& rd = get_reg(op.rd);
 							rd = {};
+							rd.tag = reg_tag_allocator++;
 							rd.is_loaded = true;
 
 							const reg_state_t& const_reg = is_ra ? ra : rb;
@@ -2451,6 +2611,19 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			}
 		}
 
+		if (!preserve_blocks.empty())
+		{
+			ensure(func.blocks.size() == preserve_blocks.size());
+
+			for (auto fit = func.blocks.begin(), pit = preserve_blocks.begin(); fit != func.blocks.end(); fit++, pit++)
+			{
+				// Ensure block addresses match
+				ensure(fit->first == pit->first);
+			}
+
+			func.blocks = std::move(preserve_blocks);
+		}
+
 		if (postpone_analysis)
 		{
 			// Block aborted: abort function, postpone
@@ -2501,7 +2674,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			{
 				const u32 iaddr = _ptr.addr();
 				const ppu_opcode_t op{get_ref<u32>(_ptr++)};
-				const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+				const ppu_itype::type type = g_ppu_itype.decode(op.opcode);
 
 				if (type == ppu_itype::B || type == ppu_itype::BC)
 				{
@@ -2574,7 +2747,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 		{
 			const u32 addr = _ptr.addr();
 			const ppu_opcode_t op{get_ref<u32>(_ptr++)};
-			const ppu_itype::type type = s_ppu_itype.decode(op.opcode);
+			const ppu_itype::type type = g_ppu_itype.decode(op.opcode);
 
 			if (type == ppu_itype::UNK)
 			{
@@ -2813,7 +2986,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			{
 				const ppu_opcode_t op{get_ref<u32>(i_pos)};
 
-				switch (auto type = s_ppu_itype.decode(op.opcode))
+				switch (auto type = g_ppu_itype.decode(op.opcode))
 				{
 				case ppu_itype::UNK:
 				case ppu_itype::ECIWX:
@@ -2884,7 +3057,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						}
 
 						const ppu_opcode_t test_op{get_ref<u32>(target)};
-						const auto type0 = s_ppu_itype.decode(test_op.opcode);
+						const auto type0 = g_ppu_itype.decode(test_op.opcode);
 
 						if (type0 == ppu_itype::UNK)
 						{
@@ -2906,7 +3079,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 								break;
 							}
 
-							const auto type1 = s_ppu_itype.decode(get_ref<u32>(target + 4));
+							const auto type1 = g_ppu_itype.decode(get_ref<u32>(target + 4));
 
 							if (type1 == ppu_itype::UNK)
 							{
