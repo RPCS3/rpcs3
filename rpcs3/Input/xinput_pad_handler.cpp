@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "xinput_pad_handler.h"
 #include "Emu/Io/pad_config.h"
+#include "util/dyn_lib.hpp"
 
 namespace XINPUT_INFO
 {
@@ -77,8 +78,6 @@ xinput_pad_handler::~xinput_pad_handler()
 {
 	if (library)
 	{
-		FreeLibrary(library);
-		library = nullptr;
 		xinputGetExtended = nullptr;
 		xinputGetCustomData = nullptr;
 		xinputGetState = nullptr;
@@ -374,12 +373,6 @@ pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_m
 	};
 }
 
-template<class T>
-T getProc(HMODULE hModule, LPCSTR lpProcName)
-{
-	return reinterpret_cast<T>(GetProcAddress(hModule, lpProcName));
-}
-
 bool xinput_pad_handler::Init()
 {
 	if (m_is_init)
@@ -387,17 +380,17 @@ bool xinput_pad_handler::Init()
 
 	for (auto it : XINPUT_INFO::LIBRARY_FILENAMES)
 	{
-		library = LoadLibrary(it);
+		library.load(it);
 		if (library)
 		{
-			xinputGetExtended = getProc<PFN_XINPUTGETEXTENDED>(library, "XInputGetExtended"); // Optional
-			xinputGetCustomData = getProc<PFN_XINPUTGETCUSTOMDATA>(library, "XInputGetCustomData"); // Optional
-			xinputGetState = getProc<PFN_XINPUTGETSTATE>(library, reinterpret_cast<LPCSTR>(100));
+			xinputGetExtended = library.get<PFN_XINPUTGETEXTENDED>("XInputGetExtended");       // Optional
+			xinputGetCustomData = library.get<PFN_XINPUTGETCUSTOMDATA>("XInputGetCustomData"); // Optional
+			xinputGetState = library.get<PFN_XINPUTGETSTATE>(reinterpret_cast<LPCSTR>(100));
 			if (!xinputGetState)
-				xinputGetState = getProc<PFN_XINPUTGETSTATE>(library, "XInputGetState");
+				xinputGetState = library.get<PFN_XINPUTGETSTATE>("XInputGetState");
 
-			xinputSetState = getProc<PFN_XINPUTSETSTATE>(library, "XInputSetState");
-			xinputGetBatteryInformation = getProc<PFN_XINPUTGETBATTERYINFORMATION>(library, "XInputGetBatteryInformation");
+			xinputSetState = library.get<PFN_XINPUTSETSTATE>("XInputSetState");
+			xinputGetBatteryInformation = library.get<PFN_XINPUTGETBATTERYINFORMATION>("XInputGetBatteryInformation");
 
 			if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
@@ -405,8 +398,6 @@ bool xinput_pad_handler::Init()
 				break;
 			}
 
-			FreeLibrary(library);
-			library = nullptr;
 			xinputGetExtended = nullptr;
 			xinputGetCustomData = nullptr;
 			xinputGetState = nullptr;

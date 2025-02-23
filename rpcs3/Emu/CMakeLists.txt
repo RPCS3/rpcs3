@@ -627,11 +627,6 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKVertexProgram.cpp
         RSX/VK/VKTextureCache.cpp
     )
-    if(MSVC)
-        set_source_files_properties(RSX/VK/vkutils/shared.cpp PROPERTIES
-        COMPILE_FLAGS /EHs-
-        SKIP_PRECOMPILE_HEADERS ON)
-    endif()
 endif()
 
 target_link_libraries(rpcs3_emu
