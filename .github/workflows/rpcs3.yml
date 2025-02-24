@@ -29,15 +29,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.0"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: clang
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.0"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: gcc
           - os: ubuntu-24.04-arm
-            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.0"
+            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.1"
             build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
     runs-on: ${{ matrix.os }}
