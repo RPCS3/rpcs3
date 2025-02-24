@@ -1351,6 +1351,9 @@
     <ClCompile Include="Emu\RSX\GSFrameBase.cpp">
       <Filter>Emu\GPU\RSX\Game Window</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
