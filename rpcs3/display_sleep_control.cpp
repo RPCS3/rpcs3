@@ -39,7 +39,7 @@ bool display_sleep_control_supported()
 #endif
 }
 
-void enable_display_sleep()
+void enable_display_sleep(bool enabled)
 {
 	if (!display_sleep_control_supported())
 	{
@@ -47,15 +47,23 @@ void enable_display_sleep()
 	}
 
 #ifdef _WIN32
-	SetThreadExecutionState(ES_CONTINUOUS);
+	SetThreadExecutionState(enabled ? ES_CONTINUOUS : (ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED));
 #elif defined(__APPLE__)
-	if (s_pm_assertion != kIOPMNullAssertionID)
+	if (enabled && s_pm_assertion != kIOPMNullAssertionID)
 	{
 		IOPMAssertionRelease(s_pm_assertion);
 		s_pm_assertion = kIOPMNullAssertionID;
 	}
+	else if (!enabled)
+	{
+#pragma GCC diagnostic push
+// Necessary as some of those values are macro using old casts
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+		IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep, kIOPMAssertionLevelOn, CFSTR("Game running"), &s_pm_assertion);
+#pragma GCC diagnostic pop
+	}
 #elif defined(HAVE_QTDBUS)
-	if (s_dbus_cookie != 0)
+	if (enabled && s_dbus_cookie != 0)
 	{
 		for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
 		{
@@ -68,36 +76,20 @@ void enable_display_sleep()
 		}
 		s_dbus_cookie = 0;
 	}
-#endif
-}
-
-void disable_display_sleep()
-{
-	if (!display_sleep_control_supported())
+	else if (!enabled)
 	{
-		return;
-	}
-
-#ifdef _WIN32
-	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
-#elif defined(__APPLE__)
-#pragma GCC diagnostic push
-// Necessary as some of those values are macro using old casts
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-	IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep, kIOPMAssertionLevelOn, CFSTR("Game running"), &s_pm_assertion);
-#pragma GCC diagnostic pop
-#elif defined(HAVE_QTDBUS)
-	for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
-	{
-		QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
-		if (interface.isValid())
+		for (const char* service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
 		{
-			QDBusReply<u32> reply = interface.call("Inhibit", "rpcs3", "Game running");
-			if (reply.isValid())
+			QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
+			if (interface.isValid())
 			{
-				s_dbus_cookie = reply.value();
+				QDBusReply<u32> reply = interface.call("Inhibit", "rpcs3", "Game running");
+				if (reply.isValid())
+				{
+					s_dbus_cookie = reply.value();
+				}
+				break;
 			}
-			break;
 		}
 	}
 #endif
