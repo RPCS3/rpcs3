@@ -168,6 +168,8 @@ void headless_application::InitializeCallbacks()
 	callbacks.play_sound = [](const std::string&){};
 	callbacks.add_breakpoint = [](u32 /*addr*/){};
 
+	callbacks.check_microphone_permissions = [](){};
+
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
