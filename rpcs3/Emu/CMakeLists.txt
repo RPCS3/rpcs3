@@ -571,6 +571,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/program_util.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
+    RSX/GSFrameBase.cpp
     RSX/RSXDisAsm.cpp
     RSX/RSXFIFO.cpp
     RSX/RSXOffload.cpp
