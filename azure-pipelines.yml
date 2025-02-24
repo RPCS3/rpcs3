@@ -33,7 +33,9 @@ jobs:
   steps:
   - task: Cache@2
     inputs:
-      key: ccache | $(Agent.OS) | $(COMPILER)
+      key: ccache | $(Agent.OS) | $(COMPILER) | $(Build.SourceVersion)
+      restoreKeys: |
+       ccache | $(Agent.OS) | $(COMPILER)
       path: $(CCACHE_DIR)
     displayName: ccache
 
@@ -89,9 +91,11 @@ jobs:
 
     - task: Cache@2
       inputs:
-        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock | glslang.lock
+        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock | glslang.lock | $(Build.SourceVersion)
         path: $(CACHE_DIR)
         restoreKeys: |
+          $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA)
+          $(Agent.OS) | $(COMPILER) | "$(QT_VER)"
           $(Agent.OS) | $(COMPILER)
       displayName: Cache
 
@@ -142,10 +146,10 @@ jobs:
   steps:
     - task: Cache@2
       inputs:
-        key: ccache | "$(Agent.OS)"
+        key: ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(Build.SourceVersion)"
         path: $(CCACHE_DIR)
         restoreKeys: |
-          ccache | "$(Agent.OS)"
+          ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)"
       displayName: Ccache cache
     
     - task: Cache@2
@@ -203,10 +207,10 @@ jobs:
   steps:
     - task: Cache@2
       inputs:
-        key: ccache | "$(Agent.OS)"
+        key: ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(Build.SourceVersion)"
         path: $(CCACHE_DIR)
         restoreKeys: |
-          ccache | "$(Agent.OS)"
+          ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)"
       displayName: Ccache cache
     
     - task: Cache@2
