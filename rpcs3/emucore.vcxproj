@@ -180,6 +180,7 @@
     <ClCompile Include="Emu\NP\ip_address.cpp" />
     <ClCompile Include="Emu\vfs_config.cpp" />
     <ClCompile Include="Loader\disc.cpp" />
+    <ClCompile Include="util\emu_utils.cpp" />
     <ClCompile Include="util\serialization_ext.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
