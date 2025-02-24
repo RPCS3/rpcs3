@@ -112,6 +112,7 @@
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
+    <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
