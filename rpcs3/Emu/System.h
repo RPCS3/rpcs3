@@ -107,6 +107,7 @@ struct EmuCallbacks
 	std::function<std::vector<std::string>()> get_font_dirs;
 	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
 	std::function<void(u32)> add_breakpoint;
+	std::function<void()> check_microphone_permissions;
 };
 
 namespace utils

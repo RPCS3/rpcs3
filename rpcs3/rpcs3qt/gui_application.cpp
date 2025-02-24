@@ -60,6 +60,10 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #endif
 
+#if QT_CONFIG(permissions)
+#include <QPermissions>
+#endif
+
 LOG_CHANNEL(gui_log, "GUI");
 
 std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
@@ -876,6 +880,32 @@ void gui_application::InitializeCallbacks()
 		{
 			m_main_window->OnAddBreakpoint(addr);
 		});
+	};
+
+	callbacks.check_microphone_permissions = []()
+	{
+#if QT_CONFIG(permissions)
+		Emu.BlockingCallFromMainThread([]()
+		{
+			const QMicrophonePermission permission;
+			switch (qApp->checkPermission(permission))
+			{
+			case Qt::PermissionStatus::Undetermined:
+				gui_log.notice("Requesting microphone permission");
+				qApp->requestPermission(permission, []()
+				{
+					Emu.GetCallbacks().check_microphone_permissions();
+				});
+				break;
+			case Qt::PermissionStatus::Denied:
+				gui_log.error("RPCS3 has no permissions to access microphones on this device.");
+				break;
+			case Qt::PermissionStatus::Granted:
+				gui_log.notice("Microphone permission granted");
+				break;
+			}
+		});
+#endif
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
