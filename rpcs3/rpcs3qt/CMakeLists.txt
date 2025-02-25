@@ -61,6 +61,7 @@ add_library(rpcs3_ui STATIC
     pad_settings_dialog.cpp
     patch_creator_dialog.cpp
     patch_manager_dialog.cpp
+    permissions.cpp
     persistent_settings.cpp
     pkg_install_dialog.cpp
     progress_dialog.cpp

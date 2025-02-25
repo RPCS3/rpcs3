@@ -2,6 +2,7 @@
 #include "gui_application.h"
 
 #include "qt_utils.h"
+#include "permissions.h"
 #include "welcome_dialog.h"
 #include "main_window.h"
 #include "emu_settings.h"
@@ -59,10 +60,6 @@
 #include <Dbt.h>
 
 #include "Emu/Cell/lv2/sys_usbd.h"
-#endif
-
-#if QT_CONFIG(permissions)
-#include <QPermissions>
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -888,28 +885,10 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.check_microphone_permissions = []()
 	{
-#if QT_CONFIG(permissions)
 		Emu.BlockingCallFromMainThread([]()
 		{
-			const QMicrophonePermission permission;
-			switch (qApp->checkPermission(permission))
-			{
-			case Qt::PermissionStatus::Undetermined:
-				gui_log.notice("Requesting microphone permission");
-				qApp->requestPermission(permission, []()
-				{
-					Emu.GetCallbacks().check_microphone_permissions();
-				});
-				break;
-			case Qt::PermissionStatus::Denied:
-				gui_log.error("RPCS3 has no permissions to access microphones on this device.");
-				break;
-			case Qt::PermissionStatus::Granted:
-				gui_log.notice("Microphone permission granted");
-				break;
-			}
+			gui::utils::check_microphone_permission();
 		});
-#endif
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
