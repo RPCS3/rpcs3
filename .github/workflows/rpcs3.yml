@@ -40,6 +40,7 @@ jobs:
             docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.1"
             build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
+    name: RPCS3 Linux ${{ matrix.os }} ${{ matrix.compiler }}
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
@@ -90,6 +91,7 @@ jobs:
           compression-level: 0
 
   Windows_Build:
+    name: RPCS3 Windows
     runs-on: windows-2025
     env:
       COMPILER: msvc
