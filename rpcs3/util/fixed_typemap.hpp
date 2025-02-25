@@ -144,7 +144,7 @@ namespace stx
 			}
 
 			template <typename T>
-				requires requires(T& a, utils::serial& ar) { a.save(ar); }
+				requires requires(T& a, utils::serial& ar) { a.save(stx::exact_t<utils::serial&>(ar)); }
 			static void call_save(void* ptr, utils::serial& ar) noexcept
 			{
 				std::launder(static_cast<T*>(ptr))->save(stx::exact_t<utils::serial&>(ar));
@@ -170,7 +170,7 @@ namespace stx
 					r.thread_op = &call_thread_op<T>;
 				}
 
-				if constexpr (!!(requires(T& a, utils::serial& ar) { a.save(ar); }))
+				if constexpr (!!(requires(T& a, utils::serial& ar) { a.save(stx::exact_t<utils::serial&>(ar)); }))
 				{
 					r.save = &call_save<T>;
 				}

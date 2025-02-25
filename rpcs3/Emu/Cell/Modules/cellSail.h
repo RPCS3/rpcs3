@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
 #include "cellVpost.h"
 
 // Error Codes
