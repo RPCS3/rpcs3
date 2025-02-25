@@ -1161,6 +1161,9 @@
     <ClCompile Include="Input\ps_move_calibration.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\permissions.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1363,6 +1366,9 @@
     </ClInclude>
     <ClInclude Include="Input\ps_move_calibration.h">
       <Filter>Io\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\permissions.h">
+      <Filter>Gui\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
