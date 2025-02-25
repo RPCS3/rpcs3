@@ -130,7 +130,7 @@ struct fmt_unveil<se_t<T, Se, Align>>
 };
 
 // String type format provider, also type classifier (format() called if an argument is formatted as "%s")
-template <typename T, typename = void>
+template <typename T>
 struct fmt_class_string
 {
 	// Formatting function (must be explicitly specialized)
@@ -215,7 +215,7 @@ struct fmt_class_string<T*> : fmt_class_string<const void*>
 };
 
 template <>
-struct fmt_class_string<const char*, void>
+struct fmt_class_string<const char*>
 {
 	static void format(std::string& out, u64 arg);
 };
@@ -237,7 +237,7 @@ struct fmt_class_string<char8_t*> : fmt_class_string<const char8_t*>
 };
 
 template <>
-struct fmt_class_string<const wchar_t*, void>
+struct fmt_class_string<const wchar_t*>
 {
 	static void format(std::string& out, u64 arg);
 };
@@ -257,7 +257,7 @@ namespace fmt
 }
 
 template <fmt::StringConvertible T>
-struct fmt_class_string<T, void>
+struct fmt_class_string<T>
 {
 	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{
@@ -278,7 +278,7 @@ namespace fmt
 }
 
 template <fmt::ByteArray T>
-struct fmt_class_string<T, void>
+struct fmt_class_string<T>
 {
 	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{

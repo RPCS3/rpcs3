@@ -441,37 +441,37 @@ struct fmt_unveil<vm::_ptr_base<T, AT>>
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<const void, u32>, void>
+struct fmt_class_string<vm::_ptr_base<const void, u32>>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <typename T>
-struct fmt_class_string<vm::_ptr_base<T, u32>, void> : fmt_class_string<vm::_ptr_base<const void, u32>, void>
+struct fmt_class_string<vm::_ptr_base<T, u32>> : fmt_class_string<vm::_ptr_base<const void, u32>>
 {
 	// Classify all pointers as const void*
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<const char, u32>, void>
+struct fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<char, u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<char, u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify char* as const char*
 };
 
 template <usz Size>
-struct fmt_class_string<vm::_ptr_base<const char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<const char[Size], u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify const char[] as const char*
 };
 
 template <usz Size>
-struct fmt_class_string<vm::_ptr_base<char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<char[Size], u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify char[] as const char*
 };
