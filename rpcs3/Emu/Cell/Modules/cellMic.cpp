@@ -590,7 +590,7 @@ f32 microphone_device::calculate_energy_level()
 		sum_squares += normalized_sample * normalized_sample;
 	}
 
-	const f32 rms = num_samples > 0 ? std::sqrt(sum_squares / num_samples) : 0.0f;
+	const f32 rms = num_samples > 0 ? static_cast<f32>(std::sqrt(sum_squares / num_samples)) : 0.0f;
 	constexpr f32 decibels_max = 90.0f;
 	const f32 decibels_relative = 20.0f * std::log10(std::max(rms, 0.00001f));
 	const f32 decibels = decibels_max + (decibels_relative * 0.5f);
