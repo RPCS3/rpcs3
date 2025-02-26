@@ -500,12 +500,13 @@ struct copy_rgb655_block_swizzled
 
 struct copy_decoded_bc1_block
 {
-	static void copy_mipmap_level(std::span<u32> dst, std::span<const u64> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u64> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
 		for (u32 row = 0; row < row_count * depth; row++)
 		{
-			for (u32 col = 0; col < width_in_block; col++) {
+			for (u32 col = 0; col < width_in_block; col++)
+			{
 				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
 				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
 				bcdec_bc1(compressedBlock, decompressedBlock, destinationPitch);
@@ -519,12 +520,13 @@ struct copy_decoded_bc1_block
 
 struct copy_decoded_bc2_block
 {
-	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
 		for (u32 row = 0; row < row_count * depth; row++)
 		{
-			for (u32 col = 0; col < width_in_block; col++) {
+			for (u32 col = 0; col < width_in_block; col++)
+			{
 				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
 				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
 				bcdec_bc2(compressedBlock, decompressedBlock, destinationPitch);
@@ -538,12 +540,13 @@ struct copy_decoded_bc2_block
 
 struct copy_decoded_bc3_block
 {
-	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
 		for (u32 row = 0; row < row_count * depth; row++)
 		{
-			for (u32 col = 0; col < width_in_block; col++) {
+			for (u32 col = 0; col < width_in_block; col++)
+			{
 				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
 				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
 				bcdec_bc3(compressedBlock, decompressedBlock, destinationPitch);
