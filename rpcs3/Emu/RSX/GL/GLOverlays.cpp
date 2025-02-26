@@ -303,7 +303,7 @@ namespace gl
 		}
 
 		// Create font file
-		const std::vector<u8> glyph_data = font->get_glyph_data();
+		const std::vector<u8>& glyph_data = font->get_glyph_data();
 
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, 1, GL_R8, RSX_FORMAT_CLASS_COLOR);
 		tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
