@@ -51,8 +51,6 @@
 
 #include "Utilities/JIT.h"
 
-#include "display_sleep_control.h"
-
 #include "Emu/IPC_socket.h"
 
 #if defined(HAVE_VULKAN)
@@ -90,7 +88,6 @@ extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
-extern void check_microphone_permissions();
 
 extern void signal_system_cache_can_stay();
 
@@ -1810,7 +1807,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			if (const std::vector<std::string> device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"}); !device_list.empty())
 			{
-				check_microphone_permissions();
+				Emu.GetCallbacks().check_microphone_permissions();
 			}
 		}
 
@@ -2507,7 +2504,7 @@ void Emulator::Run(bool start_playtime)
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		disable_display_sleep();
+		Emu.GetCallbacks().enable_display_sleep(false);
 	}
 }
 
@@ -2792,7 +2789,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 	}
 
 	// Always Enable display sleep, not only if it was prevented.
-	enable_display_sleep();
+	Emu.GetCallbacks().enable_display_sleep(true);
 
 	return true;
 }
@@ -2889,7 +2886,7 @@ void Emulator::Resume()
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		disable_display_sleep();
+		Emu.GetCallbacks().enable_display_sleep(false);
 	}
 }
 
@@ -3799,7 +3796,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.
-			enable_display_sleep();
+			Emu.GetCallbacks().enable_display_sleep(true);
 
 			if (allow_autoexit)
 			{

@@ -60,6 +60,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
+    <ClCompile Include="..\Utilities\date_time.cpp" />
     <ClCompile Include="..\Utilities\stack_trace.cpp" />
     <ClCompile Include="Crypto\decrypt_binaries.cpp" />
     <ClCompile Include="Crypto\unzip.cpp" />
@@ -114,6 +115,7 @@
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
+    <ClCompile Include="Emu\RSX\GSFrameBase.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
@@ -178,6 +180,7 @@
     <ClCompile Include="Emu\NP\ip_address.cpp" />
     <ClCompile Include="Emu\vfs_config.cpp" />
     <ClCompile Include="Loader\disc.cpp" />
+    <ClCompile Include="util\emu_utils.cpp" />
     <ClCompile Include="util\serialization_ext.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>

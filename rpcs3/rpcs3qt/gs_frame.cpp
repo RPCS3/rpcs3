@@ -53,18 +53,12 @@ extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
+extern atomic_t<bool> g_game_window_focused;
 extern atomic_t<recording_mode> g_recording_mode;
-
-atomic_t<bool> g_game_window_focused = false;
 
 namespace pad
 {
 	extern atomic_t<bool> g_home_menu_requested;
-}
-
-bool is_input_allowed()
-{
-	return g_game_window_focused || g_cfg.io.background_input_enabled;
 }
 
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)

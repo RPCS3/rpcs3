@@ -48,6 +48,7 @@ target_include_directories(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
     ../util/console.cpp
+    ../util/emu_utils.cpp
     ../util/media_utils.cpp
     ../util/video_provider.cpp
     ../util/logs.cpp
@@ -61,6 +62,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/cheat_info.cpp
     ../../Utilities/cond.cpp
     ../../Utilities/Config.cpp
+    ../../Utilities/date_time.cpp
     ../../Utilities/File.cpp
     ../../Utilities/JITASM.cpp
     ../../Utilities/JITLLVM.cpp
@@ -571,6 +573,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/program_util.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
+    RSX/GSFrameBase.cpp
     RSX/RSXDisAsm.cpp
     RSX/RSXFIFO.cpp
     RSX/RSXOffload.cpp
