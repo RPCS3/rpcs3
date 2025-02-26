@@ -58,6 +58,7 @@
     <ClCompile Include=".\zstd\programs\lorem.c" />
     <ClCompile Include=".\zstd\programs\zstdcli.c" />
     <ClCompile Include=".\zstd\programs\zstdcli_trace.c" />
+    <ClCompile Include="zstd\lib\compress\zstd_preSplit.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include=".\zstd\lib\common\pool.h" />
@@ -97,6 +98,24 @@
     <ClInclude Include=".\zstd\programs\fileio.h" />
     <ClInclude Include=".\zstd\programs\platform.h" />
     <ClInclude Include=".\zstd\programs\util.h" />
+    <ClInclude Include="zstd\lib\common\allocations.h" />
+    <ClInclude Include="zstd\lib\common\bits.h" />
+    <ClInclude Include="zstd\lib\common\bitstream.h" />
+    <ClInclude Include="zstd\lib\common\compiler.h" />
+    <ClInclude Include="zstd\lib\common\cpu.h" />
+    <ClInclude Include="zstd\lib\common\debug.h" />
+    <ClInclude Include="zstd\lib\common\error_private.h" />
+    <ClInclude Include="zstd\lib\common\mem.h" />
+    <ClInclude Include="zstd\lib\common\portability_macros.h" />
+    <ClInclude Include="zstd\lib\common\zstd_deps.h" />
+    <ClInclude Include="zstd\lib\common\zstd_trace.h" />
+    <ClInclude Include="zstd\lib\compress\clevels.h" />
+    <ClInclude Include="zstd\lib\compress\hist.h" />
+    <ClInclude Include="zstd\lib\compress\zstd_compress_internal.h" />
+    <ClInclude Include="zstd\lib\compress\zstd_ldm_geartab.h" />
+    <ClInclude Include="zstd\lib\compress\zstd_preSplit.h" />
+    <ClInclude Include="zstd\lib\decompress\zstd_decompress_block.h" />
+    <ClInclude Include="zstd\lib\decompress\zstd_decompress_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="zstd.rc" />
