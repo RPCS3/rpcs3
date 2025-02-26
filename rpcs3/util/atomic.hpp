@@ -173,7 +173,8 @@ namespace atomic_wait
 
 		constexpr list& operator=(const list&) noexcept = default;
 
-		template <typename... U, typename = std::void_t<decltype(std::declval<U>().wait(any_value))...>>
+		template <typename... U>
+			requires(requires(U& u) { u.wait(any_value); } && ...)
 		constexpr list(U&... vars)
 			: m_info{{&vars, 0}...}
 		{
@@ -190,7 +191,8 @@ namespace atomic_wait
 			return *this;
 		}
 
-		template <uint Index, typename T2, typename U, typename = std::void_t<decltype(std::declval<T2>().wait(any_value))>>
+		template <uint Index, typename T2, typename U>
+			requires(requires(T2& t2) { t2.wait(any_value); })
 		constexpr void set(T2& var, U value)
 		{
 			static_assert(Index < Max);
@@ -229,7 +231,8 @@ namespace atomic_wait
 		}
 	};
 
-	template <typename... T, typename = std::void_t<decltype(std::declval<T>().wait(any_value))...>>
+	template <typename... T>
+		requires(requires(T& t) { t.wait(any_value); } && ...)
 	list(T&... vars) -> list<sizeof...(T), T...>;
 }
 

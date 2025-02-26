@@ -22,7 +22,7 @@ namespace fmt
 #endif
 }
 
-template <typename T, typename = void>
+template <typename T>
 struct fmt_unveil
 {
 	static_assert(sizeof(T) > 0, "fmt_unveil<> error: incomplete type");
@@ -54,7 +54,8 @@ struct fmt_unveil
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8 && alignof(T) <= 8>>
+	requires(std::is_integral_v<T> && sizeof(T) <= 8 && alignof(T) <= 8)
+struct fmt_unveil<T>
 {
 	using type = T;
 
@@ -65,7 +66,8 @@ struct fmt_unveil<T, std::enable_if_t<std::is_integral_v<T> && sizeof(T) <= 8 &&
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) <= 8 && alignof(T) <= 8>>
+	requires(std::is_floating_point_v<T> && sizeof(T) <= 8 && alignof(T) <= 8)
+struct fmt_unveil<T>
 {
 	using type = T;
 
@@ -77,7 +79,8 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) <
 };
 
 template <typename T>
-struct fmt_unveil<T, std::enable_if_t<std::is_enum_v<T>>>
+	requires std::is_enum_v<T>
+struct fmt_unveil<T>
 {
 	using type = T;
 
@@ -88,7 +91,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_enum_v<T>>>
 };
 
 template <typename T>
-struct fmt_unveil<T*, void>
+struct fmt_unveil<T*>
 {
 	using type = std::add_const_t<T>*;
 
@@ -105,7 +108,7 @@ namespace fmt
 }
 
 template <fmt::CharT T, usz N>
-struct fmt_unveil<T[N], void>
+struct fmt_unveil<T[N]>
 {
 	using type = std::add_const_t<T>*;
 
@@ -116,7 +119,7 @@ struct fmt_unveil<T[N], void>
 };
 
 template <typename T, bool Se, usz Align>
-struct fmt_unveil<se_t<T, Se, Align>, void>
+struct fmt_unveil<se_t<T, Se, Align>>
 {
 	using type = typename fmt_unveil<T>::type;
 
@@ -127,7 +130,7 @@ struct fmt_unveil<se_t<T, Se, Align>, void>
 };
 
 // String type format provider, also type classifier (format() called if an argument is formatted as "%s")
-template <typename T, typename = void>
+template <typename T>
 struct fmt_class_string
 {
 	// Formatting function (must be explicitly specialized)
@@ -200,47 +203,47 @@ struct fmt_class_string
 };
 
 template <>
-struct fmt_class_string<const void*, void>
+struct fmt_class_string<const void*>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <typename T>
-struct fmt_class_string<T*, void> : fmt_class_string<const void*, void>
+struct fmt_class_string<T*> : fmt_class_string<const void*>
 {
 	// Classify all pointers as const void*
 };
 
 template <>
-struct fmt_class_string<const char*, void>
+struct fmt_class_string<const char*>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <>
-struct fmt_class_string<char*, void> : fmt_class_string<const char*>
+struct fmt_class_string<char*> : fmt_class_string<const char*>
 {
 	// Classify char* as const char*
 };
 
 template <>
-struct fmt_class_string<const char8_t*, void> : fmt_class_string<const char*>
+struct fmt_class_string<const char8_t*> : fmt_class_string<const char*>
 {
 };
 
 template <>
-struct fmt_class_string<char8_t*, void> : fmt_class_string<const char8_t*>
+struct fmt_class_string<char8_t*> : fmt_class_string<const char8_t*>
 {
 };
 
 template <>
-struct fmt_class_string<const wchar_t*, void>
+struct fmt_class_string<const wchar_t*>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <>
-struct fmt_class_string<wchar_t*, void> : fmt_class_string<const wchar_t*>
+struct fmt_class_string<wchar_t*> : fmt_class_string<const wchar_t*>
 {
 };
 
@@ -254,7 +257,7 @@ namespace fmt
 }
 
 template <fmt::StringConvertible T>
-struct fmt_class_string<T, void>
+struct fmt_class_string<T>
 {
 	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{
@@ -275,7 +278,7 @@ namespace fmt
 }
 
 template <fmt::ByteArray T>
-struct fmt_class_string<T, void>
+struct fmt_class_string<T>
 {
 	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{
