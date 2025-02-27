@@ -5,24 +5,24 @@ namespace rsx
 {
 	namespace overlays
 	{
-		static usz get_line_start(const std::u32string& text, usz pos)
+		static usz get_line_start(std::u32string_view text, usz pos)
 		{
 			if (pos == 0)
 			{
 				return 0;
 			}
 			const usz line_start = text.rfind('\n', pos - 1);
-			if (line_start == std::string::npos)
+			if (line_start == umax)
 			{
 				return 0;
 			}
 			return line_start + 1;
 		}
 
-		static usz get_line_end(const std::u32string& text, usz pos)
+		static usz get_line_end(std::u32string_view text, usz pos)
 		{
 			const usz line_end = text.find('\n', pos);
-			if (line_end == std::string::npos)
+			if (line_end == umax)
 			{
 				return text.length();
 			}
@@ -198,13 +198,11 @@ namespace rsx
 		{
 			if (!is_compiled)
 			{
-				auto& compiled = label::get_compiled();
+				auto renderer = get_font();
+				const auto [caret_x, caret_y] = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
 
 				overlay_element caret;
-				auto renderer        = get_font();
-				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
-
-				caret.set_pos(static_cast<u16>(caret_loc.first) + padding_left + x, static_cast<u16>(caret_loc.second) + padding_top + y);
+				caret.set_pos(static_cast<u16>(caret_x) + padding_left + x, static_cast<u16>(caret_y) + padding_top + y);
 				caret.set_size(1, static_cast<u16>(renderer->get_size_px() + 2));
 				caret.fore_color           = fore_color;
 				caret.back_color           = fore_color;
@@ -217,11 +215,39 @@ namespace rsx
 					m_reset_caret_pulse = false;
 				}
 
-				compiled.add(caret.get_compiled());
+				// Check if we have to scroll horizontally
+				// TODO: Vertical scrolling
+				const s32 available_width = w - padding_left - padding_right;
+				const f32 offset_right = caret_x + caret.w - available_width;
+
+				if (text.empty())
+				{
+					// Scroll to the beginning
+					horizontal_scroll_offset = 0.0f;
+				}
+				else if (horizontal_scroll_offset >= caret_x)
+				{
+					// Scroll to the left so that the entire caret is visible
+					horizontal_scroll_offset = caret_x;
+				}
+				else if (horizontal_scroll_offset <= offset_right && offset_right > 0.0f)
+				{
+					// Scroll to the right so that the entire caret is visible
+					horizontal_scroll_offset = offset_right;
+				}
+				else if (horizontal_scroll_offset > 0.0f && offset_right > 0.0f && caret_position >= text.size())
+				{
+					// Scroll to the left so that the entire caret is visible and reveal preceding text
+					horizontal_scroll_offset = offset_right;
+				}
+
+				horizontal_scroll_offset = std::max(0.0f, horizontal_scroll_offset);
+
+				auto& compiled = label::get_compiled();
+				compiled.add(caret.get_compiled(), -horizontal_scroll_offset, -vertical_scroll_offset);
 
 				for (auto& cmd : compiled.draw_commands)
 				{
-					// TODO: Scrolling by using scroll offset
 					cmd.config.clip_region = true;
 					cmd.config.clip_rect   = {static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(x + w), static_cast<f32>(y + h)};
 				}
