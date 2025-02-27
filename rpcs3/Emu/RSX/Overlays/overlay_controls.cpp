@@ -596,7 +596,7 @@ namespace rsx
 					cmd_text.verts = render_text(text.c_str(), static_cast<f32>(x), static_cast<f32>(y));
 
 					if (!cmd_text.verts.empty())
-						compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
+						compiled_resources.add(std::move(compiled_resources_temp), margin_left - horizontal_scroll_offset, margin_top - vertical_scroll_offset);
 				}
 
 				is_compiled = true;

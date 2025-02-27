@@ -17,7 +17,6 @@ namespace rsx
 			};
 
 			usz caret_position = 0;
-			u16 vertical_scroll_offset = 0;
 
 			bool m_reset_caret_pulse = false;
 			bool password_mode = false;
