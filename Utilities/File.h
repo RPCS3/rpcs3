@@ -251,6 +251,12 @@ namespace fs
 		// Open file with specified mode
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
+#ifdef _WIN32
+		static file from_native_handle(void *handle);
+#else
+		static file from_native_handle(int fd);
+#endif
+
 		// Open memory for read
 		explicit file(const void* ptr, usz size);
 
