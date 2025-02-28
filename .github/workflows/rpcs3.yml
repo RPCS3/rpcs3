@@ -114,7 +114,12 @@ jobs:
       QT_DATE: '202501260838'
       VULKAN_VER: '1.3.268.0'
       VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
-      CACHE_DIR: ./cache
+      CCACHE_SHA: '6252f081876a9a9f700fae13a5aec5d0d486b28261d7f1f72ac11c7ad9df4da9'
+      CCACHE_BIN_DIR: 'C:\ccache_bin'
+      CCACHE_DIR: 'C:\ccache'
+      CCACHE_INODECACHE: 'true'
+      CCACHE_SLOPPINESS: 'time_macros'
+      DEPS_CACHE_DIR: ./dependency_cache
     steps:
 
       - name: Checkout repository
@@ -131,15 +136,19 @@ jobs:
         shell: bash
         run: .ci/get_keys-windows.sh
 
-      - name: Setup Cache
+      - name: Setup Build Ccache
         uses: actions/cache@main
         with:
-          path: ${{ env.CACHE_DIR }}
-          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}-${{github.run_id}}"
-          restore-keys: |
-            "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-"
-            "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-"
-            "${{ runner.os }}-${{ env.COMPILER }}-"
+          path: ${{ env.CCACHE_DIR }}
+          key: "${{ runner.os }}-ccache-${{ env.COMPILER }}-${{github.run_id}}"
+          restore-keys: ${{ runner.os }}-ccache-${{ env.COMPILER }}-
+      
+      - name: Setup Dependencies Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.DEPS_CACHE_DIR }}
+          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}"
+          restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
 
       - name: Download and unpack dependencies
         shell: bash
@@ -158,7 +167,7 @@ jobs:
         uses: microsoft/setup-msbuild@main
 
       - name: Compile RPCS3
-        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64
+        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
 
       - name: Pack up build artifacts
         shell: bash
