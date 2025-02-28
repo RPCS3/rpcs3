@@ -746,7 +746,7 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't map native pages (expected to be always mapped in this case)
-		const bool is_noop = bflags & page_size_4k && utils::c_page_size > 4096;
+		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
 
 		// Lock range being mapped
 		auto range_lock = _lock_main_range_lock(range_allocation, addr, size);
@@ -958,7 +958,7 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't unmap native pages (always mapped)
-		const bool is_noop = bflags & page_size_4k && utils::c_page_size > 4096;
+		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
 
 		// Determine deallocation size
 		u32 size = 0;
@@ -1305,7 +1305,7 @@ namespace vm
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
 			{
 				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 			}
@@ -1778,7 +1778,7 @@ namespace vm
 		if (flags & preallocated)
 		{
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
-			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no);
+			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
 		}
 
