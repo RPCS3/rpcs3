@@ -2172,8 +2172,8 @@ void thread_base::start()
 void thread_base::initialize(void (*error_cb)())
 {
 #ifndef _WIN32
-#ifdef  ANDROID
-    m_thread.release(pthread_self());
+#ifdef ANDROID
+	m_thread.release(pthread_self());
 #else
 	m_thread.release(reinterpret_cast<u64>(pthread_self()));
 #endif
@@ -2622,7 +2622,7 @@ thread_base::~thread_base() noexcept
 		WaitForSingleObject(handle0, INFINITE);
 		CloseHandle(handle0);
 #elif defined(ANDROID)
-        pthread_join(m_thread.load(), nullptr);
+		pthread_join(m_thread.load(), nullptr);
 #else
 		pthread_join(reinterpret_cast<pthread_t>(m_thread.load()), nullptr);
 #endif
@@ -2697,11 +2697,10 @@ u64 thread_base::get_cycles()
 #else
 	clockid_t _clock;
 	struct timespec thread_time;
-    pthread_t thread_id;
 #ifdef ANDROID
-    thread_id = handle;
+	pthread_t thread_id = handle;
 #else
-    thread_id = reinterpret_cast<pthread_t>(handle);
+	pthread_t thread_id = reinterpret_cast<pthread_t>(handle);
 #endif
 	if (!pthread_getcpuclockid(thread_id, &_clock) && !clock_gettime(_clock, &thread_time))
 	{
@@ -3326,7 +3325,7 @@ u64 thread_ctrl::get_tid()
 #ifdef _WIN32
 	return GetCurrentThreadId();
 #elif defined(ANDROID)
-    return static_cast<u64>(pthread_self());
+	return static_cast<u64>(pthread_self());
 #elif defined(__linux__)
 	return syscall(SYS_gettid);
 #else

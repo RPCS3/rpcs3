@@ -133,7 +133,7 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 	sys_net_sockaddr sn_addr;
 
 	sys_net_sockaddr_in* paddr = reinterpret_cast<sys_net_sockaddr_in*>(&sn_addr);
-    *paddr = {};
+	*paddr = {};
 
 	paddr->sin_len = sizeof(sys_net_sockaddr_in);
 	paddr->sin_family = SYS_NET_AF_INET;
