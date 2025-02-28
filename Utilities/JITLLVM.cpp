@@ -776,7 +776,7 @@ bool jit_compiler::add(const std::string& path)
 	if (!cache)
 	{
 		jit_log.error("ObjectCache: Failed to read file. (path='%s', error=%s)", path, fs::g_tls_error);
-		return false;		
+		return false;
 	}
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
@@ -857,11 +857,11 @@ const char * fallback_cpu_detection()
 			// Return zen4 as a workaround until the next LLVM upgrade.
 			return "znver4";
 		default:
-		 	// Safest guesses
+			// Safest guesses
 			return utils::has_avx512() ? "znver4" :
 			       utils::has_avx2()   ? "znver1" :
 			       utils::has_avx()    ? "bdver1" :
-				"nehalem";
+			                             "nehalem";
 		}
 	}
 	else if (brand.find("Intel") != std::string::npos)
