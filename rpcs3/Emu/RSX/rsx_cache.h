@@ -21,7 +21,13 @@ namespace rsx
 	template <typename pipeline_storage_type, typename backend_storage>
 	class shaders_cache
 	{
-		using unpacked_type = lf_fifo<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>, 1000>; // TODO: Determine best size
+		using unpacked_type = lf_fifo<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>,
+#ifdef ANDROID
+		200
+#else
+		1000 // TODO: Determine best size
+#endif
+		>;
 
 		struct pipeline_data
 		{
