@@ -569,6 +569,6 @@ public:
 	bool add_sub_disk_space(ssz space);
 };
 
-llvm::StringRef fallback_cpu_detection();
+const char *fallback_cpu_detection();
 
 #endif // LLVM_AVAILABLE
