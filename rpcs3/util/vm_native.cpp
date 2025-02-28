@@ -686,7 +686,11 @@ namespace utils
 #else
 
 #ifdef __linux__
+#ifdef ANDROID
+		if constexpr (char c = '?'; true)
+#else
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
+#endif
 		{
 			// Simply use memfd for overcommit memory
 			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
