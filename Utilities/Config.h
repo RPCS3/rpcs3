@@ -554,21 +554,6 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		std::pair<const std::string&, shared_ptr<std::string>> get() const
-		{
-			auto v = m_value.load();
-
-			if (auto s = v.get())
-			{
-				return {*s, std::move(v)};
-			}
-			else
-			{
-				static const std::string _empty;
-				return {_empty, {}};
-			}
-		}
-
 		void from_default() override;
 
 		std::string to_string() const override
