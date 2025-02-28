@@ -687,7 +687,7 @@ namespace utils
 
 #ifdef __linux__
 #ifdef ANDROID
-		if constexpr (char c = '?'; true)
+		if constexpr (constexpr char c = '?')
 #else
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 #endif
