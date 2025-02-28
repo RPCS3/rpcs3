@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/endian.hpp"
 #include "../../Utilities/File.h"
 
 #include <vector>
