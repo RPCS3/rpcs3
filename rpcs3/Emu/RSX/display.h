@@ -29,7 +29,7 @@ using display_handle_t = std::variant<
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	std::pair<wl_display*, wl_surface*>
 #elif defined(ANDROID)
-	void *
+	struct ANativeWindow *
 #endif
 >;
 #endif

@@ -181,6 +181,13 @@ namespace vk
 				found_surface_ext = true;
 			}
 #endif //(WAYLAND)
+#ifdef VK_USE_PLATFORM_ANDROID_KHR
+			if (support.is_supported(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
+			{
+				extensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+				found_surface_ext = true;
+			}
+#endif
 			if (!found_surface_ext)
 			{
 				rsx_log.error("Could not find a supported Vulkan surface extension");
