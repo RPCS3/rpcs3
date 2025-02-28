@@ -16,10 +16,11 @@
 
 LOG_CHANNEL(pkg_log, "PKG");
 
-package_reader::package_reader(const std::string& path)
+package_reader::package_reader(const std::string& path, fs::file file)
 	: m_path(path)
+	, m_file(std::move(file))
 {
-	if (!m_file.open(path))
+	if (!m_file && !m_file.open(path))
 	{
 		pkg_log.error("PKG file not found!");
 		return;
@@ -119,7 +120,7 @@ bool package_reader::read_header()
 		return false;
 	}
 
-	if (u64{umax} / sizeof(PKGEntry) < m_header.file_count)
+	if (u64{umax} / sizeof(PKGEntry) < u64(m_header.file_count))
 	{
 		pkg_log.error("PKG file count is too large! (0x%x)", m_header.file_count);
 		return false;
@@ -505,7 +506,7 @@ bool package_reader::set_decryption_key()
 	}
 
 	std::memcpy(m_dec_key.data(), PKG_AES_KEY, m_dec_key.size());
-	
+
 	if (std::vector<PKGEntry> entries; !read_entries(entries))
 	{
 		pkg_log.notice("PKG may be IDU, retrying with IDU key.");
