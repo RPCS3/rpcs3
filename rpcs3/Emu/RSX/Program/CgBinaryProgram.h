@@ -8,8 +8,8 @@
 #include "Utilities/File.h"
 
 #ifndef WITHOUT_OPENGL
-	#include "Emu/RSX/GL/GLVertexProgram.h"
-	#include "Emu/RSX/GL/GLFragmentProgram.h"
+#include "Emu/RSX/GL/GLVertexProgram.h"
+#include "Emu/RSX/GL/GLFragmentProgram.h"
 #endif
 
 using CGprofile = u32;

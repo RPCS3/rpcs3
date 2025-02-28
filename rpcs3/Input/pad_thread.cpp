@@ -180,7 +180,7 @@ void pad_thread::Init()
 				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
 				cur_pad_handler = keyptr;
 #else
-                cur_pad_handler = nullpad;
+				cur_pad_handler = nullpad;
 #endif
 			}
 			else

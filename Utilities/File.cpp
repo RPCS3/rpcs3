@@ -1693,7 +1693,8 @@ fs::file fs::file::from_native_handle(void *handle)
 	return result;
 }
 #else
-fs::file fs::file::from_native_handle(int fd) {
+fs::file fs::file::from_native_handle(int fd)
+{
 	fs::file result;
 	result.m_file = std::make_unique<unix_file>(fd);
 	return result;

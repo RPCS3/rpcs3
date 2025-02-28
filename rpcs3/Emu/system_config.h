@@ -121,7 +121,7 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", 
 #if defined(ANDROID) || defined(__APPLE__)
-		video_renderer::vulkan
+			video_renderer::vulkan
 #else
 			video_renderer::opengl // TODO: Is it still actual?
 #endif

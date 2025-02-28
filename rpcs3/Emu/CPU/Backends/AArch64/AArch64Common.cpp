@@ -155,7 +155,7 @@ namespace aarch64
             return {};
         }
 
-        const cpu_entry_t *lowest_part_info = nullptr; 
+        const cpu_entry_t* lowest_part_info = nullptr; 
         for (const auto& [midr, count] : core_layout)
         {
             const auto implementer_id = (midr >> 24) & 0xff;
@@ -167,12 +167,13 @@ namespace aarch64
                 return {};
             }
 
-            if (lowest_part_info == nullptr || lowest_part_info > part_info) {
+            if (lowest_part_info == nullptr || lowest_part_info > part_info)
+            {
                 lowest_part_info = part_info;
             }
         }
 
-        return lowest_part_info == nullptr ? "" : lowest_part_info->name;
+        return lowest_part_info ? lowest_part_info->name : "";
     }
 
     std::string get_cpu_brand()
