@@ -297,6 +297,8 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_LOCKED_TITLE: return tr("Locked trophy: %0").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_TROPHY_HIDDEN_TITLE: return tr("Hidden trophy");
 		case localized_string_id::HOME_MENU_TROPHY_HIDDEN_DESCRIPTION: return tr("This trophy is hidden");
+		case localized_string_id::HOME_MENU_TROPHY_SHOW_HIDDEN_TROPHIES: return tr("Show hidden trophies");
+		case localized_string_id::HOME_MENU_TROPHY_HIDE_HIDDEN_TROPHIES: return tr("Hide hidden trophies");
 		case localized_string_id::HOME_MENU_TROPHY_PLATINUM_RELEVANT: return tr("Platinum relevant");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_BRONZE: return tr("Bronze", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
