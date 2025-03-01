@@ -219,4 +219,9 @@ namespace vk
 			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 	};
+
+	struct WSI_config
+	{
+		bool supports_automatic_wm_reports = true;
+	};
 }

@@ -250,8 +250,11 @@ namespace vk
 
 	swapchain_base* instance::create_swapchain(display_handle_t window_handle, vk::physical_device& dev)
 	{
-		bool force_wm_reporting_off = false;
-		m_surface = make_WSI_surface(m_instance, window_handle);
+		WSI_config surface_config
+		{
+			.supports_automatic_wm_reports = true
+		};
+		m_surface = make_WSI_surface(m_instance, window_handle, &surface_config);
 
 		u32 device_queues = dev.get_queue_count();
 		std::vector<VkBool32> supports_present(device_queues, VK_FALSE);
@@ -358,6 +361,6 @@ namespace vk
 
 		color_space = surfFormats[0].colorSpace;
 
-		return new swapchain_WSI(dev, present_queue_idx, graphics_queue_idx, transfer_queue_idx, format, m_surface, color_space, force_wm_reporting_off);
+		return new swapchain_WSI(dev, present_queue_idx, graphics_queue_idx, transfer_queue_idx, format, m_surface, color_space, !surface_config.supports_automatic_wm_reports);
 	}
 }
