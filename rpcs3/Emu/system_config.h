@@ -305,6 +305,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, umax> console_psid_low{this, "PSID low"};
 		cfg::string hdd_model{this, "HDD Model Name", ""};
 		cfg::string hdd_serial{this, "HDD Serial Number", ""};
+		cfg::node_map_entry sup_argv{ this, "Process ARGV" };
 	} sys{ this };
 
 	struct node_net : cfg::node

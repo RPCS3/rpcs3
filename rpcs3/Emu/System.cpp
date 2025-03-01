@@ -1418,6 +1418,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		if (resolve_path_as_vfs_path)
 		{
+			ensure(!argv.empty());
+
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
 				m_path = rpcs3::utils::get_hdd0_dir();
@@ -1464,10 +1466,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Unknown source for path redirection: %s", argv[0]);
 			}
 
-			if (argv.size() == 1)
+			if (argv.size() >= 1)
 			{
 				// Resolve later properly as if booted through host path
-				argv.clear();
+				argv[0].clear();
 			}
 
 			sys_log.notice("Restored executable path: \'%s\'", m_path);
@@ -2283,6 +2285,21 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			if (argv.empty())
 			{
 				argv.resize(1);
+			}
+
+			for (const auto& [arg_name, arg] : g_cfg.sys.sup_argv.get_map())
+			{
+				if (m_ar)
+				{
+					break;
+				}
+
+				// arg_name is unused here
+				// It exists solely for the user's convenience
+
+				sys_log.success("Passing CLI argument %d - \'%s\': \"%s\"", argv.size(), arg_name, arg);
+
+				argv.emplace_back(arg);
 			}
 
 			if (argv[0].empty())

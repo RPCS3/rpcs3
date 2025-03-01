@@ -4,6 +4,7 @@
 #include <iostream>
 #include <chrono>
 #include <clocale>
+#include <span>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -398,22 +399,34 @@ constexpr auto arg_stdout       = "stdout";
 constexpr auto arg_stderr       = "stderr";
 #endif
 
-int find_arg(std::string arg, int& argc, char* argv[])
+constexpr auto arg_emulation_barrier = "";
+
+int find_arg(const char* to_search, std::span<char* const> argv)
 {
-	arg = "--" + arg;
-	for (int i = 0; i < argc; ++i) // It's not guaranteed that argv 0 is the executable.
-		if (!strcmp(arg.c_str(), argv[i]))
+	// It's not guaranteed that argv 0 is the executable.
+	for (usz i = 0; i != argv.size(); i++)
+	{
+		const auto argp = argv[i];
+
+		if (argp[0] == '-' && argp[1] == '-' && !std::strcmp(to_search, argp + 2))
+		{
 			return i;
+		}
+	}
+
 	return -1;
 }
 
-QCoreApplication* create_application(int& argc, char* argv[])
+QCoreApplication* create_application(std::span<char* const> qt_argv)
 {
-	if (find_arg(arg_headless, argc, argv) != -1 ||
-		find_arg(arg_decrypt, argc, argv) != -1 ||
-		find_arg(arg_commit_db, argc, argv) != -1)
+	static int s_argc = static_cast<int>(qt_argv.size());
+	static char** const s_argv = const_cast<char**>(qt_argv.data());
+
+	if (find_arg(arg_headless, qt_argv) != -1 ||
+		find_arg(arg_decrypt, qt_argv) != -1 ||
+		find_arg(arg_commit_db, qt_argv) != -1)
 	{
-		return new headless_application(argc, argv);
+		return new headless_application(s_argc, s_argv);
 	}
 
 #ifdef __linux__
@@ -432,12 +445,12 @@ QCoreApplication* create_application(int& argc, char* argv[])
 
 	bool use_high_dpi = true;
 
-	const int i_hdpi = find_arg(arg_high_dpi, argc, argv);
+	const int i_hdpi = find_arg(arg_high_dpi, qt_argv);
 	if (i_hdpi != -1)
 	{
 		const std::string cmp_str = "0";
-		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
-		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
+		const auto i_hdpi_2 = (s_argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
+		const auto high_dpi_setting = (i_hdpi_2 && !std::strcmp(cmp_str.c_str(), qt_argv[i_hdpi_2])) ? "0" : "1";
 
 		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
@@ -462,11 +475,11 @@ QCoreApplication* create_application(int& argc, char* argv[])
 			return ok;
 		};
 
-		if (const int i_rounding = find_arg(arg_rounding, argc, argv); i_rounding != -1)
+		if (const int i_rounding = find_arg(arg_rounding, qt_argv); i_rounding != -1)
 		{
-			if (const int i_rounding_2 = i_rounding + 1; argc > i_rounding_2)
+			if (const int i_rounding_2 = i_rounding + 1; s_argc > i_rounding_2)
 			{
-				if (const auto arg_val = argv[i_rounding_2]; !check_dpi_rounding_arg(arg_val))
+				if (const auto arg_val = qt_argv[i_rounding_2]; !check_dpi_rounding_arg(arg_val))
 				{
 					const std::string msg = fmt::format("The command line value %s for %s is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.", arg_val, arg_rounding);
 					sys_log.error("%s", msg); // Don't exit with fatal error. The resulting dialog might be unreadable with dpi problems.
@@ -488,7 +501,7 @@ QCoreApplication* create_application(int& argc, char* argv[])
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
 	}
 
-	return new gui_application(argc, argv);
+	return new gui_application(s_argc, s_argv);
 }
 
 template <>
@@ -537,8 +550,22 @@ int main(int argc, char** argv)
 
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
+	std::span<char* const> argv_span{ argv, argc + 0u };
+	std::span<char* const> emu_argv;
+	std::span<char* const> qt_argv;
+
+	if (int emu_pos = find_arg(arg_emulation_barrier, argv_span); emu_pos != -1)
+	{
+		emu_argv = argv_span.subspan(emu_pos + 1);
+		qt_argv = argv_span.subspan(0, emu_pos);
+	}
+	else
+	{
+		qt_argv = argv_span;
+	}
+
 	// Only run RPCS3 to display an error
-	if (int err_pos = find_arg(arg_error, argc, argv); err_pos != -1)
+	if (int err_pos = find_arg(arg_error, qt_argv); err_pos != -1)
 	{
 		// Reconstruction of the error from multiple args
 		std::string error;
@@ -559,7 +586,7 @@ int main(int argc, char** argv)
 	static fs::file instance_lock;
 
 	// True if an argument --updating found
-	const bool is_updating = find_arg(arg_updating, argc, argv) != -1;
+	const bool is_updating = find_arg(arg_updating, qt_argv) != -1;
 
 	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating
 	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
@@ -735,9 +762,9 @@ int main(int argc, char** argv)
 	// The constructor of QApplication eats the --style and --stylesheet arguments.
 	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
 	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
-	const bool use_cli_style = find_arg(arg_style, argc, argv) != -1 || find_arg(arg_stylesheet, argc, argv) != -1;
+	const bool use_cli_style = find_arg(arg_style, qt_argv) != -1 || find_arg(arg_stylesheet, qt_argv) != -1;
 
-	QScopedPointer<QCoreApplication> app(create_application(argc, argv));
+	QScopedPointer<QCoreApplication> app(create_application(qt_argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 	app->setOrganizationName("RPCS3");
@@ -790,6 +817,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_stdout, "Attach the console window and listen to standard output stream. (STDOUT)"));
 	parser.addOption(QCommandLineOption(arg_stderr, "Attach the console window and listen to error output stream. (STDERR)"));
 #endif
+
+	parser.addOption(QCommandLineOption("N/A", "Arguments after \"--\" are considered emulation arguments."));
 
 	parser.process(app->arguments());
 
@@ -851,15 +880,15 @@ int main(int argc, char** argv)
 #endif
 		std::string from_sha;
 
-		if (const int i_arg_commit_db = find_arg(arg_commit_db, argc, argv); i_arg_commit_db != -1)
+		if (const int i_arg_commit_db = find_arg(arg_commit_db, qt_argv); i_arg_commit_db != -1)
 		{
 			if (int i = i_arg_commit_db + 1; argc > i)
 			{
-				path = argv[i++];
+				path = qt_argv[i++];
 
 				if (argc > i)
 				{
-					from_sha = argv[i];
+					from_sha = qt_argv[i];
 				}
 			}
 #ifdef _WIN32
@@ -1385,9 +1414,9 @@ int main(int argc, char** argv)
 			}
 		});
 	}
-	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
+	else if (const QStringList args = parser.positionalArguments(); (!args.isEmpty() || !emu_argv.empty()) && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		const std::string spath = ::at32(args, 0).toStdString();
+		const std::string spath = (args.isEmpty() ? emu_argv[0] : ::at32(args, 0).toStdString());
 
 		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
@@ -1407,13 +1436,39 @@ int main(int argc, char** argv)
 
 		if (args.length() > 1)
 		{
+			// Reserve empty string for executable path
 			rpcs3_argv.emplace_back();
 
-			for (int i = 1; i < args.length(); i++)
+			rpcs3_argv.emplace_back();
+
+			for (int i = 1; i != args.length(); i++)
 			{
 				const std::string arg = args[i].toStdString();
 				rpcs3_argv.emplace_back(arg);
-				sys_log.notice("Optional command line argument %d: %s", i, arg);
+
+				sys_log.error("Optional command line argument %d: %s"
+					"\nPlease pass emulation arguments after an empty \"--\" paramater."
+					"\nIn the future, the emulator would not support optional arguments without it.", i, arg);
+			}
+		}
+
+		// Additional arguments passed after "--"
+		if (emu_argv.size() > (args.isEmpty() ? 1 : 0))
+		{
+			// Reserve empty string for executable path
+			if (rpcs3_argv.empty())
+			{
+				rpcs3_argv.emplace_back();
+			}
+
+			rpcs3_argv.emplace_back();
+
+			for (usz i = args.isEmpty() ? 1 : 0; i != emu_argv.size(); i++)
+			{
+				const std::string arg = args[i].toStdString();
+				rpcs3_argv.emplace_back(arg);
+
+				sys_log.success("Optional command line argument %d: %s", i, arg);
 			}
 		}
 
