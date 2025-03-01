@@ -52,5 +52,17 @@ namespace vk
 	};
 
 	using swapchain_NATIVE = swapchain_MacOS;
+
+	static
+	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t handle)
+	{
+		VkSurfaceKHR result = VK_NULL_HANDLE;
+		VkMacOSSurfaceCreateInfoMVK createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
+		createInfo.pView = window_handle;
+
+		CHECK_RESULT(vkCreateMacOSSurfaceMVK(vk_instance, &createInfo, NULL, &result));
+		return result;
+	}
 #endif
 }
