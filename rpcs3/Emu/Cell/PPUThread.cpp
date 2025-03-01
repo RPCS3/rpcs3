@@ -4284,8 +4284,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
 				}
 
-				// Ignore executables larger thaan 500KB to prevent a long pause on exitspawn
-				if (src.size() > 500000)
+				// Ignore executables larger than 500KB to prevent a long pause on exitspawn
+				if (src.size() >= 500000)
 				{
 					g_progr_ftotal_bits -= file_size;
 
