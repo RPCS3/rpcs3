@@ -213,6 +213,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_cg_disasm_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_add_bp_window.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_add_bp_window.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -395,6 +401,9 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
       <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\debugger_add_bp_window.cpp">
+      <Filter>Gui\debugger</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\debugger_frame.cpp">
       <Filter>Gui\debugger</Filter>

@@ -13,6 +13,7 @@ add_library(rpcs3_ui STATIC
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp
+    debugger_add_bp_window.cpp
     debugger_frame.cpp
     debugger_list.cpp
     downloader.cpp
@@ -128,6 +129,10 @@ add_library(rpcs3_ui STATIC
 
     "../resources.qrc"
 )
+
+if(HAS_MEMORY_BREAKPOINTS)
+    target_compile_definitions(rpcs3_ui PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
+endif()
 
 if(WIN32)
     target_sources(rpcs3_ui PUBLIC "../windows.qrc")

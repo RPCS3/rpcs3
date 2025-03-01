@@ -28,6 +28,10 @@ if(USE_ASAN)
     set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
 endif()
 
+if(HAS_MEMORY_BREAKPOINTS)
+    target_compile_definitions(rpcs3_emu PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
+endif()
+
 target_link_libraries(rpcs3_emu
     PRIVATE
         3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
