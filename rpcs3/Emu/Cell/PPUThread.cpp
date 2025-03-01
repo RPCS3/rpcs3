@@ -4275,9 +4275,30 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
+			if (!src && !Emu.klic.empty() && src.open(path))
+			{
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+
+					// Ignore executables larger than 500KB to prevent a long pause on exitspawn
+					if (src.size() >= 500000)
+					{
+						g_progr_ftotal_bits -= file_size;
+
+						continue;
+					}
+				}
+			}
+
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
@@ -4459,9 +4480,22 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
+			if (!src && !Emu.klic.empty() && src.open(path))
+			{
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+				}
+			}
+
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
