@@ -23,6 +23,8 @@ namespace rsx
 			is_current_page = true;
 
 			m_message_box = std::make_shared<home_menu_message_box>(x, y, width, height);
+			m_message_box->visible = false;
+
 			m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
 
 			std::unique_ptr<overlay_element> resume = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESUME));
