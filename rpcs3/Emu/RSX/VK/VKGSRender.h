@@ -6,7 +6,7 @@
 #include "vkutils/data_heap.h"
 #include "vkutils/instance.h"
 #include "vkutils/sync.h"
-#include "vkutils/swapchain.hpp"
+#include "vkutils/swapchain.h"
 
 #include "VKGSRenderTypes.hpp"
 #include "VKTextureCache.h"
