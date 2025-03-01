@@ -549,13 +549,12 @@ void main_window::show_boot_error(game_boot_result status)
 	}
 	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
-	QMessageBox* msg = new QMessageBox();
+	QMessageBox* msg = new QMessageBox(this);
 	msg->setWindowTitle(tr("Boot Failed"));
 	msg->setIcon(QMessageBox::Critical);
 	msg->setTextFormat(Qt::RichText);
 	msg->setStandardButtons(QMessageBox::Ok);
 	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
-	msg->setParent(this);
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
 }
