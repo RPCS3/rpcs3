@@ -5,7 +5,7 @@
 #include "Utilities/Thread.h"
 
 #if defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/vkutils/instance.hpp"
+#include "Emu/RSX/VK/vkutils/instance.h"
 #endif
 
 #include <chrono>

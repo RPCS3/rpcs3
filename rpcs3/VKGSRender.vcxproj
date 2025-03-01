@@ -58,7 +58,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
-    <ClInclude Include="Emu\RSX\VK\vkutils\instance.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
@@ -94,6 +94,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp" />
