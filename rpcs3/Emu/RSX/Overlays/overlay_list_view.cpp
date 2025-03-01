@@ -71,21 +71,30 @@ namespace rsx
 			m_scroll_indicator_bottom->fore_color.a = 0.f;
 		}
 
-		void list_view::update_selection()
+		const overlay_element* list_view::get_selected_entry() const
 		{
 			if (m_selected_entry < 0)
 			{
-				return; // Ideally unreachable but it should still be possible to recover by user interaction.
+				return nullptr; // Ideally unreachable but it should still be possible to recover by user interaction.
 			}
 
 			const usz current_index = static_cast<usz>(m_selected_entry) * (m_use_separators ? 2 : 1);
 
 			if (current_index >= m_items.size())
 			{
-				return; // Ideally unreachable but it should still be possible to recover by user interaction.
+				return nullptr; // Ideally unreachable but it should still be possible to recover by user interaction.
 			}
 
-			const auto current_element = m_items[current_index].get();
+			return m_items[current_index].get();
+		}
+
+		void list_view::update_selection()
+		{
+			const overlay_element* current_element = get_selected_entry();
+			if (!current_element)
+			{
+				return; // Ideally unreachable but it should still be possible to recover by user interaction.
+			}
 
 			// Calculate bounds
 			const auto min_y = current_element->y - y;
