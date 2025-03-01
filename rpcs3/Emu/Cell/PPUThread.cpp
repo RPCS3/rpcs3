@@ -4275,9 +4275,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			if (!src && Emu.klic.size() > 0 && src.open(path))
+			if (!src && !Emu.klic.empty() && src.open(path))
 			{
-				src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&Emu.klic[0]), nullptr, true);
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+				}
 			}
 
 			if (!src)
@@ -4467,9 +4472,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				}
 			}
 
-			if (!src && Emu.klic.size() > 0 && src.open(path))
+			if (!src && !Emu.klic.empty() && src.open(path))
 			{
-				src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&Emu.klic[0]), nullptr, true);
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+				}
 			}
 
 			if (!src)
@@ -4647,7 +4657,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty())
+	if (compile_main && g_cfg.core.llvm_precompilation && !Emu.GetTitleID().empty() && !Emu.IsChildProcess())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
