@@ -122,36 +122,7 @@ namespace vk
 #endif
 
 #if defined(HAVE_WAYLAND)
-
-	class swapchain_Wayland : public native_swapchain_base
-	{
-	public:
-		swapchain_Wayland(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
-		{}
-
-		~swapchain_Wayland() {}
-
-		bool init() override
-		{
-			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
-		}
-
-		void create(display_handle_t& window_handle) override
-		{
-			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
-		}
-
-		void destroy(bool full = true) override
-		{
-			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
-		}
-
-		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
-		{
-			fmt::throw_exception("Native Wayland swapchain is not implemented yet!");
-		}
-	};
+	using swapchain_Wayland = native_swapchain_base;
 
 #ifndef HAVE_X11
 	using swapchain_NATIVE = swapchain_Wayland;
