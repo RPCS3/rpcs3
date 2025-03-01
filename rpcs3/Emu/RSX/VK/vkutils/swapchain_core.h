@@ -121,6 +121,28 @@ namespace vk
 
 		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override;
 
+		// Clients must implement these methods to render without WSI support
+		bool init() override
+		{
+			fmt::throw_exception("Native swapchain is not implemented yet!");
+		}
+
+		void create(display_handle_t& /*window_handle*/) override
+		{
+			fmt::throw_exception("Native swapchain is not implemented yet!");
+		}
+
+		void destroy(bool /*full*/ = true) override
+		{
+			fmt::throw_exception("Native swapchain is not implemented yet!");
+		}
+
+		VkResult present(VkSemaphore /*semaphore*/, u32 /*index*/) override
+		{
+			fmt::throw_exception("Native swapchain is not implemented yet!");
+		}
+
+		// Generic accessors
 		void end_frame(command_buffer& cmd, u32 index) override
 		{
 			swapchain_images[index].second->do_dma_transfer(cmd);
