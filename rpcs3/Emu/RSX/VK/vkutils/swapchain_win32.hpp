@@ -93,8 +93,8 @@ namespace vk
 
 	using swapchain_NATIVE = swapchain_WIN32;
 
-	static
-	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle)
+	[[maybe_unused]] static
+	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* /*config*/)
 	{
 		HINSTANCE hInstance = NULL;
 		VkSurfaceKHR result = VK_NULL_HANDLE;

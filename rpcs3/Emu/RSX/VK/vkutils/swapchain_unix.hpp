@@ -130,8 +130,8 @@ namespace vk
 
 #endif
 
-	static
-	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle)
+	[[maybe_unused]] static
+	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle, WSI_config* config)
 	{
 		VkSurfaceKHR result = VK_NULL_HANDLE;
 
@@ -158,7 +158,7 @@ namespace vk
 				createInfo.display = p.first;
 				createInfo.surface = p.second;
 				CHECK_RESULT(vkCreateWaylandSurfaceKHR(vk_instance, &createInfo, nullptr, &result));
-				force_wm_reporting_off = true;
+				config->supports_automatic_wm_reports = false;
 			}
 			else
 #endif
