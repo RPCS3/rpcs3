@@ -251,56 +251,7 @@ namespace vk
 	swapchain_base* instance::create_swapchain(display_handle_t window_handle, vk::physical_device& dev)
 	{
 		bool force_wm_reporting_off = false;
-#ifdef _WIN32
-		HINSTANCE hInstance = NULL;
-
-		VkWin32SurfaceCreateInfoKHR createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		createInfo.hinstance = hInstance;
-		createInfo.hwnd = window_handle;
-
-		CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &m_surface));
-
-#elif defined(__APPLE__)
-		VkMacOSSurfaceCreateInfoMVK createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-		createInfo.pView = window_handle;
-
-		CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &m_surface));
-#else
-
-		std::visit([&](auto&& p)
-			{
-				using T = std::decay_t<decltype(p)>;
-
-#ifdef HAVE_X11
-				if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
-				{
-					VkXlibSurfaceCreateInfoKHR createInfo = {};
-					createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-					createInfo.dpy = p.first;
-					createInfo.window = p.second;
-					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
-				}
-				else
-#endif
-#ifdef HAVE_WAYLAND
-					if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
-					{
-						VkWaylandSurfaceCreateInfoKHR createInfo = {};
-						createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-						createInfo.display = p.first;
-						createInfo.surface = p.second;
-						CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
-						force_wm_reporting_off = true;
-					}
-					else
-#endif
-					{
-						static_assert(std::conditional_t<true, std::false_type, T>::value, "Unhandled window_handle type in std::variant");
-					}
-			}, window_handle);
-#endif
+		m_surface = make_WSI_surface(m_instance, window_handle);
 
 		u32 device_queues = dev.get_queue_count();
 		std::vector<VkBool32> supports_present(device_queues, VK_FALSE);

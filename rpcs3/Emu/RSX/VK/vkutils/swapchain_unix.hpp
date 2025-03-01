@@ -158,4 +158,44 @@ namespace vk
 #endif
 
 #endif
+
+	static
+	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle)
+	{
+		VkSurfaceKHR result = VK_NULL_HANDLE;
+
+		std::visit([&](auto&& p)
+		{
+			using T = std::decay_t<decltype(p)>;
+
+#ifdef HAVE_X11
+			if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
+			{
+				VkXlibSurfaceCreateInfoKHR createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+				createInfo.dpy = p.first;
+				createInfo.window = p.second;
+				CHECK_RESULT(vkCreateXlibSurfaceKHR(vk_instance, &createInfo, nullptr, &result));
+			}
+			else
+#endif
+#ifdef HAVE_WAYLAND
+			if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
+			{
+				VkWaylandSurfaceCreateInfoKHR createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+				createInfo.display = p.first;
+				createInfo.surface = p.second;
+				CHECK_RESULT(vkCreateWaylandSurfaceKHR(vk_instance, &createInfo, nullptr, &result));
+				force_wm_reporting_off = true;
+			}
+			else
+#endif
+			{
+				static_assert(std::conditional_t<true, std::false_type, T>::value, "Unhandled window_handle type in std::variant");
+			}
+		}, window_handle);
+
+		return ensure(result, "Failed to initialize Vulkan display surface");
+	}
 }

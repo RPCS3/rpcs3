@@ -93,6 +93,18 @@ namespace vk
 
 	using swapchain_NATIVE = swapchain_WIN32;
 
+	static
+	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t window_handle)
+	{
+		HINSTANCE hInstance = NULL;
+		VkSurfaceKHR result = VK_NULL_HANDLE;
 
+		VkWin32SurfaceCreateInfoKHR createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+		createInfo.hinstance = hInstance;
+		createInfo.hwnd = window_handle;
+		CHECK_RESULT(vkCreateWin32SurfaceKHR(vk_instance, &createInfo, NULL, &result));
+		return result;
+	}
 #endif
 }
