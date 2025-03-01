@@ -46,20 +46,21 @@ class debugger_frame : public custom_dock_widget
 	const QString RunString = tr("Run");
 	const QString PauseString = tr("Pause");
 
-	debugger_list* m_debugger_list;
-	QSplitter* m_right_splitter;
+	debugger_list* m_debugger_list = nullptr;
+	QSplitter* m_right_splitter = nullptr;
 	QFont m_mono;
-	QPlainTextEdit* m_misc_state;
-	QPlainTextEdit* m_regs;
-	QPushButton* m_go_to_addr;
-	QPushButton* m_go_to_pc;
-	QPushButton* m_btn_step;
-	QPushButton* m_btn_step_over;
-	QPushButton* m_btn_run;
+	QPlainTextEdit* m_misc_state = nullptr;
+	QPlainTextEdit* m_regs = nullptr;
+	QPushButton* m_go_to_addr = nullptr;
+	QPushButton* m_go_to_pc = nullptr;
+	QPushButton* m_btn_step = nullptr;
+	QPushButton* m_btn_step_over = nullptr;
+	QPushButton* m_btn_add_bp = nullptr;
+	QPushButton* m_btn_run = nullptr;
 
-	QComboBox* m_choice_units;
-	QTimer* m_update;
-	QSplitter* m_splitter;
+	QComboBox* m_choice_units = nullptr;
+	QTimer* m_update = nullptr;
+	QSplitter* m_splitter = nullptr;
 
 	u64 m_threads_created = -1;
 	u64 m_threads_deleted = -1;
@@ -83,9 +84,9 @@ class debugger_frame : public custom_dock_widget
 	u32 m_spu_disasm_pc = 0;
 	bool m_is_spu_disasm_mode = false;
 
-	breakpoint_list* m_breakpoint_list;
-	breakpoint_handler* m_ppu_breakpoint_handler;
-	call_stack_list* m_call_stack_list;
+	breakpoint_list* m_breakpoint_list = nullptr;
+	breakpoint_handler* m_ppu_breakpoint_handler = nullptr;
+	call_stack_list* m_call_stack_list = nullptr;
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;
 	QDialog* m_goto_dialog = nullptr;

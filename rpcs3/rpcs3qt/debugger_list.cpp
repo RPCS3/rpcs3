@@ -157,7 +157,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		{
 		case thread_class::ppu:
 		{
-			return m_ppu_breakpoint_handler->HasBreakpoint(pc);
+			return m_ppu_breakpoint_handler->HasBreakpoint(pc, breakpoint_types::bp_exec);
 		}
 		case thread_class::spu:
 		{

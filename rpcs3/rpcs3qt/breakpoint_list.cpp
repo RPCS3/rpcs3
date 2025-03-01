@@ -4,6 +4,7 @@
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
+#include "rpcs3qt/debugger_add_bp_window.h"
 
 #include <QMenu>
 #include <QMessageBox>
@@ -72,19 +73,35 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 	}
 }
 
-bool breakpoint_list::AddBreakpoint(u32 pc)
+bool breakpoint_list::AddBreakpoint(u32 pc, bs_t<breakpoint_types> type)
 {
-	if (!m_ppu_breakpoint_handler->AddBreakpoint(pc))
+	if (!m_ppu_breakpoint_handler->AddBreakpoint(pc, type))
 	{
 		return false;
 	}
 
-	m_disasm->disasm(pc);
+	QString breakpoint_item_text;
 
-	QString text = QString::fromStdString(m_disasm->last_opcode);
-	text.remove(10, 13);
+	if (type == breakpoint_types::bp_exec)
+	{
+		m_disasm->disasm(m_disasm->dump_pc = pc);
+		breakpoint_item_text = QString::fromStdString(m_disasm->last_opcode);
+		breakpoint_item_text.remove(10, 13);
+	}
+	else if (type == breakpoint_types::bp_read)
+	{
+		breakpoint_item_text = QString("BPMR:  0x%1").arg(pc, 8, 16, QChar('0'));
+	}
+	else if (type == breakpoint_types::bp_write)
+	{
+		breakpoint_item_text = QString("BPMW:  0x%1").arg(pc, 8, 16, QChar('0'));
+	}
+	else if (type == (breakpoint_types::bp_read + breakpoint_types::bp_write))
+	{
+		breakpoint_item_text = QString("BPMRW: 0x%1").arg(pc, 8, 16, QChar('0'));
+	}
 
-	QListWidgetItem* breakpoint_item = new QListWidgetItem(text);
+	QListWidgetItem* breakpoint_item = new QListWidgetItem(breakpoint_item_text);
 	breakpoint_item->setForeground(m_text_color_bp);
 	breakpoint_item->setBackground(m_color_bp);
 	breakpoint_item->setData(Qt::UserRole, pc);
@@ -96,8 +113,8 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 }
 
 /**
-* If breakpoint exists, we remove it, else add new one.  Yeah, it'd be nicer from a code logic to have it be set/reset.  But, that logic has to happen somewhere anyhow.
-*/
+ * If breakpoint exists, we remove it, else add new one.  Yeah, it'd be nicer from a code logic to have it be set/reset.  But, that logic has to happen somewhere anyhow.
+ */
 void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 {
 	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
@@ -168,7 +185,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 		return;
 	}
 
-	if (m_ppu_breakpoint_handler->HasBreakpoint(loc))
+	if (m_ppu_breakpoint_handler->HasBreakpoint(loc, breakpoint_types::bp_exec))
 	{
 		if (!only_add)
 		{
@@ -177,7 +194,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 	}
 	else
 	{
-		if (!AddBreakpoint(loc))
+		if (!AddBreakpoint(loc, breakpoint_types::bp_exec))
 		{
 			QMessageBox::warning(this, tr("Unknown error while setting breakpoint!"), tr("Failed to set breakpoints."));
 			return;
@@ -194,13 +211,8 @@ void breakpoint_list::OnBreakpointListDoubleClicked()
 	}
 }
 
-void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
+void breakpoint_list::OnBreakpointListRightClicked(const QPoint& pos)
 {
-	if (!itemAt(pos))
-	{
-		return;
-	}
-
 	m_context_menu = new QMenu();
 
 	if (selectedItems().count() == 1)
@@ -215,7 +227,28 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 		m_context_menu->addSeparator();
 	}
 
-	m_context_menu->addAction(m_delete_action);
+	if (selectedItems().count() >= 1)
+	{
+		m_context_menu->addAction(m_delete_action);
+	}
+
+	QAction* m_addbp = new QAction(tr("Add Breakpoint"), this);
+	connect(m_addbp, &QAction::triggered, this, [this]
+		{
+			debugger_add_bp_window dlg(this, this);
+			dlg.exec();
+		});
+	m_context_menu->addAction(m_addbp);
+
+#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
+	QAction* m_tglbpmbreak = new QAction(m_ppu_breakpoint_handler->IsBreakOnBPM() ? tr("Disable BPM") : tr("Enable BPM"), this);
+	connect(m_tglbpmbreak, &QAction::triggered, [this]
+		{
+			m_ppu_breakpoint_handler->SetBreakOnBPM(!m_ppu_breakpoint_handler->IsBreakOnBPM());
+		});
+	m_context_menu->addAction(m_tglbpmbreak);
+#endif
+
 	m_context_menu->exec(viewport()->mapToGlobal(pos));
 	m_context_menu->deleteLater();
 	m_context_menu = nullptr;
