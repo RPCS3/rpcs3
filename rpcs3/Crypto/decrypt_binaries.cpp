@@ -96,7 +96,7 @@ usz decrypt_binaries_t::decrypt(std::string_view klic_input)
 				case "SCE\0"_u32:
 				{
 					// First KLIC is no KLIC
-					elf_file = decrypt_self(std::move(elf_file), key_it != 0 ? reinterpret_cast<u8*>(&m_klics[key_it]) : nullptr);
+					elf_file = decrypt_self(elf_file, key_it != 0 ? reinterpret_cast<u8*>(&m_klics[key_it]) : nullptr);
 
 					if (!elf_file)
 					{

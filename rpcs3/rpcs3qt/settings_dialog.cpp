@@ -14,7 +14,6 @@
 #include <QStyleFactory>
 
 #include "gui_settings.h"
-#include "display_sleep_control.h"
 #include "qt_utils.h"
 #include "uuid.h"
 #include "settings_dialog.h"
@@ -1822,7 +1821,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->preventDisplaySleep, emu_settings_type::PreventDisplaySleep);
 	SubscribeTooltip(ui->preventDisplaySleep, tooltips.settings.prevent_display_sleep);
-	ui->preventDisplaySleep->setEnabled(display_sleep_control_supported());
+	ui->preventDisplaySleep->setEnabled(Emu.GetCallbacks().display_sleep_control_supported());
 
 	m_emu_settings->EnhanceCheckBox(ui->showTrophyPopups, emu_settings_type::ShowTrophyPopups);
 	SubscribeTooltip(ui->showTrophyPopups, tooltips.settings.show_trophy_popups);

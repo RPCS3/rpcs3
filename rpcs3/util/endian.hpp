@@ -267,8 +267,9 @@ private:
 			}
 		}
 
-public:
-		template <typename T2, typename = decltype(+std::declval<const T2&>())>
+	public:
+		template <typename T2>
+			requires requires(const T2& t2) { +t2; }
 		constexpr bool operator==(const T2& rhs) const noexcept
 		{
 			using R = std::common_type_t<T2>;

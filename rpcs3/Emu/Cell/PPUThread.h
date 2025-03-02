@@ -382,14 +382,15 @@ public:
 
 static_assert(ppu_join_status::max <= ppu_join_status{ppu_thread::id_base});
 
-template<typename T, typename = void>
+template <typename T>
 struct ppu_gpr_cast_impl
 {
 	static_assert(!sizeof(T), "Invalid type for ppu_gpr_cast<>");
 };
 
-template<typename T>
-struct ppu_gpr_cast_impl<T, std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>>>
+template <typename T>
+	requires std::is_integral_v<T> || std::is_enum_v<T>
+struct ppu_gpr_cast_impl<T>
 {
 	static_assert(sizeof(T) <= 8, "Too big integral type for ppu_gpr_cast<>()");
 	static_assert(std::is_same_v<std::decay_t<T>, bool> == false, "bool type is deprecated in ppu_gpr_cast<>(), use b8 instead");
@@ -405,8 +406,8 @@ struct ppu_gpr_cast_impl<T, std::enable_if_t<std::is_integral_v<T> || std::is_en
 	}
 };
 
-template<>
-struct ppu_gpr_cast_impl<b8, void>
+template <>
+struct ppu_gpr_cast_impl<b8>
 {
 	static inline u64 to(const b8& value)
 	{
@@ -419,8 +420,8 @@ struct ppu_gpr_cast_impl<b8, void>
 	}
 };
 
-template<typename T, typename AT>
-struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>, void>
+template <typename T, typename AT>
+struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>>
 {
 	static inline u64 to(const vm::_ptr_base<T, AT>& value)
 	{
@@ -433,8 +434,8 @@ struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>, void>
 	}
 };
 
-template<typename T, typename AT>
-struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
+template <typename T, typename AT>
+struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>>
 {
 	static inline u64 to(const vm::_ref_base<T, AT>& value)
 	{
@@ -448,7 +449,7 @@ struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
 };
 
 template <>
-struct ppu_gpr_cast_impl<vm::null_t, void>
+struct ppu_gpr_cast_impl<vm::null_t>
 {
 	static inline u64 to(const vm::null_t& /*value*/)
 	{

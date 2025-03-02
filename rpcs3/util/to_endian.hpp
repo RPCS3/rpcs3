@@ -6,17 +6,18 @@
 union v128;
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
-template <typename T, bool Se, typename = void>
+template <typename T, bool Se>
 struct to_se
 {
-	template <typename T2, typename = void>
+	template <typename T2>
 	struct to_se_
 	{
 		using type = T2;
 	};
 
 	template <typename T2>
-	struct to_se_<T2, std::enable_if_t<std::is_arithmetic_v<T2> || std::is_enum_v<T2>>>
+		requires std::is_arithmetic_v<T2> || std::is_enum_v<T2>
+	struct to_se_<T2>
 	{
 		using type = std::conditional_t<(sizeof(T2) > 1), se_t<T2, Se>, T2>;
 	};
@@ -44,14 +45,16 @@ struct to_se<s128, Se>
 };
 
 template <typename T, bool Se>
-struct to_se<const T, Se, std::enable_if_t<!std::is_array_v<T>>>
+	requires(!std::is_array_v<T>)
+struct to_se<const T, Se>
 {
 	// Move const qualifier
 	using type = const typename to_se<T, Se>::type;
 };
 
 template <typename T, bool Se>
-struct to_se<volatile T, Se, std::enable_if_t<!std::is_array_v<T> && !std::is_const_v<T>>>
+	requires(!std::is_array_v<T> && !std::is_const_v<T>)
+struct to_se<volatile T, Se>
 {
 	// Move volatile qualifier
 	using type = volatile typename to_se<T, Se>::type;

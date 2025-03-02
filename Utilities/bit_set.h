@@ -385,7 +385,7 @@ public:
 };
 
 template <typename T>
-struct fmt_unveil<bs_t<T>, void>
+struct fmt_unveil<bs_t<T>>
 {
 	// Format as is
 	using type = bs_t<T>;

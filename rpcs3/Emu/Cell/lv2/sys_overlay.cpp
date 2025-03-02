@@ -36,7 +36,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic), nullptr, true);
+	src = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
 
 	if (!src)
 	{

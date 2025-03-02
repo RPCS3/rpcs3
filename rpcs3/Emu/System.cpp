@@ -51,8 +51,6 @@
 
 #include "Utilities/JIT.h"
 
-#include "display_sleep_control.h"
-
 #include "Emu/IPC_socket.h"
 
 #if defined(HAVE_VULKAN)
@@ -90,7 +88,6 @@ extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 extern void send_close_home_menu_cmds();
-extern void check_microphone_permissions();
 
 extern void signal_system_cache_can_stay();
 
@@ -1750,7 +1747,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					fs::file src{path};
 
-					src = decrypt_self(std::move(src));
+					src = decrypt_self(src);
 
 					const ppu_exec_object obj = src;
 
@@ -1767,6 +1764,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
+				std::vector<ppu_module<lv2_obj>*> mod_list;
+
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
@@ -1776,6 +1775,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
+					mod_list.emplace_back(&_main);
 				}
 
 				if (Emu.IsStopped())
@@ -1783,7 +1783,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					return;
 				}
 
-				ppu_precompile(dir_queue, nullptr);
+				ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list);
 
 				if (Emu.IsStopped())
 				{
@@ -1810,7 +1810,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			if (const std::vector<std::string> device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"}); !device_list.empty())
 			{
-				check_microphone_permissions();
+				Emu.GetCallbacks().check_microphone_permissions();
 			}
 		}
 
@@ -2241,7 +2241,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// Decrypt SELF
 			had_been_decrypted = true;
-			elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
+			elf_file = decrypt_self(elf_file, klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
 		}
 		else
 		{
@@ -2507,7 +2507,7 @@ void Emulator::Run(bool start_playtime)
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		disable_display_sleep();
+		Emu.GetCallbacks().enable_display_sleep(false);
 	}
 }
 
@@ -2792,7 +2792,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 	}
 
 	// Always Enable display sleep, not only if it was prevented.
-	enable_display_sleep();
+	Emu.GetCallbacks().enable_display_sleep(true);
 
 	return true;
 }
@@ -2889,7 +2889,7 @@ void Emulator::Resume()
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		disable_display_sleep();
+		Emu.GetCallbacks().enable_display_sleep(false);
 	}
 }
 
@@ -3799,7 +3799,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.
-			enable_display_sleep();
+			Emu.GetCallbacks().enable_display_sleep(true);
 
 			if (allow_autoexit)
 			{

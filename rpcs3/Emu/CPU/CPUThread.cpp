@@ -1302,7 +1302,7 @@ cpu_thread* cpu_thread::get_next_cpu()
 	return nullptr;
 }
 
-std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
 
 void cpu_thread::dump_all(std::string& ret) const
 {
