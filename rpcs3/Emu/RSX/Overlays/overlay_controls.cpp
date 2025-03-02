@@ -735,14 +735,20 @@ namespace rsx
 				{
 					if (!item)
 					{
-						rsx_log.error("Found null item in overlay_controls");
+						rsx_log.error("Found null item in overlay_controls::vertical_layout");
 						continue;
 					}
 
 					const s32 item_y_limit = s32{item->y} + item->h - scroll_offset_value - y;
 					const s32 item_y_base = s32{item->y} - scroll_offset_value - y;
 
-					if (item_y_limit < 0 || item_y_base > h)
+					if (item_y_base > h)
+					{
+						// Out of bounds. The following items will be too.
+						break;
+					}
+
+					if (item_y_limit < 0)
 					{
 						// Out of bounds
 						continue;
@@ -809,15 +815,28 @@ namespace rsx
 
 				for (auto &item : m_items)
 				{
+					if (!item)
+					{
+						rsx_log.error("Found null item in overlay_controls::horizontal_layout");
+						continue;
+					}
+
 					const s32 item_x_limit = s32{item->x} + item->w - scroll_offset_value - w;
 					const s32 item_x_base = s32{item->x} - scroll_offset_value - w;
 
-					if (item_x_limit < 0 || item_x_base > h)
+					if (item_x_base > w)
+					{
+						// Out of bounds. The following items will be too.
+						break;
+					}
+
+					if (item_x_limit < 0)
 					{
 						// Out of bounds
 						continue;
 					}
-					else if (item_x_limit > h || item_x_base < 0)
+
+					if (item_x_limit > w || item_x_base < 0)
 					{
 						// Partial render
 						areaf clip_rect = static_cast<areaf>(areai{x, y, (x + w), (y + h)});

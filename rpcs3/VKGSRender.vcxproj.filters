@@ -73,6 +73,12 @@
       <Filter>upscalers\fsr1</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKCommonPipelineLayout.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\swapchain.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -124,7 +130,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\device.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\instance.hpp">
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.h">
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\memory.h">
@@ -139,7 +145,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\image.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.hpp">
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.h">
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h">
@@ -175,6 +181,21 @@
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\VKCommonPipelineLayout.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_win32.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_unix.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_macos.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_android.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_core.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">

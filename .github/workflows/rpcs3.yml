@@ -1,5 +1,8 @@
 name: Build RPCS3
 
+defaults:
+  run:
+    shell: bash
 on:
   push:
     paths-ignore:
@@ -33,6 +36,8 @@ jobs:
             docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: clang
+            UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
+            UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux"
           - os: ubuntu-24.04
             docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
             build_sh: "/rpcs3/.ci/build-linux.sh"
@@ -92,8 +97,7 @@ jobs:
           github.event_name != 'pull_request' &&
           github.repository == 'RPCS3/rpcs3' &&
           github.ref == 'refs/heads/master' &&
-          matrix.compiler == 'clang' &&
-          runner.arch == 'ARM64'
+          matrix.compiler == 'clang'
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: |
@@ -120,6 +124,8 @@ jobs:
       CCACHE_INODECACHE: 'true'
       CCACHE_SLOPPINESS: 'time_macros'
       DEPS_CACHE_DIR: ./dependency_cache
+      UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+      UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win"
     steps:
 
       - name: Checkout repository
@@ -128,12 +134,12 @@ jobs:
           fetch-depth: 0
 
       - name: Setup env
+        shell: pwsh
         run: |
           echo "QTDIR=C:\Qt\${{ env.QT_VER }}\${{ env.QT_VER_MSVC }}_64" >> ${{ github.env }}
           echo "VULKAN_SDK=C:\VulkanSDK\${{ env.VULKAN_VER }}" >> ${{ github.env }}
 
       - name: Get Cache Keys
-        shell: bash
         run: .ci/get_keys-windows.sh
 
       - name: Setup Build Ccache
@@ -151,11 +157,9 @@ jobs:
           restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
 
       - name: Download and unpack dependencies
-        shell: bash
         run: .ci/setup-windows.sh
 
       - name: Export Variables
-        shell: bash
         run: |
           while IFS='=' read -r key val; do
             # Skip lines that are empty or start with '#'
@@ -167,24 +171,27 @@ jobs:
         uses: microsoft/setup-msbuild@main
 
       - name: Compile RPCS3
+        shell: pwsh
         run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
 
       - name: Pack up build artifacts
-        shell: bash
         run: |
           mkdir -p "${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}"
           .ci/deploy-windows.sh
 
       - name: Upload artifacts (7z)
-        #TODO: Upload artifact to release repository
-        #condition for release
-        #if: |
-        #  github.event_name != 'pull_request' &&
-        #  github.repository == 'RPCS3/rpcs3' &&
-        #  github.ref == 'refs/heads/master'
         uses: actions/upload-artifact@main
         with:
           name: RPCS3 for Windows (MSVC)
           path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
           compression-level: 0
           if-no-files-found: error
+      
+      - name: Deploy master build to GitHub Releases
+        if: |
+          github.event_name != 'pull_request' &&
+          github.repository == 'RPCS3/rpcs3' &&
+          github.ref == 'refs/heads/master'
+        env:
+          RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
+        run: .ci/github-upload.sh

@@ -1,5 +1,5 @@
 #include "device.h"
-#include "instance.hpp"
+#include "instance.h"
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
 

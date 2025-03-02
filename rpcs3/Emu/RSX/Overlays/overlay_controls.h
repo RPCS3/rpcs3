@@ -167,6 +167,8 @@ namespace rsx
 			compiled_resource compiled_resources;
 			bool is_compiled = false;
 
+			bool visible = true;
+
 			u16 padding_left = 0;
 			u16 padding_right = 0;
 			u16 padding_top = 0;

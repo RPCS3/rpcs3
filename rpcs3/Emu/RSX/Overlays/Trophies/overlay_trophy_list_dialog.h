@@ -23,22 +23,20 @@ namespace rsx
 		struct trophy_list_dialog : public user_interface
 		{
 		private:
-			struct trophy_list_entry : horizontal_layout
-			{
-			private:
-				std::unique_ptr<image_info> icon_data;
-
-			public:
-				trophy_list_entry(const std::string& name, const std::string& description, const std::string& trophy_type, const std::string& icon_path, bool hidden, bool locked, bool platinum_relevant);
-			};
-
 			std::unique_ptr<trophy_data> load_trophies(const std::string& trop_name) const;
+			void reload();
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
+			std::unique_ptr<image_button> m_show_hidden_trophies_button;
 
 			animation_color_interpolate fade_animation;
+
+			std::unique_ptr<trophy_data> m_trophy_data;
+			atomic_t<bool> m_list_dirty { true };
+			bool m_show_hidden_trophies = false;
+			bool m_show_hidden_trophies_last = false;
 
 		public:
 			trophy_list_dialog();

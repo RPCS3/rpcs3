@@ -36,6 +36,7 @@ namespace rsx
 
 			int get_selected_index() const;
 			bool get_cancel_only() const;
+			const overlay_element* get_selected_entry() const;
 
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
