@@ -356,6 +356,11 @@ public:
 
 	void abort_extract();
 
+	fs::file &file()
+	{
+		return m_file;
+	}
+
 private:
 	bool read_header();
 	bool read_metadata();
