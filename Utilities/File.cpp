@@ -397,7 +397,7 @@ namespace fs
 #ifdef _WIN32
 	class windows_file final : public file_base
 	{
-		const HANDLE m_handle;
+		HANDLE m_handle;
 		atomic_t<u64> m_pos;
 
 	public:
@@ -409,7 +409,10 @@ namespace fs
 
 		~windows_file() override
 		{
-			CloseHandle(m_handle);
+			if (m_handle != nullptr)
+			{
+				CloseHandle(m_handle);
+			}
 		}
 
 		stat_t get_stat() override
@@ -592,11 +595,16 @@ namespace fs
 			std::memcpy(id.data.data(), &info, sizeof(info));
 			return id;
 		}
+
+		void release() override
+		{
+			m_handle = nullptr;
+		}
 	};
 #else
 	class unix_file final : public file_base
 	{
-		const int m_fd;
+		int m_fd;
 
 	public:
 		unix_file(int fd)
@@ -606,7 +614,10 @@ namespace fs
 
 		~unix_file() override
 		{
-			::close(m_fd);
+			if (m_fd >= 0)
+			{
+				::close(m_fd);
+			}
 		}
 
 		stat_t get_stat() override
@@ -767,6 +778,11 @@ namespace fs
 			}
 
 			return result;
+		}
+
+		void release() override
+		{
+			m_fd = -1;
 		}
 	};
 #endif
@@ -1685,21 +1701,19 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 }
 
 
+
+fs::file fs::file::from_native_handle(native_handle handle)
+{
+	fs::file result;
+
 #ifdef _WIN32
-fs::file fs::file::from_native_handle(void *handle)
-{
-	fs::file result;
 	result.m_file = std::make_unique<windows_file>((const HANDLE)handle);
-	return result;
-}
 #else
-fs::file fs::file::from_native_handle(int fd)
-{
-	fs::file result;
-	result.m_file = std::make_unique<unix_file>(fd);
+	result.m_file = std::make_unique<unix_file>(handle);
+#endif
+
 	return result;
 }
-#endif
 
 fs::file::file(const void* ptr, usz size)
 {
