@@ -1605,9 +1605,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Hide a developers' setting
 	remove_item(ui->FIFOAccuracy, static_cast<int>(rsx_fifo_mode::as_ps3), static_cast<int>(g_cfg.core.rsx_fifo_accuracy.def));
 
-	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
-	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
-
 	// Sliders
 
 	EnhanceSlider(emu_settings_type::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "Driver wake up delay"));
@@ -2480,6 +2477,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->combo_num_ppu_threads, emu_settings_type::NumPPUThreads, true);
 	SubscribeTooltip(ui->gb_num_ppu_threads, tooltips.settings.num_ppu_threads);
+
+	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
+	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
 
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::cfg_geometry).toByteArray()))
 	{

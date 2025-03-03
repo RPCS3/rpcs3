@@ -2709,24 +2709,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_vulkansched">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Vulkan Queue Scheduler</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_vksched_layout">
-               <item>
-                <widget class="QComboBox" name="vulkansched"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gb_rsx_fifo_accuracy">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -4476,6 +4458,24 @@
                </layout>
               </widget>
              </item>
+             <item>
+             <widget class="QGroupBox" name="gb_vulkansched">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Vulkan Queue Scheduler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_vksched_layout">
+               <item>
+                <widget class="QComboBox" name="vulkansched"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
              <item>
               <widget class="QGroupBox" name="gb_debug_io">
                <property name="title">
