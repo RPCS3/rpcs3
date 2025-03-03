@@ -2678,13 +2678,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="disableOnDiskShaderCache">
-                 <property name="text">
-                  <string>Disable On-Disk Shader Cache</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="disableVertexCache">
                  <property name="text">
                   <string>Disable Vertex Cache</string>
@@ -4269,6 +4262,13 @@
               <widget class="QCheckBox" name="disableAsyncHostMM">
                 <property name="text">
                   <string>Disable Asynchronous Memory Manager</string>
+                </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="disableOnDiskShaderCache">
+                <property name="text">
+                  <string>Disable On-Disk Shader Cache</string>
                 </property>
               </widget>
              </item>
