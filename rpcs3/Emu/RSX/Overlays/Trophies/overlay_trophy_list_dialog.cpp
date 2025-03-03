@@ -90,6 +90,8 @@ namespace rsx
 
 		trophy_list_dialog::trophy_list_dialog()
 		{
+			m_allow_input_on_pause = true;
+
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.9f;
