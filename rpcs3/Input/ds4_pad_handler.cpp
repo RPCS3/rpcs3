@@ -556,7 +556,7 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 	return true;
 }
 
-void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
+void ds4_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view wide_serial)
 {
 	if (!hidDevice)
 	{
@@ -831,13 +831,17 @@ bool ds4_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& 
 PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	DS4Device* dev = static_cast<DS4Device*>(device.get());
-	if (!dev || dev->path.empty())
+	if (!dev || dev->path == hid_enumerated_device_default)
 		return connection::disconnected;
 
 	if (dev->hidDevice == nullptr)
 	{
 		// try to reconnect
+#ifdef ANDROID
+		if (hid_device* hid_dev = hid_libusb_wrap_sys_device(dev->path, -1))
+#else
 		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
+#endif
 		{
 			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
