@@ -204,7 +204,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	// Enable drawing to window backbuffer
 	gl::screen.bind();
 
-	gl::texture *image_to_flip = nullptr, *image_to_flip2 = nullptr;
+	gl::texture* image_to_flip = nullptr;
+	gl::texture* image_to_flip2 = nullptr;
 
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -276,15 +277,86 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		gl::screen.clear(gl::buffers::color);
 	}
 
+	if (m_overlay_manager && m_overlay_manager->has_dirty())
+	{
+		m_overlay_manager->lock_shared();
+
+		std::vector<u32> uids_to_dispose;
+		uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
+		for (const auto& view : m_overlay_manager->get_dirty())
+		{
+			m_ui_renderer.remove_temp_resources(view->uid);
+			uids_to_dispose.push_back(view->uid);
+		}
+
+		m_overlay_manager->unlock_shared();
+		m_overlay_manager->dispose(uids_to_dispose);
+	}
+
+	const auto render_overlays = [this, &cmd](gl::texture* dst, const areau& aspect_ratio)
+	{
+		if (m_overlay_manager && m_overlay_manager->has_visible())
+		{
+			GLuint target = 0;
+
+			if (dst)
+			{
+				m_sshot_fbo.bind();
+				m_sshot_fbo.color = dst->id();
+				target = dst->id();
+			}
+			else
+			{
+				gl::screen.bind();
+			}
+
+			// Lock to avoid modification during run-update chain
+			std::lock_guard lock(*m_overlay_manager);
+
+			for (const auto& view : m_overlay_manager->get_views())
+			{
+				m_ui_renderer.run(cmd, aspect_ratio, target, *view.get());
+			}
+		}
+	};
+
 	if (image_to_flip)
 	{
 		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
+			static const gl::pixel_pack_settings pack_settings{};
+
+			gl::texture* tex = image_to_flip;
+
+			if (g_cfg.video.record_with_overlays)
+			{
+				m_sshot_fbo.create();
+				m_sshot_tex = std::make_unique<gl::texture>(
+					GLenum(image_to_flip->get_target()),
+					image_to_flip->width(),
+					image_to_flip->height(),
+					image_to_flip->depth(),
+					image_to_flip->levels(),
+					image_to_flip->samples(),
+					GLenum(image_to_flip->get_internal_format()),
+					image_to_flip->format_class());
+
+				tex = m_sshot_tex.get();
+
+				static const position3u offset{};
+				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, 0, 0, offset, offset, { tex->width(), tex->height(), 1 });
+
+				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()));
+				m_sshot_fbo.remove();
+			}
+			
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			gl::pixel_pack_settings pack_settings{};
-			image_to_flip->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			tex->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+
+			m_sshot_tex.reset();
 
 			if (GLenum err = glGetError(); err != GL_NO_ERROR)
 			{
@@ -349,38 +421,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	if (m_overlay_manager)
-	{
-		if (m_overlay_manager->has_dirty())
-		{
-			m_overlay_manager->lock_shared();
-
-			std::vector<u32> uids_to_dispose;
-			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
-
-			for (const auto& view : m_overlay_manager->get_dirty())
-			{
-				m_ui_renderer.remove_temp_resources(view->uid);
-				uids_to_dispose.push_back(view->uid);
-			}
-
-			m_overlay_manager->unlock_shared();
-			m_overlay_manager->dispose(uids_to_dispose);
-		}
-
-		if (m_overlay_manager->has_visible())
-		{
-			gl::screen.bind();
-
-			// Lock to avoid modification during run-update chain
-			std::lock_guard lock(*m_overlay_manager);
-
-			for (const auto& view : m_overlay_manager->get_views())
-			{
-				m_ui_renderer.run(cmd, areau(aspect_ratio), 0, *view.get());
-			}
-		}
-	}
+	render_overlays(nullptr, areau(aspect_ratio));
 
 	if (g_cfg.video.debug_overlay)
 	{
