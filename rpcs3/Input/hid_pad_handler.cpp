@@ -18,6 +18,11 @@
 
 LOG_CHANNEL(hid_log, "HID");
 
+#ifdef ANDROID
+std::vector<int> g_android_usb_devices;
+std::mutex g_android_usb_devices_mutex;
+#endif
+
 struct hid_instance
 {
 public:
@@ -56,9 +61,9 @@ public:
 
 		hid_log.notice("Initializing HIDAPI ...");
 
-		if (hid_init() != 0)
+		if (int errorCode = hid_init(); errorCode != 0)
 		{
-			hid_log.fatal("hid_init error");
+			hid_log.fatal("hid_init error %d", errorCode);
 			return false;
 		}
 
@@ -179,9 +184,18 @@ template <class Device>
 void hid_pad_handler<Device>::enumerate_devices()
 {
 	Timer timer;
-	std::set<std::string> device_paths;
-	std::map<std::string, std::wstring> serials;
+	std::set<hid_enumerated_device_type> device_paths;
+	std::map<hid_enumerated_device_type, std::wstring> serials;
 
+#ifdef ANDROID
+	{
+		std::lock_guard lock(g_android_usb_devices_mutex);
+		for (auto device : g_android_usb_devices)
+		{
+			device_paths.insert(device);
+		}
+	}
+#else
 	for (const auto& [vid, pid] : m_ids)
 	{
 		hid_device_info* dev_info = hid_enumerate(vid, pid);
@@ -209,6 +223,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		hid_free_enumeration(head);
 	}
+#endif
 	hid_log.notice("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
 
 	std::lock_guard lock(m_enumeration_mutex);
@@ -254,7 +269,7 @@ void hid_pad_handler<Device>::update_devices()
 	// Scrap devices that are not in the new list
 	for (auto& controller : m_controllers)
 	{
-		if (controller.second && !controller.second->path.empty() && !m_new_enumerated_devices.contains(controller.second->path))
+		if (controller.second && controller.second->path != hid_enumerated_device_default && !m_new_enumerated_devices.contains(controller.second->path))
 		{
 			controller.second->close();
 			cfg_pad* config = controller.second->config;
@@ -284,7 +299,11 @@ void hid_pad_handler<Device>::update_devices()
 		}
 #endif
 
-		if (hid_device* dev = hid_open_path(path.c_str()))
+#ifdef ANDROID
+		if (hid_device* dev = hid_libusb_wrap_sys_device(path, -1))
+#else
+		if (hid_device* dev = hid_open_path(path))
+#endif
 		{
 			if (const hid_device_info* info = hid_get_device_info(dev))
 			{

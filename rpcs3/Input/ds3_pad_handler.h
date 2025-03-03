@@ -145,7 +145,7 @@ public:
 private:
 	ds3_pad_handler::DataStatus get_data(ds3_device* ds3dev) override;
 	int send_output_report(ds3_device* ds3dev) override;
-	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
+	void check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view serial) override;
 
 	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
