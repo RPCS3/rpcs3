@@ -485,7 +485,7 @@ void GLGSRender::bind_texture_env()
 		}
 		else
 		{
-			auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
 			cmd->bind_texture(GL_FRAGMENT_TEXTURES_START + i, target, m_null_textures[target]->id());
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
