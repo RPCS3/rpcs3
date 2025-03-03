@@ -113,6 +113,8 @@ namespace rsx
 			: m_page_btn(120, 30)
 			, m_extra_btn(120, 30)
 		{
+			m_allow_input_on_pause = true;
+
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
