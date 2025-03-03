@@ -2470,13 +2470,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="spuProfiler">
-                 <property name="text">
-                  <string>SPU Profiler</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
@@ -4392,6 +4385,13 @@
               <widget class="QCheckBox" name="fixupPPUVNAN">
                 <property name="text">
                   <string>PPU Vector NaN Fixup</string>
+                </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="spuProfiler">
+                <property name="text">
+                  <string>SPU Profiler</string>
                 </property>
               </widget>
              </item>
