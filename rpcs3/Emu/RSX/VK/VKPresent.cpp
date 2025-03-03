@@ -704,7 +704,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			image_to_flip->pop_layout(*m_current_command_buffer);
 
 			flush_command_queue(true);
-			auto src = sshot_vkbuf.map(0, sshot_size);
+			const auto src = sshot_vkbuf.map(0, sshot_size);
 			std::vector<u8> sshot_frame(sshot_size);
 			memcpy(sshot_frame.data(), src, sshot_size);
 			sshot_vkbuf.unmap();
@@ -717,7 +717,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 			else
 			{
-				m_frame->present_frame(sshot_frame, buffer_width * 4, buffer_width, buffer_height, is_bgra);
+				m_frame->present_frame(std::move(sshot_frame), buffer_width * 4, buffer_width, buffer_height, is_bgra);
 			}
 		}
 	}
