@@ -2442,13 +2442,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="fixupPPUVNAN">
-                 <property name="text">
-                  <string>PPU Vector NaN Fixup</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="llvmPrecompilation">
                  <property name="text">
                   <string>PPU/SPU LLVM Precompilation</string>
@@ -4393,6 +4386,13 @@
                <property name="text">
                 <string>Accurate Cache Line Stores</string>
                </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="fixupPPUVNAN">
+                <property name="text">
+                  <string>PPU Vector NaN Fixup</string>
+                </property>
               </widget>
              </item>
              <item>
