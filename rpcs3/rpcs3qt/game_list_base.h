@@ -1,30 +1,9 @@
 #pragma once
 
-#include "movie_item_base.h"
-#include "game_compatibility.h"
-#include "Emu/GameInfo.h"
+#include "gui_game_info.h"
 
 #include <QIcon>
-#include <QPixmap>
 #include <QWidget>
-
-/* Having the icons associated with the game info simplifies logic internally */
-struct gui_game_info
-{
-	GameInfo info{};
-	QString localized_category;
-	compat::status compat;
-	QPixmap icon;
-	QPixmap pxmap;
-	bool hasCustomConfig = false;
-	bool hasCustomPadConfig = false;
-	bool has_hover_gif = false;
-	bool has_hover_pam = false;
-	movie_item_base* item = nullptr;
-};
-
-typedef std::shared_ptr<gui_game_info> game_info;
-Q_DECLARE_METATYPE(game_info)
 
 class game_list_base
 {
@@ -44,9 +23,6 @@ public:
 	void set_draw_compat_status_to_grid(bool enabled) { m_draw_compat_status_to_grid = enabled; }
 
 	virtual void repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio);
-
-	// Returns the visible version string in the game list
-	static std::string GetGameVersion(const game_info& game);
 
 	/** Sets the custom config icon. */
 	static QIcon GetCustomConfigIcon(const game_info& game);

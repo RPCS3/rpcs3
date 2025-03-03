@@ -37,6 +37,7 @@ add_library(rpcs3_ui STATIC
     gui_application.cpp
     gl_gs_frame.cpp
     gs_frame.cpp
+    gui_game_info.cpp
     gui_settings.cpp
     infinity_dialog.cpp
     input_dialog.cpp
