@@ -5,6 +5,7 @@
 #include <QDragMoveEvent>
 #include <QMimeData>
 
+#include "gui_game_info.h"
 #include "Utilities/bin_patch.h"
 #include <unordered_map>
 
@@ -39,7 +40,7 @@ class patch_manager_dialog : public QDialog
 	const QString tr_all_versions = tr("All versions");
 
 public:
-	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& title_id, const std::string& version, QWidget* parent = nullptr);
+	explicit patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, const std::vector<game_info>& games, const std::string& title_id, const std::string& version, QWidget* parent = nullptr);
 	~patch_manager_dialog();
 
 	int exec() override;

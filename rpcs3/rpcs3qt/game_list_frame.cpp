@@ -839,45 +839,44 @@ void game_list_frame::OnRefreshFinished()
 	const std::string cat_unknown_localized = localized.category.unknown.toStdString();
 
 	// Try to update the app version for disc games if there is a patch
-	for (const auto& entry : m_game_data)
+	for (const game_info& entry : m_game_data)
 	{
-		if (entry->info.category == "DG")
+		if (entry->info.category != "DG") continue;
+
+		for (const auto& other : m_game_data)
 		{
-			for (const auto& other : m_game_data)
+			// The patch is game data and must have the same serial and an app version
+			static constexpr auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& serial, bool is_fw)
 			{
-				// The patch is game data and must have the same serial and an app version
-				static constexpr auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& serial, bool is_fw)
+				std::add_pointer_t<char> ev0, ev1;
+				const double ver0 = std::strtod(v0.c_str(), &ev0);
+				const double ver1 = std::strtod(v1.c_str(), &ev1);
+
+				if (v0.c_str() + v0.size() == ev0 && v1.c_str() + v1.size() == ev1)
 				{
-					std::add_pointer_t<char> ev0, ev1;
-					const double ver0 = std::strtod(v0.c_str(), &ev0);
-					const double ver1 = std::strtod(v1.c_str(), &ev1);
+					return ver0 > ver1;
+				}
 
-					if (v0.c_str() + v0.size() == ev0 && v1.c_str() + v1.size() == ev1)
-					{
-						return ver0 > ver1;
-					}
+				game_list_log.error("Failed to update the displayed %s numbers for title ID %s\n'%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
+				return false;
+			};
 
-					game_list_log.error("Failed to update the displayed %s numbers for title ID %s\n'%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
-					return false;
-				};
-
-				if (entry->info.serial == other->info.serial && other->info.category != "DG" && other->info.app_ver != cat_unknown_localized)
+			if (entry->info.serial == other->info.serial && other->info.category != "DG" && other->info.app_ver != cat_unknown_localized)
+			{
+				// Update the app version if it's higher than the disc's version (old games may not have an app version)
+				if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
 				{
-					// Update the app version if it's higher than the disc's version (old games may not have an app version)
-					if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
-					{
-						entry->info.app_ver = other->info.app_ver;
-					}
-					// Update the firmware version if possible and if it's higher than the disc's version
-					if (other->info.fw != cat_unknown_localized && version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, false))
-					{
-						entry->info.fw = other->info.fw;
-					}
-					// Update the parental level if possible and if it's higher than the disc's level
-					if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
-					{
-						entry->info.parental_lvl = other->info.parental_lvl;
-					}
+					entry->info.app_ver = other->info.app_ver;
+				}
+				// Update the firmware version if possible and if it's higher than the disc's version
+				if (other->info.fw != cat_unknown_localized && version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, false))
+				{
+					entry->info.fw = other->info.fw;
+				}
+				// Update the parental level if possible and if it's higher than the disc's level
+				if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
+				{
+					entry->info.parental_lvl = other->info.parental_lvl;
 				}
 			}
 		}
@@ -1873,15 +1872,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(configure_patches, &QAction::triggered, this, [this, gameinfo]()
 	{
-		std::unordered_map<std::string, std::set<std::string>> games;
-		for (const auto& game : m_game_data)
-		{
-			if (game)
-			{
-				games[game->info.serial].insert(game_list::GetGameVersion(game));
-			}
-		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, game_list::GetGameVersion(gameinfo), this);
+		patch_manager_dialog patch_manager(m_gui_settings, m_game_data, gameinfo->info.serial, gameinfo->GetGameVersion(), this);
 		patch_manager.exec();
 	});
 	connect(check_compat, &QAction::triggered, this, [serial]

@@ -332,7 +332,7 @@ void game_list_table::populate(
 		}
 
 		// Version
-		QString app_version = QString::fromStdString(game_list::GetGameVersion(game));
+		QString app_version = QString::fromStdString(game->GetGameVersion());
 
 		if (game->info.bootable && !game->compat.latest_version.isEmpty())
 		{
