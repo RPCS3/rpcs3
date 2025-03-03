@@ -61,13 +61,13 @@ namespace rsx
 			m_label.set_text(text);
 			m_label.auto_resize();
 			m_label.set_pos(x + (w - m_label.w) / 2, y + (h - m_label.h) / 2);
-			m_visible = true;
+			visible = true;
 			refresh();
 		}
 
 		void home_menu_message_box::hide()
 		{
-			m_visible = false;
+			visible = false;
 			refresh();
 		}
 

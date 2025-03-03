@@ -435,7 +435,7 @@ namespace rsx
 
 			m_preview.set_pos(input_x, input_y + title_height);
 			m_preview.set_size(input_w, preview_height);
-			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
+			m_preview.set_padding(get_scaled(15), get_scaled(15), get_scaled(10), 0);
 
 			const s16 button_y = panel_y + panel_h + button_margin;
 

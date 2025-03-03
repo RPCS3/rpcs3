@@ -167,6 +167,8 @@ namespace rsx
 			compiled_resource compiled_resources;
 			bool is_compiled = false;
 
+			bool visible = true;
+
 			u16 padding_left = 0;
 			u16 padding_right = 0;
 			u16 padding_top = 0;
@@ -174,6 +176,9 @@ namespace rsx
 
 			u16 margin_left = 0;
 			u16 margin_top = 0;
+
+			f32 horizontal_scroll_offset = 0.0f;
+			f32 vertical_scroll_offset = 0.0f;
 
 			overlay_element() = default;
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
