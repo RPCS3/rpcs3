@@ -613,6 +613,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
+	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	const auto render_overlays = [&](vk::framebuffer_holder* fbo, const areau& area)
+	{
+		if (!has_overlay) return;
+
+		// Lock to avoid modification during run-update chain
+		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
+		std::lock_guard lock(*m_overlay_manager);
+
+		for (const auto& view : m_overlay_manager->get_views())
+		{
+			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+		}
+	};
+
 	if (image_to_flip)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
@@ -699,9 +714,34 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			copy_info.imageExtent.height              = buffer_height;
 			copy_info.imageExtent.depth               = 1;
 
-			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
-			image_to_flip->pop_layout(*m_current_command_buffer);
+			std::unique_ptr<vk::image> tmp_tex;
+			vk::image* image_to_copy = image_to_flip;
+
+			if (g_cfg.video.record_with_overlays && has_overlay)
+			{
+				const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+				single_target_pass = vk::get_renderpass(*m_device, key);
+				ensure(single_target_pass != VK_NULL_HANDLE);
+
+				tmp_tex = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT, image_to_flip->current_layout,
+					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+					0, VMM_ALLOCATION_POOL_UNDEFINED);
+
+				const areai rect = areai(0, 0, buffer_width, buffer_height);
+				vk::copy_image(*m_current_command_buffer, image_to_flip, tmp_tex.get(), rect, rect, 1);
+
+				vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { tmp_tex.get() });
+				sshot_fbo->add_ref();
+				render_overlays(sshot_fbo, areau(rect));
+				sshot_fbo->release();
+
+				image_to_copy = tmp_tex.get();
+			}
+
+			image_to_copy->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			vk::copy_image_to_buffer(*m_current_command_buffer, image_to_copy, &sshot_vkbuf, copy_info);
+			image_to_copy->pop_layout(*m_current_command_buffer);
 
 			flush_command_queue(true);
 			const auto src = sshot_vkbuf.map(0, sshot_size);
@@ -709,7 +749,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			memcpy(sshot_frame.data(), src, sshot_size);
 			sshot_vkbuf.unmap();
 
-			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
+			const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
 
 			if (g_user_asked_for_screenshot.exchange(false))
 			{
@@ -722,7 +762,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
 	if (g_cfg.video.debug_overlay || has_overlay)
 	{
 		if (target_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
@@ -754,17 +793,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		direct_fbo->add_ref();
 
-		if (has_overlay)
-		{
-			// Lock to avoid modification during run-update chain
-			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-			std::lock_guard lock(*m_overlay_manager);
-
-			for (const auto& view : m_overlay_manager->get_views())
-			{
-				ui_renderer->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
-			}
-		}
+		render_overlays(direct_fbo, areau(aspect_ratio));
 
 		if (g_cfg.video.debug_overlay)
 		{
