@@ -19,7 +19,7 @@
 LOG_CHANNEL(hid_log, "HID");
 
 #ifdef ANDROID
-std::vector<int> g_android_usb_devices;
+std::vector<android_usb_device> g_android_usb_devices;
 std::mutex g_android_usb_devices_mutex;
 #endif
 
@@ -192,7 +192,15 @@ void hid_pad_handler<Device>::enumerate_devices()
 		std::lock_guard lock(g_android_usb_devices_mutex);
 		for (auto device : g_android_usb_devices)
 		{
-			device_paths.insert(device);
+			auto filter = [&](id_pair id)
+			{
+				return id.m_vid == device.vendorId && id.m_pid == device.productId;
+			};
+
+			if (std::find_if(m_ids.begin(), m_ids.end(), filter) != m_ids.end())
+			{
+				device_paths.insert(device.fd);
+			}
 		}
 	}
 #else

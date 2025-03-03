@@ -15,8 +15,16 @@
 #ifdef ANDROID
 using hid_enumerated_device_type = int;
 using hid_enumerated_device_view = int;
+
+struct android_usb_device
+{
+	int fd;
+	u16 vendorId;
+	u16 productId;
+};
+
 inline constexpr auto hid_enumerated_device_default = -1;
-extern std::vector<int> g_android_usb_devices;
+extern std::vector<android_usb_device> g_android_usb_devices;
 extern std::mutex g_android_usb_devices_mutex;
 #else
 using hid_enumerated_device_type = std::string;
