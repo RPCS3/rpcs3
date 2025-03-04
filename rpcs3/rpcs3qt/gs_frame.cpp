@@ -793,7 +793,7 @@ void gs_frame::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 he
 	video_provider.present_frame(data, pitch, width, height, is_bgra);
 }
 
-void gs_frame::take_screenshot(std::vector<u8> data, u32 sshot_width, u32 sshot_height, bool is_bgra)
+void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra)
 {
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](std::vector<u8> sshot_data)
