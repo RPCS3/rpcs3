@@ -728,8 +728,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 					0, VMM_ALLOCATION_POOL_UNDEFINED);
 
+				tmp_tex->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
 				const areai rect = areai(0, 0, buffer_width, buffer_height);
 				vk::copy_image(*m_current_command_buffer, image_to_flip, tmp_tex.get(), rect, rect, 1);
+
+				image_to_flip->pop_layout(*m_current_command_buffer);
+				tmp_tex->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { tmp_tex.get() });
 				sshot_fbo->add_ref();
