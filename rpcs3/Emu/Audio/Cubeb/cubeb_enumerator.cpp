@@ -104,7 +104,7 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 		cubeb_dev_enum.error("cubeb_device_collection_destroy() failed: %i", err);
 	}
 
-	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	std::sort(device_list.begin(), device_list.end(), [](const audio_device_enumerator::audio_device& a, const audio_device_enumerator::audio_device& b)
 	{
 		return a.name < b.name;
 	});

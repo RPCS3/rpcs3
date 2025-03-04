@@ -204,7 +204,7 @@ namespace rsx
 		return result;
 	}
 
-	static inline u32 encode_color_to_storage_key(color4f color)
+	static inline u32 encode_color_to_storage_key(const color4f& color)
 	{
 		const u32 r = static_cast<u8>(color.r * 255);
 		const u32 g = static_cast<u8>(color.g * 255);

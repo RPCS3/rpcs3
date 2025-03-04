@@ -144,7 +144,7 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 		device_list.emplace_back(dev);
 	}
 
-	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	std::sort(device_list.begin(), device_list.end(), [](const audio_device_enumerator::audio_device& a, const audio_device_enumerator::audio_device& b)
 	{
 		return a.name < b.name;
 	});

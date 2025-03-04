@@ -307,7 +307,7 @@ public:
 	};
 
 	std::vector<pad_ensemble>& bindings() { return m_bindings; }
-	std::string name_string() const { return m_name_string; }
+	const std::string& name_string() const { return m_name_string; }
 	usz max_devices() const { return m_max_devices; }
 	bool has_config() const { return b_has_config; }
 	bool has_rumble() const { return b_has_rumble; }
