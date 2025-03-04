@@ -217,7 +217,7 @@ u32 dimensions_toypad::scramble(const std::array<u8, 7>& uid, u8 count)
 	return read_from_ptr<be_t<u32>>(dimensions_randomize(to_scramble, count).data());
 }
 
-std::array<u8, 4> dimensions_toypad::dimensions_randomize(const std::vector<u8> key, u8 count)
+std::array<u8, 4> dimensions_toypad::dimensions_randomize(const std::vector<u8>& key, u8 count)
 {
 	u32 scrambled = 0;
 	for (u8 i = 0; i < count; i++)
