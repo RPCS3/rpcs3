@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "game_list_base.h"
-#include "localized.h"
 
 #include <QDir>
 #include <QPainter>
@@ -187,17 +186,6 @@ QColor game_list_base::GetGridCompatibilityColor(const QString& string) const
 		return QColor(string);
 	}
 	return QColor();
-}
-
-std::string game_list_base::GetGameVersion(const game_info& game)
-{
-	if (game->info.app_ver == Localized().category.unknown.toStdString())
-	{
-		// Fall back to Disc/Pkg Revision
-		return game->info.version;
-	}
-
-	return game->info.app_ver;
 }
 
 QIcon game_list_base::GetCustomConfigIcon(const game_info& game)
