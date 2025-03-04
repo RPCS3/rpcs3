@@ -109,7 +109,6 @@ AVX512_ICL_FUNC usz get_vertex_program_ucode_hash_512(const RSXVertexProgram &pr
 
 	const __m512i result = _mm512_add_epi64(acc0, acc1);
 	return _mm512_reduce_add_epi64(result);
-
 }
 #endif
 
@@ -607,6 +606,30 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	const auto instBuffer = ptr;
 	s32 index = 0;
 
+	// Find the start of the program
+	while (true)
+	{
+		const auto inst = v128::loadu(instBuffer, index);
+
+		const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
+		if (opcode)
+		{
+			// We found the start of the program, don't advance the index
+			result.program_start_offset = index * 16;
+			break;
+		}
+
+		if ((inst._u32[0] >> 8) & 0x1)
+		{
+			result.program_start_offset = index * 16;
+			result.program_ucode_length = 16;
+			result.is_nop_shader = true;
+			return result;
+		}
+
+		index++;
+	}
+
 	while (true)
 	{
 		const auto inst = v128::loadu(instBuffer, index);
@@ -623,11 +646,6 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
 			if (opcode)
 			{
-				if (result.program_start_offset == umax)
-				{
-					result.program_start_offset = index * 16;
-				}
-
 				switch (opcode)
 				{
 				case RSX_FP_OPCODE_TEX:
@@ -665,31 +683,19 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			{
 				//Instruction references constant, skip one slot occupied by data
 				index++;
-				result.program_ucode_length += 16;
 				result.program_constants_buffer_length += 16;
 			}
 		}
 
-		if (result.program_start_offset != umax)
-		{
-			result.program_ucode_length += 16;
-		}
+		index++;
 
 		if ((inst._u32[0] >> 8) & 0x1)
 		{
-			if (result.program_start_offset == umax)
-			{
-				result.program_start_offset = index * 16;
-				result.program_ucode_length = 16;
-				result.is_nop_shader = true;
-			}
-
 			break;
 		}
-
-		index++;
 	}
 
+	result.program_ucode_length = (index - (result.program_start_offset / 16)) * 16;
 	return result;
 }
 
@@ -697,26 +703,21 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 {
 	// Checksum as hash with rotated data
 	const void* instbuffer = program.get_data();
-	u32 instIndex = 0;
 	usz acc0 = 0;
 	usz acc1 = 0;
-	while (true)
+	for (usz instIndex = 0; instIndex < (program.ucode_length / 16); instIndex++)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
 		const usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
 		acc0 += tmp0;
 		const usz tmp1 = std::rotr(inst._u64[1], (instIndex * 2) + 1);
 		acc1 += tmp1;
-		instIndex++;
 		// Skip constants
 		if (fragment_program_utils::is_any_src_constant(inst))
 			instIndex++;
 
-		const bool end = (inst._u32[0] >> 8) & 0x1;
-		if (end)
-			return acc0 + acc1;
 	}
-	return 0;
+	return acc0 + acc1;
 }
 
 usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
@@ -751,8 +752,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
-	usz instIndex = 0;
-	while (instIndex < (binary1.ucode_length / 16))
+	for (usz instIndex = 0; instIndex < (binary1.ucode_length / 16); instIndex++)
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
@@ -762,7 +762,6 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			return false;
 		}
 
-		instIndex++;
 		// Skip constants
 		if (fragment_program_utils::is_any_src_constant(inst1))
 			instIndex++;
