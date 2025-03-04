@@ -172,16 +172,35 @@ protected:
 		bool recompile = false;
 		vertex_program_type* new_shader;
 		{
+			thread_local const std::pair<const RSXVertexProgram, vertex_program_type>* prev_vp = nullptr;
+			thread_local usz prev_count = umax;
+			static atomic_t<usz> invl_count = 0;
+
 			reader_lock lock(m_vertex_mutex);
+
+			if (prev_count == invl_count)
+			{
+				// prev_vp must be non-null here
+				if (prev_vp->first.data.size() == rsx_vp.data.size() && prev_vp->first.output_mask == rsx_vp.output_mask)
+				{
+					if (program_hash_util::vertex_program_compare()(prev_vp->first, rsx_vp))
+					{
+						return std::forward_as_tuple(prev_vp->second, true);
+					}
+				}
+			}
 
 			const auto& I = m_vertex_shader_cache.find(rsx_vp);
 			if (I != m_vertex_shader_cache.end())
 			{
+				prev_vp = &*I;
+				prev_count = invl_count;
 				return std::forward_as_tuple(I->second, true);
 			}
 
 			if (!force_load)
 			{
+				prev_count = umax;
 				return std::forward_as_tuple(__null_vertex_program, false);
 			}
 
@@ -191,6 +210,8 @@ protected:
 			auto [it, inserted] = m_vertex_shader_cache.try_emplace(rsx_vp);
 			new_shader = &(it->second);
 			recompile = inserted;
+			prev_count = umax;
+			invl_count++;
 		}
 
 		if (recompile)
@@ -209,16 +230,35 @@ protected:
 		fragment_program_type* new_shader;
 
 		{
+			thread_local const std::pair<const RSXFragmentProgram, fragment_program_type>* prev_fp = nullptr;
+			thread_local usz prev_count = umax;
+			static atomic_t<usz> invl_count = 0;
+
 			reader_lock lock(m_fragment_mutex);
+
+			if (prev_count == invl_count)
+			{
+				// prev_vp must be non-null here
+				if (prev_fp->first.ucode_length == rsx_fp.ucode_length && prev_fp->first.texcoord_control_mask == rsx_fp.texcoord_control_mask)
+				{
+					if (program_hash_util::fragment_program_compare()(prev_fp->first, rsx_fp))
+					{
+						return std::forward_as_tuple(prev_fp->second, true);
+					}
+				}
+			}
 
 			const auto& I = m_fragment_shader_cache.find(rsx_fp);
 			if (I != m_fragment_shader_cache.end())
 			{
+				prev_fp = &*I;
+				prev_count = invl_count;
 				return std::forward_as_tuple(I->second, true);
 			}
 
 			if (!force_load)
 			{
+				prev_count = umax;
 				return std::forward_as_tuple(__null_fragment_program, false);
 			}
 
@@ -227,6 +267,8 @@ protected:
 			lock.upgrade();
 			std::tie(it, recompile) = m_fragment_shader_cache.try_emplace(rsx_fp);
 			new_shader = &(it->second);
+			prev_count = umax;
+			invl_count++;
 		}
 
 		if (recompile)
