@@ -7,7 +7,7 @@
 struct cfg_ps_move final : cfg::node
 {
 	cfg_ps_move() : cfg::node() {}
-	cfg_ps_move(cfg::node* owner, std::string name) : cfg::node(owner, name) {}
+	cfg_ps_move(cfg::node* owner, std::string name) : cfg::node(owner, std::move(name)) {}
 
 	cfg::uint<0, 255> r{ this, "Color R", 0, true };
 	cfg::uint<0, 255> g{ this, "Color G", 0, true };
