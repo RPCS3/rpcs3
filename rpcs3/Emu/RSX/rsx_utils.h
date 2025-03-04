@@ -500,10 +500,10 @@ namespace rsx
 		{
 			if (clip_x >= parent_width)
 			{
-				if (clip_width < parent_width)
-					width = clip_width;
-				else
+				if (clip_width >= parent_width)
 					width = parent_width;
+				//else
+				//	width = clip_width; // Already initialized with clip_width
 
 				x = static_cast<T>(0);
 			}
@@ -520,10 +520,10 @@ namespace rsx
 		{
 			if (clip_y >= parent_height)
 			{
-				if (clip_height < parent_height)
-					height = clip_height;
-				else
+				if (clip_height >= parent_height)
 					height = parent_height;
+				//else
+				//	height = clip_height; // Already initialized with clip_height
 
 				y = static_cast<T>(0);
 			}
