@@ -28,11 +28,23 @@ download_and_verify()
     correctChecksum="$2"
     algo="$3"
     fileName="$4"
+    path="$DEPS_CACHE_DIR/$fileName"
 
     for _ in 1 2 3; do
-        [ -e "$DEPS_CACHE_DIR/$fileName" ] || curl -fLo "$DEPS_CACHE_DIR/$fileName" "$url"
-        fileChecksum=$("${algo}sum" "$DEPS_CACHE_DIR/$fileName" | awk '{ print $1 }')
-        [ "$fileChecksum" = "$correctChecksum" ] && return 0
+        # Check if the file exists and the checksum is correct
+        if [ -e "$path" ]; then
+            fileChecksum=$("${algo}sum" "$path" | awk '{ print $1 }')
+            [ "$fileChecksum" = "$correctChecksum" ] && return 0
+        fi
+
+        # Otherwise download the file
+        curl -fLo "$path" "$url"
+
+        # Check again if the file exists and the checksum is correct
+        if [ -e "$path" ]; then
+            fileChecksum=$("${algo}sum" "$path" | awk '{ print $1 }')
+            [ "$fileChecksum" = "$correctChecksum" ] && return 0
+        fi
     done
 
     return 1;

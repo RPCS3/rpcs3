@@ -43,8 +43,8 @@
         LLVMBitstreamReader.lib;
         LLVMBitWriter.lib;
         LLVMCFGuard.lib;
+        LLVMCGData.lib;
         LLVMCodeGen.lib;
-        LLVMCodeGenData.lib;
         LLVMCodeGenTypes.lib;
         LLVMCore.lib;
         LLVMCoroutines.lib;
@@ -53,12 +53,14 @@
         LLVMDebugInfoCodeView.lib;
         LLVMDebuginfod.lib;
         LLVMDebugInfoDWARF.lib;
+        LLVMDebugInfoDWARFLowLevel.lib;
         LLVMDebugInfoGSYM.lib;
         LLVMDebugInfoLogicalView.lib;
         LLVMDebugInfoMSF.lib;
         LLVMDebugInfoPDB.lib;
         LLVMDemangle.lib;
         LLVMDlltoolDriver.lib;
+        LLVMDWARFCFIChecker.lib;
         LLVMDWARFLinker.lib;
         LLVMDWARFLinkerClassic.lib;
         LLVMDWARFLinkerParallel.lib;
@@ -66,6 +68,8 @@
         LLVMExecutionEngine.lib;
         LLVMExtensions.lib;
         LLVMFileCheck.lib;
+        LLVMFrontendAtomic.lib;
+        LLVMFrontendDirective.lib;
         LLVMFrontendDriver.lib;
         LLVMFrontendHLSL.lib;
         LLVMFrontendOffloading.lib;
@@ -118,6 +122,7 @@
         LLVMTableGenCommon.lib;
         LLVMTarget.lib;
         LLVMTargetParser.lib;
+        LLVMTelemetry.lib;
         LLVMTextAPI.lib;
         LLVMTextAPIBinaryReader.lib;
         LLVMTransformUtils.lib;
