@@ -36,6 +36,7 @@
         avutil.lib;
         swresample.lib;
         swscale.lib;
+        LLVMABI.lib;
         LLVMAggressiveInstCombine.lib;
         LLVMAnalysis.lib;
         LLVMAsmParser.lib;
@@ -44,9 +45,10 @@
         LLVMBitReader.lib;
         LLVMBitstreamReader.lib;
         LLVMBitWriter.lib;
+        LLVMCAS.lib;
         LLVMCFGuard.lib;
+        LLVMCGData.lib;
         LLVMCodeGen.lib;
-        LLVMCodeGenData.lib;
         LLVMCodeGenTypes.lib;
         LLVMCore.lib;
         LLVMCoroutines.lib;
@@ -55,12 +57,15 @@
         LLVMDebugInfoCodeView.lib;
         LLVMDebuginfod.lib;
         LLVMDebugInfoDWARF.lib;
+        LLVMDebugInfoDWARFLowLevel.lib;
         LLVMDebugInfoGSYM.lib;
         LLVMDebugInfoLogicalView.lib;
         LLVMDebugInfoMSF.lib;
         LLVMDebugInfoPDB.lib;
         LLVMDemangle.lib;
         LLVMDlltoolDriver.lib;
+        LLVMDTLTO.lib;
+        LLVMDWARFCFIChecker.lib;
         LLVMDWARFLinker.lib;
         LLVMDWARFLinkerClassic.lib;
         LLVMDWARFLinkerParallel.lib;
@@ -68,6 +73,8 @@
         LLVMExecutionEngine.lib;
         LLVMExtensions.lib;
         LLVMFileCheck.lib;
+        LLVMFrontendAtomic.lib;
+        LLVMFrontendDirective.lib;
         LLVMFrontendDriver.lib;
         LLVMFrontendHLSL.lib;
         LLVMFrontendOffloading.lib;
@@ -107,6 +114,7 @@
         LLVMOrcShared.lib;
         LLVMOrcTargetProcess.lib;
         LLVMPasses.lib;
+        LLVMPlugins.lib;
         LLVMProfileData.lib;
         LLVMRemarks.lib;
         LLVMRuntimeDyld.lib;
@@ -114,12 +122,14 @@
         LLVMScalarOpts.lib;
         LLVMSelectionDAG.lib;
         LLVMSupport.lib;
+        LLVMSupportLSP.lib;
         LLVMSymbolize.lib;
         LLVMTableGen.lib;
         LLVMTableGenBasic.lib;
         LLVMTableGenCommon.lib;
         LLVMTarget.lib;
         LLVMTargetParser.lib;
+        LLVMTelemetry.lib;
         LLVMTextAPI.lib;
         LLVMTextAPIBinaryReader.lib;
         LLVMTransformUtils.lib;
