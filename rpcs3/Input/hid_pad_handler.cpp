@@ -310,7 +310,7 @@ void hid_pad_handler<Device>::update_devices()
 #ifdef ANDROID
 		if (hid_device* dev = hid_libusb_wrap_sys_device(path, -1))
 #else
-		if (hid_device* dev = hid_open_path(path))
+		if (hid_device* dev = hid_open_path(path.c_str()))
 #endif
 		{
 			if (const hid_device_info* info = hid_get_device_info(dev))
