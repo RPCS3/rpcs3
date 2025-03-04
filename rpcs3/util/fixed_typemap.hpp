@@ -272,7 +272,7 @@ namespace stx
 				order[pos++] = {type.init_pos(), std::addressof(type)};
 			}
 
-			std::stable_sort(order.get(), order.get() + type_count, [](auto& a, auto& b)
+			std::stable_sort(order.get(), order.get() + type_count, [](const auto& a, const auto& b)
 			{
 				if (a.second->is_trivial_and_nonsavable && !b.second->is_trivial_and_nonsavable)
 				{

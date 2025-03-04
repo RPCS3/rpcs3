@@ -9,4 +9,4 @@
 void ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u8* Gx, const u8* Gy);
 void ecdsa_set_pub(const u8* Q);
 void ecdsa_set_priv(const u8* k);
-bool ecdsa_verify(u8* hash, u8* R, u8* S);
+bool ecdsa_verify(const u8* hash, u8* R, u8* S);

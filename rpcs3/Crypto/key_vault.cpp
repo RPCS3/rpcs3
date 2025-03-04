@@ -762,7 +762,7 @@ const u8* KeyVault::GetKlicenseeKey() const
 	return klicensee_key;
 }
 
-void rap_to_rif(unsigned char* rap, unsigned char* rif)
+void rap_to_rif(const unsigned char* rap, unsigned char* rif)
 {
 	int i;
 	int round;
