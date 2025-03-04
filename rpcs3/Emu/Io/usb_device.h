@@ -134,7 +134,7 @@ struct UsbDescriptorNode
 	{
 		memcpy(data, &_data, sizeof(T));
 	}
-	UsbDescriptorNode(u8 _bLength, u8 _bDescriptorType, u8* _data)
+	UsbDescriptorNode(u8 _bLength, u8 _bDescriptorType, const u8* _data)
 		: bLength(_bLength), bDescriptorType(_bDescriptorType)
 	{
 		memcpy(data, _data, _bLength - 2);

@@ -159,7 +159,7 @@ namespace fmt
 		std::string result;
 		bool first = true;
 
-		for (auto& v : sources)
+		for (const auto& v : sources)
 		{
 			if (first)
 			{

@@ -1072,7 +1072,7 @@ namespace vk
 		ensure(!host_coherent_types.empty());
 
 		// BAR heap, currently parked for future use, I have some plans for it (kd-11)
-		for (auto& type : bar_memory_types)
+		for (const auto& type : bar_memory_types)
 		{
 			result.device_bar.push(type.type_index, type.size);
 			result.device_bar_total_bytes += type.size;
@@ -1094,7 +1094,7 @@ namespace vk
 			});
 		}
 
-		for (auto& type : device_local_types)
+		for (const auto& type : device_local_types)
 		{
 			result.device_local.push(type.type_index, type.size);
 			result.device_local_total_bytes += type.size;
@@ -1106,7 +1106,7 @@ namespace vk
 			std::sort(host_coherent_types.begin(), host_coherent_types.end(), FN(x.size > y.size));
 		}
 
-		for (auto& type : host_coherent_types)
+		for (const auto& type : host_coherent_types)
 		{
 			result.host_visible_coherent.push(type.type_index, type.size);
 			result.host_visible_total_bytes += type.size;

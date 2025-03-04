@@ -115,7 +115,7 @@ void mm_joystick_handler::enumerate_devices()
 			continue;
 		}
 
-		auto& device = it->second;
+		const auto& device = it->second;
 
 		if (!device)
 			continue;
