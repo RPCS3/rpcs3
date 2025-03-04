@@ -8,6 +8,8 @@ env:
   RPCS3_TOKEN: ENCRYPTED[100ebb8e3552bf2021d0ef55dccda3e58d27be5b6cab0b0b92843ef490195d3c4edaefa087e4a3b425caa6392300b9b1]
   QT_VER_MAIN: '6'
   QT_VER: '6.8.2'
+  LLVM_COMPILER_VER: '19'
+  LLVM_VER: '19.1.7'
 
 # windows_task:
 #   matrix:
