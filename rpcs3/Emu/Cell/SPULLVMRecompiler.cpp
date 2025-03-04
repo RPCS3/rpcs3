@@ -567,6 +567,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return _ptr(m_thread, ::offset32(offset_args...));
 	}
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+#endif
 	template <typename T>
 	T* spu_mem_attr(T* inst)
 	{
@@ -600,6 +604,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		return inst;
 	}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 	// Return default register type
 	llvm::Type* get_reg_type(u32 index)
