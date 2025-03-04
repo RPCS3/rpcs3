@@ -19,9 +19,9 @@ QT_DECL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qttools${QT_SUFFIX}"
 QT_MM_URL="${QT_HOST}${QT_PREFIX}addons.qtmultimedia.${QT_PREFIX_2}qtmultimedia${QT_SUFFIX}"
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtsvg${QT_SUFFIX}"
-LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-19.1.7/llvmlibs_mt.7z'
+LLVMLIBS_URL="https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-${LLVM_VER}/llvmlibs_mt.7z"
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/sjjh0fc4ld281pjbl2xzu/VulkanSDK-1.3.268.0-Installer.exe?rlkey=f6wzc0lvms5vwkt2z3qabfv9d&dl=1"
+VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/sjjh0fc4ld281pjbl2xzu/VulkanSDK-${VULKAN_VER}-Installer.exe?rlkey=f6wzc0lvms5vwkt2z3qabfv9d&dl=1"
 CCACHE_URL="https://github.com/ccache/ccache/releases/download/v4.10.2/ccache-4.10.2-windows-x86_64.zip"
 
 DEP_URLS="         \
