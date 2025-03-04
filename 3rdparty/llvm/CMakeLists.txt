@@ -51,7 +51,7 @@ if(WITH_LLVM)
 
 		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
-		find_package(LLVM 19.1 CONFIG)
+		find_package(LLVM 20.1 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
