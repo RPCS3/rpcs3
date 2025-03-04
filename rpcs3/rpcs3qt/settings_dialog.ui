@@ -913,18 +913,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_shader_compiler_threads">
-              <property name="title">
-               <string>Number of Shader Compiler Threads</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_shader_compiler_threads_layout">
-               <item>
-                <widget class="QComboBox" name="shaderCompilerThreads"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gb_additional_settings">
               <property name="title">
                <string>Additional Settings</string>
@@ -3047,6 +3035,18 @@
               <layout class="QVBoxLayout" name="gb_max_llvm_layout">
                <item>
                 <widget class="QComboBox" name="maxLLVMThreads"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_shader_compiler_threads">
+              <property name="title">
+               <string>Max Shader Compile Threads</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_shader_compiler_threads_layout">
+               <item>
+                <widget class="QComboBox" name="shaderCompilerThreads"/>
                </item>
               </layout>
              </widget>

@@ -597,10 +597,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->shaderPrecision, emu_settings_type::ShaderPrecisionQuality);
 	SubscribeTooltip(ui->gbShaderPrecision, tooltips.settings.shader_precision);
 
-	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
-	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
-	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Number of Shader Compiler Threads"));
-
 	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
 	ui->zcullPrecisionMode->addItem(tr("Precise (Slowest)"), static_cast<int>(zcull_precision_level::precise));
 	ui->zcullPrecisionMode->addItem(tr("Approximate (Fast)"), static_cast<int>(zcull_precision_level::approximate));
@@ -1794,7 +1790,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings_type::MaxLLVMThreads, true, true, utils::get_thread_count());
 	SubscribeTooltip(ui->gb_max_llvm, tooltips.settings.max_llvm_threads);
-	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM threads").arg(utils::get_thread_count()));
+	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM Compile Threads").arg(utils::get_thread_count()));
+
+	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
+	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
+	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Max Shader Compile Threads"));
 
 	m_emu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings_type::PerfOverlayDetailLevel);
 	SubscribeTooltip(ui->perf_overlay_detail_level, tooltips.settings.perf_overlay_detail_level);
