@@ -5,7 +5,7 @@
 #include "Utilities/Thread.h"
 
 #if defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/vkutils/instance.hpp"
+#include "Emu/RSX/VK/vkutils/instance.h"
 #endif
 
 #include <chrono>
@@ -41,7 +41,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 		if (device_enum_context.create("RPCS3", true))
 		{
 			device_enum_context.bind();
-			std::vector<vk::physical_device>& gpus = device_enum_context.enumerate_devices();
+			const std::vector<vk::physical_device>& gpus = device_enum_context.enumerate_devices();
 
 			lock.lock();
 

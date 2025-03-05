@@ -82,11 +82,11 @@ constexpr FORCE_INLINE CellNotAnError not_an_error(const T& value)
 	return static_cast<CellNotAnError>(static_cast<s32>(value));
 }
 
-template <typename T, typename>
+template <typename T>
 struct ppu_gpr_cast_impl;
 
 template <>
-struct ppu_gpr_cast_impl<error_code, void>
+struct ppu_gpr_cast_impl<error_code>
 {
 	static inline u64 to(const error_code& code)
 	{

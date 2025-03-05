@@ -476,7 +476,7 @@ public:
 	fs::file MakeElf(bool isElf32);
 	bool LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info = nullptr);
 	void ShowHeaders(bool isElf32);
-	bool LoadMetadata(u8* klic_key);
+	bool LoadMetadata(const u8* klic_key);
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
 	const NPD_HEADER* GetNPDHeader() const;
@@ -559,7 +559,7 @@ private:
 	}
 };
 
-fs::file decrypt_self(fs::file elf_or_self, u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr, bool require_encrypted = false);
+fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr);
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr, NPD_HEADER* npd_out = nullptr);
 bool get_npdrm_self_header(const fs::file& self, NPD_HEADER& npd);
 

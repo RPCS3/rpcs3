@@ -75,7 +75,7 @@ namespace vk
 			return attachments.back()->image()->format();
 		}
 
-		bool matches(std::vector<vk::image*> fbo_images, u32 width, u32 height)
+		bool matches(const std::vector<vk::image*>& fbo_images, u32 width, u32 height)
 		{
 			if (m_width != width || m_height != height)
 				return false;

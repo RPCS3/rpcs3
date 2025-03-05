@@ -71,6 +71,25 @@ extern u32 ppu_generate_id(std::string_view name)
 	return result;
 }
 
+static void select_from_nids_scenpdrm_addrs(std::map<u32, std::vector<std::pair<ppua_reg_mask_t, u64>>>& result, const std::unordered_map<u32, u32>& fnid_to_use_addr)
+{
+	static const u32 fnids_list[] =
+	{
+		ppu_generate_id("sceNpDrmProcessExitSpawn"),
+		ppu_generate_id("sceNpDrmProcessExitSpawn2"),
+		ppu_generate_id("sceNpDrmIsAvailable"),
+		ppu_generate_id("sceNpDrmIsAvailable2"),
+	};
+
+	for (const auto& [nid, use] : fnid_to_use_addr)
+	{
+		if (std::count(std::begin(fnids_list), std::end(fnids_list), nid))
+		{
+			result.emplace(use, 0);
+		}
+	}
+}
+
 ppu_static_module::ppu_static_module(const char* name)
 	: name(name)
 {
@@ -157,9 +176,6 @@ struct ppu_linkage_info
 		// FNID -> (export; [imports...])
 		std::map<u32, info> functions{};
 		std::map<u32, info> variables{};
-
-		// Obsolete
-		bool imported = false;
 	};
 
 	// Module map
@@ -940,9 +956,12 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 	return result;
 }
 
-static auto ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
+using import_result_t = std::pair<std::unordered_map<u32, void*>, std::unordered_map<u32, u32>>;
+
+static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
-	std::unordered_map<u32, void*> result;
+	import_result_t result;
+	auto& [import_table, nid_to_use_addr] = result;
 
 	std::lock_guard lock(link->mutex);
 
@@ -976,12 +995,18 @@ static auto ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu
 			ppu_loader.notice("**** %s import: [%s] (0x%08x) -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, fstub);
 
 			// Function linkage info
-			auto& flink = link->modules[module_name].functions[fnid];
+			auto& flink = mlink.functions[fnid];
 
 			// Add new import
-			result.emplace(faddr, &flink);
+			import_table.emplace(faddr, &flink);
 			flink.imports.emplace(faddr);
-			mlink.imported = true;
+
+			// Check address
+			// TODO: The address of use should be extracted from analyser instead
+			if (fstub && fstub >= _module.segs[0].addr && fstub <= _module.segs[0].addr + _module.segs[0].size)
+			{
+				nid_to_use_addr.emplace(fnid, fstub);
+			}
 
 			// Link address (special HLE function by default)
 			const u32 link_addr = flink.export_addr ? flink.export_addr : g_fxo->get<ppu_function_manager>().addr;
@@ -992,7 +1017,7 @@ static auto ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu
 			// Patch refs if necessary (0x2000 seems to be correct flag indicating the presence of additional info)
 			if (const u32 frefs = (lib.attributes & 0x2000) ? +_module.get_ref<u32>(fnids, i + lib.num_func) : 0)
 			{
-				result.emplace(frefs, &flink);
+				import_table.emplace(frefs, &flink);
 				flink.frefss.emplace(frefs);
 				ppu_patch_refs(_module, &relocs, frefs, link_addr);
 			}
@@ -1010,12 +1035,11 @@ static auto ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu
 			ppu_loader.notice("**** %s import: &[%s] (ref=*0x%x)", module_name, ppu_get_variable_name(module_name, vnid), vref);
 
 			// Variable linkage info
-			auto& vlink = link->modules[module_name].variables[vnid];
+			auto& vlink = mlink.variables[vnid];
 
 			// Add new import
-			result.emplace(vref, &vlink);
+			import_table.emplace(vref, &vlink);
 			vlink.imports.emplace(vref);
-			mlink.imported = true;
 
 			// Link if available
 			ppu_patch_refs(_module, &relocs, vref, vlink.export_addr);
@@ -1838,10 +1862,13 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 
 		ppu_loader.warning("Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
+		std::unordered_map<u32, u32> nid_to_use_addr;
 		ppu_linkage_info dummy{};
 
 		prx->specials = ppu_load_exports(*prx, virtual_load ? &dummy : &link, prx->exports_start, prx->exports_end, true, &exported_funcs);
-		prx->imports = ppu_load_imports(*prx, prx->relocs, virtual_load ? &dummy : &link, lib_info->imports_start, lib_info->imports_end);
+
+		std::tie(prx->imports, nid_to_use_addr) = ppu_load_imports(*prx, prx->relocs, virtual_load ? &dummy : &link, lib_info->imports_start, lib_info->imports_end);
+		select_from_nids_scenpdrm_addrs(prx->stub_addr_to_constant_state_of_registers, nid_to_use_addr);
 
 		if (virtual_load)
 		{
@@ -2450,10 +2477,13 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 					return false;
 				}
 
+				std::unordered_map<u32, u32> nid_to_use_addr;
 				ppu_linkage_info dummy{};
 
 				ppu_load_exports(_main, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
-				ppu_load_imports(_main, _main.relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+
+				std::tie(std::ignore, nid_to_use_addr) = ppu_load_imports(_main, _main.relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+				select_from_nids_scenpdrm_addrs(_main.stub_addr_to_constant_state_of_registers, nid_to_use_addr);
 
 				std::stable_sort(_main.relocs.begin(), _main.relocs.end());
 			}
@@ -3061,10 +3091,14 @@ std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_ob
 					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
 				}
 
+				std::unordered_map<u32, u32> nid_to_use_addr;
 				ppu_linkage_info dummy{};
 
 				ppu_load_exports(*ovlm, virtual_load ? &dummy : &link, proc_prx_param.libent_start, proc_prx_param.libent_end);
-				ppu_load_imports(*ovlm, ovlm->relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+
+				std::tie(std::ignore, nid_to_use_addr) = ppu_load_imports(*ovlm, ovlm->relocs, virtual_load ? &dummy : &link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+				select_from_nids_scenpdrm_addrs(ovlm->stub_addr_to_constant_state_of_registers, nid_to_use_addr);
+
 			}
 			break;
 		}

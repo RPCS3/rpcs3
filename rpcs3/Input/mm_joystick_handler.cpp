@@ -77,7 +77,7 @@ bool mm_joystick_handler::Init()
 	m_devices.clear();
 
 	m_max_devices = joyGetNumDevs();
-	if (m_max_devices <= 0)
+	if (!m_max_devices)
 	{
 		input_log.error("mmjoy: Driver doesn't support Joysticks");
 		return false;
@@ -115,7 +115,7 @@ void mm_joystick_handler::enumerate_devices()
 			continue;
 		}
 
-		auto& device = it->second;
+		const auto& device = it->second;
 
 		if (!device)
 			continue;
@@ -408,7 +408,7 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 		if (entry.first == NO_BUTTON)
 			continue;
 
-		button_values.emplace(entry.first, js_info.dwButtons & entry.first ? 255 : 0);
+		button_values.emplace(entry.first, (js_info.dwButtons & entry.first) ? 255 : 0);
 	}
 
 	if (js_caps.wCaps & JOYCAPS_HASPOV)

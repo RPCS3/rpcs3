@@ -40,7 +40,7 @@ public:
 	{
 		std::lock_guard lock(m_mutex);
 
-		if (cfg_pad_btn<T>* item = get_button(id))
+		if (const cfg_pad_btn<T>* item = get_button(id))
 		{
 			return item->get();
 		}
@@ -52,7 +52,7 @@ public:
 	{
 		std::lock_guard lock(m_mutex);
 
-		if (cfg_pad_btn<T>* item = get_button(id))
+		if (const cfg_pad_btn<T>* item = get_button(id))
 		{
 			return item->get_default();
 		}

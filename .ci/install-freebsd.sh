@@ -9,10 +9,10 @@ export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
 # WITH_LLVM
-pkg install llvm19
+pkg install "llvm$LLVM_COMPILER_VER"
 
-# Mandatory dependencies (qt6-base is pulled via qt6-multimedia)
-pkg install git ccache cmake ninja qt6-multimedia qt6-svg glew openal-soft ffmpeg
+# Mandatory dependencies (qtX-base is pulled via qtX-multimedia)
+pkg install git ccache cmake ninja "qt$QT_VER_MAIN-multimedia" "qt$QT_VER_MAIN-svg" glew openal-soft ffmpeg
 
-# Optional dependencies (libevdev is pulled by qt6-base)
+# Optional dependencies (libevdev is pulled by qtX-base)
 pkg install pkgconf alsa-lib pulseaudio sdl2 evdev-proto vulkan-headers vulkan-loader

@@ -6234,14 +6234,14 @@ public:
 			const value_t<f32[4]> ab[2]{a, b};
 
 			std::bitset<2> safe_int_compare(0);
-			std::bitset<2> safe_nonzero_compare(0);
+			std::bitset<2> safe_finite_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
 					safe_int_compare.set(i);
-					safe_nonzero_compare.set(i);
+					safe_finite_compare.set(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -6256,7 +6256,7 @@ public:
 							// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
 							// this optimization for values outside of the range of x86 floating point hardware.
 							safe_int_compare.reset(i);
-							if (!exponent) safe_nonzero_compare.reset(i);
+							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset(i);
 						}
 					}
 				}
@@ -6267,17 +6267,20 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
+			if  (safe_finite_compare.test(1))
+			{
+				return eval(sext<s32[4]>(fcmp_uno(clamp_negative_smax(a) > b)));
+			}
+
+			if  (safe_finite_compare.test(0))
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a > clamp_smax(b))));
+			}
+
 			const auto ai = eval(bitcast<s32[4]>(a));
 			const auto bi = eval(bitcast<s32[4]>(b));
 
-			if (!safe_nonzero_compare.any())
-			{
-				return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
-			}
-			else
-			{
-				return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
-			}
+			return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
 		});
 
 		set_vr(op.rt, fcgt(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));

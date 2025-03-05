@@ -55,7 +55,8 @@ namespace vk
 		NVK,
 		V3DV,
 		HONEYKRISP,
-		PANVK
+		PANVK,
+		ARM_MALI
 	};
 
 	driver_vendor get_driver_vendor();

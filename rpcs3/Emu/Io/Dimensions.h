@@ -49,7 +49,7 @@ private:
 	static std::array<u8, 16> generate_figure_key(const std::array<u8, 0x2D * 0x04>& buf);
 	static u32 scramble(const std::array<u8, 7>& uid, u8 count);
 	static std::array<u8, 4> pwd_generate(const std::array<u8, 7>& uid);
-	static std::array<u8, 4> dimensions_randomize(const std::vector<u8> key, u8 count);
+	static std::array<u8, 4> dimensions_randomize(const std::vector<u8>& key, u8 count);
 	static u32 get_figure_id(const std::array<u8, 0x2D * 0x04>& buf);
 	u32 get_next();
 	dimensions_figure& get_figure_by_index(u8 index);

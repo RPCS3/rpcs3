@@ -65,7 +65,7 @@ XAudio2Backend::XAudio2Backend()
 		m_com_init_success = true;
 	}
 
-	if (HRESULT hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_USE_DEFAULT_PROCESSOR); FAILED(hr))
+	if (HRESULT hr = XAudio2Create(&instance, 0, XAUDIO2_USE_DEFAULT_PROCESSOR); FAILED(hr))
 	{
 		XAudio.error("XAudio2Create() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return;
@@ -78,7 +78,7 @@ XAudio2Backend::XAudio2Backend()
 	}
 
 	// Try to register a listener for device changes
-	if (HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(enumerator.GetAddressOf())); FAILED(hr))
+	if (HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&enumerator)); FAILED(hr))
 	{
 		XAudio.error("CoCreateInstance() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return;
@@ -215,7 +215,7 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 	if (use_default_device)
 	{
 		Microsoft::WRL::ComPtr<IMMDevice> default_dev{};
-		if (HRESULT hr = m_device_enumerator->GetDefaultAudioEndpoint(eRender, eConsole, default_dev.GetAddressOf()); FAILED(hr))
+		if (HRESULT hr = m_device_enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &default_dev); FAILED(hr))
 		{
 			XAudio.error("GetDefaultAudioEndpoint() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 			return false;
@@ -319,7 +319,7 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 	Microsoft::WRL::ComPtr<IXAudio2Extension> xaudio_ext{};
 	f64 min_latency{};
 
-	if (HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, std::bit_cast<void**>(xaudio_ext.GetAddressOf())); FAILED(hr))
+	if (HRESULT hr = m_xaudio2_instance.As(&xaudio_ext); FAILED(hr))
 	{
 		XAudio.error("QueryInterface() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}

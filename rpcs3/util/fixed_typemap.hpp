@@ -143,7 +143,8 @@ namespace stx
 				*std::launder(static_cast<T*>(ptr)) = state;
 			}
 
-			template <typename T> requires requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }
+			template <typename T>
+				requires requires(T& a, utils::serial& ar) { a.save(stx::exact_t<utils::serial&>(ar)); }
 			static void call_save(void* ptr, utils::serial& ar) noexcept
 			{
 				std::launder(static_cast<T*>(ptr))->save(stx::exact_t<utils::serial&>(ar));
@@ -169,7 +170,7 @@ namespace stx
 					r.thread_op = &call_thread_op<T>;
 				}
 
-				if constexpr (!!(requires (T& a) { a.save(std::declval<stx::exact_t<utils::serial&>>()); }))
+				if constexpr (!!(requires(T& a, utils::serial& ar) { a.save(stx::exact_t<utils::serial&>(ar)); }))
 				{
 					r.save = &call_save<T>;
 				}
@@ -271,7 +272,7 @@ namespace stx
 				order[pos++] = {type.init_pos(), std::addressof(type)};
 			}
 
-			std::stable_sort(order.get(), order.get() + type_count, [](auto& a, auto& b)
+			std::stable_sort(order.get(), order.get() + type_count, [](const auto& a, const auto& b)
 			{
 				if (a.second->is_trivial_and_nonsavable && !b.second->is_trivial_and_nonsavable)
 				{

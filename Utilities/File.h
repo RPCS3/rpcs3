@@ -1,5 +1,6 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
+#include "util/serialization.hpp"
 #include "util/types.hpp"
 #include "util/shared_ptr.hpp"
 #include "bit_set.h"
@@ -78,6 +79,8 @@ namespace fs
 		constexpr bool operator==(const stat_t&) const = default;
 	};
 
+	static_assert(utils::Bitcopy<stat_t>);
+
 	// Helper, layout is equal to iovec struct
 	struct iovec_clone
 	{
@@ -125,6 +128,8 @@ namespace fs
 
 		using enable_bitcopy = std::false_type;
 	};
+
+	static_assert(!utils::Bitcopy<dir_entry>);
 
 	// Directory handle base
 	struct dir_base

@@ -674,7 +674,7 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 
 	rap_file.read<u128>(rapkey);
 
-	rap_to_rif(reinterpret_cast<uchar*>(&rapkey), reinterpret_cast<uchar*>(&rifkey));
+	rap_to_rif(reinterpret_cast<const uchar*>(&rapkey), reinterpret_cast<uchar*>(&rifkey));
 
 	return rifkey;
 }

@@ -119,7 +119,7 @@ namespace rsx
 
 		void home_menu_page::show_dialog(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
 		{
-			if (m_message_box && !m_message_box->visible())
+			if (m_message_box && !m_message_box->visible)
 			{
 				rsx_log.notice("home_menu_page::show_dialog: page='%s', text='%s'", title, text);
 				m_message_box->show(text, std::move(on_accept), std::move(on_cancel));
@@ -129,7 +129,7 @@ namespace rsx
 
 		page_navigation home_menu_page::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
 		{
-			if (m_message_box && m_message_box->visible())
+			if (m_message_box && m_message_box->visible)
 			{
 				const page_navigation navigation = m_message_box->handle_button_press(button_press);
 				if (navigation != page_navigation::stay)
@@ -270,7 +270,7 @@ namespace rsx
 				{
 					compiled_resources = list_view::get_compiled();
 
-					if (m_message_box && m_message_box->visible())
+					if (m_message_box && m_message_box->visible)
 					{
 						compiled_resources.add(m_message_box->get_compiled());
 					}

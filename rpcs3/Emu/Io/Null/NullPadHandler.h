@@ -10,11 +10,6 @@ public:
 		b_has_pressure_intensity_button = false;
 	}
 
-	bool Init() override
-	{
-		return true;
-	}
-
 	void init_config(cfg_pad* cfg) override
 	{
 		if (!cfg) return;

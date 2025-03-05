@@ -79,7 +79,7 @@ namespace rsx
 
 			std::pair<f32, f32> get_char_offset(const char32_t* text, usz max_length, u16 max_width = -1, bool wrap = false);
 
-			bool matches(const char* name, int size) const { return font_name == name && static_cast<int>(size_pt) == size; }
+			bool matches(const char* name, int size) const { return static_cast<int>(size_pt) == size && font_name == name; }
 			std::string_view get_name() const { return font_name; }
 			f32 get_size_pt() const { return size_pt; }
 			f32 get_size_px() const { return size_px; }
@@ -87,7 +87,7 @@ namespace rsx
 
 			// Renderer info
 			size3u get_glyph_data_dimensions() const { return { codepage::bitmap_width, codepage::bitmap_height, ::size32(m_glyph_map) }; }
-			std::vector<u8> get_glyph_data() const;
+			const std::vector<u8>& get_glyph_data() const;
 		};
 
 		// TODO: Singletons are cancer
@@ -99,7 +99,7 @@ namespace rsx
 
 			font* find(const char* name, int size)
 			{
-				for (auto& f : fonts)
+				for (const auto& f : fonts)
 				{
 					if (f->matches(name, size))
 						return f.get();

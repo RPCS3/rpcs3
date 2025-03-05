@@ -4,6 +4,29 @@
 
 LOG_CHANNEL(log_cheat, "Cheat");
 
+template <>
+void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](cheat_type value)
+	{
+		switch (value)
+		{
+		case cheat_type::unsigned_8_cheat: return "Unsigned 8 bits";
+		case cheat_type::unsigned_16_cheat: return "Unsigned 16 bits";
+		case cheat_type::unsigned_32_cheat: return "Unsigned 32 bits";
+		case cheat_type::unsigned_64_cheat: return "Unsigned 64 bits";
+		case cheat_type::signed_8_cheat: return "Signed 8 bits";
+		case cheat_type::signed_16_cheat: return "Signed 16 bits";
+		case cheat_type::signed_32_cheat: return "Signed 32 bits";
+		case cheat_type::signed_64_cheat: return "Signed 64 bits";
+		case cheat_type::float_32_cheat: return "Float 32 bits";
+		case cheat_type::max: break;
+		}
+
+		return unknown;
+	});
+}
+
 bool cheat_info::from_str(const std::string& cheat_line)
 {
 	auto cheat_vec = fmt::split(cheat_line, {"@@@"}, false);

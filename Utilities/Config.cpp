@@ -337,6 +337,18 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::EndMap;
 		return;
 	}
+	case type::node_map:
+	{
+		//out << YAML::Block; // Does nothing, output is in Flow mode still (TODO)
+		out << YAML::BeginMap;
+		for (const auto& np : static_cast<const node_map_entry&>(rhs).get_map())
+		{
+			out << YAML::Key << np.first;
+			out << YAML::Value << fmt::format("%s", np.second);
+		}
+		out << YAML::EndMap;
+		return;
+	}
 	case type::log:
 	{
 		out << YAML::BeginMap;
@@ -417,6 +429,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 		break;
 	}
 	case type::map:
+	case type::node_map:
 	{
 		if (!data.IsMap())
 		{

@@ -2,6 +2,7 @@
 #include "gui_application.h"
 
 #include "qt_utils.h"
+#include "permissions.h"
 #include "welcome_dialog.h"
 #include "main_window.h"
 #include "emu_settings.h"
@@ -13,6 +14,7 @@
 #include "qt_camera_handler.h"
 #include "qt_music_handler.h"
 #include "rpcs3_version.h"
+#include "display_sleep_control.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -875,6 +877,17 @@ void gui_application::InitializeCallbacks()
 		Emu.BlockingCallFromMainThread([this, addr]()
 		{
 			m_main_window->OnAddBreakpoint(addr);
+		});
+	};
+
+	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
+	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
+
+	callbacks.check_microphone_permissions = []()
+	{
+		Emu.BlockingCallFromMainThread([]()
+		{
+			gui::utils::check_microphone_permission();
 		});
 	};
 

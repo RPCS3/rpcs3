@@ -1342,6 +1342,18 @@
     <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
+    <ClCompile Include="util\emu_utils.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\date_time.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GSFrameBase.cpp">
+      <Filter>Emu\GPU\RSX\Game Window</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

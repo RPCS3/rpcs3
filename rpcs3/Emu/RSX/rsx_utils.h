@@ -213,9 +213,9 @@ namespace rsx
 	};
 
 	template <typename T>
-	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 /*output_height*/)
+	void pad_texture(const void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 /*output_height*/)
 	{
-		T *src = static_cast<T*>(input_pixels);
+		const T *src = static_cast<const T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
 
 		for (u16 h = 0; h < input_height; ++h)
@@ -336,8 +336,8 @@ namespace rsx
 	template <typename T, bool input_is_swizzled>
 	void convert_linear_swizzle(const void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch)
 	{
-		u32 log2width = ceil_log2(width);
-		u32 log2height = ceil_log2(height);
+		const u32 log2width = ceil_log2(width);
+		const u32 log2height = ceil_log2(height);
 
 		// Max mask possible for square texture
 		u32 x_mask = 0x55555555;
@@ -356,7 +356,7 @@ namespace rsx
 		u32 offs_y = 0;
 		u32 offs_x = 0;
 		u32 offs_x0 = 0; //total y-carry offset for x
-		u32 y_incr = limit_mask;
+		const u32 y_incr = limit_mask;
 
 		// NOTE: The swizzled area is always a POT region and we must scan all of it to fill in the linear.
 		// It is assumed that there is no padding on the linear side for simplicity - backend upload/download will crop as needed.
@@ -500,10 +500,10 @@ namespace rsx
 		{
 			if (clip_x >= parent_width)
 			{
-				if (clip_width < parent_width)
-					width = clip_width;
-				else
+				if (clip_width >= parent_width)
 					width = parent_width;
+				//else
+				//	width = clip_width; // Already initialized with clip_width
 
 				x = static_cast<T>(0);
 			}
@@ -520,10 +520,10 @@ namespace rsx
 		{
 			if (clip_y >= parent_height)
 			{
-				if (clip_height < parent_height)
-					height = clip_height;
-				else
+				if (clip_height >= parent_height)
 					height = parent_height;
+				//else
+				//	height = clip_height; // Already initialized with clip_height
 
 				y = static_cast<T>(0);
 			}
@@ -586,8 +586,8 @@ namespace rsx
 	template <bool clamp = false>
 	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		ref_width = (ref_width)? ref_width : width;
-		ref_height = (ref_height)? ref_height : height;
+		ref_width = (ref_width) ? ref_width : width;
+		ref_height = (ref_height) ? ref_height : height;
 		const u16 ref = std::max(ref_width, ref_height);
 
 		if (ref > g_cfg.video.min_scalable_dimension)

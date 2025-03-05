@@ -49,7 +49,12 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\image.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\scratch.h" />
-    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_android.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_core.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_unix.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_macos.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_win32.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\sync.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\memory.h" />
@@ -58,7 +63,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
-    <ClInclude Include="Emu\RSX\VK\vkutils\instance.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
@@ -94,7 +99,9 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\swapchain.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\descriptors.cpp" />

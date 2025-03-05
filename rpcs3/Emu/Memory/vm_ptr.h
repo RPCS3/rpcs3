@@ -342,21 +342,24 @@ namespace vm
 		template<typename T, typename AT = u32, typename AT2 = u32> using bcpptr = bpptr<const T, AT, AT2>;
 
 		// Perform static_cast (for example, vm::ptr<void> to vm::ptr<char>)
-		template<typename CT, typename T, typename AT, typename = decltype(static_cast<to_be_t<CT>*>(std::declval<T*>()))>
+		template <typename CT, typename T, typename AT>
+			requires requires(T* t) { static_cast<to_be_t<CT>*>(t); }
 		inline _ptr_base<to_be_t<CT>, u32> static_ptr_cast(const _ptr_base<T, AT>& other)
 		{
 			return vm::cast(other.addr());
 		}
 
 		// Perform const_cast (for example, vm::cptr<char> to vm::ptr<char>)
-		template<typename CT, typename T, typename AT, typename = decltype(const_cast<to_be_t<CT>*>(std::declval<T*>()))>
+		template <typename CT, typename T, typename AT>
+			requires requires(T* t) { const_cast<to_be_t<CT>*>(t); }
 		inline _ptr_base<to_be_t<CT>, u32> const_ptr_cast(const _ptr_base<T, AT>& other)
 		{
 			return vm::cast(other.addr());
 		}
 
 		// Perform reinterpret cast
-		template <typename CT, typename T, typename AT, typename = decltype(reinterpret_cast<to_be_t<CT>*>(std::declval<T*>()))>
+		template <typename CT, typename T, typename AT>
+			requires requires(T* t) { reinterpret_cast<to_be_t<CT>*>(t); }
 		inline _ptr_base<to_be_t<CT>, u32> unsafe_ptr_cast(const _ptr_base<T, AT>& other)
 		{
 			return vm::cast(other.addr());
@@ -426,8 +429,8 @@ struct to_se<vm::_ptr_base<T, AT>, Se>
 };
 
 // Format pointer
-template<typename T, typename AT>
-struct fmt_unveil<vm::_ptr_base<T, AT>, void>
+template <typename T, typename AT>
+struct fmt_unveil<vm::_ptr_base<T, AT>>
 {
 	using type = vm::_ptr_base<T, u32>; // Use only T, ignoring AT
 
@@ -438,37 +441,37 @@ struct fmt_unveil<vm::_ptr_base<T, AT>, void>
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<const void, u32>, void>
+struct fmt_class_string<vm::_ptr_base<const void, u32>>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <typename T>
-struct fmt_class_string<vm::_ptr_base<T, u32>, void> : fmt_class_string<vm::_ptr_base<const void, u32>, void>
+struct fmt_class_string<vm::_ptr_base<T, u32>> : fmt_class_string<vm::_ptr_base<const void, u32>>
 {
 	// Classify all pointers as const void*
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<const char, u32>, void>
+struct fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	static void format(std::string& out, u64 arg);
 };
 
 template <>
-struct fmt_class_string<vm::_ptr_base<char, u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<char, u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify char* as const char*
 };
 
 template <usz Size>
-struct fmt_class_string<vm::_ptr_base<const char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<const char[Size], u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify const char[] as const char*
 };
 
 template <usz Size>
-struct fmt_class_string<vm::_ptr_base<char[Size], u32>, void> : fmt_class_string<vm::_ptr_base<const char, u32>>
+struct fmt_class_string<vm::_ptr_base<char[Size], u32>> : fmt_class_string<vm::_ptr_base<const char, u32>>
 {
 	// Classify char[] as const char*
 };

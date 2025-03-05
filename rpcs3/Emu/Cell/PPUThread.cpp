@@ -4162,6 +4162,52 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
 	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
 
+	std::vector<u128> decrypt_klics;
+
+	if (loaded_modules)
+	{
+		for (auto mod : *loaded_modules)
+		{
+			for (const auto& [stub, data_vec] : mod->stub_addr_to_constant_state_of_registers)
+			{
+				if (decrypt_klics.size() >= 4u)
+				{
+					break;
+				}
+
+				for (const auto& [reg_mask, constant_value] : data_vec)
+				{
+					if (decrypt_klics.size() >= 4u)
+					{
+						break;
+					}
+
+					if (constant_value > u32{umax})
+					{
+						continue;
+					}
+
+					// R3 - first argument
+					if (reg_mask.mask & (1u << 3))
+					{
+						// Sizeof KLIC
+						if (auto klic_ptr = mod->get_ptr<const u8>(static_cast<u32>(constant_value), 16))
+						{
+							// Try to read from that address
+							if (const u128 klic_value = read_from_ptr<u128>(klic_ptr))
+							{
+								if (!std::count_if(decrypt_klics.begin(), decrypt_klics.end(), FN(std::memcmp(&x, &klic_value, 16) == 0)))
+								{
+									decrypt_klics.emplace_back(klic_value);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	named_thread_group workers("SPRX Worker ", std::min<u32>(software_thread_limit, cpu_thread_limit), [&]
 	{
 #ifdef __APPLE__
@@ -4211,12 +4257,48 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				fmt::append(path, "_x%x", off);
 			}
 
-			// Some files may fail to decrypt due to the lack of klic
-			src = decrypt_self(std::move(src));
+			for (usz i = 0;; i++)
+			{
+				if (i > decrypt_klics.size())
+				{
+					src.close();
+					break;
+				}
+
+				// Some files may fail to decrypt due to the lack of klic
+				u128 key = i == decrypt_klics.size() ? u128{} : decrypt_klics[i];
+
+				if (auto result = decrypt_self(src, i == decrypt_klics.size() ? nullptr : reinterpret_cast<const u8*>(&key)))
+				{
+					src = std::move(result);
+					break;
+				}
+			}
+
+			if (!src && !Emu.klic.empty() && src.open(path))
+			{
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+
+					// Ignore executables larger than 500KB to prevent a long pause on exitspawn
+					if (src.size() >= 500000)
+					{
+						g_progr_ftotal_bits -= file_size;
+
+						continue;
+					}
+				}
+			}
 
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
@@ -4380,12 +4462,40 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				continue;
 			}
 
-			// Some files may fail to decrypt due to the lack of klic
-			src = decrypt_self(std::move(src), nullptr, nullptr, true);
+			for (usz i = 0;; i++)
+			{
+				if (i > decrypt_klics.size())
+				{
+					src.close();
+					break;
+				}
+
+				// Some files may fail to decrypt due to the lack of klic
+				u128 key = i == decrypt_klics.size() ? u128{} : decrypt_klics[i];
+
+				if (auto result = decrypt_self(src, i == decrypt_klics.size() ? nullptr : reinterpret_cast<const u8*>(&key)))
+				{
+					src = std::move(result);
+					break;
+				}
+			}
+
+			if (!src && !Emu.klic.empty() && src.open(path))
+			{
+				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+				
+				if (src) 
+				{
+					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+				}
+			}
 
 			if (!src)
 			{
 				ppu_log.notice("Failed to decrypt '%s'", path);
+
+				g_progr_ftotal_bits -= file_size;
+
 				continue;
 			}
 
@@ -4484,6 +4594,7 @@ extern void ppu_initialize()
 	}
 
 	std::vector<ppu_module<lv2_obj>*> module_list;
+	module_list.emplace_back(&g_fxo->get<main_ppu_module<lv2_obj>>());
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 

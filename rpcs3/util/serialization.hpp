@@ -18,10 +18,7 @@ namespace utils
 	};
 
 	template <typename T>
-	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires ()
-	{
-		std::enable_if_t<std::conjunction_v<typename T::enable_bitcopy>>();
-	};
+	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || typename T::enable_bitcopy()();
 
 	template <typename T>
 	concept TupleAlike = (!FastRandomAccess<T>) && requires ()
@@ -30,8 +27,8 @@ namespace utils
 	};
 
 	template <typename T>
-	concept ListAlike = requires (std::remove_cvref_t<T>& obj) { obj.insert(obj.end(), std::declval<typename T::value_type>()); };
 
+	concept ListAlike = requires(std::remove_cvref_t<T>& obj, T::value_type item) { obj.insert(obj.end(), std::move(item)); };
 	struct serial;
 
 	struct serialization_file_handler
@@ -124,7 +121,7 @@ public:
 			m_expect_little_data = value;
 		}
 
-		// Return true if small amounts of both input and output memory are expected (performance hint)  
+		// Return true if small amounts of both input and output memory are expected (performance hint)
 		bool expect_little_data() const
 		{
 			return m_expect_little_data;
@@ -427,7 +424,8 @@ public:
 			return true;
 		}
 
-		template <typename T> requires requires (T& obj) { (obj.*(&T::operator()))(std::declval<stx::exact_t<utils::serial&>>()); }
+		template <typename T>
+			requires requires(T& obj, utils::serial& ar) { (obj.*(&T::operator()))(stx::exact_t<utils::serial&>(ar)); }
 		bool serialize(T& obj)
 		{
 			obj(*this);
@@ -568,14 +566,14 @@ public:
 			}
 			else if constexpr (TupleAlike<T>)
 			{
-				constexpr usz tup_size = c_tup_size<type>;
+				constexpr int tup_size = c_tup_size<type>;
 
 				static_assert(tup_size == 2 || tup_size == 4, "Unimplemented tuple serialization!");
 
-				using first_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(0, tup_size - 1)>(std::declval<type&>()))>;
-				using second_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(1, tup_size - 1)>(std::declval<type&>()))>;
-				using third_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(2, tup_size - 1)>(std::declval<type&>()))>;
-				using fourth_t = std::remove_cvref_t<decltype(std::get<std::min<usz>(3, tup_size - 1)>(std::declval<type&>()))>;
+				using first_t  = typename std::tuple_element<std::min(0, tup_size - 1), type>::type;
+				using second_t = typename std::tuple_element<std::min(1, tup_size - 1), type>::type;
+				using third_t  = typename std::tuple_element<std::min(2, tup_size - 1), type>::type;
+				using fourth_t = typename std::tuple_element<std::min(3, tup_size - 1), type>::type;
 
 				first_t first = this->operator first_t();
 

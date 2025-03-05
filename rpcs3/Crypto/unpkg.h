@@ -314,11 +314,6 @@ struct package_install_result
 
 class package_reader
 {
-	struct thread_key
-	{
-		const usz unique_num = umax;
-	};
-
 	struct install_entry
 	{
 		typename std::map<std::string, install_entry*>::value_type* weak_reference{};
@@ -354,7 +349,7 @@ public:
 	bool is_valid() const { return m_is_valid; }
 	package_install_result check_target_app_version() const;
 	static package_install_result extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
-	psf::registry get_psf() const { return m_psf; }
+	const psf::registry& get_psf() const { return m_psf; }
 	result get_result() const { return m_result; };
 
 	int get_progress(int maximum = 100) const;
@@ -365,14 +360,15 @@ private:
 	bool read_header();
 	bool read_metadata();
 	bool read_param_sfo();
-	bool decrypt_data();
+	bool set_decryption_key();
+	bool read_entries(std::vector<PKGEntry>& entries);
 	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, u64 num_bytes);
 	bool set_install_path();
 	bool fill_data(std::map<std::string, install_entry*>& all_install_entries);
 	std::span<const char> archive_read_block(u64 offset, void* data_ptr, u64 num_bytes);
-	std::span<const char> decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key = {0});
-	void extract_worker(thread_key thread_data_key);
+	usz decrypt(u64 offset, u64 size, const uchar* key, void* local_buf);
+	void extract_worker();
 
 	std::deque<install_entry> m_install_entries;
 	std::string m_install_path;
@@ -383,6 +379,7 @@ private:
 	bool m_was_null = false;
 
 	static constexpr usz BUF_SIZE = 8192 * 1024; // 8 MB
+	static constexpr usz BUF_PADDING = 32;
 
 	bool m_is_valid = false;
 	result m_result = result::not_started;
@@ -390,7 +387,6 @@ private:
 	std::string m_path{};
 	std::string m_install_dir{};
 	fs::file m_file{};
-	std::vector<std::unique_ptr<u128[]>> m_bufs{};
 	std::array<uchar, 16> m_dec_key{};
 
 	PKGHeader m_header{};

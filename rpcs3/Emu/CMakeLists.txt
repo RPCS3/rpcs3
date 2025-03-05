@@ -28,6 +28,10 @@ if(USE_ASAN)
     set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
 endif()
 
+if(HAS_MEMORY_BREAKPOINTS)
+    target_compile_definitions(rpcs3_emu PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
+endif()
+
 target_link_libraries(rpcs3_emu
     PRIVATE
         3rdparty::zlib 3rdparty::yaml-cpp 3rdparty::zstd
@@ -48,6 +52,7 @@ target_include_directories(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
     ../util/console.cpp
+    ../util/emu_utils.cpp
     ../util/media_utils.cpp
     ../util/video_provider.cpp
     ../util/logs.cpp
@@ -61,6 +66,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/cheat_info.cpp
     ../../Utilities/cond.cpp
     ../../Utilities/Config.cpp
+    ../../Utilities/date_time.cpp
     ../../Utilities/File.cpp
     ../../Utilities/JITASM.cpp
     ../../Utilities/JITLLVM.cpp
@@ -482,6 +488,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/surface_store.cpp
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
+    RSX/Common/texture_cache_types.cpp
     RSX/Core/RSXContext.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
@@ -571,6 +578,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/program_util.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
+    RSX/GSFrameBase.cpp
     RSX/RSXDisAsm.cpp
     RSX/RSXFIFO.cpp
     RSX/RSXOffload.cpp
@@ -593,8 +601,10 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
         RSX/VK/vkutils/image_helpers.cpp
+        RSX/VK/vkutils/instance.cpp
         RSX/VK/vkutils/scratch.cpp
         RSX/VK/vkutils/sync.cpp
+        RSX/VK/vkutils/swapchain.cpp
         RSX/VK/vkutils/memory.cpp
         RSX/VK/vkutils/device.cpp
         RSX/VK/vkutils/sampler.cpp
@@ -627,11 +637,6 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKVertexProgram.cpp
         RSX/VK/VKTextureCache.cpp
     )
-    if(MSVC)
-        set_source_files_properties(RSX/VK/vkutils/shared.cpp PROPERTIES
-        COMPILE_FLAGS /EHs-
-        SKIP_PRECOMPILE_HEADERS ON)
-    endif()
 endif()
 
 target_link_libraries(rpcs3_emu

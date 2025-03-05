@@ -41,6 +41,7 @@ namespace cfg
 		string, // cfg::string type
 		set, // cfg::set_entry type
 		map, // cfg::map_entry type
+		node_map, // cfg::node_map_entry type
 		log, // cfg::log_entry type
 		device, // cfg::device_entry type
 	};
@@ -542,7 +543,7 @@ namespace cfg
 		std::string def;
 
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
-			: _base(type::string, owner, name, dynamic)
+			: _base(type::string, owner, std::move(name), dynamic)
 			, m_value(def)
 			, def(std::move(def))
 		{
@@ -627,13 +628,13 @@ namespace cfg
 	template<typename T>
 	using map_of_type = std::map<std::string, T, std::less<>>;
 
-	class map_entry final : public _base
+	class map_entry : public _base
 	{
 		map_of_type<std::string> m_map{};
 
 	public:
-		map_entry(node* owner, const std::string& name)
-			: _base(type::map, owner, name, true)
+		map_entry(node* owner, const std::string& name, type _type = type::map)
+			: _base(_type, owner, name, true)
 		{
 		}
 
@@ -650,6 +651,15 @@ namespace cfg
 		void erase(std::string_view key);
 
 		void from_default() override;
+	};
+
+	class node_map_entry final : public map_entry
+	{
+	public:
+		node_map_entry(node* owner, const std::string& name)
+			: map_entry(owner, name, type::node_map)
+		{
+		}
 	};
 
 	class log_entry final : public _base

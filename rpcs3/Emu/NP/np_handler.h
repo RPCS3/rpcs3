@@ -509,6 +509,7 @@ namespace np
 			std::string pr_status;
 			std::string pr_comment;
 			std::vector<u8> pr_data;
+			atomic_t<bool> advertised = false;
 		} presence_self;
 
 		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);

@@ -30,6 +30,7 @@ void microphone_creator::refresh_list()
 		{
 			while (*devices != 0)
 			{
+				cfg_log.notice("Found microphone: %s", devices);
 				m_microphone_list.append(devices);
 				devices += strlen(devices) + 1;
 			}

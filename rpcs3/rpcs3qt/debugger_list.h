@@ -56,7 +56,7 @@ private:
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
-	breakpoint_handler* m_ppu_breakpoint_handler;
+	breakpoint_handler* m_ppu_breakpoint_handler = nullptr;
 	cpu_thread* m_cpu = nullptr;
 	std::shared_ptr<CPUDisAsm> m_disasm;
 	QDialog* m_cmd_detail = nullptr;

@@ -20,6 +20,7 @@ SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::str
 
 KeyVault::KeyVault()
 {
+	std::memcpy(klicensee_key, NP_KLIC_FREE, sizeof(klicensee_key));
 }
 
 void KeyVault::LoadSelfLV0Keys()
@@ -751,18 +752,17 @@ SELF_KEY KeyVault::FindSelfKey(u32 type, u16 revision, u64 version)
 	return key;
 }
 
-void KeyVault::SetKlicenseeKey(u8* key)
+void KeyVault::SetKlicenseeKey(const u8* key)
 {
-	klicensee_key = std::make_unique<u8[]>(0x10);
-	memcpy(klicensee_key.get(), key, 0x10);
+	std::memcpy(klicensee_key, key, 0x10);
 }
 
-u8* KeyVault::GetKlicenseeKey() const
+const u8* KeyVault::GetKlicenseeKey() const
 {
-	return klicensee_key.get();
+	return klicensee_key;
 }
 
-void rap_to_rif(unsigned char* rap, unsigned char* rif)
+void rap_to_rif(const unsigned char* rap, unsigned char* rif)
 {
 	int i;
 	int round;

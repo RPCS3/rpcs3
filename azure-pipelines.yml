@@ -10,117 +10,132 @@ pr:
     include:
       - master
 jobs:
-- job: Linux_Build
-  strategy:
-    matrix:
-      Clang:
-        COMPILER: clang
-      GCC:
-        COMPILER: gcc
-  variables:
-    CCACHE_DIR: $(Pipeline.Workspace)/ccache
-    CI_HAS_ARTIFACTS: true
-    UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
-    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-linux"
-    DEPLOY_APPIMAGE: true
-    APPDIR: "/rpcs3/build/appdir"
-    ARTDIR: "/root/artifacts"
-    RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
+# - job: Linux_Build
+#   strategy:
+#     matrix:
+#       Clang:
+#         COMPILER: clang
+#       GCC:
+#         COMPILER: gcc
+#   variables:
+#     CCACHE_DIR: $(Pipeline.Workspace)/ccache
+#     CI_HAS_ARTIFACTS: true
+#     UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
+#     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-linux"
+#     DEPLOY_APPIMAGE: true
+#     APPDIR: "/rpcs3/build/appdir"
+#     ARTDIR: "/root/artifacts"
+#     RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
 
-  pool:
-    vmImage: 'ubuntu-latest'
+#   pool:
+#     vmImage: 'ubuntu-latest'
 
-  steps:
-  - task: Cache@2
-    inputs:
-      key: ccache | $(Agent.OS) | $(COMPILER)
-      path: $(CCACHE_DIR)
-    displayName: ccache
+#   steps:
+#   - task: Cache@2
+#     inputs:
+#       key: ccache | $(Agent.OS) | $(COMPILER) | $(Build.SourceVersion)
+#       restoreKeys: |
+#        ccache | $(Agent.OS) | $(COMPILER)
+#       path: $(CCACHE_DIR)
+#     displayName: ccache
 
-  - bash: |
-      docker pull --quiet rpcs3/rpcs3-ci-jammy:1.0
-      docker run                      \
-        -v $(pwd):/rpcs3              \
-        --env-file .ci/docker.env \
-        -v $CCACHE_DIR:/root/.ccache  \
-        -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-ci-jammy:1.0 \
-        /rpcs3/.ci/build-linux.sh
-    displayName: Docker setup and build
+#   - bash: |
+#       docker pull --quiet rpcs3/rpcs3-ci-jammy:1.1
+#       docker run                      \
+#         -v $(pwd):/rpcs3              \
+#         --env-file .ci/docker.env \
+#         -v $CCACHE_DIR:/root/.ccache  \
+#         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
+#         rpcs3/rpcs3-ci-jammy:1.1 \
+#         /rpcs3/.ci/build-linux.sh
+#     displayName: Docker setup and build
 
-  - publish: $(Build.ArtifactStagingDirectory)
-    condition: succeeded()
-    artifact: RPCS3 for Linux ($(COMPILER))
+#   - publish: $(Build.ArtifactStagingDirectory)
+#     condition: succeeded()
+#     artifact: RPCS3 for Linux ($(COMPILER))
 
-  - bash: |
-      COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
-      COMM_COUNT=$(git rev-list --count HEAD)
-      COMM_HASH=$(git rev-parse --short=8 HEAD)
+#   - bash: |
+#       COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
+#       COMM_COUNT=$(git rev-list --count HEAD)
+#       COMM_HASH=$(git rev-parse --short=8 HEAD)
 
-      export AVVER="${COMM_TAG}-${COMM_COUNT}"
+#       export AVVER="${COMM_TAG}-${COMM_COUNT}"
 
-      .ci/github-upload.sh
-    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'clang'))
-    displayName: Push build to GitHub
-    env:
-      RPCS3_TOKEN: $(RPCS3-Token)
+#       .ci/github-upload.sh
+#     condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'clang'))
+#     displayName: Push build to GitHub
+#     env:
+#       RPCS3_TOKEN: $(RPCS3-Token)
 
-- job: Windows_Build
-  variables:
-    COMPILER: msvc
-    QT_VER_MAIN: '6'
-    QT_VER: '6.8.1'
-    QT_VER_MSVC: 'msvc2022'
-    QT_DATE: '202411221531'
-    QTDIR: C:\Qt\$(QT_VER)\$(QT_VER_MSVC)_64
-    VULKAN_VER: '1.3.268.0'
-    VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
-    VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
-    CACHE_DIR: ./cache
-    UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
-    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win"
+# - job: Windows_Build
+#   variables:
+#     COMPILER: msvc
+#     QT_VER_MAIN: '6'
+#     QT_VER: '6.8.2'
+#     QT_VER_MSVC: 'msvc2022'
+#     QT_DATE: '202501260838'
+#     QTDIR: C:\Qt\$(QT_VER)\$(QT_VER_MSVC)_64
+#     LLVM_VER: '19.1.7'
+#     VULKAN_VER: '1.3.268.0'
+#     VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
+#     VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
+#     CCACHE_SHA: '6252f081876a9a9f700fae13a5aec5d0d486b28261d7f1f72ac11c7ad9df4da9'
+#     CCACHE_BIN_DIR: 'C:\ccache_bin'
+#     CCACHE_DIR: 'C:\ccache'
+#     CCACHE_INODECACHE: 'true'
+#     CCACHE_SLOPPINESS: 'time_macros'
+#     DEPS_CACHE_DIR: ./dependency_cache
+#     UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+#     UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win"
 
-  pool:
-    vmImage: "windows-latest"
+#   pool:
+#     vmImage: "windows-latest"
 
-  steps:
-    - bash: .ci/get_keys-windows.sh
-      displayName: Get Cache Keys
+#   steps:
+#     - bash: .ci/get_keys-windows.sh
+#       displayName: Get Cache Keys
 
-    - task: Cache@2
-      inputs:
-        key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | llvm.lock | glslang.lock
-        path: $(CACHE_DIR)
-        restoreKeys: |
-          $(Agent.OS) | $(COMPILER)
-      displayName: Cache
+#     - task: Cache@2
+#       inputs:
+#         key: ccache | $(Agent.OS) | $(COMPILER) | "$(Build.SourceVersion)"
+#         path: $(CCACHE_DIR)
+#         restoreKeys: 
+#           ccache | $(Agent.OS) | $(COMPILER)
+#       displayName: Build Ccache
 
-    - bash: .ci/setup-windows.sh
-      displayName: Download and unpack dependencies
+#     - task: Cache@2
+#       inputs:
+#         key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | $(CCACHE_SHA) | llvm.lock | glslang.lock
+#         path: $(DEPS_CACHE_DIR)
+#       displayName: Dependencies Cache
 
-    - bash: .ci/export-azure-vars.sh
-      displayName: Export Variables
+#     - bash: .ci/setup-windows.sh
+#       displayName: Download and unpack dependencies
 
-    - task: VSBuild@1
-      inputs:
-        solution: 'rpcs3.sln'
-        maximumCpuCount: true
-        platform: x64
-        configuration: 'Release'
-      displayName: Compile RPCS3
+#     - bash: .ci/export-azure-vars.sh
+#       displayName: Export Variables
 
-    - bash: .ci/deploy-windows.sh
-      displayName: Pack up build artifacts
+#     - task: VSBuild@1
+#       inputs:
+#         solution: 'rpcs3.sln'
+#         maximumCpuCount: true
+#         platform: x64
+#         configuration: 'Release'
+#         msbuildArgs: /p:CLToolPath=$(CCACHE_BIN_DIR) /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="$(Build.SourcesDirectory)\buildfiles\msvc\ci_no_debug_info.targets"
+#       displayName: Compile RPCS3
 
-    - publish: $(Build.ArtifactStagingDirectory)
-      condition: succeeded()
-      artifact: RPCS3 for Windows
+#     - bash: .ci/deploy-windows.sh
+#       displayName: Pack up build artifacts
 
-    - bash: .ci/github-upload.sh
-      condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
-      displayName: Push build to GitHub
-      env:
-        RPCS3_TOKEN: $(RPCS3-Token)
+#     - publish: $(Build.ArtifactStagingDirectory)
+#       condition: succeeded()
+#       artifact: RPCS3 for Windows
+
+#     - bash: .ci/github-upload.sh
+#       condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
+#       displayName: Push build to GitHub
+#       env:
+#         RPCS3_TOKEN: $(RPCS3-Token)
 
 - job: Mac_Build_x86_64
   timeoutInMinutes: 180
@@ -142,12 +157,12 @@ jobs:
   steps:
     - task: Cache@2
       inputs:
-        key: ccache | "$(Agent.OS)"
+        key: ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(Build.SourceVersion)"
         path: $(CCACHE_DIR)
         restoreKeys: |
-          ccache | "$(Agent.OS)"
+          ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)"
       displayName: Ccache cache
-    
+
     - task: Cache@2
       inputs:
         key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)" 
@@ -155,7 +170,7 @@ jobs:
         restoreKeys: |
           qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)" 
       displayName: Qt cache
-    
+
     # - task: Cache@2
     #   inputs:
     #     key: brew | "$(Agent.OS)"
@@ -182,7 +197,7 @@ jobs:
       displayName: Push build to GitHub
       env:
         RPCS3_TOKEN: $(RPCS3-Token)
-        
+
 - job: Mac_Build_arm64
   timeoutInMinutes: 180
   variables:
@@ -203,12 +218,12 @@ jobs:
   steps:
     - task: Cache@2
       inputs:
-        key: ccache | "$(Agent.OS)"
+        key: ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(Build.SourceVersion)"
         path: $(CCACHE_DIR)
         restoreKeys: |
-          ccache | "$(Agent.OS)"
+          ccache | "$(Agent.OS)" | "$(Agent.OSArchitecture)"
       displayName: Ccache cache
-    
+
     - task: Cache@2
       inputs:
         key: qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)"
@@ -216,7 +231,7 @@ jobs:
         restoreKeys: |
           qt | "$(Agent.OS)" | "$(Agent.OSArchitecture)" | "$(QT_VER)"
       displayName: Qt cache
-    
+
     # - task: Cache@2
     #   inputs:
     #     key: brew | "$(Agent.OS)"

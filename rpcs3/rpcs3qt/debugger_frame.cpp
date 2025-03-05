@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <functional>
 
+#include "rpcs3qt/debugger_add_bp_window.h"
 #include "util/asm.hpp"
 
 constexpr auto qstr = QString::fromStdString;
@@ -43,42 +44,13 @@ constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
+#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
+breakpoint_handler g_breakpoint_handler = breakpoint_handler();
+#endif
 
-extern bool is_using_interpreter(thread_class t_class)
-{
-	switch (t_class)
-	{
-	case thread_class::ppu: return g_cfg.core.ppu_decoder != ppu_decoder_type::llvm;
-	case thread_class::spu: return g_cfg.core.spu_decoder != spu_decoder_type::asmjit && g_cfg.core.spu_decoder != spu_decoder_type::llvm;
-	default: return true;
-	}
-}
+extern bool is_using_interpreter(thread_class t_class);
 
-extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle)
-{
-	if (!handle)
-	{
-		switch (cpu->get_class())
-		{
-		case thread_class::ppu: handle = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id); break;
-		case thread_class::spu: handle = idm::get_unlocked<named_thread<spu_thread>>(cpu->id); break;
-		default: break;
-		}
-	}
-
-	std::shared_ptr<CPUDisAsm> result;
-
-	switch (cpu->get_class())
-	{
-	case thread_class::ppu: result = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr); break;
-	case thread_class::spu: result = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls); break;
-	case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu); break;
-	default: return result;
-	}
-
-	result->set_cpu_handle(std::move(handle));
-	return result;
-}
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
@@ -98,7 +70,12 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
+#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
+	m_ppu_breakpoint_handler = &g_breakpoint_handler;
+#else
 	m_ppu_breakpoint_handler = new breakpoint_handler();
+#endif
+
 	m_breakpoint_list = new breakpoint_list(this, m_ppu_breakpoint_handler);
 
 	m_debugger_list = new debugger_list(this, m_gui_settings, m_ppu_breakpoint_handler);
@@ -122,6 +99,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	m_go_to_pc = new QPushButton(tr("Go To PC"), this);
 	m_btn_step = new QPushButton(tr("Step"), this);
 	m_btn_step_over = new QPushButton(tr("Step Over"), this);
+	m_btn_add_bp = new QPushButton(tr("Add BP"), this);
 	m_btn_run = new QPushButton(RunString, this);
 
 	EnableButtons(false);
@@ -132,6 +110,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	hbox_b_main->addWidget(m_go_to_pc);
 	hbox_b_main->addWidget(m_btn_step);
 	hbox_b_main->addWidget(m_btn_step_over);
+	hbox_b_main->addWidget(m_btn_add_bp);
 	hbox_b_main->addWidget(m_btn_run);
 	hbox_b_main->addWidget(m_choice_units);
 	hbox_b_main->addStretch();
@@ -183,6 +162,12 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
+
+	connect(m_btn_add_bp, &QAbstractButton::clicked, this, [this]
+		{
+			debugger_add_bp_window dlg(m_breakpoint_list, this);
+			dlg.exec();
+		});
 
 	connect(m_btn_run, &QAbstractButton::clicked, this, &debugger_frame::RunBtnPress);
 
@@ -1620,7 +1605,7 @@ void debugger_frame::DoStep(bool step_over)
 
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc);
+				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc, breakpoint_types::bp_exec);
 
 				// Undefine previous step over breakpoint if it hasn't been already
 				// This can happen when the user steps over a branch that doesn't return to itself
@@ -1712,6 +1697,7 @@ void debugger_frame::EnableButtons(bool enable)
 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);
+	m_btn_add_bp->setEnabled(enable);
 	m_btn_step->setEnabled(step);
 	m_btn_step_over->setEnabled(step);
 	m_btn_run->setEnabled(enable);

@@ -14,10 +14,8 @@ namespace rsx
 			void show(const std::string& text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
 			void hide();
 			page_navigation handle_button_press(pad_button button_press);
-			bool visible() const { return m_visible; }
 
 		private:
-			bool m_visible = false;
 			label m_label{};
 			image_button m_accept_btn;
 			image_button m_cancel_btn;

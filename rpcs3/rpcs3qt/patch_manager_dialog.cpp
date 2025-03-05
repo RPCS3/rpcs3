@@ -57,12 +57,11 @@ enum node_level : int
 
 Q_DECLARE_METATYPE(patch_engine::patch_config_value);
 
-patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& title_id, const std::string& version, QWidget* parent)
+patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, const std::vector<game_info>& games, const std::string& title_id, const std::string& version, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(std::move(gui_settings))
 	, m_expand_current_match(!title_id.empty() && !version.empty()) // Expand first search results
 	, m_search_version(QString::fromStdString(version))
-	, m_owned_games(std::move(games))
 	, ui(new Ui::patch_manager_dialog)
 {
 	ui->setupUi(this);
@@ -70,6 +69,15 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	// Load gui settings
 	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
+
+	// Get owned games
+	for (const auto& game : games)
+	{
+		if (game && game->info.bootable)
+		{
+			m_owned_games[game->info.serial].insert(game->GetGameVersion());
+		}
+	}
 
 	// Initialize gui controls
 	ui->patch_filter->setText(QString::fromStdString(title_id));

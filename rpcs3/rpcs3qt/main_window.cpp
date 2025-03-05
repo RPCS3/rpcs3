@@ -86,11 +86,6 @@
 #include <QEventLoop>
 #include <QTimer>
 
-#if QT_CONFIG(permissions)
-#include <QGuiApplication>
-#include <QPermissions>
-#endif
-
 #ifdef _WIN32
 #include "raw_mouse_settings_dialog.h"
 #endif
@@ -166,32 +161,6 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			}
 		}
 	}
-}
-
-extern void check_microphone_permissions()
-{
-#if QT_CONFIG(permissions)
-	Emu.BlockingCallFromMainThread([]()
-	{
-		const QMicrophonePermission permission;
-		switch (qApp->checkPermission(permission))
-		{
-		case Qt::PermissionStatus::Undetermined:
-			gui_log.notice("Requesting microphone permission");
-			qApp->requestPermission(permission, []()
-			{
-				check_microphone_permissions();
-			});
-			break;
-		case Qt::PermissionStatus::Denied:
-			gui_log.error("RPCS3 has no permissions to access microphones on this device.");
-			break;
-		case Qt::PermissionStatus::Granted:
-			gui_log.notice("Microphone permission granted");
-			break;
-		}
-	});
-#endif
 }
 
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
@@ -580,13 +549,12 @@ void main_window::show_boot_error(game_boot_result status)
 	}
 	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
-	QMessageBox* msg = new QMessageBox();
+	QMessageBox* msg = new QMessageBox(this);
 	msg->setWindowTitle(tr("Boot Failed"));
 	msg->setIcon(QMessageBox::Critical);
 	msg->setTextFormat(Qt::RichText);
 	msg->setStandardButtons(QMessageBox::Ok);
 	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
-	msg->setParent(this);
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
 }
@@ -3102,18 +3070,7 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Game_Patches, &QAction::triggered, this, [this]
 	{
-		std::unordered_map<std::string, std::set<std::string>> games;
-		if (m_game_list_frame)
-		{
-			for (const game_info& game : m_game_list_frame->GetGameInfo())
-			{
-				if (game)
-				{
-					games[game->info.serial].insert(game_list::GetGameVersion(game));
-				}
-			}
-		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, "", "", this);
+		patch_manager_dialog patch_manager(m_gui_settings, m_game_list_frame ? m_game_list_frame->GetGameInfo() : std::vector<game_info>{}, "", "", this);
 		patch_manager.exec();
  	});
 

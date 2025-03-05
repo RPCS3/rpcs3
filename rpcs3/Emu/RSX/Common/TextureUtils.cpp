@@ -3,6 +3,7 @@
 #include "TextureUtils.h"
 #include "../RSXThread.h"
 #include "../rsx_utils.h"
+#include "3rdparty/bcdec/bcdec.hpp"
 
 #include "util/asm.hpp"
 
@@ -497,6 +498,66 @@ struct copy_rgb655_block_swizzled
 	}
 };
 
+struct copy_decoded_bc1_block
+{
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u64> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
+		for (u32 row = 0; row < row_count * depth; row++)
+		{
+			for (u32 col = 0; col < width_in_block; col++)
+			{
+				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
+				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
+				bcdec_bc1(compressedBlock, decompressedBlock, destinationPitch);
+			}
+
+			src_offset += src_pitch_in_block;
+			dst_offset += destinationPitch;
+		}
+	}
+};
+
+struct copy_decoded_bc2_block
+{
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
+		for (u32 row = 0; row < row_count * depth; row++)
+		{
+			for (u32 col = 0; col < width_in_block; col++)
+			{
+				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
+				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
+				bcdec_bc2(compressedBlock, decompressedBlock, destinationPitch);
+			}
+
+			src_offset += src_pitch_in_block;
+			dst_offset += destinationPitch;
+		}
+	}
+};
+
+struct copy_decoded_bc3_block
+{
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
+		for (u32 row = 0; row < row_count * depth; row++)
+		{
+			for (u32 col = 0; col < width_in_block; col++)
+			{
+				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
+				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
+				bcdec_bc3(compressedBlock, decompressedBlock, destinationPitch);
+			}
+
+			src_offset += src_pitch_in_block;
+			dst_offset += destinationPitch;
+		}
+	}
+};
+
 namespace
 {
 	/**
@@ -952,6 +1013,12 @@ namespace rsx
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		{
+			if (!caps.supports_dxt)
+			{
+				copy_decoded_bc1_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u64>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
+			}
+
 			const bool is_3d = depth > 1;
 			const bool is_po2 = utils::is_power_of_2(src_layout.width_in_texel) && utils::is_power_of_2(src_layout.height_in_texel);
 
@@ -981,8 +1048,22 @@ namespace rsx
 		}
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		{
+			if (!caps.supports_dxt)
+			{
+				copy_decoded_bc2_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
+			}
+			[[fallthrough]];
+		}
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		{
+			if (!caps.supports_dxt)
+			{
+				copy_decoded_bc3_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
+			}
+
 			const bool is_3d = depth > 1;
 			const bool is_po2 = utils::is_power_of_2(src_layout.width_in_texel) && utils::is_power_of_2(src_layout.height_in_texel);
 
@@ -1094,7 +1175,7 @@ namespace rsx
 		return result;
 	}
 
-	bool is_compressed_host_format(u32 texture_format)
+	bool is_compressed_host_format(const texture_uploader_capabilities& caps, u32 texture_format)
 	{
 		switch (texture_format)
 		{
@@ -1129,7 +1210,7 @@ namespace rsx
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-			return true;
+			return caps.supports_dxt;
 		}
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}

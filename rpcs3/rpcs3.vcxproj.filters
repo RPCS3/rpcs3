@@ -213,6 +213,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_cg_disasm_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_add_bp_window.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_add_bp_window.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -395,6 +401,9 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\cg_disasm_window.cpp">
       <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\debugger_add_bp_window.cpp">
+      <Filter>Gui\debugger</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\debugger_frame.cpp">
       <Filter>Gui\debugger</Filter>
@@ -1161,6 +1170,12 @@
     <ClCompile Include="Input\ps_move_calibration.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\permissions.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\gui_game_info.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1363,6 +1378,12 @@
     </ClInclude>
     <ClInclude Include="Input\ps_move_calibration.h">
       <Filter>Io\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\permissions.h">
+      <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\gui_game_info.h">
+      <Filter>Gui\game list</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1693,6 +1714,9 @@
     <CustomBuild Include="rpcs3qt\vfs_tool_dialog.h">
       <Filter>Gui\vfs</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\debugger_add_bp_window.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
@@ -1826,6 +1850,9 @@
     </None>
     <None Include="..\darwin\util\sysinfo_darwin.mm">
       <Filter>Darwin</Filter>
+    </None>
+    <None Include="..\.github\workflows\rpcs3.yml">
+      <Filter>CI</Filter>
     </None>
   </ItemGroup>
 </Project>

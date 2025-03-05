@@ -113,6 +113,8 @@ namespace rsx
 			: m_page_btn(120, 30)
 			, m_extra_btn(120, 30)
 		{
+			m_allow_input_on_pause = true;
+
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
@@ -121,6 +123,7 @@ namespace rsx
 			m_list->set_pos(20, 85);
 
 			m_message_box = std::make_shared<home_menu_message_box>(20, 85, virtual_width - 2 * 20, 540);
+			m_message_box->visible = false;
 
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
@@ -156,7 +159,7 @@ namespace rsx
 		{
 			if (fade_animation.active) return;
 
-			if (m_message_box && m_message_box->visible())
+			if (m_message_box && m_message_box->visible)
 			{
 				const page_navigation navigation = m_message_box->handle_button_press(button_press);
 				if (navigation != page_navigation::stay)
@@ -210,7 +213,7 @@ namespace rsx
 						}
 					}
 
-					if (!selected_username.empty() && m_message_box && !m_message_box->visible())
+					if (!selected_username.empty() && m_message_box && !m_message_box->visible)
 					{
 						m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REMOVE_USER_MSG, selected_username.c_str()), [this, selected_username]()
 						{
@@ -247,7 +250,7 @@ namespace rsx
 						user_index++;
 					}
 
-					if (!selected_username.empty() && m_message_box && !m_message_box->visible())
+					if (!selected_username.empty() && m_message_box && !m_message_box->visible)
 					{
 						if (user_index < m_friend_data.requests_received.size())
 						{
@@ -291,7 +294,7 @@ namespace rsx
 						}
 					}
 
-					if (!selected_username.empty() && m_message_box && !m_message_box->visible())
+					if (!selected_username.empty() && m_message_box && !m_message_box->visible)
 					{
 						m_message_box->show(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_UNBLOCK_USER_MSG, selected_username.c_str()), []()
 						{
@@ -392,7 +395,7 @@ namespace rsx
 					m_last_page.store(m_current_page);
 				}
 
-				if (m_message_box && m_message_box->visible())
+				if (m_message_box && m_message_box->visible)
 				{
 					result.add(m_message_box->get_compiled());
 				}

@@ -26,7 +26,7 @@ xaudio2_enumerator::~xaudio2_enumerator()
 std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_output_devices()
 {
 	Microsoft::WRL::ComPtr<IMMDeviceEnumerator> devEnum{};
-	if (HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(devEnum.GetAddressOf())); FAILED(hr))
+	if (HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&devEnum)); FAILED(hr))
 	{
 		xaudio_dev_enum.error("CoCreateInstance() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return {};
@@ -57,7 +57,7 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 	for (UINT dev_idx = 0; dev_idx < count; dev_idx++)
 	{
 		Microsoft::WRL::ComPtr<IMMDevice> endpoint{};
-		if (HRESULT hr = devices->Item(dev_idx, endpoint.GetAddressOf()); FAILED(hr))
+		if (HRESULT hr = devices->Item(dev_idx, &endpoint); FAILED(hr))
 		{
 			xaudio_dev_enum.error("devices->Item() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 			continue;
@@ -83,7 +83,7 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 		CoTaskMemFree(id);
 
 		Microsoft::WRL::ComPtr<IPropertyStore> props{};
-		if (HRESULT hr = endpoint->OpenPropertyStore(STGM_READ, props.GetAddressOf()); FAILED(hr))
+		if (HRESULT hr = endpoint->OpenPropertyStore(STGM_READ, &props); FAILED(hr))
 		{
 			xaudio_dev_enum.error("endpoint->OpenPropertyStore() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 			continue;
@@ -144,7 +144,7 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 		device_list.emplace_back(dev);
 	}
 
-	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	std::sort(device_list.begin(), device_list.end(), [](const audio_device_enumerator::audio_device& a, const audio_device_enumerator::audio_device& b)
 	{
 		return a.name < b.name;
 	});
