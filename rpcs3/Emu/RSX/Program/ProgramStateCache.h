@@ -213,6 +213,7 @@ protected:
 			recompile = inserted;
 			prev_map_count = umax;
 			prev_rsx_count = umax;
+			prev_vp = nullptr;
 			map_invl_count++;
 		}
 
@@ -225,7 +226,7 @@ protected:
 	}
 
 	/// bool here to inform that the program was preexisting.
-	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, usz /*rsx_fp_invalidation_count*/)
+	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, usz rsx_fp_invalidation_count)
 	{
 		bool recompile = false;
 		typename binary_to_fragment_program::iterator it;
@@ -242,13 +243,14 @@ protected:
 				// prev_vp must be non-null here
 				if (prev_fp->first.ucode_length == rsx_fp.ucode_length && prev_fp->first.texcoord_control_mask == rsx_fp.texcoord_control_mask)
 				{
-					// if (rsx_fp_invalidation_count != umax && prev_rsx_count == rsx_fp_invalidation_count)
-					// {
-					// 	return std::forward_as_tuple(prev_fp->second, true);
-					// }
+					if (rsx_fp_invalidation_count != umax && prev_rsx_count == rsx_fp_invalidation_count)
+					{
+						return std::forward_as_tuple(prev_fp->second, true);
+					}
 
 					if (program_hash_util::fragment_program_compare()(prev_fp->first, rsx_fp))
 					{
+						prev_rsx_count = rsx_fp_invalidation_count;
 						return std::forward_as_tuple(prev_fp->second, true);
 					}
 				}
@@ -258,7 +260,7 @@ protected:
 			if (I != m_fragment_shader_cache.end())
 			{
 				prev_fp = &*I;
-				//prev_rsx_count = rsx_fp_invalidation_count;
+				prev_rsx_count = rsx_fp_invalidation_count;
 				prev_map_count = map_invl_count;
 				return std::forward_as_tuple(I->second, true);
 			}
@@ -270,6 +272,7 @@ protected:
 			new_shader = &(it->second);
 			prev_map_count = umax;
 			prev_rsx_count = umax;
+			prev_fp = nullptr;
 			map_invl_count++;
 		}
 
