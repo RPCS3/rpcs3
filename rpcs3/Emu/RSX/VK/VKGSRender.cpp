@@ -1960,7 +1960,10 @@ bool VKGSRender::load_program()
 		vk::enter_uninterruptible();
 
 		// Load current program from cache
-		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, m_pipeline_properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
+			vertex_program, vertex_program_invalidation_count, 
+			fragment_program, fragment_program_invalidation_count,
+			m_pipeline_properties,
 			shadermode != shader_mode::recompiler, true, m_pipeline_layout);
 
 		vk::leave_uninterruptible();
