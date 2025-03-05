@@ -29,7 +29,7 @@ namespace vk
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
 	bool g_drv_emulate_cond_render = false;
-	bool g_drv_strict_query_scopes = true;
+	bool g_drv_strict_query_scopes = false;
 	bool g_drv_force_reuse_query_pools = false;
 
 	u64 g_num_processed_frames = 0;
