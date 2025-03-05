@@ -196,3 +196,38 @@ jobs:
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: .ci/github-upload.sh
+
+  Generate_Translation_Template:
+    name: Generate Translation Template
+    runs-on: ubuntu-24.04
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Install Qt6 Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-tools-dev qt6-l10n-tools
+
+      - name: Generate .ts file using lupdate (Qt6)
+        run: |
+          mkdir -p translations
+          LUPDATE_PATH=$(find /usr -name lupdate -type f 2>/dev/null | head -n 1)
+          if [ -z "$LUPDATE_PATH" ]; then
+            echo "Error: lupdate not found!"
+            exit 1
+          else
+            echo "lupdate found at: $LUPDATE_PATH"
+            $LUPDATE_PATH -recursive . -ts translations/rpcs3_template.ts
+            sed -i 's|filename="\.\./|filename="./|g' translations/rpcs3_template.ts
+          fi
+
+      - name: Upload translation template
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3_Translation_Template
+          path: translations/rpcs3_template.ts
+          compression-level: 0
