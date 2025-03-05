@@ -200,7 +200,7 @@ jobs:
   Generate_Translation_Template:
     name: Generate Translation Template
     runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
