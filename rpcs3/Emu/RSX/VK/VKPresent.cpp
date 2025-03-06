@@ -116,7 +116,9 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 		case VK_SUCCESS:
 			break;
 		case VK_SUBOPTIMAL_KHR:
+#ifndef ANDROID
 			should_reinitialize_swapchain = true;
+#endif
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			swapchain_unavailable = true;
