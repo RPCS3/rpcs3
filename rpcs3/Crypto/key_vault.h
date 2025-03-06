@@ -347,4 +347,4 @@ private:
 };
 
 // RAP to RIF function.
-void rap_to_rif(unsigned char* rap, unsigned char* rif);
+void rap_to_rif(const unsigned char* rap, unsigned char* rif);

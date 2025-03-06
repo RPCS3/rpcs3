@@ -190,7 +190,7 @@ struct ParamArray
 
 	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)
 	{
-		ParamType* t = SearchParam(flag, type);
+		const ParamType* t = SearchParam(flag, type);
 		return t && t->HasItem(name);
 	}
 
@@ -300,7 +300,7 @@ public:
 			{ 3, 'w' }
 		};
 
-		for (auto& p : pos_to_swizzle)
+		for (const auto& p : pos_to_swizzle)
 		{
 			swizzle[p.second] = swizzles[0].length() > p.first ? swizzles[0][p.first] : 0;
 		}
@@ -309,7 +309,7 @@ public:
 		{
 			std::unordered_map<char, char> new_swizzle;
 
-			for (auto& p : pos_to_swizzle)
+			for (const auto& p : pos_to_swizzle)
 			{
 				new_swizzle[p.second] = swizzle[swizzles[i].length() <= p.first ? '\0' : swizzles[i][p.first]];
 			}
@@ -320,7 +320,7 @@ public:
 		swizzles.clear();
 		std::string new_swizzle;
 
-		for (auto& p : pos_to_swizzle)
+		for (const auto& p : pos_to_swizzle)
 		{
 			if (swizzle[p.second] != '\0')
 				new_swizzle += swizzle[p.second];

@@ -91,7 +91,7 @@ namespace vk
 			get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 		}
 
-		void preload_programs(RSXVertexProgram& vp, RSXFragmentProgram& fp)
+		void preload_programs(const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 		{
 			search_vertex_program(vp);
 			search_fragment_program(fp);

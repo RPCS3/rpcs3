@@ -43,10 +43,10 @@ private:
 	infinity_figure& get_figure_by_order(u8 order_added);
 	u8 derive_figure_position(u8 position);
 
-	u32 random_a;
-	u32 random_b;
-	u32 random_c;
-	u32 random_d;
+	u32 random_a = 0;
+	u32 random_b = 0;
+	u32 random_c = 0;
+	u32 random_d = 0;
 
 	u8 m_figure_order = 0;
 	std::queue<std::array<u8, 32>> m_figure_added_removed_responses;

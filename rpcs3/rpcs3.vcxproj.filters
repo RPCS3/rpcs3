@@ -1714,6 +1714,9 @@
     <CustomBuild Include="rpcs3qt\vfs_tool_dialog.h">
       <Filter>Gui\vfs</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\debugger_add_bp_window.h">
+      <Filter>Gui\debugger</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
@@ -1847,6 +1850,9 @@
     </None>
     <None Include="..\darwin\util\sysinfo_darwin.mm">
       <Filter>Darwin</Filter>
+    </None>
+    <None Include="..\.github\workflows\rpcs3.yml">
+      <Filter>CI</Filter>
     </None>
   </ItemGroup>
 </Project>

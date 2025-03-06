@@ -543,7 +543,7 @@ namespace cfg
 		std::string def;
 
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
-			: _base(type::string, owner, name, dynamic)
+			: _base(type::string, owner, std::move(name), dynamic)
 			, m_value(def)
 			, def(std::move(def))
 		{

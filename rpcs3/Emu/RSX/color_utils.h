@@ -110,14 +110,14 @@ namespace rsx
 		return result;
 	}
 
-	static inline void get_g8b8_r8g8_colormask(bool& red, bool&/*green*/, bool& blue, bool& alpha)
+	static inline void get_g8b8_r8g8_colormask(bool& red, bool/*green*/, bool& blue, bool& alpha)
 	{
 		red = blue;
 		blue = false;
 		alpha = false;
 	}
 
-	static inline void get_g8b8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
+	static inline void get_g8b8_clear_color(u8& red, u8 /*green*/, u8 blue, u8 /*alpha*/)
 	{
 		red = blue;
 	}
@@ -132,12 +132,12 @@ namespace rsx
 		return result;
 	}
 
-	static inline void get_abgr8_colormask(bool& red, bool& /*green*/, bool& blue, bool& /*alpha*/)
+	static inline void get_abgr8_colormask(bool& red, bool /*green*/, bool& blue, bool /*alpha*/)
 	{
 		std::swap(red, blue);
 	}
 
-	static inline void get_abgr8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
+	static inline void get_abgr8_clear_color(u8& red, u8 /*green*/, u8& blue, u8 /*alpha*/)
 	{
 		std::swap(red, blue);
 	}
@@ -151,7 +151,7 @@ namespace rsx
 		return static_cast<u8>((value * 255) / base);
 	}
 
-	static inline void get_rgb565_clear_color(u8& red, u8& green, u8& blue, u8& /*alpha*/)
+	static inline void get_rgb565_clear_color(u8& red, u8& green, u8& blue, u8 /*alpha*/)
 	{
 		// RSX clear color is just a memcpy, so in this case the input is ARGB8 so only BG have the 16-bit input
 		const u16 raw_value = static_cast<u16>(green) << 8 | blue;
@@ -189,7 +189,7 @@ namespace rsx
 		alpha = false;
 	}
 
-	static inline void get_b8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
+	static inline void get_b8_clear_color(u8& red, u8 /*green*/, u8& blue, u8 /*alpha*/)
 	{
 		std::swap(red, blue);
 	}
@@ -204,7 +204,7 @@ namespace rsx
 		return result;
 	}
 
-	static inline u32 encode_color_to_storage_key(color4f color)
+	static inline u32 encode_color_to_storage_key(const color4f& color)
 	{
 		const u32 r = static_cast<u8>(color.r * 255);
 		const u32 g = static_cast<u8>(color.g * 255);

@@ -256,13 +256,13 @@ public:
 
 		program_buffer_patch_entry() = default;
 
-		program_buffer_patch_entry(f32& key, f32& value)
+		program_buffer_patch_entry(f32 key, f32 value)
 		{
 			fp_key = key;
 			fp_value = value;
 		}
 
-		program_buffer_patch_entry(u32& key, u32& value)
+		program_buffer_patch_entry(u32 key, u32 value)
 		{
 			hex_key = key;
 			hex_value = value;

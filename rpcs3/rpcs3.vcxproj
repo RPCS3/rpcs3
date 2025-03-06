@@ -2087,6 +2087,7 @@
     <None Include="..\.ci\install-freebsd.sh" />
     <None Include="..\.ci\optimize-mac.sh" />
     <None Include="..\.ci\setup-windows.sh" />
+    <None Include="..\.github\workflows\rpcs3.yml" />
     <None Include="..\azure-pipelines.yml" />
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss" />
     <None Include="..\bin\GuiConfigs\Darker Style by TheMitoSan.qss" />
