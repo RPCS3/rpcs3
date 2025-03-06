@@ -770,6 +770,21 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	return true;
 }
 
+bool fragment_program_compare::config_only(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2)
+{
+	if (binary1.ucode_length != binary2.ucode_length ||
+		binary1.ctrl != binary2.ctrl ||
+		binary1.texture_state != binary2.texture_state ||
+		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
+		binary1.two_sided_lighting != binary2.two_sided_lighting ||
+		binary1.mrt_buffers_count != binary2.mrt_buffers_count)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 namespace rsx
 {
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
