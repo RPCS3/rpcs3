@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - qt-test
+      - master
     paths:
       - 'rpcs3/**'
 
