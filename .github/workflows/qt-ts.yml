@@ -18,12 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Qt6 Tools
+      - name: Install Qt Tools
         run: |
           sudo apt-get update
           sudo apt-get install -y qt6-tools-dev qt6-l10n-tools
 
-      - name: Generate .ts file using lupdate (Qt6)
+      - name: Generate .ts file using lupdate (Qt)
         run: |
           mkdir -p translations
           cd rpcs3  # Change to the rpcs3 directory
