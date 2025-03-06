@@ -80,6 +80,7 @@ namespace program_hash_util
 	struct fragment_program_compare
 	{
 		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
+		static bool config_only(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2);
 	};
 }
 
@@ -245,10 +246,15 @@ protected:
 				{
 					if (rsx_fp_invalidation_count != umax && prev_rsx_count == rsx_fp_invalidation_count)
 					{
-						return std::forward_as_tuple(prev_fp->second, true);
+						// Shader UCODE must be the same.
+						// Shader config changes are not tracked at the moment
+						// Compare manually
+						if (program_hash_util::fragment_program_compare::config_only(prev_fp->first, rsx_fp))
+						{
+							return std::forward_as_tuple(prev_fp->second, true);
+						}
 					}
-
-					if (program_hash_util::fragment_program_compare()(prev_fp->first, rsx_fp))
+					else if (program_hash_util::fragment_program_compare()(prev_fp->first, rsx_fp))
 					{
 						prev_rsx_count = rsx_fp_invalidation_count;
 						return std::forward_as_tuple(prev_fp->second, true);

@@ -221,12 +221,31 @@ namespace rsx
 			}
 		};
 
-		template<u32 index>
-		struct set_texture_dirty_bit
+		template <u32 index>
+		struct set_texture_dirty_bit_texture_config
 		{
-			static void impl(context* ctx, u32 /*reg*/, u32 /*arg*/)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				util::set_fragment_texture_dirty_bit(ctx, index);
+				util::set_fragment_texture_dirty_bit(ctx, arg, index, true);
+			}
+		};
+
+		template <u32 index>
+		struct set_texture_offset
+		{
+			static void impl(context* ctx, u32 reg, u32 /*arg*/)
+			{
+				fmt::throw_exception("Unreacable!");
+				util::set_texture_configuration_command(ctx, reg);
+			}
+		};
+
+		template <u32 index>
+		struct set_texture_dirty_bit_location_and_area
+		{
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
+			{
+				util::set_fragment_texture_dirty_bit(ctx, arg, index, false);
 			}
 		};
 

@@ -2047,7 +2047,9 @@ namespace rsx
 		ensure(!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty));
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
-		fragment_program_invalidation_count++;
+
+		// FP config is always checked for now (see get_graphics_pipeline)
+		//fragment_program_invalidation_count++;
 
 		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		current_fragment_program.texcoord_control_mask = m_ctx->register_state->texcoord_control_mask();
