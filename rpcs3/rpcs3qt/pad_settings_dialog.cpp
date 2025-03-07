@@ -1983,6 +1983,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return tr("Evdev");
 #endif
+		case pad_handler::virtual_pad: return tr("Virtual");
 	}
 	return original;
 }
@@ -2008,6 +2009,7 @@ QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QStr
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: break; // Localization not feasible. Names differ for each device.
 #endif
+		case pad_handler::virtual_pad: break;
 	}
 	return original;
 }

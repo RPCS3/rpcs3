@@ -67,7 +67,7 @@ struct pad_ensemble
 	std::shared_ptr<PadDevice> buddy_device;
 
 	explicit pad_ensemble(std::shared_ptr<Pad> _pad, std::shared_ptr<PadDevice> _device, std::shared_ptr<PadDevice> _buddy_device)
-		: pad(_pad), device(_device), buddy_device(_buddy_device)
+		: pad(std::move(_pad)), device(std::move(_device)), buddy_device(std::move(_buddy_device))
 	{}
 };
 
