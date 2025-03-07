@@ -15,18 +15,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
-        with:
-          fetch-depth: 0
 
       - name: Install Qt Tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y qt6-tools-dev qt6-l10n-tools
+          sudo apt update
+          sudo apt install -y qt6-l10n-tools
 
       - name: Generate .ts file using lupdate (Qt)
+        working-directory: rpcs3
         run: |
-          mkdir -p translations
-          cd rpcs3  # Change to the rpcs3 directory
+          mkdir -p ../translations
           LUPDATE_PATH=$(find /usr -name lupdate -type f 2>/dev/null | head -n 1)
           if [ -z "$LUPDATE_PATH" ]; then
             echo "Error: lupdate not found!"
