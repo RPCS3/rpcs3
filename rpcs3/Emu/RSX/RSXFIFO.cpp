@@ -233,7 +233,11 @@ namespace rsx
 			else
 			{
 				// Return a raw pointer with no limited access
-				return {static_cast<const u32*>(vm::base(m_iotable->get_addr(m_internal_get))), 0x10000};
+				constexpr u32 _1m = 0x100000;
+				const u32 base = m_iotable->get_addr(m_internal_get);
+				const u32 base_1m = m_iotable->get_addr(m_internal_get + _1m);
+
+				return {static_cast<const u32*>(vm::base(base)), (base_1m - _1m == base ? _1m : (_1m - (m_internal_get % _1m))) / 4 };
 			}
 		}
 
