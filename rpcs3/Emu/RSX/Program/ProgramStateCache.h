@@ -80,6 +80,7 @@ namespace program_hash_util
 	struct fragment_program_compare
 	{
 		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
+		static bool config_only(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2);
 	};
 }
 
@@ -167,22 +168,42 @@ protected:
 	pipeline_storage_type __null_pipeline_handle;
 
 	/// bool here to inform that the program was preexisting.
-	std::tuple<const vertex_program_type&, bool> search_vertex_program(const RSXVertexProgram& rsx_vp, bool force_load = true)
+	std::tuple<const vertex_program_type&, bool> search_vertex_program(const RSXVertexProgram& rsx_vp, usz rsx_vp_invalidation_count)
 	{
 		bool recompile = false;
 		vertex_program_type* new_shader;
 		{
+			thread_local const std::pair<const RSXVertexProgram, vertex_program_type>* prev_vp = nullptr;
+			thread_local usz prev_map_count = umax, prev_rsx_count = umax;
+			static atomic_t<usz> map_invl_count = 0;
+
 			reader_lock lock(m_vertex_mutex);
+
+			if (prev_map_count == map_invl_count)
+			{
+				// prev_vp must be non-null here
+				if (prev_vp->first.data.size() == rsx_vp.data.size() && prev_vp->first.output_mask == rsx_vp.output_mask)
+				{
+					if (rsx_vp_invalidation_count != umax && prev_rsx_count == rsx_vp_invalidation_count)
+					{
+						return std::forward_as_tuple(prev_vp->second, true);
+					}
+
+					if (program_hash_util::vertex_program_compare()(prev_vp->first, rsx_vp))
+					{
+						prev_rsx_count = rsx_vp_invalidation_count;
+						return std::forward_as_tuple(prev_vp->second, true);
+					}
+				}
+			}
 
 			const auto& I = m_vertex_shader_cache.find(rsx_vp);
 			if (I != m_vertex_shader_cache.end())
 			{
+				prev_vp = &*I;
+				prev_map_count = map_invl_count;
+				prev_rsx_count = rsx_vp_invalidation_count;
 				return std::forward_as_tuple(I->second, true);
-			}
-
-			if (!force_load)
-			{
-				return std::forward_as_tuple(__null_vertex_program, false);
 			}
 
 			rsx_log.trace("VP not found in buffer!");
@@ -191,6 +212,10 @@ protected:
 			auto [it, inserted] = m_vertex_shader_cache.try_emplace(rsx_vp);
 			new_shader = &(it->second);
 			recompile = inserted;
+			prev_map_count = umax;
+			prev_rsx_count = umax;
+			prev_vp = nullptr;
+			map_invl_count++;
 		}
 
 		if (recompile)
@@ -202,24 +227,48 @@ protected:
 	}
 
 	/// bool here to inform that the program was preexisting.
-	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, bool force_load = true)
+	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, usz rsx_fp_invalidation_count)
 	{
 		bool recompile = false;
 		typename binary_to_fragment_program::iterator it;
 		fragment_program_type* new_shader;
-
 		{
+			thread_local const std::pair<const RSXFragmentProgram, fragment_program_type>* prev_fp = nullptr;
+			thread_local usz prev_map_count = umax, prev_rsx_count = umax;
+			static atomic_t<usz> map_invl_count = 0;
+
 			reader_lock lock(m_fragment_mutex);
+
+			if (prev_map_count == map_invl_count)
+			{
+				// prev_vp must be non-null here
+				if (prev_fp->first.ucode_length == rsx_fp.ucode_length && prev_fp->first.texcoord_control_mask == rsx_fp.texcoord_control_mask)
+				{
+					if (rsx_fp_invalidation_count != umax && prev_rsx_count == rsx_fp_invalidation_count)
+					{
+						// Shader UCODE must be the same.
+						// Shader config changes are not tracked at the moment
+						// Compare manually
+						if (program_hash_util::fragment_program_compare::config_only(prev_fp->first, rsx_fp))
+						{
+							return std::forward_as_tuple(prev_fp->second, true);
+						}
+					}
+					else if (program_hash_util::fragment_program_compare()(prev_fp->first, rsx_fp))
+					{
+						prev_rsx_count = rsx_fp_invalidation_count;
+						return std::forward_as_tuple(prev_fp->second, true);
+					}
+				}
+			}
 
 			const auto& I = m_fragment_shader_cache.find(rsx_fp);
 			if (I != m_fragment_shader_cache.end())
 			{
+				prev_fp = &*I;
+				prev_rsx_count = rsx_fp_invalidation_count;
+				prev_map_count = map_invl_count;
 				return std::forward_as_tuple(I->second, true);
-			}
-
-			if (!force_load)
-			{
-				return std::forward_as_tuple(__null_fragment_program, false);
 			}
 
 			rsx_log.trace("FP not found in buffer!");
@@ -227,6 +276,10 @@ protected:
 			lock.upgrade();
 			std::tie(it, recompile) = m_fragment_shader_cache.try_emplace(rsx_fp);
 			new_shader = &(it->second);
+			prev_map_count = umax;
+			prev_rsx_count = umax;
+			prev_fp = nullptr;
+			map_invl_count++;
 		}
 
 		if (recompile)
@@ -290,15 +343,17 @@ public:
 	template<typename... Args>
 	pipeline_data_type get_graphics_pipeline(
 		const RSXVertexProgram& vertexShader,
+		usz vertexShaderInvalidationCount,
 		const RSXFragmentProgram& fragmentShader,
+		usz fragmentShaderInvalidationCount,
 		pipeline_properties& pipelineProperties,
 		bool compile_async,
 		bool allow_notification,
 		Args&& ...args
 	)
 	{
-		const auto& vp_search = search_vertex_program(vertexShader);
-		const auto& fp_search = search_fragment_program(fragmentShader);
+		const auto& vp_search = search_vertex_program(vertexShader, vertexShaderInvalidationCount);
+		const auto& fp_search = search_fragment_program(fragmentShader, fragmentShaderInvalidationCount);
 
 		const bool already_existing_fragment_program = std::get<1>(fp_search);
 		const bool already_existing_vertex_program = std::get<1>(vp_search);

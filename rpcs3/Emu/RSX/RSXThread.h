@@ -242,6 +242,8 @@ namespace rsx
 
 		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
 		rsx::bitmask_t<rsx::pipeline_state> m_graphics_state;
+		u64 fragment_program_invalidation_count = umax;
+		u64 vertex_program_invalidation_count = umax;
 		u64 ROP_sync_timestamp = 0;
 
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};

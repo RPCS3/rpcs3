@@ -1904,6 +1904,7 @@ namespace rsx
 		}
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_ucode_dirty);
+		fragment_program_invalidation_count++;
 
 		// Request for update of fragment constants if the program block is invalidated
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
@@ -1953,6 +1954,7 @@ namespace rsx
 		}
 
 		m_graphics_state.clear(rsx::pipeline_state::vertex_program_ucode_dirty);
+		vertex_program_invalidation_count++;
 
 		// Reload transform constants unconditionally for now
 		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
@@ -2010,6 +2012,7 @@ namespace rsx
 			return;
 		}
 
+		vertex_program_invalidation_count++;
 		ensure(!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 
@@ -2044,6 +2047,9 @@ namespace rsx
 		ensure(!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty));
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
+
+		// FP config is always checked for now (see get_graphics_pipeline)
+		//fragment_program_invalidation_count++;
 
 		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		current_fragment_program.texcoord_control_mask = m_ctx->register_state->texcoord_control_mask();
