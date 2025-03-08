@@ -119,13 +119,11 @@ struct cfg_root : cfg::node
 	{
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", 
-#if defined(ANDROID) || defined(__APPLE__)
-			video_renderer::vulkan
+#if defined(HAVE_VULKAN)
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan };
 #else
-			video_renderer::opengl // TODO: Is it still actual?
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
 #endif
-		};
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720p };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
