@@ -124,7 +124,6 @@ struct cfg_root : cfg::node
 #else
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
 #endif
-		};
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720p };
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
