@@ -782,8 +782,9 @@ bool GLGSRender::load_program()
 	{
 		void* pipeline_properties = nullptr;
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
-			current_vertex_program, vertex_program_invalidation_count, 
-			current_fragment_program, fragment_program_invalidation_count,
+			&m_program_cache_hint,
+			current_vertex_program,
+			current_fragment_program,
 			pipeline_properties,
 			shadermode != shader_mode::recompiler, true);
 
