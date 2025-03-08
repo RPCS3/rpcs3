@@ -706,7 +706,7 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 	const void* instbuffer = program.get_data();
 	usz acc0 = 0;
 	usz acc1 = 0;
-	for (usz instIndex = 0; instIndex < (program.ucode_length / 16); instIndex++)
+	for (int instIndex = 0; instIndex < static_cast<int>(program.ucode_length / 16); instIndex++)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
 		const usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
