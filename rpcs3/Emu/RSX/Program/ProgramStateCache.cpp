@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ProgramStateCache.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Core/RSXDriverState.h"
 #include "util/sysinfo.hpp"
 
 #include <stack>
@@ -850,5 +851,18 @@ namespace rsx
 #else
 		write_fragment_constants_to_buffer_fallback(buffer, rsx_prog, offsets_cache, sanitize);
 #endif
+	}
+
+	void program_cache_hint_t::invalidate(u32 flags)
+	{
+		if (flags & rsx::vertex_program_dirty)
+		{
+			cached_vertex_program = nullptr;
+		}
+
+		if (flags & rsx::fragment_program_dirty)
+		{
+			cached_fragment_program = nullptr;
+		}
 	}
 }
