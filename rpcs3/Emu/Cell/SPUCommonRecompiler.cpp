@@ -4235,16 +4235,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 						if (tb.reg_origin[i] == 0x80000000)
 						{
-							must_repeat |= !tb.targets.empty() && tb.reg_origin[i] != expected;
-
 							tb.reg_origin[i] = expected;
 						}
 						else if (tb.reg_origin[i] != expected)
 						{
-							must_repeat |= !tb.targets.empty() && tb.reg_origin[i] != umax;
-
 							// Set umax if multiple origins merged (requires PHI node)
 							tb.reg_origin[i] = umax;
+
+							must_repeat |= !tb.targets.empty();
 						}
 					}
 
