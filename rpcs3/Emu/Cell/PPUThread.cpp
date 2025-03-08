@@ -5760,7 +5760,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	// Define some types
 	const auto _func = FunctionType::get(translator.get_type<void>(), {
 		translator.get_type<u8*>(), // Exec base
-		translator.GetContextType()->getPointerTo(), // PPU context
+		translator.get_type<u8*>(), // PPU context
 		translator.get_type<u64>(), // Segment address (for PRX)
 		translator.get_type<u8*>(), // Memory base
 		translator.get_type<u64>(), // r0
