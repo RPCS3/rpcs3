@@ -9,7 +9,7 @@
 
 #include "util/sysinfo.hpp"
 
-static u64 timebase_offset;
+u64 g_timebase_offs{};
 static u64 systemtime_offset;
 
 #ifndef __linux__
@@ -145,8 +145,8 @@ static constexpr u64 g_timebase_freq = /*79800000*/ 80000000ull; // 80 Mhz
 u64 convert_to_timebased_time(u64 time)
 {
 	const u64 result = time * (g_timebase_freq / 1000000ull) * g_cfg.core.clocks_scale / 100u;
-	ensure(result >= timebase_offset);
-	return result - timebase_offset;
+	ensure(result >= g_timebase_offs);
+	return result - g_timebase_offs;
 }
 
 u64 get_timebased_time()
@@ -160,7 +160,7 @@ u64 get_timebased_time()
 #else
 		const u64 result = (tsc / freq * g_timebase_freq + tsc % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
 #endif
-		return result - timebase_offset;
+		return result - g_timebase_offs;
 	}
 
 	while (true)
@@ -183,7 +183,7 @@ u64 get_timebased_time()
 
 		const u64 result = (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
-		if (result) return result - timebase_offset;
+		if (result) return result - g_timebase_offs;
 	}
 }
 
@@ -192,7 +192,7 @@ u64 get_timebased_time()
 // If none-zero arg is specified it will become the base time (for savestates)
 void initialize_timebased_time(u64 timebased_init, bool reset)
 {
-	timebase_offset = 0;
+	g_timebase_offs = 0;
 
 	if (reset)
 	{
@@ -204,7 +204,7 @@ void initialize_timebased_time(u64 timebased_init, bool reset)
 	const u64 current = get_timebased_time();
 	timebased_init = current - timebased_init;
 
-	timebase_offset = timebased_init;
+	g_timebase_offs = timebased_init;
 	systemtime_offset = timebased_init / (g_timebase_freq / 1000000);
 }
 
