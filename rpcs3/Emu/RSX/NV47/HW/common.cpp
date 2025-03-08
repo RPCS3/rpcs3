@@ -62,7 +62,7 @@ namespace rsx
 			return vm::cast(get_address(offset, location));
 		}
 
-		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index, bool /*is_shader_config*/)
+		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index)
 		{
 			if (REGS(ctx)->latch == arg)
 			{
