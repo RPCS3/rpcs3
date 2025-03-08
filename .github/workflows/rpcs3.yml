@@ -173,7 +173,7 @@ jobs:
 
       - name: Compile RPCS3
         shell: pwsh
-        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
+        run: msbuild rpcs3.sln /p:Configuration=Release /v:minimal /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
 
       - name: Pack up build artifacts
         run: |
