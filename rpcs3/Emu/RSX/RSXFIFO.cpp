@@ -240,7 +240,7 @@ namespace rsx
 
 			for (u32 remaining = size, addr = m_internal_get, ptr = from; remaining > 0;)
 			{
-				const u32 next_block = utils::align(addr, _1M);
+				const u32 next_block = utils::align(addr + 1, _1M);
 				const u32 available = (next_block - addr);
 				if (remaining <= available)
 				{
