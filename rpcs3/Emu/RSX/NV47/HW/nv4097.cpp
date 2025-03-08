@@ -98,7 +98,7 @@ namespace rsx
 
 			const auto values = &REGS(ctx)->transform_constants[load + constant_id][subreg];
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
 
 			if (fifo_span.size() < rcount)
 			{
@@ -148,7 +148,7 @@ namespace rsx
 				rcount -= max - (max_vertex_program_instructions * 4);
 			}
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
 
 			if (fifo_span.size() < rcount)
 			{

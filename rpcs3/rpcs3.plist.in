@@ -33,7 +33,7 @@
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.games</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>13.0</string>
+	<string>14.0</string>
 	<key>NSCameraUsageDescription</key>
 	<string>The camera will be used for PlayStation Eye emulation</string>
 	<key>NSMicrophoneUsageDescription</key>

@@ -382,7 +382,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	if (g_cfg.video.overlay)
+	if (g_cfg.video.debug_overlay)
 	{
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -400,6 +400,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 			? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
 			: 0;
+		const auto program_cache_lookups = info.stats.program_cache_lookups_total;
+		const auto program_cache_ellided = info.stats.program_cache_lookups_ellided;
+		const auto program_cache_ellision_rate = program_cache_lookups
+			? (program_cache_ellided * 100) / program_cache_lookups
+			: 0;
 
 		rsx::overlays::set_debug_overlay_text(fmt::format(
 			"Internal Resolution:     %s\n"
@@ -413,13 +418,15 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			"Texture memory: %12dM\n"
 			"Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)\n"
 			"Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)\n"
-			"Vertex cache hits: %9u/%u (%u%%)",
+			"Vertex cache hits: %9u/%u (%u%%)\n"
+			"Program cache lookup ellision: %u/%u (%u%%)",
 			info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
 			get_load(), info.stats.draw_calls, info.stats.setup_time, info.stats.vertex_upload_time,
 			info.stats.textures_upload_time, info.stats.draw_exec_time, num_dirty_textures, texture_memory_size,
 			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
 			num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio, texture_copies_ellided,
-			vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio)
+			vertex_cache_hit_count, info.stats.vertex_cache_request_count, vertex_cache_hit_ratio,
+			program_cache_ellided, program_cache_lookups, program_cache_ellision_rate)
 		);
 	}
 

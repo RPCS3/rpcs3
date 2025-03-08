@@ -223,22 +223,42 @@ namespace rsx
 			m_remaining_commands = 0;
 		}
 
-		std::span<const u32> FIFO_control::get_current_arg_ptr() const
+		std::span<const u32> FIFO_control::get_current_arg_ptr(u32 length_in_words) const
 		{
 			if (g_cfg.core.rsx_fifo_accuracy)
 			{
 				// Return a pointer to the cache storage with confined access
-				return {reinterpret_cast<const u32*>(&m_cache) + (m_internal_get - m_cache_addr) / 4, (m_cache_size - (m_internal_get - m_cache_addr)) / 4};
+				const u32 cache_offset_in_words = (m_internal_get - m_cache_addr) / 4;
+				const u32 cache_size_in_words = m_cache_size / 4;
+				return {reinterpret_cast<const u32*>(&m_cache) + cache_offset_in_words, cache_size_in_words - cache_offset_in_words};
 			}
-			else
-			{
-				// Return a raw pointer with no limited access
-				constexpr u32 _1m = 0x100000;
-				const u32 base = m_iotable->get_addr(m_internal_get);
-				const u32 base_1m = m_iotable->get_addr(m_internal_get + _1m);
 
-				return {static_cast<const u32*>(vm::base(base)), (base_1m - _1m == base ? _1m : (_1m - (m_internal_get % _1m))) / 4 };
+			// Return a raw pointer to contiguous memory
+			constexpr u32 _1M = 0x100000;
+			const u32 size = length_in_words * sizeof(u32);
+			const u32 from = m_iotable->get_addr(m_internal_get);
+
+			for (u32 remaining = size, addr = m_internal_get, ptr = from; remaining > 0;)
+			{
+				const u32 next_block = utils::align(addr + 1, _1M);
+				const u32 available = (next_block - addr);
+				if (remaining <= available)
+				{
+					return { static_cast<const u32*>(vm::base(from)), length_in_words };
+				}
+
+				remaining -= available;
+				const u32 next_ptr = m_iotable->get_addr(next_block);
+				if (next_ptr != (ptr + available))
+				{
+					return { static_cast<const u32*>(vm::base(from)), (size - remaining) / sizeof(u32)};
+				}
+
+				ptr = next_ptr;
+				addr = next_block;
 			}
+
+			fmt::throw_exception("Unreachable");
 		}
 
 		bool FIFO_control::read_unsafe(register_pair& data)
