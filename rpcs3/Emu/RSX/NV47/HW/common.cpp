@@ -100,47 +100,28 @@ namespace rsx
 			ensure(!command_span.empty() && command_span.size() <= count);
 
 			u32* const dst_regs = &REGS(ctx)->registers[reg];
- 
-			//u8 change_mask = 0;
-			u8 change_mask = 0xff;
-
-			if (dst_regs[0] != REGS(ctx)->latch)
-			{
-				// Fixup for the first method
-				change_mask |= 1;
-			}
+			bool set_dirty = (dst_regs[0] != REGS(ctx)->latch);
 
 			for (usz i = 1; i < command_span.size(); i++)
 			{
 				const u32 command_data = std::bit_cast<be_t<u32>>(command_span[i]);
 
-				change_mask |= command_data != dst_regs[i] ? (1u << i) : 0;
-
+				set_dirty = set_dirty || (command_data != dst_regs[i]);
 				dst_regs[i] = command_data;
-			}
-
-			// Disabled
-			// Bits set:
-			// NV4097_SET_TEXTURE_OFFSET
-			// NV4097_SET_TEXTURE_IMAGE_RECT
-			//constexpr u32 mask_of_texture_data_not_affecting_shader_config = 0x41;
-			constexpr u32 mask_of_texture_data_not_affecting_shader_config = 0;
-
-			if (change_mask)
-			{
-				RSX(ctx)->m_textures_dirty[texture_index] = true;
-
-				if (~mask_of_texture_data_not_affecting_shader_config & change_mask)
-				{
-					if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << texture_index))
-					{
-						RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
-					}
-				}
 			}
 
 			// Skip handled methods
 			RSX(ctx)->fifo_ctrl->skip_methods(static_cast<u32>(command_span.size()) - 1);
+
+			if (set_dirty)
+			{
+				RSX(ctx)->m_textures_dirty[texture_index] = true;
+
+				if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << texture_index))
+				{
+					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+				}
+			}
 		}
 
 		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index)
