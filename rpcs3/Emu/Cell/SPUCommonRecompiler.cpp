@@ -8148,15 +8148,23 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					}
 				}
 
-				auto& res_state = is_all_resolved ? cur_node->start_reg_state : temp;
-
-				if (!is_all_resolved)
+				if (qi == 0)
 				{
-					res_state = reg_state_t::make_unknown<s_reg_max>(it->block_pc);
+					// TODO: First block is always resolved here, but this logic can be improved to detect more cases of opportunistic resolving
+					is_all_resolved = true;
 				}
 
-				for (usz bi = 0; is_all_resolved && bi < it->state_prev.size(); bi++)
+				auto& res_state = is_all_resolved ? cur_node->start_reg_state : temp;
+
+				for (usz bi = 0, is_first = 1; bi < it->state_prev.size(); bi++)
 				{
+					if (it->state_prev[bi].disconnected)
+					{
+						// Loop state, even if not ignored for a million times the result would still be the same
+						// So ignore it
+						continue;
+					}
+
 					std::array<reg_state_t, s_reg_max>* arg_state{};
 					const auto& node = ::at32(map, it->state_prev[bi].block_pc);
 
@@ -8172,7 +8180,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 						ensure(it->state_prev[bi].state_written);
 					}
 
-					if (bi == 0)
+					if (is_first)
 					{
 						res_state = *arg_state;
 					}
@@ -8180,6 +8188,8 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 					{
 						merge(res_state, res_state, *arg_state, it->block_pc);
 					}
+
+					is_first = 0;
 				}
 
 				std::array<reg_state_t, s_reg_max>* result_storage{};
