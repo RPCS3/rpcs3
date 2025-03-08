@@ -2054,7 +2054,7 @@ public:
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
 						}
-						else if (src < 0x40000)
+						else if (src < SPU_LS_SIZE)
 						{
 							// Passthrough register value
 							const auto bfound = m_blocks.find(src);
