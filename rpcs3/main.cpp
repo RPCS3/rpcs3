@@ -410,7 +410,7 @@ int find_arg(const char* to_search, std::span<char* const> argv)
 
 		if (argp[0] == '-' && argp[1] == '-' && !std::strcmp(to_search, argp + 2))
 		{
-			return i;
+			return ::narrow<int>(i);
 		}
 	}
 
