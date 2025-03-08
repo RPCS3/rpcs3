@@ -717,7 +717,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	pad_get_data(port_no, data.get_ptr());
 
-	if (g_cfg.io.debug_overlay && !g_cfg.video.overlay && port_no == 0)
+	if (g_cfg.io.debug_overlay && !g_cfg.video.debug_overlay && port_no == 0)
 	{
 		show_debug_overlay(*data, *pad, config);
 	}

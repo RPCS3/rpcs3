@@ -50,7 +50,7 @@ namespace rsx
 			{
 				auto overlay = manager->get<rsx::overlays::debug_overlay>();
 
-				if (g_cfg.video.overlay || g_cfg.io.debug_overlay)
+				if (g_cfg.video.debug_overlay || g_cfg.io.debug_overlay)
 				{
 					if (!overlay)
 					{
@@ -66,7 +66,7 @@ namespace rsx
 
 		extern void set_debug_overlay_text(std::string&& text)
 		{
-			if (!g_cfg.misc.use_native_interface || (!g_cfg.video.overlay && !g_cfg.io.debug_overlay))
+			if (!g_cfg.misc.use_native_interface || (!g_cfg.video.debug_overlay && !g_cfg.io.debug_overlay))
 				return;
 
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())

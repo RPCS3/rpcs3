@@ -3151,7 +3151,7 @@ namespace rsx
 
 		// Reset current stats
 		m_frame_stats = {};
-		m_profiler.enabled = !!g_cfg.video.overlay;
+		m_profiler.enabled = !!g_cfg.video.debug_overlay;
 	}
 
 	f64 thread::get_cached_display_refresh_rate()
