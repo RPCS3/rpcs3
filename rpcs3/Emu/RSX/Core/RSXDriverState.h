@@ -40,6 +40,10 @@ namespace rsx
 
 		xform_instancing_state_dirty  = (1 << 25), // Transform instancing state has changed
 
+		// TODO - Should signal that we simply need to do a FP compare before the next draw call and invalidate the ucode if the content has changed.
+		// Marking as dirty to invalidate hot cache also works, it's not like there's tons of barriers per frame anyway.
+		fragment_program_needs_rehash = fragment_program_ucode_dirty,
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty | xform_instancing_state_dirty,

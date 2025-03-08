@@ -111,7 +111,7 @@ namespace rsx
 						continue;
 					}
 
-					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+					m_storage.preload_programs(nullptr, std::get<1>(entry), std::get<2>(entry));
 
 					unpacked[unpacked.push_begin()] = std::move(entry);
 				}

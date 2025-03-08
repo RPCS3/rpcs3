@@ -17,7 +17,7 @@ namespace rsx
 
 		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg0, u32 arg1 = 0u, u32 index = 0u);
 
-		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index, bool is_shader_config);
+		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index);
 
 		void set_texture_configuration_command(rsx::context* ctx, u32 reg);
 

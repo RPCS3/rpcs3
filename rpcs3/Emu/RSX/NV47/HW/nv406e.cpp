@@ -26,7 +26,7 @@ namespace rsx
 			const u32 addr = get_address(REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
 
 			// Syncronization point, may be associated with memory changes without actually changing addresses
-			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
+			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
