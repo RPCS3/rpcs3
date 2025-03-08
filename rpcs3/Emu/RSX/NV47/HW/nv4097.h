@@ -222,15 +222,6 @@ namespace rsx
 		};
 
 		template <u32 index>
-		struct set_texture_dirty_bit_texture_config
-		{
-			static void impl(context* ctx, u32 /*reg*/, u32 arg)
-			{
-				util::set_fragment_texture_dirty_bit(ctx, arg, index, true);
-			}
-		};
-
-		template <u32 index>
 		struct set_texture_offset
 		{
 			static void impl(context* ctx, u32 reg, u32 /*arg*/)
@@ -241,11 +232,11 @@ namespace rsx
 		};
 
 		template <u32 index>
-		struct set_texture_dirty_bit_location_and_area
+		struct set_fragment_texture_dirty_bit
 		{
 			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				util::set_fragment_texture_dirty_bit(ctx, arg, index, false);
+				util::set_fragment_texture_dirty_bit(ctx, arg, index);
 			}
 		};
 
