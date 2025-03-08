@@ -1959,10 +1959,24 @@ bool VKGSRender::load_program()
 	{
 		vk::enter_uninterruptible();
 
+		if (g_cfg.video.debug_overlay)
+		{
+			m_frame_stats.program_cache_lookups_total += 2;
+			if (m_program_cache_hint.has_fragment_program())
+			{
+				m_frame_stats.program_cache_lookups_ellided++;
+			}
+			if (m_program_cache_hint.has_vertex_program())
+			{
+				m_frame_stats.program_cache_lookups_ellided++;
+			}
+		}
+
 		// Load current program from cache
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
-			vertex_program, vertex_program_invalidation_count, 
-			fragment_program, fragment_program_invalidation_count,
+			&m_program_cache_hint,
+			vertex_program,
+			fragment_program,
 			m_pipeline_properties,
 			shadermode != shader_mode::recompiler, true, m_pipeline_layout);
 
