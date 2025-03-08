@@ -96,14 +96,8 @@ namespace rsx
 			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
 
 			// Clamp by the count of methods this function is responsible to
-			std::span<const u32> command_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
-
-			if (command_span.size() > count)
-			{
-				command_span = command_span.subspan(0, count);
-			}
-
-			ensure(!command_span.empty());
+			std::span<const u32> command_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(count);
+			ensure(!command_span.empty() && command_span.size() <= count);
 
 			u32* const dst_regs = &REGS(ctx)->registers[reg];
  

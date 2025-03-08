@@ -42,7 +42,7 @@ namespace rsx
 			const u32 x = REGS(ctx)->nv308a_x() + index;
 			const u32 y = REGS(ctx)->nv308a_y();
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(count);
 
 			if (fifo_span.size() < count)
 			{
