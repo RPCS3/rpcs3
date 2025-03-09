@@ -62,13 +62,65 @@ namespace rsx
 			return vm::cast(get_address(offset, location));
 		}
 
-		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 index)
+		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index)
 		{
+			if (REGS(ctx)->latch == arg)
+			{
+				return;
+			}
+
 			RSX(ctx)->m_textures_dirty[index] = true;
 
 			if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << index))
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+			}
+		}
+
+		void set_texture_configuration_command(rsx::context* ctx, u32 reg)
+		{
+			const u32 reg_index = reg - NV4097_SET_TEXTURE_OFFSET;
+			ensure(reg_index % 8 == 0 && reg_index < 8 * 16); // Only NV4097_SET_TEXTURE_OFFSET is expected
+
+			const u32 texture_index = reg_index / 8;
+
+			// FIFO args count including this one
+			const u32 fifo_args_cnt = RSX(ctx)->fifo_ctrl->get_remaining_args_count() + 1;
+
+			// The range of methods this function resposible to
+			constexpr u32 method_range = 8;
+
+			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
+
+			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
+
+			// Clamp by the count of methods this function is responsible to
+			std::span<const u32> command_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(count);
+			ensure(!command_span.empty() && command_span.size() <= count);
+
+			u32* const dst_regs = &REGS(ctx)->registers[reg];
+			bool set_dirty = (dst_regs[0] != REGS(ctx)->latch);
+
+			for (usz i = 1; i < command_span.size(); i++)
+			{
+				const u32 command_data = std::bit_cast<be_t<u32>>(command_span[i]);
+
+				set_dirty = set_dirty || (command_data != dst_regs[i]);
+				dst_regs[i] = command_data;
+			}
+
+			// Skip handled methods
+			RSX(ctx)->fifo_ctrl->skip_methods(static_cast<u32>(command_span.size()) - 1);
+
+			if (set_dirty)
+			{
+				RSX(ctx)->m_textures_dirty[texture_index] = true;
+
+				if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << texture_index))
+				{
+					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+				}
 			}
 		}
 

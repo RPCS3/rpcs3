@@ -40,13 +40,13 @@ jobs:
 #     displayName: ccache
 
 #   - bash: |
-#       docker pull --quiet rpcs3/rpcs3-ci-jammy:1.1
+#       docker pull --quiet rpcs3/rpcs3-ci-jammy:1.2
 #       docker run                      \
 #         -v $(pwd):/rpcs3              \
 #         --env-file .ci/docker.env \
 #         -v $CCACHE_DIR:/root/.ccache  \
 #         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-#         rpcs3/rpcs3-ci-jammy:1.1 \
+#         rpcs3/rpcs3-ci-jammy:1.2 \
 #         /rpcs3/.ci/build-linux.sh
 #     displayName: Docker setup and build
 
@@ -152,7 +152,7 @@ jobs:
     LLVM_COMPILER_VER: '19'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2
@@ -213,7 +213,7 @@ jobs:
     LLVM_COMPILER_VER: '19'
 
   pool:
-    vmImage: "macOS-13"
+    vmImage: "macOS-14"
 
   steps:
     - task: Cache@2

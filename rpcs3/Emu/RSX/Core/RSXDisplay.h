@@ -59,6 +59,9 @@ namespace rsx
 		u32 vertex_cache_request_count;
 		u32 vertex_cache_miss_count;
 
+		u32 program_cache_lookups_total;
+		u32 program_cache_lookups_ellided;
+
 		framebuffer_statistics_t framebuffer_stats;
 	};
 

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ProgramStateCache.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Core/RSXDriverState.h"
 #include "util/sysinfo.hpp"
 
 #include <stack>
@@ -705,7 +706,7 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 	const void* instbuffer = program.get_data();
 	usz acc0 = 0;
 	usz acc1 = 0;
-	for (usz instIndex = 0; instIndex < (program.ucode_length / 16); instIndex++)
+	for (int instIndex = 0; instIndex < static_cast<int>(program.ucode_length / 16); instIndex++)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
 		const usz tmp0 = std::rotr(inst._u64[0], instIndex * 2);
@@ -767,6 +768,21 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			instIndex++;
 	}
 	
+	return true;
+}
+
+bool fragment_program_compare::config_only(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2)
+{
+	if (binary1.ucode_length != binary2.ucode_length ||
+		binary1.ctrl != binary2.ctrl ||
+		binary1.texture_state != binary2.texture_state ||
+		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
+		binary1.two_sided_lighting != binary2.two_sided_lighting ||
+		binary1.mrt_buffers_count != binary2.mrt_buffers_count)
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -835,5 +851,18 @@ namespace rsx
 #else
 		write_fragment_constants_to_buffer_fallback(buffer, rsx_prog, offsets_cache, sanitize);
 #endif
+	}
+
+	void program_cache_hint_t::invalidate(u32 flags)
+	{
+		if (flags & rsx::vertex_program_dirty)
+		{
+			cached_vertex_program = nullptr;
+		}
+
+		if (flags & rsx::fragment_program_dirty)
+		{
+			cached_fragment_program = nullptr;
+		}
 	}
 }

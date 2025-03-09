@@ -7,6 +7,7 @@
 #include "util/logs.hpp"
 #include "util/fnv_hash.hpp"
 #include "util/v128.hpp"
+#include <util/bless.hpp>
 
 #include <span>
 #include <unordered_map>
@@ -80,11 +81,53 @@ namespace program_hash_util
 	struct fragment_program_compare
 	{
 		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
+		static bool config_only(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2);
 	};
 }
 
 namespace rsx
 {
+	struct program_cache_hint_t
+	{
+		template <typename T>
+		T* get_fragment_program() const
+		{
+			return utils::bless<T>(cached_fragment_program);
+		}
+
+		template <typename T>
+		T* get_vertex_program() const
+		{
+			return utils::bless<T>(cached_vertex_program);
+		}
+
+		bool has_vertex_program() const
+		{
+			return cached_vertex_program != nullptr;
+		}
+
+		bool has_fragment_program() const
+		{
+			return cached_fragment_program != nullptr;
+		}
+
+		void invalidate(u32 flags);
+
+		static inline void cache_vertex_program(program_cache_hint_t* cache, void* vertex_program)
+		{
+			if (cache) cache->cached_vertex_program = vertex_program;
+		}
+
+		static inline void cache_fragment_program(program_cache_hint_t* cache, void* fragment_program)
+		{
+			if (cache) cache->cached_fragment_program = fragment_program;
+		}
+
+	protected:
+		void* cached_fragment_program = nullptr;
+		void* cached_vertex_program = nullptr;
+	};
+
 	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize = true);
 }
 
@@ -96,13 +139,13 @@ namespace rsx
 * - a typedef VertexProgramData to a type that encapsulate vertex program info. It should provide an Id member.
 * - a typedef FragmentProgramData to a types that encapsulate fragment program info. It should provide an Id member and a fragment constant offset vector.
 * - a typedef PipelineData encapsulating monolithic program.
-* - a typedef PipelineProperties to a type that encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
+* - a typedef pipeline_properties to a type that encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
 * - a	typedef ExtraData type that will be passed to the buildProgram function.
 * It should also contains the following function member :
 * - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, usz ID);
 * - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, usz ID);
-* - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData);
-* - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, PipelineProperties& props);
+* - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const pipeline_properties &pipeline_properties, const ExtraData& extraData);
+* - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, pipeline_properties& props);
 */
 template<typename backend_traits>
 class program_state_cache
@@ -167,8 +210,16 @@ protected:
 	pipeline_storage_type __null_pipeline_handle;
 
 	/// bool here to inform that the program was preexisting.
-	std::tuple<const vertex_program_type&, bool> search_vertex_program(const RSXVertexProgram& rsx_vp, bool force_load = true)
+	std::tuple<const vertex_program_type&, bool> search_vertex_program(
+		rsx::program_cache_hint_t* cache_hint,
+		const RSXVertexProgram& rsx_vp)
 	{
+		if (cache_hint && cache_hint->has_vertex_program())
+		{
+			// The caller guarantees that the cached vertex program is correct.
+			return std::forward_as_tuple(*cache_hint->get_vertex_program<vertex_program_type>(), true);
+		}
+
 		bool recompile = false;
 		vertex_program_type* new_shader;
 		{
@@ -177,12 +228,8 @@ protected:
 			const auto& I = m_vertex_shader_cache.find(rsx_vp);
 			if (I != m_vertex_shader_cache.end())
 			{
+				rsx::program_cache_hint_t::cache_vertex_program(cache_hint, &(I->second));
 				return std::forward_as_tuple(I->second, true);
-			}
-
-			if (!force_load)
-			{
-				return std::forward_as_tuple(__null_vertex_program, false);
 			}
 
 			rsx_log.trace("VP not found in buffer!");
@@ -198,28 +245,30 @@ protected:
 			backend_traits::recompile_vertex_program(rsx_vp, *new_shader, m_next_id++);
 		}
 
+		rsx::program_cache_hint_t::cache_vertex_program(cache_hint, new_shader);
 		return std::forward_as_tuple(*new_shader, false);
 	}
 
 	/// bool here to inform that the program was preexisting.
-	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, bool force_load = true)
+	std::tuple<const fragment_program_type&, bool> search_fragment_program(rsx::program_cache_hint_t* cache_hint, const RSXFragmentProgram& rsx_fp)
 	{
+		if (cache_hint && cache_hint->has_fragment_program())
+		{
+			// The caller guarantees that the cached fragemnt program is correct.
+			return std::forward_as_tuple(*cache_hint->get_fragment_program<fragment_program_type>(), true);
+		}
+
 		bool recompile = false;
 		typename binary_to_fragment_program::iterator it;
 		fragment_program_type* new_shader;
-
 		{
 			reader_lock lock(m_fragment_mutex);
 
 			const auto& I = m_fragment_shader_cache.find(rsx_fp);
 			if (I != m_fragment_shader_cache.end())
 			{
+				rsx::program_cache_hint_t::cache_fragment_program(cache_hint, &(I->second));
 				return std::forward_as_tuple(I->second, true);
-			}
-
-			if (!force_load)
-			{
-				return std::forward_as_tuple(__null_fragment_program, false);
 			}
 
 			rsx_log.trace("FP not found in buffer!");
@@ -235,6 +284,7 @@ protected:
 			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
 		}
 
+		rsx::program_cache_hint_t::cache_fragment_program(cache_hint, new_shader);
 		return std::forward_as_tuple(*new_shader, false);
 	}
 
@@ -289,29 +339,30 @@ public:
 
 	template<typename... Args>
 	pipeline_data_type get_graphics_pipeline(
-		const RSXVertexProgram& vertexShader,
-		const RSXFragmentProgram& fragmentShader,
-		pipeline_properties& pipelineProperties,
+		rsx::program_cache_hint_t* cache_hint,
+		const RSXVertexProgram& vertex_shader,
+		const RSXFragmentProgram& fragment_shader,
+		pipeline_properties& pipeline_properties,
 		bool compile_async,
 		bool allow_notification,
 		Args&& ...args
 	)
 	{
-		const auto& vp_search = search_vertex_program(vertexShader);
-		const auto& fp_search = search_fragment_program(fragmentShader);
+		const auto& vp_search = search_vertex_program(cache_hint, vertex_shader);
+		const auto& fp_search = search_fragment_program(cache_hint, fragment_shader);
 
 		const bool already_existing_fragment_program = std::get<1>(fp_search);
 		const bool already_existing_vertex_program = std::get<1>(vp_search);
 		const vertex_program_type& vertex_program = std::get<0>(vp_search);
 		const fragment_program_type& fragment_program = std::get<0>(fp_search);
-		const pipeline_key key = { vertex_program.id, fragment_program.id, pipelineProperties };
+		const pipeline_key key = { vertex_program.id, fragment_program.id, pipeline_properties };
 
 		m_cache_miss_flag = true;
 
 		if (already_existing_vertex_program && already_existing_fragment_program)
 		{
 			// There is a high chance the pipeline object was compiled if the two shaders already existed before
-			backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipelineProperties);
+			backend_traits::validate_pipeline_properties(vertex_program, fragment_program, pipeline_properties);
 
 			reader_lock lock(m_pipeline_mutex);
 			if (const auto I = m_storage.find(key); I != m_storage.end())
@@ -341,7 +392,7 @@ public:
 
 		if (allow_notification)
 		{
-			callback = [this, vertexShader, fragmentShader_ = RSXFragmentProgram::clone(fragmentShader), key]
+			callback = [this, vertex_shader, fragment_shader_ = RSXFragmentProgram::clone(fragment_shader), key]
 			(pipeline_storage_type& pipeline) -> pipeline_type*
 			{
 				if (!pipeline)
@@ -350,7 +401,7 @@ public:
 				}
 
 				rsx_log.success("Program compiled successfully");
-				notify_pipeline_compiled(key.properties, vertexShader, fragmentShader_);
+				notify_pipeline_compiled(key.properties, vertex_shader, fragment_shader_);
 
 				std::lock_guard lock(m_pipeline_mutex);
 				auto& pipe_result = m_storage[key];
@@ -377,7 +428,7 @@ public:
 		auto result = backend_traits::build_pipeline(
 			vertex_program,                 // VS, must already be decompiled and recompiled above
 			fragment_program,               // FS, must already be decompiled and recompiled above
-			pipelineProperties,             // Pipeline state
+			pipeline_properties,             // Pipeline state
 			compile_async,                  // Allow asynchronous compilation
 			callback,                       // Insertion and notification callback
 			std::forward<Args>(args)...);   // Other arguments

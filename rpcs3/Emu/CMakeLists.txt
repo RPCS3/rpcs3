@@ -143,8 +143,8 @@ target_sources(rpcs3_emu PRIVATE
 )
 
 if(USE_FAUDIO)
-    find_package(SDL2)
-    if(SDL2_FOUND AND SDL2_VERSION VERSION_GREATER_EQUAL 2.0.9)
+    find_package(SDL3)
+    if(SDL3_FOUND AND SDL3_VERSION VERSION_GREATER_EQUAL 3.2.0)
         target_sources(rpcs3_emu PRIVATE
             Audio/FAudio/FAudioBackend.cpp
             Audio/FAudio/faudio_enumerator.cpp
@@ -641,7 +641,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PUBLIC
-        3rdparty::ffmpeg 3rdparty::sdl2
+        3rdparty::ffmpeg 3rdparty::sdl3
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl

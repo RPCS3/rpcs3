@@ -135,13 +135,13 @@ struct GLProgramBuffer : public program_state_cache<GLTraits>
 	template <typename... Args>
 	void add_pipeline_entry(const RSXVertexProgram& vp, const RSXFragmentProgram& fp, void* &props, Args&& ...args)
 	{
-		get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
+		get_graphics_pipeline(nullptr, vp, fp, props, false, false, std::forward<Args>(args)...);
 	}
 
-	void preload_programs(const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
+	void preload_programs(rsx::program_cache_hint_t* cache_hint, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
 	{
-		search_vertex_program(vp);
-		search_fragment_program(fp);
+		search_vertex_program(cache_hint, vp);
+		search_fragment_program(cache_hint, fp);
 	}
 
 	bool check_cache_missed() const

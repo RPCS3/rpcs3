@@ -141,7 +141,7 @@ struct cfg_root : cfg::node
 		cfg::_bool log_programs{ this, "Log shader programs" };
 		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };
-		cfg::_bool overlay{ this, "Debug overlay", false, true };
+		cfg::_bool debug_overlay{ this, "Debug overlay", false, true };
 		cfg::_bool renderdoc_compatiblity{ this, "Renderdoc Compatibility Mode" };
 		cfg::_bool use_gpu_texture_scaling{ this, "Use GPU texture scaling", false };
 		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };

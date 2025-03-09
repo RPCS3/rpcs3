@@ -15,7 +15,7 @@ enum class pad_handler
 	xinput,
 	mm,
 #endif
-#ifdef HAVE_SDL2
+#ifdef HAVE_SDL3
 	sdl,
 #endif
 #ifdef HAVE_LIBEVDEV

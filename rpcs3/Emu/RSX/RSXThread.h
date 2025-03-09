@@ -242,6 +242,7 @@ namespace rsx
 
 		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
 		rsx::bitmask_t<rsx::pipeline_state> m_graphics_state;
+
 		u64 ROP_sync_timestamp = 0;
 
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
@@ -259,6 +260,8 @@ namespace rsx
 
 		vertex_program_texture_state current_vp_texture_state = {};
 		fragment_program_texture_state current_fp_texture_state = {};
+
+		program_cache_hint_t m_program_cache_hint;
 
 		// Runs shader prefetch and resolves pipeline status flags
 		void analyse_current_rsx_pipeline();

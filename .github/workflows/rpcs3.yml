@@ -33,17 +33,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.2"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: clang
             UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
             UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux"
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.1"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.2"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: gcc
           - os: ubuntu-24.04-arm
-            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.1"
+            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.2"
             build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
             UPLOAD_COMMIT_HASH: a1d35836e8d45bfc6f63c26f0a3e5d46ef622fe1
@@ -173,7 +173,7 @@ jobs:
 
       - name: Compile RPCS3
         shell: pwsh
-        run: msbuild rpcs3.sln /p:Configuration=Release /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
+        run: msbuild rpcs3.sln /p:Configuration=Release /v:minimal /p:Platform=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_no_debug_info.targets"
 
       - name: Pack up build artifacts
         run: |

@@ -159,7 +159,7 @@ namespace rsx
 			u32 get_pos() const { return m_internal_get; }
 			u32 last_cmd() const { return m_cmd; }
 			void sync_get() const;
-			std::span<const u32> get_current_arg_ptr() const;
+			std::span<const u32> get_current_arg_ptr(u32 length_in_words) const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void restore_state(u32 cmd, u32 count);
 			void inc_get(bool wait);

@@ -98,7 +98,7 @@ namespace rsx
 
 			const auto values = &REGS(ctx)->transform_constants[load + constant_id][subreg];
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
 
 			if (fifo_span.size() < rcount)
 			{
@@ -148,16 +148,45 @@ namespace rsx
 				rcount -= max - (max_vertex_program_instructions * 4);
 			}
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr();
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
 
 			if (fifo_span.size() < rcount)
 			{
 				rcount = ::size32(fifo_span);
 			}
 
-			copy_data_swap_u32(&REGS(ctx)->transform_program[load_pos * 4 + index % 4], fifo_span.data(), rcount);
+			const auto out_ptr = &REGS(ctx)->transform_program[load_pos * 4 + index % 4];
 
-			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
+			pipeline_state to_set_dirty = rsx::pipeline_state::vertex_program_ucode_dirty;
+
+			if (rcount >= 4 && !RSX(ctx)->m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
+			{
+				// Assume clean
+				to_set_dirty = {};
+
+				const usz first_index_off = 0;
+				const usz second_index_off = (((rcount / 4) - 1) / 2) * 4;
+
+				const u64 src_op1_2 = read_from_ptr<be_t<u64>>(fifo_span.data() + first_index_off);
+				const u64 src_op2_2 = read_from_ptr<be_t<u64>>(fifo_span.data() + second_index_off);
+
+				// Fast comparison
+				if (src_op1_2 != read_from_ptr<u64>(out_ptr + first_index_off) || src_op2_2 != read_from_ptr<u64>(out_ptr + second_index_off))
+				{
+					to_set_dirty = rsx::pipeline_state::vertex_program_ucode_dirty;
+				}
+			}
+
+			if (to_set_dirty)
+			{
+				copy_data_swap_u32(out_ptr, fifo_span.data(), rcount);
+			}
+			else if (copy_data_swap_u32_cmp(out_ptr, fifo_span.data(), rcount))
+			{
+				to_set_dirty = rsx::pipeline_state::vertex_program_ucode_dirty;
+			}
+
+			RSX(ctx)->m_graphics_state |= to_set_dirty;
 			REGS(ctx)->transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
 			RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
 		}
