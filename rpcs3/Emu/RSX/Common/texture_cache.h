@@ -381,9 +381,20 @@ namespace rsx
 				{
 					if (!(surface = surface_cache.get_surface_at(ref_address)))
 					{
-						// Compositing op. Just ignore expiry for now
-						ensure(!ref_image);
-						return {};
+						// Surface cache does not have our image. Two possibilities:
+						// 1. It was never a real RTT, just some op like dynamic/static-copy/composite request. image_ref is null in such cases.
+						// 2. It was real but probably deleted some time ago and we have a bogus pointer. Discard it in this case.
+						if (!ref_image)
+						{
+							// Compositing op. Just ignore expiry for now
+							return {};
+						}
+
+						// We have a real image but surface cache says it doesn't exist any more. Force a reupload.
+						// Normally the global samplers dirty flag should have been set to invalidate all references.
+						ensure(external_subresource_desc.op == deferred_request_command::nop);
+						rsx_log.warning("Renderer is holding a stale reference to a surface that no longer exists!");
+						return { true, nullptr };
 					}
 				}
 
