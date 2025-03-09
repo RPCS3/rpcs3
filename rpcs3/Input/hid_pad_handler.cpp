@@ -63,7 +63,7 @@ public:
 
 		if (int errorCode = hid_init(); errorCode != 0)
 		{
-			hid_log.fatal("hid_init error: %s", hid_error(errorCode));
+			hid_log.fatal("hid_init error %d", errorCode);
 			return false;
 		}
 
