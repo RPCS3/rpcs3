@@ -198,7 +198,7 @@ namespace utils
 		}
 
 #elif __linux__
-
+#ifndef ANDROID
 		m_previous_idle_times_per_cpu.resize(utils::get_thread_count(), 0.0);
 		m_previous_total_times_per_cpu.resize(utils::get_thread_count(), 0.0);
 
@@ -289,6 +289,7 @@ namespace utils
 		{
 			perf_log.error("Failed to open /proc/stat (%s)", strerror(errno));
 		}
+#endif
 #else
 		total_usage = get_usage();
 #endif

@@ -14,6 +14,12 @@
 
 using namespace std::literals::string_literals;
 
+#ifdef ANDROID
+std::string g_android_executable_dir;
+std::string g_android_config_dir;
+std::string g_android_cache_dir;
+#endif
+
 #ifdef _WIN32
 
 #include "Utilities/StrUtil.h"
@@ -387,6 +393,399 @@ namespace fs
 		g_tls_error = error::readonly;
 		return false;
 	}
+
+#ifdef _WIN32
+	class windows_file final : public file_base
+	{
+		HANDLE m_handle;
+		atomic_t<u64> m_pos;
+
+	public:
+		windows_file(HANDLE handle)
+			: m_handle(handle)
+			, m_pos(0)
+		{
+		}
+
+		~windows_file() override
+		{
+			if (m_handle != nullptr)
+			{
+				CloseHandle(m_handle);
+			}
+		}
+
+		stat_t get_stat() override
+		{
+			FILE_BASIC_INFO basic_info;
+			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
+
+			stat_t info;
+			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
+			info.size = this->size();
+			info.atime = to_time(basic_info.LastAccessTime);
+			info.mtime = to_time(basic_info.LastWriteTime);
+			info.ctime = info.mtime;
+
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
+
+			return info;
+		}
+
+		void sync() override
+		{
+			ensure(FlushFileBuffers(m_handle)); // "file::sync"
+		}
+
+		bool trunc(u64 length) override
+		{
+			FILE_END_OF_FILE_INFO _eof;
+			_eof.EndOfFile.QuadPart = length;
+
+			if (!SetFileInformationByHandle(m_handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
+			{
+				g_tls_error = to_error(GetLastError());
+				return false;
+			}
+
+			return true;
+		}
+
+		u64 read(void* buffer, u64 count) override
+		{
+			u64 nread_sum = 0;
+
+			for (char* data = static_cast<char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nread = 0;
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos;
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
+				nread_sum += nread;
+				m_pos += nread;
+
+				if (nread < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nread_sum;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			u64 nread_sum = 0;
+
+			for (char* data = static_cast<char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nread = 0;
+				OVERLAPPED ovl{};
+				ovl.Offset = DWORD(offset);
+				ovl.OffsetHigh = DWORD(offset >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
+				nread_sum += nread;
+
+				if (nread < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+				offset += size;
+			}
+
+			return nread_sum;
+		}
+
+		u64 write(const void* buffer, u64 count) override
+		{
+			u64 nwritten_sum = 0;
+
+			for (const char* data = static_cast<const char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nwritten = 0;
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos.fetch_add(size);
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
+				ensure(nwritten == size);
+				nwritten_sum += nwritten;
+
+				if (nwritten < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nwritten_sum;
+		}
+
+		u64 seek(s64 offset, seek_mode whence) override
+		{
+			if (whence > seek_end)
+			{
+				fmt::throw_exception("Invalid whence (0x%x)", whence);
+			}
+
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() : -1;
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			m_pos = new_pos;
+			return m_pos;
+		}
+
+		u64 size() override
+		{
+			LARGE_INTEGER size;
+			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
+
+			return size.QuadPart;
+		}
+
+		native_handle get_handle() override
+		{
+			return m_handle;
+		}
+
+		file_id get_id() override
+		{
+			file_id id{"windows_file"};
+			id.data.resize(sizeof(FILE_ID_INFO));
+
+			FILE_ID_INFO info;
+
+			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
+			{
+				// Try GetFileInformationByHandle as a fallback
+				BY_HANDLE_FILE_INFORMATION info2;
+				ensure(GetFileInformationByHandle(m_handle, &info2));
+
+				info = {};
+				info.VolumeSerialNumber = info2.dwVolumeSerialNumber;
+				std::memcpy(&info.FileId, &info2.nFileIndexHigh, 8);
+			}
+
+			std::memcpy(id.data.data(), &info, sizeof(info));
+			return id;
+		}
+
+		void release() override
+		{
+			m_handle = nullptr;
+		}
+	};
+#else
+	class unix_file final : public file_base
+	{
+		int m_fd;
+
+	public:
+		unix_file(int fd)
+			: m_fd(fd)
+		{
+		}
+
+		~unix_file() override
+		{
+			if (m_fd >= 0)
+			{
+				::close(m_fd);
+			}
+		}
+
+		stat_t get_stat() override
+		{
+			struct ::stat file_info;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
+
+			stat_t info;
+			info.is_directory = S_ISDIR(file_info.st_mode);
+			info.is_writable = file_info.st_mode & 0200; // HACK: approximation
+			info.size = file_info.st_size;
+			info.atime = file_info.st_atime;
+			info.mtime = file_info.st_mtime;
+			info.ctime = info.mtime;
+
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
+
+			return info;
+		}
+
+		void sync() override
+		{
+			ensure(::fsync(m_fd) == 0); // "file::sync"
+		}
+
+		bool trunc(u64 length) override
+		{
+			if (::ftruncate(m_fd, length) != 0)
+			{
+				g_tls_error = to_error(errno);
+				return false;
+			}
+
+			return true;
+		}
+
+		u64 read(void* buffer, u64 count) override
+		{
+			u64 result = 0;
+
+			// Loop because (huge?) read can be processed partially
+			while (auto r = ::read(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::read"
+				count -= r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
+
+			return result;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::pread(m_fd, buffer, count, offset))
+			{
+				ensure(r > 0); // "file::read_at"
+				count -= r;
+				offset += r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
+
+			return result;
+		}
+
+		u64 write(const void* buffer, u64 count) override
+		{
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::write(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::write"
+				count -= r;
+				result += r;
+				buffer = static_cast<const u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
+
+			return result;
+		}
+
+		u64 seek(s64 offset, seek_mode whence) override
+		{
+			if (whence > seek_end)
+			{
+				fmt::throw_exception("Invalid whence (0x%x)", whence);
+			}
+
+			const int mode =
+				whence == seek_set ? SEEK_SET :
+				whence == seek_cur ? SEEK_CUR : SEEK_END;
+
+			const auto result = ::lseek(m_fd, offset, mode);
+
+			if (result == -1)
+			{
+				g_tls_error = to_error(errno);
+				return -1;
+			}
+
+			return result;
+		}
+
+		u64 size() override
+		{
+			struct ::stat file_info;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
+
+			return file_info.st_size;
+		}
+
+		native_handle get_handle() override
+		{
+			return m_fd;
+		}
+
+		file_id get_id() override
+		{
+			struct ::stat file_info;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::get_id"
+
+			file_id id{"unix_file"};
+			id.data.resize(sizeof(file_info.st_dev) + sizeof(file_info.st_ino));
+
+			std::memcpy(id.data.data(), &file_info.st_dev, sizeof(file_info.st_dev));
+			std::memcpy(id.data.data() + sizeof(file_info.st_dev), &file_info.st_ino, sizeof(file_info.st_ino));
+			return id;
+		}
+
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count) override
+		{
+			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
+			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
+
+			u64 result = 0;
+
+			while (buf_count)
+			{
+				iovec arg[256];
+				const auto count = std::min<u64>(buf_count, 256);
+				std::memcpy(&arg, buffers, sizeof(iovec) * count);
+				const auto added = ::writev(m_fd, arg, count);
+				ensure(added != -1); // "file::write_gather"
+				result += added;
+				buf_count -= count;
+				buffers += count;
+			}
+
+			return result;
+		}
+
+		void release() override
+		{
+			m_fd = -1;
+		}
+	};
+#endif
 }
 
 shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
@@ -1241,205 +1640,6 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base
-	{
-		const HANDLE m_handle;
-		atomic_t<u64> m_pos;
-
-	public:
-		windows_file(HANDLE handle)
-			: m_handle(handle)
-			, m_pos(0)
-		{
-		}
-
-		~windows_file() override
-		{
-			CloseHandle(m_handle);
-		}
-
-		stat_t get_stat() override
-		{
-			FILE_BASIC_INFO basic_info;
-			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
-
-			stat_t info;
-			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-			info.size = this->size();
-			info.atime = to_time(basic_info.LastAccessTime);
-			info.mtime = to_time(basic_info.LastWriteTime);
-			info.ctime = info.mtime;
-
-			if (info.atime < info.mtime)
-				info.atime = info.mtime;
-
-			return info;
-		}
-
-		void sync() override
-		{
-			ensure(FlushFileBuffers(m_handle)); // "file::sync"
-		}
-
-		bool trunc(u64 length) override
-		{
-			FILE_END_OF_FILE_INFO _eof;
-			_eof.EndOfFile.QuadPart = length;
-
-			if (!SetFileInformationByHandle(m_handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
-			{
-				g_tls_error = to_error(GetLastError());
-				return false;
-			}
-
-			return true;
-		}
-
-		u64 read(void* buffer, u64 count) override
-		{
-			u64 nread_sum = 0;
-
-			for (char* data = static_cast<char*>(buffer); count;)
-			{
-				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
-
-				DWORD nread = 0;
-				OVERLAPPED ovl{};
-				const u64 pos = m_pos;
-				ovl.Offset = DWORD(pos);
-				ovl.OffsetHigh = DWORD(pos >> 32);
-				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
-				nread_sum += nread;
-				m_pos += nread;
-
-				if (nread < size)
-				{
-					break;
-				}
-
-				count -= size;
-				data += size;
-			}
-
-			return nread_sum;
-		}
-
-		u64 read_at(u64 offset, void* buffer, u64 count) override
-		{
-			u64 nread_sum = 0;
-
-			for (char* data = static_cast<char*>(buffer); count;)
-			{
-				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
-
-				DWORD nread = 0;
-				OVERLAPPED ovl{};
-				ovl.Offset = DWORD(offset);
-				ovl.OffsetHigh = DWORD(offset >> 32);
-				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
-				nread_sum += nread;
-
-				if (nread < size)
-				{
-					break;
-				}
-
-				count -= size;
-				data += size;
-				offset += size;
-			}
-
-			return nread_sum;
-		}
-
-		u64 write(const void* buffer, u64 count) override
-		{
-			u64 nwritten_sum = 0;
-
-			for (const char* data = static_cast<const char*>(buffer); count;)
-			{
-				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
-
-				DWORD nwritten = 0;
-				OVERLAPPED ovl{};
-				const u64 pos = m_pos.fetch_add(size);
-				ovl.Offset = DWORD(pos);
-				ovl.OffsetHigh = DWORD(pos >> 32);
-				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
-				ensure(nwritten == size);
-				nwritten_sum += nwritten;
-
-				if (nwritten < size)
-				{
-					break;
-				}
-
-				count -= size;
-				data += size;
-			}
-
-			return nwritten_sum;
-		}
-
-		u64 seek(s64 offset, seek_mode whence) override
-		{
-			if (whence > seek_end)
-			{
-				fmt::throw_exception("Invalid whence (0x%x)", whence);
-			}
-
-			const s64 new_pos =
-				whence == fs::seek_set ? offset :
-				whence == fs::seek_cur ? offset + m_pos :
-				whence == fs::seek_end ? offset + size() : -1;
-
-			if (new_pos < 0)
-			{
-				fs::g_tls_error = fs::error::inval;
-				return -1;
-			}
-
-			m_pos = new_pos;
-			return m_pos;
-		}
-
-		u64 size() override
-		{
-			LARGE_INTEGER size;
-			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
-
-			return size.QuadPart;
-		}
-
-		native_handle get_handle() override
-		{
-			return m_handle;
-		}
-
-		file_id get_id() override
-		{
-			file_id id{"windows_file"};
-			id.data.resize(sizeof(FILE_ID_INFO));
-
-			FILE_ID_INFO info;
-
-			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
-			{
-				// Try GetFileInformationByHandle as a fallback
-				BY_HANDLE_FILE_INFORMATION info2;
-				ensure(GetFileInformationByHandle(m_handle, &info2));
-
-				info = {};
-				info.VolumeSerialNumber = info2.dwVolumeSerialNumber;
-				std::memcpy(&info.FileId, &info2.nFileIndexHigh, 8);
-			}
-
-			std::memcpy(id.data.data(), &info, sizeof(info));
-			return id;
-		}
-	};
-
 	m_file = std::make_unique<windows_file>(handle);
 #else
 	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
@@ -1490,182 +1690,6 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		ensure(::ftruncate(fd, 0) == 0);
 	}
 
-	class unix_file final : public file_base
-	{
-		const int m_fd;
-
-	public:
-		unix_file(int fd)
-			: m_fd(fd)
-		{
-		}
-
-		~unix_file() override
-		{
-			::close(m_fd);
-		}
-
-		stat_t get_stat() override
-		{
-			struct ::stat file_info;
-			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
-
-			stat_t info;
-			info.is_directory = S_ISDIR(file_info.st_mode);
-			info.is_writable = file_info.st_mode & 0200; // HACK: approximation
-			info.size = file_info.st_size;
-			info.atime = file_info.st_atime;
-			info.mtime = file_info.st_mtime;
-			info.ctime = info.mtime;
-
-			if (info.atime < info.mtime)
-				info.atime = info.mtime;
-
-			return info;
-		}
-
-		void sync() override
-		{
-			ensure(::fsync(m_fd) == 0); // "file::sync"
-		}
-
-		bool trunc(u64 length) override
-		{
-			if (::ftruncate(m_fd, length) != 0)
-			{
-				g_tls_error = to_error(errno);
-				return false;
-			}
-
-			return true;
-		}
-
-		u64 read(void* buffer, u64 count) override
-		{
-			u64 result = 0;
-
-			// Loop because (huge?) read can be processed partially
-			while (auto r = ::read(m_fd, buffer, count))
-			{
-				ensure(r > 0); // "file::read"
-				count -= r;
-				result += r;
-				buffer = static_cast<u8*>(buffer) + r;
-				if (!count)
-					break;
-			}
-
-			return result;
-		}
-
-		u64 read_at(u64 offset, void* buffer, u64 count) override
-		{
-			u64 result = 0;
-
-			// For safety; see read()
-			while (auto r = ::pread(m_fd, buffer, count, offset))
-			{
-				ensure(r > 0); // "file::read_at"
-				count -= r;
-				offset += r;
-				result += r;
-				buffer = static_cast<u8*>(buffer) + r;
-				if (!count)
-					break;
-			}
-
-			return result;
-		}
-
-		u64 write(const void* buffer, u64 count) override
-		{
-			u64 result = 0;
-
-			// For safety; see read()
-			while (auto r = ::write(m_fd, buffer, count))
-			{
-				ensure(r > 0); // "file::write"
-				count -= r;
-				result += r;
-				buffer = static_cast<const u8*>(buffer) + r;
-				if (!count)
-					break;
-			}
-
-			return result;
-		}
-
-		u64 seek(s64 offset, seek_mode whence) override
-		{
-			if (whence > seek_end)
-			{
-				fmt::throw_exception("Invalid whence (0x%x)", whence);
-			}
-
-			const int mode =
-				whence == seek_set ? SEEK_SET :
-				whence == seek_cur ? SEEK_CUR : SEEK_END;
-
-			const auto result = ::lseek(m_fd, offset, mode);
-
-			if (result == -1)
-			{
-				g_tls_error = to_error(errno);
-				return -1;
-			}
-
-			return result;
-		}
-
-		u64 size() override
-		{
-			struct ::stat file_info;
-			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
-
-			return file_info.st_size;
-		}
-
-		native_handle get_handle() override
-		{
-			return m_fd;
-		}
-
-		file_id get_id() override
-		{
-			struct ::stat file_info;
-			ensure(::fstat(m_fd, &file_info) == 0); // "file::get_id"
-
-			file_id id{"unix_file"};
-			id.data.resize(sizeof(file_info.st_dev) + sizeof(file_info.st_ino));
-
-			std::memcpy(id.data.data(), &file_info.st_dev, sizeof(file_info.st_dev));
-			std::memcpy(id.data.data() + sizeof(file_info.st_dev), &file_info.st_ino, sizeof(file_info.st_ino));
-			return id;
-		}
-
-		u64 write_gather(const iovec_clone* buffers, u64 buf_count) override
-		{
-			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
-			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
-
-			u64 result = 0;
-
-			while (buf_count)
-			{
-				iovec arg[256];
-				const auto count = std::min<u64>(buf_count, 256);
-				std::memcpy(&arg, buffers, sizeof(iovec) * count);
-				const auto added = ::writev(m_fd, arg, count);
-				ensure(added != -1); // "file::write_gather"
-				result += added;
-				buf_count -= count;
-				buffers += count;
-			}
-
-			return result;
-		}
-	};
-
 	m_file = std::make_unique<unix_file>(fd);
 
 	if (mode & fs::isfile && !(mode & fs::write) && get_stat().is_directory)
@@ -1674,6 +1698,21 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		g_tls_error = error::isdir;
 	}
 #endif
+}
+
+
+
+fs::file fs::file::from_native_handle(native_handle handle)
+{
+	fs::file result;
+
+#ifdef _WIN32
+	result.m_file = std::make_unique<windows_file>((const HANDLE)handle);
+#else
+	result.m_file = std::make_unique<unix_file>(handle);
+#endif
+
+	return result;
 }
 
 fs::file::file(const void* ptr, usz size)
@@ -1957,6 +1996,9 @@ bool fs::file::strict_read_check(u64 offset, u64 _size, u64 type_size) const
 
 std::string fs::get_executable_path()
 {
+#ifdef ANDROID
+	return g_android_executable_dir + "/dummy-rpcs3.apk";
+#else
 	// Use magic static
 	static const std::string s_exe_path = []
 	{
@@ -2002,10 +2044,14 @@ std::string fs::get_executable_path()
 	}();
 
 	return s_exe_path;
+#endif
 }
 
 std::string fs::get_executable_dir()
 {
+#ifdef ANDROID
+	return g_android_executable_dir;
+#else
 	// Use magic static
 	static const std::string s_exe_dir = []
 	{
@@ -2019,10 +2065,14 @@ std::string fs::get_executable_dir()
 	}();
 
 	return s_exe_dir;
+#endif
 }
 
 const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirectory)
 {
+#ifdef ANDROID
+	return g_android_config_dir;
+#else
 	// Use magic static
 	static const std::string s_dir = []
 	{
@@ -2112,10 +2162,14 @@ const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirect
 #endif
 
 	return s_dir;
+#endif
 }
 
 const std::string& fs::get_cache_dir()
 {
+#ifdef ANDROID
+	return g_android_cache_dir;
+#else
 	static const std::string s_dir = []
 	{
 		std::string dir;
@@ -2150,6 +2204,7 @@ const std::string& fs::get_cache_dir()
 	}();
 
 	return s_dir;
+#endif
 }
 
 const std::string& fs::get_log_dir()
@@ -2527,7 +2582,7 @@ bool fs::pending_file::commit(bool overwrite)
 		BY_HANDLE_FILE_INFORMATION file_info;
 
 		if (!GetFileInformationByHandle(file_handle, &file_info) || file_info.nNumberOfLinks == 1)
-		{	
+		{
 			CloseHandle(file_handle);
 			break;
 		}

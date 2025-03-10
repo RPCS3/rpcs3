@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/endian.hpp"
 #include "../../Utilities/File.h"
 
 #include <vector>
@@ -58,6 +59,7 @@ class pup_object
 
 public:
 	pup_object(fs::file&& file);
+	fs::file &file() { return m_file; }
 
 	explicit operator pup_error() const { return m_error; }
 	const std::string& get_formatted_error() const { return m_formatted_error; }

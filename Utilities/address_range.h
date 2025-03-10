@@ -15,12 +15,12 @@ namespace utils
 	 */
 	static inline u32 page_start(u32 addr)
 	{
-		return addr & ~(c_page_size - 1);
+		return addr & ~(get_page_size() - 1);
 	}
 
 	static inline u32 next_page(u32 addr)
 	{
-		return page_start(addr) + c_page_size;
+		return page_start(addr) + get_page_size();
 	}
 
 	static inline u32 page_end(u32 addr)
@@ -30,7 +30,7 @@ namespace utils
 
 	static inline u32 is_page_aligned(u32 val)
 	{
-		return (val & (c_page_size - 1)) == 0;
+		return (val & (get_page_size() - 1)) == 0;
 	}
 
 

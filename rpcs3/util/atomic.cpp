@@ -33,10 +33,12 @@ static bool has_waitv()
 {
 	static const bool s_has_waitv = []
 	{
+#ifndef ANDROID
+		// FIXME: it produces SIGSYS signal
 		syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
-		if (errno == ENOSYS)
-			return false;
-		return true;
+		return errno != ENOSYS;
+#endif
+		return false;
 	}();
 
 	return s_has_waitv;
@@ -170,6 +172,8 @@ namespace
 		{
 #ifdef _WIN32
 			tid = GetCurrentThreadId();
+#elif defined(ANDROID)
+			tid = pthread_self();
 #else
 			tid = reinterpret_cast<u64>(pthread_self());
 #endif

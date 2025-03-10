@@ -133,12 +133,12 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 	sys_net_sockaddr sn_addr;
 
 	sys_net_sockaddr_in* paddr = reinterpret_cast<sys_net_sockaddr_in*>(&sn_addr);
+	*paddr = {};
 
 	paddr->sin_len = sizeof(sys_net_sockaddr_in);
 	paddr->sin_family = SYS_NET_AF_INET;
 	paddr->sin_port = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<const sockaddr_in*>(&native_addr)->sin_port);
 	paddr->sin_addr = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<const sockaddr_in*>(&native_addr)->sin_addr.s_addr);
-	paddr->sin_zero = 0;
 
 	return sn_addr;
 }

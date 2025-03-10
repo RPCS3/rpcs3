@@ -79,13 +79,16 @@ else()
 		# we don't have the system libusb, so we compile from submodule
 		unset(LIBUSB_LIBRARIES CACHE)
 		add_subdirectory(libusb EXCLUDE_FROM_ALL)
+
+		if (NOT TARGET usb-1.0 AND TARGET usb-1.0-static)
+			add_library(usb-1.0 ALIAS usb-1.0-static)
+		endif()
 	endif()
 endif()
 
 
 # hidapi
 add_subdirectory(hidapi)
-
 
 # glslang
 add_subdirectory(glslang EXCLUDE_FROM_ALL)
@@ -99,23 +102,27 @@ add_subdirectory(yaml-cpp)
 
 # OpenGL
 
-find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
+if (NOT ANDROID)
+	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
-add_library(3rdparty_opengl INTERFACE)
-target_include_directories(3rdparty_opengl INTERFACE GL)
+	add_library(3rdparty_opengl INTERFACE)
+	target_include_directories(3rdparty_opengl INTERFACE GL)
 
-if (WIN32)
-	if(NOT MSVC)
+	if (WIN32)
+		if(NOT MSVC)
+			target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
+		else()
+			target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
+		endif()
+	elseif(APPLE)
 		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 	else()
-		target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
+		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
 	endif()
-elseif(APPLE)
-	target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 else()
-	target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
+	add_library(3rdparty_opengl INTERFACE)
+	target_compile_definitions(3rdparty_opengl INTERFACE WITHOUT_OPENGL=1)
 endif()
-
 
 # stblib
 add_subdirectory(stblib)
@@ -181,7 +188,7 @@ if(USE_VULKAN)
 		target_compile_definitions(3rdparty_vulkan INTERFACE -DHAVE_VULKAN)
 		target_link_libraries(3rdparty_vulkan INTERFACE Vulkan::Vulkan)
 
-		if(UNIX AND NOT APPLE)
+		if(UNIX AND NOT APPLE AND NOT ANDROID)
 			find_package(Wayland)
 			if (WAYLAND_FOUND)
 				target_include_directories(3rdparty_vulkan
@@ -205,7 +212,12 @@ endif()
 add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
-add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
+if (NOT ANDROID)
+	add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
+else()
+	add_library(3rdparty_openal INTERFACE)
+	target_compile_definitions(3rdparty_openal INTERFACE WITHOUT_OPENAL=1)
+endif()
 
 # FAudio
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
@@ -246,47 +258,52 @@ set_property(TARGET ${FAUDIO_TARGET} PROPERTY FOLDER "3rdparty/")
 
 
 # FFMPEG
-add_library(3rdparty_ffmpeg INTERFACE)
+if(NOT ANDROID)
+	add_library(3rdparty_ffmpeg INTERFACE)
 
-# Select the version of ffmpeg to use, default is builtin
-if(USE_SYSTEM_FFMPEG)
-	message(STATUS "RPCS3: using shared ffmpeg")
-	find_package(FFMPEG REQUIRED)
+	# Select the version of ffmpeg to use, default is builtin
+	if(USE_SYSTEM_FFMPEG)
+		message(STATUS "RPCS3: using shared ffmpeg")
+		find_package(FFMPEG REQUIRED)
 
-	target_include_directories(3rdparty_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
-	target_link_libraries(3rdparty_ffmpeg INTERFACE ${FFMPEG_LIBRARIES})
-else()
-	message(STATUS "RPCS3: using builtin ffmpeg")
-	add_subdirectory(ffmpeg EXCLUDE_FROM_ALL)
-	# ffmpeg-core libraries are extracted to CMAKE_BINARY_DIR
-	set(FFMPEG_LIB_DIR "${CMAKE_BINARY_DIR}/3rdparty/ffmpeg/lib")
+		target_include_directories(3rdparty_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
+		target_link_libraries(3rdparty_ffmpeg INTERFACE ${FFMPEG_LIBRARIES})
+	else()
+		message(STATUS "RPCS3: using builtin ffmpeg")
+		add_subdirectory(ffmpeg EXCLUDE_FROM_ALL)
+		# ffmpeg-core libraries are extracted to CMAKE_BINARY_DIR
+		set(FFMPEG_LIB_DIR "${CMAKE_BINARY_DIR}/3rdparty/ffmpeg/lib")
 
-	if (WIN32)
-		target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
+		if (WIN32)
+			target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
+		endif()
+
+		find_library(FFMPEG_LIB_AVFORMAT avformat PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+
+		if (FFMPEG_LIB_AVFORMAT MATCHES "FFMPEG_LIB_AVFORMAT-NOTFOUND")
+			message(FATAL_ERROR "@#$%! FFMPEG NOT FOUND! ${FFMPEG_LIB_DIR}")
+		endif()
+
+		target_link_libraries(3rdparty_ffmpeg
+		INTERFACE
+			${FFMPEG_LIB_AVFORMAT}
+			${FFMPEG_LIB_AVCODEC}
+			${FFMPEG_LIB_AVUTIL}
+			${FFMPEG_LIB_SWSCALE}
+			${FFMPEG_LIB_SWRESAMPLE}
+		)
+		target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
 	endif()
-
-	find_library(FFMPEG_LIB_AVFORMAT avformat PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-	find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-	find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-	find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-	find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-
-	target_link_libraries(3rdparty_ffmpeg
-	INTERFACE
-		${FFMPEG_LIB_AVFORMAT}
-		${FFMPEG_LIB_AVCODEC}
-		${FFMPEG_LIB_AVUTIL}
-		${FFMPEG_LIB_SWSCALE}
-		${FFMPEG_LIB_SWRESAMPLE}
-	)
-
-	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
 endif()
 
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
-if(NOT MSVC)
+if(NOT MSVC AND NOT ANDROID)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()

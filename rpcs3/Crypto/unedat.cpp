@@ -709,12 +709,9 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 		return false;
 	}
 
-	std::string_view sv{NPD.content_id, std::size(NPD.content_id)};
-	sv = sv.substr(0, sv.find_first_of('\0'));
-
 	if (npd_out)
 	{
-		memcpy(npd_out, &NPD, sizeof(NPD_HEADER));
+		*npd_out = NPD;
 	}
 
 	return true;

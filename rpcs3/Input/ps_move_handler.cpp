@@ -265,7 +265,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 }
 #endif
 
-void ps_move_handler::check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
+void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view wide_serial)
 {
 #ifndef _WIN32
 	if (!hidDevice)
@@ -422,7 +422,7 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	ps_move_device* move_device = static_cast<ps_move_device*>(device.get());
-	if (!move_device || move_device->path.empty())
+	if (!move_device || move_device->path == hid_enumerated_device_default)
 		return connection::disconnected;
 
 	if (move_device->hidDevice == nullptr)
@@ -434,7 +434,11 @@ PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_
 			move_device->hidDevice = dev;
 		}
 #else
+#ifdef ANDROID
+		if (hid_device* dev = hid_libusb_wrap_sys_device(move_device->path, -1))
+#else
 		if (hid_device* dev = hid_open_path(move_device->path.c_str()))
+#endif
 		{
 			if (hid_set_nonblocking(dev, 1) == -1)
 			{

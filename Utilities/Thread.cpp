@@ -1997,7 +1997,7 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 
 #else
 	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
-	const bool is_writing = 
+	const bool is_writing =
 		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
 		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
 		(insn & 0xbfdf0000) == 0x0d000000 ||  // STR <Wt>, [<Xn>, <Xm>] (store word with register offset)
@@ -2172,7 +2172,11 @@ void thread_base::start()
 void thread_base::initialize(void (*error_cb)())
 {
 #ifndef _WIN32
+#ifdef ANDROID
+	m_thread.release(pthread_self());
+#else
 	m_thread.release(reinterpret_cast<u64>(pthread_self()));
+#endif
 #endif
 
 	// Initialize TLS variables
@@ -2617,6 +2621,8 @@ thread_base::~thread_base() noexcept
 		const HANDLE handle0 = reinterpret_cast<HANDLE>(m_thread.load());
 		WaitForSingleObject(handle0, INFINITE);
 		CloseHandle(handle0);
+#elif defined(ANDROID)
+		pthread_join(m_thread.load(), nullptr);
 #else
 		pthread_join(reinterpret_cast<pthread_t>(m_thread.load()), nullptr);
 #endif
@@ -2691,7 +2697,12 @@ u64 thread_base::get_cycles()
 #else
 	clockid_t _clock;
 	struct timespec thread_time;
-	if (!pthread_getcpuclockid(reinterpret_cast<pthread_t>(handle), &_clock) && !clock_gettime(_clock, &thread_time))
+#ifdef ANDROID
+	pthread_t thread_id = handle;
+#else
+	pthread_t thread_id = reinterpret_cast<pthread_t>(handle);
+#endif
+	if (!pthread_getcpuclockid(thread_id, &_clock) && !clock_gettime(_clock, &thread_time))
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
@@ -3194,7 +3205,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), !mask ? 0 : 1);
-#elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
+#elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	if (!mask)
 	{
 		// Reset affinity mask
@@ -3246,7 +3257,7 @@ u64 thread_ctrl::get_thread_affinity_mask()
 
 	sig_log.error("Failed to get thread affinity mask.");
 	return 0;
-#elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
+#elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
@@ -3313,6 +3324,8 @@ u64 thread_ctrl::get_tid()
 {
 #ifdef _WIN32
 	return GetCurrentThreadId();
+#elif defined(ANDROID)
+	return static_cast<u64>(pthread_self());
 #elif defined(__linux__)
 	return syscall(SYS_gettid);
 #else

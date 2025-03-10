@@ -332,7 +332,7 @@ class package_reader
 	};
 
 public:
-	package_reader(const std::string& path);
+	package_reader(const std::string& path, fs::file file = {});
 	~package_reader();
 
 	enum result
@@ -355,6 +355,11 @@ public:
 	int get_progress(int maximum = 100) const;
 
 	void abort_extract();
+
+	fs::file &file()
+	{
+		return m_file;
+	}
 
 private:
 	bool read_header();

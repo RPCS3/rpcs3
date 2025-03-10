@@ -119,7 +119,7 @@ struct cfg_root : cfg::node
 	{
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
-#ifdef __APPLE__
+#if defined(HAVE_VULKAN)
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan };
 #else
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };

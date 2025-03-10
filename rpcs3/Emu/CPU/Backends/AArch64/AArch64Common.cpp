@@ -136,6 +136,46 @@ namespace aarch64
 #endif
     }
 
+    std::string get_cpu_name()
+    {
+        std::map<u64, int> core_layout;
+        for (u32 i = 0; i < std::thread::hardware_concurrency(); ++i)
+        {
+            const auto midr = read_MIDR_EL1(i);
+            if (midr == umax)
+            {
+                break;
+            }
+
+            core_layout[midr]++;
+        }
+
+        if (core_layout.empty())
+        {
+            return {};
+        }
+
+        const cpu_entry_t* lowest_part_info = nullptr; 
+        for (const auto& [midr, count] : core_layout)
+        {
+            const auto implementer_id = (midr >> 24) & 0xff;
+            const auto part_id = (midr >> 4) & 0xfff;
+
+            const auto part_info = find_cpu_part(implementer_id, part_id);
+            if (!part_info)
+            {
+                return {};
+            }
+
+            if (lowest_part_info == nullptr || lowest_part_info > part_info)
+            {
+                lowest_part_info = part_info;
+            }
+        }
+
+        return lowest_part_info ? lowest_part_info->name : "";
+    }
+
     std::string get_cpu_brand()
     {
         // Fetch vendor and part numbers. ARM CPUs often have more than 1 architecture on the SoC, so we check all of them.

@@ -179,7 +179,7 @@ public:
 
 private:
 	DataStatus get_data(skateboard_device* device) override;
-	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
+	void check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view wide_serial) override;
 	int send_output_report(skateboard_device* device) override;
 
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;

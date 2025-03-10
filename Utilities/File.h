@@ -114,6 +114,9 @@ namespace fs
 		virtual native_handle get_handle();
 		virtual file_id get_id();
 		virtual u64 write_gather(const iovec_clone* buffers, u64 buf_count);
+		virtual void release()
+		{
+		}
 	};
 
 	// Directory entry (TODO)
@@ -251,6 +254,8 @@ namespace fs
 		// Open file with specified mode
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
+		static file from_native_handle(native_handle handle);
+
 		// Open memory for read
 		explicit file(const void* ptr, usz size);
 
@@ -280,9 +285,17 @@ namespace fs
 			m_file = std::move(ptr);
 		}
 
+		void release_handle()
+		{
+			if (m_file)
+			{
+				release()->release();
+			}
+		}
+
 		std::unique_ptr<file_base> release()
 		{
-			return std::move(m_file);
+			return std::exchange(m_file, nullptr);
 		}
 
 		// Change file size (possibly appending zero bytes)

@@ -10,11 +10,13 @@
 #include <numeric>
 #include <cmath>
 
+#ifndef WITHOUT_OPENAL
 #include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
+#endif
 
 LOG_CHANNEL(cellMic);
 
-template<>
+template <>
 void fmt_class_string<CellMicInError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
@@ -43,7 +45,7 @@ void fmt_class_string<CellMicInError>::format(std::string& out, u64 arg)
 	});
 }
 
-template<>
+template <>
 void fmt_class_string<CellMicInErrorDsp>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
@@ -240,7 +242,6 @@ bool mic_context::check_device(u32 dev_num)
 	return device.is_registered();
 }
 
-
 // Static functions
 
 template <u32 bytesize>
@@ -304,6 +305,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	raw_samplingrate = raw_r;
 	num_channels     = channels;
 
+#ifndef WITHOUT_OPENAL
 	// Adjust number of channels depending on microphone type
 	switch (device_type)
 	{
@@ -482,10 +484,14 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 
 	mic_opened = true;
 	return CELL_OK;
+#else
+	return CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT;
+#endif
 }
 
 error_code microphone_device::close_microphone()
 {
+#ifndef WITHOUT_OPENAL
 	if (mic_started)
 	{
 		stop_microphone();
@@ -504,12 +510,14 @@ error_code microphone_device::close_microphone()
 
 	temp_buf.clear();
 	mic_opened = false;
+#endif
 
 	return CELL_OK;
 }
 
 error_code microphone_device::start_microphone()
 {
+#ifndef WITHOUT_OPENAL
 	for (const mic_device& micdevice : devices)
 	{
 		alcCaptureStart(micdevice.device);
@@ -520,14 +528,15 @@ error_code microphone_device::start_microphone()
 			return CELL_MICIN_ERROR_FATAL;
 		}
 	}
+#endif
 
 	mic_started = true;
-
 	return CELL_OK;
 }
 
 error_code microphone_device::stop_microphone()
 {
+#ifndef WITHOUT_OPENAL
 	for (const mic_device& micdevice : devices)
 	{
 		alcCaptureStop(micdevice.device);
@@ -536,9 +545,9 @@ error_code microphone_device::stop_microphone()
 			cellMic.error("Error stopping capture of device %s (error=0x%x)", micdevice.name, err);
 		}
 	}
+#endif
 
 	mic_started = false;
-
 	return CELL_OK;
 }
 
@@ -600,6 +609,7 @@ f32 microphone_device::calculate_energy_level()
 
 u32 microphone_device::capture_audio()
 {
+#ifndef WITHOUT_OPENAL
 	ensure(sample_size > 0);
 
 	u32 num_samples = inbuf_size / sample_size;
@@ -634,6 +644,9 @@ u32 microphone_device::capture_audio()
 	}
 
 	return num_samples;
+#else
+	return 0;
+#endif
 }
 
 // Private functions

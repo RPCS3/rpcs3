@@ -46,6 +46,10 @@ LOG_CHANNEL(jit_log, "JIT");
 #pragma GCC diagnostic pop
 #endif
 
+#ifdef ARCH_ARM64
+#include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#endif
+
 const bool jit_initialize = []() -> bool
 {
 	llvm::InitializeNativeTarget();
@@ -590,8 +594,10 @@ std::string jit_compiler::triple1()
 	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
 #elif defined(__APPLE__) && defined(ARCH_X64)
 	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
-#elif defined(__APPLE__) && defined(ARCH_ARM64)
+#elif (defined(__ANDROID__) || defined(__APPLE__)) && defined(ARCH_ARM64)
 	return llvm::Triple::normalize("aarch64-unknown-linux-android"); // Set environment to android to reserve x18
+#elif defined(__ANDROID__) && defined(ARCH_X64)
+	return llvm::Triple::normalize("x86_64-unknown-linux-android");
 #else
 	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
 #endif
@@ -605,8 +611,10 @@ std::string jit_compiler::triple2()
 	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
 #elif defined(__APPLE__) && defined(ARCH_X64)
 	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
-#elif defined(__APPLE__) && defined(ARCH_ARM64)
+#elif (defined(__ANDROID__) || defined(__APPLE__)) && defined(ARCH_ARM64)
 	return llvm::Triple::normalize("aarch64-unknown-linux-android"); // Set environment to android to reserve x18
+#elif defined(__ANDROID__) && defined(ARCH_X64)
+	return llvm::Triple::normalize("x86_64-unknown-linux-android"); // Set environment to android to reserve x18
 #else
 	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
 #endif
@@ -768,7 +776,7 @@ bool jit_compiler::add(const std::string& path)
 	if (!cache)
 	{
 		jit_log.error("ObjectCache: Failed to read file. (path='%s', error=%s)", path, fs::g_tls_error);
-		return false;		
+		return false;
 	}
 
 	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
@@ -817,9 +825,9 @@ u64 jit_compiler::get(const std::string& name)
 	return m_engine->getGlobalValueAddress(name);
 }
 
-llvm::StringRef fallback_cpu_detection()
+const char * fallback_cpu_detection()
 {
-#if defined (ARCH_X64)
+#if defined(ARCH_X64)
 	// If we got here we either have a very old and outdated CPU or a new CPU that has not been seen by LLVM yet.
 	const std::string brand = utils::get_cpu_brand();
 	const auto family = utils::get_cpu_family();
@@ -849,11 +857,11 @@ llvm::StringRef fallback_cpu_detection()
 			// Return zen4 as a workaround until the next LLVM upgrade.
 			return "znver4";
 		default:
-		 	// Safest guesses
+			// Safest guesses
 			return utils::has_avx512() ? "znver4" :
-				utils::has_avx2() ? "znver1" :
-				utils::has_avx() ? "bdver1" :
-				"nehalem";
+			       utils::has_avx2()   ? "znver1" :
+			       utils::has_avx()    ? "bdver1" :
+			                             "nehalem";
 		}
 	}
 	else if (brand.find("Intel") != std::string::npos)
@@ -883,10 +891,26 @@ llvm::StringRef fallback_cpu_detection()
 	}
 
 #elif defined(ARCH_ARM64)
+#ifdef ANDROID
+	static std::string s_result = []() -> std::string
+	{
+		std::string result = aarch64::get_cpu_name();
+		if (result.empty())
+		{
+			return "cortex-a78";
+		}
+
+		std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+		return result;
+	}();
+
+	return s_result.c_str();
+#else
 	// TODO: Read the data from /proc/cpuinfo. ARM CPU registers are not accessible from usermode.
 	// This will be a pain when supporting snapdragon on windows but we'll cross that bridge when we get there.
 	// Require at least armv8-2a. Older chips are going to be useless anyway.
 	return "cortex-a78";
+#endif
 #endif
 
 	// Failed to guess, use generic fallback
