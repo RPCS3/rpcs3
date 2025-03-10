@@ -703,6 +703,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceRadioButton(shader_mode_bg, emu_settings_type::ShaderMode);
 
+	// Hide interpreter_only unless it is selected or the debug mode is active
+	if (!ui->rb_shader_interpreter_only->isChecked() && !m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
+	{
+		ui->rb_shader_interpreter_only->setVisible(false);
+	}
+
 	// Sliders
 
 	m_emu_settings->EnhanceSlider(ui->resolutionScale, emu_settings_type::ResolutionScale);
