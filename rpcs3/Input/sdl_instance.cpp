@@ -96,6 +96,9 @@ bool sdl_instance::initialize()
 			case SDL_LOG_CATEGORY_TEST:
 				category_name = "test";
 				break;
+			case SDL_LOG_CATEGORY_GPU:
+				category_name = "gpu";
+				break;
 			default:
 				category_name = fmt::format("unknown(%d)", category);
 				break;
