@@ -82,6 +82,14 @@ namespace rsx
 					rcount = 0;
 			}
 
+			if (rcount == 0)
+			{
+				// Out-of-bounds write is a NOP
+				rsx_log.trace("Out of bounds write for transform constant block.");
+				RSX(ctx)->fifo_ctrl->skip_methods(fifo_args_cnt - 1);
+				return;
+			}
+
 			if (RSX(ctx)->in_begin_end && !REGS(ctx)->current_draw_clause.empty())
 			{
 				// Updating constants mid-draw is messy. Defer the writes
@@ -146,6 +154,14 @@ namespace rsx
 			{
 				rsx_log.warning("Program buffer overflow! Attempted to write %u VP instructions.", max / 4);
 				rcount -= max - (max_vertex_program_instructions * 4);
+			}
+
+			if (!rcount)
+			{
+				// Out-of-bounds write is a NOP
+				rsx_log.trace("Out of bounds write for transform program block.");
+				RSX(ctx)->fifo_ctrl->skip_methods(fifo_args_cnt - 1);
+				return;
 			}
 
 			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);

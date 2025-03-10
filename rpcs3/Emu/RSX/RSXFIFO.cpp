@@ -225,6 +225,13 @@ namespace rsx
 
 		std::span<const u32> FIFO_control::get_current_arg_ptr(u32 length_in_words) const
 		{
+			if (!length_in_words)
+			{
+				// This means the caller is doing something stupid
+				rsx_log.error("Invalid access to FIFO args data, requested length = 0");
+				return {};
+			}
+
 			if (g_cfg.core.rsx_fifo_accuracy)
 			{
 				// Return a pointer to the cache storage with confined access

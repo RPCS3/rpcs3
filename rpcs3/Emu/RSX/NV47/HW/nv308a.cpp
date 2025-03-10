@@ -35,6 +35,13 @@ namespace rsx
 
 			u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
 
+			if (!count)
+			{
+				rsx_log.error("nv308a::color - No data to read/write.");
+				RSX(ctx)->fifo_ctrl->skip_methods(fifo_args_cnt - 1);
+				return;
+			}
+
 			const u32 dst_dma = REGS(ctx)->blit_engine_output_location_nv3062();
 			const u32 dst_offset = REGS(ctx)->blit_engine_output_offset_nv3062();
 			const u32 out_pitch = REGS(ctx)->blit_engine_output_pitch_nv3062();
