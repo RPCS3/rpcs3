@@ -85,6 +85,9 @@ public:
 			case SDL_LOG_CATEGORY_TEST:
 				category_name = "test";
 				break;
+			case SDL_LOG_CATEGORY_GPU:
+				category_name = "gpu";
+				break;
 			default:
 				category_name = fmt::format("unknown(%d)", category);
 				break;
@@ -142,6 +145,11 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 		{ SDLKeyCodes::RS,       "RS"       },
 		{ SDLKeyCodes::Guide,    "Guide"    },
 		{ SDLKeyCodes::Misc1,    "Misc 1"   },
+		{ SDLKeyCodes::Misc2,    "Misc 2"   },
+		{ SDLKeyCodes::Misc3,    "Misc 3"   },
+		{ SDLKeyCodes::Misc4,    "Misc 4"   },
+		{ SDLKeyCodes::Misc5,    "Misc 5"   },
+		{ SDLKeyCodes::Misc6,    "Misc 6"   },
 		{ SDLKeyCodes::RPaddle1, "R Paddle 1" },
 		{ SDLKeyCodes::LPaddle1, "L Paddle 1" },
 		{ SDLKeyCodes::RPaddle2, "R Paddle 2" },
@@ -1116,6 +1124,11 @@ sdl_pad_handler::SDLKeyCodes sdl_pad_handler::get_button_code(SDL_GamepadButton 
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_STICK: return SDLKeyCodes::RS;
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_GUIDE: return SDLKeyCodes::Guide;
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC1: return SDLKeyCodes::Misc1;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC2: return SDLKeyCodes::Misc2;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC3: return SDLKeyCodes::Misc3;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC4: return SDLKeyCodes::Misc4;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC5: return SDLKeyCodes::Misc5;
+	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MISC6: return SDLKeyCodes::Misc6;
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1: return SDLKeyCodes::RPaddle1;
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_LEFT_PADDLE1: return SDLKeyCodes::LPaddle1;
 	case SDL_GamepadButton::SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2: return SDLKeyCodes::RPaddle2;
