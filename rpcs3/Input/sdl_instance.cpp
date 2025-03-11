@@ -40,6 +40,14 @@ void sdl_instance::pump_events()
 		SDL_PumpEvents();
 }
 
+void sdl_instance::set_hint(const char* name, const char* value)
+{
+	if (!SDL_SetHint(name, value))
+	{
+		sdl_log.error("Could not set hint '%s' to '%s': %s", name, value, SDL_GetError());
+	}
+}
+
 bool sdl_instance::initialize()
 {
 	const std::lock_guard<std::mutex> lock(m_instance_mutex);
@@ -52,10 +60,14 @@ bool sdl_instance::initialize()
 	sdl_log.notice("Initializing SDL ...");
 
 	// Set non-dynamic hints before SDL_Init
-	if (!SDL_SetHint(SDL_HINT_JOYSTICK_THREAD, "1"))
-	{
-		sdl_log.error("Could not set SDL_HINT_JOYSTICK_THREAD: %s", SDL_GetError());
-	}
+	set_hint(SDL_HINT_JOYSTICK_THREAD, "1");
+
+	// DS3 pressure sensitive buttons
+#ifdef _WIN32
+	set_hint(SDL_HINT_JOYSTICK_HIDAPI_PS3_SIXAXIS_DRIVER, "1");
+#else
+	set_hint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
+#endif
 
 	if (!SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD))
 	{
