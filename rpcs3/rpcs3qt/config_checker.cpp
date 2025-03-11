@@ -197,6 +197,7 @@ bool config_checker::check_config(QString content, QString& result, bool is_log)
 			break;
 		}
 		case cfg::type::map:
+		case cfg::type::node_map:
 		case cfg::type::device:
 		{
 			// Ignored
