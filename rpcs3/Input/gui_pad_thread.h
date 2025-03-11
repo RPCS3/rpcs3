@@ -6,8 +6,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
 #include "Utilities/Timer.h"
-
-#include <thread>
+#include "Utilities/Thread.h"
 
 class PadHandlerBase;
 class gui_settings;
@@ -62,8 +61,7 @@ protected:
 	std::shared_ptr<PadHandlerBase> m_handler;
 	std::shared_ptr<Pad> m_pad;
 
-	std::unique_ptr<std::thread> m_thread;
-	atomic_t<bool> m_terminate = false;
+	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	atomic_t<bool> m_allow_global_input = false;
 	static atomic_t<bool> m_reset;
 
