@@ -1,6 +1,6 @@
+#include "stdafx.h"
 #include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
 #include "Emu/NP/ip_address.h"
-#include "stdafx.h"
 #include <string>
 #include <mutex>
 #include <thread>
@@ -42,8 +42,6 @@
 #endif
 
 LOG_CHANNEL(rpcn_log, "rpcn");
-
-int get_native_error();
 
 template <>
 void fmt_class_string<rpcn::ErrorType>::format(std::string& out, u64 arg)
