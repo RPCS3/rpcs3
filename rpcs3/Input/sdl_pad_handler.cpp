@@ -46,6 +46,19 @@ public:
 			sdl_log.error("Could not set SDL_HINT_JOYSTICK_THREAD: %s", SDL_GetError());
 		}
 
+		// DS3 pressure sensitive buttons
+#ifdef _WIN32
+		if (!SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS3_SIXAXIS_DRIVER, "1"))
+		{
+			sdl_log.error("Could not set SDL_HINT_JOYSTICK_HIDAPI_PS3_SIXAXIS_DRIVER: %s", SDL_GetError());
+		}
+#else
+		if (!SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1"))
+		{
+			sdl_log.error("Could not set SDL_HINT_JOYSTICK_HIDAPI_PS3: %s", SDL_GetError());
+		}
+#endif
+
 		if (!SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD))
 		{
 			sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
@@ -169,6 +182,16 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 		{ SDLKeyCodes::RSXPos,   "RS X+"    },
 		{ SDLKeyCodes::RSYPos,   "RS Y+"    },
 		{ SDLKeyCodes::RSYNeg,   "RS Y-"    },
+		{ SDLKeyCodes::PressureCross,    "Cross (DS3)" },
+		{ SDLKeyCodes::PressureCircle,   "Circle (DS3)" },
+		{ SDLKeyCodes::PressureSquare,   "Square (DS3)" },
+		{ SDLKeyCodes::PressureTriangle, "Triangle (DS3)" },
+		{ SDLKeyCodes::PressureL1,       "L1 (DS3)" },
+		{ SDLKeyCodes::PressureR1,       "R1 (DS3)" },
+		{ SDLKeyCodes::PressureNorth,    "North (DS3)" },
+		{ SDLKeyCodes::PressureSouth,    "South (DS3)" },
+		{ SDLKeyCodes::PressureWest,     "West (DS3)" },
+		{ SDLKeyCodes::PressureEast,     "East (DS3)" },
 	};
 
 	init_configs();
@@ -360,6 +383,7 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 	}
 
 	info.type = SDL_GetGamepadType(info.gamepad);
+	info.real_type = SDL_GetRealGamepadType(info.gamepad);
 	info.vid = SDL_GetGamepadVendor(info.gamepad);
 	info.pid = SDL_GetGamepadProduct(info.gamepad);
 	info.product_version = SDL_GetGamepadProductVersion(info.gamepad);
@@ -393,8 +417,8 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 		}
 	}
 
-	sdl_log.notice("Found game pad %d: type=%d, name='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_player_led=%d, has_mono_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
-		id, static_cast<int>(info.type), info.name, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_player_led, info.has_mono_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
+	sdl_log.notice("Found game pad %d: type=%d, real_type=%d, name='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_player_led=%d, has_mono_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
+		id, static_cast<int>(info.type), static_cast<int>(info.real_type), info.name, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_player_led, info.has_mono_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
 
 	if (info.has_accel)
 	{
@@ -441,6 +465,33 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 		if (SDL_GamepadHasAxis(info.gamepad, axis_id))
 		{
 			info.axis_ids.insert(axis_id);
+		}
+	}
+
+	// The DS3 may have extra pressure sensitive buttons as axis
+	if (info.real_type == SDL_GamepadType::SDL_GAMEPAD_TYPE_PS3)
+	{
+		if (SDL_Joystick* joystick = SDL_GetGamepadJoystick(info.gamepad))
+		{
+			const int num_axes = SDL_GetNumJoystickAxes(joystick);
+			const int num_buttons = SDL_GetNumJoystickButtons(joystick);
+
+			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11;
+
+			sdl_log.notice("DS3 device %d has %d axis and %d buttons (has_pressure_buttons=%d)", id, num_axes, num_buttons, info.is_ds3_with_pressure_buttons);
+
+			if (info.is_ds3_with_pressure_buttons)
+			{
+				// Add pressure buttons
+				for (int i = SDL_GAMEPAD_AXIS_COUNT; i < num_axes; i++)
+				{
+					const SDL_GamepadAxis axis_id = static_cast<SDL_GamepadAxis>(i);
+					if (SDL_GamepadHasAxis(info.gamepad, axis_id))
+					{
+						info.axis_ids.insert(axis_id);
+					}
+				}
+			}
 		}
 	}
 
@@ -996,7 +1047,27 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 		const u8 value = SDL_GetGamepadButton(dev->sdl.gamepad, button_id);
 		const SDLKeyCodes key_code = get_button_code(button_id);
 
-		// TODO: SDL does not support DS3 button intensity in the current version
+		// TODO: SDL does not simply support DS3 button intensity in the current version
+		if (dev->sdl.is_ds3_with_pressure_buttons)
+		{
+			switch (key_code)
+			{
+			case SDLKeyCodes::North:
+			case SDLKeyCodes::South:
+			case SDLKeyCodes::West:
+			case SDLKeyCodes::East:
+			case SDLKeyCodes::Left:
+			case SDLKeyCodes::Right:
+			case SDLKeyCodes::Up:
+			case SDLKeyCodes::Down:
+			case SDLKeyCodes::LB:
+			case SDLKeyCodes::RB:
+				continue;
+			default:
+				break;
+			}
+		}
+
 		values[key_code] = value ? 255 : 0;
 	}
 
@@ -1029,7 +1100,18 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 			values[SDLKeyCodes::RSYPos] = value < 0 ? std::abs(value) - 1 : 0;
 			break;
 		default:
+		{
+			if (dev->sdl.is_ds3_with_pressure_buttons)
+			{
+				// Get pressure button value from axis
+				if (const int key_code = SDLKeyCodes::PressureCross + axis_id - SDL_GAMEPAD_AXIS_COUNT;
+					key_code >= SDLKeyCodes::PressureCross && key_code <= SDLKeyCodes::PressureEast)
+				{
+					values[key_code] = std::max<u16>(0, value);
+				}
+			}
 			break;
+		}
 		}
 	}
 
