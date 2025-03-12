@@ -591,7 +591,8 @@ usb_handler_thread::~usb_handler_thread()
 	}
 
 #if LIBUSB_API_VERSION >= 0x01000102
-	libusb_hotplug_deregister_callback(ctx, callback_handle);
+	if (ctx && hotplug_supported)
+		libusb_hotplug_deregister_callback(ctx, callback_handle);
 #endif
 
 	if (ctx)
