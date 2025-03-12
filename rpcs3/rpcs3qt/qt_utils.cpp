@@ -232,6 +232,23 @@ namespace gui
 			return QString("style=\"color: %0;\"").arg(get_link_color_string(name));
 		}
 
+		QString make_link(const QString& text, const QString& url)
+		{
+			return QString("<a %0 href=\"%1\">%2</a>").arg(get_link_style()).arg(url).arg(text);
+		}
+
+		QString make_bold(const QString& text)
+		{
+			return QString("<span style=\"font-weight:600;\">%0</span>").arg(text);
+		}
+
+		QString make_paragraph(QString text, const QString& white_space_style)
+		{
+			return QString(R"(<p%0>%1</p>)")
+				.arg(white_space_style.isEmpty() ? "" : "style=\"white-space: nowrap;\"")
+				.arg(text.replace("\n", "<br>"));
+		}
+
 		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
 		{
 			// Create empty canvas for expanded image

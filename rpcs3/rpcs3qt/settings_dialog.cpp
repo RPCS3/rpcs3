@@ -313,29 +313,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				if (!utils::has_mpx())
 				{
 					title = tr("Haswell/Broadwell TSX Warning");
-					message = tr(
-						R"(
-							<p style="white-space: nowrap;">
-								RPCS3 has detected that you are using TSX functions on a Haswell or Broadwell CPU.<br>
-								Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
-								That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
-								We recommend to disable this feature and update your computer BIOS.<br><br>
-								Do you wish to use TSX anyway?
-							</p>
-						)");
+					message = gui::utils::make_paragraph(tr(
+						"RPCS3 has detected that you are using TSX functions on a Haswell or Broadwell CPU.\n"
+						"Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.\n"
+						"That means using TSX may break games or even <font color=\"red\"><b>damage</b></font> your data.\n"
+						"We recommend to disable this feature and update your computer BIOS.\n"
+						"\n"
+						"Do you wish to use TSX anyway?"
+					));
 				}
 				else
 				{
 					title = tr("TSX-FA Warning");
-					message = tr(
-						R"(
-							<p style="white-space: nowrap;">
-								RPCS3 has detected your CPU only supports TSX-FA.<br>
-								That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
-								We recommend to disable this feature.<br><br>
-								Do you wish to use TSX anyway?
-							</p>
-						)");
+					message = gui::utils::make_paragraph(tr(
+						"RPCS3 has detected your CPU only supports TSX-FA.\n"
+						"That means using TSX may break games or even <font color=\"red\"><b>damage</b></font> your data.\n"
+						"We recommend to disable this feature.\n"
+						"\n"
+						"Do you wish to use TSX anyway?"
+					));
 				}
 
 				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
