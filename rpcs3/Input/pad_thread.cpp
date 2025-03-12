@@ -18,6 +18,7 @@
 #ifndef ANDROID
 #include "keyboard_pad_handler.h"
 #endif
+#include "virtual_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/PadHandler.h"
@@ -687,6 +688,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::evdev:
 		return std::make_shared<evdev_joystick_handler>();
 #endif
+    case pad_handler::virtual_pad:
+		return std::make_shared<virtual_pad_handler>();
 	}
 
 	return nullptr;
