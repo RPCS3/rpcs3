@@ -92,6 +92,15 @@ namespace gui
 		// Returns the style for richtext <a> links. e.g. style="color: #123456;"
 		QString get_link_style(const QString& name = "richtext_link_color");
 
+		// Returns a richtext link
+		QString make_link(const QString& text, const QString& url);
+
+		// Returns a bold richtext string
+		QString make_bold(const QString& text);
+
+		// Returns a richtext paragraph with white-space: nowrap;
+		QString make_paragraph(QString text, const QString& white_space_style = "nowrap");
+
 		template <typename T>
 		void set_font_size(T& qobj, int size)
 		{

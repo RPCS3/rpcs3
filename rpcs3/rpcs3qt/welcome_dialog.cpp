@@ -24,27 +24,23 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));
 
-	ui->label_desc->setText(tr(
-		R"(
-			<p style="white-space: nowrap;">
-				RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.<br>
-				It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with <a %0 href="https://rpcs3.net/patreon">Patreon</a>.<br>
-				Our developers and contributors are always working hard to ensure this project is the best that it can be.<br>
-				There are still plenty of implementations to make and optimizations to do.
-			</p>
-		)"
-	).arg(gui::utils::get_link_style()));
+	ui->label_desc->setText(gui::utils::make_paragraph(tr(
+		"RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.\n"
+		"It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with %0.\n"
+		"Our developers and contributors are always working hard to ensure this project is the best that it can be.\n"
+		"There are still plenty of implementations to make and optimizations to do.")
+		.arg(gui::utils::make_link(tr("Patreon"), "https://rpcs3.net/patreon"))));
 
-	ui->label_info->setText(tr(
-		R"(
-			<p style="white-space: nowrap;">
-				To get started, you must first install the <span style="font-weight:600;">PlayStation 3 firmware</span>.<br>
-				Please refer to the <a %0 href="https://rpcs3.net/quickstart">Quickstart</a> guide found on the official website for further information.<br>
-				If you have any further questions, please refer to the <a %0 href="https://rpcs3.net/faq">FAQ</a>.<br>
-				Otherwise, further discussion and support can be found on the <a %0 href="https://forums.rpcs3.net">Forums</a> or on our <a %0 href="https://discord.me/RPCS3">Discord</a> server.
-			</p>
-		)"
-	).arg(gui::utils::get_link_style()));
+	ui->label_info->setText(gui::utils::make_paragraph(tr(
+		"To get started, you must first install the %0.\n"
+		"Please refer to the %1 guide found on the official website for further information.\n"
+		"If you have any further questions, please refer to the %2.\n"
+		"Otherwise, further discussion and support can be found on the %3 or on our %4 server.")
+		.arg(gui::utils::make_bold(tr("PlayStation 3 firmware")))
+		.arg(gui::utils::make_link(tr("Quickstart"), "https://rpcs3.net/quickstart"))
+		.arg(gui::utils::make_link(tr("FAQ"), "https://rpcs3.net/faq"))
+		.arg(gui::utils::make_link(tr("Forums"), "https://forums.rpcs3.net"))
+		.arg(gui::utils::make_link(tr("Discord"), "https://discord.me/RPCS3"))));
 
 #ifdef __APPLE__
 	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));
