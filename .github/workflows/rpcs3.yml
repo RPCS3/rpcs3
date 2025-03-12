@@ -5,15 +5,7 @@ defaults:
     shell: bash
 on:
   push:
-    paths-ignore:
-      - '.cirrus.yml'
-      - '.azure-pipelines.yml'
-      - 'README.md'
   pull_request:
-    paths-ignore:
-      - '.cirrus.yml'
-      - '.azure-pipelines.yml'
-      - 'README.md'
   workflow_dispatch:
 
 concurrency:
