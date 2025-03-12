@@ -533,16 +533,16 @@ AVX512_ICL_FUNC bool vertex_program_compare_512(const RSXVertexProgram &binary1,
 
 bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const
 {
-	if (binary1.output_mask != binary2.output_mask)
+	if (!compare_properties(binary1, binary2))
+	{
 		return false;
-	if (binary1.ctrl != binary2.ctrl)
+	}
+
+	if (binary1.data.size() != binary2.data.size() ||
+		binary1.jump_table != binary2.jump_table)
+	{
 		return false;
-	if (binary1.texture_state != binary2.texture_state)
-		return false;
-	if (binary1.data.size() != binary2.data.size())
-		return false;
-	if (binary1.jump_table != binary2.jump_table)
-		return false;
+	}
 
 #ifdef ARCH_X64
 	if (utils::has_avx512_icl())
@@ -570,6 +570,13 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	}
 
 	return true;
+}
+
+bool vertex_program_compare::compare_properties(const RSXVertexProgram& binary1, const RSXVertexProgram& binary2)
+{
+	return binary1.output_mask == binary2.output_mask &&
+		binary1.ctrl == binary2.ctrl &&
+		binary1.texture_state == binary2.texture_state;
 }
 
 bool fragment_program_utils::is_any_src_constant(v128 sourceOperand)
@@ -741,12 +748,7 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	if (binary1.ucode_length != binary2.ucode_length ||
-		binary1.ctrl != binary2.ctrl ||
-		binary1.texture_state != binary2.texture_state ||
-		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
-		binary1.two_sided_lighting != binary2.two_sided_lighting ||
-		binary1.mrt_buffers_count != binary2.mrt_buffers_count)
+	if (!compare_properties(binary1, binary2))
 	{
 		return false;
 	}
@@ -771,19 +773,14 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 	return true;
 }
 
-bool fragment_program_compare::config_only(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2)
+bool fragment_program_compare::compare_properties(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2)
 {
-	if (binary1.ucode_length != binary2.ucode_length ||
-		binary1.ctrl != binary2.ctrl ||
-		binary1.texture_state != binary2.texture_state ||
-		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
-		binary1.two_sided_lighting != binary2.two_sided_lighting ||
-		binary1.mrt_buffers_count != binary2.mrt_buffers_count)
-	{
-		return false;
-	}
-
-	return true;
+	return binary1.ucode_length == binary2.ucode_length &&
+		binary1.ctrl == binary2.ctrl &&
+		binary1.texture_state == binary2.texture_state &&
+		binary1.texcoord_control_mask == binary2.texcoord_control_mask &&
+		binary1.two_sided_lighting == binary2.two_sided_lighting &&
+		binary1.mrt_buffers_count == binary2.mrt_buffers_count;
 }
 
 namespace rsx
@@ -857,12 +854,68 @@ namespace rsx
 	{
 		if (flags & rsx::vertex_program_dirty)
 		{
-			cached_vertex_program = nullptr;
+			m_cached_vertex_program = nullptr;
 		}
 
 		if (flags & rsx::fragment_program_dirty)
 		{
-			cached_fragment_program = nullptr;
+			m_cached_fragment_program = nullptr;
 		}
 	}
+
+	void program_cache_hint_t::invalidate_vertex_program(const RSXVertexProgram& p)
+	{
+		if (!m_cached_vertex_program)
+		{
+			return;
+		}
+
+		if (!vertex_program_compare::compare_properties(m_cached_vp_properties, p))
+		{
+			m_cached_vertex_program = nullptr;
+		}
+	}
+
+	void program_cache_hint_t::invalidate_fragment_program(const RSXFragmentProgram& p)
+	{
+		if (!m_cached_fragment_program)
+		{
+			return;
+		}
+
+		if (!fragment_program_compare::compare_properties(m_cached_fp_properties, p))
+		{
+			m_cached_fragment_program = nullptr;
+		}
+	}
+
+	void program_cache_hint_t::cache_vertex_program(program_cache_hint_t* cache, const RSXVertexProgram& ref, void* vertex_program)
+	{
+		if (!cache)
+		{
+			return;
+		}
+
+		cache->m_cached_vertex_program = vertex_program;
+		cache->m_cached_vp_properties.output_mask = ref.output_mask;
+		cache->m_cached_vp_properties.ctrl = ref.ctrl;
+		cache->m_cached_vp_properties.texture_state = ref.texture_state;
+	}
+
+	void program_cache_hint_t::cache_fragment_program(program_cache_hint_t* cache, const RSXFragmentProgram& ref, void* fragment_program)
+	{
+		if (!cache)
+		{
+			return;
+		}
+
+		cache->m_cached_fragment_program = fragment_program;
+		cache->m_cached_fp_properties.ucode_length = ref.ucode_length;
+		cache->m_cached_fp_properties.ctrl = ref.ctrl;
+		cache->m_cached_fp_properties.texture_state = ref.texture_state;
+		cache->m_cached_fp_properties.texcoord_control_mask = ref.texcoord_control_mask;
+		cache->m_cached_fp_properties.two_sided_lighting = ref.two_sided_lighting;
+		cache->m_cached_fp_properties.mrt_buffers_count = ref.mrt_buffers_count;
+	}
+
 }
