@@ -1,8 +1,9 @@
 RPCS3
 =====
 
-[![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=4&branchName=master)
-[![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=8&_a=summary&repositoryFilter=4)
+[![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3/master?label=Cirrus%20CI&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/RPCS3/rpcs3/rpcs3.yml?branch=master&logo=github&label=Actions)](https://github.com/RPCS3/rpcs3/actions/workflows/rpcs3.yml)
 [![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
 
 The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows, Linux, macOS and FreeBSD.
