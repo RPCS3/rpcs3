@@ -43,6 +43,8 @@ namespace program_hash_util
 
 	struct vertex_program_compare
 	{
+		static bool compare_properties(const RSXVertexProgram& binary1, const RSXVertexProgram& binary2);
+
 		bool operator()(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2) const;
 	};
 
@@ -80,8 +82,9 @@ namespace program_hash_util
 
 	struct fragment_program_compare
 	{
+		static bool compare_properties(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2);
+
 		bool operator()(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2) const;
-		static bool config_only(const RSXFragmentProgram &binary1, const RSXFragmentProgram &binary2);
 	};
 }
 
@@ -92,40 +95,46 @@ namespace rsx
 		template <typename T>
 		T* get_fragment_program() const
 		{
-			return utils::bless<T>(cached_fragment_program);
+			return utils::bless<T>(m_cached_fragment_program);
 		}
 
 		template <typename T>
 		T* get_vertex_program() const
 		{
-			return utils::bless<T>(cached_vertex_program);
+			return utils::bless<T>(m_cached_vertex_program);
 		}
 
 		bool has_vertex_program() const
 		{
-			return cached_vertex_program != nullptr;
+			return m_cached_vertex_program != nullptr;
 		}
 
 		bool has_fragment_program() const
 		{
-			return cached_fragment_program != nullptr;
+			return m_cached_fragment_program != nullptr;
 		}
 
+		// Invalidate caches if the renderer state shows they are out of date
 		void invalidate(u32 flags);
 
-		static inline void cache_vertex_program(program_cache_hint_t* cache, void* vertex_program)
-		{
-			if (cache) cache->cached_vertex_program = vertex_program;
-		}
+		// Invalidate vertex program if the cached program is not compatible with the incoming
+		void invalidate_vertex_program(const RSXVertexProgram& p);
 
-		static inline void cache_fragment_program(program_cache_hint_t* cache, void* fragment_program)
-		{
-			if (cache) cache->cached_fragment_program = fragment_program;
-		}
+		// Invalidate fragment program if the cached program is not compatible with the incoming
+		void invalidate_fragment_program(const RSXFragmentProgram& p);
+
+		// Helper - optionally cache the vertex program if possible
+		static void cache_vertex_program(program_cache_hint_t* cache, const RSXVertexProgram& ref, void* vertex_program);
+
+		// Helper - optionally cache the fragment program if possible
+		static void cache_fragment_program(program_cache_hint_t* cache, const RSXFragmentProgram& ref, void* fragment_program);
 
 	protected:
-		void* cached_fragment_program = nullptr;
-		void* cached_vertex_program = nullptr;
+		void* m_cached_fragment_program = nullptr;
+		void* m_cached_vertex_program = nullptr;
+
+		RSXFragmentProgram m_cached_fp_properties;
+		RSXVertexProgram m_cached_vp_properties;
 	};
 
 	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize = true);
@@ -228,7 +237,7 @@ protected:
 			const auto& I = m_vertex_shader_cache.find(rsx_vp);
 			if (I != m_vertex_shader_cache.end())
 			{
-				rsx::program_cache_hint_t::cache_vertex_program(cache_hint, &(I->second));
+				rsx::program_cache_hint_t::cache_vertex_program(cache_hint, rsx_vp, &(I->second));
 				return std::forward_as_tuple(I->second, true);
 			}
 
@@ -245,7 +254,7 @@ protected:
 			backend_traits::recompile_vertex_program(rsx_vp, *new_shader, m_next_id++);
 		}
 
-		rsx::program_cache_hint_t::cache_vertex_program(cache_hint, new_shader);
+		rsx::program_cache_hint_t::cache_vertex_program(cache_hint, rsx_vp, new_shader);
 		return std::forward_as_tuple(*new_shader, false);
 	}
 
@@ -267,7 +276,7 @@ protected:
 			const auto& I = m_fragment_shader_cache.find(rsx_fp);
 			if (I != m_fragment_shader_cache.end())
 			{
-				rsx::program_cache_hint_t::cache_fragment_program(cache_hint, &(I->second));
+				rsx::program_cache_hint_t::cache_fragment_program(cache_hint, rsx_fp, &(I->second));
 				return std::forward_as_tuple(I->second, true);
 			}
 
@@ -284,7 +293,7 @@ protected:
 			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
 		}
 
-		rsx::program_cache_hint_t::cache_fragment_program(cache_hint, new_shader);
+		rsx::program_cache_hint_t::cache_fragment_program(cache_hint, rsx_fp, new_shader);
 		return std::forward_as_tuple(*new_shader, false);
 	}
 

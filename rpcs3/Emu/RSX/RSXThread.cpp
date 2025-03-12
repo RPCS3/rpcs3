@@ -2034,6 +2034,8 @@ namespace rsx
 		}
 
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
+
+		m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 	}
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
@@ -2275,6 +2277,8 @@ namespace rsx
 				rsx_log.trace("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
 		}
+
+		m_program_cache_hint.invalidate_fragment_program(current_fragment_program);
 	}
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
