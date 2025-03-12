@@ -105,7 +105,7 @@ freebsd_task:
   matrix:
     - name: Cirrus FreeBSD
       freebsd_instance:
-        image_family: freebsd-13-4
+        image_family: freebsd-13-5
         cpu: 8
         memory: 8G
   env:
