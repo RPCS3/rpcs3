@@ -6835,7 +6835,7 @@ public:
 
 				const auto div_result = the_one / div;
 
-				return vfixupimmps(bitcast<f32[4]>(splat<u32[4]>(0xFFFFFFFFu)), div_result, splat<u32[4]>(0x11001188u), 0, 0xff);
+				return vfixupimmps(div_result, div_result, splat<u32[4]>(0x00220088u), 0, 0xff);
 			});	
 		}
 		else
