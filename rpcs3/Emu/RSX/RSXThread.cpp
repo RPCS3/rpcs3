@@ -2005,6 +2005,9 @@ namespace rsx
 			}
 
 			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
+
+			// Emit invalidate here in case ucode is actually clean
+			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 		}
 
 		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
