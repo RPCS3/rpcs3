@@ -220,7 +220,8 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Initialize args
-	c.mov(x86::r13, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+	c.movabs(x86::r13, reinterpret_cast<u64>(&vm::g_exec_addr));
+	c.mov(x86::r13, x86::qword_ptr(x86::r13));
 	c.mov(x86::rbp, args[0]);
 	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
 
@@ -232,7 +233,8 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.shl(x86::edx, 13);
 	c.mov(x86::r12d, x86::edx); // Load relocation base
 
-	c.mov(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
+	c.movabs(x86::rbx, reinterpret_cast<u64>(&vm::g_base_addr));
+	c.mov(x86::rbx, x86::qword_ptr(x86::rbx));
 	c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
 	c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));
 	c.mov(x86::rdi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 2)));
@@ -3164,8 +3166,9 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
+	c.push(x86::r13);
 	c.push(x86::r14);
-	c.sub(x86::rsp, 40);
+	c.sub(x86::rsp, 48);
 #ifdef _WIN32
 	if (!s_tsx_avx)
 	{
@@ -3176,14 +3179,16 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r10);
-	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.movabs(x86::rbp, reinterpret_cast<u64>(&vm::g_sudo_addr));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rbp));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(x86::rbp, -128);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.movzx(args[0].r32(), args[0].r16());
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.movabs(x86::r11, reinterpret_cast<u64>(+vm::g_reservations));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.and_(x86::r11, -128 / 2);
 	c.and_(args[0].r32(), 63);
 
@@ -3217,7 +3222,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	{
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
+		c.movabs(x86::r13, reinterpret_cast<u64>(&g_rtm_tx_limit2));
+		c.cmp(x86::rax, x86::qword_ptr(x86::r13));
 		c.jae(fall);
 	});
 
@@ -3342,8 +3348,9 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 		c.vzeroupper();
 	}
 
-	c.add(x86::rsp, 40);
+	c.add(x86::rsp, 48);
 	c.pop(x86::r14);
+	c.pop(x86::r13);
 	c.pop(x86::rbp);
 
 	maybe_flush_lbr(c);
@@ -4176,7 +4183,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	// 2 7MB overlay files -> 14GB
 	// The growth in memory requirements of LLVM is not linear with file size of course
 	// But these estimates should hopefully protect RPCS3 in the coming years
-	// Especially when thread count is on the rise with each CPU generation 
+	// Especially when thread count is on the rise with each CPU generation
 	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
 
 	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
@@ -4298,8 +4305,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (!src && !Emu.klic.empty() && src.open(path))
 			{
 				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
-				
-				if (src) 
+
+				if (src)
 				{
 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
 
@@ -4330,7 +4337,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					if (value)
 					{
-						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
+						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency
 						const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, file_size));
 						restore_mem = value - new_val;
 						value = new_val;
@@ -4503,8 +4510,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (!src && !Emu.klic.empty() && src.open(path))
 			{
 				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
-				
-				if (src) 
+
+				if (src)
 				{
 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
 				}
@@ -5076,7 +5083,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			code_size_until_jump = buf_end - buf_start;
 
 			c.add(x86::edx, seg0);
-			c.mov(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+			c.movabs(x86::rax, reinterpret_cast<u64>(&vm::g_exec_addr));
+			c.mov(x86::rax, x86::qword_ptr(x86::rax));
 			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
 
 			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
@@ -5337,7 +5345,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 					sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
 				}
 
-				part.jit_bounds = std::move(local_jit_bounds); 
+				part.jit_bounds = std::move(local_jit_bounds);
 				local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
 			}
 

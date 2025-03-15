@@ -628,6 +628,8 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+	c.push(x86::rbp);
+	c.push(x86::rbx);
 #ifdef _WIN32
 	c.sub(x86::rsp, 168);
 	if (s_tsx_avx)
@@ -648,17 +650,21 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.movups(x86::oword_ptr(x86::rsp, 128), x86::xmm14);
 		c.movups(x86::oword_ptr(x86::rsp, 144), x86::xmm15);
 	}
+#else
+	c.sub(x86::rsp, 40);
 #endif
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r10);
-	c.mov(args[1], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.movabs(args[1], reinterpret_cast<u64>(&vm::g_sudo_addr));
+	c.mov(args[1], x86::qword_ptr(args[1]));
 	c.lea(args[1], x86::qword_ptr(args[1], args[0]));
 	c.prefetchw(x86::byte_ptr(args[1], 0));
 	c.prefetchw(x86::byte_ptr(args[1], 64));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.movabs(x86::r11, reinterpret_cast<u64>(+vm::g_reservations));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 
 	// Prepare data
 	if (s_tsx_avx)
@@ -703,7 +709,8 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
+		c.movabs(x86::rbx, reinterpret_cast<u64>(&g_rtm_tx_limit2));
+		c.cmp(x86::rax, x86::qword_ptr(x86::rbx));
 		c.jae(fall);
 	});
 
@@ -853,7 +860,12 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.movups(x86::xmm15, x86::oword_ptr(x86::rsp, 144));
 	}
 	c.add(x86::rsp, 168);
+#else
+	c.add(x86::rsp, 40);
 #endif
+
+	c.pop(x86::rbx);
+	c.pop(x86::rbp);
 
 	if (s_tsx_avx)
 	{
@@ -884,8 +896,10 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
-#ifdef _WIN32
+	c.push(x86::rbp);
+	c.push(x86::rbx);
 	c.sub(x86::rsp, 40);
+#ifdef _WIN32
 	if (!s_tsx_avx)
 	{
 		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
@@ -894,7 +908,8 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 #endif
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r10);
-	c.mov(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.movabs(x86::r11, reinterpret_cast<u64>(&vm::g_sudo_addr));
+	c.mov(x86::r11, x86::qword_ptr(x86::r11));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.prefetchw(x86::byte_ptr(x86::r11, 0));
 	c.prefetchw(x86::byte_ptr(x86::r11, 64));
@@ -921,7 +936,8 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(args[1], x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.movabs(args[1], reinterpret_cast<u64>(+vm::g_reservations));
+	c.lea(args[1], x86::qword_ptr(args[1], args[0]));
 
 	// Alloc args[0] to stamp0
 	const auto stamp0 = args[0];
@@ -933,7 +949,8 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.add(x86::qword_ptr(args[3]), 1);
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
+		c.movabs(x86::rbx, reinterpret_cast<u64>(&g_rtm_tx_limit2));
+		c.cmp(x86::rax, x86::qword_ptr(x86::rbx));
 		c.jae(fall);
 	});
 
@@ -986,6 +1003,10 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.vzeroupper();
 	}
 
+	c.add(x86::rsp, 40);
+	c.pop(x86::rbx);
+	c.pop(x86::rbp);
+
 	maybe_flush_lbr(c);
 	c.ret();
 #else
@@ -1023,11 +1044,13 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r10);
-	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.movabs(x86::rbp, reinterpret_cast<u64>(&vm::g_sudo_addr));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rbp));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.movabs(x86::r11, reinterpret_cast<u64>(+vm::g_reservations));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 
 	// Alloc args[0] to stamp0
 	const auto stamp0 = args[0];
@@ -1039,7 +1062,8 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit1)));
+		c.movabs(x86::rbx, reinterpret_cast<u64>(&g_rtm_tx_limit1));
+		c.cmp(x86::rax, x86::qword_ptr(x86::rbx));
 		c.jae(fall);
 	});
 
@@ -4445,7 +4469,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 					// Detect "invalid" relative branches
 					// Branch offsets that, although are the only way to get X code address using relative address
 					// Rely on overflow/underflow of SPU memory bounds
-					// Thus they would behave differently if SPU LS memory size was to increase (evolving the CELL architecture was the original plan) 
+					// Thus they would behave differently if SPU LS memory size was to increase (evolving the CELL architecture was the original plan)
 					// Making them highly unlikely to be valid code
 
 					if (rel < 0)
@@ -4666,7 +4690,7 @@ bool spu_thread::process_mfc_cmd()
 
 									// Add to chance if previous wait was long enough
 									const u32 add_count = zero_count == 3 && total_wait >= 40 ? (total_wait - 39) * 40
-										: zero_count == 2 && total_wait >= 11 ? (total_wait - 10) * 40 
+										: zero_count == 2 && total_wait >= 11 ? (total_wait - 10) * 40
 										: zero_count == 1 && total_wait >= 8 ? (total_wait - 7) * 40
 										: zero_count == 0 && total_wait >= 6 ? (total_wait - 5) * 40
 										: 0;
@@ -5004,7 +5028,7 @@ bool spu_thread::process_mfc_cmd()
 
 						if (group->spurs_running == max_run - 1)
 						{
-							// Try to let another thread slip in and take over execution 
+							// Try to let another thread slip in and take over execution
 							thread_ctrl::wait_for(300);
 
 							// Update value
@@ -5029,7 +5053,7 @@ bool spu_thread::process_mfc_cmd()
 				if (spurs_last_task_timestamp)
 				{
 					const u64 avg_entry = spurs_average_task_duration / spurs_task_count_to_calculate;
-					spurs_average_task_duration -= avg_entry; 
+					spurs_average_task_duration -= avg_entry;
 					spurs_average_task_duration += std::min<u64>(45'000, current - spurs_last_task_timestamp);
 					spu_log.trace("duration: %d, avg=%d", current - spurs_last_task_timestamp, spurs_average_task_duration / spurs_task_count_to_calculate);
 					spurs_last_task_timestamp = 0;
@@ -5050,7 +5074,7 @@ bool spu_thread::process_mfc_cmd()
 					}
 
 					max_run = group->max_run;
-					
+
 					prev_running = group->spurs_running.fetch_op([max_run](u32& x)
 					{
 						if (x < max_run)
@@ -5115,7 +5139,7 @@ bool spu_thread::process_mfc_cmd()
 					if (spurs_last_task_timestamp)
 					{
 						const u64 avg_entry = spurs_average_task_duration / spurs_task_count_to_calculate;
-						spurs_average_task_duration -= avg_entry; 
+						spurs_average_task_duration -= avg_entry;
 						spurs_average_task_duration += std::min<u64>(45'000, current - spurs_last_task_timestamp);
 						spu_log.trace("duration: %d, avg=%d", current - spurs_last_task_timestamp, spurs_average_task_duration / spurs_task_count_to_calculate);
 						spurs_last_task_timestamp = 0;
