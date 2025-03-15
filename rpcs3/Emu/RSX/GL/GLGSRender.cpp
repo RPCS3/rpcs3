@@ -325,7 +325,7 @@ void GLGSRender::on_init_thread()
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_scratch_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 64 * 0x100000);
+	m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 128 * 0x100000);
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
