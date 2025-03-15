@@ -59,7 +59,8 @@ namespace gl
 
 		struct cached_program
 		{
-			glsl::shader fs;
+			glsl::shader vertex_shader;
+			glsl::shader fragment_shader;
 			glsl::program prog;
 			texture_pool_allocator allocator;
 		};
@@ -67,10 +68,10 @@ namespace gl
 
 	class shader_interpreter
 	{
-		glsl::shader m_vs;
-		std::unordered_map<u64, std::unique_ptr<interpreter::cached_program>> m_program_cache;
+		using shader_cache_t = std::unordered_map<u64, std::unique_ptr<interpreter::cached_program>>;
+		shader_cache_t m_program_cache;
 
-		void build_vs();
+		void build_vs(u64 compiler_options, interpreter::cached_program& prog_data);
 		void build_fs(u64 compiler_options, interpreter::cached_program& prog_data);
 		interpreter::cached_program* build_program(u64 compiler_options);
 
@@ -82,7 +83,7 @@ namespace gl
 
 		void update_fragment_textures(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, 16>& descriptors, u16 reference_mask, u32* out);
 
-		glsl::program* get(const interpreter::program_metadata& fp_metadata);
+		glsl::program* get(const interpreter::program_metadata& fp_metadata, u32 vp_ctrl, u32 fp_ctrl);
 		bool is_interpreter(const glsl::program* program) const;
 	};
 }

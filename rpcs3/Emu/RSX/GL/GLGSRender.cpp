@@ -778,7 +778,10 @@ bool GLGSRender::load_program()
 
 		if (shadermode == shader_mode::interpreter_only)
 		{
-			m_program = m_shader_interpreter.get(current_fp_metadata);
+			m_program = m_shader_interpreter.get(
+				current_fp_metadata,
+				current_vertex_program.ctrl,
+				current_fragment_program.ctrl);
 			return true;
 		}
 	}
@@ -836,7 +839,10 @@ bool GLGSRender::load_program()
 		// First load the next program if not available
 		if (!m_program)
 		{
-			m_program = m_shader_interpreter.get(current_fp_metadata);
+			m_program = m_shader_interpreter.get(
+				current_fp_metadata,
+				current_vertex_program.ctrl,
+				current_fragment_program.ctrl);
 
 			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;

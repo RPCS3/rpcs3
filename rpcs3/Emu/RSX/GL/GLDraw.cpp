@@ -814,6 +814,7 @@ void GLGSRender::end()
 	m_vertex_layout_buffer->notify();
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
+	m_instancing_ring_buffer->notify();
 
 	m_frame_stats.setup_time += m_profiler.duration();
 

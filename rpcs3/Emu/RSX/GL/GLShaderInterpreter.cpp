@@ -46,7 +46,6 @@ namespace gl
 
 	void shader_interpreter::create()
 	{
-		build_vs();
 		build_program(::program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES);
 		build_program(::program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES | ::program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT);
 	}
@@ -55,14 +54,13 @@ namespace gl
 	{
 		for (auto& prog : m_program_cache)
 		{
-			prog.second->fs.remove();
+			prog.second->vertex_shader.remove();
+			prog.second->fragment_shader.remove();
 			prog.second->prog.remove();
 		}
-
-		m_vs.remove();
 	}
 
-	glsl::program* shader_interpreter::get(const interpreter::program_metadata& metadata)
+	glsl::program* shader_interpreter::get(const interpreter::program_metadata& metadata, u32 vp_ctrl, u32 fp_ctrl)
 	{
 		// Build options
 		u64 opt = 0;
@@ -95,13 +93,14 @@ namespace gl
 			}
 		}
 
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-		if (rsx::method_registers.shader_control() & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
 		if (metadata.referenced_textures_mask) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
 		if (rsx::method_registers.polygon_stipple_enabled()) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
+		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
 
 		if (auto it = m_program_cache.find(opt); it != m_program_cache.end()) [[likely]]
 		{
@@ -115,7 +114,7 @@ namespace gl
 		return &m_current_interpreter->prog;
 	}
 
-	void shader_interpreter::build_vs()
+	void shader_interpreter::build_vs(u64 compiler_options, interpreter::cached_program& prog_data)
 	{
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
@@ -126,6 +125,10 @@ namespace gl
 		RSXVertexProgram null_prog;
 		std::string shader_str;
 		ParamArray arr;
+
+		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
+			? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS
+			: 0;
 		GLVertexDecompilerThread comp(null_prog, shader_str, arr);
 
 		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
@@ -141,14 +144,24 @@ namespace gl
 
 		// Insert vp stream input
 		builder << "\n"
-		"layout(std140, binding = " << GL_INTERPRETER_VERTEX_BLOCK << ") readonly restrict buffer VertexInstructionBlock\n"
-		"{\n"
-		"	uint base_address;\n"
-		"	uint entry;\n"
-		"	uint output_mask;\n"
-		"	uint control;\n"
-		"	uvec4 vp_instructions[];\n"
-		"};\n\n";
+			"layout(std140, binding = " << GL_INTERPRETER_VERTEX_BLOCK << ") readonly restrict buffer VertexInstructionBlock\n"
+			"{\n"
+			"	uint base_address;\n"
+			"	uint entry;\n"
+			"	uint output_mask;\n"
+			"	uint control;\n"
+			"	uvec4 vp_instructions[];\n"
+			"};\n\n";
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
+		{
+			builder << "#define _ENABLE_INSTANCED_CONSTANTS\n";
+		}
+
+		if (compiler_options)
+		{
+			builder << "\n";
+		}
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
 		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_opengl4);
@@ -156,8 +169,8 @@ namespace gl
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
 
-		m_vs.create(::glsl::program_domain::glsl_vertex_program, s);
-		m_vs.compile();
+		prog_data.vertex_shader.create(::glsl::program_domain::glsl_vertex_program, s);
+		prog_data.vertex_shader.compile();
 	}
 
 	void shader_interpreter::build_fs(u64 compiler_options, interpreter::cached_program& prog_data)
@@ -295,31 +308,32 @@ namespace gl
 		}
 
 		builder <<
-		"layout(std430, binding =" << GL_INTERPRETER_FRAGMENT_BLOCK << ") readonly restrict buffer FragmentInstructionBlock\n"
-		"{\n"
-		"	uint shader_control;\n"
-		"	uint texture_control;\n"
-		"	uint reserved1;\n"
-		"	uint reserved2;\n"
-		"	uint texture_handles[16];\n"
-		"	uvec4 fp_instructions[];\n"
-		"};\n\n";
+			"layout(std430, binding =" << GL_INTERPRETER_FRAGMENT_BLOCK << ") readonly restrict buffer FragmentInstructionBlock\n"
+			"{\n"
+			"	uint shader_control;\n"
+			"	uint texture_control;\n"
+			"	uint reserved1;\n"
+			"	uint reserved2;\n"
+			"	uint texture_handles[16];\n"
+			"	uvec4 fp_instructions[];\n"
+			"};\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
-		prog_data.fs.create(::glsl::program_domain::glsl_fragment_program, s);
-		prog_data.fs.compile();
+		prog_data.fragment_shader.create(::glsl::program_domain::glsl_fragment_program, s);
+		prog_data.fragment_shader.compile();
 	}
 
 	interpreter::cached_program* shader_interpreter::build_program(u64 compiler_options)
 	{
 		auto data = new interpreter::cached_program();
 		build_fs(compiler_options, *data);
+		build_vs(compiler_options, *data);
 
 		data->prog.create().
-			attach(m_vs).
-			attach(data->fs).
+			attach(data->vertex_shader).
+			attach(data->fragment_shader).
 			link();
 
 		data->prog.uniforms[0] = GL_STREAM_BUFFER_START + 0;

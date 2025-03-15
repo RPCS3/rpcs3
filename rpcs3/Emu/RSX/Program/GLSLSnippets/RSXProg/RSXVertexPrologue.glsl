@@ -70,6 +70,12 @@ vec4 _fetch_constant(const in int base_offset)
 	const int corrected_offset = constants_addressing_lookup[indirection_offset];
 	return instanced_constants_array[corrected_offset];
 }
+
+vec4 _fetch_constant(const in uint base_offset)
+{
+	// uint override
+	return _fetch_constant(int(base_offset));
+}
 #else
 #define _fetch_constant(x) vc[x]
 #endif
