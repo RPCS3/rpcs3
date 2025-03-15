@@ -344,15 +344,7 @@ jit_runtime_base& asmjit::get_global_runtime()
 	{
 		custom_runtime() noexcept
 		{
-			// Search starting in first 2 GiB of memory
-			for (u64 addr = size;; addr += size)
-			{
-				if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
-				{
-					m_pos.raw() = static_cast<uchar*>(ptr);
-					break;
-				}
-			}
+			ensure(m_pos.raw() = static_cast<uchar*>(utils::memory_reserve(size)));
 
 			// Initialize "end" pointer
 			m_max = m_pos + size;

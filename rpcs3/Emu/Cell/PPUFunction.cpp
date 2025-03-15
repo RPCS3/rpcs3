@@ -1902,8 +1902,9 @@ auto gen_ghc_cpp_trampoline(ppu_intrp_func_t fn_target)
 		// Take second ghc arg
 		c.mov(args[0], x86::rbp);
 		c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
-		c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
-		c.jmp(fn_target);
+		c.movabs(args[1], reinterpret_cast<u64>(&vm::g_base_addr));
+		c.add(args[2], x86::qword_ptr(args[1]));
+		c.jmp(Imm(fn_target));
 	};
 }
 

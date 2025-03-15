@@ -5,13 +5,12 @@ if(MSVC)
 	add_compile_definitions(
 		_CRT_SECURE_NO_DEPRECATE=1 _CRT_NON_CONFORMING_SWPRINTFS=1 _SCL_SECURE_NO_WARNINGS=1
 		NOMINMAX _ENABLE_EXTENDED_ALIGNED_STORAGE=1 _HAS_EXCEPTIONS=0)
-	add_link_options(/DYNAMICBASE:NO /BASE:0x10000 /FIXED)
+	add_link_options(/DYNAMICBASE:YES)
 
 	#TODO: Some of these could be cleaned up
 	add_compile_options(/wd4805) # Comparing boolean and int
 	add_compile_options(/wd4804) # Using integer operators with booleans
 	add_compile_options(/wd4200) # Zero-sized array in struct/union
-	add_link_options(/ignore:4281) # Undesirable base address 0x10000
 
 	# MSVC 2017 uses iterator as base class internally, causing a lot of warning spam
 	add_compile_definitions(_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1)
@@ -19,8 +18,6 @@ if(MSVC)
 	# Increase stack limit to 8 MB
 	add_link_options(/STACK:8388608,1048576)
 else()
-	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
-	check_cxx_compiler_flag("-no-pie" HAS_NO_PIE)
 	check_cxx_compiler_flag("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 	check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
 	if (APPLE)
@@ -99,15 +96,6 @@ else()
 	if(NOT APPLE AND NOT WIN32)
 		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		add_link_options(-Wl,--exclude-libs,ALL)
-
-		if(HAS_NO_PIE)
-			add_link_options(-no-pie)
-		endif()
-	elseif(APPLE)
-		if (CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
-			add_link_options(-Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000)
-			add_link_options(-Wl,-no_pie)
-		endif()
 	elseif(WIN32)
 		add_compile_definitions(__STDC_FORMAT_MACROS=1)
 
@@ -116,11 +104,6 @@ else()
 
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
-
-		# For arm64 windows, the image base cannot be below 4GB or the OS rejects the binary without much explanation.
-		if(COMPILER_X86)
-			add_link_options(-Wl,--image-base,0x10000)
-		endif()
 	endif()
 
 	# Specify C++ library to use as standard C++ when using clang (not required on linux due to GNU)
