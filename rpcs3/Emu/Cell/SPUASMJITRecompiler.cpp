@@ -2607,8 +2607,8 @@ void spu_recompiler::BI(spu_opcode_t op)
 	else if (op.d && found->second.size() == 1 && found->second[0] == spu_branch_target(m_pos, 1))
 	{
 		// Interrupts-disable pattern
-		c->mov(SPU_OFF_8(interrupts_enabled), 0);
-		return;
+		// c->mov(SPU_OFF_8(interrupts_enabled), 0);
+		// return;
 	}
 
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
