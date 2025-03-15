@@ -105,6 +105,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::ring_buffer> m_vertex_instructions_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_instructions_buffer;
 	std::unique_ptr<gl::ring_buffer> m_raster_env_ring_buffer;
+	std::unique_ptr<gl::ring_buffer> m_instancing_ring_buffer;
 
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
@@ -117,6 +118,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	GLint m_min_texbuffer_alignment = 256;
 	GLint m_uniform_buffer_offset_align = 256;
+	GLint m_min_ssbo_alignment = 256;
 	GLint m_max_texbuffer_size = 65536;
 
 	bool manually_flush_ring_buffers = false;

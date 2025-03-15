@@ -599,7 +599,11 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (!upload_info.index_info)
 	{
-		if (draw_call.is_single_draw())
+		if (draw_call.is_trivial_instanced_draw)
+		{
+			glDrawArraysInstanced(draw_mode, 0, upload_info.vertex_draw_count, draw_call.pass_count());
+		}
+		else if (draw_call.is_single_draw())
 		{
 			glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
 		}
@@ -625,7 +629,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 				if (driver_caps.vendor_AMD && (first + range.count) > (0x100000 >> 2))
 				{
-					//Unlikely, but added here in case the identity buffer is not large enough somehow
+					// Unlikely, but added here in case the identity buffer is not large enough somehow
 					use_draw_arrays_fallback = true;
 					break;
 				}
@@ -635,7 +639,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 			if (use_draw_arrays_fallback)
 			{
-				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
+				// MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
 				for (u32 n = 0; n < draw_count; ++n)
 				{
 					glDrawArrays(draw_mode, firsts[n], counts[n]);
@@ -643,13 +647,13 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			}
 			else if (driver_caps.vendor_AMD)
 			{
-				//Use identity index buffer to fix broken vertexID on AMD
+				// Use identity index buffer to fix broken vertexID on AMD
 				m_identity_index_buffer->bind();
 				glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, static_cast<GLsizei>(draw_count));
 			}
 			else
 			{
-				//Normal render
+				// Normal render
 				glMultiDrawArrays(draw_mode, firsts, counts, static_cast<GLsizei>(draw_count));
 			}
 		}
@@ -667,7 +671,11 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 		m_index_ring_buffer->bind();
 
-		if (draw_call.is_single_draw())
+		if (draw_call.is_trivial_instanced_draw)
+		{
+			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{ index_offset }), draw_call.pass_count());
+		}
+		else if (draw_call.is_single_draw())
 		{
 			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{index_offset}));
 		}
@@ -781,13 +789,20 @@ void GLGSRender::end()
 		m_program->validate();
 	}
 
-	rsx::method_registers.current_draw_clause.begin();
+	auto& draw_call = REGS(m_ctx)->current_draw_clause;
+	draw_call.begin();
 	u32 subdraw = 0u;
 	do
 	{
 		emit_geometry(subdraw++);
+
+		if (draw_call.is_trivial_instanced_draw)
+		{
+			// We already completed. End the draw.
+			draw_call.end();
+		}
 	}
-	while (rsx::method_registers.current_draw_clause.next());
+	while (draw_call.next());
 
 	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
 
