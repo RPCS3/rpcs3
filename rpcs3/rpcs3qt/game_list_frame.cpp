@@ -8,6 +8,7 @@
 #include "persistent_settings.h"
 #include "emu_settings.h"
 #include "gui_settings.h"
+#include "gui_application.h"
 #include "game_list_table.h"
 #include "game_list_grid.h"
 #include "game_list_grid_item.h"
@@ -573,9 +574,13 @@ void game_list_frame::OnParsingFinished()
 	sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
 	m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
 
+	const s32 language_index = gui_application::get_language_id();
 	const std::string game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
+	const std::string localized_title = fmt::format("TITLE_%02d", language_index);
+	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
+	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
 
-	const auto add_game = [this, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
+	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
 		GameInfo game{};
 		game.path = dir_or_elf;
@@ -624,8 +629,11 @@ void game_list_frame::OnParsingFinished()
 		}
 		else
 		{
+			std::string_view name = psf::get_string(psf, localized_title);
+			if (name.empty()) name = psf::get_string(psf, "TITLE", cat_unknown_localized);
+
 			game.serial       = std::string(title_id);
-			game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
+			game.name         = std::string(name);
 			game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
 			game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
 			game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
@@ -635,23 +643,6 @@ void game_list_frame::OnParsingFinished()
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
 			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-			game.icon_path    = sfo_dir + "/ICON0.PNG";
-			game.movie_path   = sfo_dir + "/ICON1.PAM";
-
-			if (game.category == "DG")
-			{
-				const std::string game_data_dir = _hdd + "game/" + game.serial;
-
-				if (std::string latest_icon = game_data_dir + "/ICON0.PNG"; fs::is_file(latest_icon))
-				{
-					game.icon_path = std::move(latest_icon);
-				}
-
-				if (std::string latest_movie = game_data_dir + "/ICON1.PAM"; fs::is_file(latest_movie))
-				{
-					game.movie_path = std::move(latest_movie);
-				}
-			}
 		}
 
 		if (show_custom_icons)
@@ -659,6 +650,30 @@ void game_list_frame::OnParsingFinished()
 			if (std::string icon_path = game_icon_path + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
 			{
 				game.icon_path = std::move(icon_path);
+			}
+		}
+
+		if (game.icon_path.empty())
+		{
+			if (std::string icon_path = sfo_dir + "/" + localized_icon; fs::is_file(icon_path))
+			{
+				game.icon_path = std::move(icon_path);
+			}
+			else
+			{
+				game.icon_path = sfo_dir + "/ICON0.PNG";
+			}
+		}
+
+		if (game.movie_path.empty())
+		{
+			if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
+			{
+				game.movie_path = std::move(movie_path);
+			}
+			else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
+			{
+				game.movie_path = std::move(movie_path);
 			}
 		}
 
@@ -720,13 +735,7 @@ void game_list_frame::OnParsingFinished()
 		info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
 		info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
 		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
-		info.has_hover_pam = fs::is_file(info.info.movie_path);
-
-		// Free some memory
-		if (!info.has_hover_pam)
-		{
-			info.info.movie_path.clear();
-		}
+		info.has_hover_pam = !info.info.movie_path.empty();
 
 		m_games.push(std::make_shared<gui_game_info>(std::move(info)));
 	};
@@ -837,14 +846,21 @@ void game_list_frame::OnRefreshFinished()
 
 	const Localized localized;
 	const std::string cat_unknown_localized = localized.category.unknown.toStdString();
+	const s32 language_index = gui_application::get_language_id();
+	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
+	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
 
 	// Try to update the app version for disc games if there is a patch
+	// Also try to find updated game icons and movies
 	for (const game_info& entry : m_game_data)
 	{
 		if (entry->info.category != "DG") continue;
 
 		for (const auto& other : m_game_data)
 		{
+			if (other->info.category == "DG") continue;
+			if (entry->info.serial != other->info.serial) continue;
+
 			// The patch is game data and must have the same serial and an app version
 			static constexpr auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& serial, bool is_fw)
 			{
@@ -861,7 +877,7 @@ void game_list_frame::OnRefreshFinished()
 				return false;
 			};
 
-			if (entry->info.serial == other->info.serial && other->info.category != "DG" && other->info.app_ver != cat_unknown_localized)
+			if (other->info.app_ver != cat_unknown_localized)
 			{
 				// Update the app version if it's higher than the disc's version (old games may not have an app version)
 				if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
@@ -878,6 +894,26 @@ void game_list_frame::OnRefreshFinished()
 				{
 					entry->info.parental_lvl = other->info.parental_lvl;
 				}
+			}
+
+			if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
+			{
+				entry->info.icon_path = std::move(icon_path);
+			}
+			else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
+			{
+				entry->info.icon_path = std::move(icon_path);
+			}
+
+			if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
+			{
+				entry->info.movie_path = std::move(movie_path);
+				entry->has_hover_pam = true;
+			}
+			else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
+			{
+				entry->info.movie_path = std::move(movie_path);
+				entry->has_hover_pam = true;
 			}
 		}
 	}

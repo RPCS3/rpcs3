@@ -1382,9 +1382,11 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	fs::file icon_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/ICON0.PNG"));
+	// Try to get icon in current language first
+	const std::string trophy_path = fmt::format("/dev_hdd0/home/%s/trophy/%s/", Emu.GetUsr(), ctxt->trp_name);
+	fs::file icon_file(vfs::get(fmt::format("%s/ICON0_%02d.PNG", trophy_path, static_cast<s32>(g_cfg.sys.language))));
 
-	if (!icon_file)
+	if (!icon_file && !icon_file.open(vfs::get(fmt::format("%s/ICON0.PNG", trophy_path))))
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_FILE;
 	}
