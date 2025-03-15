@@ -23,13 +23,13 @@ namespace gl
 		bool initialized = false;
 		version_info glsl_version;
 
-		bool EXT_dsa_supported = false;
-		bool EXT_depth_bounds_test = false;
-		bool AMD_pinned_memory = false;
-		bool ARB_dsa_supported = false;
+		bool EXT_direct_state_access_supported = false;
+		bool EXT_depth_bounds_test_supported = false;
+		bool AMD_pinned_memory_supported = false;
+		bool ARB_direct_state_access_supported = false;
 		bool ARB_bindless_texture_supported = false;
 		bool ARB_buffer_storage_supported = false;
-		bool ARB_texture_buffer_supported = false;
+		bool ARB_texture_buffer_object_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
@@ -40,7 +40,7 @@ namespace gl
 		bool ARB_compute_shader_supported = false;
 		bool NV_depth_buffer_float_supported = false;
 		bool NV_fragment_shader_barycentric_supported = false;
-		bool ARB_shader_texture_image_samples = false;
+		bool ARB_shader_texture_image_samples_supported = false;
 		bool EXT_texture_compression_s3tc_supported = false;
 
 		bool vendor_INTEL = false;  // has broken GLSL compiler
@@ -52,9 +52,6 @@ namespace gl
 		bool subvendor_ATI = false; // Pre-GCN cards (terascale, evergreen)
 
 		void initialize();
-
-	private:
-		bool check(const std::string& ext_name, const char* test);
 	};
 
 	const capabilities& get_driver_caps();
