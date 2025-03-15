@@ -151,12 +151,12 @@ void GLGSRender::on_init_thread()
 	auto& gl_caps = gl::get_driver_caps();
 
 	std::vector<std::string> exception_reasons;
-	if (!gl_caps.ARB_texture_buffer_supported)
+	if (!gl_caps.ARB_texture_buffer_object_supported)
 	{
 		exception_reasons.push_back("GL_ARB_texture_buffer_object is required but not supported by your GPU");
 	}
 
-	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
+	if (!gl_caps.ARB_direct_state_access_supported && !gl_caps.EXT_direct_state_access_supported)
 	{
 		exception_reasons.push_back("GL_ARB_direct_state_access or GL_EXT_direct_state_access is required but not supported by your GPU");
 	}
@@ -198,7 +198,7 @@ void GLGSRender::on_init_thread()
 		backend_config.supports_normalized_barycentrics = false;
 	}
 
-	if (gl_caps.AMD_pinned_memory && g_cfg.video.host_label_synchronization)
+	if (gl_caps.AMD_pinned_memory_supported && g_cfg.video.host_label_synchronization)
 	{
 		backend_config.supports_host_gpu_labels = true;
 

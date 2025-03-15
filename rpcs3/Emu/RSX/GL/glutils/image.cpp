@@ -201,7 +201,7 @@ namespace gl
 		}
 		case GL_TEXTURE_CUBE_MAP:
 		{
-			if (get_driver_caps().ARB_dsa_supported)
+			if (get_driver_caps().ARB_direct_state_access_supported)
 			{
 				glTextureSubImage3D(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
 			}
@@ -246,12 +246,12 @@ namespace gl
 		if (!region.x && !region.y && !region.z &&
 			region.width == m_width && region.height == m_height && region.depth == m_depth)
 		{
-			if (caps.ARB_dsa_supported)
+			if (caps.ARB_direct_state_access_supported)
 				glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);
 			else
 				glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
 		}
-		else if (caps.ARB_dsa_supported)
+		else if (caps.ARB_direct_state_access_supported)
 		{
 			glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
 				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);

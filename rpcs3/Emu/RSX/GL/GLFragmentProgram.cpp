@@ -54,7 +54,7 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 		}
 		else
 		{
-			ensure(driver_caps.ARB_shader_texture_image_samples, "MSAA support on OpenGL requires a driver running OpenGL 4.5 or supporting GL_ARB_shader_texture_image_samples.");
+			ensure(driver_caps.ARB_shader_texture_image_samples_supported, "MSAA support on OpenGL requires a driver running OpenGL 4.5 or supporting GL_ARB_shader_texture_image_samples.");
 			required_extensions.push_back("GL_ARB_shader_texture_image_samples");
 		}
 	}
