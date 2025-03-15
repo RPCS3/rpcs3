@@ -321,7 +321,7 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 				{
 					if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
 					{
-						info.title= qstr(localized_title);
+						info.title = qstr(localized_title);
 					}
 
 					if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())

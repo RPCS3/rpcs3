@@ -111,7 +111,7 @@ public Q_SLOTS:
 	void OnAddBreakpoint(u32 addr) const;
 
 	void RepaintGui();
-	void RetranslateUI(const QStringList& language_codes, const QString& language);
+	void RetranslateUI(const QStringList& language_codes, const QString& language_code);
 
 private Q_SLOTS:
 	void OnPlayOrPause();
