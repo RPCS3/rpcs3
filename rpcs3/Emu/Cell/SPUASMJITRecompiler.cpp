@@ -2770,14 +2770,17 @@ void spu_recompiler::FREST(spu_opcode_t op)
 	const u64 fraction_lut_addr = reinterpret_cast<u64>(spu_frest_fraction_lut);
 	const u64 exponent_lut_addr = reinterpret_cast<u64>(spu_frest_exponent_lut);
 
+	c->movabs(*arg0, fraction_lut_addr);
+	c->movabs(*arg1, exponent_lut_addr);
+
 	for (u32 index = 0; index < 4; index++)
 	{
 		c->pextrd(*qw0, v_fraction, index);
-		c->mov(*qw1, asmjit::x86::dword_ptr(fraction_lut_addr, *qw0, 2));
+		c->mov(*qw1, asmjit::x86::dword_ptr(*arg0, *qw0, 2));
 		c->pinsrd(v_fraction, *qw1, index);
 
 		c->pextrd(*qw0, v_exponent, index);
-		c->mov(*qw1, asmjit::x86::dword_ptr(exponent_lut_addr, *qw0, 2));
+		c->mov(*qw1, asmjit::x86::dword_ptr(*arg1, *qw0, 2));
 		c->pinsrd(v_exponent, *qw1, index);
 	}
 
@@ -2810,14 +2813,17 @@ void spu_recompiler::FRSQEST(spu_opcode_t op)
 	const u64 fraction_lut_addr = reinterpret_cast<u64>(spu_frsqest_fraction_lut);
 	const u64 exponent_lut_addr = reinterpret_cast<u64>(spu_frsqest_exponent_lut);
 
+	c->movabs(*arg0, fraction_lut_addr);
+	c->movabs(*arg1, exponent_lut_addr);
+
 	for (u32 index = 0; index < 4; index++)
 	{
 		c->pextrd(*qw0, v_fraction, index);
-		c->mov(*qw1, asmjit::x86::dword_ptr(fraction_lut_addr, *qw0, 2));
+		c->mov(*qw1, asmjit::x86::dword_ptr(*arg0, *qw0, 2));
 		c->pinsrd(v_fraction, *qw1, index);
 
 		c->pextrd(*qw0, v_exponent, index);
-		c->mov(*qw1, asmjit::x86::dword_ptr(exponent_lut_addr, *qw0, 2));
+		c->mov(*qw1, asmjit::x86::dword_ptr(*arg1, *qw0, 2));
 		c->pinsrd(v_exponent, *qw1, index);
 	}
 
