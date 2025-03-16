@@ -12,8 +12,6 @@ namespace vk
 
 	class shader_interpreter
 	{
-		glsl::shader m_vs;
-
 		std::vector<glsl::program_input> m_vs_inputs;
 		std::vector<glsl::program_input> m_fs_inputs;
 
@@ -41,8 +39,14 @@ namespace vk
 			}
 		};
 
+		struct shader_cache_entry_t
+		{
+			std::unique_ptr<glsl::shader> m_fs;
+			std::unique_ptr<glsl::shader> m_vs;
+		};
+
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
-		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
+		std::unordered_map<u64, shader_cache_entry_t> m_shader_cache;
 		rsx::simple_array<VkDescriptorPoolSize> m_descriptor_pool_sizes;
 		vk::descriptor_pool m_descriptor_pool;
 
@@ -55,7 +59,7 @@ namespace vk
 		std::pair<VkDescriptorSetLayout, VkPipelineLayout> create_layout(VkDevice dev);
 		void create_descriptor_pools(const vk::render_device& dev);
 
-		void build_vs();
+		glsl::shader* build_vs(u64 compiler_opt);
 		glsl::shader* build_fs(u64 compiler_opt);
 		glsl::program* link(const vk::pipeline_props& properties, u64 compiler_opt);
 
@@ -63,7 +67,12 @@ namespace vk
 		void init(const vk::render_device& dev);
 		void destroy();
 
-		glsl::program* get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata);
+		glsl::program* get(
+			const vk::pipeline_props& properties,
+			const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata,
+			u32 vp_ctrl,
+			u32 fp_ctrl);
+
 		bool is_interpreter(const glsl::program* prog) const;
 
 		u32 get_vertex_instruction_location() const;
