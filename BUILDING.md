@@ -46,11 +46,11 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia qt6-svg sdl3 sndio jack2 base-devel
+    sudo pacman -S glew openal cmake ninja vulkan-validation-layers qt6-base qt6-declarative qt6-multimedia qt6-svg sdl3 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 
-    sudo apt-get install build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-3.2 libsdl3-dev libjack-dev libsndio-dev
+    sudo apt-get install build-essential ninja-build libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-3.2 libsdl3-dev libjack-dev libsndio-dev
 
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 
@@ -67,7 +67,7 @@ sudo apt-get update
 sudo apt-get install gcc-13 g++-13
 ```
 
-You can either use `update-alternatives` to setup `gcc-13`/`g++-13` as your default compilers or prefix any `cmake` command by `CXX=g++-13 CC=gcc-13 ` to use it.
+You can either use `update-alternatives` to setup `gcc-13`/`g++-13` as your default compilers or prefix the `cmake` build file generation command by `CXX=g++-13 CC=gcc-13` to use it.
 
 ##### Vulkan SDK
 
@@ -94,19 +94,21 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel
+    sudo dnf install alsa-lib-devel cmake ninja-build glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel llvm-devel
 
 #### OpenSUSE
 
-    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt6-qtbase-devel libqt6-qtmultimedia-devel libqt6-qtsvg-devel libQt6Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
+    sudo zypper install git cmake ninja libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt6-qtbase-devel libqt6-qtmultimedia-devel libqt6-qtsvg-devel libQt6Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
 
 ## Setup the project
 
 Clone and initialize the repository
 
-```
-git clone https://github.com/RPCS3/rpcs3.git
+```bash
+git clone --recurse-submodules https://github.com/RPCS3/rpcs3.git
 cd rpcs3
+# This is automatically done by `git clone --recurse-submodules`,
+# but in case you forgot it, you can manually fetch submodules this way:
 git submodule update --init
 ```
 
@@ -181,11 +183,11 @@ In case you preferred to install and use the standalone **CMake** tool:
 
 While still in the project root:
 
-1) `cd .. && mkdir --parents rpcs3_build && cd rpcs3_build`
-2) `cmake ../rpcs3/ && make` or `CXX=g++-13 CC=gcc-13 cmake ../rpcs3/ && make` to force these compilers
-3) run RPCS3 with `./bin/rpcs3`
+1) `cmake -B build -G Ninja` to generate build files with the default compiler (override the compiler by prepending e.g. `CC=clang CXX=clang++`)
+2) `cmake --build build` to compile
+3) run RPCS3 with `build/bin/rpcs3`
 
-If compiling for ARM, pass the flag `-DUSE_NATIVE_INSTRUCTIONS=OFF` to the cmake command. This resolves some Neon errors when compiling our SIMD headers.
+If compiling for ARM, pass the flag `-DUSE_NATIVE_INSTRUCTIONS=OFF` to the first `cmake` command. This resolves some NEON errors when compiling our SIMD headers.
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 If desired, use the various build options in [CMakeLists](https://github.com/RPCS3/rpcs3/blob/master/CMakeLists.txt).
