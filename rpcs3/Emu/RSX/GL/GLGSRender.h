@@ -145,8 +145,6 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	shared_mutex m_sampler_mutex;
 	atomic_t<bool> m_samplers_dirty = {true};
-	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
-	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;
 	rsx::simple_array<u8> m_scratch_buffer;
 

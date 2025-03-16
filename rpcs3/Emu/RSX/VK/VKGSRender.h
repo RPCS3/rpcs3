@@ -81,8 +81,6 @@ private:
 	shared_mutex m_sampler_mutex;
 	atomic_t<bool> m_samplers_dirty = { true };
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
-	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
-	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::array<vk::sampler*, rsx::limits::fragment_textures_count> fs_sampler_handles{};
 	std::array<vk::sampler*, rsx::limits::vertex_textures_count> vs_sampler_handles{};
 
