@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "common.h"
 
+#include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/RSXThread.h"
 
 #define RSX(ctx) ctx->rsxthr
@@ -100,7 +101,9 @@ namespace rsx
 			ensure(!command_span.empty() && command_span.size() <= count);
 
 			u32* const dst_regs = &REGS(ctx)->registers[reg];
-			bool set_dirty = (dst_regs[0] != REGS(ctx)->latch);
+			bool set_dirty = (dst_regs[0] != REGS(ctx)->latch) ||
+				(RSX(ctx)->fs_sampler_state[texture_index] &&
+					RSX(ctx)->fs_sampler_state[texture_index]->upload_context != rsx::texture_upload_context::shader_read);
 
 			for (usz i = 1; i < command_span.size(); i++)
 			{
