@@ -30,6 +30,9 @@ namespace vk
 			: 0;
 		VKVertexDecompilerThread comp(null_prog, shader_str, arr, vk_prog);
 
+		// Initialize compiler properties
+		comp.properties.has_indexed_constants = true;
+
 		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
 		uniforms.items.emplace_back("vc[468]", -1);
 
