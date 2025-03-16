@@ -131,6 +131,9 @@ namespace gl
 			: 0;
 		GLVertexDecompilerThread comp(null_prog, shader_str, arr);
 
+		// Initialize compiler properties
+		comp.properties.has_indexed_constants = true;
+
 		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
 		uniforms.items.emplace_back("vc[468]", -1);
 
