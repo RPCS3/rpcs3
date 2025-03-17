@@ -1585,6 +1585,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableAsyncHostMM, emu_settings_type::DisableAsyncHostMM);
 	SubscribeTooltip(ui->disableAsyncHostMM, tooltips.settings.disable_async_host_mm);
 
+	m_emu_settings->EnhanceCheckBox(ui->disableSpinOptimization, emu_settings_type::DisableSpinOptimization);
+	SubscribeTooltip(ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);

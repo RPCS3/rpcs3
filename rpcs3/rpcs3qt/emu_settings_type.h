@@ -51,6 +51,7 @@ enum class emu_settings_type
 	AccuratePPUFPCC,
 	MaxPreemptCount,
 	SPUProfiler,
+	DisableSpinOptimization,
 
 	// Graphics
 	Renderer,
@@ -248,6 +249,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},
 	{ emu_settings_type::MaxPreemptCount,          { "Core", "Max CPU Preempt Count"}},
 	{ emu_settings_type::SPUProfiler,              { "Core", "SPU Profiler"}},
+	{ emu_settings_type::DisableSpinOptimization,  { "Core", "Disable SPU GETLLAR Spin Optimization"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
