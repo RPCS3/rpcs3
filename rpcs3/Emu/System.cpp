@@ -2200,7 +2200,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				if (m_localized_title != localized_title)
 				{
 					sys_log.notice("Localized Title was set from %s to %s", m_localized_title, localized_title);
-					m_localized_title = std::move(localized_title);
+					m_localized_title = localized_title;
 				}
 			}
 		}
