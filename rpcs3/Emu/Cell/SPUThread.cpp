@@ -4615,15 +4615,15 @@ bool spu_thread::process_mfc_cmd()
 
 							if (getllar_busy_waiting_switch == umax && getllar_spin_count == 4)
 							{
-								const u32 percent = g_cfg.core.spu_getllar_busy_waiting_percentage;
-
 								// Hidden value to force busy waiting (100 to 1 are dynamically adjusted, 0 is not)
-								if (percent != 101)
+								if (!g_cfg.core.spu_getllar_spin_optimization_disabled)
 								{
+									const u32 percent = g_cfg.core.spu_getllar_busy_waiting_percentage;
+
 									// Predict whether or not to use operating system sleep based on history
 									auto& stats = getllar_wait_time[(addr % SPU_LS_SIZE) / 128];
 
-									const auto old_stats = stats;
+									const std::array<u8, 4> old_stats = stats;
 									std::array<u8, 4> new_stats{};
 
 									// Rotate history (prepare newest entry)
@@ -4640,7 +4640,7 @@ bool spu_thread::process_mfc_cmd()
 									for (u8 val : old_stats)
 									{
 										total_wait += val;
-										zero_count += (val == 0 ? 1 : 0);
+										if (val == 0) ++zero_count;
 									}
 
 									// Add to chance if previous wait was long enough
@@ -4675,10 +4675,8 @@ bool spu_thread::process_mfc_cmd()
 							// Don't be stubborn, force operating sleep if too much time has passed
 							else if (getllar_busy_waiting_switch == 1 && perf0.get() > getllar_evaluate_time && perf0.get() - getllar_evaluate_time >= 400'000)
 							{
-								const u32 percent = g_cfg.core.spu_getllar_busy_waiting_percentage;
-
 								// Hidden value to force busy waiting
-								if (percent != 101)
+								if (!g_cfg.core.spu_getllar_spin_optimization_disabled)
 								{
 									spu_log.trace("SPU wait for 0x%x", addr);
 									getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front() = 1;

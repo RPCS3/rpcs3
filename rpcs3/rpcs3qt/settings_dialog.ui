@@ -265,7 +265,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0,0">
+           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
             <item>
              <widget class="QGroupBox" name="gb_tsx">
               <property name="sizePolicy">
@@ -2423,6 +2423,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="disableSpinOptimization">
+                 <property name="text">
+                  <string>Disable SPU GETLLAR Spin Optimization</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>
@@ -4242,16 +4249,16 @@
              </item>
              <item>
               <widget class="QCheckBox" name="disableAsyncHostMM">
-                <property name="text">
-                  <string>Disable Asynchronous Memory Manager</string>
-                </property>
+               <property name="text">
+                <string>Disable Asynchronous Memory Manager</string>
+               </property>
               </widget>
              </item>
              <item>
               <widget class="QCheckBox" name="disableOnDiskShaderCache">
-                <property name="text">
-                  <string>Disable On-Disk Shader Cache</string>
-                </property>
+               <property name="text">
+                <string>Disable On-Disk Shader Cache</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -4365,16 +4372,16 @@
              </item>
              <item>
               <widget class="QCheckBox" name="fixupPPUVNAN">
-                <property name="text">
-                  <string>PPU Vector NaN Fixup</string>
-                </property>
+               <property name="text">
+                <string>PPU Vector NaN Fixup</string>
+               </property>
               </widget>
              </item>
              <item>
               <widget class="QCheckBox" name="spuProfiler">
-                <property name="text">
-                  <string>SPU Profiler</string>
-                </property>
+               <property name="text">
+                <string>SPU Profiler</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -4398,7 +4405,7 @@
           </item>
           <item>
            <widget class="QWidget" name="debug_more_stuff" native="true">
-            <layout class="QVBoxLayout" name="debug_more_stuff_layout" stretch="0,0,0,0,1">
+            <layout class="QVBoxLayout" name="debug_more_stuff_layout" stretch="0,0,0,0,0,1">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -4459,23 +4466,23 @@
               </widget>
              </item>
              <item>
-             <widget class="QGroupBox" name="gb_vulkansched">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Vulkan Queue Scheduler</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_vksched_layout">
-               <item>
-                <widget class="QComboBox" name="vulkansched"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
+              <widget class="QGroupBox" name="gb_vulkansched">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="title">
+                <string>Vulkan Queue Scheduler</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_vksched_layout">
+                <item>
+                 <widget class="QComboBox" name="vulkansched"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
              <item>
               <widget class="QGroupBox" name="gb_debug_io">
                <property name="title">
