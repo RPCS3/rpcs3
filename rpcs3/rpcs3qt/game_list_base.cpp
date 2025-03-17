@@ -73,7 +73,7 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	const QColor color = GetGridCompatibilityColor(game->compat.color);
 	{
 		std::lock_guard lock(game->item->pixmap_mutex);
-		game->pxmap = PaintedPixmap(game->icon, device_pixel_ratio, game->hasCustomConfig, game->hasCustomPadConfig, color);
+		game->pxmap = PaintedPixmap(game->icon, device_pixel_ratio, game->has_custom_config, game->has_custom_pad_config, color);
 	}
 
 	if (!cancel || !cancel->load())
@@ -197,17 +197,17 @@ QIcon game_list_base::GetCustomConfigIcon(const game_info& game)
 	static const QIcon icon_custom_config(":/Icons/custom_config.png");
 	static const QIcon icon_controllers(":/Icons/controllers.png");
 
-	if (game->hasCustomConfig && game->hasCustomPadConfig)
+	if (game->has_custom_config && game->has_custom_pad_config)
 	{
 		return icon_combo_config_bordered;
 	}
 
-	if (game->hasCustomConfig)
+	if (game->has_custom_config)
 	{
 		return icon_custom_config;
 	}
 
-	if (game->hasCustomPadConfig)
+	if (game->has_custom_pad_config)
 	{
 		return icon_controllers;
 	}

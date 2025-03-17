@@ -732,8 +732,8 @@ void game_list_frame::OnParsingFinished()
 		info.info = std::move(game);
 		info.localized_category = std::move(qt_cat);
 		info.compat = m_game_compat->GetCompatibility(info.info.serial);
-		info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
-		info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
+		info.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
+		info.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
 		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
 		info.has_hover_pam = !info.info.movie_path.empty();
 
@@ -1168,7 +1168,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const bool is_current_running_game = is_game_running(current_game.serial);
 
-	QAction* boot = new QAction(gameinfo->hasCustomConfig
+	QAction* boot = new QAction(gameinfo->has_custom_config
 		? (is_current_running_game
 			? tr("&Reboot with global configuration")
 			: tr("&Boot with global configuration"))
@@ -1179,7 +1179,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QFont font = boot->font();
 	font.setBold(true);
 
-	if (gameinfo->hasCustomConfig)
+	if (gameinfo->has_custom_config)
 	{
 		QAction* boot_custom = menu.addAction(is_current_running_game
 			? tr("&Reboot with custom configuration")
@@ -1243,12 +1243,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	menu.addSeparator();
 
-	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
+	QAction* configure = menu.addAction(gameinfo->has_custom_config
 		? tr("&Change Custom Configuration")
 		: tr("&Create Custom Configuration From Global Settings"));
-	QAction* create_game_default_config = gameinfo->hasCustomConfig ? nullptr
+	QAction* create_game_default_config = gameinfo->has_custom_config ? nullptr
 		: menu.addAction(tr("&Create Custom Configuration From Default Settings"));
-	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig
+	QAction* pad_configure = menu.addAction(gameinfo->has_custom_pad_config
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
@@ -1260,7 +1260,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Remove menu
 	QMenu* remove_menu = menu.addMenu(tr("&Remove"));
 
-	if (gameinfo->hasCustomConfig)
+	if (gameinfo->has_custom_config)
 	{
 		QAction* remove_custom_config = remove_menu->addAction(tr("&Remove Custom Configuration"));
 		connect(remove_custom_config, &QAction::triggered, [this, current_game, gameinfo]()
@@ -1271,7 +1271,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		});
 	}
-	if (gameinfo->hasCustomPadConfig)
+	if (gameinfo->has_custom_pad_config)
 	{
 		QAction* remove_custom_pad_config = remove_menu->addAction(tr("&Remove Custom Gamepad Configuration"));
 		connect(remove_custom_pad_config, &QAction::triggered, [this, current_game, gameinfo]()
@@ -1588,7 +1588,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	if (gameinfo->hasCustomConfig)
+	if (gameinfo->has_custom_config)
 	{
 		QAction* open_config_dir = open_folder_menu->addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [current_game]()
@@ -1675,9 +1675,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, [this, gameinfo]()
 		{
-			if (!gameinfo->hasCustomConfig)
+			if (!gameinfo->has_custom_config)
 			{
-				gameinfo->hasCustomConfig = true;
+				gameinfo->has_custom_config = true;
 				ShowCustomConfigIcon(gameinfo);
 			}
 			Q_EMIT NotifyEmuSettingsChange();
@@ -1700,9 +1700,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		pad_settings_dialog dlg(m_gui_settings, this, &current_game);
 
-		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
+		if (dlg.exec() == QDialog::Accepted && !gameinfo->has_custom_pad_config)
 		{
-			gameinfo->hasCustomPadConfig = true;
+			gameinfo->has_custom_pad_config = true;
 			ShowCustomConfigIcon(gameinfo);
 		}
 	});
@@ -2041,7 +2041,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 		{
 			if (game)
 			{
-				game->hasCustomConfig = false;
+				game->has_custom_config = false;
 			}
 			game_list_log.success("Removed configuration file: %s", path);
 		}
@@ -2084,7 +2084,7 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 	{
 		if (game)
 		{
-			game->hasCustomPadConfig = false;
+			game->has_custom_pad_config = false;
 		}
 		if (!Emu.IsStopped(true) && Emu.GetTitleID() == title_id)
 		{
@@ -2556,7 +2556,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 	std::set<std::string> serials;
 	for (const auto& game : m_game_data)
 	{
-		if (game->hasCustomConfig && !serials.count(game->info.serial))
+		if (game->has_custom_config && !serials.count(game->info.serial))
 		{
 			serials.emplace(game->info.serial);
 		}
@@ -2591,7 +2591,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 	std::set<std::string> serials;
 	for (const auto& game : m_game_data)
 	{
-		if (game->hasCustomPadConfig && !serials.count(game->info.serial))
+		if (game->has_custom_pad_config && !serials.count(game->info.serial))
 		{
 			serials.emplace(game->info.serial);
 		}
@@ -2667,15 +2667,15 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 	}
 
 	const std::string serial         = game->info.serial;
-	const bool has_custom_config     = game->hasCustomConfig;
-	const bool has_custom_pad_config = game->hasCustomPadConfig;
+	const bool has_custom_config     = game->has_custom_config;
+	const bool has_custom_pad_config = game->has_custom_pad_config;
 
 	for (const auto& other_game : m_game_data)
 	{
 		if (other_game->info.serial == serial)
 		{
-			other_game->hasCustomConfig    = has_custom_config;
-			other_game->hasCustomPadConfig = has_custom_pad_config;
+			other_game->has_custom_config     = has_custom_config;
+			other_game->has_custom_pad_config = has_custom_pad_config;
 		}
 	}
 
