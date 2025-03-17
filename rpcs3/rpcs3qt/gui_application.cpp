@@ -21,6 +21,7 @@
 #endif
 
 #include "Emu/Audio/audio_utils.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/vfs_config.h"
@@ -65,6 +66,8 @@
 LOG_CHANNEL(gui_log, "GUI");
 
 std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
+
+s32 gui_application::m_language_id = static_cast<s32>(CELL_SYSUTIL_LANG_ENGLISH_US);
 
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
@@ -228,13 +231,13 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 			installTranslator(&translator);
 		}
 	}
-	else if (const QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
+	else if (QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
 	{
 		// show error, but ignore default case "en", since it is handled in source code
 		gui_log.error("No translation file found in: %s", file_path);
 
 		// reset current language to default "en"
-		m_language_code = default_code;
+		set_language_code(std::move(default_code));
 	}
 }
 
@@ -245,7 +248,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 		return;
 	}
 
-	m_language_code = language_code;
+	set_language_code(language_code);
 
 	const QLocale locale      = QLocale(language_code);
 	const QString locale_name = QLocale::languageToString(locale.language());
@@ -305,6 +308,69 @@ QStringList gui_application::GetAvailableLanguageCodes()
 	}
 
 	return language_codes;
+}
+
+void gui_application::set_language_code(QString language_code)
+{
+	m_language_code = language_code;
+
+	// Transform language code to lowercase and use '-'
+	language_code = language_code.toLower().replace("_", "-");
+
+	// Try to find the CELL language ID for this language code
+	static const std::map<QString, CellSysutilLang> language_ids = {
+		{"ja", CELL_SYSUTIL_LANG_JAPANESE },
+		{"en", CELL_SYSUTIL_LANG_ENGLISH_US },
+		{"en-us", CELL_SYSUTIL_LANG_ENGLISH_US },
+		{"en-gb", CELL_SYSUTIL_LANG_ENGLISH_GB },
+		{"fr", CELL_SYSUTIL_LANG_FRENCH },
+		{"es", CELL_SYSUTIL_LANG_SPANISH },
+		{"de", CELL_SYSUTIL_LANG_GERMAN },
+		{"it", CELL_SYSUTIL_LANG_ITALIAN },
+		{"nl", CELL_SYSUTIL_LANG_DUTCH },
+		{"pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT },
+		{"pt-pt", CELL_SYSUTIL_LANG_PORTUGUESE_PT },
+		{"pt-br", CELL_SYSUTIL_LANG_PORTUGUESE_BR },
+		{"ru", CELL_SYSUTIL_LANG_RUSSIAN },
+		{"ko", CELL_SYSUTIL_LANG_KOREAN },
+		{"zh", CELL_SYSUTIL_LANG_CHINESE_T },
+		{"zh-hant", CELL_SYSUTIL_LANG_CHINESE_T },
+		{"zh-hans", CELL_SYSUTIL_LANG_CHINESE_S },
+		{"fi", CELL_SYSUTIL_LANG_FINNISH },
+		{"sv", CELL_SYSUTIL_LANG_SWEDISH },
+		{"da", CELL_SYSUTIL_LANG_DANISH },
+		{"no", CELL_SYSUTIL_LANG_NORWEGIAN },
+		{"nn", CELL_SYSUTIL_LANG_NORWEGIAN },
+		{"nb", CELL_SYSUTIL_LANG_NORWEGIAN },
+		{"pl", CELL_SYSUTIL_LANG_POLISH },
+		{"tr", CELL_SYSUTIL_LANG_TURKISH },
+	};
+
+	// Check direct match first
+	const auto it = language_ids.find(language_code);
+	if (it != language_ids.cend())
+	{
+		m_language_id = static_cast<s32>(it->second);
+		return;
+	}
+
+	// Try to find closest match
+	for (const auto& [code, id] : language_ids)
+	{
+		if (language_code.startsWith(code))
+		{
+			m_language_id = static_cast<s32>(id);
+			return;
+		}
+	}
+
+	// Fallback to English (US)
+	m_language_id = static_cast<s32>(CELL_SYSUTIL_LANG_ENGLISH_US);
+}
+
+s32 gui_application::get_language_id()
+{
+	return m_language_id;
 }
 
 void gui_application::InitializeConnects()

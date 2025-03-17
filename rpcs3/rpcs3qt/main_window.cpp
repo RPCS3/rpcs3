@@ -2413,9 +2413,9 @@ void main_window::RepaintGui()
 	Q_EMIT RequestDialogRepaint();
 }
 
-void main_window::RetranslateUI(const QStringList& language_codes, const QString& language)
+void main_window::RetranslateUI(const QStringList& language_codes, const QString& language_code)
 {
-	UpdateLanguageActions(language_codes, language);
+	UpdateLanguageActions(language_codes, language_code);
 
 	ui->retranslateUi(this);
 

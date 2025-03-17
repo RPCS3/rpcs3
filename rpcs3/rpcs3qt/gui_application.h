@@ -69,6 +69,8 @@ public:
 	/** Call this method before calling app.exec */
 	bool Init() override;
 
+	static s32 get_language_id();
+
 	std::unique_ptr<gs_frame> get_gs_frame();
 
 	main_window* m_main_window = nullptr;
@@ -90,6 +92,8 @@ private:
 	void UpdatePlaytime();
 	void StopPlaytime();
 
+	void set_language_code(QString language_code);
+
 	class native_event_filter : public QAbstractNativeEventFilter
 	{
 	public:
@@ -99,6 +103,7 @@ private:
 
 	QTranslator m_translator;
 	QString m_language_code;
+	static s32 m_language_id;
 
 	QTimer m_timer;
 	QElapsedTimer m_timer_playtime;

@@ -2,6 +2,7 @@
 
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
+#include "gui_application.h"
 #include "gui_settings.h"
 #include "persistent_settings.h"
 #include "game_list_delegate.h"
@@ -405,11 +406,14 @@ void save_manager_dialog::UpdateIcons()
 	m_list->resizeRowsToContents();
 	m_list->resizeColumnToContents(SaveColumns::Icon);
 
+	const s32 language_index = gui_application::get_language_id();
+	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
+
 	for (int i = 0; i < m_list->rowCount(); ++i)
 	{
 		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
 		{
-			icon_item->set_icon_load_func([this, cancel = icon_item->icon_loading_aborted(), dpr](int index)
+			icon_item->set_icon_load_func([this, cancel = icon_item->icon_loading_aborted(), dpr, localized_icon](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -428,7 +432,8 @@ void save_manager_dialog::UpdateIcons()
 							const int idx_real = user_item->data(Qt::UserRole).toInt();
 							const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
 
-							if (!icon.load(QString::fromStdString(m_dir + entry.dirName + "/ICON0.PNG")))
+							if (!icon.load(QString::fromStdString(m_dir + entry.dirName + "/" + localized_icon)) &&
+								!icon.load(QString::fromStdString(m_dir + entry.dirName + "/ICON0.PNG")))
 							{
 								gui_log.warning("Loading icon for save %s failed", entry.dirName);
 								icon = QPixmap(320, 176);
