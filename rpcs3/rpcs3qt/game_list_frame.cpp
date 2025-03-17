@@ -582,8 +582,8 @@ void game_list_frame::OnParsingFinished()
 
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
-		GameInfo game{};
-		game.path = dir_or_elf;
+		gui_game_info game{};
+		game.info.path = dir_or_elf;
 
 		const Localized thread_localized;
 
@@ -599,13 +599,13 @@ void game_list_frame::OnParsingFinished()
 				return;
 			}
 
-			game.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
-			game.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
-			game.version = utils::get_firmware_version();
-			game.app_ver = game.version;
-			game.fw = game.version;
-			game.bootable = 1;
-			game.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
+			game.info.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
+			game.info.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
+			game.info.version = utils::get_firmware_version();
+			game.info.app_ver = game.info.version;
+			game.info.fw = game.info.version;
+			game.info.bootable = 1;
+			game.info.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
 
 			if (dir_or_elf.starts_with(dev_flash))
 			{
@@ -618,13 +618,13 @@ void game_list_frame::OnParsingFinished()
 
 				if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
 				{
-					game.name = it->second.toStdString();
+					game.info.name = it->second.toStdString();
 				}
 			}
 
-			if (game.name.empty())
+			if (game.info.name.empty())
 			{
-				game.name = game.serial;
+				game.info.name = game.info.serial;
 			}
 		}
 		else
@@ -632,52 +632,53 @@ void game_list_frame::OnParsingFinished()
 			std::string_view name = psf::get_string(psf, localized_title);
 			if (name.empty()) name = psf::get_string(psf, "TITLE", cat_unknown_localized);
 
-			game.serial       = std::string(title_id);
-			game.name         = std::string(name);
-			game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
-			game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
-			game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
-			game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
-			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
-			game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
-			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
-			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
-			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+			game.info.serial       = std::string(title_id);
+			game.info.name         = std::string(name);
+			game.info.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
+			game.info.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
+			game.info.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
+			game.info.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
+			game.info.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
+			game.info.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
+			game.info.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
+			game.info.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
+			game.info.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 		}
 
 		if (show_custom_icons)
 		{
-			if (std::string icon_path = game_icon_path + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
+			if (std::string icon_path = game_icon_path + game.info.serial + "/ICON0.PNG"; fs::is_file(icon_path))
 			{
-				game.icon_path = std::move(icon_path);
+				game.info.icon_path = std::move(icon_path);
+				game.has_custom_icon = true;
 			}
 		}
 
-		if (game.icon_path.empty())
+		if (game.info.icon_path.empty())
 		{
 			if (std::string icon_path = sfo_dir + "/" + localized_icon; fs::is_file(icon_path))
 			{
-				game.icon_path = std::move(icon_path);
+				game.info.icon_path = std::move(icon_path);
 			}
 			else
 			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
+				game.info.icon_path = sfo_dir + "/ICON0.PNG";
 			}
 		}
 
-		if (game.movie_path.empty())
+		if (game.info.movie_path.empty())
 		{
 			if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
 			{
-				game.movie_path = std::move(movie_path);
+				game.info.movie_path = std::move(movie_path);
 			}
 			else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
 			{
-				game.movie_path = std::move(movie_path);
+				game.info.movie_path = std::move(movie_path);
 			}
 		}
 
-		const QString serial = qstr(game.serial);
+		const QString serial = QString::fromStdString(game.info.serial);
 
 		m_games_mutex.lock();
 
@@ -709,7 +710,7 @@ void game_list_frame::OnParsingFinished()
 
 		m_games_mutex.unlock();
 
-		QString qt_cat = qstr(game.category);
+		QString qt_cat = QString::fromStdString(game.info.category);
 
 		if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
 		{
@@ -719,7 +720,7 @@ void game_list_frame::OnParsingFinished()
 		{
 			qt_cat = data_cat->second;
 		}
-		else if (game.category == cat_unknown)
+		else if (game.info.category == cat_unknown)
 		{
 			qt_cat = thread_localized.category.unknown;
 		}
@@ -728,16 +729,14 @@ void game_list_frame::OnParsingFinished()
 			qt_cat = thread_localized.category.other;
 		}
 
-		gui_game_info info{};
-		info.info = std::move(game);
-		info.localized_category = std::move(qt_cat);
-		info.compat = m_game_compat->GetCompatibility(info.info.serial);
-		info.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(info.info.serial));
-		info.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(info.info.serial));
-		info.has_hover_gif = fs::is_file(game_icon_path + info.info.serial + "/hover.gif");
-		info.has_hover_pam = !info.info.movie_path.empty();
+		game.localized_category = std::move(qt_cat);
+		game.compat = m_game_compat->GetCompatibility(game.info.serial);
+		game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.info.serial));
+		game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.info.serial));
+		game.has_hover_gif = fs::is_file(game_icon_path + game.info.serial + "/hover.gif");
+		game.has_hover_pam = !game.info.movie_path.empty();
 
-		m_games.push(std::make_shared<gui_game_info>(std::move(info)));
+		m_games.push(std::make_shared<gui_game_info>(std::move(game)));
 	};
 
 	const auto add_disc_dir = [this](const std::string& path, std::vector<std::string>& legit_paths)
@@ -896,13 +895,16 @@ void game_list_frame::OnRefreshFinished()
 				}
 			}
 
-			if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
+			if (!entry->has_custom_icon)
 			{
-				entry->info.icon_path = std::move(icon_path);
-			}
-			else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
-			{
-				entry->info.icon_path = std::move(icon_path);
+				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
+				{
+					entry->info.icon_path = std::move(icon_path);
+				}
+				else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
+				{
+					entry->info.icon_path = std::move(icon_path);
+				}
 			}
 
 			if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))

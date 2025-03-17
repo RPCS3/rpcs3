@@ -17,6 +17,7 @@ struct gui_game_info
 	QPixmap pxmap;
 	bool has_custom_config = false;
 	bool has_custom_pad_config = false;
+	bool has_custom_icon = false;
 	bool has_hover_gif = false;
 	bool has_hover_pam = false;
 	movie_item_base* item = nullptr;
