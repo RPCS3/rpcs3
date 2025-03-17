@@ -531,9 +531,9 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-nlohmann::json cfg::node::to_json() const 
+nlohmann::ordered_json cfg::node::to_json() const 
 {
-	auto result = nlohmann::json::object();
+	auto result = nlohmann::ordered_json::object();
 
 	for (const auto& node : get_nodes())
 	{

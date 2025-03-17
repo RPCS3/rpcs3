@@ -97,7 +97,7 @@ namespace cfg
 			return {};
 		}
 
-		virtual nlohmann::json to_json() const = 0;
+		virtual nlohmann::ordered_json to_json() const = 0;
 		virtual bool from_json(const nlohmann::json &, bool dynamic = false) = 0;
 
 		// Convert default to string (optional)
@@ -149,7 +149,7 @@ namespace cfg
 
 		// Serialize node
 		std::string to_string() const override;
-		nlohmann::json to_json() const override;
+		nlohmann::ordered_json to_json() const override;
 
 		// Deserialize node
 		bool from_string(std::string_view value, bool dynamic = false) override;
@@ -190,7 +190,7 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -290,7 +290,7 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -383,7 +383,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -490,7 +490,7 @@ namespace cfg
 			return "0.0";
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -605,7 +605,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -696,7 +696,7 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -758,7 +758,7 @@ namespace cfg
 			return { m_set.begin(), m_set.end() };
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -818,7 +818,7 @@ namespace cfg
 			return m_map;
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return
 			{ 
@@ -877,7 +877,7 @@ namespace cfg
 			return m_map;
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			auto levels = try_to_enum_list(&fmt_class_string<logs::level>::format);
 			auto values = nlohmann::json::object();
@@ -1010,7 +1010,7 @@ namespace cfg
 			m_default = m_map;
 		}
 
-		nlohmann::json to_json() const override
+		nlohmann::ordered_json to_json() const override
 		{
 			return {};
 		}
