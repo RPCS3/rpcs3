@@ -68,7 +68,8 @@ QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	margin-top: 0.0625em;
 }
 QCheckBox::indicator:checked, QListWidget::indicator::checked, QTreeWidget::indicator::checked {
-	background-color: #FFF; /* White */
+	background-color: #000; /* Black */
+	image: url("GuiConfigs/check_mark_white.png");
 }
 QCheckBox::indicator:unchecked, QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
 	background-color: #000; /* Black */
@@ -86,13 +87,14 @@ QRadioButton::indicator {
 	border-radius: 0.270em;
 }
 QRadioButton::indicator:checked {
-	background-color: #FFF; /* Green */
+	background-color: #000; /* Black */
+	image: url("GuiConfigs/check_mark_white.png");
 }
 QRadioButton::indicator:unchecked {
-	background-color: #000; /* Red */
+	background-color: #000; /* Black */
 }
 QRadioButton::indicator::disabled {
-	background-color: #af4949; /* Gray */
+	background-color: #af4949; /* Red */
 }
 
 /* Combo Boxes */
