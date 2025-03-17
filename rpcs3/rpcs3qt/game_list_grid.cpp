@@ -48,7 +48,6 @@ void game_list_grid::populate(
 {
 	clear_list();
 
-	const QString game_icon_path = play_hover_movies ? QString::fromStdString(fs::get_config_dir() + "/Icons/game_icons/") : "";
 	game_list_grid_item* selected_item = nullptr;
 
 	blockSignals(true);
@@ -109,11 +108,7 @@ void game_list_grid::populate(
 			}
 		});
 
-		if (play_hover_movies && game->has_hover_gif)
-		{
-			item->set_movie_path(game_icon_path % serial % "/hover.gif");
-		}
-		else if (play_hover_movies && game->has_hover_pam)
+		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
 			item->set_movie_path(QString::fromStdString(game->info.movie_path));
 		}

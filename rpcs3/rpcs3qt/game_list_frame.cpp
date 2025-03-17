@@ -666,18 +666,20 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 
-		game.has_hover_gif = fs::is_file(game_icon_path + game.info.serial + "/hover.gif");
-
-		if (!game.has_hover_gif && game.info.movie_path.empty())
+		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; fs::is_file(movie_path))
 		{
-			if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
-			{
-				game.info.movie_path = std::move(movie_path);
-			}
-			else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
-			{
-				game.info.movie_path = std::move(movie_path);
-			}
+			game.info.movie_path = std::move(movie_path);
+			game.has_hover_gif = true;
+		}
+		else if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
+		{
+			game.info.movie_path = std::move(movie_path);
+			game.has_hover_pam = true;
+		}
+		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
+		{
+			game.info.movie_path = std::move(movie_path);
+			game.has_hover_pam = true;
 		}
 
 		const QString serial = QString::fromStdString(game.info.serial);
@@ -735,7 +737,6 @@ void game_list_frame::OnParsingFinished()
 		game.compat = m_game_compat->GetCompatibility(game.info.serial);
 		game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.info.serial));
 		game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.info.serial));
-		game.has_hover_pam = !game.info.movie_path.empty();
 
 		m_games.push(std::make_shared<gui_game_info>(std::move(game)));
 	};
