@@ -666,7 +666,9 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 
-		if (game.info.movie_path.empty())
+		game.has_hover_gif = fs::is_file(game_icon_path + game.info.serial + "/hover.gif");
+
+		if (!game.has_hover_gif && game.info.movie_path.empty())
 		{
 			if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
 			{
@@ -733,7 +735,6 @@ void game_list_frame::OnParsingFinished()
 		game.compat = m_game_compat->GetCompatibility(game.info.serial);
 		game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.info.serial));
 		game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.info.serial));
-		game.has_hover_gif = fs::is_file(game_icon_path + game.info.serial + "/hover.gif");
 		game.has_hover_pam = !game.info.movie_path.empty();
 
 		m_games.push(std::make_shared<gui_game_info>(std::move(game)));
@@ -907,15 +908,18 @@ void game_list_frame::OnRefreshFinished()
 				}
 			}
 
-			if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
+			if (!entry->has_hover_gif)
 			{
-				entry->info.movie_path = std::move(movie_path);
-				entry->has_hover_pam = true;
-			}
-			else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
-			{
-				entry->info.movie_path = std::move(movie_path);
-				entry->has_hover_pam = true;
+				if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
+				{
+					entry->info.movie_path = std::move(movie_path);
+					entry->has_hover_pam = true;
+				}
+				else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
+				{
+					entry->info.movie_path = std::move(movie_path);
+					entry->has_hover_pam = true;
+				}
 			}
 		}
 	}
