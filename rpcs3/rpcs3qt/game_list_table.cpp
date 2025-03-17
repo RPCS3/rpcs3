@@ -216,7 +216,6 @@ void game_list_table::populate(
 	const QLocale locale{};
 	const Localized localized;
 
-	const QString game_icon_path = play_hover_movies ? QString::fromStdString(fs::get_config_dir() + "/Icons/game_icons/") : "";
 	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 
 	int row = 0;
@@ -292,11 +291,7 @@ void game_list_table::populate(
 			}
 		});
 
-		if (play_hover_movies && game->has_hover_gif)
-		{
-			icon_item->set_movie_path(game_icon_path % serial % "/hover.gif");
-		}
-		else if (play_hover_movies && game->has_hover_pam)
+		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
 			icon_item->set_movie_path(QString::fromStdString(game->info.movie_path));
 		}
