@@ -107,4 +107,7 @@
 [submodule "3rdparty/GPUOpen/VulkanMemoryAllocator"]
 	path = 3rdparty/GPUOpen/VulkanMemoryAllocator
 	url = ../../Megamouse/VulkanMemoryAllocator.git
+[submodule "3rdparty/json"]
+	path = 3rdparty/json
+	url = ../../nlohmann/json.git
 	ignore = dirty

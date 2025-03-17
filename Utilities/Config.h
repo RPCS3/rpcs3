@@ -5,6 +5,7 @@
 #include "util/logs.hpp"
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
+#include "nlohmann/json.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -96,6 +97,9 @@ namespace cfg
 			return {};
 		}
 
+		virtual nlohmann::json to_json() const = 0;
+		virtual bool from_json(const nlohmann::json &, bool dynamic = false) = 0;
+
 		// Convert default to string (optional)
 		virtual std::string def_to_string() const
 		{
@@ -145,9 +149,11 @@ namespace cfg
 
 		// Serialize node
 		std::string to_string() const override;
+		nlohmann::json to_json() const override;
 
 		// Deserialize node
 		bool from_string(std::string_view value, bool dynamic = false) override;
+		bool from_json(const nlohmann::json &, bool dynamic = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -184,6 +190,16 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "bool"},
+				{"value", m_value.load()},
+				{"default", def},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			return def ? "true" : "false";
@@ -206,6 +222,17 @@ namespace cfg
 			else
 				return false;
 
+			return true;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_boolean())
+			{
+				return false;
+			}
+
+			m_value = json.get<nlohmann::json::boolean_t>();
 			return true;
 		}
 
@@ -263,6 +290,17 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "enum"},
+				{"value", to_string()},
+				{"default", def_to_string()},
+				{"variants", to_list()},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			std::string result;
@@ -282,6 +320,16 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		bool from_json(const nlohmann::json &json, bool dynamic) override
+		{
+			if (!json.is_string())
+			{
+				return false;
+			}
+
+			return from_string(json.get<nlohmann::json::string_t>(), dynamic);
 		}
 
 		std::vector<std::string> to_list() const override
@@ -335,6 +383,18 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "int"},
+				{"value", m_value.load()},
+				{"default", def},
+				{"min", min},
+				{"man", max},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			return std::to_string(def);
@@ -350,6 +410,23 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_number_integer())
+			{
+				return false;
+			}
+
+			auto value = json.get<nlohmann::json::number_integer_t>();
+			if (value < min || value > max)
+			{
+				return false;
+			}
+
+			m_value = value;
+			return true;
 		}
 
 		void set(const s64& value)
@@ -413,6 +490,18 @@ namespace cfg
 			return "0.0";
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "float"},
+				{"value", m_value.load()},
+				{"default", def},
+				{"min", min},
+				{"man", max},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			std::string result;
@@ -434,6 +523,23 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_number_float())
+			{
+				return false;
+			}
+
+			auto value = json.get<nlohmann::json::number_float_t>();
+			if (value < min || value > max)
+			{
+				return false;
+			}
+
+			m_value = value;
+			return true;
 		}
 
 		void set(const f64& value)
@@ -499,6 +605,18 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "uint"},
+				{"value", m_value.load()},
+				{"default", def},
+				{"min", min},
+				{"man", max},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			return std::to_string(def);
@@ -514,6 +632,23 @@ namespace cfg
 			}
 
 			return false;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_number_unsigned())
+			{
+				return false;
+			}
+
+			auto value = json.get<nlohmann::json::number_unsigned_t>();
+			if (value < min || value > max)
+			{
+				return false;
+			}
+
+			m_value = value;
+			return true;
 		}
 
 		void set(const u64& value)
@@ -561,6 +696,16 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "string"},
+				{"value", to_string()},
+				{"default", def_to_string()},
+			};
+		}
+
 		std::string def_to_string() const override
 		{
 			return def;
@@ -569,6 +714,17 @@ namespace cfg
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			m_value = std::string(value);
+			return true;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_string())
+			{
+				return false;
+			}
+
+			m_value = json.get<nlohmann::json::string_t>();
 			return true;
 		}
 	};
@@ -602,11 +758,45 @@ namespace cfg
 			return { m_set.begin(), m_set.end() };
 		}
 
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "set"},
+				{"value", to_list()},
+			};
+		}
+
 		bool from_list(std::vector<std::string>&& list) override
 		{
 			m_set = { std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()) };
 
 			return true;
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_array())
+			{
+				return false;
+			}
+
+			auto array = json.get<nlohmann::json::array_t>();
+
+			std::vector<std::string> string_array;
+			string_array.reserve(array.size());
+
+			for (auto &elem : array)
+			{
+				if (!elem.is_string())
+				{
+					return false;
+				}
+
+				string_array.push_back(elem.get<nlohmann::json::string_t>());
+			}
+
+			return from_list(std::move(string_array));
 		}
 	};
 
@@ -626,6 +816,31 @@ namespace cfg
 		const map_of_type<std::string>& get_map() const
 		{
 			return m_map;
+		}
+
+		nlohmann::json to_json() const override
+		{
+			return
+			{ 
+				{"type", "map"},
+				{"value", m_map},
+			};
+		}
+
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_object())
+			{
+				return false;
+			}
+
+			for (auto &elem : json.get<nlohmann::json::object_t>())
+			{
+				set_value(elem.first, elem.second);
+			}
+
+			return true;
 		}
 
 		std::string get_value(std::string_view key);
@@ -662,6 +877,57 @@ namespace cfg
 			return m_map;
 		}
 
+		nlohmann::json to_json() const override
+		{
+			auto levels = try_to_enum_list(&fmt_class_string<logs::level>::format);
+			auto values = nlohmann::json::object();
+			for (auto [key, level] : m_map)
+			{
+				std::string level_string;
+				fmt_class_string<logs::level>::format(level_string, fmt_unveil<logs::level>::get(level));
+				values[key] = level_string;
+			}
+
+			return
+			{ 
+				{"type", "log_map"},
+				{"values", values},
+				{"levels", levels},
+			};
+		}
+
+		bool from_json(const nlohmann::json &json, bool) override
+		{
+			if (!json.is_object())
+			{
+				return false;
+			}
+
+			for  (auto [key, valueString] : json.get<nlohmann::json::object_t>())
+			{
+				if (!valueString.is_string())
+				{
+					continue;
+				}
+
+				logs::level value;
+
+				if (u64 int_value;
+					try_to_enum_value(&int_value, &fmt_class_string<logs::level>::format, valueString.get<std::string>()))
+				{
+					value = static_cast<logs::level>(static_cast<std::underlying_type_t<logs::level>>(int_value));
+				}
+				else
+				{
+					continue;
+				}
+
+				m_map[key] = value;
+			}
+
+			return true;
+		}
+
 		void set_map(map_of_type<logs::level>&& map);
 
 		void from_default() override;
@@ -674,6 +940,61 @@ namespace cfg
 		std::string vid;
 		std::string pid;
 		std::pair<u16, u16> get_usb_ids() const;
+
+		nlohmann::json to_json() const
+		{
+			return {
+				{"path", path},
+				{"serial", serial},
+				{"vid", vid},
+				{"pid", pid},
+			};
+		}
+
+		bool from_json(const nlohmann::json &json)
+		{
+			if (json.contains("path"))
+			{
+				if (!json["path"].is_string())
+				{
+					return false;
+				}
+
+				path = json["path"];
+			}
+
+			if (json.contains("serial"))
+			{
+				if (!json["serial"].is_string())
+				{
+					return false;
+				}
+
+				path = json["serial"];
+			}
+
+			if (json.contains("vid"))
+			{
+				if (!json["vid"].is_string())
+				{
+					return false;
+				}
+
+				path = json["vid"];
+			}
+
+			if (json.contains("pid"))
+			{
+				if (!json["pid"].is_string())
+				{
+					return false;
+				}
+
+				path = json["pid"];
+			}
+
+			return true;
+		}
 	};
 
 	class device_entry final : public _base
@@ -687,6 +1008,16 @@ namespace cfg
 			, m_map(std::move(def))
 		{
 			m_default = m_map;
+		}
+
+		nlohmann::json to_json() const override
+		{
+			return {};
+		}
+
+		bool from_json(const nlohmann::json &, bool) override
+		{
+			return false;
 		}
 
 		const map_of_type<device_info>& get_map() const

@@ -531,6 +531,54 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
+nlohmann::json cfg::node::to_json() const 
+{
+	auto result = nlohmann::json::object();
+
+	for (const auto& node : get_nodes())
+	{
+		result[node->get_name()] = node->to_json();
+	}
+
+	return result;
+}
+
+bool cfg::node::from_json(const nlohmann::json &json, bool dynamic)
+{
+	if (!json.is_object())
+	{
+		return false;
+	}
+
+	auto find_node = [this](std::string_view name) -> _base *
+	{
+		for (const auto& node : get_nodes())
+		{
+			if (node->get_name() == name)
+			{
+				return node;
+			}
+		}
+
+		return nullptr;
+	};
+
+
+	for (auto &[key, value] : json.get<nlohmann::json::object_t>())
+	{
+		auto keyNode = find_node(key);
+
+		if (keyNode == nullptr || (dynamic && !keyNode->get_is_dynamic()))
+		{
+			continue;
+		}
+
+		keyNode->from_json(value, dynamic);
+	}
+
+	return false;
+}
+
 bool cfg::node::from_string(std::string_view value, bool dynamic)
 {
 	auto [result, error] = yaml_load(std::string(value));

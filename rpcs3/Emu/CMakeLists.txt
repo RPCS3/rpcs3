@@ -173,19 +173,12 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PUBLIC
-        3rdparty::openal)
-
-target_link_libraries(rpcs3_emu
-    PUBLIC
-        3rdparty::cubeb)
-
-target_link_libraries(rpcs3_emu
-    PUBLIC
-        3rdparty::soundtouch)
-
-target_link_libraries(rpcs3_emu
-    PUBLIC
-        3rdparty::miniupnpc)
+        3rdparty::openal
+        3rdparty::cubeb
+        3rdparty::soundtouch
+        3rdparty::miniupnpc
+        3rdparty::json
+)
 
 # Cell
 target_sources(rpcs3_emu PRIVATE
