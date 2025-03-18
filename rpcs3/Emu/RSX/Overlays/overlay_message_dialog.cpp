@@ -3,6 +3,7 @@
 #include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
@@ -356,10 +357,14 @@ namespace rsx
 
 				if (!background_image)
 				{
-					if (const auto picture_path = Emu.GetBackgroundPicturePath(); fs::exists(picture_path))
+					for (game_content_type type : { game_content_type::background_picture, game_content_type::content_icon, game_content_type::overlay_picture })
 					{
-						background_image = std::make_unique<image_info>(picture_path.c_str());
-						dirty |= !!background_image->get_data();
+						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type); fs::is_file(picture_path))
+						{
+							background_image = std::make_unique<image_info>(picture_path);
+							dirty |= !!background_image->get_data();
+							break;
+						}
 					}
 				}
 
