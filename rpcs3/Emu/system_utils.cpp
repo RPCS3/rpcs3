@@ -4,6 +4,7 @@
 #include "vfs_config.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
 #include "Utilities/Thread.h"
@@ -337,5 +338,171 @@ namespace rpcs3::utils
 	{
 		if (title_id.empty()) return "";
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
+	}
+
+	std::string get_game_content_path(game_content_type type)
+	{
+		static constexpr auto search_barrier = "barrier";
+
+		const auto find_content = [](const std::vector<std::string>& testees) -> std::string
+		{
+			// Try to return the content with the highest resolution
+			// Be naive and assume that its the one that spans over the most bytes
+			usz max_file_size = 0;
+			usz index_of_largest_file = umax;
+
+			for (usz index = 0; index < testees.size(); index++)
+			{
+				const std::string& path = testees[index];
+				if (path.empty()) continue;
+
+				if (path == search_barrier)
+				{
+					if (index_of_largest_file != umax)
+					{
+						// Found a file in the preferred image group
+						break;
+					}
+
+					continue;
+				}
+
+				fs::stat_t file_stat{};
+
+				if (!fs::get_stat(path, file_stat) || file_stat.is_directory)
+				{
+					continue;
+				}
+
+				if (max_file_size < file_stat.size)
+				{
+					max_file_size = file_stat.size;
+					index_of_largest_file = index;
+				}
+			}
+
+			if (index_of_largest_file < testees.size())
+			{
+				return testees[index_of_largest_file];
+			}
+
+			return {};
+		};
+
+		const std::string sfo_dir = Emu.GetSfoDir(false);
+		std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+
+		if (sfo_dir == disc_dir)
+		{
+			disc_dir.clear();
+		}
+
+		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
+
+		switch (type)
+		{
+		case game_content_type::content_icon: // ICON0.PNG
+		{
+			const std::vector<std::string> paths =
+			{
+				sfo_dir + fmt::format("/ICON0%s.PNG", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/ICON0%s.PNG", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/ICON0.PNG",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
+			};
+			return find_content(paths);
+		}
+		case game_content_type::content_icon_video: // ICON1.PAM
+		{
+			const std::vector<std::string> paths =
+			{
+				sfo_dir + fmt::format("/ICON1%s.PAM", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/ICON1%s.PAM", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/ICON1.PAM",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/ICON1.PAM") : disc_dir,
+			};
+			return find_content(paths);
+		}
+		case game_content_type::content_icon_sound: // SND0.AT3
+		{
+			const std::vector<std::string> paths =
+			{
+				sfo_dir + fmt::format("/SND0%s.AT3", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/SND0%s.AT3", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/SND0.AT3",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/SND0.AT3") : disc_dir,
+			};
+			return find_content(paths);
+		}
+		case game_content_type::overlay_picture: // PIC0.PNG (16:9) or PIC2.PNG (4:3)
+		{
+			if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
+			{
+				const std::vector<std::string> paths =
+				{
+					sfo_dir + fmt::format("/PIC0%s.PNG", locale_suffix),
+					search_barrier,
+					!disc_dir.empty() ? (disc_dir + fmt::format("/PIC0%s.PNG", locale_suffix)) : disc_dir,
+					search_barrier,
+					sfo_dir + "/PIC0.PNG",
+					search_barrier,
+					!disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
+				};
+				return find_content(paths);
+			}
+
+			const std::vector<std::string> paths =
+			{
+				sfo_dir + fmt::format("/PIC2%s.PNG", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC2%s.PNG", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/PIC2.PNG",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
+			};
+			return find_content(paths);
+		}
+		case game_content_type::background_picture: // PIC1.PNG
+		{
+			const std::vector<std::string> paths =
+			{
+				// Try to find a custom icon first
+				fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG",
+				search_barrier,
+
+				// Use PIC1.PNG
+				sfo_dir + fmt::format("/PIC1%s.PNG", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC1%s.PNG", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/PIC1.PNG",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
+				search_barrier,
+
+				// Fallback to PIC3.PNG (should only exist for packages...)
+				sfo_dir + fmt::format("/PIC3%s.PNG", locale_suffix),
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC3%s.PNG", locale_suffix)) : disc_dir,
+				search_barrier,
+				sfo_dir + "/PIC3.PNG",
+				search_barrier,
+				!disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
+			};
+			return find_content(paths);
+		}
+		}
+
+		return {};
 	}
 }
