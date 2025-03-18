@@ -96,6 +96,11 @@ namespace rsx
 			if (background_image && background_image->get_data())
 			{
 				result.add(background_poster.get_compiled());
+
+				if (background_overlay_image && background_overlay_image->get_data())
+				{
+					result.add(background_overlay_poster.get_compiled());
+				}
 			}
 
 			result.add(background.get_compiled());
@@ -357,13 +362,25 @@ namespace rsx
 
 				if (!background_image)
 				{
+					game_content_type background_content_type = game_content_type::background_picture;
+
 					for (game_content_type type : { game_content_type::background_picture, game_content_type::content_icon, game_content_type::overlay_picture })
 					{
 						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type); fs::is_file(picture_path))
 						{
+							background_content_type = type;
 							background_image = std::make_unique<image_info>(picture_path);
 							dirty |= !!background_image->get_data();
 							break;
+						}
+					}
+
+					if (background_image && !background_overlay_image && background_content_type == game_content_type::background_picture)
+					{
+						if (const std::string picture_path = rpcs3::utils::get_game_content_path(game_content_type::overlay_picture); fs::is_file(picture_path))
+						{
+							background_overlay_image = std::make_unique<image_info>(picture_path);
+							dirty |= !!background_overlay_image->get_data();
 						}
 					}
 				}
@@ -393,6 +410,17 @@ namespace rsx
 						const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
 						background_poster.set_padding(padding, padding, 0, 0);
 					}
+
+					if (background_overlay_image && background_overlay_image->get_data())
+					{
+						const f32 color = (100 - background_darkening_strength) / 100.f;
+						background_overlay_poster.fore_color = color4f(color, color, color, 1.);
+
+						background_overlay_poster.set_pos(std::min(virtual_width - background_overlay_image->w, virtual_width * 2 / 3), (virtual_height - background_overlay_image->h) / 2);
+						background_overlay_poster.set_size(background_overlay_image->w, background_overlay_image->h);
+						background_overlay_poster.set_raw_image(background_overlay_image.get());
+						background_overlay_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
+					}
 				}
 			}
 			else
@@ -402,6 +430,13 @@ namespace rsx
 					background_poster.clear_image();
 					background_image.reset();
 				}
+
+				if (background_overlay_image)
+				{
+					background_overlay_poster.clear_image();
+					background_overlay_image.reset();
+				}
+
 				background.back_color.a = 0.85f;
 			}
 		}

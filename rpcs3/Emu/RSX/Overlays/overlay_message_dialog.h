@@ -16,8 +16,10 @@ namespace rsx
 			image_button btn_ok;
 			image_button btn_cancel;
 
-			overlay_element bottom_bar, background;
+			overlay_element bottom_bar;
+			overlay_element background;
 			image_view background_poster;
+			image_view background_overlay_poster;
 			std::array<progress_bar, 2> progress_bars{};
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;
@@ -31,6 +33,7 @@ namespace rsx
 			u32 background_blur_strength = 0;
 			u32 background_darkening_strength = 0;
 			std::unique_ptr<image_info> background_image;
+			std::unique_ptr<image_info> background_overlay_image;
 
 			animation_color_interpolate fade_animation;
 
