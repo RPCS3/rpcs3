@@ -17,7 +17,7 @@ namespace rsx
 
 			if (fs::exists(avatar_path))
 			{
-				icon_data = std::make_unique<image_info>(avatar_path.c_str());
+				icon_data = std::make_unique<image_info>(avatar_path);
 				static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 			}
 			else

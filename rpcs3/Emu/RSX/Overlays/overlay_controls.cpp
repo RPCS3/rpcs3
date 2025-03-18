@@ -54,7 +54,7 @@ namespace rsx
 			return result;
 		}
 
-		image_info::image_info(const char* filename, bool grayscaled)
+		image_info::image_info(const std::string& filename, bool grayscaled)
 		{
 			fs::file f(filename, fs::read + fs::isfile);
 
@@ -132,7 +132,7 @@ namespace rsx
 			{
 				// First check the global config dir
 				const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
-				auto info = std::make_unique<image_info>(image_path.c_str());
+				auto info = std::make_unique<image_info>(image_path);
 
 #if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
 				// Check the DATADIR if defined
@@ -140,7 +140,7 @@ namespace rsx
 				{
 					const std::string data_dir (DATADIR);
 					const std::string image_data = data_dir + "/Icons/ui/" + res;
-					info = std::make_unique<image_info>(image_data.c_str());
+					info = std::make_unique<image_info>(image_data);
 				}
 #endif
 
@@ -148,7 +148,7 @@ namespace rsx
 				{
 					// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
 					std::string src = "Icons/ui/" + res;
-					info = std::make_unique<image_info>(src.c_str());
+					info = std::make_unique<image_info>(src);
 #ifndef _WIN32
 					// Check for Icons in ../share/rpcs3 for AppImages,
 					// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
@@ -188,12 +188,12 @@ namespace rsx
 #else
 							src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
 #endif
-							info = std::make_unique<image_info>(src.c_str());
+							info = std::make_unique<image_info>(src);
 							// Check if the icons are in the same directory as the executable (local builds)
 							if (info->get_data() == nullptr)
 							{
 								src = executablePath + "/Icons/ui/" + res;
-								info = std::make_unique<image_info>(src.c_str());
+								info = std::make_unique<image_info>(src);
 							}
 						}
 					}
