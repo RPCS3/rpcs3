@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{719448a4-8eab-4e75-b6b7-687e2b217490}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{7c0d57b3-e2ef-45c2-aa2d-2765e5c73279}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="discord-rpc\src\backoff.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\src\connection.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\src\msg_queue.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\src\rpc_connection.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\src\serialization.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\include\discord_register.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+    <ClInclude Include="discord-rpc\include\discord_rpc.h">
+      <Filter>Header files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="discord-rpc\src\connection_win.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="discord-rpc\src\discord_register_win.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="discord-rpc\src\discord_rpc.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="discord-rpc\src\dllmain.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="discord-rpc\src\rpc_connection.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="discord-rpc\src\serialization.cpp">
+      <Filter>Source files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
