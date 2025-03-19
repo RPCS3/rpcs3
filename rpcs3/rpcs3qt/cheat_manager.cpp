@@ -990,7 +990,7 @@ void cheat_manager_dialog::do_the_search()
 	{
 		for (u32 row = 0; row < size; row++)
 		{
-			lst_search->insertItem(row, tr("0x%0").arg(offsets_found[row], 1, 16).toUpper());
+			lst_search->insertItem(row, QString("0x%0").arg(offsets_found[row], 1, 16).toUpper());
 		}
 	}
 
@@ -1024,7 +1024,7 @@ void cheat_manager_dialog::update_cheat_list()
 				item_type->setFlags(item_type->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::type, item_type);
 
-				QTableWidgetItem* item_offset = new QTableWidgetItem(tr("0x%1").arg(offset.second.offset, 1, 16).toUpper());
+				QTableWidgetItem* item_offset = new QTableWidgetItem(QString("0x%0").arg(offset.second.offset, 1, 16).toUpper());
 				item_offset->setData(Qt::UserRole, QVariant(offset.second.offset));
 				item_offset->setFlags(item_offset->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, cheat_table_columns::offset, item_offset);
