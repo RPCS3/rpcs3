@@ -1207,7 +1207,7 @@ void debugger_frame::OnSelectSPUDisassembler()
 	}
 
 	m_spu_disasm_dialog = new QDialog(this);
-	m_spu_disasm_dialog->setWindowTitle(tr("SPU Disassmebler Properties"));
+	m_spu_disasm_dialog->setWindowTitle(tr("SPU Disassembler Properties"));
 
 	// Panels
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
