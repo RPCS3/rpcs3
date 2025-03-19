@@ -413,7 +413,7 @@ public:
 	{
 		std::string name = m_path;
 
-		name.append(_module->getName().data());
+		name.append(_module->getName());
 		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
 		name.append(".gz");
 
@@ -425,9 +425,9 @@ public:
 
 		ensure(m_compiler);
 
-		fs::file module_file(name, fs::rewrite);
+		fs::pending_file module_file;
 
-		if (!module_file)
+		if (!module_file.open((name)))
 		{
 			jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
 			return;
@@ -442,18 +442,17 @@ public:
 			return;
 		}
 
-		if (!zip(obj.getBufferStart(), obj.getBufferSize(), module_file))
+		if (!zip(obj.getBufferStart(), obj.getBufferSize(), module_file.file))
 		{
-			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
-			module_file.close();
-			fs::remove_file(name);
+			jit_log.error("LLVM: Failed to compress module: %s", std::string(_module->getName()));
 			return;
 		}
 
-		jit_log.trace("LLVM: Created module: %s", _module->getName().data());
+		jit_log.trace("LLVM: Created module: %s", std::string(_module->getName()));
 
 		// Restore space that was overestimated
-		ensure(m_compiler->add_sub_disk_space(max_size - module_file.size()));
+		ensure(m_compiler->add_sub_disk_space(max_size - module_file.file.size()));
+		module_file.commit();
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
