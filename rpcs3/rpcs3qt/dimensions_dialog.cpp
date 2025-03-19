@@ -773,7 +773,7 @@ void dimensions_dialog::load_figure_path(u8 pad, u8 index, const QString& path)
 		}
 		else
 		{
-			m_edit_figures[index]->setText(tr("Blank Tag"));
+			m_edit_figures[index]->setText("Blank Tag");
 		}
 	}
 }
