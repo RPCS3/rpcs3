@@ -388,10 +388,10 @@ namespace cfg
 			return
 			{ 
 				{"type", "int"},
-				{"value", m_value.load()},
-				{"default", def},
-				{"min", min},
-				{"man", max},
+				{"value", to_string()},
+				{"default", def_to_string()},
+				{"min", std::to_string(min)},
+				{"max", std::to_string(max)},
 			};
 		}
 
@@ -495,10 +495,10 @@ namespace cfg
 			return
 			{ 
 				{"type", "float"},
-				{"value", m_value.load()},
-				{"default", def},
-				{"min", min},
-				{"man", max},
+				{"value", to_string()},
+				{"default", def_to_string()},
+				{"min", std::to_string(min)},
+				{"max", std::to_string(max)},
 			};
 		}
 
@@ -610,10 +610,10 @@ namespace cfg
 			return
 			{ 
 				{"type", "uint"},
-				{"value", m_value.load()},
-				{"default", def},
-				{"min", min},
-				{"man", max},
+				{"value", to_string()},
+				{"default", def_to_string()},
+				{"min", std::to_string(min)},
+				{"max", std::to_string(max)},
 			};
 		}
 
