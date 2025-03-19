@@ -413,11 +413,17 @@ namespace rsx
 
 					if (background_overlay_image && background_overlay_image->get_data())
 					{
+						constexpr f32 reference_factor = 2.0f / 3.0f;
+						const f32 image_aspect = background_overlay_image->w / static_cast<f32>(background_overlay_image->h);
+						const f32 overlay_width = background_overlay_image->w * reference_factor;
+						const f32 overlay_height = overlay_width / image_aspect;
+						const u16 overlay_x = static_cast<u16>(std::min(virtual_width - overlay_width, (virtual_width * reference_factor) - (overlay_width / 2.0f)));
+						const u16 overlay_y = static_cast<u16>(std::min(virtual_height - overlay_height, (virtual_height * reference_factor) - (overlay_height / 2.0f)));
 						const f32 color = (100 - background_darkening_strength) / 100.f;
-						background_overlay_poster.fore_color = color4f(color, color, color, 1.);
 
-						background_overlay_poster.set_pos(std::min(virtual_width - background_overlay_image->w, virtual_width * 2 / 3), (virtual_height - background_overlay_image->h) / 2);
-						background_overlay_poster.set_size(background_overlay_image->w, background_overlay_image->h);
+						background_overlay_poster.fore_color = color4f(color, color, color, 1.);
+						background_overlay_poster.set_size(static_cast<u16>(overlay_width), static_cast<u16>(overlay_height));
+						background_overlay_poster.set_pos(overlay_x, overlay_y);
 						background_overlay_poster.set_raw_image(background_overlay_image.get());
 						background_overlay_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
 					}
