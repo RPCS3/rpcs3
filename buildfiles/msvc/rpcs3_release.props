@@ -11,10 +11,12 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration Condition="'$(Configuration)'=='Release'">UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
       <AdditionalLibraryDirectories Condition="'$(Configuration)'=='Release'">%(AdditionalLibraryDirectories);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\lib;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\$(Configuration)\lib;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);</AdditionalDependencies>
     </Link>
