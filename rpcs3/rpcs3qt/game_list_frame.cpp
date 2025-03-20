@@ -897,7 +897,9 @@ void game_list_frame::OnRefreshFinished()
 				}
 			}
 
-			if (!entry->has_custom_icon)
+			// ICON0.PNG is not supposed to be updateable, so we can ignore the hdd0 dir for disc games in that case
+			// Let's fetch it anyway if the path was empty for some reason
+			if (entry->info.icon_path.empty())
 			{
 				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
 				{
