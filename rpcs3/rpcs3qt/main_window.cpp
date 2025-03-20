@@ -917,7 +917,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 			if (!info.changelog.isEmpty())
 			{
 				mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-				mb.setDetailedText(tr("%0").arg(info.changelog));
+				mb.setDetailedText(info.changelog);
 
 				// Smartass hack to make the unresizeable message box wide enough for the changelog
 				const int log_width = QLabel(info.changelog).sizeHint().width();
