@@ -340,7 +340,7 @@ namespace rpcs3::utils
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 
-	std::string get_game_content_path(game_content_type type)
+	std::string get_game_content_path(game_content_type type, game_content_dir_type& dir_type)
 	{
 		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
 		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
@@ -352,11 +352,12 @@ namespace rpcs3::utils
 		}
 
 		const bool is_disc_game = !disc_dir.empty();
+		const bool check_disc = is_disc_game && dir_type != game_content_dir_type::dev_hdd0;
 
-		const auto find_content = [is_disc_game, &hdd0_dir, &disc_dir, &locale_suffix](const std::string& name, const std::string& extension) -> std::string
+		const auto find_content = [&](const std::string& name, const std::string& extension) -> std::string
 		{
 			// ICON0.PNG is not supposed to be updateable, so we can ignore the hdd0 dir for disc games in that case
-			const bool check_hdd0 = !hdd0_dir.empty() && !(is_disc_game && name == "ICON0");
+			const bool check_hdd0 = !hdd0_dir.empty() && dir_type != game_content_dir_type::dev_bdvd && !(is_disc_game && name == "ICON0");
 
 			// Check localized content first
 			for (bool localized : { true, false })
@@ -367,16 +368,24 @@ namespace rpcs3::utils
 				if (check_hdd0)
 				{
 					if (std::string path = hdd0_dir + filename; fs::is_file(path))
+					{
+						dir_type = game_content_dir_type::dev_hdd0;
 						return path;
+					}
 				}
 
 				// Check content on disc
-				if (is_disc_game)
+				if (check_disc)
 				{
 					if (std::string path = disc_dir + filename; fs::is_file(path))
+					{
+						dir_type = game_content_dir_type::dev_bdvd;
 						return path;
+					}
 				}
 			}
+
+			dir_type = game_content_dir_type::any;
 			return {};
 		};
 
@@ -400,20 +409,21 @@ namespace rpcs3::utils
 			return find_content(high_res ? "PIC0" : "PIC2", "PNG");
 		}
 		case game_content_type::background_picture:
+		case game_content_type::background_picture_2:
 		{
 			// Try to find a custom background first
 			if (std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG"; fs::is_file(path))
+			{
+				dir_type = game_content_dir_type::any;
 				return path;
+			}
 
 			// Look for proper background
-			if (std::string path = find_content("PIC1", "PNG"); !path.empty())
-				return path;
-
-			// Fallback to PIC3.PNG (should only exist for content discs though...)
-			return find_content("PIC3", "PNG");
+			return find_content(type == game_content_type::background_picture ? "PIC1" : "PIC3", "PNG");
 		}
 		}
 
+		dir_type = game_content_dir_type::any;
 		return {};
 	}
 }
