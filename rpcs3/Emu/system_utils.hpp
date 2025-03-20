@@ -3,13 +3,21 @@
 #include "util/types.hpp"
 #include <string>
 
+enum class game_content_dir_type
+{
+	any,      // Can also be used as none when returned
+	dev_hdd0, // HDD0 dir
+	dev_bdvd, // Disc dir
+};
+
 enum class game_content_type
 {
-	content_icon,       // ICON0.PNG
-	content_video,      // ICON1.PAM
-	content_sound,      // SND0.AT3
-	overlay_picture,    // PIC0.PNG (16:9) or PIC2.PNG (4:3)
-	background_picture, // PIC1.PNG
+	content_icon,         // ICON0.PNG
+	content_video,        // ICON1.PAM
+	content_sound,        // SND0.AT3
+	overlay_picture,      // PIC0.PNG (16:9) or PIC2.PNG (4:3)
+	background_picture,   // PIC1.PNG
+	background_picture_2, // PIC3.PNG (should only exist for install or extra content discs...)
 };
 
 namespace rpcs3::utils
@@ -40,5 +48,5 @@ namespace rpcs3::utils
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 
-	std::string get_game_content_path(game_content_type type);
+	std::string get_game_content_path(game_content_type type, game_content_dir_type& dir_type);
 }

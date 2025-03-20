@@ -362,22 +362,25 @@ namespace rsx
 
 				if (!background_image)
 				{
-					game_content_type background_content_type = game_content_type::background_picture;
+					// Search for any useable background picture in the given order
+					game_content_type content_type = game_content_type::background_picture;
+					game_content_dir_type dir_type = game_content_dir_type::any;
 
 					for (game_content_type type : { game_content_type::background_picture, game_content_type::content_icon, game_content_type::overlay_picture })
 					{
-						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type); fs::is_file(picture_path))
+						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type, dir_type); !picture_path.empty())
 						{
-							background_content_type = type;
+							content_type = type;
 							background_image = std::make_unique<image_info>(picture_path);
 							dirty |= !!background_image->get_data();
 							break;
 						}
 					}
 
-					if (background_image && !background_overlay_image && background_content_type == game_content_type::background_picture)
+					// Search for an overlay picture in the same dir in case we found a real background picture
+					if (background_image && !background_overlay_image && content_type == game_content_type::background_picture && dir_type != game_content_dir_type::any)
 					{
-						if (const std::string picture_path = rpcs3::utils::get_game_content_path(game_content_type::overlay_picture); fs::is_file(picture_path))
+						if (const std::string picture_path = rpcs3::utils::get_game_content_path(game_content_type::overlay_picture, dir_type); !picture_path.empty())
 						{
 							background_overlay_image = std::make_unique<image_info>(picture_path);
 							dirty |= !!background_overlay_image->get_data();
