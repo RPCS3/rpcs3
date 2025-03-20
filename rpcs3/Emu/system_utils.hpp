@@ -5,11 +5,11 @@
 
 enum class game_content_type
 {
-	content_icon,
-	content_icon_video,
-	content_icon_sound,
-	overlay_picture,
-	background_picture,
+	content_icon,       // ICON0.PNG
+	content_video,      // ICON1.PAM
+	content_sound,      // SND0.AT3
+	overlay_picture,    // PIC0.PNG (16:9) or PIC2.PNG (4:3)
+	background_picture, // PIC1.PNG
 };
 
 namespace rpcs3::utils
