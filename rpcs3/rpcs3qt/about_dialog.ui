@@ -76,10 +76,10 @@
          <item>
           <spacer name="icon_spacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeType">
-            <enum>QSizePolicy::MinimumExpanding</enum>
+            <enum>QSizePolicy::Policy::MinimumExpanding</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -100,7 +100,6 @@
            <font>
             <family>Arial</family>
             <pointsize>14</pointsize>
-            <weight>50</weight>
             <bold>false</bold>
            </font>
           </property>
@@ -108,10 +107,10 @@
            <string>RPCS3 PlayStation 3 Emulator</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
           </property>
           <property name="textInteractionFlags">
-           <set>Qt::TextSelectableByMouse</set>
+           <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
           </property>
          </widget>
         </item>
@@ -124,10 +123,10 @@
            </font>
           </property>
           <property name="textFormat">
-           <enum>Qt::RichText</enum>
+           <enum>Qt::TextFormat::RichText</enum>
           </property>
           <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
           </property>
           <property name="wordWrap">
            <bool>false</bool>
@@ -136,7 +135,7 @@
            <bool>true</bool>
           </property>
           <property name="textInteractionFlags">
-           <set>Qt::TextBrowserInteraction</set>
+           <set>Qt::TextInteractionFlag::TextBrowserInteraction</set>
           </property>
          </widget>
         </item>
@@ -152,16 +151,16 @@
            <string/>
           </property>
           <property name="textFormat">
-           <enum>Qt::RichText</enum>
+           <enum>Qt::TextFormat::RichText</enum>
           </property>
           <property name="alignment">
-           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
           </property>
           <property name="wordWrap">
            <bool>true</bool>
           </property>
           <property name="textInteractionFlags">
-           <set>Qt::TextBrowserInteraction</set>
+           <set>Qt::TextInteractionFlag::TextBrowserInteraction</set>
           </property>
          </widget>
         </item>
@@ -185,13 +184,13 @@
       </size>
      </property>
      <property name="frameShape">
-      <enum>QFrame::NoFrame</enum>
+      <enum>QFrame::Shape::NoFrame</enum>
      </property>
      <property name="verticalScrollBarPolicy">
-      <enum>Qt::ScrollBarAlwaysOn</enum>
+      <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOn</enum>
      </property>
      <property name="sizeAdjustPolicy">
-      <enum>QAbstractScrollArea::AdjustToContents</enum>
+      <enum>QAbstractScrollArea::SizeAdjustPolicy::AdjustToContents</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -201,50 +200,105 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>788</width>
-        <height>2076</height>
+        <width>793</width>
+        <height>2638</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="names_layout" stretch="1,1,1,1">
        <property name="sizeConstraint">
-        <enum>QLayout::SetMinimumSize</enum>
+        <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
        </property>
        <property name="leftMargin">
         <number>24</number>
        </property>
        <item>
-        <widget class="QLabel" name="developers">
-         <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Developers:&lt;/b&gt;&lt;br&gt;&lt;br&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;¬Oil&lt;br&gt;Nekotekina&lt;br&gt;¬Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;¬vlj&lt;br&gt;kd-11&lt;br&gt;¬jarveson&lt;br&gt;¬raven02&lt;br&gt;AniLeo&lt;br&gt;¬cornytrace&lt;br&gt;¬ssshadow&lt;br&gt;¬Numan&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;¬flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;br&gt;eladash&lt;/p&gt;</string>
+        <layout class="QVBoxLayout" name="developerLayout" stretch="0,1">
+         <property name="spacing">
+          <number>10</number>
          </property>
-         <property name="scaledContents">
-          <bool>false</bool>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
+         <item>
+          <widget class="QLabel" name="developersTitle">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Developers:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="developers">
+           <property name="text">
+            <string notr="true">&lt;p&gt;¬DH&lt;br&gt;¬AlexAltea&lt;br&gt;¬Hykem&lt;br&gt;¬Oil&lt;br&gt;Nekotekina&lt;br&gt;¬Bigpet&lt;br&gt;¬gopalsr83&lt;br&gt;¬tambry&lt;br&gt;¬vlj&lt;br&gt;kd-11&lt;br&gt;¬jarveson&lt;br&gt;¬raven02&lt;br&gt;AniLeo&lt;br&gt;¬cornytrace&lt;br&gt;¬ssshadow&lt;br&gt;¬Numan&lt;br&gt;hcorion&lt;br&gt;Megamouse&lt;br&gt;¬flash-fire&lt;br&gt;DAGINATSUKO&lt;br&gt;GalCiv&lt;br&gt;eladash&lt;/p&gt;</string>
+           </property>
+           <property name="scaledContents">
+            <bool>false</bool>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
-        <widget class="QLabel" name="contributors">
-         <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Contributors:&lt;/b&gt;&lt;br&gt;&lt;br&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;br&gt;scribam&lt;br&gt;TGE&lt;br&gt;velocity&lt;br&gt;Farseer&lt;br&gt;Dangles&lt;br&gt;ruipin&lt;br&gt;jbeich&lt;br&gt;CookiePLMonster&lt;br&gt;Whatcookie&lt;br&gt;rajkosto&lt;br&gt;Admiral Thrawn&lt;br&gt;FlexBy&lt;br&gt;Dunastique&lt;br&gt;Jonathan44062&lt;br&gt;yurinator557&lt;br&gt;Satan&lt;br&gt;HoldTheMourning&lt;br&gt;illusion0001&lt;/p&gt;</string>
+        <layout class="QVBoxLayout" name="contributorsLayout" stretch="0,1">
+         <property name="spacing">
+          <number>10</number>
          </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
+         <item>
+          <widget class="QLabel" name="contributorsTitle">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Contributors:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="contributors">
+           <property name="text">
+            <string notr="true">&lt;p&gt;BlackDaemon&lt;br&gt;elisha464&lt;br&gt;Aishou&lt;br&gt;krofna&lt;br&gt;xsacha&lt;br&gt;danilaml&lt;br&gt;unknownbrackets&lt;br&gt;Zangetsu38&lt;br&gt;lioncash&lt;br&gt;achurch&lt;br&gt;darkf&lt;br&gt;Syphurith&lt;br&gt;Blaypeg&lt;br&gt;Survanium90&lt;br&gt;georgemoralis&lt;br&gt;ikki84&lt;br&gt;scribam&lt;br&gt;TGE&lt;br&gt;velocity&lt;br&gt;Farseer&lt;br&gt;Dangles&lt;br&gt;ruipin&lt;br&gt;jbeich&lt;br&gt;CookiePLMonster&lt;br&gt;Whatcookie&lt;br&gt;rajkosto&lt;br&gt;Admiral Thrawn&lt;br&gt;FlexBy&lt;br&gt;Dunastique&lt;br&gt;Jonathan44062&lt;br&gt;yurinator557&lt;br&gt;Satan&lt;br&gt;HoldTheMourning&lt;br&gt;illusion0001&lt;/p&gt;</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
-        <widget class="QLabel" name="supporters">
-         <property name="text">
-          <string>&lt;p&gt;&lt;b&gt;Supporters:&lt;/b&gt;&lt;br&gt;&lt;br&gt;Howard Garrison&lt;br&gt;EXPotemkin&lt;br&gt;Marko V.&lt;br&gt;danhp&lt;br&gt;Jake (5315825)&lt;br&gt;Ian Reid&lt;br&gt;Tad Sherlock&lt;br&gt;Tyler Friesen&lt;br&gt;Folzar&lt;br&gt;Payton Williams&lt;br&gt;RedPill Australia&lt;br&gt;yanghong&lt;br&gt;Mohammed El-Serougi&lt;br&gt;Дима ~Ximer13~ Кулин&lt;br&gt;James Reed&lt;br&gt;BaroqueSonata&lt;br&gt;Bonzay0&lt;br&gt;Henrijs Kons&lt;br&gt;eoiz&lt;br&gt;Lena Stöffler&lt;br&gt;Michael Holder&lt;br&gt;Max Bosse&lt;br&gt;Tyler Whisinnand&lt;br&gt;Gato Harvey&lt;br&gt;cain4355&lt;br&gt;Thomas Peltier&lt;br&gt;Loli Co.&lt;br&gt;MapleLoonie&lt;br&gt;Travis McEwen&lt;br&gt;Scott Singratsomboune&lt;br&gt;T.E&lt;br&gt;Lukas Rieger&lt;br&gt;Dane Madsen&lt;br&gt;JMS&lt;br&gt;Jonatan R&lt;br&gt;Luke Johnson&lt;br&gt;Thomas Zaorski&lt;br&gt;MyOwnFan&lt;br&gt;Alexandros Mandravillis&lt;br&gt;Socker Bopper&lt;br&gt;Faris Leonhart&lt;br&gt;Fabien Net&lt;br&gt;Raves&lt;br&gt;Barrowsx&lt;br&gt;kilsuton&lt;br&gt;Max Mason&lt;br&gt;Ethan Condon&lt;br&gt;jfidone&lt;br&gt;iaDRM&lt;br&gt;Kazer2.0&lt;br&gt;Bryce Quintin&lt;br&gt;Yuri Kunde Schlesner&lt;br&gt;Abdulla Altayer&lt;br&gt;Nicolas Jallamion&lt;br&gt;Vorvek&lt;br&gt;Ian Faddis&lt;br&gt;Leon&lt;br&gt;Mohammad Taleb&lt;br&gt;Jokez&lt;br&gt;crashX&lt;br&gt;Raveskirza&lt;br&gt;Grant Deacon&lt;br&gt;michael&lt;br&gt;David Zech&lt;br&gt;Ben Manoochehri&lt;br&gt;Adnan Kovacevic&lt;br&gt;Mighty J&lt;br&gt;Sam Shan Jiang&lt;br&gt;TheAnig&lt;br&gt;Rodney Coleman&lt;br&gt;FiniteAce&lt;br&gt;Kian Soon Alex Chiam&lt;br&gt;yukkuri&lt;br&gt;Justin Chadwick&lt;br&gt;toxic Itzi&lt;br&gt;Templerror&lt;br&gt;Myles Wesley Carlson&lt;br&gt;Max Bosse&lt;br&gt;Ethan Clark&lt;br&gt;LupineDream&lt;br&gt;CheatCodesOfLife&lt;br&gt;Jan Zykmund&lt;br&gt;Francesco Cinquemani&lt;br&gt;Andylg&lt;br&gt;Julia H de Camargos&lt;br&gt;Suvodip Mitra&lt;br&gt;Goh&lt;br&gt;Dmitry&lt;br&gt;Steel Brain&lt;br&gt;VarieZ&lt;br&gt;William Swango&lt;br&gt;Matthew Messersmith&lt;br&gt;Duane Locsin&lt;br&gt;Shuddertrix&lt;br&gt;Loweys Litsman&lt;br&gt;Shuddertrix&lt;br&gt;Mason Ferrie&lt;br&gt;Richard Kaplan&lt;br&gt;Hugues Valois&lt;br&gt;richard(lath..ch@)&lt;br&gt;Johnathan (Virtuous John)&lt;br&gt;eoiz&lt;br&gt;Dany Huguenin&lt;br&gt;doobieashtray&lt;br&gt;dean(mag..94@)&lt;br&gt;Pommier Jean-Philippe&lt;br&gt;Douglas Alan Albino&lt;br&gt;Ryan Mull&lt;br&gt;Thor-Erling Engen&lt;br&gt;Nick Carpenter&lt;br&gt;curryking3&lt;br&gt;Jared Tracton&lt;br&gt;alex(koo..oh@)&lt;br&gt;Jason O'Brien&lt;br&gt;Skeletal Charizard&lt;br&gt;Ace00&lt;br&gt;Brandon Corujo&lt;br&gt;HyperBitHero&lt;br&gt;佳文 李&lt;br&gt;sorryboi
+        <layout class="QVBoxLayout" name="supportersLayout" stretch="0,1">
+         <property name="spacing">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="supportersTitle">
+           <property name="font">
+            <font>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Supporters:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="supporters">
+           <property name="text">
+            <string notr="true">&lt;p&gt;Howard Garrison&lt;br&gt;EXPotemkin&lt;br&gt;Marko V.&lt;br&gt;danhp&lt;br&gt;Jake (5315825)&lt;br&gt;Ian Reid&lt;br&gt;Tad Sherlock&lt;br&gt;Tyler Friesen&lt;br&gt;Folzar&lt;br&gt;Payton Williams&lt;br&gt;RedPill Australia&lt;br&gt;yanghong&lt;br&gt;Mohammed El-Serougi&lt;br&gt;Дима ~Ximer13~ Кулин&lt;br&gt;James Reed&lt;br&gt;BaroqueSonata&lt;br&gt;Bonzay0&lt;br&gt;Henrijs Kons&lt;br&gt;eoiz&lt;br&gt;Lena Stöffler&lt;br&gt;Michael Holder&lt;br&gt;Max Bosse&lt;br&gt;Tyler Whisinnand&lt;br&gt;Gato Harvey&lt;br&gt;cain4355&lt;br&gt;Thomas Peltier&lt;br&gt;Loli Co.&lt;br&gt;MapleLoonie&lt;br&gt;Travis McEwen&lt;br&gt;Scott Singratsomboune&lt;br&gt;T.E&lt;br&gt;Lukas Rieger&lt;br&gt;Dane Madsen&lt;br&gt;JMS&lt;br&gt;Jonatan R&lt;br&gt;Luke Johnson&lt;br&gt;Thomas Zaorski&lt;br&gt;MyOwnFan&lt;br&gt;Alexandros Mandravillis&lt;br&gt;Socker Bopper&lt;br&gt;Faris Leonhart&lt;br&gt;Fabien Net&lt;br&gt;Raves&lt;br&gt;Barrowsx&lt;br&gt;kilsuton&lt;br&gt;Max Mason&lt;br&gt;Ethan Condon&lt;br&gt;jfidone&lt;br&gt;iaDRM&lt;br&gt;Kazer2.0&lt;br&gt;Bryce Quintin&lt;br&gt;Yuri Kunde Schlesner&lt;br&gt;Abdulla Altayer&lt;br&gt;Nicolas Jallamion&lt;br&gt;Vorvek&lt;br&gt;Ian Faddis&lt;br&gt;Leon&lt;br&gt;Mohammad Taleb&lt;br&gt;Jokez&lt;br&gt;crashX&lt;br&gt;Raveskirza&lt;br&gt;Grant Deacon&lt;br&gt;michael&lt;br&gt;David Zech&lt;br&gt;Ben Manoochehri&lt;br&gt;Adnan Kovacevic&lt;br&gt;Mighty J&lt;br&gt;Sam Shan Jiang&lt;br&gt;TheAnig&lt;br&gt;Rodney Coleman&lt;br&gt;FiniteAce&lt;br&gt;Kian Soon Alex Chiam&lt;br&gt;yukkuri&lt;br&gt;Justin Chadwick&lt;br&gt;toxic Itzi&lt;br&gt;Templerror&lt;br&gt;Myles Wesley Carlson&lt;br&gt;Max Bosse&lt;br&gt;Ethan Clark&lt;br&gt;LupineDream&lt;br&gt;CheatCodesOfLife&lt;br&gt;Jan Zykmund&lt;br&gt;Francesco Cinquemani&lt;br&gt;Andylg&lt;br&gt;Julia H de Camargos&lt;br&gt;Suvodip Mitra&lt;br&gt;Goh&lt;br&gt;Dmitry&lt;br&gt;Steel Brain&lt;br&gt;VarieZ&lt;br&gt;William Swango&lt;br&gt;Matthew Messersmith&lt;br&gt;Duane Locsin&lt;br&gt;Shuddertrix&lt;br&gt;Loweys Litsman&lt;br&gt;Shuddertrix&lt;br&gt;Mason Ferrie&lt;br&gt;Richard Kaplan&lt;br&gt;Hugues Valois&lt;br&gt;richard(lath..ch@)&lt;br&gt;Johnathan (Virtuous John)&lt;br&gt;eoiz&lt;br&gt;Dany Huguenin&lt;br&gt;doobieashtray&lt;br&gt;dean(mag..94@)&lt;br&gt;Pommier Jean-Philippe&lt;br&gt;Douglas Alan Albino&lt;br&gt;Ryan Mull&lt;br&gt;Thor-Erling Engen&lt;br&gt;Nick Carpenter&lt;br&gt;curryking3&lt;br&gt;Jared Tracton&lt;br&gt;alex(koo..oh@)&lt;br&gt;Jason O'Brien&lt;br&gt;Skeletal Charizard&lt;br&gt;Ace00&lt;br&gt;Brandon Corujo&lt;br&gt;HyperBitHero&lt;br&gt;佳文 李&lt;br&gt;sorryboi
           &lt;br&gt;Johnson Bui
           &lt;br&gt;itachi1986
           &lt;br&gt;Mortano
@@ -288,22 +342,24 @@
           &lt;br&gt;Vekkar
           &lt;br&gt;Jackson Abney
           &lt;/p&gt;</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-         </property>
-         <property name="textInteractionFlags">
-          <set>Qt::TextSelectableByMouse</set>
-         </property>
-        </widget>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::TextInteractionFlag::TextSelectableByMouse</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <spacer name="names_spacer">
          <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+          <enum>Qt::Orientation::Horizontal</enum>
          </property>
          <property name="sizeType">
-          <enum>QSizePolicy::MinimumExpanding</enum>
+          <enum>QSizePolicy::Policy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -376,7 +432,7 @@
      <item>
       <spacer name="button_spacer">
        <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
        <property name="sizeHint" stdset="0">
         <size>
