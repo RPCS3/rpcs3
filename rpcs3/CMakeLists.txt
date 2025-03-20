@@ -201,3 +201,12 @@ if (NOT ANDROID)
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     endif()
 endif()
+
+# Udev rules, per platform
+if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+    install(FILES udev.rules
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d/ RENAME 99-rpcs3.rules)
+elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    install(FILES devd.conf
+        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/devd/ RENAME rpcs3.conf)
+endif()
