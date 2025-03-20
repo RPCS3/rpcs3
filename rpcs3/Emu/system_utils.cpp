@@ -343,27 +343,35 @@ namespace rpcs3::utils
 	std::string get_game_content_path(game_content_type type)
 	{
 		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
-		const std::string sfo_dir = Emu.GetSfoDir(false);
-		std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+		std::string hdd0_dir = Emu.GetSfoDir(false);
 
-		if (sfo_dir == disc_dir)
+		if (hdd0_dir == disc_dir)
 		{
-			disc_dir.clear();
+			hdd0_dir.clear(); // No hdd0 dir
 		}
 
-		const auto find_content = [&sfo_dir, &disc_dir, &locale_suffix](const std::string& name, const std::string& extension) -> std::string
+		const bool is_disc_game = !disc_dir.empty();
+
+		const auto find_content = [is_disc_game, &hdd0_dir, &disc_dir, &locale_suffix](const std::string& name, const std::string& extension) -> std::string
 		{
+			// ICON0.PNG is not supposed to be updateable, so we can ignore the hdd0 dir for disc games in that case
+			const bool check_hdd0 = !hdd0_dir.empty() && !(is_disc_game && name == "ICON0");
+
 			// Check localized content first
 			for (bool localized : { true, false })
 			{
 				const std::string filename = fmt::format("/%s%s.%s", name, localized ? locale_suffix : std::string(), extension);
 
 				// Check content on hdd0 first
-				if (std::string path = sfo_dir + filename; fs::is_file(path))
-					return path;
+				if (check_hdd0)
+				{
+					if (std::string path = hdd0_dir + filename; fs::is_file(path))
+						return path;
+				}
 
 				// Check content on disc
-				if (!disc_dir.empty())
+				if (is_disc_game)
 				{
 					if (std::string path = disc_dir + filename; fs::is_file(path))
 						return path;
