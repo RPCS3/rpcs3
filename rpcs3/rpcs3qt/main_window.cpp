@@ -2497,7 +2497,13 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			locations.insert(gui::utils::shortcut_location::applications);
 		}
 
+		if (locations.empty() && !create_caches)
+		{
+			return;
+		}
+
 		std::vector<game_info> game_data;
+		std::vector<game_info> game_data_shortcuts;
 
 		for (const auto& [boot_path, title_id] : paths)
 		{
@@ -2507,7 +2513,10 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 				{
 					if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
 					{
-						m_game_list_frame->CreateShortcuts(gameinfo, locations);
+						if (!locations.empty())
+						{
+							game_data_shortcuts.push_back(gameinfo);
+						}
 
 						if (create_caches)
 						{
@@ -2518,6 +2527,11 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 					break;
 				}
 			}
+		}
+		
+		if (!game_data_shortcuts.empty() && !locations.empty())
+		{
+			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
 		}
 
 		if (!game_data.empty())
