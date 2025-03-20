@@ -366,7 +366,7 @@ namespace rsx
 					game_content_type content_type = game_content_type::background_picture;
 					game_content_dir_type dir_type = game_content_dir_type::any;
 
-					for (game_content_type type : { game_content_type::background_picture, game_content_type::content_icon, game_content_type::overlay_picture })
+					for (game_content_type type : { game_content_type::background_picture, game_content_type::overlay_picture, game_content_type::content_icon })
 					{
 						if (const std::string picture_path = rpcs3::utils::get_game_content_path(type, dir_type); !picture_path.empty())
 						{
