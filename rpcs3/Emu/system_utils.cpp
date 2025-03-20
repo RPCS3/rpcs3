@@ -342,53 +342,7 @@ namespace rpcs3::utils
 
 	std::string get_game_content_path(game_content_type type)
 	{
-		static constexpr auto search_barrier = "barrier";
-
-		const auto find_content = [](const std::vector<std::string>& testees) -> std::string
-		{
-			// Try to return the content with the highest resolution
-			// Be naive and assume that its the one that spans over the most bytes
-			usz max_file_size = 0;
-			usz index_of_largest_file = umax;
-
-			for (usz index = 0; index < testees.size(); index++)
-			{
-				const std::string& path = testees[index];
-				if (path.empty()) continue;
-
-				if (path == search_barrier)
-				{
-					if (index_of_largest_file != umax)
-					{
-						// Found a file in the preferred image group
-						break;
-					}
-
-					continue;
-				}
-
-				fs::stat_t file_stat{};
-
-				if (!fs::get_stat(path, file_stat) || file_stat.is_directory)
-				{
-					continue;
-				}
-
-				if (max_file_size < file_stat.size)
-				{
-					max_file_size = file_stat.size;
-					index_of_largest_file = index;
-				}
-			}
-
-			if (index_of_largest_file < testees.size())
-			{
-				return testees[index_of_largest_file];
-			}
-
-			return {};
-		};
-
+		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
 		const std::string sfo_dir = Emu.GetSfoDir(false);
 		std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
 
@@ -397,109 +351,58 @@ namespace rpcs3::utils
 			disc_dir.clear();
 		}
 
-		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
+		const auto find_content = [&sfo_dir, &disc_dir, &locale_suffix](const std::string& name, const std::string& extension) -> std::string
+		{
+			// Check localized content first
+			for (bool localized : { true, false })
+			{
+				const std::string filename = fmt::format("/%s%s.%s", name, localized ? locale_suffix : std::string(), extension);
+
+				// Check content on hdd0 first
+				if (std::string path = sfo_dir + filename; fs::is_file(path))
+					return path;
+
+				// Check content on disc
+				if (!disc_dir.empty())
+				{
+					if (std::string path = disc_dir + filename; fs::is_file(path))
+						return path;
+				}
+			}
+			return {};
+		};
 
 		switch (type)
 		{
-		case game_content_type::content_icon: // ICON0.PNG
+		case game_content_type::content_icon:
 		{
-			const std::vector<std::string> paths =
-			{
-				sfo_dir + fmt::format("/ICON0%s.PNG", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/ICON0%s.PNG", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/ICON0.PNG",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/ICON0.PNG") : disc_dir,
-			};
-			return find_content(paths);
+			return find_content("ICON0", "PNG");
 		}
-		case game_content_type::content_icon_video: // ICON1.PAM
+		case game_content_type::content_video:
 		{
-			const std::vector<std::string> paths =
-			{
-				sfo_dir + fmt::format("/ICON1%s.PAM", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/ICON1%s.PAM", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/ICON1.PAM",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/ICON1.PAM") : disc_dir,
-			};
-			return find_content(paths);
+			return find_content("ICON1", "PAM");
 		}
-		case game_content_type::content_icon_sound: // SND0.AT3
+		case game_content_type::content_sound:
 		{
-			const std::vector<std::string> paths =
-			{
-				sfo_dir + fmt::format("/SND0%s.AT3", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/SND0%s.AT3", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/SND0.AT3",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/SND0.AT3") : disc_dir,
-			};
-			return find_content(paths);
+			return find_content("SND0", "AT3");
 		}
-		case game_content_type::overlay_picture: // PIC0.PNG (16:9) or PIC2.PNG (4:3)
+		case game_content_type::overlay_picture:
 		{
-			if (g_cfg.video.aspect_ratio == video_aspect::_16_9)
-			{
-				const std::vector<std::string> paths =
-				{
-					sfo_dir + fmt::format("/PIC0%s.PNG", locale_suffix),
-					search_barrier,
-					!disc_dir.empty() ? (disc_dir + fmt::format("/PIC0%s.PNG", locale_suffix)) : disc_dir,
-					search_barrier,
-					sfo_dir + "/PIC0.PNG",
-					search_barrier,
-					!disc_dir.empty() ? (disc_dir + "/PIC0.PNG") : disc_dir,
-				};
-				return find_content(paths);
-			}
+			const bool high_res = g_cfg.video.aspect_ratio == video_aspect::_16_9;
+			return find_content(high_res ? "PIC0" : "PIC2", "PNG");
+		}
+		case game_content_type::background_picture:
+		{
+			// Try to find a custom background first
+			if (std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG"; fs::is_file(path))
+				return path;
 
-			const std::vector<std::string> paths =
-			{
-				sfo_dir + fmt::format("/PIC2%s.PNG", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC2%s.PNG", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/PIC2.PNG",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/PIC2.PNG") : disc_dir,
-			};
-			return find_content(paths);
-		}
-		case game_content_type::background_picture: // PIC1.PNG
-		{
-			const std::vector<std::string> paths =
-			{
-				// Try to find a custom icon first
-				fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG",
-				search_barrier,
+			// Look for proper background
+			if (std::string path = find_content("PIC1", "PNG"); !path.empty())
+				return path;
 
-				// Use PIC1.PNG
-				sfo_dir + fmt::format("/PIC1%s.PNG", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC1%s.PNG", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/PIC1.PNG",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/PIC1.PNG") : disc_dir,
-				search_barrier,
-
-				// Fallback to PIC3.PNG (should only exist for packages...)
-				sfo_dir + fmt::format("/PIC3%s.PNG", locale_suffix),
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + fmt::format("/PIC3%s.PNG", locale_suffix)) : disc_dir,
-				search_barrier,
-				sfo_dir + "/PIC3.PNG",
-				search_barrier,
-				!disc_dir.empty() ? (disc_dir + "/PIC3.PNG") : disc_dir,
-			};
-			return find_content(paths);
+			// Fallback to PIC3.PNG (should only exist for content discs though...)
+			return find_content("PIC3", "PNG");
 		}
 		}
 
