@@ -59,7 +59,7 @@ public:
 
 	const std::vector<game_info>& GetGameInfo() const;
 
-	void CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations);
+	void CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations);
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
