@@ -2596,7 +2596,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, 0, 0)})
+				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, -1, 0)})
 				{
 					if (old_path.empty())
 					{
@@ -3404,7 +3404,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		{
 			set_progress_message("Creating File");
 
-			path = get_savestate_file(m_title_id, m_path, 0, 0);
+			path = get_savestate_file(m_title_id, m_path, 0, umax);
 
 			// The function is meant for reading files, so if there is no ZST file it would not return compressed file path
 			// So this is the only place where the result is edited if need to be
@@ -3644,12 +3644,48 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					sys_log.success("Old savestate has been removed: path='%s'", old_path2);
 				}
 
-				sys_log.success("Saved savestate! path='%s' (file_size=0x%x, time_to_save=%gs)", path, file_stat.size, (get_system_time() - start_time) / 1000000.);
+				sys_log.success("Saved savestate! path='%s' (file_size=0x%x (%d MiB), time_to_save=%gs)", path, file_stat.size, utils::aligned_div<u64>(file_stat.size, 1u << 20), (get_system_time() - start_time) / 1000000.);
 
 				if (!g_cfg.savestate.suspend_emu)
 				{
 					// Allow to reboot from GUI
 					m_path = path;
+				}
+
+				// Clean savestates
+				// Cap by number and aggregate file size
+				const u64 max_files = g_cfg.savestate.max_files;
+				const u64 max_files_size = g_cfg.savestate.max_files_size;
+
+				bool logged_limits = false;
+
+				while (true)
+				{
+					std::string to_remove = get_savestate_file(m_title_id, m_path, max_files + 1, max_files_size == 0 ? u64{umax} : (max_files_size << 20));
+
+					if (to_remove.empty())
+					{
+						break;
+					}	
+
+					if (!fs::remove_file(to_remove))
+					{
+						sys_log.error("Failed to remove savestate file at '%s'! (error: %s)", to_remove, fs::g_tls_error);
+						break;
+					}
+					else
+					{
+						if (!logged_limits)
+						{
+							sys_log.success("Maximum save state files set: %d.\nMaximum save state disk space set: %d (MiB).\nRemoved old savestate file at '%s'.\n"
+								, max_files, max_files_size, to_remove);
+							logged_limits = true;
+						}
+						else
+						{
+							sys_log.success("Removed old savestate file at '%s'.", to_remove);
+						}
+					}
 				}
 			}
 		}
