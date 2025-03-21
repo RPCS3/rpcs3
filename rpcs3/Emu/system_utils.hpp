@@ -3,13 +3,6 @@
 #include "util/types.hpp"
 #include <string>
 
-enum class game_content_dir_type
-{
-	any,      // Can also be used as none when returned
-	dev_hdd0, // HDD0 dir
-	dev_bdvd, // Disc dir
-};
-
 enum class game_content_type
 {
 	content_icon,         // ICON0.PNG
@@ -48,5 +41,5 @@ namespace rpcs3::utils
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 
-	std::string get_game_content_path(game_content_type type, game_content_dir_type& dir_type);
+	std::string get_game_content_path(game_content_type type);
 }
