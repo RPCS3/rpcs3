@@ -122,7 +122,7 @@ namespace utils
 		return pts > m_last_video_pts_incoming;
 	}
 
-	void video_provider::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra)
+	void video_provider::present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra)
 	{
 		if (!m_active)
 		{
