@@ -1031,108 +1031,120 @@ void game_list_frame::ItemSelectionChangedSlot()
 	Q_EMIT NotifyGameSelection(game);
 }
 
-void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations)
+void game_list_frame::CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations)
 {
-	if (locations.empty())
+	if (games.empty())
 	{
-		game_list_log.error("Failed to create shortcuts for %s. No locations selected.", qstr(gameinfo->info.name).simplified());
+		game_list_log.notice("Skip creating shortcuts. No games selected.");
 		return;
 	}
 
-	std::string gameid_token_value;
-
-	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
-
-	if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
+	if (locations.empty())
 	{
-		const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
-		std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
-
-		if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
-		{
-			relative_boot_dir = relative_boot_dir.substr(char_pos);
-		}
-		else
-		{
-			relative_boot_dir.clear();
-		}
-
-		if (!relative_boot_dir.empty())
-		{
-			if (relative_boot_dir != "PS3_GAME")
-			{
-				gameid_token_value = gameinfo->info.serial + "/" + relative_boot_dir;
-			}
-			else
-			{
-				gameid_token_value = gameinfo->info.serial;
-			}
-		}
-	}
-	else
-	{
-		gameid_token_value = gameinfo->info.serial;
-	}
-
-#ifdef __linux__
-	const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%%%RPCS3_VFS%%%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-											: fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
-#else
-	const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%RPCS3_VFS%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-											: fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
-#endif
-	const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
-
-	if (!fs::create_path(target_icon_dir))
-	{
-		game_list_log.error("Failed to create shortcut path %s (%s)", qstr(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
+		game_list_log.error("Failed to create shortcuts. No locations selected.");
 		return;
 	}
 
 	bool success = true;
 
-	for (const gui::utils::shortcut_location& location : locations)
+	for (const game_info& gameinfo : games)
 	{
-		std::string destination;
+		std::string gameid_token_value;
 
-		switch (location)
-		{
-		case gui::utils::shortcut_location::desktop:
-			destination = "desktop";
-			break;
-		case gui::utils::shortcut_location::applications:
-			destination = "application menu";
-			break;
-#ifdef _WIN32
-		case gui::utils::shortcut_location::rpcs3_shortcuts:
-			destination = "/games/shortcuts/";
-			break;
-#endif
-		}
+		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 
-		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
+		if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
 		{
-			game_list_log.success("Created %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+			const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
+			std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
+
+			if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
+			{
+				relative_boot_dir = relative_boot_dir.substr(char_pos);
+			}
+			else
+			{
+				relative_boot_dir.clear();
+			}
+
+			if (!relative_boot_dir.empty())
+			{
+				if (relative_boot_dir != "PS3_GAME")
+				{
+					gameid_token_value = gameinfo->info.serial + "/" + relative_boot_dir;
+				}
+				else
+				{
+					gameid_token_value = gameinfo->info.serial;
+				}
+			}
 		}
 		else
 		{
-			game_list_log.error("Failed to create %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+			gameid_token_value = gameinfo->info.serial;
+		}
+
+#ifdef __linux__
+		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%%%RPCS3_VFS%%%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
+		                                                                               : fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
+#else
+		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%RPCS3_VFS%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
+		                                                                               : fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
+#endif
+		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
+
+		if (!fs::create_path(target_icon_dir))
+		{
+			game_list_log.error("Failed to create shortcut path %s (%s)", qstr(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
 			success = false;
+			continue;
+		}
+
+		for (const gui::utils::shortcut_location& location : locations)
+		{
+			std::string destination;
+
+			switch (location)
+			{
+			case gui::utils::shortcut_location::desktop:
+				destination = "desktop";
+				break;
+			case gui::utils::shortcut_location::applications:
+				destination = "application menu";
+				break;
+#ifdef _WIN32
+			case gui::utils::shortcut_location::rpcs3_shortcuts:
+				destination = "/games/shortcuts/";
+				break;
+#endif
+			}
+
+			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
+			{
+				game_list_log.success("Created %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+			}
+			else
+			{
+				game_list_log.error("Failed to create %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+				success = false;
+			}
 		}
 	}
 
 #ifdef _WIN32
-	if (locations.size() > 1 || !locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))
-#endif
+	if (locations.size() == 1 && locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))
 	{
-		if (success)
-		{
-			QMessageBox::information(this, tr("Success!"), tr("Successfully created shortcut(s)."));
-		}
-		else
-		{
-			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create shortcut(s)!"));
-		}
+		return;
+	}
+#endif
+
+	if (success)
+	{
+		QMessageBox::information(this, tr("Success!"), tr("Successfully created shortcut(s)."));
+	}
+	else
+	{
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to create one or more shortcuts!"));
 	}
 }
 
@@ -1378,7 +1390,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* create_desktop_shortcut = manage_game_menu->addAction(tr("&Create Desktop Shortcut"));
 	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo]()
 	{
-		CreateShortcuts(gameinfo, {gui::utils::shortcut_location::desktop});
+		CreateShortcuts({gameinfo}, {gui::utils::shortcut_location::desktop});
 	});
 #ifdef _WIN32
 	QAction* create_start_menu_shortcut = manage_game_menu->addAction(tr("&Create Start Menu Shortcut"));
@@ -1389,7 +1401,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 #endif
 	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo]()
 	{
-		CreateShortcuts(gameinfo, {gui::utils::shortcut_location::applications});
+		CreateShortcuts({gameinfo}, {gui::utils::shortcut_location::applications});
 	});
 
 	manage_game_menu->addSeparator();

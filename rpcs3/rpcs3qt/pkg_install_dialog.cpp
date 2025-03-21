@@ -68,7 +68,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		else if (!info.local_cat.isEmpty())
 		{
 			append_comma();
-			accumulated_info += tr("%0", "Package type info").arg(info.local_cat);
+			accumulated_info += info.local_cat;
 		}
 
 		if (!info.version.isEmpty())

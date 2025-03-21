@@ -119,7 +119,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 		QString textFromValue(int value) const override
 		{
-			return tr("%0").arg(1 << value);
+			return QString("%0").arg(1 << value);
 		}
 	};
 

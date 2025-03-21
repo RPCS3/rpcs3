@@ -360,7 +360,7 @@ void log_frame::CreateAndConnectActions()
 		m_perform_goto_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
 		m_perform_goto_thread_on_debugger->setEnabled(m_log->textCursor().hasSelection() && *goto_signal_accepted);
 		m_perform_goto_on_debugger->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the debugger."));
-		m_perform_goto_thread_on_debugger->setToolTip(tr("Show the thread that corresponds to the thread ID from lthe log text on the debugger."));
+		m_perform_goto_thread_on_debugger->setToolTip(tr("Show the thread that corresponds to the thread ID from the log text on the debugger."));
 
 		menu->addSeparator();
 		menu->addActions(m_log_level_acts->actions());

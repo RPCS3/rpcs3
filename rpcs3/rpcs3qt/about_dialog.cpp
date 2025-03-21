@@ -18,7 +18,7 @@ about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_
 	ui->version->setText(tr("RPCS3 Version: %1").arg(QString::fromStdString(rpcs3::get_verbose_version())));
 	ui->description->setText(gui::utils::make_paragraph(tr(
 		"RPCS3 is an open-source Sony PlayStation 3 emulator and debugger.\n"
-		"It is written in C++ for Windows, Linux, FreeBSD and MacOS funded with %0.\n"
+		"It is written in C++ for Windows, Linux, FreeBSD and MacOS, funded with %0.\n"
 		"Our developers and contributors are always working hard to ensure this project is the best that it can be.\n"
 		"There are still plenty of implementations to make and optimizations to do.")
 		.arg(gui::utils::make_link(tr("Patreon"), "https://rpcs3.net/patreon"))));
