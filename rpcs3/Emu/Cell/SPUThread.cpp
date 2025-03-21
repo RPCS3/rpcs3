@@ -2142,20 +2142,31 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
 {
+#if defined(ARCH_X64)
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
 		jit = spu_recompiler_base::make_asmjit_recompiler();
 	}
 	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
-#if defined(ARCH_X64)
 		jit = spu_recompiler_base::make_fast_llvm_recompiler();
+	}
+	else
+	{
+		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
+	}
 #elif defined(ARCH_ARM64)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
 		jit = spu_recompiler_base::make_llvm_recompiler();
+	}
+	else
+	{
+		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
+	}
 #else
 #error "Unimplemented"
 #endif
-	}
 
 	if (g_cfg.core.mfc_debug)
 	{
@@ -2217,20 +2228,31 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	, lv2_id(ar)
 	, spu_tname(make_single<std::string>(ar.operator std::string()))
 {
+#if defined(ARCH_X64)
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
 		jit = spu_recompiler_base::make_asmjit_recompiler();
 	}
 	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
-#if defined(ARCH_X64)
 		jit = spu_recompiler_base::make_fast_llvm_recompiler();
+	}
+	else
+	{
+		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
+	}
 #elif defined(ARCH_ARM64)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
 		jit = spu_recompiler_base::make_llvm_recompiler();
+	}
+	else
+	{
+		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
+	}
 #else
 #error "Unimplemented"
 #endif
-	}
 
 	if (g_cfg.core.mfc_debug)
 	{
