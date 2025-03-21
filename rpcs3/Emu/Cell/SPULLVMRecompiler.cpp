@@ -2538,13 +2538,13 @@ public:
 						{
 							if (b2 != bqbi)
 							{
-								auto ins = b2->block->getFirstNonPHI();
+								auto ins = b2->block->getFirstNonPHIIt();
 
 								if (b2->bb->preds.size() == 1)
 								{
 									if (!dt.dominates(bs->getOperand(0), ins))
 										continue;
-									if (!pdt.dominates(ins, bs))
+									if (!pdt.dominates(&*ins, bs))
 										continue;
 
 									m_ir->SetInsertPoint(ins);
@@ -2607,10 +2607,10 @@ public:
 										spu_log.trace("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
 									}
 
-									ins = edge->getTerminator();
+									ins = edge->getTerminator()->getIterator();
 									if (!dt.dominates(bs->getOperand(0), ins))
 										continue;
-									if (!pdt.dominates(ins, bs))
+									if (!pdt.dominates(&*ins, bs))
 										continue;
 
 									m_ir->SetInsertPoint(ins);
@@ -2861,7 +2861,7 @@ public:
 
 		// Create interpreter table
 		const auto if_type = get_ftype<void, u8*, u8*, u32, u32, u8*, u32, u8*>();
-		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
+		m_function_table = new GlobalVariable(*m_module, ArrayType::get(m_ir->getPtrTy(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
 
 		init_luts();
 
@@ -2905,7 +2905,7 @@ public:
 		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
 
 		// Decode (shift) and load function pointer
-		const auto first = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
+		const auto first = m_ir->CreateLoad(m_ir->getPtrTy(), m_ir->CreateGEP(m_ir->getPtrTy(), m_interp_table, m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
 		const auto call0 = m_ir->CreateCall(if_type, first, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
 		call0->setCallingConv(CallingConv::GHC);
 		m_ir->CreateRetVoid();
@@ -3049,7 +3049,7 @@ public:
 						const auto next_pc = itype & spu_itype::branch ? m_interp_pc : m_interp_pc_next;
 						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())));
 						const auto next_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {be32_op});
-						const auto next_if = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
+						const auto next_if = m_ir->CreateLoad(m_ir->getPtrTy(), m_ir->CreateGEP(m_ir->getPtrTy(), m_interp_table, m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
 						llvm::cast<LoadInst>(next_if)->setVolatile(true);
 
 						if (!(itype & spu_itype::branch))
@@ -3174,7 +3174,7 @@ public:
 			}
 		}
 
-		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), iptrs));
+		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(m_ir->getPtrTy(), 1ull << m_interp_magn), iptrs));
 		m_function_table = nullptr;
 
 		for (auto& f : *_module)
@@ -7784,7 +7784,7 @@ public:
 			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value));
 			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), get_segment_base());
 			const auto type = m_finfo->chunk->getFunctionType();
-			const auto fval = m_ir->CreateIntToPtr(targ, type->getPointerTo());
+			const auto fval = m_ir->CreateIntToPtr(targ, m_ir->getPtrTy());
 			tail_chunk({type, fval}, m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
 			m_ir->SetInsertPoint(fail);
 		}
