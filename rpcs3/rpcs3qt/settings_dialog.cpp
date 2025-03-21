@@ -1793,13 +1793,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Comboboxes
 
-	m_emu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings_type::MaxLLVMThreads, true, true, utils::get_thread_count());
-	SubscribeTooltip(ui->gb_max_llvm, tooltips.settings.max_llvm_threads);
-	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM Compile Threads").arg(utils::get_thread_count()));
+	m_emu_settings->EnhanceComboBox(ui->llvmThreadsUsage, emu_settings_type::LLVMThreadsUsage, true, true, static_cast<int>(g_cfg.core.llvm_threads_use_level.max));
+	SubscribeTooltip(ui->gb_max_llvm, tooltips.settings.llvm_threads_use_level);
+	ui->llvmThreadsUsage->setItemText(ui->llvmThreadsUsage->findData(0), tr("All Threads", "LLVM Compile Threads Use Level"));
 
-	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
+	m_emu_settings->EnhanceComboBox(ui->shaderThreadsUsage, emu_settings_type::ShaderThreadsUsage, true, true, static_cast<int>(g_cfg.video.shader_threads_use_level.max));
 	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
-	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Max Shader Compile Threads"));
+	ui->shaderThreadsUsage->setItemText(ui->shaderThreadsUsage->findData(0), tr("Auto", "Max Shader Compile Threads"));
 
 	m_emu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings_type::PerfOverlayDetailLevel);
 	SubscribeTooltip(ui->perf_overlay_detail_level, tooltips.settings.perf_overlay_detail_level);

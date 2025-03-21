@@ -3037,11 +3037,11 @@
             <item>
              <widget class="QGroupBox" name="gb_max_llvm">
               <property name="title">
-               <string>Max LLVM Compile Threads</string>
+               <string>Max LLVM Threads Usage</string>
               </property>
               <layout class="QVBoxLayout" name="gb_max_llvm_layout">
                <item>
-                <widget class="QComboBox" name="maxLLVMThreads"/>
+                <widget class="QComboBox" name="llvmThreadsUsage"/>
                </item>
               </layout>
              </widget>
@@ -3049,11 +3049,11 @@
             <item>
              <widget class="QGroupBox" name="gb_shader_compiler_threads">
               <property name="title">
-               <string>Max Shader Compile Threads</string>
+               <string>Max Shader Threads Usage</string>
               </property>
               <layout class="QVBoxLayout" name="gb_shader_compiler_threads_layout">
                <item>
-                <widget class="QComboBox" name="shaderCompilerThreads"/>
+                <widget class="QComboBox" name="shaderThreadsUsage"/>
                </item>
               </layout>
              </widget>

@@ -3684,17 +3684,17 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 struct jit_core_allocator
 {
-	const s16 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
+	const s32 thread_count = limit();
 
 	// Initialize global semaphore with the max number of threads
-	::semaphore<0x7fff> sem{std::max<s16>(thread_count, 1)};
+	::semaphore<0x7fff> sem{static_cast<s16>(thread_count)};
 
 	// Mutex for special extra-large modules to compile alone
 	shared_mutex shared_mtx;
 
-	static s16 limit()
+	static s32 limit()
 	{
-		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
+		return std::min<s32>(0x7fff, rpcs3::utils::get_max_threads());
 	}
 };
 
@@ -4157,10 +4157,10 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	// The growth in memory requirements of LLVM is not linear with file size of course
 	// But these estimates should hopefully protect RPCS3 in the coming years
 	// Especially when thread count is on the rise with each CPU generation 
-	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
+	atomic_t<u32> file_size_limit = static_cast<u32>(std::min<u64>(std::max<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536), u32{umax}));
 
-	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
-	const u32 cpu_thread_limit = utils::get_thread_count() > 8u ? std::max<u32>(utils::get_thread_count(), 2) - 1 : utils::get_thread_count(); // One LLVM thread less
+	const u32 software_thread_limit = ::size32(file_queue);
+	const u32 cpu_thread_limit = std::min<u32>(std::max<u32>(rpcs3::utils::get_max_threads(), 2), software_thread_limit) - 1; // One LLVM thread less
 
 	std::vector<u128> decrypt_klics;
 

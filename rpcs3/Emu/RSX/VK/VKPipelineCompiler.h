@@ -158,7 +158,7 @@ namespace vk
 			const std::vector<glsl::program_input>& vs_inputs, const std::vector<glsl::program_input>& fs_inputs);
 	};
 
-	void initialize_pipe_compiler(int num_worker_threads = -1);
+	void initialize_pipe_compiler(int worker_threads_level = 0);
 	void destroy_pipe_compiler();
 	pipe_compiler* get_pipe_compiler();
 }

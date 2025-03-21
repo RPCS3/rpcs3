@@ -5,6 +5,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "util/sysinfo.hpp"
+#include "util/asm.hpp"
 #include "Utilities/File.h"
 #include "Utilities/Thread.h"
 #include "Crypto/unpkg.h"
@@ -20,9 +21,23 @@ namespace rpcs3::utils
 {
 	u32 get_max_threads()
 	{
-		const u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
+		const u32 max_threads_level = static_cast<u32>(g_cfg.core.llvm_threads_use_level);
+
+		if (max_threads_level == 1)
+		{
+			// Forced single-threaded mode
+			return 1;
+		}
+
 		const u32 hw_threads = ::utils::get_thread_count();
-		const u32 thread_count = max_threads > 0 ? std::min(max_threads, hw_threads) : hw_threads;
+		const u32 thread_count = max_threads_level > 0 ? ::utils::aligned_div<u32>(hw_threads * max_threads_level, g_cfg.core.llvm_threads_use_level.max) : hw_threads;
+
+		if (max_threads_level == g_cfg.core.llvm_threads_use_level.max - 1 && thread_count == hw_threads)
+		{
+			// Level below the last should always be lower than max threads
+			return std::max<u32>(thread_count, 2) - 1;
+		}
+
 		return thread_count;
 	}
 

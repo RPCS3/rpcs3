@@ -7530,7 +7530,7 @@ struct spu_llvm
 
 		u32 worker_count = 1;
 
-		if (uint hc = utils::get_thread_count(); hc >= 12)
+		if (uint hc = rpcs3::utils::get_max_threads(); hc >= 12)
 		{
 			worker_count = hc - 12 + 3;
 		}

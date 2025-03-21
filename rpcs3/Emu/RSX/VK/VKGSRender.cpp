@@ -572,7 +572,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	spirv::initialize_compiler_context();
-	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	vk::initialize_pipe_compiler(g_cfg.video.shader_threads_use_level);
 
 	m_prog_buffer = std::make_unique<vk::program_cache>
 	(

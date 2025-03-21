@@ -2,6 +2,7 @@
 #include "GLPipelineCompiler.h"
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
+#include "util/asm.hpp"
 
 namespace gl
 {
@@ -91,28 +92,37 @@ namespace gl
 		std::function<draw_context_t()> context_create_func,
 		std::function<void(draw_context_t)> context_bind_func,
 		std::function<void(draw_context_t)> context_destroy_func,
-		int num_worker_threads)
+		int worker_threads_level)
 	{
-		if (num_worker_threads == 0)
+		// Select optimal number of compiler threads
+		u32 num_worker_threads = 0;
+
+		const auto hw_threads = utils::get_thread_count();
+		if (hw_threads > 16)
 		{
-			// Select optimal number of compiler threads
-			const auto hw_threads = utils::get_thread_count();
-			if (hw_threads > 12)
-			{
-				num_worker_threads = 6;
-			}
-			else if (hw_threads > 8)
-			{
-				num_worker_threads = 4;
-			}
-			else if (hw_threads == 8)
-			{
-				num_worker_threads = 2;
-			}
-			else
-			{
-				num_worker_threads = 1;
-			}
+			num_worker_threads = 8 + (hw_threads - 16) / 4;
+		}
+		else if (hw_threads > 12)
+		{
+			num_worker_threads = 6;
+		}
+		else if (hw_threads >= 8)
+		{
+			num_worker_threads = hw_threads - 7;
+		}
+		else
+		{
+			num_worker_threads = 1;
+		}
+
+		if (worker_threads_level == 1)
+		{
+			// Forced single-threaded mode
+			num_worker_threads = 1;
+		}
+		else if (worker_threads_level)
+		{
+			num_worker_threads = utils::aligned_div<u32>(num_worker_threads * worker_threads_level, 8);
 		}
 
 		ensure(num_worker_threads >= 1);

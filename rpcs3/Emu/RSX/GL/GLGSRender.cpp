@@ -116,7 +116,7 @@ void GLGSRender::on_init_thread()
 			m_frame->delete_context(ctx);
 		};
 
-		gl::initialize_pipe_compiler(context_create_func, context_bind_func, context_destroy_func, g_cfg.video.shader_compiler_threads_count);
+		gl::initialize_pipe_compiler(context_create_func, context_bind_func, context_destroy_func, g_cfg.video.shader_threads_use_level);
 	}
 	else
 	{
