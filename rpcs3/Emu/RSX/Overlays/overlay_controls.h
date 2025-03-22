@@ -41,7 +41,7 @@ namespace rsx
 			int bpp = 0;
 
 			image_info(image_info&) = delete;
-			image_info(const char* filename, bool grayscaled = false);
+			image_info(const std::string& filename, bool grayscaled = false);
 			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
 			~image_info();
 

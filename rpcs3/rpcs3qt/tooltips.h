@@ -56,7 +56,7 @@ public:
 		const QString anti_cheat_savestates        = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after its load, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely, just ignored by RPCS3. You can manually relaunch it if needed.");
 		const QString compatible_savestates        = tr("When this mode is on, SPU emulation prioritizes savestate compatibility, however, it may reduce performance slightly.\nWhen this mode is off, some games may not allow making a savestate and show an SPU pause error in the log.");
 		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
-		const QString spu_profiler                 = tr("When enabled, SPU performance is measured at runtime.\nEnable only at a developr's request because when enabled it reduces performance a bit by itself.");
+		const QString spu_profiler                 = tr("When enabled, SPU performance is measured at runtime.\nEnable only at a developer's request because when enabled it reduces performance a bit by itself.");
 
 		// audio
 
@@ -166,7 +166,7 @@ public:
 		const QString perf_overlay_center_x                = tr("Centers the performance overlay horizontally and overrides the horizontal margin.");
 		const QString perf_overlay_center_y                = tr("Centers the performance overlay vertically and overrides the vertical margin.");
 
-		const QString shader_load_bg_enabled   = tr("Shows a background image during the native shader loading dialog/loading screen.\nBy default the used image will be <gamedir>/PS3_GAME/PIC1.PNG or <gamedir>/PS3_GAME/PIC0.PNG.");
+		const QString shader_load_bg_enabled   = tr("Shows a background image during the native shader loading dialog/loading screen.\nBy default the used image will be <gamedir>/PS3_GAME/PIC1.PNG.");
 		const QString shader_load_bg_darkening = tr("Changes the background image darkening effect strength of the native shader loading dialog.\nThis may be used to improve readability and/or aesthetics.");
 		const QString shader_load_bg_blur      = tr("Changes the background image blur effect strength of the native shader loading dialog.\nThis may be used to improve readability and/or aesthetics.");
 

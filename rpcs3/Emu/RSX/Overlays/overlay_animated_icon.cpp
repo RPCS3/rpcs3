@@ -12,7 +12,7 @@ namespace rsx
 		animated_icon::animated_icon(const char* icon_name)
 		{
 			const std::string image_path = fmt::format("%s/Icons/ui/%s", fs::get_config_dir(), icon_name);
-			m_icon = std::make_unique<image_info>(image_path.c_str());
+			m_icon = std::make_unique<image_info>(image_path);
 			set_raw_image(m_icon.get());
 		}
 

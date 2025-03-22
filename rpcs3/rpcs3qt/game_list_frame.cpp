@@ -897,7 +897,8 @@ void game_list_frame::OnRefreshFinished()
 				}
 			}
 
-			if (!entry->has_custom_icon)
+			// Let's fetch the game data icon if the path was empty for some reason
+			if (entry->info.icon_path.empty())
 			{
 				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
 				{
@@ -906,20 +907,6 @@ void game_list_frame::OnRefreshFinished()
 				else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
 				{
 					entry->info.icon_path = std::move(icon_path);
-				}
-			}
-
-			if (!entry->has_hover_gif)
-			{
-				if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
-				{
-					entry->info.movie_path = std::move(movie_path);
-					entry->has_hover_pam = true;
-				}
-				else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
-				{
-					entry->info.movie_path = std::move(movie_path);
-					entry->has_hover_pam = true;
 				}
 			}
 		}

@@ -338,8 +338,6 @@ public:
 
 	void SetUsr(const std::string& user);
 
-	std::string GetBackgroundPicturePath() const;
-
 	u64 GetPauseTime() const
 	{
 		return m_pause_amend_time;
