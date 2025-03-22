@@ -141,7 +141,8 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 					p2p_vport++;
 				}
 			}
-			else if (pport.bound_p2p_vports.contains(p2p_vport))
+			
+			if (pport.bound_p2p_vports.contains(p2p_vport))
 			{
 				// Check that all other sockets are SO_REUSEADDR or SO_REUSEPORT
 				auto& bound_sockets = ::at32(pport.bound_p2p_vports, p2p_vport);
