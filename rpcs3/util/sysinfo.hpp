@@ -29,13 +29,7 @@ namespace utils
 
 	bool has_avx10();
 
-	bool has_avx10_512();
-
 	u32 avx10_isa_version();
-
-	bool has_avx512_256();
-
-	bool has_avx512_icl_256();
 
 	bool has_xop();
 
