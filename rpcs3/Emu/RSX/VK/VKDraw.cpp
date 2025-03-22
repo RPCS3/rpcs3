@@ -1031,10 +1031,7 @@ void VKGSRender::end()
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
-	{
-		analyse_current_rsx_pipeline();
-	}
+	analyse_current_rsx_pipeline();
 
 	m_frame_stats.setup_time += m_profiler.duration();
 
