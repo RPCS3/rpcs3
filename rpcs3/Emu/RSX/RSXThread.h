@@ -10,6 +10,7 @@
 #include "Common/bitfield.hpp"
 #include "Common/profiling_timer.hpp"
 #include "Common/texture_cache_types.h"
+#include "Common/TextureUtils.h"
 #include "Program/RSXVertexProgram.h"
 #include "Program/RSXFragmentProgram.h"
 
@@ -90,8 +91,6 @@ namespace rsx
 		bool supports_host_gpu_labels;         // Advanced host synchronization
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 	};
-
-	class sampled_image_descriptor_base;
 
 	struct desync_fifo_cmd_info
 	{
