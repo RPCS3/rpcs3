@@ -737,7 +737,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return false;
 	}
 
-	struct patch_data p_data{};
+	patch_data p_data{};
 	p_data.type            = type;
 	p_data.offset          = addr_node.as<u32>(0) + modifier;
 	p_data.original_offset = addr_node.Scalar();
@@ -789,8 +789,14 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	switch (p_data.type)
 	{
+	case patch_type::invalid:
+	case patch_type::load:
+	{
+		fmt::throw_exception("Unreachable patch type: %s", p_data.type);
+	}
 	case patch_type::bp_exec:
 	case patch_type::utf8:
+	case patch_type::c_utf8:
 	case patch_type::jump_func:
 	case patch_type::move_file:
 	case patch_type::hide_file:
@@ -827,7 +833,13 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		get_node_value(u32{}, s32{});
 		break;
 	}
-	default:
+	case patch_type::alloc:
+	case patch_type::code_alloc:
+	case patch_type::jump:
+	case patch_type::jump_link:
+	case patch_type::le64:
+	case patch_type::be64:
+	case patch_type::bd64:
 	{
 		get_node_value(u64{}, s64{});
 		break;
