@@ -303,6 +303,12 @@ static void fixup_settings(const psf::registry* _psf)
 			g_cfg.video.resolution.set(new_resolution);
 		}
 	}
+
+	if (g_cfg.net.net_active == np_internet_status::disabled && g_cfg.net.psn_status != np_psn_status::disabled)
+	{
+		sys_log.warning("Net status was set to disconnected so psn status was disabled");
+		g_cfg.net.psn_status.set(np_psn_status::disabled);
+	}
 }
 
 extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>* _module, std::string_view title_id)

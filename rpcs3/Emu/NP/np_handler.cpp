@@ -858,7 +858,7 @@ namespace np
 		presence_self.pr_data = {};
 		presence_self.advertised = false;
 
-		if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+		if (is_connected && is_psn_active && rpcn)
 		{
 			rpcn_log.notice("Setting RPCN state to disconnected!");
 			rpcn->reset_state();
