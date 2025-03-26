@@ -113,7 +113,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
         xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
@@ -164,7 +164,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
         xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
@@ -1099,11 +1099,11 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_OPENGL_LIB -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_QML_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\minidx12\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtOpenGL" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtQml" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\custom_dialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
