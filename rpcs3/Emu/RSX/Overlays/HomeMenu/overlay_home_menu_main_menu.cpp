@@ -38,26 +38,33 @@ namespace rsx
 
 			add_page(std::make_shared<home_menu_settings>(x, y, width, height, use_separators, this));
 
-			std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
-			add_item(friends, [](pad_button btn) -> page_navigation
+			if (rsx::overlays::friends_list_dialog::rpcn_configured())
 			{
-				if (btn != pad_button::cross) return page_navigation::stay;
-
-				rsx_log.notice("User selected friends in home menu");
-				Emu.CallFromMainThread([]()
+				std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
+				add_item(friends, [](pad_button btn) -> page_navigation
 				{
-					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-					{
-						const error_code result = manager->create<rsx::overlays::friends_list_dialog>()->show(true, [](s32 status)
-						{
-							rsx_log.notice("Closing friends list with status %d", status);
-						});
+					if (btn != pad_button::cross) return page_navigation::stay;
 
-						(result ? rsx_log.error : rsx_log.notice)("Opened friends list with result %d", s32{result});
-					}
+					rsx_log.notice("User selected friends in home menu");
+					Emu.CallFromMainThread([]()
+					{
+						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+						{
+							const error_code result = manager->create<rsx::overlays::friends_list_dialog>()->show(true, [](s32 status)
+							{
+								rsx_log.notice("Closing friends list with status %d", status);
+							});
+
+							(result ? rsx_log.error : rsx_log.notice)("Opened friends list with result %d", s32{result});
+						}
+					});
+					return page_navigation::stay;
 				});
-				return page_navigation::stay;
-			});
+			}
+			else
+			{
+				rsx_log.notice("Friends list hidden in home menu. RPCN is not configured.");
+			}
 
 			// get current trophy name for trophy list overlay
 			std::string trop_name;
