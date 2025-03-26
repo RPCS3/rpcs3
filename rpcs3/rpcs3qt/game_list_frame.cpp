@@ -899,7 +899,7 @@ void game_list_frame::OnRefreshFinished()
 			}
 
 			// Let's fetch the game data icon if preferred or if the path was empty for some reason
-			if (m_prefer_game_data_icons || entry->info.icon_path.empty())
+			if ((m_prefer_game_data_icons && !entry->has_custom_icon) || entry->info.icon_path.empty())
 			{
 				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
 				{
