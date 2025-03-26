@@ -104,3 +104,7 @@
 	path = 3rdparty/discord-rpc/discord-rpc
 	url = ../../Vestrel/discord-rpc
 	ignore = dirty
+[submodule "3rdparty/GPUOpen/VulkanMemoryAllocator"]
+	path = 3rdparty/GPUOpen/VulkanMemoryAllocator
+	url = ../../Megamouse/VulkanMemoryAllocator.git
+	ignore = dirty
