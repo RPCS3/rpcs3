@@ -214,6 +214,7 @@ namespace gui
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
+	const gui_save gl_pref_gd_icon = gui_save(game_list, "pref_gd_icon", false);
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 	const gui_save gl_hover_gifs   = gui_save(game_list, "hover_gifs",   true);
 

@@ -73,6 +73,7 @@ public Q_SLOTS:
 	void SetListMode(const bool& is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
+	void SetPreferGameDataIcons(bool enabled);
 	void SetShowCustomIcons(bool show);
 	void SetPlayHoverGifs(bool play);
 	void FocusAndSelectFirstEntryIfNoneIs();
@@ -212,6 +213,7 @@ private:
 	qreal m_margin_factor;
 	qreal m_text_factor;
 	bool m_draw_compat_status_to_grid = false;
+	bool m_prefer_game_data_icons = false;
 	bool m_show_custom_icons = true;
 	bool m_play_hover_movies = true;
 	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type{std::in_place};
