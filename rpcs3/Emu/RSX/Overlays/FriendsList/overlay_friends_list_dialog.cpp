@@ -684,5 +684,12 @@ namespace rsx
 
 			return CELL_OK;
 		}
+
+		bool friends_list_dialog::rpcn_configured()
+		{
+			cfg_rpcn cfg;
+			cfg.load();
+			return !cfg.get_npid().empty() && !cfg.get_password().empty();
+		}
 	} // namespace overlays
 } // namespace RSX
