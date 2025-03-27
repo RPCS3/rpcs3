@@ -74,6 +74,22 @@ void fmt_class_string<CellMicInErrorDsp>::format(std::string& out, u64 arg)
 	});
 }
 
+namespace fmt
+{
+	struct alc_error
+	{
+		ALCdevice* device{};
+		ALCenum error{};
+	};
+}
+
+template <>
+void fmt_class_string<fmt::alc_error>::format(std::string& out, u64 arg)
+{
+	const fmt::alc_error& obj = get_object(arg);
+	fmt::append(out, "0x%x='%s'", obj.error, alcGetString(obj.device, obj.error));
+}
+
 void mic_context::operator()()
 {
 	// Timestep in microseconds
@@ -448,7 +464,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 
 	if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 	{
-		cellMic.error("Error opening capture device %s (error=0x%x, device=*0x%x)", devices[0].name, err, device);
+		cellMic.error("Error opening capture device %s (error=%s, device=*0x%x)", devices[0].name, fmt::alc_error{device, err}, device);
 #ifdef _WIN32
 		cellMic.error("Make sure microphone use is authorized under \"Microphone privacy settings\" in windows configuration");
 #endif
@@ -466,7 +482,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 		if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
 		{
 			// Ignore it and move on
-			cellMic.error("Error opening 2nd SingStar capture device %s (error=0x%x, device=*0x%x)", devices[1].name, err, device);
+			cellMic.error("Error opening 2nd SingStar capture device %s (error=%s, device=*0x%x)", devices[1].name, fmt::alc_error{device, err}, device);
 		}
 		else
 		{
@@ -523,7 +539,7 @@ error_code microphone_device::start_microphone()
 		alcCaptureStart(micdevice.device);
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error starting capture of device %s (error=0x%x)", micdevice.name, err);
+			cellMic.error("Error starting capture of device %s (error=%s)", micdevice.name, fmt::alc_error{micdevice.device, err});
 			stop_microphone();
 			return CELL_MICIN_ERROR_FATAL;
 		}
@@ -542,7 +558,7 @@ error_code microphone_device::stop_microphone()
 		alcCaptureStop(micdevice.device);
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error stopping capture of device %s (error=0x%x)", micdevice.name, err);
+			cellMic.error("Error stopping capture of device %s (error=%s)", micdevice.name, fmt::alc_error{micdevice.device, err});
 		}
 	}
 #endif
@@ -621,7 +637,7 @@ u32 microphone_device::capture_audio()
 
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error getting number of captured samples of device %s (error=0x%x)", micdevice.name, err);
+			cellMic.error("Error getting number of captured samples of device %s (error=%s)", micdevice.name, fmt::alc_error{micdevice.device, err});
 			return CELL_MICIN_ERROR_FATAL;
 		}
 
@@ -639,7 +655,7 @@ u32 microphone_device::capture_audio()
 
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
-			cellMic.error("Error capturing samples of device %s (error=0x%x)", micdevice.name, err);
+			cellMic.error("Error capturing samples of device %s (error=%s)", micdevice.name, fmt::alc_error{micdevice.device, err});
 		}
 	}
 
