@@ -121,7 +121,7 @@ jobs:
 #         maximumCpuCount: true
 #         platform: x64
 #         configuration: 'Release'
-#         msbuildArgs: /p:CLToolPath=$(CCACHE_BIN_DIR) /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="$(Build.SourcesDirectory)\buildfiles\msvc\ci_no_debug_info.targets"
+#         msbuildArgs: /p:CLToolPath=$(CCACHE_BIN_DIR) /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="$(Build.SourcesDirectory)\buildfiles\msvc\ci_only.targets"
 #       displayName: Compile RPCS3
 
 #     - bash: .ci/deploy-windows.sh
