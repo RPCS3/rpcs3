@@ -35,7 +35,7 @@
    <bool>true</bool>
   </property>
   <property name="dockOptions">
-   <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging</set>
+   <set>QMainWindow::DockOption::AllowNestedDocks|QMainWindow::DockOption::AllowTabbedDocks|QMainWindow::DockOption::AnimatedDocks|QMainWindow::DockOption::GroupedDragging</set>
   </property>
   <widget class="QWidget" name="centralWidget">
    <property name="sizePolicy">
@@ -344,6 +344,7 @@
      <addaction name="setIconSizeMediumAct"/>
      <addaction name="setIconSizeLargeAct"/>
      <addaction name="separator"/>
+     <addaction name="actionPreferGameDataIcons"/>
      <addaction name="showCustomIconsAct"/>
      <addaction name="playHoverGifsAct"/>
     </widget>
@@ -1413,6 +1414,14 @@
   <action name="actionManage_Savestates">
    <property name="text">
     <string>Savestates</string>
+   </property>
+  </action>
+  <action name="actionPreferGameDataIcons">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Prefer Game Data Icons</string>
    </property>
   </action>
  </widget>

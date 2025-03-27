@@ -5870,13 +5870,13 @@ public:
 					{
 						if (perm_only)
 						{
-							set_vr(op.rt4, vperm2b256to128(as, b, c));
+							set_vr(op.rt4, vperm2b(as, b, c));
 							return;
 						}
 
 						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-						const auto ab = vperm2b256to128(as, b, c);
+						const auto ab = vperm2b(as, b, c);
 						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 						return;
 					}
@@ -5920,13 +5920,13 @@ public:
 				{
 					if (perm_only)
 					{
-						set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+						set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
 						return;
 					}
 
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b256to128(a, b, eval(c ^ 0xf));
+					const auto ab = vperm2b(a, b, eval(c ^ 0xf));
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 					return;
 				}
@@ -5938,13 +5938,13 @@ public:
 				{
 					if (perm_only)
 					{
-						set_vr(op.rt4, vperm2b256to128(b, a, eval(c ^ 0x1f)));
+						set_vr(op.rt4, vperm2b(b, a, eval(c ^ 0x1f)));
 						return;
 					}
 
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b256to128(b, a, eval(c ^ 0x1f));
+					const auto ab = vperm2b(b, a, eval(c ^ 0x1f));
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 					return;
 				}

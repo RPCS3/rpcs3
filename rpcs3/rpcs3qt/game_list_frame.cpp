@@ -223,6 +223,7 @@ void game_list_frame::LoadSettings()
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters(true);
 	m_grid_category_filters = m_gui_settings->GetGameListCategoryFilters(false);
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
+	m_prefer_game_data_icons = m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
 
@@ -897,8 +898,8 @@ void game_list_frame::OnRefreshFinished()
 				}
 			}
 
-			// Let's fetch the game data icon if the path was empty for some reason
-			if (entry->info.icon_path.empty())
+			// Let's fetch the game data icon if preferred or if the path was empty for some reason
+			if ((m_prefer_game_data_icons && !entry->has_custom_icon) || entry->info.icon_path.empty())
 			{
 				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
 				{
@@ -907,6 +908,19 @@ void game_list_frame::OnRefreshFinished()
 				else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
 				{
 					entry->info.icon_path = std::move(icon_path);
+				}
+			}
+
+			// Let's fetch the game data movie if preferred or if the path was empty
+			if (m_prefer_game_data_icons || entry->info.movie_path.empty())
+			{
+				if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
+				{
+					entry->info.movie_path = std::move(movie_path);
+				}
+				else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
+				{
+					entry->info.movie_path = std::move(movie_path);
 				}
 			}
 		}
@@ -2999,6 +3013,16 @@ void game_list_frame::SetShowCompatibilityInGrid(bool show)
 	m_draw_compat_status_to_grid = show;
 	RepaintIcons();
 	m_gui_settings->SetValue(gui::gl_draw_compat, show);
+}
+
+void game_list_frame::SetPreferGameDataIcons(bool enabled)
+{
+	if (m_prefer_game_data_icons != enabled)
+	{
+		m_prefer_game_data_icons = enabled;
+		m_gui_settings->SetValue(gui::gl_pref_gd_icon, enabled);
+		Refresh(true);
+	}
 }
 
 void game_list_frame::SetShowCustomIcons(bool show)

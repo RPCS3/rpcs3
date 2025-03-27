@@ -1481,6 +1481,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const auto [text, value] = get_data(ui->netStatusBox, index);
 		ui->gb_edit_dns->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
 		ui->enable_upnp->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
+
+		if (static_cast<np_internet_status>(value) == np_internet_status::disabled)
+		{
+			ui->psnStatusBox->setCurrentIndex(find_item(ui->psnStatusBox, static_cast<int>(g_cfg.net.psn_status.def)));
+			ui->psnStatusBox->setEnabled(false);
+		}
+		else
+		{
+			ui->psnStatusBox->setEnabled(true);
+		}
 	});
 	m_emu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings_type::InternetStatus);
 	SubscribeTooltip(ui->gb_netStatusBox, tooltips.settings.net_status);
