@@ -59,6 +59,8 @@ namespace rsx
 			error_code show(bool enable_overlay, std::function<void(s32 status)> on_close);
 
 			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
+
+			static bool rpcn_configured();
 		};
 	}
 }
