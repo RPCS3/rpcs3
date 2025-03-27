@@ -322,6 +322,8 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	num_channels     = channels;
 
 #ifndef WITHOUT_OPENAL
+	enumerate_devices();
+
 	// Adjust number of channels depending on microphone type
 	switch (device_type)
 	{
@@ -662,8 +664,43 @@ u32 microphone_device::capture_audio()
 // Private functions
 
 #ifndef WITHOUT_OPENAL
-ALCdevice* microphone_device::open_device(std::string& name, u32 samplingrate, ALCenum num_al_channels, u32 buf_size)
+void microphone_device::enumerate_devices()
 {
+	cellMic.notice("Enumerating capture devices...");
+	enumerated_devices.clear();
+
+	if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT") == AL_TRUE)
+	{
+		if (const char* alc_devices = alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER))
+		{
+			while (alc_devices && *alc_devices != 0)
+			{
+				cellMic.notice("Found capture device: '%s'", alc_devices);
+				enumerated_devices.push_back(alc_devices);
+				alc_devices += strlen(alc_devices) + 1;
+			}
+		}
+	}
+	else
+	{
+		// Without enumeration we can only use one device
+		cellMic.error("OpenAl extension ALC_ENUMERATION_EXT not supported. The enumerated capture devices will only contain the default capture device.");
+
+		if (const char* alc_device = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER))
+		{
+			cellMic.notice("Found default capture device: '%s'", alc_device);
+			enumerated_devices.push_back(alc_device);
+		}
+	}
+}
+
+ALCdevice* microphone_device::open_device(const std::string& name, u32 samplingrate, ALCenum num_al_channels, u32 buf_size)
+{
+	if (std::none_of(enumerated_devices.cbegin(), enumerated_devices.cend(), [&name](const std::string& dev){ return dev == name; }))
+	{
+		cellMic.error("Capture device '%s' not in enumerated devices", name);
+	}
+
 	ALCdevice* device = alcCaptureOpenDevice(name.c_str(), samplingrate, num_al_channels, buf_size);
 
 	if (ALCenum err = alcGetError(device); err != ALC_NO_ERROR || !device)
