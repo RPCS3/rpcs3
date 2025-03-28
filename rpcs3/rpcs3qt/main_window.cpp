@@ -538,6 +538,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::still_running:
 		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
 		break;
+	case game_boot_result::firmware_version:
+		message = tr("The game or PS3 application needs a more recent firmware version.");
+		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::already_added: // Handled elsewhere
 	case game_boot_result::currently_restricted:

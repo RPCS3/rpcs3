@@ -864,30 +864,15 @@ void game_list_frame::OnRefreshFinished()
 			if (entry->info.serial != other->info.serial) continue;
 
 			// The patch is game data and must have the same serial and an app version
-			static constexpr auto version_is_bigger = [](const std::string& v0, const std::string& v1, const std::string& serial, bool is_fw)
-			{
-				std::add_pointer_t<char> ev0, ev1;
-				const double ver0 = std::strtod(v0.c_str(), &ev0);
-				const double ver1 = std::strtod(v1.c_str(), &ev1);
-
-				if (v0.c_str() + v0.size() == ev0 && v1.c_str() + v1.size() == ev1)
-				{
-					return ver0 > ver1;
-				}
-
-				game_list_log.error("Failed to update the displayed %s numbers for title ID %s\n'%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
-				return false;
-			};
-
 			if (other->info.app_ver != cat_unknown_localized)
 			{
 				// Update the app version if it's higher than the disc's version (old games may not have an app version)
-				if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
+				if (entry->info.app_ver == cat_unknown_localized || rpcs3::utils::version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, false))
 				{
 					entry->info.app_ver = other->info.app_ver;
 				}
 				// Update the firmware version if possible and if it's higher than the disc's version
-				if (other->info.fw != cat_unknown_localized && version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, false))
+				if (other->info.fw != cat_unknown_localized && rpcs3::utils::version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, true))
 				{
 					entry->info.fw = other->info.fw;
 				}
