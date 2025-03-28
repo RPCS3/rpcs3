@@ -760,6 +760,7 @@
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="util\types.hpp" />
     <ClInclude Include="..\Utilities\version.h" />
+    <ClInclude Include="util\video_source.h" />
     <ClInclude Include="util\vm.hpp" />
     <ClInclude Include="util\asm.hpp" />
     <ClInclude Include="Crypto\aes.h" />

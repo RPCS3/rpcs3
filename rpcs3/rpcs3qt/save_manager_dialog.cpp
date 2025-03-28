@@ -208,7 +208,7 @@ void save_manager_dialog::Init()
 		if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
 		{
 			item->setData(SaveUserRole::PixmapScaled, pixmap);
-			item->call_icon_func();
+			item->image_change_callback();
 		}
 	});
 	connect(search_bar, &QLineEdit::textChanged, this, &save_manager_dialog::text_changed);
@@ -344,14 +344,14 @@ void save_manager_dialog::UpdateList()
 
 		if (const std::string movie_path = dir_path + localized_movie; fs::is_file(movie_path))
 		{
-			icon_item->set_movie_path(QString::fromStdString(movie_path));
+			icon_item->set_video_path(movie_path);
 		}
 		else if (const std::string movie_path = dir_path + "ICON1.PAM"; fs::is_file(movie_path))
 		{
-			icon_item->set_movie_path(QString::fromStdString(movie_path));
+			icon_item->set_video_path(movie_path);
 		}
 
-		icon_item->set_icon_func([this, icon_item](const QVideoFrame& frame)
+		icon_item->set_image_change_callback([this, icon_item](const QVideoFrame& frame)
 		{
 			if (!icon_item)
 			{

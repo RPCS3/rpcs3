@@ -2716,6 +2716,9 @@
     <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
+    <ClInclude Include="util\video_source.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

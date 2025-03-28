@@ -33,7 +33,7 @@ void game_list_base::repaint_icons(std::vector<game_info>& game_data, const QCol
 				IconLoadFunction(game, device_pixel_ratio, cancel);
 			});
 
-			item->call_icon_func();
+			item->image_change_callback();
 		}
 	}
 }
