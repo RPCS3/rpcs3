@@ -3103,7 +3103,18 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.last_faddr = 0;
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr) & -128;
+	const u32 res_cached = ppu.res_cached;
+
+	if ((addr & -128) == (res_cached & -128))
+	{
+		// Reload "cached" reservation of previous succeeded conditional store
+		// This seems like a hardware feature according to cellSpursAddUrgentCommand function
+		ppu.rtime -= 128;
+	}
+	else
+	{
+		ppu.rtime = vm::reservation_acquire(addr) & -128;
+	}
 
 	be_t<u64> rdata;
 
@@ -3376,7 +3387,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	}
 
 	// Test if store address is on the same aligned 8-bytes memory as load
-	if (const u32 raddr = std::exchange(ppu.raddr, 0); raddr / 8 != addr / 8)
+	if (const u32 raddr = ppu.raddr; raddr / 8 != addr / 8)
 	{
 		// If not and it is on the same aligned 128-byte memory, proceed only if 128-byte reservations are enabled
 		// In realhw the store address can be at any address of the 128-byte cache line
@@ -3389,12 +3400,16 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				data += 0;
 			}
 
+			ppu.raddr = 0;
+			ppu.res_cached = 0;
 			return false;
 		}
 	}
 
 	if (old_data != data || rtime != (res & -128))
 	{
+		ppu.raddr = 0;
+		ppu.res_cached = 0;
 		return false;
 	}
 
@@ -3650,6 +3665,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		}
 
 		ppu.last_faddr = 0;
+		ppu.res_cached = ppu.raddr;
+		ppu.rtime += 128;
+		ppu.raddr = 0;
 		return true;
 	}
 
@@ -3669,6 +3687,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		ppu.res_notify = 0;
 	}
 
+	ppu.raddr = 0;
+	ppu.res_cached = 0;
 	return false;
 }
 

@@ -1204,18 +1204,30 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 
 	std::vector<v128> gpr_saved(128);
 	be_t<u32> rdata_saved[32]{};
+	be_t<u32> lsa_saved[32]{};
+	spu_mfc_cmd mfc_regs_saved{};
 	u32 saved_pc = umax;
+	const u8* lsa_state_ptr = nullptr;
+
+	const u8* lsa_ptr = _ptr<u8>(ch_mfc_cmd.lsa);
 
 	// Load PC, GPRs and reservation data atomically
 	// We may not load the entire context atomically, but there is importance their state being intact for debugging
 	do
 	{
 		saved_pc = pc;
+
+		// Account for list transfer: record EAL instead
+		mfc_regs_saved = ch_mfc_cmd;
+		lsa_state_ptr = _ptr<const u8>(mfc_regs_saved.eal < SPU_LS_SIZE && mfc_regs_saved.eal % 8 == 0 ? mfc_regs_saved.eal : mfc_regs_saved.lsa);
+
 		std::memcpy(gpr_saved.data(), gpr.data(), sizeof(v128) * gpr.size());
 		std::memcpy(rdata_saved, rdata, sizeof(rdata));
+		std::memcpy(lsa_saved, lsa_state_ptr, std::min<usz>(128, SPU_LS_SIZE - (lsa_state_ptr - _ptr<u8>(0))));
 		atomic_fence_acquire();
 	}
-	while (saved_pc != pc || std::memcmp(rdata_saved, rdata, sizeof(rdata)) != 0 || std::memcmp(gpr_saved.data(), gpr.data(), sizeof(v128) * gpr.size()) != 0);
+	while (saved_pc != pc || std::memcmp(rdata_saved, rdata, sizeof(rdata)) != 0 || std::memcmp(gpr_saved.data(), gpr.data(), sizeof(v128) * gpr.size()) != 0
+		|| std::memcmp(&mfc_regs_saved, &ch_mfc_cmd, sizeof(mfc_regs_saved)) != 0 || std::memcmp(lsa_saved, lsa_state_ptr, std::min<usz>(128, SPU_LS_SIZE - (lsa_state_ptr - _ptr<u8>(0)))) != 0);
 
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
@@ -1350,6 +1362,7 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	fmt::append(ret, "SNR config: 0x%llx\n", snr_config);
 	fmt::append(ret, "SNR1: %s\n", ch_snr1);
 	fmt::append(ret, "SNR2: %s\n", ch_snr2);
+	fmt::append(ret, "Last WrDec: %-9d (0x%08x) (%s)\n", ch_dec_value, ch_dec_value, is_dec_frozen ? "suspend" : "running");
 
 	if (get_type() != spu_type::threaded)
 	{
@@ -1387,6 +1400,14 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	{
 		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(rdata_saved[0])
 			, rdata_saved[i + 0], rdata_saved[i + 1], rdata_saved[i + 2], rdata_saved[i + 3]);
+	}
+
+	fmt::append(ret, "\nLSA Data:\n");
+
+	for (usz i = 0; i < std::size(lsa_saved); i += 4)
+	{
+		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(lsa_saved[0])
+			, lsa_saved[i + 0], lsa_saved[i + 1], lsa_saved[i + 2], lsa_saved[i + 3]);
 	}
 }
 
