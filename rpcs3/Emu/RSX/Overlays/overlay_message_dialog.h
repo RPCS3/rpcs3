@@ -2,6 +2,7 @@
 
 #include "overlays.h"
 #include "overlay_progress_bar.hpp"
+#include "overlay_video.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 namespace rsx
@@ -20,6 +21,7 @@ namespace rsx
 			overlay_element background;
 			image_view background_poster;
 			image_view background_overlay_poster;
+			std::unique_ptr<video_view> background_overlay_video;
 			std::array<progress_bar, 2> progress_bars{};
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;

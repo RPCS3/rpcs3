@@ -8,6 +8,7 @@
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
+#include "util/video_source.h"
 
 #include <clocale>
 
@@ -172,6 +173,8 @@ void headless_application::InitializeCallbacks()
 	callbacks.enable_display_sleep = [](bool /*enabled*/){};
 
 	callbacks.check_microphone_permissions = [](){};
+
+	callbacks.make_video_source = [](){ return nullptr; };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

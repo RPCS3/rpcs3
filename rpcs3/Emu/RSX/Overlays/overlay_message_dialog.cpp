@@ -101,6 +101,11 @@ namespace rsx
 				{
 					result.add(background_overlay_poster.get_compiled());
 				}
+
+				if (background_overlay_video && background_overlay_video->get_info())
+				{
+					result.add(background_overlay_video->get_compiled());
+				}
 			}
 
 			result.add(background.get_compiled());
@@ -376,8 +381,18 @@ namespace rsx
 						}
 					}
 
+					// Search for a video in the same dir in case we found a real background picture
+					if (background_image && !background_overlay_video && content_type == game_content_type::background_picture)
+					{
+						if (const std::string video_path = rpcs3::utils::get_game_content_path(game_content_type::content_video); !video_path.empty())
+						{
+							background_overlay_video = std::make_unique<video_view>(video_path);
+							dirty = background_overlay_video->get_info();
+						}
+					}
+
 					// Search for an overlay picture in the same dir in case we found a real background picture
-					if (background_image && !background_overlay_image && content_type == game_content_type::background_picture)
+					if (background_image && !background_overlay_video && !background_overlay_image && content_type == game_content_type::background_picture)
 					{
 						if (const std::string picture_path = rpcs3::utils::get_game_content_path(game_content_type::overlay_picture); !picture_path.empty())
 						{
@@ -411,6 +426,14 @@ namespace rsx
 					{
 						const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
 						background_poster.set_padding(padding, padding, 0, 0);
+					}
+
+					if (background_overlay_video && background_overlay_video->get_info())
+					{
+						background_overlay_video->fore_color = color4f(color, color, color, 1.);
+						background_overlay_video->set_size(virtual_width, virtual_height);
+						background_overlay_video->set_pos(0, 0);
+						background_overlay_video->set_blur_strength(static_cast<u8>(background_blur_strength));
 					}
 
 					if (background_overlay_image && background_overlay_image->get_data())
