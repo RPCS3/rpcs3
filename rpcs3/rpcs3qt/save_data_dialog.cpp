@@ -12,7 +12,7 @@
 
 LOG_CHANNEL(cellSaveData);
 
-s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
+s32 save_data_dialog::ShowSaveDataList(const std::string& base_dir, std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
 {
 	cellSaveData.notice("ShowSaveDataList(save_entries=%d, focused=%d, op=0x%x, listSet=*0x%x, enable_overlay=%d)", save_entries.size(), focused, op, listSet, enable_overlay);
 
@@ -29,7 +29,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 	{
 		cellSaveData.notice("ShowSaveDataList: Showing native UI dialog");
 
-		const s32 result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, focused, op, listSet, enable_overlay);
+		const s32 result = manager->create<rsx::overlays::save_dialog>()->show(base_dir, save_entries, focused, op, listSet, enable_overlay);
 		if (result != rsx::overlays::user_interface::selection_code::error)
 		{
 			cellSaveData.notice("ShowSaveDataList: Native UI dialog returned with selection %d", result);

@@ -1,20 +1,33 @@
 #pragma once
 
 #include "types.hpp"
+#include <functional>
 
 class video_source
 {
 public:
 	video_source() {};
 	virtual ~video_source() {};
-	virtual void set_video_path(const std::string& path) { static_cast<void>(path); }
-	virtual bool has_new() const { return false; };
-	virtual void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp)
+	virtual void set_video_path(const std::string& video_path) = 0;
+	virtual void set_active(bool active) = 0;
+	virtual bool get_active() const = 0;
+	virtual bool has_new() const = 0;
+	virtual void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) = 0;
+
+	void set_update_callback(std::function<void()> callback)
 	{
-		static_cast<void>(data);
-		static_cast<void>(w);
-		static_cast<void>(h);
-		static_cast<void>(ch);
-		static_cast<void>(bpp);
+		m_update_callback = callback;
 	}
+
+protected:
+	void notify_update()
+	{
+		if (m_update_callback)
+		{
+			m_update_callback();
+		}
+	}
+
+private:
+	std::function<void()> m_update_callback;
 };

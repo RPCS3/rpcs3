@@ -91,6 +91,15 @@ namespace rsx
 		void list_view::update_selection()
 		{
 			const overlay_element* current_element = get_selected_entry();
+
+			for (auto& item : m_items)
+			{
+				if (item)
+				{
+					item->set_selected(item.get() == current_element);
+				}
+			}
+
 			if (!current_element)
 			{
 				return; // Ideally unreachable but it should still be possible to recover by user interaction.
@@ -195,7 +204,7 @@ namespace rsx
 				m_cancel_btn->set_pos(x + 180, y + h + 20);
 
 			m_cancel_only = cancel_only;
-			is_compiled   = false;
+			m_is_compiled = false;
 		}
 
 		bool list_view::get_cancel_only() const
@@ -219,7 +228,7 @@ namespace rsx
 
 		compiled_resource& list_view::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				auto& compiled = vertical_layout::get_compiled();
 				compiled.add(m_highlight_box->get_compiled());

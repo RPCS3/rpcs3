@@ -44,7 +44,7 @@ namespace rsx
 
 		compiled_resource& home_menu_message_box::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				compiled_resource& compiled = overlay_element::get_compiled();
 				compiled.add(m_label.get_compiled());

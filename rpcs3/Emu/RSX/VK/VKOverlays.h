@@ -154,6 +154,9 @@ namespace vk
 
 		ui_overlay_renderer();
 
+		void upload_simple_texture(vk::image* tex, vk::command_buffer& cmd,
+			vk::data_heap& upload_heap, u32 w, u32 h, u32 layers, bool font, const void* pixel_src);
+
 		vk::image_view* upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
 			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid);
 
@@ -164,7 +167,7 @@ namespace vk
 		void remove_temp_resources(u32 key);
 
 		vk::image_view* find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap);
-		vk::image_view* find_temp_image(rsx::overlays::image_info* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
+		vk::image_view* find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
 
 		std::vector<VkPushConstantRange> get_push_constants() override;
 
