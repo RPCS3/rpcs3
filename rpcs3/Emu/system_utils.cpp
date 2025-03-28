@@ -418,4 +418,19 @@ namespace rpcs3::utils
 
 		return {};
 	}
+
+	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw)
+	{
+		std::add_pointer_t<char> ev0, ev1;
+		const double ver0 = std::strtod(v0.data(), &ev0);
+		const double ver1 = std::strtod(v1.data(), &ev1);
+
+		if (v0.data() + v0.size() == ev0 && v1.data() + v1.size() == ev1)
+		{
+			return ver0 > ver1;
+		}
+
+		sys_log.error("Failed to compare the %s numbers for title ID %s: '%s'-'%s'", is_fw ? "firmware version" : "version", serial, v0, v1);
+		return false;
+	}
 }

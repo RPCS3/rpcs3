@@ -51,6 +51,7 @@ enum class game_boot_result : u32
 	decryption_error,
 	file_creation_error,
 	firmware_missing,
+	firmware_version,
 	unsupported_disc_type,
 	savestate_corrupted,
 	savestate_version_unsupported,
