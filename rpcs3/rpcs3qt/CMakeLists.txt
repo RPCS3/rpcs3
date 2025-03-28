@@ -73,6 +73,7 @@ add_library(rpcs3_ui STATIC
     qt_camera_video_sink.cpp
     qt_music_handler.cpp
     qt_utils.cpp
+    qt_video_source.cpp
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
     recvmessage_dialog_frame.cpp
