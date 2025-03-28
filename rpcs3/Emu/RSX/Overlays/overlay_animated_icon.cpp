@@ -58,7 +58,7 @@ namespace rsx
 
 		compiled_resource& animated_icon::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				compiled_resources = image_view::get_compiled();
 			}

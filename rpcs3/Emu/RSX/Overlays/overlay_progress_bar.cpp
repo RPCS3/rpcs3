@@ -23,7 +23,7 @@ namespace rsx
 		void progress_bar::set_limit(f32 limit)
 		{
 			m_limit     = limit;
-			is_compiled = false;
+			m_is_compiled = false;
 		}
 
 		void progress_bar::set_value(f32 value)
@@ -32,7 +32,7 @@ namespace rsx
 
 			f32 indicator_width = (w * m_value) / m_limit;
 			indicator.set_size(static_cast<u16>(indicator_width), h);
-			is_compiled = false;
+			m_is_compiled = false;
 		}
 
 		void progress_bar::set_pos(s16 _x, s16 _y)
@@ -68,12 +68,12 @@ namespace rsx
 			text_view.set_size(w, text_h);
 
 			set_pos(text_view.x, text_view.y);
-			is_compiled = false;
+			m_is_compiled = false;
 		}
 
 		compiled_resource& progress_bar::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				auto& compiled = overlay_element::get_compiled();
 				compiled.add(text_view.get_compiled());

@@ -64,7 +64,7 @@ namespace rsx
 					if (const T new_value = m_setting->get(); new_value != m_last_value || initializing)
 					{
 						m_last_value = new_value;
-						is_compiled = false;
+						m_is_compiled = false;
 					}
 				}
 			}
@@ -101,7 +101,7 @@ namespace rsx
 			{
 				this->update_value();
 
-				if (!this->is_compiled)
+				if (!this->is_compiled())
 				{
 					const std::string value_text = Emu.GetCallbacks().get_localized_setting(home_menu_setting<T, cfg::_enum<T>>::m_setting, static_cast<u32>(this->m_last_value));
 					m_dropdown.set_text(value_text);
@@ -145,7 +145,7 @@ namespace rsx
 			{
 				this->update_value();
 
-				if (!this->is_compiled)
+				if (!this->is_compiled())
 				{
 					const f64 percentage = std::clamp((this->m_last_value - static_cast<T>(m_minimum)) / std::fabs(m_maximum - m_minimum), 0.0, 1.0);
 					m_slider.set_pos(m_slider.x, this->y + (this->h - m_slider.h) / 2);

@@ -165,7 +165,6 @@ namespace rsx
 			void set_sinus_offset(f32 sinus_modifier);
 
 			compiled_resource compiled_resources;
-			bool is_compiled = false;
 
 			bool visible = true;
 
@@ -185,6 +184,7 @@ namespace rsx
 			virtual ~overlay_element() = default;
 
 			virtual void refresh();
+			virtual bool is_compiled() { return m_is_compiled; }
 			virtual void translate(s16 _x, s16 _y);
 			virtual void scale(f32 _x, f32 _y, bool origin_scaling);
 			virtual void set_pos(s16 _x, s16 _y);
@@ -204,6 +204,9 @@ namespace rsx
 			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
+
+		protected:
+			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
 		};
 
 		struct layout_container : public overlay_element
@@ -220,6 +223,8 @@ namespace rsx
 
 			void translate(s16 _x, s16 _y) override;
 			void set_pos(s16 _x, s16 _y) override;
+
+			bool is_compiled() override;
 
 			compiled_resource& get_compiled() override;
 
@@ -248,6 +253,7 @@ namespace rsx
 			compiled_resource& get_compiled() override
 			{
 				// No draw
+				m_is_compiled = true;
 				return compiled_resources;
 			}
 		};
