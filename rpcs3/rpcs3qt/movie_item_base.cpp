@@ -26,8 +26,8 @@ movie_item_base::~movie_item_base()
 
 void movie_item_base::init_pointers()
 {
-	m_icon_loading_aborted.reset(new atomic_t<bool>(false));
-	m_size_on_disk_loading_aborted.reset(new atomic_t<bool>(false));
+	m_icon_loading_aborted = std::make_shared<atomic_t<bool>>(false);
+	m_size_on_disk_loading_aborted = std::make_shared<atomic_t<bool>>(false);
 }
 
 void movie_item_base::set_active(bool active)
@@ -67,7 +67,7 @@ void movie_item_base::init_movie()
 
 	if (lower.endsWith(".gif"))
 	{
-		m_movie.reset(new QMovie(m_movie_path));
+		m_movie = std::make_shared<QMovie>(m_movie_path);
 		m_movie_path.clear();
 
 		if (!m_movie->isValid())
@@ -99,17 +99,17 @@ void movie_item_base::init_movie()
 			return;
 		}
 
-		m_movie_buffer.reset(new QBuffer(&m_movie_data));
+		m_movie_buffer = std::make_unique<QBuffer>(&m_movie_data);
 		m_movie_buffer->open(QIODevice::ReadOnly);
 	}
 
-	m_video_sink.reset(new QVideoSink());
+	m_video_sink = std::make_shared<QVideoSink>();
 	QObject::connect(m_video_sink.get(), &QVideoSink::videoFrameChanged, m_video_sink.get(), [this](const QVideoFrame& frame)
 	{
 		m_icon_callback(frame);
 	});
 
-	m_media_player.reset(new QMediaPlayer());
+	m_media_player = std::make_unique<QMediaPlayer>();
 	m_media_player->setVideoSink(m_video_sink.get());
 	m_media_player->setLoops(QMediaPlayer::Infinite);
 
