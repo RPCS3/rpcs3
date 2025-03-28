@@ -195,7 +195,7 @@ namespace rsx
 				m_cancel_btn->set_pos(x + 180, y + h + 20);
 
 			m_cancel_only = cancel_only;
-			is_compiled   = false;
+			m_is_compiled = false;
 		}
 
 		bool list_view::get_cancel_only() const
@@ -219,7 +219,7 @@ namespace rsx
 
 		compiled_resource& list_view::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				auto& compiled = vertical_layout::get_compiled();
 				compiled.add(m_highlight_box->get_compiled());

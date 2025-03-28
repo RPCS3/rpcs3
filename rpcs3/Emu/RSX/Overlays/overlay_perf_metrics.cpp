@@ -814,7 +814,7 @@ namespace rsx
 
 		compiled_resource& graph::get_compiled()
 		{
-			if (is_compiled)
+			if (is_compiled())
 			{
 				return compiled_resources;
 			}
