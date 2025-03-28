@@ -137,6 +137,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::decryption_error: return "Failed to decrypt content";
 		case game_boot_result::file_creation_error: return "Could not create important files";
 		case game_boot_result::firmware_missing: return "Firmware is missing";
+		case game_boot_result::firmware_version: return "Firmware is too old";
 		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
 		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
 		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build.\nTry to use an older or newer RPCS3 build.\nEspecially if you know the build that created the savestate.";
@@ -1965,7 +1966,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Initialize performance monitor
 		g_fxo->init<named_thread<perf_monitor>>();
 
-		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
 
 		const auto disc_psf_obj = psf::load_object(disc_sfo_dir);
@@ -2100,6 +2100,21 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 		}
 
+		// Check firmware version
+		if (const std::string_view game_fw_version = psf::get_string(_psf, "PS3_SYSTEM_VER", ""); !game_fw_version.empty())
+		{
+			if (const std::string fw_version = utils::get_firmware_version(); fw_version.empty())
+			{
+				sys_log.warning("Firmware not installed. Skipping required firmware check. (title_id='%s', game_fw='%s')", m_title_id, game_fw_version);
+			}
+			else if (rpcs3::utils::version_is_bigger(game_fw_version, fw_version, m_title_id, true))
+			{
+				sys_log.error("The game's required firmware version is higher than the installed firmware's version. (title_id='%s', game_fw='%s', fw='%s')", m_title_id, game_fw_version, fw_version);
+				return game_boot_result::firmware_version;
+			}
+		}
+
+		// Set title to actual disc title if necessary
 		if (!disc_psf_obj.empty())
 		{
 			const auto bdvd_title = psf::get_string(disc_psf_obj, "TITLE");
