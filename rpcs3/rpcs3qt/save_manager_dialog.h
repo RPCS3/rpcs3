@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game_list.h"
+
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QDialog>
@@ -11,6 +12,7 @@
 
 class gui_settings;
 class persistent_settings;
+class video_label;
 
 class save_manager_dialog : public QDialog
 {
@@ -59,7 +61,7 @@ private:
 	QSize m_icon_size;
 	QColor m_icon_color;
 
-	QLabel* m_details_icon = nullptr;
+	video_label* m_details_icon = nullptr;
 	QLabel* m_details_title = nullptr;
 	QLabel* m_details_subtitle = nullptr;
 	QLabel* m_details_modified = nullptr;

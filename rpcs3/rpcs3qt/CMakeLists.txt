@@ -113,6 +113,7 @@ add_library(rpcs3_ui STATIC
     vfs_dialog_usb_input.cpp
     vfs_dialog_usb_tab.cpp
     vfs_tool_dialog.cpp
+    video_label.cpp
     welcome_dialog.cpp
 
     about_dialog.ui
