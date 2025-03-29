@@ -21,9 +21,15 @@ void qt_video_source::set_video_path(const std::string& path)
 
 void qt_video_source::set_active(bool active)
 {
-	if (!m_active.exchange(active) && active)
+	if (m_active.exchange(active) == active) return;
+
+	if (active)
 	{
 		start_movie();
+	}
+	else
+	{
+		stop_movie();
 	}
 }
 

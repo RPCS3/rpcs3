@@ -2,11 +2,13 @@
 
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
+#include "qt_video_source.h"
 #include "gui_application.h"
 #include "gui_settings.h"
 #include "persistent_settings.h"
 #include "game_list_delegate.h"
 #include "progress_dialog.h"
+#include "video_label.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -107,7 +109,7 @@ void save_manager_dialog::Init()
 	push_close->setAutoDefault(true);
 
 	// Details
-	m_details_icon = new QLabel(this);
+	m_details_icon = new video_label(this);
 	m_details_icon->setMinimumSize(320, 176);
 	m_details_title = new QLabel(tr("Select an item to view details"), this);
 	m_details_title->setWordWrap(true);
@@ -640,7 +642,9 @@ void save_manager_dialog::UpdateDetails()
 {
 	if (const int selected = m_list->selectionModel()->selectedRows().size(); selected != 1)
 	{
-		m_details_icon->setPixmap(QPixmap());
+		m_details_icon->set_thumbnail({});
+		m_details_icon->set_active(false);
+
 		m_details_subtitle->setText("");
 		m_details_modified->setText("");
 		m_details_details->setText("");
@@ -664,7 +668,7 @@ void save_manager_dialog::UpdateDetails()
 
 		const int row = m_list->currentRow();
 		QTableWidgetItem* item = m_list->item(row, SaveColumns::Name);
-		QTableWidgetItem* icon_item = m_list->item(row, SaveColumns::Icon);
+		movie_item* icon_item = static_cast<movie_item*>(m_list->item(row, SaveColumns::Icon));
 
 		if (!item || !icon_item)
 		{
@@ -674,7 +678,14 @@ void save_manager_dialog::UpdateDetails()
 		const int idx = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
-		m_details_icon->setPixmap(icon_item->data(Qt::UserRole).value<QPixmap>());
+		if (!icon_item->video_path().isEmpty())
+		{
+			m_details_icon->set_video_path(icon_item->video_path().toStdString());
+		}
+
+		m_details_icon->set_thumbnail(icon_item->data(SaveUserRole::Pixmap).value<QPixmap>());
+		m_details_icon->set_active(false);
+
 		m_details_title->setText(QString::fromStdString(save.title));
 		m_details_subtitle->setText(QString::fromStdString(save.subtitle));
 		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));

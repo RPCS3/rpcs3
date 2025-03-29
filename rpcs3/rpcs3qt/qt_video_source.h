@@ -23,7 +23,7 @@ public:
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 	bool has_new() const override { return m_has_new; }
 
-	void set_active(bool active);
+	virtual void set_active(bool active);
 	[[nodiscard]] bool get_active() const
 	{
 		return m_active;
