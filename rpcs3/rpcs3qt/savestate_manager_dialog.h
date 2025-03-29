@@ -1,6 +1,6 @@
 #pragma once
 
-#include "game_list_base.h"
+#include "gui_game_info.h"
 
 #include <QWidget>
 #include <QComboBox>
