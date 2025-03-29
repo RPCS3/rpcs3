@@ -52,10 +52,9 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		}
 	});
 
-	connect(this, &game_list::IconReady, this, [this](const game_info& game)
+	connect(this, &game_list::IconReady, this, [this](const movie_item_base* item)
 	{
-		if (!game || !game->item) return;
-		game->item->call_icon_func();
+		if (item) item->call_icon_func();
 	});
 }
 

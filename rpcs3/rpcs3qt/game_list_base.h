@@ -32,7 +32,7 @@ protected:
 	QPixmap PaintedPixmap(const QPixmap& icon, qreal device_pixel_ratio, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& compatibility_color = {}) const;
 	QColor GetGridCompatibilityColor(const QString& string) const;
 
-	std::function<void(const game_info&)> m_icon_ready_callback{};
+	std::function<void(const movie_item_base*)> m_icon_ready_callback{};
 	bool m_draw_compat_status_to_grid{};
 	bool m_is_list_layout{};
 	QSize m_icon_size{};
