@@ -307,6 +307,13 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 			ui->menuBar->cornerWidget()->setVisible(update_available);
 		}
 	});
+	connect(&m_updater, &update_manager::signal_about_to_terminate, this, [this]()
+	{
+		if (m_game_list_frame)
+		{
+			m_game_list_frame->StopAllThreads();
+		}
+	});
 
 #ifdef RPCS3_UPDATE_SUPPORTED
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)

@@ -755,6 +755,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		m_gui_settings->sync(); // Make sure to sync before terminating RPCS3
 	}
 
+	Q_EMIT signal_about_to_terminate();
+
 	Emu.GracefulShutdown(false);
 	Emu.CleanUp();
 
