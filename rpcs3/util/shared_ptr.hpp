@@ -574,7 +574,6 @@ namespace stx
 		}
 
 		// Random checks which may fail on invalid pointer
-		ensure((reinterpret_cast<u64>(r.d()->destroy.load()) - 0x10000) >> 47 == 0);
 		ensure((r.d()->refs++ - 1) >> 58 == 0);
 		return r;
 	}

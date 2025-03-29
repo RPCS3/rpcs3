@@ -97,10 +97,9 @@
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <LinkIncremental>false</LinkIncremental>
       <OutputFile>$(OutDir)\rpcs3.exe</OutputFile>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Windows</SubSystem>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <BaseAddress>0x10000</BaseAddress>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <Midl>
@@ -148,10 +147,11 @@
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <OutputFile>$(OutDir)\rpcs3d.exe</OutputFile>
-      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Windows</SubSystem>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <BaseAddress>0x10000</BaseAddress>
+      <BaseAddress>
+      </BaseAddress>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <Midl>

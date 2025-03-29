@@ -389,13 +389,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// SPU tool tips
 	SubscribeTooltip(ui->spu__static, tooltips.settings.spu__static);
 	SubscribeTooltip(ui->spu_dynamic, tooltips.settings.spu_dynamic);
+#if defined(ARCH_X64)
 	SubscribeTooltip(ui->spu_asmjit,  tooltips.settings.spu_asmjit);
+#endif
 	SubscribeTooltip(ui->spu_llvm,    tooltips.settings.spu_llvm);
 
 	QButtonGroup* spu_bg = new QButtonGroup(this);
 	spu_bg->addButton(ui->spu__static, static_cast<int>(spu_decoder_type::_static));
 	spu_bg->addButton(ui->spu_dynamic, static_cast<int>(spu_decoder_type::dynamic));
+#if defined(ARCH_X64)
 	spu_bg->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
+#endif
 	spu_bg->addButton(ui->spu_llvm,    static_cast<int>(spu_decoder_type::llvm));
 
 	connect(spu_bg, &QButtonGroup::idToggled, [this](int id, bool checked)
