@@ -139,6 +139,8 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 	}
 
 	m_last_hover_item = new_item;
+
+	QTableWidget::mouseMoveEvent(event);
 }
 
 void game_list::mouseDoubleClickEvent(QMouseEvent* ev)
@@ -169,13 +171,15 @@ void game_list::keyPressEvent(QKeyEvent* event)
 	QTableWidget::keyPressEvent(event);
 }
 
-void game_list::leaveEvent(QEvent* /*event*/)
+void game_list::leaveEvent(QEvent* event)
 {
 	if (m_last_hover_item)
 	{
 		m_last_hover_item->set_active(false);
 		m_last_hover_item = nullptr;
 	}
+
+	QTableWidget::leaveEvent(event);
 }
 
 void game_list::FocusAndSelectFirstEntryIfNoneIs()
