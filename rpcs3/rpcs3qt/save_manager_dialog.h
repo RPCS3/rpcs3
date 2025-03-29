@@ -1,5 +1,6 @@
 #pragma once
 
+#include "game_list.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QDialog>
@@ -46,7 +47,7 @@ private:
 
 	std::vector<SaveDataEntry> GetSaveEntries(const std::string& base_dir);
 
-	QTableWidget* m_list = nullptr;
+	game_list* m_list = nullptr;
 	std::string m_dir;
 	std::vector<SaveDataEntry> m_save_entries;
 

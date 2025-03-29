@@ -55,6 +55,7 @@ enum SaveColumns
 enum SaveUserRole
 {
 	Pixmap = Qt::UserRole,
+	PixmapScaled,
 	PixmapLoaded
 };
 
@@ -77,7 +78,7 @@ save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 void save_manager_dialog::Init()
 {
 	// Table
-	m_list = new QTableWidget(this);
+	m_list = new game_list();
 	m_list->setItemDelegate(new game_list_delegate(m_list));
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -90,6 +91,7 @@ void save_manager_dialog::Init()
 	m_list->setHorizontalHeaderLabels(QStringList() << tr("Icon") << tr("Title & Subtitle") << tr("Last Modified") << tr("Save ID") << tr("Notes"));
 	m_list->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	m_list->horizontalHeader()->setStretchLastSection(true);
+	m_list->setMouseTracking(true);
 
 	// Bottom bar
 	const int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
@@ -203,9 +205,10 @@ void save_manager_dialog::Init()
 	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
 	connect(this, &save_manager_dialog::IconReady, this, [this](int index, const QPixmap& pixmap)
 	{
-		if (QTableWidgetItem* icon_item = m_list->item(index, SaveColumns::Icon))
+		if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
 		{
-			icon_item->setData(Qt::DecorationRole, pixmap);
+			item->setData(SaveUserRole::PixmapScaled, pixmap);
+			item->call_icon_func();
 		}
 	});
 	connect(search_bar, &QLineEdit::textChanged, this, &save_manager_dialog::text_changed);
@@ -321,34 +324,66 @@ void save_manager_dialog::UpdateList()
 	QPixmap placeholder(320, 176);
 	placeholder.fill(Qt::transparent);
 
+	const s32 language_index = gui_application::get_language_id();
+	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
+
 	for (int i = 0; i < static_cast<int>(m_save_entries.size()); ++i)
 	{
 		const SaveDataEntry& entry = ::at32(m_save_entries, i);
 
 		const QString title = QString::fromStdString(entry.title) + QStringLiteral("\n") + QString::fromStdString(entry.subtitle);
 		const QString dir_name = QString::fromStdString(entry.dirName);
+		const std::string dir_path = m_dir + entry.dirName + "/";
 
-		custom_table_widget_item* iconItem = new custom_table_widget_item;
-		iconItem->setData(Qt::DecorationRole, placeholder);
-		iconItem->setData(SaveUserRole::Pixmap, placeholder);
-		iconItem->setData(SaveUserRole::PixmapLoaded, false);
-		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(i, SaveColumns::Icon, iconItem);
+		custom_table_widget_item* icon_item = new custom_table_widget_item;
+		icon_item->setData(Qt::DecorationRole, placeholder);
+		icon_item->setData(SaveUserRole::Pixmap, placeholder);
+		icon_item->setData(SaveUserRole::PixmapScaled, placeholder);
+		icon_item->setData(SaveUserRole::PixmapLoaded, false);
+		icon_item->setFlags(icon_item->flags() & ~Qt::ItemIsEditable);
 
-		QTableWidgetItem* titleItem = new QTableWidgetItem(title);
+		if (const std::string movie_path = dir_path + localized_movie; fs::is_file(movie_path))
+		{
+			icon_item->set_movie_path(QString::fromStdString(movie_path));
+		}
+		else if (const std::string movie_path = dir_path + "ICON1.PAM"; fs::is_file(movie_path))
+		{
+			icon_item->set_movie_path(QString::fromStdString(movie_path));
+		}
+
+		icon_item->set_icon_func([this, icon_item](const QVideoFrame& frame)
+		{
+			if (!icon_item)
+			{
+				return;
+			}
+
+			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
+			{
+				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
+			}
+			else
+			{
+				icon_item->setData(Qt::DecorationRole, icon_item->data(SaveUserRole::PixmapScaled).value<QPixmap>());
+				icon_item->stop_movie();
+			}
+		});
+		m_list->setItem(i, SaveColumns::Icon, icon_item);
+
+		custom_table_widget_item* titleItem = new custom_table_widget_item(title);
 		titleItem->setData(Qt::UserRole, i); // For sorting to work properly
 		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, SaveColumns::Name, titleItem);
 
-		QTableWidgetItem* timeItem = new QTableWidgetItem(FormatTimestamp(entry.mtime));
+		custom_table_widget_item* timeItem = new custom_table_widget_item(FormatTimestamp(entry.mtime));
 		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, SaveColumns::Time, timeItem);
 
-		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dir_name);
+		custom_table_widget_item* dirNameItem = new custom_table_widget_item(dir_name);
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, SaveColumns::Dir, dirNameItem);
 
-		QTableWidgetItem* noteItem = new QTableWidgetItem();
+		custom_table_widget_item* noteItem = new custom_table_widget_item();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
 		if (notes.contains(dir_name))
 		{
@@ -399,6 +434,7 @@ void save_manager_dialog::UpdateIcons()
 	{
 		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
 		{
+			icon_item->setData(SaveUserRole::PixmapScaled, placeholder);
 			icon_item->setData(Qt::DecorationRole, placeholder);
 		}
 	}
