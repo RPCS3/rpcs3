@@ -78,7 +78,7 @@ public:
 	bool get_mouse_lock_state();
 
 	bool can_consume_frame() const override;
-	void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
+	void present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
 protected:
