@@ -37,5 +37,6 @@ bool virtual_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	}
 
 	m_bindings.emplace_back(std::move(pad), nullptr, nullptr);
+	connected_devices++;
 	return true;
 }
