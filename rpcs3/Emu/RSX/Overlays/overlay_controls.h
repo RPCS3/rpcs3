@@ -30,23 +30,28 @@ namespace rsx
 			triangle_fan = 4
 		};
 
-		struct image_info
+		struct image_info_base
+		{
+			int w = 0, h = 0, channels = 0;
+			int bpp = 0;
+
+			virtual const u8* get_data() const = 0;
+		};
+
+		struct image_info : public image_info_base
 		{
 		private:
 			u8* data = nullptr;
 			std::vector<u8> data_grey;
 
 		public:
-			int w = 0, h = 0, channels = 0;
-			int bpp = 0;
-
 			image_info(image_info&) = delete;
 			image_info(const std::string& filename, bool grayscaled = false);
 			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
 			~image_info();
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
-			const u8* get_data() const { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
 		};
 
 		struct resource_config
@@ -276,7 +281,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 			void set_image_resource(u8 resource_id);
-			void set_raw_image(image_info* raw_image);
+			void set_raw_image(image_info_base* raw_image);
 			void clear_image();
 			void set_blur_strength(u8 strength);
 		};
