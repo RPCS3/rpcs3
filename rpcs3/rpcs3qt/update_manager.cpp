@@ -499,14 +499,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	UInt16 temp_u16[PATH_MAX];
 	u8 temp_u8[PATH_MAX];
 	const usz kInputBufSize = static_cast<usz>(1u << 18u);
-	const ISzAlloc g_Alloc     = {SzAlloc, SzFree};
+	const ISzAlloc g_Alloc = {SzAlloc, SzFree};
 
 	ISzAlloc allocImp     = g_Alloc;
 	ISzAlloc allocTempImp = g_Alloc;
 
-	if (InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
+	if (const WRes res = InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
 	{
-		update_log.error("Failed to open temporary storage file: %s", tmpfile_path);
+		update_log.error("Failed to open temporary storage file: '%s' (error=%d)", tmpfile_path, static_cast<u64>(res));
 		return false;
 	}
 
@@ -534,7 +534,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		SzArEx_Free(&db, &allocImp);
 		ISzAlloc_Free(&allocImp, lookStream.buf);
 
-		File_Close(&archiveStream.file);
+		const WRes res2 = File_Close(&archiveStream.file);
+		if (res2) update_log.warning("7z failed to close file (error=%d)", static_cast<u64>(res2));
 
 		switch (res)
 		{
