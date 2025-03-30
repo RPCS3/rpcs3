@@ -91,6 +91,15 @@ namespace rsx
 		void list_view::update_selection()
 		{
 			const overlay_element* current_element = get_selected_entry();
+
+			for (auto& item : m_items)
+			{
+				if (item)
+				{
+					item->set_selected(item.get() == current_element);
+				}
+			}
+
 			if (!current_element)
 			{
 				return; // Ideally unreachable but it should still be possible to recover by user interaction.
