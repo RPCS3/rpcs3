@@ -42,7 +42,7 @@ private:
 	void Init();
 	void UpdateList();
 	void UpdateIcons();
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 	void WaitForRepaintThreads(bool abort);
 
 	void closeEvent(QCloseEvent* event) override;
