@@ -678,11 +678,7 @@ void save_manager_dialog::UpdateDetails()
 		const int idx = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
-		if (!icon_item->video_path().isEmpty())
-		{
-			m_details_icon->set_video_path(icon_item->video_path().toStdString());
-		}
-
+		m_details_icon->set_video_path(icon_item->video_path().toStdString());
 		m_details_icon->set_thumbnail(icon_item->data(SaveUserRole::Pixmap).value<QPixmap>());
 		m_details_icon->set_active(false);
 
