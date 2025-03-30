@@ -586,7 +586,7 @@ void save_manager_dialog::OnEntriesRemove()
 }
 
 // Pop-up a small context-menu, being a replacement for save_data_manage_dialog
-void save_manager_dialog::ShowContextMenu(const QPoint &pos)
+void save_manager_dialog::ShowContextMenu(const QPoint& pos)
 {
 	const int idx = m_list->currentRow();
 	if (idx == -1)
