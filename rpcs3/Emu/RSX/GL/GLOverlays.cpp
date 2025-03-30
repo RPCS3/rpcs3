@@ -218,12 +218,12 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
 	{
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
+		const GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
 
 		auto result = view.get();
@@ -234,7 +234,7 @@ namespace gl
 		}
 		else
 		{
-			u64 key = reinterpret_cast<u64>(desc);
+			const u64 key = reinterpret_cast<u64>(desc);
 			temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 			temp_view_cache[key] = std::move(view);
 		}
@@ -249,7 +249,7 @@ namespace gl
 		rsx::overlays::resource_config configuration;
 		configuration.load_files();
 
-		for (const auto &res : configuration.texture_raw_data)
+		for (const auto& res : configuration.texture_raw_data)
 		{
 			load_simple_image(res.get(), false, -1);
 		}
@@ -318,13 +318,22 @@ namespace gl
 		return result;
 	}
 
-	gl::texture_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info* desc, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, u32 owner_uid)
 	{
-		auto key = reinterpret_cast<u64>(desc);
+		const bool dirty = std::exchange(desc->dirty, false);
+		const u64 key = reinterpret_cast<u64>(desc);
+
 		auto cached = temp_view_cache.find(key);
 		if (cached != temp_view_cache.end())
 		{
-			return cached->second.get();
+			gl::texture_view* view = cached->second.get();
+
+			if (dirty)
+			{
+				view->image()->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
+			}
+
+			return view;
 		}
 
 		return load_simple_image(desc, true, owner_uid);
@@ -420,7 +429,7 @@ namespace gl
 			}
 			case rsx::overlays::image_resource_id::raw_image:
 			{
-				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info_base*>(cmd.config.external_data_ref), ui.uid)->id());
 				break;
 			}
 			case rsx::overlays::image_resource_id::font_file:

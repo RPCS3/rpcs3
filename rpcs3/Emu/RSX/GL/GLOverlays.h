@@ -75,7 +75,7 @@ namespace gl
 
 		ui_overlay_renderer();
 
-		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid);
+		gl::texture_view* load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid);
 
 		void create();
 		void destroy();
@@ -84,7 +84,7 @@ namespace gl
 
 		gl::texture_view* find_font(rsx::overlays::font* font);
 
-		gl::texture_view* find_temp_image(rsx::overlays::image_info* desc, u32 owner_uid);
+		gl::texture_view* find_temp_image(rsx::overlays::image_info_base* desc, u32 owner_uid);
 
 		void set_primitive_type(rsx::overlays::primitive_type type);
 
