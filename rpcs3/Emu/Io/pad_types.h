@@ -522,6 +522,8 @@ struct Pad
 	s32 m_orientation_reset_button_index{-1}; // Special button index. -1 if not set.
 	bool get_orientation_reset_button_active();
 
+	u64 m_last_rumble_time_us{0};
+
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state{0};
 
