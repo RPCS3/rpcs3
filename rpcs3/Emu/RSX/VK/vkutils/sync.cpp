@@ -253,7 +253,7 @@ namespace vk
 
 		if (m_backend == sync_backend::events_v2)
 		{
-			m_device->_vkCmdPipelineBarrier2KHR(cmd, &dependency);
+			_vkCmdPipelineBarrier2KHR(cmd, &dependency);
 			return;
 		}
 
@@ -284,7 +284,7 @@ namespace vk
 			// The expectation is that this will be awaited using the gpu_wait function.
 			if (m_backend == sync_backend::events_v2) [[ likely ]]
 			{
-				m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &dependency);
+				_vkCmdSetEvent2KHR(cmd, m_vk_event, &dependency);
 			}
 			else
 			{
@@ -322,7 +322,7 @@ namespace vk
 			.pMemoryBarriers = &mem_barrier
 		};
 
-		m_device->_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
+		_vkCmdSetEvent2KHR(cmd, m_vk_event, &empty_dependency);
 	}
 
 	void event::host_signal() const
@@ -342,7 +342,7 @@ namespace vk
 
 		if (m_backend == sync_backend::events_v2) [[ likely ]]
 		{
-			m_device->_vkCmdWaitEvents2KHR(cmd, 1, &m_vk_event, &dependency);
+			_vkCmdWaitEvents2KHR(cmd, 1, &m_vk_event, &dependency);
 			return;
 		}
 

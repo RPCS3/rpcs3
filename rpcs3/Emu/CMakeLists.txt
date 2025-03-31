@@ -650,6 +650,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKVertexBuffers.cpp
         RSX/VK/VKVertexProgram.cpp
         RSX/VK/VKTextureCache.cpp
+        RSX/VK/VulkanAPI.cpp
     )
 endif()
 
