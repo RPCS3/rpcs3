@@ -36,6 +36,8 @@ namespace rsx
 			int bpp = 0;
 			bool dirty = false;
 
+			image_info_base() {}
+			virtual ~image_info_base() {}
 			virtual const u8* get_data() const = 0;
 		};
 
@@ -46,10 +48,11 @@ namespace rsx
 			std::vector<u8> data_grey;
 
 		public:
+			using image_info_base::image_info_base;
 			image_info(image_info&) = delete;
 			image_info(const std::string& filename, bool grayscaled = false);
 			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
-			~image_info();
+			virtual ~image_info();
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }

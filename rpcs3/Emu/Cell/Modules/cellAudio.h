@@ -195,7 +195,7 @@ struct audio_port
 	// Handle copy ctor of atomic var
 	audio_port(const audio_port& r)
 	{
-		std::memcpy(this, &r, sizeof(r));
+		std::memcpy(static_cast<void*>(this), &r, sizeof(r));
 	}
 
 	ENABLE_BITWISE_SERIALIZATION;

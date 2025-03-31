@@ -23,7 +23,7 @@ public:
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 	bool has_new() const override { return m_has_new; }
 
-	virtual void set_active(bool active);
+	void set_active(bool active) override;
 	bool get_active() const override { return m_active; }
 
 	void start_movie();
