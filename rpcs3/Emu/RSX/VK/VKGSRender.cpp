@@ -1161,9 +1161,9 @@ void VKGSRender::check_heap_status(u32 flags)
 	else
 	{
 		heap_critical = false;
-		u32 test = 1u << std::countr_zero(flags);
 		do
 		{
+			const u32 test = 1u << std::countr_zero(flags);
 			switch (flags & test)
 			{
 			case 0:
@@ -1203,7 +1203,6 @@ void VKGSRender::check_heap_status(u32 flags)
 			}
 
 			flags &= ~test;
-			test <<= 1;
 		}
 		while (flags && !heap_critical);
 	}
