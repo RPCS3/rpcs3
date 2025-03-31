@@ -270,7 +270,7 @@ void VKGSRender::load_texture_env()
 		{
 			if (tex.enabled())
 			{
-				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
+				check_heap_status(m_texture_upload_buffer_ring_info);
 				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
 			}
 			else
@@ -429,7 +429,7 @@ void VKGSRender::load_texture_env()
 		{
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
-				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
+				check_heap_status(m_texture_upload_buffer_ring_info);
 				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
 			}
 			else
@@ -1141,7 +1141,12 @@ void VKGSRender::end()
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Final heap check...
-	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
+	check_heap_status(
+	{
+		std::ref(m_attrib_ring_info),
+		std::ref(m_index_buffer_ring_info),
+		std::ref(m_draw_indirect_count_ring_info)
+	});
 
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
