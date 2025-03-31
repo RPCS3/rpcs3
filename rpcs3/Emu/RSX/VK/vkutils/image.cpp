@@ -292,7 +292,7 @@ namespace vk
 			name_info.objectHandle = reinterpret_cast<u64>(value);
 			name_info.pObjectName = name.c_str();
 
-			g_render_device->_vkSetDebugUtilsObjectNameEXT(m_device, &name_info);
+			_vkSetDebugUtilsObjectNameEXT(m_device, &name_info);
 		}
 	}
 

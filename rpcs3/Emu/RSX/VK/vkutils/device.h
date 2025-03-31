@@ -156,18 +156,6 @@ namespace vk
 			const VkPhysicalDeviceFeatures& requested_features) const;
 
 	public:
-		// Exported device endpoints
-		PFN_vkCmdBeginConditionalRenderingEXT _vkCmdBeginConditionalRenderingEXT = nullptr;
-		PFN_vkCmdEndConditionalRenderingEXT _vkCmdEndConditionalRenderingEXT = nullptr;
-		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
-		PFN_vkQueueInsertDebugUtilsLabelEXT _vkQueueInsertDebugUtilsLabelEXT = nullptr;
-		PFN_vkCmdInsertDebugUtilsLabelEXT _vkCmdInsertDebugUtilsLabelEXT = nullptr;
-		PFN_vkCmdSetEvent2KHR _vkCmdSetEvent2KHR = nullptr;
-		PFN_vkCmdWaitEvents2KHR _vkCmdWaitEvents2KHR = nullptr;
-		PFN_vkCmdPipelineBarrier2KHR _vkCmdPipelineBarrier2KHR = nullptr;
-		PFN_vkGetDeviceFaultInfoEXT _vkGetDeviceFaultInfoEXT = nullptr;
-
-	public:
 		render_device() = default;
 		~render_device() = default;
 

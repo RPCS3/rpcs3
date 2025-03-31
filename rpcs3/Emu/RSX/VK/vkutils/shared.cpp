@@ -17,7 +17,7 @@ namespace vk
 			return "Extended fault info is not available. Extension 'VK_EXT_device_fault' is probably not supported by your driver.";
 		}
 
-		ensure(g_render_device->_vkGetDeviceFaultInfoEXT);
+		ensure(_vkGetDeviceFaultInfoEXT);
 
 		VkDeviceFaultCountsEXT fault_counts
 		{
@@ -30,7 +30,7 @@ namespace vk
 		std::string fault_description;
 
 		// Retrieve sizes
-		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
+		_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, nullptr);
 
 		// Resize arrays and fill
 		address_info.resize(fault_counts.addressInfoCount);
@@ -44,7 +44,7 @@ namespace vk
 			.pVendorInfos = vendor_info.data(),
 			.pVendorBinaryData = vendor_binary_data.data()
 		};
-		g_render_device->_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
+		_vkGetDeviceFaultInfoEXT(*g_render_device, &fault_counts, &fault_info);
 
 		fault_description = fault_info.description;
 		std::string fault_message = fmt::format(
