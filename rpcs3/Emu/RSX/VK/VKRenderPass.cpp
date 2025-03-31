@@ -4,6 +4,8 @@
 #include "VKRenderPass.h"
 #include "vkutils/image.h"
 
+#include "Emu/RSX/Common/unordered_map.hpp"
+
 namespace vk
 {
 	struct active_renderpass_info_t
@@ -14,10 +16,10 @@ namespace vk
 
 	atomic_t<u64> g_cached_renderpass_key = 0;
 	VkRenderPass  g_cached_renderpass = VK_NULL_HANDLE;
-	std::unordered_map<VkCommandBuffer, active_renderpass_info_t>  g_current_renderpass;
+	rsx::unordered_map<VkCommandBuffer, active_renderpass_info_t>  g_current_renderpass;
 
 	shared_mutex g_renderpass_cache_mutex;
-	std::unordered_map<u64, VkRenderPass> g_renderpass_cache;
+	rsx::unordered_map<u64, VkRenderPass> g_renderpass_cache;
 
 	// Key structure
 	// 0-7 color_format
