@@ -1162,7 +1162,6 @@ void VKGSRender::check_heap_status(u32 flags)
 	{
 		heap_critical = false;
 		u32 test = 1u << std::countr_zero(flags);
-
 		do
 		{
 			switch (flags & test)
@@ -2046,7 +2045,7 @@ void VKGSRender::load_program_env()
 		check_heap_status(VK_HEAP_CHECK_VERTEX_ENV_STORAGE);
 
 		// Vertex state
-		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
+		const auto mem = m_vertex_env_ring_info.static_alloc<256>();
 		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
@@ -2134,7 +2133,7 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE);
 
-		auto mem = m_fragment_env_ring_info.alloc<256>(256);
+		auto mem = m_fragment_env_ring_info.static_alloc<256>();
 		auto buf = m_fragment_env_ring_info.map(mem, 32);
 
 		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
@@ -2146,7 +2145,7 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
 
-		auto mem = m_fragment_texture_params_ring_info.alloc<256>(768);
+		auto mem = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
 		auto buf = m_fragment_texture_params_ring_info.map(mem, 768);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
@@ -2158,7 +2157,7 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE);
 
-		auto mem = m_raster_env_ring_info.alloc<256>(256);
+		auto mem = m_raster_env_ring_info.static_alloc<256>();
 		auto buf = m_raster_env_ring_info.map(mem, 128);
 
 		std::memcpy(buf, rsx::method_registers.polygon_stipple_pattern(), 128);
