@@ -2,7 +2,7 @@
 
 #include "vkutils/commands.h"
 #include "vkutils/descriptors.h"
-#include "VKFrameContextManager.h"
+#include "VKDataHeapManager.h"
 #include "VKResourceManager.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
@@ -187,7 +187,7 @@ namespace vk
 		u32 present_image = -1;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
-		frame_context_manager::managed_heap_snapshot_t heap_snapshot;
+		data_heap_manager::managed_heap_snapshot_t heap_snapshot;
 		u64 last_frame_sync_time = 0;
 
 		// Copy shareable information
@@ -209,7 +209,7 @@ namespace vk
 
 		void tag_frame_end()
 		{
-			heap_snapshot = frame_context_manager::get_heap_snapshot();
+			heap_snapshot = data_heap_manager::get_heap_snapshot();
 			last_frame_sync_time = rsx::get_shared_tag();
 		}
 

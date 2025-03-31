@@ -209,7 +209,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	}
 
 	// Resource cleanup.
-	// TODO: This is some outdated crap.
 	{
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
@@ -235,21 +234,12 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 
 		ctx->buffer_views_to_clean.clear();
 
-		const auto shadermode = g_cfg.video.shadermode.get();
-
-		if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
-		{
-			// TODO: This is jank AF
-			m_vertex_instructions_buffer.reset_allocation_stats();
-			m_fragment_instructions_buffer.reset_allocation_stats();
-		}
-
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
 			m_last_heap_sync_time = ctx->last_frame_sync_time;
 
 			// Heap cleanup; deallocates memory consumed by the frame if it is still held
-			vk::frame_context_manager::restore_snapshot(ctx->heap_snapshot);
+			vk::data_heap_manager::restore_snapshot(ctx->heap_snapshot);
 		}
 	}
 

@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "VKFrameContextManager.h"
+#include "VKDataHeapManager.h"
 
 #include "vkutils/data_heap.h"
 #include <unordered_set>
 
-namespace vk::frame_context_manager
+namespace vk::data_heap_manager
 {
 	std::unordered_set<vk::data_heap*> g_managed_heaps;
 
@@ -44,6 +44,27 @@ namespace vk::frame_context_manager
 			heap->m_get_pos = found->second;
 			heap->notify();
 		}
+	}
+
+	void reset_heap_allocations()
+	{
+		for (auto& heap : g_managed_heaps)
+		{
+			heap->reset_allocation_stats();
+		}
+	}
+
+	bool any_critical()
+	{
+		for (auto& heap : g_managed_heaps)
+		{
+			if (heap->is_critical())
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	void reset()

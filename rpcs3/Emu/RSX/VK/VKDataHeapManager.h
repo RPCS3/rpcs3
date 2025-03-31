@@ -8,7 +8,7 @@ namespace vk
 {
 	class data_heap;
 
-	namespace frame_context_manager
+	namespace data_heap_manager
 	{
 		using managed_heap_snapshot_t = std::unordered_map<const vk::data_heap*, s64>;
 
@@ -23,6 +23,12 @@ namespace vk
 
 		// Synchronize heap with snapshot
 		void restore_snapshot(const managed_heap_snapshot_t& snapshot);
+
+		// Reset all managed heap allocations
+		void reset_heap_allocations();
+
+		// Check if any managed heap is in critical state
+		bool any_critical();
 
 		// Cleanup
 		void reset();

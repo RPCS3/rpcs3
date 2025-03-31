@@ -19,11 +19,11 @@
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDataHeapManager.h" />
     <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
     <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
     <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h" />
-    <ClInclude Include="Emu\RSX\VK\VKFrameContextManager.h" />
     <ClInclude Include="Emu\RSX\VK\VKGSRender.h" />
     <ClInclude Include="Emu\RSX\VK\VKGSRenderTypes.hpp" />
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
@@ -74,12 +74,12 @@
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDataHeapManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKFrameContextManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
