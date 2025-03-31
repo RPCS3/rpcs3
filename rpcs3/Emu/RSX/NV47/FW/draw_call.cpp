@@ -138,6 +138,47 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
+	simple_array<draw_range_t> draw_clause::get_subranges() const
+	{
+		ensure(!is_single_draw());
+
+		const auto range = get_range();
+		const auto limit = range.first + range.count;
+		const auto _pass_count = pass_count();
+
+		simple_array<draw_range_t> ret;
+		ret.reserve(_pass_count);
+
+		u32 previous_barrier = range.first;
+		u32 vertex_counter = 0;
+
+		for (auto it = current_barrier_it;
+			it != draw_command_barriers.end() && it->draw_id == current_range_index;
+			it++)
+		{
+			const auto& barrier = *it;
+			if (barrier.type != primitive_restart_barrier)
+				continue;
+
+			if (barrier.address <= range.first)
+				continue;
+
+			if (barrier.address >= limit)
+				break;
+
+			const u32 count = barrier.address - previous_barrier;
+			ret.push_back({ 0, vertex_counter, count });
+			previous_barrier = barrier.address;
+			vertex_counter += count;
+		}
+
+		ensure(!ret.empty());
+		ensure(previous_barrier < limit);
+		ret.push_back({ 0, vertex_counter, limit - previous_barrier });
+
+		return ret;
+	}
+
 	u32 draw_clause::execute_pipeline_dependencies(context* ctx, instanced_draw_config_t* instance_config) const
 	{
 		u32 result = 0u;

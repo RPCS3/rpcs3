@@ -1,3 +1,4 @@
+#include "Emu/RSX/VK/VKDataHeapManager.h"
 #include "stdafx.h"
 #include "../Overlays/overlay_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
@@ -23,6 +24,7 @@
 #include "../Program/SPIRVCommon.h"
 
 #include "util/asm.hpp"
+#include <vulkan/vulkan_core.h>
 
 namespace vk
 {
@@ -554,6 +556,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 			std::ref(m_vertex_instructions_buffer),
 			std::ref(m_fragment_instructions_buffer)
 		});
+	}
+
+	if (m_device->get_multidraw_support().supported)
+	{
+		m_draw_indirect_count_ring_info.create(VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, 16 * 0x100000, "multidraw indirect buffer", 1024);
+		vk::data_heap_manager::register_ring_buffer(m_draw_indirect_count_ring_info);
 	}
 
 	// Initialize optional allocation information with placeholders
@@ -1165,7 +1173,11 @@ void VKGSRender::check_heap_status(u32 flags)
 				heap_critical = m_texture_upload_buffer_ring_info.is_critical();
 				break;
 			case VK_HEAP_CHECK_VERTEX_STORAGE:
-				heap_critical = m_attrib_ring_info.is_critical() || m_index_buffer_ring_info.is_critical();
+				heap_critical = m_attrib_ring_info.is_critical() ||
+				m_index_buffer_ring_info.is_critical() ||
+				(m_draw_indirect_count_ring_info.heap
+					? m_draw_indirect_count_ring_info.is_critical()
+					: false);
 				break;
 			case VK_HEAP_CHECK_VERTEX_ENV_STORAGE:
 				heap_critical = m_vertex_env_ring_info.is_critical();

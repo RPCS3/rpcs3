@@ -285,48 +285,19 @@ namespace rsx
 		 */
 		u32 execute_pipeline_dependencies(struct context* ctx, instanced_draw_config_t* instance_config = nullptr) const;
 
+		/**
+		 * Returns the first-count data for the current subdraw
+		 */
 		const draw_range_t& get_range() const
 		{
 			ensure(current_range_index < draw_command_ranges.size());
 			return draw_command_ranges[current_range_index];
 		}
 
-		simple_array<draw_range_t> get_subranges() const
-		{
-			ensure(!is_single_draw());
-
-			const auto range = get_range();
-			const auto limit = range.first + range.count;
-
-			simple_array<draw_range_t> ret;
-			u32 previous_barrier = range.first;
-			u32 vertex_counter = 0;
-
-			for (const auto& barrier : draw_command_barriers)
-			{
-				if (barrier.draw_id != current_range_index)
-					continue;
-
-				if (barrier.type != primitive_restart_barrier)
-					continue;
-
-				if (barrier.address <= range.first)
-					continue;
-
-				if (barrier.address >= limit)
-					break;
-
-				const u32 count = barrier.address - previous_barrier;
-				ret.push_back({ 0, vertex_counter, count });
-				previous_barrier = barrier.address;
-				vertex_counter += count;
-			}
-
-			ensure(!ret.empty());
-			ensure(previous_barrier < limit);
-			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
-
-			return ret;
-		}
+		/*
+		 * Returns a compiled list of all subdraws.
+		 * NOTE: This is a non-trivial operation as it takes disjoint primitive boundaries into account.
+		 */
+		simple_array<draw_range_t> get_subranges() const;
 	};
 }

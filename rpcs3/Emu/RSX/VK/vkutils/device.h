@@ -61,6 +61,14 @@ namespace vk
 		operator bool() const { return supported; }
 	};
 
+	struct multidraw_features
+	{
+		bool supported;
+		u32 max_batch_size;
+
+		operator bool() const { return supported; }
+	};
+
 	class physical_device
 	{
 		VkInstance parent = VK_NULL_HANDLE;
@@ -79,6 +87,8 @@ namespace vk
 
 		custom_border_color_features custom_border_color_support{};
 
+		multidraw_features multidraw_support{};
+
 		struct
 		{
 			bool barycentric_coords = false;
@@ -93,7 +103,6 @@ namespace vk
 			bool unrestricted_depth_range = false;
 			bool extended_device_fault = false;
 			bool texture_compression_bc = false;
-			bool multidraw_indirect = false;
 		} optional_features_support;
 
 		friend class render_device;
@@ -176,6 +185,7 @@ namespace vk
 		const pipeline_binding_table& get_pipeline_binding_table() const { return m_pipeline_binding_table; }
 		const gpu_shader_types_support& get_shader_types_support() const { return pgpu->shader_types_support; }
 		const custom_border_color_features& get_custom_border_color_support() const { return pgpu->custom_border_color_support; }
+		const multidraw_features get_multidraw_support() const { return pgpu->multidraw_support; }
 
 		bool get_shader_stencil_export_support() const { return pgpu->optional_features_support.shader_stencil_export; }
 		bool get_depth_bounds_support() const { return pgpu->features.depthBounds != VK_FALSE; }
@@ -193,7 +203,6 @@ namespace vk
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
 		bool get_extended_device_fault_support() const { return pgpu->optional_features_support.extended_device_fault; }
 		bool get_texture_compression_bc_support() const { return pgpu->optional_features_support.texture_compression_bc; }
-		bool get_multidraw_indirect_support() const { return pgpu->optional_features_support.multidraw_indirect; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
