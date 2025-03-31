@@ -6,6 +6,7 @@
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
 #include "vkutils/chip_class.h"
+#include <vulkan/vulkan_core.h>
 
 namespace vk
 {
@@ -937,6 +938,20 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		{
 			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
 		}
+		else if (m_device->get_multidraw_support())
+		{
+			const auto subranges = draw_call.get_subranges();
+			const auto subranges_count = ::size32(subranges);
+			auto [offset, ptr] = m_draw_indirect_count_ring_info.alloc_and_map<4, VkMultiDrawInfoEXT>(subranges_count);
+
+			auto _ptr = ptr;
+			for (const auto& range : subranges)
+			{
+				_ptr->firstVertex = range.first;
+				_ptr->vertexCount = range.count;
+			}
+			vkCmdDrawMultiEXT(*m_current_command_buffer, subranges_count, ptr, 1, 0, sizeof(VkMultiDrawInfoEXT));
+		}
 		else
 		{
 			u32 vertex_offset = 0;
@@ -962,6 +977,24 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		else if (rsx::method_registers.current_draw_clause.is_single_draw())
 		{
 			vkCmdDrawIndexed(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0, 0);
+		}
+		else if (m_device->get_multidraw_support())
+		{
+			const auto subranges = draw_call.get_subranges();
+			const auto subranges_count = ::size32(subranges);
+			auto [offset, ptr] = m_draw_indirect_count_ring_info.alloc_and_map<4, VkMultiDrawIndexedInfoEXT>(subranges_count);
+
+			auto _ptr = ptr;
+			u32 vertex_offset = 0;
+			for (const auto& range : subranges)
+			{
+				const auto count = get_index_count(draw_call.primitive, range.count);
+				_ptr->vertexOffset = 0;
+				_ptr->firstIndex = vertex_offset;
+				_ptr->indexCount = count;
+				vertex_offset += count;
+			}
+			vkCmdDrawMultiIndexedEXT(*m_current_command_buffer, subranges_count, ptr, 1, 0, sizeof(VkMultiDrawIndexedInfoEXT), nullptr);
 		}
 		else
 		{

@@ -2,6 +2,7 @@
 #include "instance.h"
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
+#include <vulkan/vulkan_core.h>
 
 namespace vk
 {
@@ -36,6 +37,7 @@ namespace vk
 			VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_info{};
 			VkPhysicalDeviceBorderColorSwizzleFeaturesEXT border_color_swizzle_info{};
 			VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
+			VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -86,6 +88,13 @@ namespace vk
 				features2.pNext         = &device_fault_info;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_MULTI_DRAW_EXTENSION_NAME))
+			{
+				multidraw_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+				multidraw_info.pNext = features2.pNext;
+				features2.pNext      = &multidraw_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -97,6 +106,9 @@ namespace vk
 			custom_border_color_support.supported = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
 			custom_border_color_support.swizzle_extension_supported = border_color_swizzle_info.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
 			custom_border_color_support.require_border_color_remap = !border_color_swizzle_info.borderColorSwizzleFromImage;
+
+			multidraw_support.supported = !!multidraw_info.multiDraw;
+			multidraw_support.max_batch_size = 65536;
 
 			optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
 			optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
@@ -124,7 +136,6 @@ namespace vk
 		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
-		optional_features_support.multidraw_indirect       = device_extensions.is_supported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
 
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
@@ -165,12 +176,20 @@ namespace vk
 			properties2.pNext = nullptr;
 
 			VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
+			VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
 
 			if (descriptor_indexing_support)
 			{
 				descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
 				descriptor_indexing_props.pNext = properties2.pNext;
 				properties2.pNext = &descriptor_indexing_props;
+			}
+
+			if (multidraw_support.supported)
+			{
+				multidraw_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT;
+				multidraw_props.pNext = properties2.pNext;
+				properties2.pNext = &multidraw_props;
 			}
 
 			if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
@@ -197,6 +216,17 @@ namespace vk
 				{
 					rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
 					descriptor_max_draw_calls = 8192;
+				}
+			}
+
+			if (multidraw_support.supported)
+			{
+				multidraw_support.max_batch_size = multidraw_props.maxMultiDrawCount;
+
+				if (!multidraw_props.maxMultiDrawCount)
+				{
+					rsx_log.error("Physical device reports 0 support maxMultiDraw count. Multidraw support will be disabled.");
+					multidraw_support.supported = false;
 				}
 			}
 		}
