@@ -402,7 +402,8 @@ namespace vk
 		upload_heap.unmap();
 
 		const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers };
-		VkBufferImageCopy region {
+		VkBufferImageCopy region
+		{
 			.bufferOffset = offset,
 			.bufferRowLength = w,
 			.bufferImageHeight = h,

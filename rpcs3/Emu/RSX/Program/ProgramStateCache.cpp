@@ -23,10 +23,6 @@
 #endif
 #endif
 
-#ifdef ARCH_ARM64
-#define AVX512_ICL_FUNC
-#endif
-
 #ifdef _MSC_VER
 #define AVX512_ICL_FUNC
 #else

@@ -9,8 +9,11 @@ namespace rsx
 	{
 		struct video_info : public image_info_base
 		{
-			std::vector<u8> data;
+			using image_info_base::image_info_base;
+			virtual ~video_info() {}
 			const u8* get_data() const override { return data.empty() ? nullptr : data.data(); }
+
+			std::vector<u8> data;
 		};
 
 		class video_view final : public image_view
