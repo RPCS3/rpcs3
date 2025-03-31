@@ -527,7 +527,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "raster env buffer");
 	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "instancing data buffer");
 
-	vk::frame_context_manager::register_ring_buffers
+	vk::data_heap_manager::register_ring_buffers
 	({
 		std::ref(m_attrib_ring_info),
 		std::ref(m_fragment_env_ring_info),
@@ -538,8 +538,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		std::ref(m_transform_constants_ring_info),
 		std::ref(m_index_buffer_ring_info),
 		std::ref(m_texture_upload_buffer_ring_info),
-		std::ref(m_vertex_instructions_buffer),
-		std::ref(m_fragment_instructions_buffer),
 		std::ref(m_raster_env_ring_info),
 		std::ref(m_instancing_buffer_ring_info)
 	});
@@ -550,6 +548,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	{
 		m_vertex_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "vertex instructions buffer", 512 * 16);
 		m_fragment_instructions_buffer.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 64 * 0x100000, "fragment instructions buffer", 2048);
+
+		vk::data_heap_manager::register_ring_buffers
+		({
+			std::ref(m_vertex_instructions_buffer),
+			std::ref(m_fragment_instructions_buffer)
+		});
 	}
 
 	// Initialize optional allocation information with placeholders
@@ -820,7 +824,7 @@ VKGSRender::~VKGSRender()
 	m_upscaler.reset();
 
 	// Heaps
-	vk::frame_context_manager::reset();
+	vk::data_heap_manager::reset();
 
 	// Fallback bindables
 	null_buffer.reset();
@@ -1149,17 +1153,7 @@ void VKGSRender::check_heap_status(u32 flags)
 	bool heap_critical;
 	if (flags == VK_HEAP_CHECK_ALL)
 	{
-		heap_critical = m_attrib_ring_info.is_critical() ||
-			m_texture_upload_buffer_ring_info.is_critical() ||
-			m_fragment_env_ring_info.is_critical() ||
-			m_vertex_env_ring_info.is_critical() ||
-			m_fragment_texture_params_ring_info.is_critical() ||
-			m_vertex_layout_ring_info.is_critical() ||
-			m_fragment_constants_ring_info.is_critical() ||
-			m_transform_constants_ring_info.is_critical() ||
-			m_index_buffer_ring_info.is_critical() ||
-			m_raster_env_ring_info.is_critical() ||
-			m_instancing_buffer_ring_info.is_critical();
+		heap_critical = vk::data_heap_manager::any_critical();
 	}
 	else
 	{
@@ -1226,18 +1220,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			flush_command_queue(true);
 			m_vertex_cache->purge();
 
-			m_index_buffer_ring_info.reset_allocation_stats();
-			m_fragment_env_ring_info.reset_allocation_stats();
-			m_vertex_env_ring_info.reset_allocation_stats();
-			m_fragment_texture_params_ring_info.reset_allocation_stats();
-			m_vertex_layout_ring_info.reset_allocation_stats();
-			m_fragment_constants_ring_info.reset_allocation_stats();
-			m_transform_constants_ring_info.reset_allocation_stats();
-			m_attrib_ring_info.reset_allocation_stats();
-			m_texture_upload_buffer_ring_info.reset_allocation_stats();
-			m_raster_env_ring_info.reset_allocation_stats();
-			m_instancing_buffer_ring_info.reset_allocation_stats();
-			m_current_frame->reset_heap_ptrs();
+			vk::data_heap_manager::reset_heap_allocations();
 			m_last_heap_sync_time = rsx::get_shared_tag();
 		}
 		else

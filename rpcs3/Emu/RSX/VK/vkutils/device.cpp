@@ -124,6 +124,7 @@ namespace vk
 		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+		optional_features_support.multidraw_indirect       = device_extensions.is_supported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
 
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);

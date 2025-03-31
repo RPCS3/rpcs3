@@ -627,12 +627,12 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKCommonDecompiler.cpp
         RSX/VK/VKCommonPipelineLayout.cpp
         RSX/VK/VKCompute.cpp
+        RSX/VK/VKDataHeapManager.cpp
         RSX/VK/VKDMA.cpp
         RSX/VK/VKDraw.cpp
         RSX/VK/VKFormats.cpp
         RSX/VK/VKFragmentProgram.cpp
         RSX/VK/VKFramebuffer.cpp
-        RSX/VK/VKFrameContextManager.cpp
         RSX/VK/VKGSRender.cpp
         RSX/VK/VKHelpers.cpp
         RSX/VK/VKMemAlloc.cpp
