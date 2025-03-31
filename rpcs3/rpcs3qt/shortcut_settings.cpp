@@ -76,9 +76,9 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_toggle_mouse_and_keyboard, shortcut_info{ "game_window_toggle_mouse_and_keyboard", tr("Toggle Keyboard"), "Ctrl+F11", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_home_menu, shortcut_info{ "gw_home_menu", tr("Open Home Menu"), "Shift+F10", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_mute_unmute, shortcut_info{ "gw_mute_unmute", tr("Mute/Unmute Audio"), "Shift+M", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_volume_up, shortcut_info{ "gw_volume_up", tr("Volume Up"), "Shift++", shortcut_handler_id::game_window, true } },
-		{ shortcut::gw_volume_down, shortcut_info{ "gw_volume_down", tr("Volume Down"), "Shift+-", shortcut_handler_id::game_window, true } },
+		{ shortcut::gw_mute_unmute, shortcut_info{ "gw_mute_unmute", tr("Mute/Unmute Audio"), "Ctrl+Shift+M", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_volume_up, shortcut_info{ "gw_volume_up", tr("Volume Up"), "Ctrl+Shift++", shortcut_handler_id::game_window, true } },
+		{ shortcut::gw_volume_down, shortcut_info{ "gw_volume_down", tr("Volume Down"), "Ctrl+Shift+-", shortcut_handler_id::game_window, true } },
 	})
 {
 }
