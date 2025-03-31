@@ -143,6 +143,7 @@ private:
 	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
 	vk::data_heap m_raster_env_ring_info;              // Raster control such as polygon and line stipple
 	vk::data_heap m_instancing_buffer_ring_info;       // Instanced rendering data (constants indirection table + instanced constants)
+	vk::data_heap m_draw_indirect_count_ring_info;     // Buffer holding first-count data for multidraw support
 
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;

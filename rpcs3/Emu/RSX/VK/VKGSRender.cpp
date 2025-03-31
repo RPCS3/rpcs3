@@ -527,6 +527,23 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "raster env buffer");
 	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "instancing data buffer");
 
+	vk::frame_context_manager::register_ring_buffers
+	({
+		std::ref(m_attrib_ring_info),
+		std::ref(m_fragment_env_ring_info),
+		std::ref(m_vertex_env_ring_info),
+		std::ref(m_fragment_texture_params_ring_info),
+		std::ref(m_vertex_layout_ring_info),
+		std::ref(m_fragment_constants_ring_info),
+		std::ref(m_transform_constants_ring_info),
+		std::ref(m_index_buffer_ring_info),
+		std::ref(m_texture_upload_buffer_ring_info),
+		std::ref(m_vertex_instructions_buffer),
+		std::ref(m_fragment_instructions_buffer),
+		std::ref(m_raster_env_ring_info),
+		std::ref(m_instancing_buffer_ring_info)
+	});
+
 	const auto shadermode = g_cfg.video.shadermode.get();
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
@@ -803,19 +820,7 @@ VKGSRender::~VKGSRender()
 	m_upscaler.reset();
 
 	// Heaps
-	m_attrib_ring_info.destroy();
-	m_fragment_env_ring_info.destroy();
-	m_vertex_env_ring_info.destroy();
-	m_fragment_texture_params_ring_info.destroy();
-	m_vertex_layout_ring_info.destroy();
-	m_fragment_constants_ring_info.destroy();
-	m_transform_constants_ring_info.destroy();
-	m_index_buffer_ring_info.destroy();
-	m_texture_upload_buffer_ring_info.destroy();
-	m_vertex_instructions_buffer.destroy();
-	m_fragment_instructions_buffer.destroy();
-	m_raster_env_ring_info.destroy();
-	m_instancing_buffer_ring_info.destroy();
+	vk::frame_context_manager::reset();
 
 	// Fallback bindables
 	null_buffer.reset();
