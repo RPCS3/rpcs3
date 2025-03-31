@@ -834,19 +834,14 @@ VKGSRender::~VKGSRender()
 	{
 		// Return resources back to the owner
 		m_current_frame = &frame_context_storage[m_current_queue_index];
-		m_current_frame->swap_storage(m_aux_frame_context);
 		m_current_frame->grab_resources(m_aux_frame_context);
 	}
-
-	m_aux_frame_context.buffer_views_to_clean.clear();
 
 	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
 	{
 		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
 		vkDestroySemaphore((*m_device), ctx.acquire_signal_semaphore, nullptr);
-
-		ctx.buffer_views_to_clean.clear();
 	}
 
 	// Textures
@@ -2291,7 +2286,9 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		ensure(m_texbuffer_view_size >= m_vertex_layout_stream_info.range);
 
 		if (m_vertex_layout_storage)
-			m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
+		{
+			vk::get_gc()->dispose(m_vertex_layout_storage);
+		}
 
 		const usz alloc_addr = m_vertex_layout_stream_info.offset;
 		const usz view_size = (alloc_addr + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - alloc_addr : m_texbuffer_view_size;

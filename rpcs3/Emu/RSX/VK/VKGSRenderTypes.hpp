@@ -182,8 +182,6 @@ namespace vk
 
 		rsx::flags32_t flags = 0;
 
-		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
-
 		u32 present_image = -1;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
@@ -197,14 +195,7 @@ namespace vk
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
 			descriptor_set.swap(other.descriptor_set);
 			flags = other.flags;
-
 			heap_snapshot = other.heap_snapshot;
-		}
-
-		// Exchange storage (non-copyable)
-		void swap_storage(frame_context_t& other)
-		{
-			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
 		}
 
 		void tag_frame_end()
@@ -216,6 +207,7 @@ namespace vk
 		void reset_heap_ptrs()
 		{
 			last_frame_sync_time = 0;
+			heap_snapshot.clear();
 		}
 	};
 

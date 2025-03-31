@@ -232,8 +232,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 
 		vk::reset_global_resources();
 
-		ctx->buffer_views_to_clean.clear();
-
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
 			m_last_heap_sync_time = ctx->last_frame_sync_time;
@@ -408,7 +406,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		// Swap aux storage and current frame; aux storage should always be ready for use at all times
-		m_current_frame->swap_storage(m_aux_frame_context);
 		m_current_frame->grab_resources(m_aux_frame_context);
 	}
 	else if (m_current_frame->swap_command_buffer)

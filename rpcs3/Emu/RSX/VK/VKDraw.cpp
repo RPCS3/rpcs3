@@ -837,7 +837,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			if (m_vertex_layout_storage &&
 				m_vertex_layout_storage->info.buffer != m_vertex_layout_ring_info.heap->value)
 			{
-				m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
+				vk::get_gc()->dispose(m_vertex_layout_storage);
 			}
 
 			vk::clear_status_interrupt(vk::heap_changed);
