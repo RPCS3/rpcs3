@@ -41,7 +41,7 @@ namespace vk::data_heap_manager
 				continue;
 			}
 
-			heap->m_get_pos = found->second;
+			heap->set_get_pos(found->second);
 			heap->notify();
 		}
 	}
