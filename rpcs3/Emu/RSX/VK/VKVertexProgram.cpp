@@ -115,15 +115,15 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std140, set=0, binding=" << static_cast<int>(m_binding_table.vertex_constant_buffers_bind_slot) << ") uniform VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << static_cast<int>(m_binding_table.vertex_constant_buffers_bind_slot) << ") readonly buffer VertexConstantsBuffer\n";
 					OS << "{\n";
-					OS << "	vec4 " << PI.name << ";\n";
+					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
 
 					in.location = m_binding_table.vertex_constant_buffers_bind_slot;
 					in.domain = glsl::glsl_vertex_program;
 					in.name = "VertexConstantsBuffer";
-					in.type = vk::glsl::input_type_uniform_buffer;
+					in.type = vk::glsl::input_type_storage_buffer;
 
 					inputs.push_back(in);
 					continue;
