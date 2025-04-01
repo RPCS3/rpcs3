@@ -111,7 +111,7 @@ jobs:
       LLVM_VER: '19.1.7'
       VULKAN_VER: '1.3.268.0'
       VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
-      CCACHE_SHA: '6252f081876a9a9f700fae13a5aec5d0d486b28261d7f1f72ac11c7ad9df4da9'
+      CCACHE_SHA: '1f39f3ad5aae3fe915e99ad1302633bc8f6718e58fa7c0de2b0ba7e080f0f08c'
       CCACHE_BIN_DIR: 'C:\ccache_bin'
       CCACHE_DIR: 'C:\ccache'
       CCACHE_INODECACHE: 'true'
