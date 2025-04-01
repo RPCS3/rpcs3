@@ -244,7 +244,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 			continue;
 		}
 
-		SaveDataEntry save_entry;
+		SaveDataEntry save_entry {};
 		save_entry.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
 		save_entry.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
 		save_entry.title     = psf::get_string(psf, "TITLE");
@@ -307,7 +307,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 		// Display a blocking Save Data List asynchronously in the GUI thread.
 		if (auto save_dialog = Emu.GetCallbacks().get_save_dialog())
 		{
-			selected = save_dialog->ShowSaveDataList(save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null, g_fxo->get<savedata_manager>().enable_overlay);
+			selected = save_dialog->ShowSaveDataList(base_dir, save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null, g_fxo->get<savedata_manager>().enable_overlay);
 		}
 
 		// Reschedule after a blocking dialog returns
@@ -326,7 +326,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 		focused = save_entries.empty() ? -1 : selected;
 
 		// Get information from the selected entry
-		SaveDataEntry entry    = save_entries[selected];
+		const SaveDataEntry& entry = ::at32(save_entries, selected);
 		const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
 
 		// Reusable display message string
@@ -760,7 +760,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	result->userdata = userdata; // probably should be assigned only once (allows the callback to change it)
 
-	SaveDataEntry save_entry;
+	SaveDataEntry save_entry {};
 
 	if (setList)
 	{
@@ -820,7 +820,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 							break;
 						}
 
-						SaveDataEntry save_entry2;
+						SaveDataEntry save_entry2 {};
 						save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
 						save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
 						save_entry2.title     = psf::get_string(psf, "TITLE");
@@ -1183,7 +1183,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Display a blocking Save Data List asynchronously in the GUI thread.
 			if (auto save_dialog = Emu.GetCallbacks().get_save_dialog())
 			{
-				selected = save_dialog->ShowSaveDataList(save_entries, focused, operation, listSet, g_fxo->get<savedata_manager>().enable_overlay);
+				selected = save_dialog->ShowSaveDataList(base_dir, save_entries, focused, operation, listSet, g_fxo->get<savedata_manager>().enable_overlay);
 			}
 			else
 			{
@@ -1214,8 +1214,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			else
 			{
 				// Get information from the selected entry
-				SaveDataEntry entry = save_entries[selected];
-				message = get_confirmation_message(operation, entry);
+				message = get_confirmation_message(operation, ::at32(save_entries, selected));
 			}
 
 			// Yield before a blocking dialog is being spawned
@@ -1345,14 +1344,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				else
 				{
 					// Get information from the selected entry
-					SaveDataEntry entry = save_entries[selected];
-					message = get_confirmation_message(operation, entry);
+					message = get_confirmation_message(operation, ::at32(save_entries, selected));
 				}
 
 				// Yield before a blocking dialog is being spawned
 				lv2_obj::sleep(ppu);
 
 				// Get user confirmation by opening a blocking dialog
+				// TODO: show fixedSet->newIcon
 				s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
 				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 

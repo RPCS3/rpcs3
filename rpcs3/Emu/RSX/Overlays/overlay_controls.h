@@ -30,23 +30,32 @@ namespace rsx
 			triangle_fan = 4
 		};
 
-		struct image_info
+		struct image_info_base
+		{
+			int w = 0, h = 0, channels = 0;
+			int bpp = 0;
+			bool dirty = false;
+
+			image_info_base() {}
+			virtual ~image_info_base() {}
+			virtual const u8* get_data() const = 0;
+		};
+
+		struct image_info : public image_info_base
 		{
 		private:
 			u8* data = nullptr;
 			std::vector<u8> data_grey;
 
 		public:
-			int w = 0, h = 0, channels = 0;
-			int bpp = 0;
-
+			using image_info_base::image_info_base;
 			image_info(image_info&) = delete;
 			image_info(const std::string& filename, bool grayscaled = false);
 			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
-			~image_info();
+			virtual ~image_info();
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
-			const u8* get_data() const { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
 		};
 
 		struct resource_config
@@ -165,7 +174,6 @@ namespace rsx
 			void set_sinus_offset(f32 sinus_modifier);
 
 			compiled_resource compiled_resources;
-			bool is_compiled = false;
 
 			bool visible = true;
 
@@ -185,6 +193,7 @@ namespace rsx
 			virtual ~overlay_element() = default;
 
 			virtual void refresh();
+			virtual bool is_compiled() { return m_is_compiled; }
 			virtual void translate(s16 _x, s16 _y);
 			virtual void scale(f32 _x, f32 _y, bool origin_scaling);
 			virtual void set_pos(s16 _x, s16 _y);
@@ -204,6 +213,10 @@ namespace rsx
 			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
+			virtual void set_selected(bool selected) { static_cast<void>(selected); }
+
+		protected:
+			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
 		};
 
 		struct layout_container : public overlay_element
@@ -220,6 +233,8 @@ namespace rsx
 
 			void translate(s16 _x, s16 _y) override;
 			void set_pos(s16 _x, s16 _y) override;
+
+			bool is_compiled() override;
 
 			compiled_resource& get_compiled() override;
 
@@ -248,6 +263,7 @@ namespace rsx
 			compiled_resource& get_compiled() override
 			{
 				// No draw
+				m_is_compiled = true;
 				return compiled_resources;
 			}
 		};
@@ -263,7 +279,7 @@ namespace rsx
 
 		struct image_view : public overlay_element
 		{
-		private:
+		protected:
 			u8 image_resource_ref = image_resource_id::none;
 			void* external_ref = nullptr;
 
@@ -276,7 +292,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 			void set_image_resource(u8 resource_id);
-			void set_raw_image(image_info* raw_image);
+			void set_raw_image(image_info_base* raw_image);
 			void clear_image();
 			void set_blur_strength(u8 strength);
 		};

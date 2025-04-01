@@ -196,7 +196,7 @@ namespace rsx
 
 		compiled_resource& edit_text::get_compiled()
 		{
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				auto renderer = get_font();
 				const auto [caret_x, caret_y] = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
@@ -252,7 +252,7 @@ namespace rsx
 					cmd.config.clip_rect   = {static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(x + w), static_cast<f32>(y + h)};
 				}
 
-				is_compiled = true;
+				m_is_compiled = true;
 			}
 
 			return compiled_resources;

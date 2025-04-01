@@ -52,10 +52,9 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		}
 	});
 
-	connect(this, &game_list::IconReady, this, [this](const game_info& game)
+	connect(this, &game_list::IconReady, this, [this](const movie_item_base* item)
 	{
-		if (!game || !game->item) return;
-		game->item->call_icon_func();
+		if (item) item->image_change_callback();
 	});
 }
 
@@ -243,7 +242,7 @@ void game_list_table::populate(
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		game->item = icon_item;
 
-		icon_item->set_icon_func([this, icon_item, game](const QVideoFrame& frame)
+		icon_item->set_image_change_callback([this, icon_item, game](const QVideoFrame& frame)
 		{
 			if (!icon_item || !game)
 			{
@@ -293,7 +292,7 @@ void game_list_table::populate(
 
 		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
-			icon_item->set_movie_path(QString::fromStdString(game->info.movie_path));
+			icon_item->set_video_path(game->info.movie_path);
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);

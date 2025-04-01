@@ -33,7 +33,7 @@ void game_list_base::repaint_icons(std::vector<game_info>& game_data, const QCol
 				IconLoadFunction(game, device_pixel_ratio, cancel);
 			});
 
-			item->call_icon_func();
+			item->image_change_callback();
 		}
 	}
 }
@@ -79,7 +79,7 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	if (!cancel || !cancel->load())
 	{
 		if (m_icon_ready_callback)
-			m_icon_ready_callback(game);
+			m_icon_ready_callback(game->item);
 	}
 }
 

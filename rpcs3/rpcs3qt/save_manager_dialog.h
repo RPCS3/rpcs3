@@ -1,5 +1,7 @@
 #pragma once
 
+#include "game_list.h"
+
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QDialog>
@@ -10,6 +12,7 @@
 
 class gui_settings;
 class persistent_settings;
+class video_label;
 
 class save_manager_dialog : public QDialog
 {
@@ -39,14 +42,14 @@ private:
 	void Init();
 	void UpdateList();
 	void UpdateIcons();
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 	void WaitForRepaintThreads(bool abort);
 
 	void closeEvent(QCloseEvent* event) override;
 
 	std::vector<SaveDataEntry> GetSaveEntries(const std::string& base_dir);
 
-	QTableWidget* m_list = nullptr;
+	game_list* m_list = nullptr;
 	std::string m_dir;
 	std::vector<SaveDataEntry> m_save_entries;
 
@@ -58,7 +61,7 @@ private:
 	QSize m_icon_size;
 	QColor m_icon_color;
 
-	QLabel* m_details_icon = nullptr;
+	video_label* m_details_icon = nullptr;
 	QLabel* m_details_title = nullptr;
 	QLabel* m_details_subtitle = nullptr;
 	QLabel* m_details_modified = nullptr;

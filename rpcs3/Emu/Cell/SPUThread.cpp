@@ -1237,7 +1237,7 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 
 		if (const_value != r)
 		{
-			// Expectation of pretictable code path has not been met (such as a branch directly to the instruction)
+			// Expectation of predictable code path has not been met (such as a branch directly to the instruction)
 			is_const = false;
 		}
 
@@ -1447,7 +1447,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			if (v != v128::from32r(addr))
 			{
 				// 1) Non-zero lower words are invalid (because BRSL-like instructions generate only zeroes)
-				// 2) Bits normally masked out by indirect braches are considered invalid
+				// 2) Bits normally masked out by indirect branches are considered invalid
 				return true;
 			}
 

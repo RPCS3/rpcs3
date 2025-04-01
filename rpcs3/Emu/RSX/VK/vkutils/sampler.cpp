@@ -22,7 +22,7 @@ namespace vk
 	}
 
 	border_color_t::border_color_t(const color4f& color, VkFormat fmt, VkImageAspectFlags aspect)
-		: format(fmt), aspect(aspect), color_value(color)
+		: storage_key(0), format(fmt), aspect(aspect), color_value(color)
 	{
 		const auto encoded_color = rsx::encode_color_to_storage_key(color);
 		value = vk::get_border_color(encoded_color);

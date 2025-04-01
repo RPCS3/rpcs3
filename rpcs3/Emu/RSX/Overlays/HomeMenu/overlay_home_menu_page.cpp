@@ -258,9 +258,9 @@ namespace rsx
 
 		compiled_resource& home_menu_page::get_compiled()
 		{
-			if (!is_compiled || (m_message_box && !m_message_box->is_compiled))
+			if (!is_compiled() || (m_message_box && !m_message_box->is_compiled()))
 			{
-				is_compiled = false;
+				m_is_compiled = false;
 
 				if (home_menu_page* page = get_current_page(false))
 				{
@@ -281,7 +281,7 @@ namespace rsx
 					}
 				}
 
-				is_compiled = true;
+				m_is_compiled = true;
 			}
 
 			return compiled_resources;

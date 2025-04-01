@@ -196,6 +196,12 @@
     <Filter Include="Gui\savestates">
       <UniqueIdentifier>{9b51636c-b371-425b-86d3-be003774a1b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\video">
+      <UniqueIdentifier>{2bb5cec5-5acb-40c0-a388-68db05dff305}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\widgets">
+      <UniqueIdentifier>{149c596b-83e7-43f8-b5db-6108694434ef}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1176,6 +1182,12 @@
     <ClCompile Include="rpcs3qt\gui_game_info.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_video_source.cpp">
+      <Filter>Io\video</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\video_label.cpp">
+      <Filter>Gui\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1219,9 +1231,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\qt_utils.h">
       <Filter>Gui\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\custom_dock_widget.h">
-      <Filter>Gui</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\user_account.h">
       <Filter>Gui\user accounts</Filter>
@@ -1384,6 +1393,15 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\gui_game_info.h">
       <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_video_source.h">
+      <Filter>Io\video</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_dock_widget.h">
+      <Filter>Gui\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\video_label.h">
+      <Filter>Gui\widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

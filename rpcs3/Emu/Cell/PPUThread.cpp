@@ -4956,9 +4956,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			return +code_ptr;
 		}
 
-		constexpr auto abs_diff = [](u64 a, u64 b) { return a <= b ? b - a : a - b; };
+		[[maybe_unused]] constexpr auto abs_diff = [](u64 a, u64 b) { return a <= b ? b - a : a - b; };
 
-		auto write_le = [](u8*& code, auto value)
+		[[maybe_unused]] auto write_le = [](u8*& code, auto value)
 		{
 			write_to_ptr<le_t<std::remove_cvref_t<decltype(value)>>>(code, value);
 			code += sizeof(value);
@@ -5823,7 +5823,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 				min_addr = std::min<u32>(min_addr, mod_func.addr);
 
 				// Translate
-				if (const auto func = translator.Translate(mod_func))
+				if ([[maybe_unused]] const auto func = translator.Translate(mod_func))
 				{
 #ifdef ARCH_X64 // TODO
 					// Run optimization passes
@@ -5841,7 +5841,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		// Run this only in one module for all functions compiled
 		if (module_part.jit_bounds)
 		{
-			if (const auto func = translator.GetSymbolResolver(module_part))
+			if ([[maybe_unused]] const auto func = translator.GetSymbolResolver(module_part))
 			{
 #ifdef ARCH_X64 // TODO
 				// Run optimization passes

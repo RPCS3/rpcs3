@@ -1354,6 +1354,9 @@
     <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2715,6 +2718,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
+    <ClInclude Include="util\video_source.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_video.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

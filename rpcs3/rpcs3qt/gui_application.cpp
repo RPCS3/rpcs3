@@ -27,6 +27,7 @@
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
+#include "qt_video_source.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -954,6 +955,8 @@ void gui_application::InitializeCallbacks()
 			gui::utils::check_microphone_permission();
 		});
 	};
+
+	callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

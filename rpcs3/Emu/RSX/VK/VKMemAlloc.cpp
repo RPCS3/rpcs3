@@ -53,7 +53,7 @@ private:
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 #endif
-#include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
+#include "3rdparty/GPUOpen/VulkanMemoryAllocator/src/vk_mem_alloc.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else

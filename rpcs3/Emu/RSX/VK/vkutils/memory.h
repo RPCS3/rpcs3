@@ -4,7 +4,7 @@
 #include "../../rsx_utils.h"
 #include "shared.h"
 
-#include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
+#include "3rdparty/GPUOpen/VulkanMemoryAllocator/src/vk_mem_alloc.h"
 
 namespace vk
 {

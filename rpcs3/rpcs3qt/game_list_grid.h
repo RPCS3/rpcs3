@@ -33,5 +33,5 @@ Q_SIGNALS:
 	void FocusToSearchBar();
 	void ItemDoubleClicked(const game_info& game);
 	void ItemSelectionChanged(const game_info& game);
-	void IconReady(const game_info& game);
+	void IconReady(const movie_item_base* item);
 };

@@ -40,7 +40,7 @@ namespace rsx
 		{
 			update_value();
 
-			if (!is_compiled)
+			if (!is_compiled())
 			{
 				const f32 col = m_last_value ? 1.0f : 0.3f;
 				const f32 bkg = m_last_value ? 0.3f : 1.0f;

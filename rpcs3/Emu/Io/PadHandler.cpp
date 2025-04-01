@@ -752,6 +752,22 @@ void PadHandlerBase::process()
 
 		pad->move_data.orientation_enabled = b_has_orientation && device->config && device->config->orientation_enabled.get();
 
+		// Disable pad vibration if no new data was sent for 3 seconds
+		if (pad->m_last_rumble_time_us > 0)
+		{
+			std::lock_guard lock(pad::g_pad_mutex);
+
+			if ((get_system_time() - pad->m_last_rumble_time_us) > 3'000'000)
+			{
+				for (VibrateMotor& motor : pad->m_vibrateMotors)
+				{
+					motor.m_value = 0;
+				}
+
+				pad->m_last_rumble_time_us = 0;
+			}
+		}
+
 		const connection status = update_connection(device);
 
 		switch (status)
