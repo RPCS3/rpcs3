@@ -29,8 +29,9 @@ std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 
 void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
-	OS << "#version 450\n\n";
-	OS << "#extension GL_ARB_separate_shader_objects : enable\n\n";
+	OS <<
+		"#version 450\n\n"
+		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 	OS <<
 		"layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n"
@@ -59,7 +60,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint vertex_base_index;\n"
 		"	uint vertex_index_offset;\n"
 		"	uint draw_id;\n"
-		"	uint layout_ptr_offset;\n";
+		"	uint layout_ptr_offset;\n"
+		"	uint xform_constants_offset;\n";
 
 	if (m_device_props.emulate_conditional_rendering)
 	{

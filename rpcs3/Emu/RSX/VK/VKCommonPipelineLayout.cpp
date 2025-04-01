@@ -136,13 +136,13 @@ namespace vk
 
 		std::array<VkPushConstantRange, 1> push_constants;
 		push_constants[0].offset = 0;
-		push_constants[0].size = 16;
+		push_constants[0].size = 20;
 		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
 		if (vk::emulate_conditional_rendering())
 		{
 			// Conditional render toggle
-			push_constants[0].size = 20;
+			push_constants[0].size = 24;
 		}
 
 		const auto set_layout = vk::descriptors::create_layout(bindings);
