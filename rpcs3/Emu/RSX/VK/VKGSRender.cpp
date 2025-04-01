@@ -2108,7 +2108,8 @@ void VKGSRender::load_program_env()
 		if (!io_buf.empty())
 		{
 			m_transform_constants_ring_info.unmap();
-			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem_offset, io_buf.size() };
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
+			m_xform_constants_dynamic_offset = mem_offset;
 		}
 	}
 
@@ -2310,21 +2311,19 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		base_offset = 0;
 	}
 
-	u8 data_size = 16;
-	u32 draw_info[5];
-
-	draw_info[0] = vertex_info.vertex_index_base;
-	draw_info[1] = vertex_info.vertex_index_offset;
-	draw_info[2] = id;
-	draw_info[3] = (id * 16) + (base_offset / 8);
+	rsx::simple_array<u32> dynamic_constants;
+	dynamic_constants.push_back(vertex_info.vertex_index_base);       // Vertex index base
+	dynamic_constants.push_back(vertex_info.vertex_index_offset);     // Vertex index offset
+	dynamic_constants.push_back(id);                                  // Draw id
+	dynamic_constants.push_back((id * 16) + (base_offset / 8));       // Vertex layout offset
+	dynamic_constants.push_back(m_xform_constants_dynamic_offset);    // Vertex constants offset
 
 	if (vk::emulate_conditional_rendering())
 	{
-		draw_info[4] = cond_render_ctrl.hw_cond_active ? 1 : 0;
-		data_size = 20;
+		dynamic_constants.push_back(cond_render_ctrl.hw_cond_active ? 1 : 0);
 	}
 
-	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
+	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, dynamic_constants.size_bytes(), dynamic_constants.data());
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
