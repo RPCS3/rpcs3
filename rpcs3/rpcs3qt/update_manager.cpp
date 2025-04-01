@@ -504,11 +504,29 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	ISzAlloc allocImp     = g_Alloc;
 	ISzAlloc allocTempImp = g_Alloc;
 
-	if (const WRes res = InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
+	const auto WRes_to_string = [](WRes res)
 	{
-		update_log.error("Failed to open temporary storage file: '%s' (error=%d)", tmpfile_path, static_cast<u64>(res));
+#ifdef _WIN32
+		return fmt::format("0x%x='%s'", res, std::system_category().message(HRESULT_FROM_WIN32(res)));
+#else
+		return fmt::format("0x%x='%s'", res, strerror(res));
+#endif
+	};
+
+#ifdef _WIN32
+	const std::wstring tmpfile_path_w = utf8_to_wchar(tmpfile_path);
+	if (const WRes res = InFile_OpenW(&archiveStream.file, tmpfile_path_w.c_str()))
+	{
+		update_log.error("Failed to open temporary storage file: '%s' (error=%s)", tmpfile_path_w.c_str(), WRes_to_string(res));
 		return false;
 	}
+#else
+	if (const WRes res = InFile_Open(&archiveStream.file, tmpfile_path.c_str()))
+	{
+		update_log.error("Failed to open temporary storage file: '%s' (error=%s)", tmpfile_path, WRes_to_string(res));
+		return false;
+	}
+#endif
 
 	FileInStream_CreateVTable(&archiveStream);
 	LookToRead2_CreateVTable(&lookStream, False);
@@ -529,22 +547,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	CrcGenerateTable();
 	SzArEx_Init(&db);
 
-	auto error_free7z = [&]()
+	const auto error_free7z = [&]()
 	{
 		SzArEx_Free(&db, &allocImp);
 		ISzAlloc_Free(&allocImp, lookStream.buf);
 
 		const WRes res2 = File_Close(&archiveStream.file);
-		if (res2) update_log.warning("7z failed to close file (error=%d)", static_cast<u64>(res2));
-
-		switch (res)
-		{
-		case SZ_OK: break;
-		case SZ_ERROR_UNSUPPORTED: update_log.error("7z decoder doesn't support this archive"); break;
-		case SZ_ERROR_MEM: update_log.error("7z decoder failed to allocate memory"); break;
-		case SZ_ERROR_CRC: update_log.error("7z decoder CRC error"); break;
-		default: update_log.error("7z decoder error: %d", static_cast<u64>(res)); break;
-		}
+		if (res2) update_log.warning("7z failed to close file (error=%s)", WRes_to_string(res2));
+		if (res) update_log.error("7z decoder error: %s", WRes_to_string(res));
 	};
 
 	if (res != SZ_OK)
@@ -588,7 +598,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		const DWORD permissions = (attribs >> 16) & (S_IRWXU | S_IRWXG | S_IRWXO);
 		const bool is_symlink = (attribs & FILE_ATTRIBUTE_UNIX_EXTENSION) != 0 && S_ISLNK(attribs >> 16);
 #endif
-		const usz len        = SzArEx_GetFileNameUtf16(&db, i, nullptr);
+		const usz len = SzArEx_GetFileNameUtf16(&db, i, nullptr);
 
 		if (len >= PATH_MAX)
 		{
@@ -598,7 +608,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		}
 
 		SzArEx_GetFileNameUtf16(&db, i, temp_u16);
-		memset(temp_u8, 0, sizeof(temp_u8));
+		std::memset(temp_u8, 0, sizeof(temp_u8));
 		// Simplistic conversion to UTF-8
 		for (usz index = 0; index < len; index++)
 		{
