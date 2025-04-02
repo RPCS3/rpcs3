@@ -226,49 +226,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	ui->sysPauseAct->setEnabled(enable_play_last);
 	ui->toolbar_start->setEnabled(enable_play_last);
 
-	// create tool buttons for the taskbar thumbnail
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_bar = new QWinThumbnailToolBar(this);
-	m_thumb_bar->setWindow(windowHandle());
-
-	m_thumb_playPause = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_playPause->setToolTip(start_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_play);
-	m_thumb_playPause->setEnabled(enable_play_last);
-
-	m_thumb_stop = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_stop->setToolTip(tr("Stop"));
-	m_thumb_stop->setIcon(m_icon_thumb_stop);
-	m_thumb_stop->setEnabled(false);
-
-	m_thumb_restart = new QWinThumbnailToolButton(m_thumb_bar);
-	m_thumb_restart->setToolTip(tr("Restart"));
-	m_thumb_restart->setIcon(m_icon_thumb_restart);
-	m_thumb_restart->setEnabled(false);
-
-	m_thumb_bar->addButton(m_thumb_playPause);
-	m_thumb_bar->addButton(m_thumb_stop);
-	m_thumb_bar->addButton(m_thumb_restart);
-
-	RepaintThumbnailIcons();
-
-	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []()
-	{
-		gui_log.notice("User clicked the stop button on thumbnail toolbar");
-		Emu.GracefulShutdown(false, true);
-	});
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []()
-	{
-		gui_log.notice("User clicked the restart button on thumbnail toolbar");
-		Emu.Restart();
-	});
-	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, [this]()
-	{
-		gui_log.notice("User clicked the playPause button on thumbnail toolbar");
-		OnPlayOrPause();
-	});
-#endif
-
 	// RPCS3 Updater
 
 	QMenu* download_menu = new QMenu(tr("Update Available!"));
@@ -1868,19 +1825,6 @@ void main_window::RepaintThumbnailIcons()
 	{
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
-
-#ifdef HAS_QT_WIN_STUFF
-	if (!m_thumb_bar) return;
-
-	m_icon_thumb_play = icon(":/Icons/play.png");
-	m_icon_thumb_pause = icon(":/Icons/pause.png");
-	m_icon_thumb_stop = icon(":/Icons/stop.png");
-	m_icon_thumb_restart = icon(":/Icons/restart.png");
-
-	m_thumb_playPause->setIcon(Emu.IsRunning() || Emu.IsStarting() ? m_icon_thumb_pause : m_icon_thumb_play);
-	m_thumb_stop->setIcon(m_icon_thumb_stop);
-	m_thumb_restart->setIcon(m_icon_thumb_restart);
-#endif
 }
 
 void main_window::RepaintToolBarIcons()
@@ -1971,12 +1915,6 @@ void main_window::OnEmuRun(bool /*start_playtime*/)
 
 	m_debugger_frame->EnableButtons(true);
 
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_stop->setToolTip(stop_tooltip);
-	m_thumb_restart->setToolTip(restart_tooltip);
-	m_thumb_playPause->setToolTip(pause_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_pause);
-#endif
 	ui->sysPauseAct->setText(tr("&Pause"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
@@ -1996,12 +1934,6 @@ void main_window::OnEmuResume() const
 	const QString pause_tooltip = tr("Pause %0").arg(title);
 	const QString stop_tooltip = tr("Stop %0").arg(title);
 
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_stop->setToolTip(stop_tooltip);
-	m_thumb_restart->setToolTip(restart_tooltip);
-	m_thumb_playPause->setToolTip(pause_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_pause);
-#endif
 	ui->sysPauseAct->setText(tr("&Pause"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
@@ -2015,10 +1947,6 @@ void main_window::OnEmuPause() const
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
 
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_playPause->setToolTip(resume_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_play);
-#endif
 	ui->sysPauseAct->setText(tr("&Resume"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
@@ -2039,10 +1967,6 @@ void main_window::OnEmuStop()
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_playPause->setToolTip(play_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_play);
-#endif
 
 	EnableMenus(false);
 
@@ -2061,10 +1985,6 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(restart_tooltip);
 		ui->sysRebootAct->setEnabled(true);
-#ifdef HAS_QT_WIN_STUFF
-		m_thumb_restart->setToolTip(restart_tooltip);
-		m_thumb_restart->setEnabled(true);
-#endif
 	}
 
 	ui->batchRemoveShaderCachesAct->setEnabled(true);
@@ -2106,10 +2026,7 @@ void main_window::OnEmuReady() const
 	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_playPause->setToolTip(play_tooltip);
-	m_thumb_playPause->setIcon(m_icon_thumb_play);
-#endif
+
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
@@ -2133,13 +2050,6 @@ void main_window::OnEmuReady() const
 
 void main_window::EnableMenus(bool enabled) const
 {
-	// Thumbnail Buttons
-#ifdef HAS_QT_WIN_STUFF
-	m_thumb_playPause->setEnabled(enabled);
-	m_thumb_stop->setEnabled(enabled);
-	m_thumb_restart->setEnabled(enabled);
-#endif
-
 	// Toolbar
 	ui->toolbar_start->setEnabled(enabled);
 	ui->toolbar_stop->setEnabled(enabled);
@@ -3588,16 +3498,10 @@ void main_window::CreateDockWindows()
 
 			ui->toolbar_start->setEnabled(enable_play_buttons);
 			ui->sysPauseAct->setEnabled(enable_play_buttons);
-#ifdef HAS_QT_WIN_STUFF
-			m_thumb_playPause->setEnabled(enable_play_buttons);
-#endif
 
 			if (!tooltip.isEmpty())
 			{
 				ui->toolbar_start->setToolTip(tooltip);
-#ifdef HAS_QT_WIN_STUFF
-				m_thumb_playPause->setToolTip(tooltip);
-#endif
 			}
 		}
 
