@@ -34,6 +34,8 @@ namespace vm
 	extern u8* const g_free_addr;
 	extern u8 g_reservations[65536 / 128 * 64];
 
+	static constexpr u64 g_exec_addr_seg_offset = 0x2'0000'0000ULL;
+
 	struct writer_lock;
 
 	enum memory_location_t : uint

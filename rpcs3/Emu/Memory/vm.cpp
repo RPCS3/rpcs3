@@ -47,7 +47,7 @@ namespace vm
 	u8* const g_sudo_addr = g_base_addr + 0x1'0000'0000;
 
 	// Auxiliary virtual memory for executable areas
-	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x200000000);
+	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x300000000);
 
 	// Hooks for memory R/W interception (default: zero offset to some function with only ret instructions)
 	u8* const g_hook_addr = memory_reserve_4GiB(g_exec_addr, 0x800000000);
