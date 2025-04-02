@@ -225,13 +225,13 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.mov(x86::rbp, args[0]);
 	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
 
-	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::edx, 1, 0)); // Load call target
-	c.mov(x86::rdx, x86::rax);
-	c.shl(x86::rax, 16);
-	c.shr(x86::rax, 16);
-	c.shr(x86::rdx, 48);
+	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::rdx, 1, 0)); // Load call target
+	c.movabs(x86::r12, vm::g_exec_addr_seg_offset);
+	c.add(x86::r12, x86::r13);
+	c.shr(x86::edx, 1);
+	c.mov(x86::edx, x86::word_ptr(x86::r12, x86::edx)); // Load relocation base
 	c.shl(x86::edx, 13);
-	c.mov(x86::r12d, x86::edx); // Load relocation base
+	c.mov(x86::r12d, x86::edx); // Set relocation base
 
 	c.movabs(x86::rbx, reinterpret_cast<u64>(&vm::g_base_addr));
 	c.mov(x86::rbx, x86::qword_ptr(x86::rbx));
@@ -348,13 +348,10 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.ldr(call_target, arm::Mem(a64::x19, pc));
 	// Compute REG_Hp
 	const arm::GpX reg_hp = a64::x21;
-	c.mov(reg_hp, call_target);
-	c.lsr(reg_hp, reg_hp, 48);
+	c.mov(reg_hp, Imm(vm::g_exec_addr_seg_offset));
+	c.add(reg_hp, reg_hp, pc, arm::Shift(arm::ShiftOp::kLSR, 2));
+	c.ldrh(reg_hp.w(), arm::Mem(a64::x19, reg_hp));
 	c.lsl(reg_hp.w(), reg_hp.w(), 13);
-
-	// Zero top 16 bits of call target
-	c.lsl(call_target, call_target, Imm(16));
-	c.lsr(call_target, call_target, Imm(16));
 
 	// Load registers
 	c.mov(a64::x22, Imm(reinterpret_cast<u64>(&vm::g_base_addr)));
@@ -475,6 +472,11 @@ static inline u8* ppu_ptr(u32 addr)
 	return vm::g_exec_addr + u64{addr} * 2;
 }
 
+static inline u8* ppu_seg_ptr(u32 addr)
+{
+	return vm::g_exec_addr + vm::g_exec_addr_seg_offset + (addr >> 1);
+}
+
 static inline ppu_intrp_func_t ppu_read(u32 addr)
 {
 	return read_from_ptr<ppu_intrp_func_t>(ppu_ptr(addr));
@@ -520,7 +522,7 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 
 	while (true)
 	{
-		if (uptr func = uptr(ppu_read(ppu.cia)); (func << 16 >> 16) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+		if (uptr func = uptr(ppu_read(ppu.cia)); func != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 		{
 			// We found a recompiler function at cia, return
 			break;
@@ -775,6 +777,9 @@ extern void ppu_register_range(u32 addr, u32 size)
 	utils::memory_commit(ppu_ptr(addr), u64{size} * 2, utils::protection::rw);
 	ensure(vm::page_protect(addr, size, 0, vm::page_executable));
 
+	// Segment data
+	utils::memory_commit(ppu_seg_ptr(addr), size >> 1, utils::protection::rw);
+
 	if (g_cfg.core.ppu_debug)
 	{
 		utils::memory_commit(vm::g_stat_addr + addr, size);
@@ -787,12 +792,13 @@ extern void ppu_register_range(u32 addr, u32 size)
 		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 		{
 			// Assume addr is the start of first segment of PRX
-			const uptr entry_value = reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3));
-			write_to_ptr<uptr>(ppu_ptr(addr), entry_value);
+			write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ppu_recompiler_fallback_ghc));
+			write_to_ptr<u16>(ppu_seg_ptr(addr), static_cast<u16>(seg_base >> 13));
 		}
 		else
 		{
 			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_fallback);
+			write_to_ptr<u16>(ppu_seg_ptr(addr), 0);
 		}
 
 		addr += 4;
@@ -807,7 +813,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	// Initialize specific function
 	if (ptr)
 	{
-		write_to_ptr<uptr>(ppu_ptr(addr), (reinterpret_cast<uptr>(ptr) & 0xffff'ffff'ffffu) | (uptr(ppu_read(addr)) & ~0xffff'ffff'ffffu));
+		write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ptr));
 		return;
 	}
 
@@ -5087,14 +5093,14 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			c.mov(x86::rax, x86::qword_ptr(x86::rax));
 			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
 
-			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
-			c.mov(x86::rdx, x86::rax);
-			c.shl(x86::rax, 16);
-			c.shr(x86::rax, 16);
-			c.shr(x86::rdx, 48);
+			c.mov(x86::rcx, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
+			c.movabs(x86::r12, vm::g_exec_addr_seg_offset);
+			c.add(x86::rax, x86::r12);
+			c.shr(x86::edx, 1);
+			c.mov(x86::edx, x86::word_ptr(x86::rax, x86::edx)); // Load relocation base
 			c.shl(x86::edx, 13);
-			c.mov(x86::r12d, x86::edx); // Load relocation base
-			c.jmp(x86::rax);
+			c.mov(x86::r12d, x86::edx); // Set relocation base
+			c.jmp(x86::rcx);
 #else
 			// Load REG_Base - use absolute jump target to bypass rel jmp range limits
 			// X19 contains vm::g_exec_addr
@@ -5130,13 +5136,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			// Compute REG_Hp
 			const arm::GpX reg_hp = a64::x21;
-			c.mov(reg_hp, call_target);
-			c.lsr(reg_hp, reg_hp, 48);
+			c.mov(reg_hp, Imm(vm::g_exec_addr_seg_offset));
+			c.add(reg_hp, reg_hp, pc, arm::Shift(arm::ShiftOp::kLSR, 2));
+			c.ldrh(reg_hp.w(), arm::Mem(exec_addr, reg_hp));
 			c.lsl(reg_hp.w(), reg_hp.w(), 13);
-
-			// Zero top 16 bits of call target
-			c.lsl(call_target, call_target, 16);
-			c.lsr(call_target, call_target, 16);
 
 			// Execute LLE call
 			c.br(call_target);
@@ -5405,7 +5408,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5717,7 +5720,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		for (u32 addr = info.segs[0].addr; addr < info.segs[0].addr + info.segs[0].size; addr += 4, inst_ptr++)
 		{
-			if (*inst_ptr == ppu_instructions::BLR() && (reinterpret_cast<uptr>(ppu_read(addr)) << 16 >> 16) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+			if (*inst_ptr == ppu_instructions::BLR() && reinterpret_cast<uptr>(ppu_read(addr)) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 			{
 				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), BLR_func);
 			}
