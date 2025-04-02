@@ -661,9 +661,6 @@ void gs_frame::show()
 			}
 		}
 	});
-
-	// if we do this before show, the QWinTaskbarProgress won't show
-	m_progress_indicator->show(this);
 }
 
 display_handle_t gs_frame::handle() const
