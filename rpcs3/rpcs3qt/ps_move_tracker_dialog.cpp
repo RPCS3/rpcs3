@@ -360,6 +360,7 @@ void ps_move_tracker_dialog::update_saturation_threshold(bool update_slider)
 		ui->saturationThresholdSlider->setValue(saturation_threshold);
 	}
 }
+
 void ps_move_tracker_dialog::update_min_radius(bool update_slider)
 {
 	ui->minRadiusGb->setTitle(tr("Min Radius: %0 %").arg(g_cfg_move.min_radius.get()));
