@@ -296,6 +296,7 @@ void game_list_table::populate(
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);
+		icon_item->setData(Qt::DecorationRole, QPixmap(m_icon_size));
 		icon_item->setData(gui::custom_roles::game_role, QVariant::fromValue(game));
 
 		// Title
