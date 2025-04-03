@@ -483,8 +483,6 @@ namespace vm
 			}
 		}
 
-		bool to_prepare_memory = true;
-
 		for (u64 i = 0;; i++)
 		{
 			auto& bits = get_range_lock_bits(true);
@@ -512,22 +510,11 @@ namespace vm
 
 			if (i < 100)
 			{
-				if (to_prepare_memory)
-				{
-					// We have some spare time, prepare cache lines (todo: reservation tests here)
-					utils::prefetch_write(vm::get_super_ptr(addr));
-					utils::prefetch_write(vm::get_super_ptr(addr) + 64);
-					to_prepare_memory = false;
-				}
-
 				busy_wait(200);
 			}
 			else
 			{
 				std::this_thread::yield();
-
-				// Thread may have been switched or the cache clue has been undermined, cache needs to be prapred again
-				to_prepare_memory = true;
 			}
 		}
 
@@ -591,13 +578,6 @@ namespace vm
 					break;
 				}
 
-				if (to_prepare_memory)
-				{
-					utils::prefetch_write(vm::get_super_ptr(addr));
-					utils::prefetch_write(vm::get_super_ptr(addr) + 64);
-					to_prepare_memory = false;
-				}
-
 				utils::pause();
 			}
 
@@ -607,13 +587,6 @@ namespace vm
 				{
 					while (!(ptr->state & cpu_flag::wait))
 					{
-						if (to_prepare_memory)
-						{
-							utils::prefetch_write(vm::get_super_ptr(addr));
-							utils::prefetch_write(vm::get_super_ptr(addr) + 64);
-							to_prepare_memory = false;
-						}
-
 						utils::pause();
 					}
 				}
