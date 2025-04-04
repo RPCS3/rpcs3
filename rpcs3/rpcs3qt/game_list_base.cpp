@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "game_list_base.h"
+#include "custom_table_widget_item.h"
 
 #include <QDir>
 #include <QPainter>
@@ -22,18 +23,17 @@ void game_list_base::repaint_icons(std::vector<game_info>& game_data, const QCol
 	placeholder.setDevicePixelRatio(device_pixel_ratio);
 	placeholder.fill(Qt::transparent);
 
+	int row = 0;
 	for (game_info& game : game_data)
 	{
+		if (row++ % 2 == 0) placeholder.fill(Qt::red);
+		else                placeholder.fill(Qt::blue);
+
 		game->pxmap = placeholder;
 	
-		if (movie_item_base* item = game->item)
+		if (custom_table_widget_item* item = static_cast<custom_table_widget_item*>(game->item))
 		{
-			item->set_icon_load_func([this, game, device_pixel_ratio, cancel = item->icon_loading_aborted()](int)
-			{
-				IconLoadFunction(game, device_pixel_ratio, cancel);
-			});
-
-			item->image_change_callback();
+			item->setData(Qt::DecorationRole, placeholder);
 		}
 	}
 }
