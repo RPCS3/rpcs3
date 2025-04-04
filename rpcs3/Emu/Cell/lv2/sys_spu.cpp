@@ -388,7 +388,24 @@ struct spu_limits_t
 
 	SAVESTATE_INIT_POS(47);
 
-	bool check(const limits_data& init) const
+	bool check_valid(const limits_data& init) const
+	{
+		u32 physical_spus_count = init.physical;
+		u32 raw_spu_count = init.raw_spu;
+		u32 controllable_spu_count = init.controllable;
+
+		const u32 spu_limit = init.spu_limit != umax ? init.spu_limit : max_spu;
+		const u32 raw_limit = init.raw_limit != umax ? init.raw_limit : max_raw;
+
+		if (spu_limit + raw_limit > 6 || physical_spus_count > spu_limit || controllable_spu_count > spu_limit)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	bool check_busy(const limits_data& init) const
 	{
 		u32 physical_spus_count = init.physical;
 		u32 raw_spu_count = init.raw_spu;
@@ -410,7 +427,8 @@ struct spu_limits_t
 
 		raw_spu_count += spu_thread::g_raw_spu_ctr;
 
-		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || physical_spus_count + controllable_spu_count > spu_limit)
+		// physical_spus_count >= spu_limit returns EBUSY, not EINVAL!
+		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || physical_spus_count > spu_limit || controllable_spu_count > spu_limit)
 		{
 			return false;
 		}
@@ -437,7 +455,7 @@ error_code sys_spu_initialize(ppu_thread& ppu, u32 max_usable_spu, u32 max_raw_s
 
 	std::lock_guard lock(limits.mutex);
 
-	if (!limits.check(limits_data{.spu_limit = max_usable_spu - max_raw_spu, .raw_limit = max_raw_spu}))
+	if (!limits.check_busy(limits_data{.spu_limit = max_usable_spu - max_raw_spu, .raw_limit = max_raw_spu}))
 	{
 		return CELL_EBUSY;
 	}
@@ -952,7 +970,13 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	std::unique_lock lock(limits.mutex);
 
-	if (!limits.check(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
+	if (!limits.check_valid(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
+	{
+		ct->free(mem_size);
+		return CELL_EINVAL;
+	}
+
+	if (!limits.check_busy(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
 	{
 		ct->free(mem_size);
 		return CELL_EBUSY;
@@ -2275,7 +2299,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	std::lock_guard lock(limits.mutex);
 
-	if (!limits.check(limits_data{.raw_spu = 1}))
+	if (!limits.check_busy(limits_data{.raw_spu = 1}))
 	{
 		return CELL_EAGAIN;
 	}
@@ -2331,7 +2355,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 
 	std::lock_guard lock(limits.mutex);
 
-	if (!limits.check(limits_data{.raw_spu = 1}))
+	if (!limits.check_busy(limits_data{.raw_spu = 1}))
 	{
 		return CELL_EAGAIN;
 	}
