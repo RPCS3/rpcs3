@@ -16,4 +16,4 @@ Submitting your test results for Commercial Games must be done on our forums. Pl
 
 # Contributing
 
-Check the [Coding Style Guidelines](https://github.com/RPCS3/rpcs3/wiki/Coding-Style) and [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information). If you have any questions, hit us up on our [Discord Server](https://discord.me/RPCS3) in the **#development** channel.
+Check the [Coding Style Guidelines](https://github.com/RPCS3/rpcs3/wiki/Coding-Style) and [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information). If you have any questions, hit us up on our [Discord Server](https://discord.gg/rpcs3) in the **#development** channel.

@@ -4,7 +4,7 @@ contact_links:
     url: https://rpcs3.net/quickstart
     about: Everything you need to know to install and configure emulator, and add games
   - name: Ask for help
-    url: https://discord.me/RPCS3
+    url: https://discord.gg/rpcs3
     about: If you have some questions or need help, please use our Discord server instead of GitHub
   - name: Report game compatibility
     url: https://forums.rpcs3.net/thread-196671.html
