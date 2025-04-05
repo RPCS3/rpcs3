@@ -433,7 +433,7 @@ namespace vk
 	void descriptor_set::push(const descriptor_set_dynamic_offset_t& offset)
 	{
 		ensure(offset.location >= 0 && offset.location <= 16);
-		while (m_dynamic_offsets.size() < (offset.location + 1))
+		while (m_dynamic_offsets.size() < (static_cast<u32>(offset.location) + 1u))
 		{
 			m_dynamic_offsets.push_back(0);
 		}
