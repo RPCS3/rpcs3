@@ -76,6 +76,8 @@ vec4 _fetch_constant(const in uint base_offset)
 	// uint override
 	return _fetch_constant(int(base_offset));
 }
+#elif defined(VULKAN)
+#define _fetch_constant(x) vc[x + xform_constants_offset]
 #else
 #define _fetch_constant(x) vc[x]
 #endif

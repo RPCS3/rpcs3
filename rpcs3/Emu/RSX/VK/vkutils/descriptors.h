@@ -27,6 +27,12 @@ namespace vk
 		}
 	};
 
+	struct descriptor_set_dynamic_offset_t
+	{
+		int location;
+		u32 value;
+	};
+
 	class descriptor_pool
 	{
 	public:
@@ -95,6 +101,7 @@ namespace vk
 		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
 		void push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask = umax);
+		void push(const descriptor_set_dynamic_offset_t& offset);
 
 		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 
@@ -109,6 +116,7 @@ namespace vk
 		rsx::simple_array<VkBufferView> m_buffer_view_pool;
 		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
 		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
+		rsx::simple_array<u32> m_dynamic_offsets;
 
 #ifdef __clang__
 		// Clang (pre 16.x) does not support LWG 2089, std::construct_at for POD types
