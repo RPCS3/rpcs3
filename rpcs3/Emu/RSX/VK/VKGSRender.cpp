@@ -2311,19 +2311,28 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		base_offset = 0;
 	}
 
+	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
+	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16;
+
 	rsx::simple_array<u32> dynamic_constants;
-	dynamic_constants.push_back(vertex_info.vertex_index_base);       // Vertex index base
-	dynamic_constants.push_back(vertex_info.vertex_index_offset);     // Vertex index offset
-	dynamic_constants.push_back(id);                                  // Draw id
-	dynamic_constants.push_back((id * 16) + (base_offset / 8));       // Vertex layout offset
-	dynamic_constants.push_back(m_xform_constants_dynamic_offset);    // Vertex constants offset
+	dynamic_constants.push_back(vertex_info.vertex_index_base);         // Vertex index base
+	dynamic_constants.push_back(vertex_info.vertex_index_offset);       // Vertex index offset
+	dynamic_constants.push_back(id);                                    // Draw id
+	dynamic_constants.push_back(vertex_layout_offset);                  // Vertex layout offset
+	dynamic_constants.push_back(constant_id_offset);                    // Vertex constants offset
 
 	if (vk::emulate_conditional_rendering())
 	{
 		dynamic_constants.push_back(cond_render_ctrl.hw_cond_active ? 1 : 0);
 	}
 
-	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, dynamic_constants.size_bytes(), dynamic_constants.data());
+	vkCmdPushConstants(
+		*m_current_command_buffer,
+		m_pipeline_layout,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0,
+		static_cast<u32>(dynamic_constants.size_bytes()),
+		dynamic_constants.data());
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2355,83 +2364,16 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		return;
 	}
 
-	// Hot-patching transform constants mid-draw (instanced draw)
-	std::pair<VkDeviceSize, VkDeviceSize> data_range;
-	void* data_source = nullptr;
-
-	if (m_vertex_prog->has_indexed_constants)
+	// Buffer updates mid-pass violate the spec and destroy performance on NVIDIA
+	auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
 	{
-		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
-		const auto byte_count = count * 16;
-		const auto byte_offset = index * 16;
-
-		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
-		data_source = &REGS(ctx)->transform_constants[index];
-	}
-	else if (auto xform_id = m_vertex_prog->translate_constants_range(index, count); xform_id >= 0)
-	{
-		const auto write_offset = xform_id * 16;
-		const auto byte_count = count * 16;
-
-		data_range = { m_vertex_constants_buffer_info.offset + write_offset, byte_count };
-		data_source = &REGS(ctx)->transform_constants[index];
-	}
-	else
-	{
-		// Indexed. This is a bit trickier. Use scratchpad to avoid UAF
-		auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
-		{
-			m_scratch_mem.resize(size);
-			return { m_scratch_mem.data(), size };
-		};
-
-		rsx::io_buffer iobuf(allocate_mem);
-		upload_transform_constants(iobuf);
-
-		ensure(iobuf.size() >= m_vertex_constants_buffer_info.range);
-		data_range = { m_vertex_constants_buffer_info.offset, m_vertex_constants_buffer_info.range };
-		data_source = iobuf.data();
-	}
-
-	// Preserving an active renderpass across a transfer operation is illegal vulkan. However, splitting up the CB into thousands of renderpasses incurs an overhead.
-	// We cheat here for specific cases where we already know the driver can let us get away with this.
-	static const std::set<vk::driver_vendor> s_allowed_vendors =
-	{
-		vk::driver_vendor::AMD,
-		vk::driver_vendor::RADV,
-		vk::driver_vendor::LAVAPIPE,
-		vk::driver_vendor::NVIDIA,
-		vk::driver_vendor::NVK
+		const usz alignment = m_device->gpu().get_limits().minStorageBufferOffsetAlignment;
+		m_xform_constants_dynamic_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
+		return std::make_pair(m_transform_constants_ring_info.map(m_xform_constants_dynamic_offset, size), size);
 	};
 
-	const auto driver_vendor = vk::get_driver_vendor();
-	const bool preserve_renderpass = !g_cfg.video.strict_rendering_mode && s_allowed_vendors.contains(driver_vendor);
-
-	vk::insert_buffer_memory_barrier(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-		preserve_renderpass);
-
-	// FIXME: This is illegal during a renderpass
-	vkCmdUpdateBuffer(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		data_source);
-
-	vk::insert_buffer_memory_barrier(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT,
-		preserve_renderpass);
+	rsx::io_buffer iobuf(allocate_mem);
+	upload_transform_constants(iobuf);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
