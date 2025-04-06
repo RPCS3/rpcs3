@@ -2312,18 +2312,21 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	}
 
 	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
-	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16;
+	const volatile u32 constant_id_offset = static_cast<volatile u32>(m_xform_constants_dynamic_offset) / 16u;
 
-	rsx::simple_array<u32> dynamic_constants;
-	dynamic_constants.push_back(vertex_info.vertex_index_base);         // Vertex index base
-	dynamic_constants.push_back(vertex_info.vertex_index_offset);       // Vertex index offset
-	dynamic_constants.push_back(id);                                    // Draw id
-	dynamic_constants.push_back(vertex_layout_offset);                  // Vertex layout offset
-	dynamic_constants.push_back(constant_id_offset);                    // Vertex constants offset
+	u32 push_constants[6];
+	u32 data_length = 20;
+
+	push_constants[0] = vertex_info.vertex_index_base;
+	push_constants[1] = vertex_info.vertex_index_offset;
+	push_constants[2] = id;
+	push_constants[3] = vertex_layout_offset;
+	push_constants[4] = constant_id_offset;
 
 	if (vk::emulate_conditional_rendering())
 	{
-		dynamic_constants.push_back(cond_render_ctrl.hw_cond_active ? 1 : 0);
+		push_constants[5] = cond_render_ctrl.hw_cond_active ? 1 : 0;
+		data_length += 4;
 	}
 
 	vkCmdPushConstants(
@@ -2331,8 +2334,8 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		m_pipeline_layout,
 		VK_SHADER_STAGE_VERTEX_BIT,
 		0,
-		static_cast<u32>(dynamic_constants.size_bytes()),
-		dynamic_constants.data());
+		data_length,
+		push_constants);
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2349,7 +2352,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	m_vertex_layout_ring_info.unmap();
 }
 
-void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
+void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32 count)
 {
 	if (!m_program || !m_vertex_prog)
 	{
