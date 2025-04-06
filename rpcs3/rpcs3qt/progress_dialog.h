@@ -14,10 +14,6 @@ public:
 	void SetDeleteOnClose();
 	void SignalFailure() const;
 
-	void show_progress_indicator();
-
-	void setVisible(bool visible) override;
-
 private:
 	std::unique_ptr<progress_indicator> m_progress_indicator;
 };

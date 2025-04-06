@@ -4,7 +4,7 @@ RPCS3
 [![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=8&_a=summary&repositoryFilter=4)
 [![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3/master?label=Cirrus%20CI&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/RPCS3/rpcs3/rpcs3.yml?branch=master&logo=github&label=Actions)](https://github.com/RPCS3/rpcs3/actions/workflows/rpcs3.yml)
-[![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
+[![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.gg/rpcs3)
 
 The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows, Linux, macOS and FreeBSD.
 
@@ -34,7 +34,7 @@ See [BUILDING.md](BUILDING.md) for more information about how to setup an enviro
 
 Check our friendly [quickstart](https://rpcs3.net/quickstart) guide to make sure your computer meets the minimum system requirements to run RPCS3.
 
-Don't forget to have your graphics driver up to date and to install the [Visual C++ Redistributable Packages for Visual Studio 2019](https://aka.ms/vs/16/release/VC_redist.x64.exe) if you are a Windows user.
+Don't forget to have your graphics driver up to date and to install the [Visual C++ Redistributable Packages for Visual Studio 2022](https://aka.ms/vs/17/release/VC_redist.x64.exe) if you are a Windows user.
 
 ## License
 

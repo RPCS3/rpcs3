@@ -1,10 +1,5 @@
 #pragma once
 
-#ifdef HAS_QT_WIN_STUFF
-#include <QWinThumbnailToolBar>
-#include <QWinThumbnailToolButton>
-#endif
-
 #include <QActionGroup>
 #include <QMainWindow>
 #include <QIcon>
@@ -60,17 +55,6 @@ class main_window : public QMainWindow
 	QIcon m_icon_restart;
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;
-
-#ifdef HAS_QT_WIN_STUFF
-	QIcon m_icon_thumb_play;
-	QIcon m_icon_thumb_pause;
-	QIcon m_icon_thumb_stop;
-	QIcon m_icon_thumb_restart;
-	QWinThumbnailToolBar *m_thumb_bar = nullptr;
-	QWinThumbnailToolButton *m_thumb_playPause = nullptr;
-	QWinThumbnailToolButton *m_thumb_stop = nullptr;
-	QWinThumbnailToolButton *m_thumb_restart = nullptr;
-#endif
 
 	enum class drop_type
 	{
