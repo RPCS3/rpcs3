@@ -1825,7 +1825,7 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_spu.warning("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
+	sys_spu.trace("sys_spu_thread_write_spu_mb(id=0x%x, value=0x%x)", id, value);
 
 	const auto [thread, group] = lv2_spu_group::get_thread(id);
 
