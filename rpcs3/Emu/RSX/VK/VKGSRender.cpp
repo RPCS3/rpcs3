@@ -491,7 +491,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
 
 	//Precalculated stuff
-	std::tie(m_pipeline_layout, m_descriptor_layouts) = vk::get_common_pipeline_layout(*m_device);
+	rsx::simple_array<VkDescriptorSetLayoutBinding> binding_layout;
+	std::tie(m_pipeline_layout, m_descriptor_layouts, binding_layout) = vk::get_common_pipeline_layout(*m_device);
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
@@ -507,18 +508,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// Generate frame contexts
 	const u32 max_draw_calls = m_device->get_descriptor_max_draw_calls();
-	const auto& binding_table = m_device->get_pipeline_binding_table();
-	const u32 num_fs_samplers = binding_table.vertex_textures_first_bind_slot - binding_table.textures_first_bind_slot;
-
-	rsx::simple_array<VkDescriptorPoolSize> descriptor_type_sizes =
-	{
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) },
-
-		// Conditional rendering predicate slot; refactor to allow skipping this when not needed
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 }
-	};
+	const auto descriptor_type_sizes = vk::get_descriptor_pool_sizes(binding_layout);
 	m_descriptor_pool.create(*m_device, descriptor_type_sizes, max_draw_calls);
 
 	VkSemaphoreCreateInfo semaphore_info = {};
@@ -531,7 +521,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
-	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
+	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "raster env buffer");
@@ -2107,7 +2097,7 @@ void VKGSRender::load_program_env()
 		usz mem_offset = 0;
 		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
 		{
-			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
+			const auto alignment = m_device->gpu().get_limits().minStorageBufferOffsetAlignment;
 			mem_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
 			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, size), size);
 		};
@@ -2118,7 +2108,8 @@ void VKGSRender::load_program_env()
 		if (!io_buf.empty())
 		{
 			m_transform_constants_ring_info.unmap();
-			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem_offset, io_buf.size() };
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
+			m_xform_constants_dynamic_offset = mem_offset;
 		}
 	}
 
@@ -2225,7 +2216,7 @@ void VKGSRender::load_program_env()
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 
 	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot, m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_buffer(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot, m_current_frame->descriptor_set);
 	m_program->bind_uniform(m_raster_env_buffer_info, binding_table.rasterizer_env_bind_slot, m_current_frame->descriptor_set);
@@ -2320,21 +2311,31 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		base_offset = 0;
 	}
 
-	u8 data_size = 16;
-	u32 draw_info[5];
+	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
+	const volatile u32 constant_id_offset = static_cast<volatile u32>(m_xform_constants_dynamic_offset) / 16u;
 
-	draw_info[0] = vertex_info.vertex_index_base;
-	draw_info[1] = vertex_info.vertex_index_offset;
-	draw_info[2] = id;
-	draw_info[3] = (id * 16) + (base_offset / 8);
+	u32 push_constants[6];
+	u32 data_length = 20;
+
+	push_constants[0] = vertex_info.vertex_index_base;
+	push_constants[1] = vertex_info.vertex_index_offset;
+	push_constants[2] = id;
+	push_constants[3] = vertex_layout_offset;
+	push_constants[4] = constant_id_offset;
 
 	if (vk::emulate_conditional_rendering())
 	{
-		draw_info[4] = cond_render_ctrl.hw_cond_active ? 1 : 0;
-		data_size = 20;
+		push_constants[5] = cond_render_ctrl.hw_cond_active ? 1 : 0;
+		data_length += 4;
 	}
 
-	vkCmdPushConstants(*m_current_command_buffer, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
+	vkCmdPushConstants(
+		*m_current_command_buffer,
+		m_pipeline_layout,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		0,
+		data_length,
+		push_constants);
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2351,7 +2352,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	m_vertex_layout_ring_info.unmap();
 }
 
-void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 count)
+void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32 count)
 {
 	if (!m_program || !m_vertex_prog)
 	{
@@ -2366,83 +2367,16 @@ void VKGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 		return;
 	}
 
-	// Hot-patching transform constants mid-draw (instanced draw)
-	std::pair<VkDeviceSize, VkDeviceSize> data_range;
-	void* data_source = nullptr;
-
-	if (m_vertex_prog->has_indexed_constants)
+	// Buffer updates mid-pass violate the spec and destroy performance on NVIDIA
+	auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
 	{
-		// We're working with a full range. We can do a direct patch in this case since no index translation is required.
-		const auto byte_count = count * 16;
-		const auto byte_offset = index * 16;
-
-		data_range = { m_vertex_constants_buffer_info.offset + byte_offset, byte_count };
-		data_source = &REGS(ctx)->transform_constants[index];
-	}
-	else if (auto xform_id = m_vertex_prog->translate_constants_range(index, count); xform_id >= 0)
-	{
-		const auto write_offset = xform_id * 16;
-		const auto byte_count = count * 16;
-
-		data_range = { m_vertex_constants_buffer_info.offset + write_offset, byte_count };
-		data_source = &REGS(ctx)->transform_constants[index];
-	}
-	else
-	{
-		// Indexed. This is a bit trickier. Use scratchpad to avoid UAF
-		auto allocate_mem = [&](usz size) -> std::pair<void*, usz>
-		{
-			m_scratch_mem.resize(size);
-			return { m_scratch_mem.data(), size };
-		};
-
-		rsx::io_buffer iobuf(allocate_mem);
-		upload_transform_constants(iobuf);
-
-		ensure(iobuf.size() >= m_vertex_constants_buffer_info.range);
-		data_range = { m_vertex_constants_buffer_info.offset, m_vertex_constants_buffer_info.range };
-		data_source = iobuf.data();
-	}
-
-	// Preserving an active renderpass across a transfer operation is illegal vulkan. However, splitting up the CB into thousands of renderpasses incurs an overhead.
-	// We cheat here for specific cases where we already know the driver can let us get away with this.
-	static const std::set<vk::driver_vendor> s_allowed_vendors =
-	{
-		vk::driver_vendor::AMD,
-		vk::driver_vendor::RADV,
-		vk::driver_vendor::LAVAPIPE,
-		vk::driver_vendor::NVIDIA,
-		vk::driver_vendor::NVK
+		const usz alignment = m_device->gpu().get_limits().minStorageBufferOffsetAlignment;
+		m_xform_constants_dynamic_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
+		return std::make_pair(m_transform_constants_ring_info.map(m_xform_constants_dynamic_offset, size), size);
 	};
 
-	const auto driver_vendor = vk::get_driver_vendor();
-	const bool preserve_renderpass = !g_cfg.video.strict_rendering_mode && s_allowed_vendors.contains(driver_vendor);
-
-	vk::insert_buffer_memory_barrier(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		VK_ACCESS_UNIFORM_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-		preserve_renderpass);
-
-	// FIXME: This is illegal during a renderpass
-	vkCmdUpdateBuffer(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		data_source);
-
-	vk::insert_buffer_memory_barrier(
-		*m_current_command_buffer,
-		m_vertex_constants_buffer_info.buffer,
-		data_range.first,
-		data_range.second,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT,
-		preserve_renderpass);
+	rsx::io_buffer iobuf(allocate_mem);
+	upload_transform_constants(iobuf);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
