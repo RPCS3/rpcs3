@@ -29,6 +29,9 @@ namespace rsx
 		// Location of last execution barrier
 		u32 last_execution_barrier_index{};
 
+		// Mask of all active barriers
+		u32 draw_command_barrier_mask = 0;
+
 		// Draw-time iterator to the draw_command_barriers struct
 		mutable simple_array<barrier_t>::iterator current_barrier_it;
 
