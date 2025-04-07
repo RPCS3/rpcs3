@@ -183,7 +183,12 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	if (!mutex)
 	{
-		return CELL_ESRCH;
+		if (lwmutex_id >> 24 == lv2_lwmutex::id_base >> 24)
+		{
+			return { CELL_ESRCH, lwmutex_id };
+		}
+
+		return { CELL_ESRCH, "Invalid ID" };
 	}
 
 	if (mutex.ret)
@@ -313,7 +318,12 @@ error_code _sys_lwmutex_trylock(ppu_thread& ppu, u32 lwmutex_id)
 
 	if (!mutex)
 	{
-		return CELL_ESRCH;
+		if (lwmutex_id >> 24 == lv2_lwmutex::id_base >> 24)
+		{
+			return { CELL_ESRCH, lwmutex_id };
+		}
+
+		return { CELL_ESRCH, "Invalid ID" };
 	}
 
 	if (!mutex.ret)
