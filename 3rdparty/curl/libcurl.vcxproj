@@ -76,6 +76,7 @@
     <ClCompile Include="curl\lib\connect.c" />
     <ClCompile Include="curl\lib\content_encoding.c" />
     <ClCompile Include="curl\lib\cookie.c" />
+    <ClCompile Include="curl\lib\cshutdn.c" />
     <ClCompile Include="curl\lib\curl_addrinfo.c" />
     <ClCompile Include="curl\lib\curl_des.c" />
     <ClCompile Include="curl\lib\curl_endian.c" />
@@ -94,7 +95,9 @@
     <ClCompile Include="curl\lib\curl_threads.c" />
     <ClCompile Include="curl\lib\curl_trc.c" />
     <ClCompile Include="curl\lib\cw-out.c" />
+    <ClCompile Include="curl\lib\cw-pause.c" />
     <ClCompile Include="curl\lib\dict.c" />
+    <ClCompile Include="curl\lib\dllmain.c" />
     <ClCompile Include="curl\lib\doh.c" />
     <ClCompile Include="curl\lib\dynbuf.c" />
     <ClCompile Include="curl\lib\dynhds.c" />
@@ -112,6 +115,7 @@
     <ClCompile Include="curl\lib\getinfo.c" />
     <ClCompile Include="curl\lib\gopher.c" />
     <ClCompile Include="curl\lib\hash.c" />
+    <ClCompile Include="curl\lib\hash_offt.c" />
     <ClCompile Include="curl\lib\headers.c" />
     <ClCompile Include="curl\lib\hmac.c" />
     <ClCompile Include="curl\lib\hostasyn.c" />
@@ -138,6 +142,7 @@
     <ClCompile Include="curl\lib\krb5.c" />
     <ClCompile Include="curl\lib\ldap.c" />
     <ClCompile Include="curl\lib\llist.c" />
+    <ClCompile Include="curl\lib\macos.c" />
     <ClCompile Include="curl\lib\md4.c" />
     <ClCompile Include="curl\lib\md5.c" />
     <ClCompile Include="curl\lib\memdebug.c" />
@@ -145,6 +150,7 @@
     <ClCompile Include="curl\lib\mprintf.c" />
     <ClCompile Include="curl\lib\mqtt.c" />
     <ClCompile Include="curl\lib\multi.c" />
+    <ClCompile Include="curl\lib\multi_ev.c" />
     <ClCompile Include="curl\lib\netrc.c" />
     <ClCompile Include="curl\lib\nonblock.c" />
     <ClCompile Include="curl\lib\noproxy.c" />
@@ -174,10 +180,9 @@
     <ClCompile Include="curl\lib\splay.c" />
     <ClCompile Include="curl\lib\strcase.c" />
     <ClCompile Include="curl\lib\strdup.c" />
+    <ClCompile Include="curl\lib\strequal.c" />
     <ClCompile Include="curl\lib\strerror.c" />
     <ClCompile Include="curl\lib\strparse.c" />
-    <ClCompile Include="curl\lib\strtok.c" />
-    <ClCompile Include="curl\lib\strtoofft.c" />
     <ClCompile Include="curl\lib\system_win32.c" />
     <ClCompile Include="curl\lib\telnet.c" />
     <ClCompile Include="curl\lib\tftp.c" />
@@ -260,6 +265,7 @@
     <ClInclude Include="curl\lib\connect.h" />
     <ClInclude Include="curl\lib\content_encoding.h" />
     <ClInclude Include="curl\lib\cookie.h" />
+    <ClInclude Include="curl\lib\cshutdn.h" />
     <ClInclude Include="curl\lib\curlx.h" />
     <ClInclude Include="curl\lib\curl_addrinfo.h" />
     <ClInclude Include="curl\lib\curl_base64.h" />
@@ -291,6 +297,7 @@
     <ClInclude Include="curl\lib\curl_threads.h" />
     <ClInclude Include="curl\lib\curl_trc.h" />
     <ClInclude Include="curl\lib\cw-out.h" />
+    <ClInclude Include="curl\lib\cw-pause.h" />
     <ClInclude Include="curl\lib\dict.h" />
     <ClInclude Include="curl\lib\doh.h" />
     <ClInclude Include="curl\lib\dynbuf.h" />
@@ -309,6 +316,7 @@
     <ClInclude Include="curl\lib\getinfo.h" />
     <ClInclude Include="curl\lib\gopher.h" />
     <ClInclude Include="curl\lib\hash.h" />
+    <ClInclude Include="curl\lib\hash_offt.h" />
     <ClInclude Include="curl\lib\headers.h" />
     <ClInclude Include="curl\lib\hostip.h" />
     <ClInclude Include="curl\lib\hsts.h" />
@@ -328,11 +336,13 @@
     <ClInclude Include="curl\lib\inet_ntop.h" />
     <ClInclude Include="curl\lib\inet_pton.h" />
     <ClInclude Include="curl\lib\llist.h" />
+    <ClInclude Include="curl\lib\macos.h" />
     <ClInclude Include="curl\lib\memdebug.h" />
     <ClInclude Include="curl\lib\mime.h" />
     <ClInclude Include="curl\lib\mqtt.h" />
     <ClInclude Include="curl\lib\multihandle.h" />
     <ClInclude Include="curl\lib\multiif.h" />
+    <ClInclude Include="curl\lib\multi_ev.h" />
     <ClInclude Include="curl\lib\netrc.h" />
     <ClInclude Include="curl\lib\nonblock.h" />
     <ClInclude Include="curl\lib\noproxy.h" />
