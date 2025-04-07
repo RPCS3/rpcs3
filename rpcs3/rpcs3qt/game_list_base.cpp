@@ -25,7 +25,7 @@ void game_list_base::repaint_icons(std::vector<game_info>& game_data, const QCol
 	for (game_info& game : game_data)
 	{
 		game->pxmap = placeholder;
-	
+
 		if (movie_item_base* item = game->item)
 		{
 			item->set_icon_load_func([this, game, device_pixel_ratio, cancel = item->icon_loading_aborted()](int)
