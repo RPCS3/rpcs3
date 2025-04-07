@@ -40,7 +40,7 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 		.arg(gui::utils::make_link(tr("Quickstart"), "https://rpcs3.net/quickstart"))
 		.arg(gui::utils::make_link(tr("FAQ"), "https://rpcs3.net/faq"))
 		.arg(gui::utils::make_link(tr("Forums"), "https://forums.rpcs3.net"))
-		.arg(gui::utils::make_link(tr("Discord"), "https://discord.me/RPCS3"))));
+		.arg(gui::utils::make_link(tr("Discord"), "https://discord.gg/rpcs3"))));
 
 #ifdef __APPLE__
 	ui->create_applications_menu_shortcut->setText(tr("&Create Launchpad shortcut"));

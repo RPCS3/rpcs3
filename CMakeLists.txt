@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.9)
+cmake_minimum_required(VERSION 3.28)
 
 project(rpcs3 LANGUAGES C CXX)
 

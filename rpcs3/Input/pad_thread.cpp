@@ -236,6 +236,7 @@ void pad_thread::SetRumble(const u32 pad, u8 large_motor, bool small_motor)
 	if (pad >= m_pads.size())
 		return;
 
+	m_pads[pad]->m_last_rumble_time_us = get_system_time();
 	m_pads[pad]->m_vibrateMotors[0].m_value = large_motor;
 	m_pads[pad]->m_vibrateMotors[1].m_value = small_motor ? 255 : 0;
 }

@@ -68,8 +68,6 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	, m_start_games_fullscreen(force_fullscreen)
 	, m_renderer(g_cfg.video.renderer)
 {
-	load_gui_settings();
-
 	m_window_title = Emu.GetFormattedTitle(0);
 
 	if (!g_cfg_recording.load())
@@ -121,8 +119,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 		create();
 	}
 
-	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
-	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
+	load_gui_settings();
 
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
@@ -174,6 +171,20 @@ void gs_frame::load_gui_settings()
 	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
 	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
+
+	if (m_disable_kb_hotkeys)
+	{
+		if (m_shortcut_handler)
+		{
+			m_shortcut_handler->deleteLater();
+			m_shortcut_handler = nullptr;
+		}
+	}
+	else if (!m_shortcut_handler)
+	{
+		m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
+		connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
+	}
 }
 
 void gs_frame::update_shortcuts()
@@ -650,9 +661,6 @@ void gs_frame::show()
 			}
 		}
 	});
-
-	// if we do this before show, the QWinTaskbarProgress won't show
-	m_progress_indicator->show(this);
 }
 
 display_handle_t gs_frame::handle() const
@@ -1101,7 +1109,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool visibility_cha
 
 void gs_frame::mouse_hide_timeout()
 {
-	// Our idle timeout occured, so we update the cursor
+	// Our idle timeout occurred, so we update the cursor
 	if (m_hide_mouse_after_idletime && m_show_mouse)
 	{
 		handle_cursor(visibility(), false, false, false);

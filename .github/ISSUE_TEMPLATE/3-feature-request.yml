@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please do not ask for help or report compatibility regressions here, use [RPCS3 Discord server](https://discord.me/RPCS3) or [forums](https://forums.rpcs3.net/) instead.
+        Please do not ask for help or report compatibility regressions here, use [RPCS3 Discord server](https://discord.gg/rpcs3) or [forums](https://forums.rpcs3.net/) instead.
   - type: textarea
     id: quick-summary
     attributes:
@@ -31,6 +31,6 @@ body:
         * If this feature is something that a game is trying to use, upload a log file for it.
 
         RPCS3's Log file will be ```RPCS3.log.gz``` (sometimes shows as RPCS3.log with zip icon) or ```RPCS3.log``` (sometimes shows as RPCS3 wtih notepad icon).
-        * On Windows it will be in the RPCS3 directory near the executable
+        * On Windows it will be in the ```log``` folder inside your RPCS3 folder.
         * On Linux it will be in ```~/.cache/rpcs3/```
         * On MacOS it will be in ```~/Library/Caches/rpcs3```. If you're unable to locate it copy paste the path in Spotlight and hit enter.

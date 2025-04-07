@@ -270,13 +270,12 @@ std::vector<SaveDataEntry> save_manager_dialog::GetSaveEntries(const std::string
 			return;
 		}
 
-		SaveDataEntry save_entry2;
+		SaveDataEntry save_entry2 {};
 		save_entry2.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
 		save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
 		save_entry2.title = psf::get_string(psf, "TITLE");
 		save_entry2.subtitle = psf::get_string(psf, "SUB_TITLE");
 		save_entry2.details = psf::get_string(psf, "DETAIL");
-		save_entry2.size = 0;
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
@@ -586,7 +585,7 @@ void save_manager_dialog::OnEntriesRemove()
 }
 
 // Pop-up a small context-menu, being a replacement for save_data_manage_dialog
-void save_manager_dialog::ShowContextMenu(const QPoint &pos)
+void save_manager_dialog::ShowContextMenu(const QPoint& pos)
 {
 	const int idx = m_list->currentRow();
 	if (idx == -1)

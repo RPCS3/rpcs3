@@ -13,11 +13,12 @@ namespace rsx
 		private:
 			struct save_dialog_entry : horizontal_layout
 			{
-			private:
-				std::unique_ptr<image_info> icon_data;
-
 			public:
-				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf);
+				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path);
+				void set_selected(bool selected) override;
+
+			private:
+				overlay_element* m_image = nullptr;
 			};
 
 			std::unique_ptr<overlay_element> m_dim_background;
@@ -38,7 +39,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay);
+			s32 show(const std::string& base_dir, std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay);
 		};
 	}
 }

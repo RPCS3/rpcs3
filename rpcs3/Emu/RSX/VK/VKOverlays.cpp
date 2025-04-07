@@ -386,21 +386,13 @@ namespace vk
 			VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
 	}
 
-	vk::image_view* ui_overlay_renderer::upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
-		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid)
+	void ui_overlay_renderer::upload_simple_texture(vk::image* tex, vk::command_buffer& cmd,
+		vk::data_heap& upload_heap, u32 w, u32 h, u32 layers, bool font, const void* pixel_src)
 	{
-		const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 		const u32 pitch = (font) ? w : w * 4;
 		const u32 data_size = pitch * h * layers;
 		const auto offset = upload_heap.alloc<512>(data_size);
 		const auto addr = upload_heap.map(offset, data_size);
-
-		const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers };
-
-		auto tex = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_IMAGE_TYPE_2D, format, std::max(w, 1u), std::max(h, 1u), 1, 1, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			0, VMM_ALLOCATION_POOL_UNDEFINED);
 
 		if (pixel_src && data_size)
 			std::memcpy(addr, pixel_src, data_size);
@@ -409,17 +401,32 @@ namespace vk
 
 		upload_heap.unmap();
 
-		VkBufferImageCopy region;
-		region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, layers };
-		region.bufferOffset = offset;
-		region.bufferRowLength = w;
-		region.bufferImageHeight = h;
-		region.imageOffset = {};
-		region.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u };
-
-		change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		const VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, layers };
+		VkBufferImageCopy region
+		{
+			.bufferOffset = offset,
+			.bufferRowLength = w,
+			.bufferImageHeight = h,
+			.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, layers },
+			.imageOffset = {},
+			.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u }
+		};
+		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 		vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-		change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+	}
+
+	vk::image_view* ui_overlay_renderer::upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
+		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid)
+	{
+		const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
+
+		auto tex = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_IMAGE_TYPE_2D, format, std::max(w, 1u), std::max(h, 1u), 1, 1, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			0, VMM_ALLOCATION_POOL_UNDEFINED);
+
+		upload_simple_texture(tex.get(), cmd, upload_heap, w, h, layers, font, pixel_src);
 
 		auto view = std::make_unique<vk::image_view>(dev, tex.get());
 
@@ -521,12 +528,23 @@ namespace vk
 				true, false, bytes.data(), -1);
 	}
 
-	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
+	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
 	{
-		u64 key = reinterpret_cast<u64>(desc);
-		auto found = temp_view_cache.find(key);
-		if (found != temp_view_cache.end())
-			return found->second.get();
+		const bool dirty = std::exchange(desc->dirty, false);
+		const u64 key = reinterpret_cast<u64>(desc);
+
+		auto cached = temp_view_cache.find(key);
+		if (cached != temp_view_cache.end())
+		{
+			vk::image_view* view = cached->second.get();
+
+			if (dirty)
+			{
+				upload_simple_texture(view->image(), cmd, upload_heap, desc->w, desc->h, 1, false, desc->get_data());
+			}
+
+			return view;
+		}
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, desc->w, desc->h, 1,
 				false, true, desc->get_data(), owner_uid);
@@ -693,7 +711,7 @@ namespace vk
 					: rsx::overlays::texture_sampling_mode::font3D;
 				break;
 			case rsx::overlays::image_resource_id::raw_image:
-				src = find_temp_image(static_cast<rsx::overlays::image_info*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
+				src = find_temp_image(static_cast<rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
 				break;
 			default:
 				src = view_cache[command.config.texture_ref].get();

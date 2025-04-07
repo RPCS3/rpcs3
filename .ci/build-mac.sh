@@ -108,6 +108,8 @@ export MACOSX_DEPLOYMENT_TARGET=14.0
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
     -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=140000" \
+    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
     -G Ninja
 
 "$BREW_PATH/bin/ninja"; build_status=$?;

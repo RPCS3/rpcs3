@@ -131,9 +131,6 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	// Fix size
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
-
-	// if we do this before, the QWinTaskbarProgress won't show
-	if (m_progress_indicator) m_progress_indicator->show(m_dialog->windowHandle());
 }
 
 void msg_dialog_frame::Close(bool success)
