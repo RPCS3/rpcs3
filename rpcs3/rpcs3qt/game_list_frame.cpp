@@ -2363,7 +2363,7 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 
 		connect(future_watcher, &QFutureWatcher<void>::finished, this, [=, this]()
 		{
-			pdlg->setLabelText(progressLabel.arg(+*index).arg(serials_size));
+			pdlg->setLabelText(progressLabel.arg(index->load()).arg(serials_size));
 			pdlg->setCancelButtonText(tr("OK"));
 			QApplication::beep();
 
@@ -2396,7 +2396,7 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 			return;
 		}
 
-		pdlg->setLabelText(progressLabel.arg(+*index).arg(serials_size));
+		pdlg->setLabelText(progressLabel.arg(index->load()).arg(serials_size));
 		pdlg->setCancelButtonText(tr("OK"));
 		connect(pdlg, &progress_dialog::canceled, this, [pdlg](){ pdlg->deleteLater(); });
 		QApplication::beep();
