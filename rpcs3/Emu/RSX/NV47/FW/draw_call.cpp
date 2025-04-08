@@ -101,8 +101,6 @@ namespace rsx
 
 		if (draw_command_barriers.empty())
 		{
-			// Raise alarm here for investigation, we may be missing a corner case.
-			rsx_log.error("Instanced draw detected, but no command barriers found!");
 			return false;
 		}
 
