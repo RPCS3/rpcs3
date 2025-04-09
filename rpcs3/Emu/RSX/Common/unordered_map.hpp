@@ -9,11 +9,11 @@ namespace rsx
 	using unordered_map = std::unordered_map<T, U>;
 }
 #else
-#include "3rdparty/robin_hood/include/robin_hood.h"
+#include "3rdparty/unordered_dense/include/unordered_dense.h"
 
 namespace rsx
 {
 	template<typename T, typename U>
-	using unordered_map = ::robin_hood::unordered_map<T, U>;
+	using unordered_map = ankerl::unordered_dense::map<T, U>;
 }
 #endif
