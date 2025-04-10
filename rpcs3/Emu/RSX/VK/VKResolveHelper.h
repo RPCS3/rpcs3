@@ -277,7 +277,7 @@ namespace vk
 
 			static_parameters_width = 3;
 
-			build(false, true, false);
+			build(false, true, true);
 		}
 
 		void get_dynamic_state_entries(std::vector<VkDynamicState>& state_descriptors) override
