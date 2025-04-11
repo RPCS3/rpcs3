@@ -22,7 +22,7 @@ void game_list_delegate::paint(QPainter* painter, const QStyleOptionViewItem& op
 			visible_region.translate(-table->verticalHeader()->width(), -table->horizontalHeader()->height());
 
 			if (const QTableWidgetItem* current_item = table->item(index.row(), index.column());
-				current_item && visible_region.intersects(table->visualItemRect(current_item)))
+				current_item && visible_region.boundingRect().intersects(table->visualItemRect(current_item)))
 			{
 				if (movie_item* item = static_cast<movie_item*>(table->item(index.row(), static_cast<int>(gui::game_list_columns::icon))))
 				{
