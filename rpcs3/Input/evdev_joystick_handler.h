@@ -80,6 +80,8 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ KEY_DOWN            , "Down Key"    },
 		{ KEY_NEXT            , "Next Key"    },
 		{ KEY_PREVIOUS        , "Previous Key"},
+		// 8bitdo Pro 2 controller uses this for the button below "b"
+		{ KEY_MENU            , "Menu"        },
 		//{ BTN_MISC            , "Misc"        }, same as BTN_0
 		{ BTN_0               , "0"           },
 		{ BTN_1               , "1"           },
