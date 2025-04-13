@@ -208,6 +208,8 @@ private:
 
 
 		// GT5 Wheels&co
+		{0x046D, 0xC24F, 0xC24F, "Logitech G29 Driving Force Racing Wheel [PS3]", nullptr, nullptr},
+		{0x046D, 0xC260, 0xC260, "Logitech G29 Driving Force Racing Wheel [PS4]", nullptr, nullptr},
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", nullptr, nullptr},
 		{0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro", nullptr, nullptr},
 		{0x044F, 0xB65A, 0xB65A, "Thrustmaster F430", nullptr, nullptr},
