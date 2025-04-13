@@ -57,31 +57,9 @@ struct positive_axis : cfg::node
 	cfg::_bool abs_mt_tool_x{ this, "ABS_MT_TOOL_X", false };
 	cfg::_bool abs_mt_tool_y{ this, "ABS_MT_TOOL_Y", false };
 
-	bool load()
-	{
-		if (fs::file cfg_file{ cfg_name, fs::read })
-		{
-			return from_string(cfg_file.to_string());
-		}
-
-		return false;
-	}
-
-	void save()
-	{
-		fs::pending_file file(cfg_name);
-
-		if (file.file)
-		{
-			file.file.write(to_string());
-			file.commit();
-		}
-	}
-
-	bool exist()
-	{
-		return fs::is_file(cfg_name);
-	}
+	bool load();
+	void save() const;
+	bool exist() const;
 };
 
 class evdev_joystick_handler final : public PadHandlerBase
