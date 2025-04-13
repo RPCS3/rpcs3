@@ -2,6 +2,7 @@
 
 #include <util/types.hpp>
 
+#include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Core/RSXVertexTypes.h"
 #include "Emu/RSX/NV47/FW/draw_call.hpp"
 #include "Emu/RSX/Program/ProgramStateCache.h"
@@ -27,6 +28,12 @@ namespace rsx
 
 		std::array<push_buffer_vertex_info, 16> m_vertex_push_buffers;
 		rsx::simple_array<u32> m_element_push_buffer;
+
+		struct
+		{
+			rsx::simple_array<u32> u32buf;
+			rsx::simple_array<u128> u128buf;
+		} mutable m_scratch_buffers;
 
 	public:
 		draw_command_processor() = default;
