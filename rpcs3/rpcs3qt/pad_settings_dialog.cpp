@@ -536,6 +536,12 @@ void pad_settings_dialog::InitButtons()
 				continue;
 			}
 
+			// Wait for ui update to happen, or events may get lost.
+			{
+				std::lock_guard lock(m_input_mutex);
+				if (m_input_callback_data.has_new_data) continue;
+			}
+
 			std::lock_guard lock(m_handler_mutex);
 
 			const std::vector<std::string> buttons =
