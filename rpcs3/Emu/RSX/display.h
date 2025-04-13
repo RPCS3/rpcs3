@@ -22,14 +22,16 @@ using display_handle_t = void*; // NSView
 #else
 #include <variant>
 using display_handle_t = std::variant<
-#if defined(HAVE_X11) && defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#if defined(HAVE_X11)
+#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	std::pair<Display*, Window>, std::pair<wl_display*, wl_surface*>
-#elif defined(HAVE_X11)
+#else
 	std::pair<Display*, Window>
+#endif
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 	std::pair<wl_display*, wl_surface*>
 #elif defined(ANDROID)
-	struct ANativeWindow *
+	struct ANativeWindow*
 #endif
 >;
 #endif

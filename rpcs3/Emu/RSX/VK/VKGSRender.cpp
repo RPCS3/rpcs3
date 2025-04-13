@@ -442,7 +442,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		using T = std::decay_t<decltype(p)>;
 		if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
 		{
-			m_display_handle = p.first; XFlush(m_display_handle);
+			m_display_handle = p.first;
+			XFlush(m_display_handle);
 		}
 	}, display);
 #endif
