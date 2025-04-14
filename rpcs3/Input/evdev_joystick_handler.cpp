@@ -18,6 +18,33 @@
 
 LOG_CHANNEL(evdev_log, "evdev");
 
+bool positive_axis::load()
+{
+	if (fs::file cfg_file{ cfg_name, fs::read })
+	{
+		return from_string(cfg_file.to_string());
+	}
+
+	from_default();
+	return false;
+}
+
+void positive_axis::save() const
+{
+	fs::pending_file file(cfg_name);
+
+	if (file.file)
+	{
+		file.file.write(to_string());
+		file.commit();
+	}
+}
+
+bool positive_axis::exist() const
+{
+	return fs::is_file(cfg_name);
+}
+
 evdev_joystick_handler::evdev_joystick_handler()
     : PadHandlerBase(pad_handler::evdev)
 {
@@ -110,7 +137,12 @@ bool evdev_joystick_handler::Init()
 	if (m_is_init)
 		return true;
 
-	m_pos_axis_config.load();
+	if (!m_pos_axis_config.load())
+	{
+		evdev_log.notice("positive_axis config missing. Using defaults");
+	}
+
+	evdev_log.notice("positive_axis config=\n%s", m_pos_axis_config.to_string());
 
 	if (!m_pos_axis_config.exist())
 		m_pos_axis_config.save();
@@ -783,7 +815,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 					// Let's log axis information while we are in the settings in order to identify problems more easily.
 					for (const auto& [code, axis_name] : axis_list)
 					{
-						if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
+						if (const input_absinfo* info = libevdev_get_abs_info(dev, code))
 						{
 							const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
 							evdev_log.notice("Axis info for %s: %s (%s) => minimum=%d, maximum=%d, fuzz=%d, flat=%d, resolution=%d",
@@ -857,7 +889,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 				// A device must not mix regular directional axes and accelerometer axes on the same event node.
 				for (const auto& [code, axis_name] : axis_list)
 				{
-					if (const input_absinfo *info = libevdev_get_abs_info(dev, code))
+					if (const input_absinfo* info = libevdev_get_abs_info(dev, code))
 					{
 						const bool is_accel = code == ABS_X || code == ABS_Y || code == ABS_Z;
 						const char* code_name = libevdev_event_code_get_name(EV_ABS, code);
