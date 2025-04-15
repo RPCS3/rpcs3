@@ -158,19 +158,16 @@ if (NOT ANDROID)
             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/../Resources/git
             COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "${QT_DEPLOY_FLAGS}")
     elseif(UNIX)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs)
     elseif(WIN32)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenAL::OpenAL> $<TARGET_FILE_DIR:rpcs3>
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git
             COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
                 --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import
                 --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
@@ -194,8 +191,6 @@ if (NOT ANDROID)
         install(DIRECTORY ../bin/Icons
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
         install(DIRECTORY ../bin/GuiConfigs
-            DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
-        install(DIRECTORY ../bin/git
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
         install(DIRECTORY ../bin/test
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)

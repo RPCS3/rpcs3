@@ -8,7 +8,6 @@ ARTIFACT_DIR="$BUILD_ARTIFACTSTAGINGDIRECTORY"
 
 # Remove unecessary files
 rm -f ./bin/rpcs3.exp ./bin/rpcs3.lib ./bin/rpcs3.pdb ./bin/vc_redist.x64.exe
-rm -rf ./bin/git
 
 # Prepare compatibility and SDL database for packaging
 mkdir ./bin/config
