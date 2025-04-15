@@ -118,20 +118,64 @@ games_config::result games_config::remove_game(const std::string& key)
 	return result::success;
 }
 
+games_config::result games_config::update_vfs_path(const std::string& path)
+{
+	std::lock_guard lock(m_mutex);
+
+	if (m_vfs_path != path)
+	{
+		cfg_log.notice("Changing VFS path in games.yml from '%s' to '%s'", m_vfs_path, path);
+
+		// Remove games in old vfs path
+		if (!m_vfs_path.empty())
+		{
+			for (auto it = m_games.begin(); it != m_games.end();)
+			{
+				if (it->second.starts_with(m_vfs_path))
+				{
+					cfg_log.notice("Removing game from games.yml due to outdated vfs games path: '%s' (old vfs path: '%s')", it->second, m_vfs_path);
+					it = m_games.erase(it);
+					continue;
+				}
+
+				it++;
+			}
+		}
+
+		m_vfs_path = path;
+		m_dirty = true;
+
+		if (m_save_on_dirty && !save_nl())
+		{
+			return result::failure;
+		}
+	}
+
+	return result::success;
+}
+
 bool games_config::save_nl()
 {
 	YAML::Emitter out;
-	out << m_games;
+	out << YAML::BeginMap;
+	out << vfs_path_key << m_vfs_path;
+	for (const auto& [key, value] : m_games)
+	{
+		out << key << value;
+	}
+	out << YAML::EndMap;
 
-	fs::pending_file temp(fs::get_config_dir(true) + "games.yml");
+	const std::string path = fs::get_config_dir(true) + "games.yml";
+	fs::pending_file temp(path);
 
 	if (temp.file && temp.file.write(out.c_str(), out.size()) >= out.size() && temp.commit())
 	{
+		cfg_log.notice("Saved games.yml to '%s'", path);
 		m_dirty = false;
 		return true;
 	}
 
-	cfg_log.error("Failed to save games.yml: %s", fs::g_tls_error);
+	cfg_log.error("Failed to save games.yml to '%s': %s", path, fs::g_tls_error);
 	return false;
 }
 
@@ -145,6 +189,7 @@ void games_config::load()
 {
 	std::lock_guard lock(m_mutex);
 
+	m_vfs_path.clear();
 	m_games.clear();
 
 	const std::string path = fs::get_config_dir(true) + "games.yml";
@@ -186,7 +231,14 @@ void games_config::load()
 		{
 			if (!entry.first.Scalar().empty() && entry.second.IsScalar() && !entry.second.Scalar().empty())
 			{
-				m_games.emplace(entry.first.Scalar(), entry.second.Scalar());
+				if (entry.first.Scalar() == vfs_path_key)
+				{
+					m_vfs_path = entry.second.Scalar();
+				}
+				else
+				{
+					m_games.emplace(entry.first.Scalar(), entry.second.Scalar());
+				}
 			}
 		}
 	}

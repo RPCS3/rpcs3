@@ -25,12 +25,15 @@ public:
 	result add_game(const std::string& key, const std::string& path);
 	result add_external_hdd_game(const std::string& key, std::string& path);
 	result remove_game(const std::string& key);
+	result update_vfs_path(const std::string& path);
 	bool save();
 
 private:
 	bool save_nl();
 	void load();
 
+	const std::string vfs_path_key = "VFS_PATH";
+	std::string m_vfs_path;
 	std::map<std::string, std::string> m_games;
 	mutable shared_mutex m_mutex;
 

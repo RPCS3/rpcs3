@@ -419,6 +419,9 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 
 		const std::string games_dir = rpcs3::utils::get_games_dir();
 
+		// Update games path. This will remove any game in memory that matches the previous games path (we don't save to "games.yml" yet).
+		Emu.UpdateGamesPath(games_dir, false);
+
 		// List of serials (title id) to remove in "games.yml" file (if any)
 		std::vector<std::string> serials_to_remove = serials_to_remove_from_yml; // Initialize the list with the specified serials (if any)
 

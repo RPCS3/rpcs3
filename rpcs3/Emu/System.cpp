@@ -4139,6 +4139,13 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	return game_boot_result::invalid_file_or_folder;
 }
 
+void Emulator::UpdateGamesPath(const std::string& path, bool save_on_disk)
+{
+	m_games_config.set_save_on_dirty(save_on_disk);
+	[[maybe_unused]] const games_config::result res = m_games_config.update_vfs_path(path);
+	m_games_config.set_save_on_dirty(true);
+}
+
 u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list, bool save_on_disk)
 {
 	if (title_id_list.empty())
