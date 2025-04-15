@@ -30,6 +30,7 @@ void qt_video_source::set_active(bool active)
 	else
 	{
 		stop_movie();
+		image_change_callback();
 	}
 }
 
