@@ -91,19 +91,19 @@ void game_list_grid::populate(
 			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
 			{
 				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				return;
 			}
-			else
-			{
-				std::lock_guard lock(item->pixmap_mutex);
 
+			std::lock_guard lock(item->pixmap_mutex);
+
+			if (!game->pxmap.isNull())
+			{
 				item->set_icon(game->pxmap);
 
 				if (!game->has_hover_gif && !game->has_hover_pam)
 				{
 					game->pxmap = {};
 				}
-
-				item->stop_movie();
 			}
 		});
 

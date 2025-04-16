@@ -252,19 +252,19 @@ void game_list_table::populate(
 			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
 			{
 				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
+				return;
 			}
-			else
-			{
-				std::lock_guard lock(icon_item->pixmap_mutex);
 
+			std::lock_guard lock(icon_item->pixmap_mutex);
+
+			if (!game->pxmap.isNull())
+			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
 
 				if (!game->has_hover_gif && !game->has_hover_pam)
 				{
 					game->pxmap = {};
 				}
-
-				icon_item->stop_movie();
 			}
 		});
 
