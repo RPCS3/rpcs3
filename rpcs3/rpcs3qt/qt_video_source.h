@@ -31,7 +31,7 @@ public:
 
 	QPixmap get_movie_image(const QVideoFrame& frame) const;
 
-	void image_change_callback() const;
+	void image_change_callback(const QVideoFrame& frame = {}) const;
 	void set_image_change_callback(const std::function<void(const QVideoFrame&)>& func);
 
 protected:

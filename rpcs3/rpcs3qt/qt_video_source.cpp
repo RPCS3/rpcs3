@@ -34,11 +34,11 @@ void qt_video_source::set_active(bool active)
 	}
 }
 
-void qt_video_source::image_change_callback() const
+void qt_video_source::image_change_callback(const QVideoFrame& frame) const
 {
 	if (m_image_change_callback)
 	{
-		m_image_change_callback({});
+		m_image_change_callback(frame);
 	}
 }
 
@@ -76,7 +76,7 @@ void qt_video_source::init_movie()
 
 		QObject::connect(m_movie.get(), &QMovie::frameChanged, m_movie.get(), [this](int)
 		{
-			m_image_change_callback({});
+			image_change_callback();
 			m_has_new = true;
 		});
 		return;
@@ -105,7 +105,7 @@ void qt_video_source::init_movie()
 	m_video_sink = std::make_unique<QVideoSink>();
 	QObject::connect(m_video_sink.get(), &QVideoSink::videoFrameChanged, m_video_sink.get(), [this](const QVideoFrame& frame)
 	{
-		m_image_change_callback(frame);
+		image_change_callback(frame);
 		m_has_new = true;
 	});
 
