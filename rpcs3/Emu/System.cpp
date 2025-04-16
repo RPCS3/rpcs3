@@ -4139,7 +4139,7 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	return game_boot_result::invalid_file_or_folder;
 }
 
-u32 Emulator::RemoveGamesFromDir(const std::string games_dir, const std::vector<std::string>& serials_to_remove_from_yml, bool save_on_disk)
+u32 Emulator::RemoveGamesFromDir(const std::string& games_dir, const std::vector<std::string>& serials_to_remove_from_yml, bool save_on_disk)
 {
 	// List of serials (title id) to remove in "games.yml" file (if any)
 	std::vector<std::string> serials_to_remove = serials_to_remove_from_yml; // Initialize the list with the specified serials (if any)
