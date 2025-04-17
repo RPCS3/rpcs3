@@ -66,13 +66,14 @@ void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
 	});
 }
 
-void sys_spu_image::load(const fs::file& stream)
+bool sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
 
 	if (obj != elf_error::ok)
 	{
-		fmt::throw_exception("Failed to load SPU image: %s", obj.get_error());
+		sys_spu.error("Failed to load SPU image: %s", obj.get_error());
+		return false;
 	}
 
 	for (const auto& shdr : obj.shdrs)
@@ -94,7 +95,7 @@ void sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64km 0, 0x10000000)->alloc(mem_size));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64k, 0, 0x10000000)->alloc(mem_size));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -116,6 +117,7 @@ void sys_spu_image::load(const fs::file& stream)
 	this->segs = vm::null;
 
 	vm::page_protect(segs.addr(), utils::align(mem_size, 4096), 0, 0, vm::page_writable);
+	return true;
 }
 
 void sys_spu_image::free() const
@@ -517,28 +519,52 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	fs::file elf_file;
+	const fs::file elf_file = decrypt_self(file, reinterpret_cast<const u8*>(&klic));
 
-	// Check for SELF header
-	u32 file_type = umax;
-	file.read_at(0, &file_type, sizeof(file_type));
-
-	if (file_type == "SCE\0"_u32)
-	{
-		elf_file = decrypt_self(file, reinterpret_cast<u8*>(&klic));
-	}
-	else
-	{
-		elf_file = std::move(file);
-	}
-
-	if (!elf_file)
+	if (!elf_file || !img->load(elf_file))
 	{
 		sys_spu.error("sys_spu_image_open(): file %s is illegal for SPU image!", path);
 		return {CELL_ENOEXEC, path};
 	}
 
-	img->load(elf_file);
+	return CELL_OK;
+}
+
+error_code sys_spu_image_open_by_fd(ppu_thread& ppu, vm::ptr<sys_spu_image> img, s32 fd, s64 offset)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_spu.warning("sys_spu_image_open_by_fd(img=*0x%x, fd=%d, offset=0x%x)", img, fd, offset);
+
+	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	if (offset < 0)
+	{
+		return CELL_ENOEXEC;
+	}
+
+	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
+	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
+
+	const fs::file elf_file = decrypt_self(lv2_file::make_view(file, offset), reinterpret_cast<const u8*>(&klic));
+
+	if (!img->load(elf_file))
+	{
+		sys_spu.error("sys_spu_image_open(): file %s is illegal for SPU image!", file->name.data());
+		return {CELL_ENOEXEC, file->name.data()};
+	}
+
 	return CELL_OK;
 }
 
@@ -570,7 +596,7 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_ESRCH;
 	}
 
-	ensure(vm::dealloc(handle->segs.addr(), vm::main));
+	ensure(vm::dealloc(handle->segs.addr(), vm::user64k));
 	return CELL_OK;
 }
 
