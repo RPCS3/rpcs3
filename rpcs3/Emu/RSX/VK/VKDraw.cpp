@@ -1141,12 +1141,8 @@ void VKGSRender::end()
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Final heap check...
-	check_heap_status(
-	{
-		std::ref(m_attrib_ring_info),
-		std::ref(m_index_buffer_ring_info),
-		std::ref(m_draw_indirect_count_ring_info)
-	});
+	vk::data_heap* vertex_storage_heaps[] = { &m_attrib_ring_info, &m_index_buffer_ring_info, &m_draw_indirect_count_ring_info };
+	check_heap_status(vertex_storage_heaps);
 
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value

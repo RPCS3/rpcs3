@@ -8,7 +8,7 @@
 
 namespace vk
 {
-	render_device* get_current_renderer();
+	const render_device* get_current_renderer();
 
 	void init()
 	{

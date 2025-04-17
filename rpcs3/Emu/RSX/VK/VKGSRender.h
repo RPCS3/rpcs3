@@ -221,7 +221,7 @@ private:
 
 	void handle_heap_critical();
 	bool check_heap_status(const vk::data_heap& heap);
-	bool check_heap_status(std::initializer_list<std::reference_wrapper<vk::data_heap>> heaps);
+	bool check_heap_status(const std::span<vk::data_heap*>& heaps);
 	void check_present_status();
 
 	VkDescriptorSet allocate_descriptor_set();
