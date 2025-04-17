@@ -1150,24 +1150,26 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 
 bool VKGSRender::check_heap_status(const vk::data_heap& heap)
 {
-	if (heap.heap && heap.is_critical())
+	if (!heap.heap || !heap.is_critical()) [[ likely ]]
 	{
-		handle_heap_critical();
-		return true;
+		return false;
 	}
 
-	return false;
+	handle_heap_critical();
+	return true;
 }
 
-bool VKGSRender::check_heap_status(std::initializer_list<std::reference_wrapper<vk::data_heap>> heaps)
+bool VKGSRender::check_heap_status(const std::span<vk::data_heap*>& heaps)
 {
-	for (const vk::data_heap& heap : heaps)
+	for (const auto& heap : heaps)
 	{
-		if (heap.heap && heap.is_critical())
+		if (!heap->heap || !heap->is_critical()) [[ likely ]]
 		{
-			handle_heap_critical();
-			return true;
+			continue;
 		}
+
+		handle_heap_critical();
+		return true;
 	}
 
 	return false;
