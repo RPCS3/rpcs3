@@ -1371,7 +1371,10 @@ fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAddit
 	elf_or_self.seek(0);
 
 	// Check SELF header first. Check for a debug SELF.
-	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32)
+	u32 file_type = umax;
+	elf_or_self.read_at(0, &file_type, sizeof(file_type));
+
+	if (file_type == "SCE\0"_u32)
 	{
 		if (fs::file res = CheckDebugSelf(elf_or_self))
 		{
