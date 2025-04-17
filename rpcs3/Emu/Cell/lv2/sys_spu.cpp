@@ -94,7 +94,7 @@ void sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::alloc(mem_size, vm::main));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64km 0, 0x10000000)->alloc(mem_size));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -517,7 +517,20 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
-	const fs::file elf_file = decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic));
+	fs::file elf_file;
+
+	// Check for SELF header
+	u32 file_type = umax;
+	file.read_at(0, &file_type, sizeof(file_type));
+
+	if (file_type == "SCE\0"_u32)
+	{
+		elf_file = decrypt_self(file, reinterpret_cast<u8*>(&klic));
+	}
+	else
+	{
+		elf_file = std::move(file);
+	}
 
 	if (!elf_file)
 	{
