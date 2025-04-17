@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* parent)
@@ -75,6 +76,17 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 				if (tabs->tabText(i) == "dev_usb")
 				{
 					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
+				}
+				else if (tabs->tabText(i) == "games")
+				{
+					// Check if the games folder changed. If changed, reconciliate the game list for the old folder before setting the new one
+					if (const std::string games_dir = rpcs3::utils::get_games_dir(); games_dir != static_cast<vfs_dialog_tab*>(tabs->widget(i))->get_selected_path())
+					{
+						// Remove the detected serials (title id) belonging to old folder from the game list in memory and also in "games.yml" file
+						Emu.RemoveGamesFromDir(games_dir);
+					}
+
+					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings(); // set new folder
 				}
 				else
 				{
