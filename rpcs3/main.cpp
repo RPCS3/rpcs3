@@ -12,10 +12,6 @@
 #include <QTimer>
 #include <QObject>
 #include <QStyleFactory>
-#include <QByteArray>
-#include <QJsonArray>
-#include <QJsonObject>
-#include <QJsonDocument>
 #include <QMessageBox>
 #include <QMetaEnum>
 #include <QStandardPaths>
@@ -368,7 +364,6 @@ private:
 // Arguments that force a headless application (need to be checked in create_application)
 constexpr auto arg_headless     = "headless";
 constexpr auto arg_decrypt      = "decrypt";
-constexpr auto arg_commit_db    = "get-commit-db";
 
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
@@ -423,8 +418,7 @@ QCoreApplication* create_application(std::span<char* const> qt_argv)
 	static char** const s_argv = const_cast<char**>(qt_argv.data());
 
 	if (find_arg(arg_headless, qt_argv) != -1 ||
-		find_arg(arg_decrypt, qt_argv) != -1 ||
-		find_arg(arg_commit_db, qt_argv) != -1)
+		find_arg(arg_decrypt, qt_argv) != -1)
 	{
 		return new headless_application(s_argc, s_argv);
 	}
@@ -806,7 +800,6 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
-	parser.addOption(QCommandLineOption(arg_commit_db, "Update commits.lst cache. Optional arguments: <path> <sha>"));
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
@@ -867,223 +860,6 @@ int main(int argc, char** argv)
 		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
 		fprintf(stdout, "Enabled Curl verbose logging.\n");
 		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
-	}
-
-	// Handle update of commit database
-	if (parser.isSet(arg_commit_db))
-	{
-		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, true);
-#ifdef _WIN32
-		std::string path;
-#else
-		std::string path = "bin/git/commits.lst";
-#endif
-		std::string from_sha;
-
-		if (const int i_arg_commit_db = find_arg(arg_commit_db, qt_argv); i_arg_commit_db != -1)
-		{
-			if (int i = i_arg_commit_db + 1; argc > i)
-			{
-				path = qt_argv[i++];
-
-				if (argc > i)
-				{
-					from_sha = qt_argv[i];
-				}
-			}
-#ifdef _WIN32
-			else
-			{
-				fprintf(stderr, "Missing path argument.\n");
-				return 1;
-			}
-#endif
-		}
-		else
-		{
-			fprintf(stderr, "Can not find argument --%s\n", arg_commit_db);
-			return 1;
-		}
-
-		fs::file file(path, fs::read + fs::write + fs::append + fs::create);
-
-		if (!file)
-		{
-			fprintf(stderr, "Failed to open file: '%s' (errno=%d)\n", path.c_str(), errno);
-			return 1;
-		}
-
-		fprintf(stdout, "\nAppending commits to '%s' ...\n", path.c_str());
-
-		// Get existing list
-		std::string data = file.to_string();
-		std::vector<std::string> list = fmt::split(data, {"\n"});
-
-		const bool was_empty = data.empty();
-
-		// SHA to start
-		std::string last;
-
-		if (!list.empty())
-		{
-			// Decode last entry to check last written commit
-			QByteArray buf(list.back().c_str(), list.back().size());
-			QJsonDocument doc = QJsonDocument::fromJson(buf);
-
-			if (doc.isObject() && doc["sha"].isString())
-			{
-				last = doc["sha"].toString().toStdString();
-			}
-		}
-
-		list.clear();
-
-		// JSON buffer
-		QByteArray buf;
-
-		// CURL handle to work with GitHub API
-		rpcs3::curl::curl_handle curl;
-
-		struct curl_slist* hhdr{};
-		hhdr = curl_slist_append(hhdr, "Accept: application/vnd.github.v3+json");
-		hhdr = curl_slist_append(hhdr, "User-Agent: curl/7.37.0");
-
-		CURLcode err = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_HTTPHEADER) error: %s", curl_easy_strerror(err));
-
-		err = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
-		{
-			static_cast<QByteArray*>(json)->append(ptr, size);
-			return size;
-		});
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) error: %s", curl_easy_strerror(err));
-
-		err = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
-		if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
-
-		u32 page = 1;
-		constexpr u32 per_page = 100;
-
-		while (page <= 55)
-		{
-			fprintf(stdout, "Fetching page %d ...\n", page);
-
-			std::string url = "https://api.github.com/repos/RPCS3/rpcs3/commits?per_page=";
-			fmt::append(url, "%u&page=%u", per_page, page++);
-			if (!from_sha.empty())
-				fmt::append(url, "&sha=%s", from_sha);
-
-			err = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-			if (err != CURLE_OK)
-			{
-				fprintf(stderr, "curl_easy_setopt(CURLOPT_URL, %s) error: %s", url.c_str(), curl_easy_strerror(err));
-				break;
-			}
-
-			// Reset error buffer before we call curl_easy_perform
-			curl.reset_error_buffer();
-
-			err = curl_easy_perform(curl);
-			if (err != CURLE_OK)
-			{
-				const std::string error_string = curl.get_verbose_error(err);
-				fprintf(stderr, "curl_easy_perform(): %s", error_string.c_str());
-				break;
-			}
-
-			QJsonDocument info = QJsonDocument::fromJson(buf);
-
-			if (!info.isArray()) [[unlikely]]
-			{
-				fprintf(stderr, "Bad response:\n%s", buf.data());
-				break;
-			}
-
-			u32 count = 0;
-
-			for (auto&& ref : info.array())
-			{
-				if (!ref.isObject())
-				{
-					page = -1;
-					break;
-				}
-
-				count++;
-
-				QJsonObject result, author, committer;
-				QJsonObject commit = ref.toObject();
-
-				auto commit_ = commit["commit"].toObject();
-				auto author_ = commit_["author"].toObject();
-				auto committer_ = commit_["committer"].toObject();
-				auto _author = commit["author"].toObject();
-				auto _committer = commit["committer"].toObject();
-
-				result["sha"] = commit["sha"];
-				result["msg"] = commit_["message"];
-
-				author["name"] = author_["name"];
-				author["date"] = author_["date"];
-				author["email"] = author_["email"];
-				author["login"] = _author["login"];
-				author["avatar"] = _author["avatar_url"];
-
-				committer["name"] = committer_["name"];
-				committer["date"] = committer_["date"];
-				committer["email"] = committer_["email"];
-				committer["login"] = _committer["login"];
-				committer["avatar"] = _committer["avatar_url"];
-
-				result["author"] = author;
-				result["committer"] = committer;
-
-				QJsonDocument out(result);
-				buf = out.toJson(QJsonDocument::JsonFormat::Compact);
-				buf += "\n";
-
-				if (was_empty || !from_sha.empty())
-				{
-					data = buf.toStdString() + std::move(data);
-				}
-				else if (commit["sha"].toString().toStdString() == last)
-				{
-					page = -1;
-					break;
-				}
-				else
-				{
-					// Append to the list
-					list.emplace_back(buf.data(), buf.size());
-				}
-			}
-
-			buf.clear();
-
-			if (count < per_page)
-			{
-				break;
-			}
-		}
-
-		if (was_empty || !from_sha.empty())
-		{
-			file.trunc(0);
-			file.write(data);
-		}
-		else
-		{
-			// Append list in reverse order
-			for (usz i = list.size() - 1; ~i; --i)
-			{
-				file.write(list[i]);
-			}
-		}
-
-		curl_slist_free_all(hhdr);
-
-		fprintf(stdout, "Finished fetching commits: %s\n", path.c_str());
-		return 0;
 	}
 
 	if (parser.isSet(arg_q_debug))

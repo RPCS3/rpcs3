@@ -30,14 +30,15 @@ void qt_video_source::set_active(bool active)
 	else
 	{
 		stop_movie();
+		image_change_callback();
 	}
 }
 
-void qt_video_source::image_change_callback() const
+void qt_video_source::image_change_callback(const QVideoFrame& frame) const
 {
 	if (m_image_change_callback)
 	{
-		m_image_change_callback({});
+		m_image_change_callback(frame);
 	}
 }
 
@@ -64,7 +65,7 @@ void qt_video_source::init_movie()
 
 	if (lower.endsWith(".gif"))
 	{
-		m_movie.reset(new QMovie(m_video_path));
+		m_movie = std::make_unique<QMovie>(m_video_path);
 		m_video_path.clear();
 
 		if (!m_movie->isValid())
@@ -75,7 +76,7 @@ void qt_video_source::init_movie()
 
 		QObject::connect(m_movie.get(), &QMovie::frameChanged, m_movie.get(), [this](int)
 		{
-			m_image_change_callback({});
+			image_change_callback();
 			m_has_new = true;
 		});
 		return;
@@ -97,18 +98,18 @@ void qt_video_source::init_movie()
 			return;
 		}
 
-		m_video_buffer.reset(new QBuffer(&m_video_data));
+		m_video_buffer = std::make_unique<QBuffer>(&m_video_data);
 		m_video_buffer->open(QIODevice::ReadOnly);
 	}
 
-	m_video_sink.reset(new QVideoSink());
+	m_video_sink = std::make_unique<QVideoSink>();
 	QObject::connect(m_video_sink.get(), &QVideoSink::videoFrameChanged, m_video_sink.get(), [this](const QVideoFrame& frame)
 	{
-		m_image_change_callback(frame);
+		image_change_callback(frame);
 		m_has_new = true;
 	});
 
-	m_media_player.reset(new QMediaPlayer());
+	m_media_player = std::make_unique<QMediaPlayer>();
 	m_media_player->setVideoSink(m_video_sink.get());
 	m_media_player->setLoops(QMediaPlayer::Infinite);
 
