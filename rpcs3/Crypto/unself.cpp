@@ -1343,10 +1343,13 @@ static fs::file CheckDebugSelf(const fs::file& s)
 		fs::file e = fs::make_stream<std::vector<u8>>();
 
 		// Copy the data.
-		char buf[2048];
-		while (const u64 size = s.read(buf, 2048))
+		std::vector<u8> buf(std::min<usz>(s.size(), 4096));
+
+		usz read_pos = 0;
+		while (const u64 size = s.read_at(read_pos, buf.data(), buf.size()))
 		{
-			e.write(buf, size);
+			e.write(buf.data(), size);
+			read_pos += size;
 		}
 
 		return e;
@@ -1411,6 +1414,23 @@ fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAddit
 
 		// Make a new ELF file from this SELF.
 		return self_dec.MakeElf(isElf32);
+	}
+	else if (Emu.GetBoot().ends_with(".elf") || Emu.GetBoot().ends_with(".ELF"))
+	{
+		// Write the file back if the main executable is not signed
+		fs::file e = fs::make_stream<std::vector<u8>>();
+
+		// Copy the data.
+		std::vector<u8> buf(std::min<usz>(elf_or_self.size(), 4096));
+
+		usz read_pos = 0;
+		while (const u64 size = elf_or_self.read_at(read_pos, buf.data(), buf.size()))
+		{
+			e.write(buf.data(), size);
+			read_pos += size;
+		}
+
+		return e;
 	}
 
 	return {};
