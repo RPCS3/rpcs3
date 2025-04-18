@@ -82,11 +82,11 @@ namespace vk
 		CHECK_RESULT(vkCreateBuffer(m_device, &info, nullptr, &value));
 
 		auto& memory_map = dev.get_memory_mapping();
-		ensure(memory_map._vkGetMemoryHostPointerPropertiesEXT);
+		ensure(_vkGetMemoryHostPointerPropertiesEXT);
 
 		VkMemoryHostPointerPropertiesEXT memory_properties{};
 		memory_properties.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT;
-		CHECK_RESULT(memory_map._vkGetMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties));
+		CHECK_RESULT(_vkGetMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties));
 
 		VkMemoryRequirements memory_reqs;
 		vkGetBufferMemoryRequirements(m_device, value, &memory_reqs);
