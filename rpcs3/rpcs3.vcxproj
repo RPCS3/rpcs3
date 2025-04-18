@@ -199,6 +199,7 @@
     <ClCompile Include="Input\raw_mouse_handler.cpp" />
     <ClCompile Include="Input\ps_move_handler.cpp" />
     <ClCompile Include="Input\sdl_pad_handler.cpp" />
+    <ClCompile Include="Input\sdl_instance.cpp" />
     <ClCompile Include="Input\skateboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main_application.cpp" />
@@ -797,6 +798,7 @@
     <ClCompile Include="rpcs3qt\downloader.cpp" />
     <ClCompile Include="rpcs3qt\elf_memory_dumping_dialog.cpp" />
     <ClCompile Include="rpcs3qt\emulated_pad_settings_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\emulated_logitech_g27_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp" />
     <ClCompile Include="rpcs3qt\flow_layout.cpp" />
     <ClCompile Include="rpcs3qt\flow_widget.cpp" />

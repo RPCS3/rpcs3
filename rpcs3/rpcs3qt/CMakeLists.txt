@@ -22,6 +22,7 @@ add_library(rpcs3_ui STATIC
     emu_settings.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
+	emulated_logitech_g27_settings_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
     flow_layout.cpp
@@ -158,6 +159,7 @@ add_library(rpcs3_ui STATIC
     ../Input/raw_mouse_config.cpp
     ../Input/raw_mouse_handler.cpp
     ../Input/sdl_pad_handler.cpp
+    ../Input/sdl_instance.cpp
     ../Input/skateboard_pad_handler.cpp
     ../Input/xinput_pad_handler.cpp
 
