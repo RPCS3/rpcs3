@@ -54,19 +54,6 @@ namespace vk::data_heap_manager
 		}
 	}
 
-	bool any_critical()
-	{
-		for (auto& heap : g_managed_heaps)
-		{
-			if (heap->is_critical())
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	void reset()
 	{
 		for (auto& heap : g_managed_heaps)

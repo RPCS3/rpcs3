@@ -51,13 +51,6 @@ namespace vk
 
 	bool data_heap::grow(usz size)
 	{
-		if (shadow)
-		{
-			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
-			rsx_log.error("[%s] Auto-grow of shadowed heaps is not currently supported. This error should typically only be seen on MacOS.", m_name);
-			return false;
-		}
-
 		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
 		const usz size_limit = 1024 * 0x100000;
 		usz aligned_new_size = utils::align(m_size + size, 64 * 0x100000);
@@ -88,7 +81,19 @@ namespace vk
 		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
 
 		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
-		get_resource_manager()->dispose(heap);
+		auto gc = get_resource_manager();
+		if (shadow)
+		{
+			rsx_log.warning("Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
+
+			gc->dispose(shadow);
+			shadow = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VMM_ALLOCATION_POOL_SYSTEM);
+			usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			memory_index = memory_map.device_local;
+		}
+
+		gc->dispose(heap);
 		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
 
 		if (notify_on_grow)
@@ -152,20 +157,6 @@ namespace vk
 	bool data_heap::is_dirty() const
 	{
 		return !dirty_ranges.empty();
-	}
-
-	bool data_heap::is_critical() const
-	{
-		if (!::data_heap::is_critical())
-			return false;
-
-		// By default, allow the size to grow upto 8x larger
-		// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
-		const usz soft_limit = initial_size * 8;
-		if ((m_size + m_min_guard_size) < soft_limit)
-			return false;
-
-		return true;
 	}
 
 	data_heap* get_upload_heap()

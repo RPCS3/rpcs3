@@ -218,10 +218,6 @@ private:
 	VkRenderPass get_render_pass();
 
 	void update_draw_state();
-
-	void handle_heap_critical();
-	bool check_heap_status(const vk::data_heap& heap);
-	bool check_heap_status(const std::span<vk::data_heap*>& heaps);
 	void check_present_status();
 
 	VkDescriptorSet allocate_descriptor_set();

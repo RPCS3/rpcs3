@@ -142,11 +142,6 @@ public:
 		m_get_pos = value;
 	}
 
-	virtual bool is_critical() const
-	{
-		return m_min_guard_size >= m_size;
-	}
-
 	void reset_allocation_stats()
 	{
 		m_get_pos = get_current_put_pos_minus_one();

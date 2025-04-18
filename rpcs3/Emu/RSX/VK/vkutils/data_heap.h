@@ -52,7 +52,6 @@ namespace vk
 
 		// Properties
 		bool is_dirty() const;
-		bool is_critical() const override;
 	};
 
 	extern data_heap* get_upload_heap();
