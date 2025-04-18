@@ -1149,63 +1149,6 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	}
 }
 
-bool VKGSRender::check_heap_status(const vk::data_heap& heap)
-{
-	if (!heap.heap || !heap.is_critical()) [[ likely ]]
-	{
-		return false;
-	}
-
-	handle_heap_critical();
-	return true;
-}
-
-bool VKGSRender::check_heap_status(const std::span<vk::data_heap*>& heaps)
-{
-	for (const auto& heap : heaps)
-	{
-		if (!heap->heap || !heap->is_critical()) [[ likely ]]
-		{
-			continue;
-		}
-
-		handle_heap_critical();
-		return true;
-	}
-
-	return false;
-}
-
-void VKGSRender::handle_heap_critical()
-{
-	m_profiler.start();
-
-	vk::frame_context_t *target_frame = nullptr;
-	if (!m_queued_frames.empty())
-	{
-		if (m_current_frame != &m_aux_frame_context)
-		{
-			target_frame = m_queued_frames.front();
-		}
-	}
-
-	if (target_frame == nullptr)
-	{
-		flush_command_queue(true);
-		m_vertex_cache->purge();
-
-		vk::data_heap_manager::reset_heap_allocations();
-		m_last_heap_sync_time = rsx::get_shared_tag();
-	}
-	else
-	{
-		// Flush the frame context
-		frame_context_cleanup(target_frame);
-	}
-
-	m_frame_stats.flip_time += m_profiler.duration();
-}
-
 void VKGSRender::check_present_status()
 {
 	while (!m_queued_frames.empty())
@@ -2009,8 +1952,6 @@ void VKGSRender::load_program_env()
 
 	if (update_vertex_env)
 	{
-		check_heap_status(m_vertex_env_ring_info);
-
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.static_alloc<256>();
 		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
@@ -2076,8 +2017,6 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
 	{
-		check_heap_status(m_fragment_constants_ring_info);
-
 		// Fragment constants
 		if (fragment_constants_size)
 		{
@@ -2098,8 +2037,6 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_env)
 	{
-		check_heap_status(m_fragment_env_ring_info);
-
 		auto mem = m_fragment_env_ring_info.static_alloc<256>();
 		auto buf = m_fragment_env_ring_info.map(mem, 32);
 
@@ -2110,8 +2047,6 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_texture_env)
 	{
-		check_heap_status(m_fragment_texture_params_ring_info);
-
 		auto mem = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
 		auto buf = m_fragment_texture_params_ring_info.map(mem, 768);
 
@@ -2122,8 +2057,6 @@ void VKGSRender::load_program_env()
 
 	if (update_raster_env)
 	{
-		check_heap_status(m_raster_env_ring_info);
-
 		auto mem = m_raster_env_ring_info.static_alloc<256>();
 		auto buf = m_raster_env_ring_info.map(mem, 128);
 
@@ -2240,11 +2173,6 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 
 	if (transform_constants_size)
 	{
-		auto& data_source = (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
-		? m_instancing_buffer_ring_info
-		: m_transform_constants_ring_info;
-		check_heap_status(data_source);
-
 		buffer.reserve(transform_constants_size);
 		auto buf = buffer.data();
 
@@ -2731,9 +2659,6 @@ bool VKGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const r
 {
 	if (swapchain_unavailable)
 		return false;
-
-	// Verify enough memory exists before attempting to handle data transfer
-	check_heap_status(m_texture_upload_buffer_ring_info);
 
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{

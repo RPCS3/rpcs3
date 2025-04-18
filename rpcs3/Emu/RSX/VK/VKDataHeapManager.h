@@ -27,9 +27,6 @@ namespace vk
 		// Reset all managed heap allocations
 		void reset_heap_allocations();
 
-		// Check if any managed heap is in critical state
-		bool any_critical();
-
 		// Cleanup
 		void reset();
 	}
