@@ -45,7 +45,7 @@ namespace vk
 		{
 			const auto size_bytes = count * sizeof(T);
 			const auto addr = alloc<Alignment>(size_bytes);
-			return { addr, reinterpret_cast<T*>(	map(addr, size_bytes)) };
+			return { addr, reinterpret_cast<T*>(map(addr, size_bytes)) };
 		}
 
 		void sync(const vk::command_buffer& cmd);
