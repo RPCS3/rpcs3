@@ -472,6 +472,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 	vk::set_current_renderer(m_swapchain->get_device());
+	vk::init();
 
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();

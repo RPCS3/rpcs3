@@ -29,6 +29,7 @@
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
     <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
     <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
     <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
