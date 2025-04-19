@@ -8,13 +8,13 @@
 
 #include "util/to_endian.hpp"
 
+class ppu_thread;
+
 #ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
 #include "rpcs3qt/breakpoint_handler.h"
 #include "util/logs.hpp"
 
 LOG_CHANNEL(debugbp_log, "DebugBP");
-
-class ppu_thread;
 
 void ppubreak(ppu_thread& ppu);
 #endif
@@ -282,9 +282,10 @@ namespace vm
 		}
 
 		// Convert specified PS3 address to a reference of specified (possibly converted to BE) type
-		template <typename T, typename U> inline to_be_t<T>& _ref(const U& addr)
+		// Const lvalue: prevent abused writes
+		template <typename T, typename U> inline const to_be_t<T>& _ref(const U& addr)
 		{
-			return *static_cast<to_be_t<T>*>(base(addr));
+			return *static_cast<const to_be_t<T>*>(base(addr));
 		}
 
 		// Access memory bypassing memory protection
@@ -300,20 +301,33 @@ namespace vm
 		}
 
 #ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
-		inline void write16(u32 addr, be_t<u16> value, ppu_thread* ppu = nullptr)
+		template <typename T, typename U = T>
+		inline void write(u32 addr, U value, ppu_thread* ppu = nullptr)
 #else
-		inline void write16(u32 addr, be_t<u16> value)
+		template <typename T, typename U = T>
+		inline void write(u32 addr, U value, ppu_thread* = nullptr)
 #endif
 		{
-			_ref<u16>(addr) = value;
+			using dest_t = std::conditional_t<std::is_void_v<T>, U, T>;
+
+			if constexpr (!std::is_void_v<T>)
+			{
+				*_ptr<dest_t>(addr) = value;
+			}
 
 #ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
 			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
 			{
-				debugbp_log.success("BPMW: breakpoint writing(16) 0x%x at 0x%x", value, addr);
+				debugbp_log.success("BPMW: breakpoint writing(%d) 0x%x at 0x%x",
+					sizeof(dest_t) * CHAR_BIT, value, addr);
 				ppubreak(*ppu);
 			}
 #endif
+		}
+
+		inline void write16(u32 addr, be_t<u16> value, ppu_thread* ppu = nullptr)
+		{
+			write<be_t<u16>>(addr, value, ppu);
 		}
 
 		inline const be_t<u32>& read32(u32 addr)
@@ -321,21 +335,9 @@ namespace vm
 			return _ref<u32>(addr);
 		}
 
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
 		inline void write32(u32 addr, be_t<u32> value, ppu_thread* ppu = nullptr)
-#else
-		inline void write32(u32 addr, be_t<u32> value)
-#endif
 		{
-			_ref<u32>(addr) = value;
-
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
-			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
-			{
-				debugbp_log.success("BPMW: breakpoint writing(32) 0x%x at 0x%x", value, addr);
-				ppubreak(*ppu);
-			}
-#endif
+			write<be_t<u32>>(addr, value, ppu);
 		}
 
 		inline const be_t<u64>& read64(u32 addr)
@@ -343,41 +345,9 @@ namespace vm
 			return _ref<u64>(addr);
 		}
 
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
 		inline void write64(u32 addr, be_t<u64> value, ppu_thread* ppu = nullptr)
-#else
-		inline void write64(u32 addr, be_t<u64> value)
-#endif
 		{
-			_ref<u64>(addr) = value;
-
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
-			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
-			{
-				debugbp_log.success("BPMW: breakpoint writing(64) 0x%x at 0x%x", value, addr);
-				ppubreak(*ppu);
-			}
-#endif
-		}
-
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
-		template <typename T, typename U = T>
-		inline void write(u32 addr, U value, ppu_thread* ppu = nullptr)
-#else
-		template <typename T, typename U = T>
-		inline void write(u32 addr, U value)
-#endif
-		{
-			_ref<T>(addr) = static_cast<T>(value);
-
-#ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
-			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
-			{
-				debugbp_log.success("BPMW: breakpoint writing(%d) 0x%x at 0x%x",
-					sizeof(T) * CHAR_BIT, value, addr);
-				ppubreak(*ppu);
-			}
-#endif
+			write<be_t<u64>>(addr, value, ppu);
 		}
 
 		void init();

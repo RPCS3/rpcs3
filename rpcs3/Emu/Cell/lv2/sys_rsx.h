@@ -87,10 +87,7 @@ struct RsxDmaControl
 	be_t<u32> unk1;
 };
 
-struct RsxSemaphore
-{
-	atomic_be_t<u32> val;
-};
+using RsxSemaphore = be_t<u32>;
 
 struct alignas(16) RsxNotify
 {

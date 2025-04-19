@@ -3833,14 +3833,14 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			if (addr - spurs_addr <= 0x80)
 			{
-				mov_rdata(vm::_ref<spu_rdata_t>(addr), to_write);
+				mov_rdata(*vm::_ptr<spu_rdata_t>(addr), to_write);
 				res += 64;
 				return true;
 			}
 		}
 		else if (!g_use_rtm)
 		{
-			vm::_ref<atomic_t<u32>>(addr) += 0;
+			*vm::_ptr<atomic_t<u32>>(addr) += 0;
 		}
 
 		if (g_use_rtm) [[likely]]
