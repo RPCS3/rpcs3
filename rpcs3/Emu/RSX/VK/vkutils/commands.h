@@ -42,7 +42,7 @@ namespace vk
 
 		queue_submit_t(const queue_submit_t& other)
 		{
-			std::memcpy(this, &other, sizeof(queue_submit_t));
+			std::memcpy(static_cast<void*>(this), &other, sizeof(queue_submit_t));
 		}
 
 		inline queue_submit_t& wait_on(VkSemaphore semaphore, VkPipelineStageFlags stage)
