@@ -15,7 +15,7 @@ namespace rsx
 			RSX(ctx)->sync();
 
 			// Write ref+get (get will be written again with the same value at command end)
-			auto& dma = vm::_ref<RsxDmaControl>(RSX(ctx)->dma_address);
+			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->dma_address);
 			dma.get.release(RSX(ctx)->fifo_ctrl->get_pos());
 			dma.ref.store(arg);
 		}
@@ -28,7 +28,7 @@ namespace rsx
 			// Syncronization point, may be associated with memory changes without actually changing addresses
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
 
-			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
+			const auto& sema = vm::_ref<RsxSemaphore>(addr);
 
 			if (sema == arg)
 			{

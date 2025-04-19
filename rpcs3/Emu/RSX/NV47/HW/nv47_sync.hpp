@@ -21,7 +21,7 @@ namespace rsx
 				// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
 				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->release_GCM_label(address, data);
 
-				if (vm::_ref<RsxSemaphore>(address).val == data)
+				if (vm::_ref<RsxSemaphore>(address) == data)
 				{
 					// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
 					return;
@@ -57,7 +57,7 @@ namespace rsx
 				}
 			}
 
-			vm::_ref<RsxSemaphore>(address).val = data;
+			vm::write<atomic_t<RsxSemaphore>>(address, data);
 		}
 	}
 }

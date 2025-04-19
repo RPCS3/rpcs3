@@ -566,7 +566,7 @@ namespace rsx
 			default:
 				rsx_log.error("NV4097_GET_REPORT: Bad type %d", type);
 
-				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
+				vm::_ptr<atomic_t<CellGcmReportData>>(address_ptr)->atomic_op([&](CellGcmReportData& data)
 				{
 					data.timer = RSX(ctx)->timestamp();
 					data.padding = 0;
@@ -651,7 +651,7 @@ namespace rsx
 
 			ensure(addr != umax);
 
-			vm::_ref<atomic_t<RsxNotify>>(addr).store(
+			vm::_ptr<atomic_t<RsxNotify>>(addr)->store(
 			{
 				RSX(ctx)->timestamp(),
 				0

@@ -1594,12 +1594,12 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			spursHalt(spu);
 		}
 
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting)) = waiting;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::running)) = running;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::ready)) = ready;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::pending_ready)) = v128{};
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::enabled)) = enabled;
-		vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::signalled)) = signalled;
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting)) = waiting;
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::running)) = running;
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::ready)) = ready;
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::pending_ready)) = v128{};
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::enabled)) = enabled;
+		// vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::signalled)) = signalled;
 
 		std::memcpy(spu._ptr<void>(0x2700), spu._ptr<void>(0x100), 128); // Copy data
 	}//);
