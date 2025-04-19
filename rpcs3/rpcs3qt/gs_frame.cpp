@@ -36,7 +36,7 @@
 #elif defined(__APPLE__)
 //nothing
 #else
-#ifdef HAVE_WAYLAND
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
@@ -665,29 +665,22 @@ void gs_frame::show()
 
 display_handle_t gs_frame::handle() const
 {
-#ifdef _WIN32
-	return reinterpret_cast<HWND>(this->winId());
-#elif defined(__APPLE__)
-	return reinterpret_cast<void*>(this->winId()); //NSView
+#if defined(_WIN32) || defined(__APPLE__)
+	return reinterpret_cast<display_handle_t>(this->winId());
 #else
-#ifdef HAVE_WAYLAND
-	QPlatformNativeInterface *native = QGuiApplication::platformNativeInterface();
-	struct wl_display *wl_dpy = static_cast<struct wl_display *>(
-		native->nativeResourceForWindow("display", NULL));
-	struct wl_surface *wl_surf = static_cast<struct wl_surface *>(
-		native->nativeResourceForWindow("surface", const_cast<QWindow*>(static_cast<const QWindow*>(this))));
-	if (wl_dpy != nullptr && wl_surf != nullptr)
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	QPlatformNativeInterface* native = QGuiApplication::platformNativeInterface();
+	struct wl_display* wl_dpy = static_cast<struct wl_display*>(native->nativeResourceForWindow("display", nullptr));
+	struct wl_surface* wl_surf = static_cast<struct wl_surface*>(native->nativeResourceForWindow("surface", const_cast<QWindow*>(static_cast<const QWindow*>(this))));
+	if (wl_dpy && wl_surf)
 	{
 		return std::make_pair(wl_dpy, wl_surf);
 	}
-	else
 #endif
 #ifdef HAVE_X11
-	{
-		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
-	}
+	return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
 #else
-		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
+	fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
 #endif
 #endif
 }
