@@ -174,7 +174,7 @@ namespace rsx
 			{
 				// Switch to heap storage
 				_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size));
-				std::memcpy(_data, _local_storage, size_bytes());
+				std::memcpy(static_cast<void*>(_data), _local_storage, size_bytes());
 			}
 			else
 			{
