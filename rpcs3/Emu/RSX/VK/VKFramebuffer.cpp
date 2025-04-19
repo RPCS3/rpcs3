@@ -29,9 +29,9 @@ namespace vk
 	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
 	{
 		framebuffer_storage_key key(width, height, has_input_attachments);
-		auto &queue = g_framebuffers_cache[key.encoded];
+		auto& queue = g_framebuffers_cache[key.encoded];
 
-		for (auto &fbo : queue)
+		for (const auto& fbo : queue)
 		{
 			if (fbo->matches(image_list, width, height))
 			{
@@ -42,7 +42,7 @@ namespace vk
 		std::vector<std::unique_ptr<vk::image_view>> image_views;
 		image_views.reserve(image_list.size());
 
-		for (auto &e : image_list)
+		for (const auto& e : image_list)
 		{
 			const VkImageSubresourceRange subres = { e->aspect(), 0, 1, 0, 1 };
 			image_views.push_back(std::make_unique<vk::image_view>(dev, e, VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map, subres));
@@ -58,9 +58,9 @@ namespace vk
 	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, VkFormat format, VkImage attachment)
 	{
 		framebuffer_storage_key key(width, height, has_input_attachments);
-		auto &queue = g_framebuffers_cache[key.encoded];
+		auto& queue = g_framebuffers_cache[key.encoded];
 
-		for (const auto &e : queue)
+		for (const auto& e : queue)
 		{
 			if (e->attachments[0]->info.image == attachment)
 			{
