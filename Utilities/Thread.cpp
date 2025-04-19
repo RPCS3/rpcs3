@@ -2490,7 +2490,7 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	if (alert)
 	{
 		list.set<0>(_this->m_sync, 0);
-		list.set<1>(utils::bless<atomic_t<u32>>(&_this->m_taskq)[1], 0);
+		list.template set<1>(_this->m_taskq);
 	}
 	else
 	{

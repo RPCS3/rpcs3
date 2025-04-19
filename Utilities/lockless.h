@@ -49,7 +49,7 @@ public:
 
 			if (!next)
 			{
-				// Do not allow access beyond many element more at a time 
+				// Do not allow access beyond many element more at a time
 				ensure(!installed && index - i < N * 2);
 
 				installed = true;
@@ -384,17 +384,26 @@ public:
 template <typename T>
 class lf_queue final
 {
-	atomic_t<u64> m_head{0};
-
-	lf_queue_item<T>* load(u64 value) const noexcept
+public:
+	struct fat_ptr
 	{
-		return reinterpret_cast<lf_queue_item<T>*>(value >> 16);
+		u64 ptr{};
+		u32 is_non_null{};
+		u32 reserved{};
+	};
+
+private:
+	atomic_t<fat_ptr> m_head{fat_ptr{}};
+
+	lf_queue_item<T>* load(fat_ptr value) const noexcept
+	{
+		return reinterpret_cast<lf_queue_item<T>*>(value.ptr);
 	}
 
 	// Extract all elements and reverse element order (FILO to FIFO)
 	lf_queue_item<T>* reverse() noexcept
 	{
-		if (auto* head = load(m_head) ? load(m_head.exchange(0)) : nullptr)
+		if (auto* head = load(m_head) ? load(m_head.exchange(fat_ptr{})) : nullptr)
 		{
 			if (auto* prev = head->m_link)
 			{
@@ -420,7 +429,7 @@ public:
 
 	lf_queue(lf_queue&& other) noexcept
 	{
-		m_head.release(other.m_head.exchange(0));
+		m_head.release(other.m_head.exchange(fat_ptr{}));
 	}
 
 	lf_queue& operator=(lf_queue&& other) noexcept
@@ -431,7 +440,7 @@ public:
 		}
 
 		delete load(m_head);
-		m_head.release(other.m_head.exchange(0));
+		m_head.release(other.m_head.exchange(fat_ptr{}));
 		return *this;
 	}
 
@@ -442,9 +451,9 @@ public:
 
 	void wait(std::nullptr_t /*null*/ = nullptr) noexcept
 	{
-		if (m_head == 0)
+		if (!operator bool())
 		{
-			utils::bless<atomic_t<u32>>(&m_head)[1].wait(0);
+			utils::bless<atomic_t<u32>>(&m_head.raw().is_non_null)->wait(0);
 		}
 	}
 
@@ -455,7 +464,7 @@ public:
 
 	explicit operator bool() const noexcept
 	{
-		return m_head != 0;
+		return observe() != nullptr;
 	}
 
 	template <bool Notify = true, typename... Args>
@@ -464,25 +473,25 @@ public:
 		auto oldv = m_head.load();
 		auto item = new lf_queue_item<T>(load(oldv), std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(oldv, reinterpret_cast<u64>(item) << 16))
+		while (!m_head.compare_exchange(oldv, fat_ptr{reinterpret_cast<u64>(item), item != nullptr, 0}))
 		{
 			item->m_link = load(oldv);
 		}
 
-		if (!oldv && Notify)
+		if (!oldv.ptr && Notify)
 		{
 			// Notify only if queue was empty
 			notify(true);
 		}
 
-		return !oldv;
+		return !oldv.ptr;
 	}
 
 	void notify(bool force = false)
 	{
 		if (force || operator bool())
 		{
-			utils::bless<atomic_t<u32>>(&m_head)[1].notify_one();
+			utils::bless<atomic_t<u32>>(&m_head.raw().is_non_null)->notify_one();
 		}
 	}
 
@@ -498,7 +507,7 @@ public:
 	lf_queue_slice<T> pop_all_reversed()
 	{
 		lf_queue_slice<T> result;
-		result.m_head = load(m_head.exchange(0));
+		result.m_head = load(m_head.exchange(fat_ptr{}));
 		return result;
 	}
 

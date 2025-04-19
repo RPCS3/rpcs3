@@ -220,19 +220,21 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Initialize args
-	c.mov(x86::r13, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+	c.movabs(x86::r13, reinterpret_cast<u64>(&vm::g_exec_addr));
+	c.mov(x86::r13, x86::qword_ptr(x86::r13));
 	c.mov(x86::rbp, args[0]);
 	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
 
-	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::edx, 1, 0)); // Load call target
-	c.mov(x86::rdx, x86::rax);
-	c.shl(x86::rax, 16);
-	c.shr(x86::rax, 16);
-	c.shr(x86::rdx, 48);
+	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::rdx, 1, 0)); // Load call target
+	c.movabs(x86::r12, vm::g_exec_addr_seg_offset);
+	c.add(x86::r12, x86::r13);
+	c.shr(x86::edx, 1);
+	c.mov(x86::edx, x86::word_ptr(x86::r12, x86::edx)); // Load relocation base
 	c.shl(x86::edx, 13);
-	c.mov(x86::r12d, x86::edx); // Load relocation base
+	c.mov(x86::r12d, x86::edx); // Set relocation base
 
-	c.mov(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
+	c.movabs(x86::rbx, reinterpret_cast<u64>(&vm::g_base_addr));
+	c.mov(x86::rbx, x86::qword_ptr(x86::rbx));
 	c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
 	c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));
 	c.mov(x86::rdi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 2)));
@@ -346,13 +348,10 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.ldr(call_target, arm::Mem(a64::x19, pc));
 	// Compute REG_Hp
 	const arm::GpX reg_hp = a64::x21;
-	c.mov(reg_hp, call_target);
-	c.lsr(reg_hp, reg_hp, 48);
+	c.mov(reg_hp, Imm(vm::g_exec_addr_seg_offset));
+	c.add(reg_hp, reg_hp, pc, arm::Shift(arm::ShiftOp::kLSR, 2));
+	c.ldrh(reg_hp.w(), arm::Mem(a64::x19, reg_hp));
 	c.lsl(reg_hp.w(), reg_hp.w(), 13);
-
-	// Zero top 16 bits of call target
-	c.lsl(call_target, call_target, Imm(16));
-	c.lsr(call_target, call_target, Imm(16));
 
 	// Load registers
 	c.mov(a64::x22, Imm(reinterpret_cast<u64>(&vm::g_base_addr)));
@@ -473,6 +472,11 @@ static inline u8* ppu_ptr(u32 addr)
 	return vm::g_exec_addr + u64{addr} * 2;
 }
 
+static inline u8* ppu_seg_ptr(u32 addr)
+{
+	return vm::g_exec_addr + vm::g_exec_addr_seg_offset + (addr >> 1);
+}
+
 static inline ppu_intrp_func_t ppu_read(u32 addr)
 {
 	return read_from_ptr<ppu_intrp_func_t>(ppu_ptr(addr));
@@ -518,7 +522,7 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 
 	while (true)
 	{
-		if (uptr func = uptr(ppu_read(ppu.cia)); (func << 16 >> 16) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+		if (uptr func = uptr(ppu_read(ppu.cia)); func != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 		{
 			// We found a recompiler function at cia, return
 			break;
@@ -773,6 +777,9 @@ extern void ppu_register_range(u32 addr, u32 size)
 	utils::memory_commit(ppu_ptr(addr), u64{size} * 2, utils::protection::rw);
 	ensure(vm::page_protect(addr, size, 0, vm::page_executable));
 
+	// Segment data
+	utils::memory_commit(ppu_seg_ptr(addr), size >> 1, utils::protection::rw);
+
 	if (g_cfg.core.ppu_debug)
 	{
 		utils::memory_commit(vm::g_stat_addr + addr, size);
@@ -785,12 +792,13 @@ extern void ppu_register_range(u32 addr, u32 size)
 		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 		{
 			// Assume addr is the start of first segment of PRX
-			const uptr entry_value = reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3));
-			write_to_ptr<uptr>(ppu_ptr(addr), entry_value);
+			write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ppu_recompiler_fallback_ghc));
+			write_to_ptr<u16>(ppu_seg_ptr(addr), static_cast<u16>(seg_base >> 13));
 		}
 		else
 		{
 			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_fallback);
+			write_to_ptr<u16>(ppu_seg_ptr(addr), 0);
 		}
 
 		addr += 4;
@@ -805,7 +813,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	// Initialize specific function
 	if (ptr)
 	{
-		write_to_ptr<uptr>(ppu_ptr(addr), (reinterpret_cast<uptr>(ptr) & 0xffff'ffff'ffffu) | (uptr(ppu_read(addr)) & ~0xffff'ffff'ffffu));
+		write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ptr));
 		return;
 	}
 
@@ -3164,8 +3172,9 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
+	c.push(x86::r13);
 	c.push(x86::r14);
-	c.sub(x86::rsp, 40);
+	c.sub(x86::rsp, 48);
 #ifdef _WIN32
 	if (!s_tsx_avx)
 	{
@@ -3176,14 +3185,16 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 
 	// Prepare registers
 	build_swap_rdx_with(c, args, x86::r10);
-	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.movabs(x86::rbp, reinterpret_cast<u64>(&vm::g_sudo_addr));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rbp));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(x86::rbp, -128);
 	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.movzx(args[0].r32(), args[0].r16());
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.movabs(x86::r11, reinterpret_cast<u64>(+vm::g_reservations));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.and_(x86::r11, -128 / 2);
 	c.and_(args[0].r32(), 63);
 
@@ -3217,7 +3228,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	{
 		build_get_tsc(c);
 		c.sub(x86::rax, stamp0);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
+		c.movabs(x86::r13, reinterpret_cast<u64>(&g_rtm_tx_limit2));
+		c.cmp(x86::rax, x86::qword_ptr(x86::r13));
 		c.jae(fall);
 	});
 
@@ -3342,8 +3354,9 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 		c.vzeroupper();
 	}
 
-	c.add(x86::rsp, 40);
+	c.add(x86::rsp, 48);
 	c.pop(x86::r14);
+	c.pop(x86::r13);
 	c.pop(x86::rbp);
 
 	maybe_flush_lbr(c);
@@ -4179,7 +4192,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	// 2 7MB overlay files -> 14GB
 	// The growth in memory requirements of LLVM is not linear with file size of course
 	// But these estimates should hopefully protect RPCS3 in the coming years
-	// Especially when thread count is on the rise with each CPU generation 
+	// Especially when thread count is on the rise with each CPU generation
 	atomic_t<u32> file_size_limit = static_cast<u32>(std::clamp<u64>(utils::aligned_div<u64>(utils::get_total_memory(), 2000), 65536, u32{umax}));
 
 	const u32 software_thread_limit = std::min<u32>(g_cfg.core.llvm_threads ? g_cfg.core.llvm_threads : u32{umax}, ::size32(file_queue));
@@ -4301,8 +4314,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (!src && !Emu.klic.empty() && src.open(path))
 			{
 				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
-				
-				if (src) 
+
+				if (src)
 				{
 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
 
@@ -4333,7 +4346,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				{
 					if (value)
 					{
-						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency 
+						// Allow at least one file, make 0 the "memory unavailable" sign value for atomic waiting efficiency
 						const u32 new_val = static_cast<u32>(utils::sub_saturate<u64>(value, file_size));
 						restore_mem = value - new_val;
 						value = new_val;
@@ -4506,8 +4519,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			if (!src && !Emu.klic.empty() && src.open(path))
 			{
 				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
-				
-				if (src) 
+
+				if (src)
 				{
 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
 				}
@@ -5079,17 +5092,18 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			code_size_until_jump = buf_end - buf_start;
 
 			c.add(x86::edx, seg0);
-			c.mov(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+			c.movabs(x86::rax, reinterpret_cast<u64>(&vm::g_exec_addr));
+			c.mov(x86::rax, x86::qword_ptr(x86::rax));
 			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
 
-			c.mov(x86::rax, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
-			c.mov(x86::rdx, x86::rax);
-			c.shl(x86::rax, 16);
-			c.shr(x86::rax, 16);
-			c.shr(x86::rdx, 48);
+			c.mov(x86::rcx, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target
+			c.movabs(x86::r12, vm::g_exec_addr_seg_offset);
+			c.add(x86::rax, x86::r12);
+			c.shr(x86::edx, 1);
+			c.mov(x86::edx, x86::word_ptr(x86::rax, x86::edx)); // Load relocation base
 			c.shl(x86::edx, 13);
-			c.mov(x86::r12d, x86::edx); // Load relocation base
-			c.jmp(x86::rax);
+			c.mov(x86::r12d, x86::edx); // Set relocation base
+			c.jmp(x86::rcx);
 #else
 			// Load REG_Base - use absolute jump target to bypass rel jmp range limits
 			// X19 contains vm::g_exec_addr
@@ -5125,13 +5139,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			// Compute REG_Hp
 			const arm::GpX reg_hp = a64::x21;
-			c.mov(reg_hp, call_target);
-			c.lsr(reg_hp, reg_hp, 48);
+			c.mov(reg_hp, Imm(vm::g_exec_addr_seg_offset));
+			c.add(reg_hp, reg_hp, pc, arm::Shift(arm::ShiftOp::kLSR, 2));
+			c.ldrh(reg_hp.w(), arm::Mem(exec_addr, reg_hp));
 			c.lsl(reg_hp.w(), reg_hp.w(), 13);
-
-			// Zero top 16 bits of call target
-			c.lsl(call_target, call_target, 16);
-			c.lsr(call_target, call_target, 16);
 
 			// Execute LLE call
 			c.br(call_target);
@@ -5340,7 +5351,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 					sha1_update(&ctx, reinterpret_cast<const u8*>(addrs.data()), addrs.size() * sizeof(be_t<u32>));
 				}
 
-				part.jit_bounds = std::move(local_jit_bounds); 
+				part.jit_bounds = std::move(local_jit_bounds);
 				local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
 			}
 
@@ -5400,7 +5411,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v6-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5712,7 +5723,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		for (u32 addr = info.segs[0].addr; addr < info.segs[0].addr + info.segs[0].size; addr += 4, inst_ptr++)
 		{
-			if (*inst_ptr == ppu_instructions::BLR() && (reinterpret_cast<uptr>(ppu_read(addr)) << 16 >> 16) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+			if (*inst_ptr == ppu_instructions::BLR() && reinterpret_cast<uptr>(ppu_read(addr)) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 			{
 				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), BLR_func);
 			}
