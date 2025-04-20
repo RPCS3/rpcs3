@@ -1336,8 +1336,8 @@ static fs::file CheckDebugSelf(const fs::file& s)
 		// Get the real elf offset.
 		s.seek(0x10);
 
-		// Start at the real elf offset.
-		s.seek(key_version == 0x80 ? +s.read<be_t<u64>>() : +s.read<le_t<u64>>());
+		// Read the real elf offset.
+		usz read_pos = key_version == 0x80 ? +s.read<be_t<u64>>() : +s.read<le_t<u64>>();
 
 		// Write the real ELF file back.
 		fs::file e = fs::make_stream<std::vector<u8>>();
@@ -1345,7 +1345,6 @@ static fs::file CheckDebugSelf(const fs::file& s)
 		// Copy the data.
 		std::vector<u8> buf(std::min<usz>(s.size(), 4096));
 
-		usz read_pos = 0;
 		while (const u64 size = s.read_at(read_pos, buf.data(), buf.size()))
 		{
 			e.write(buf.data(), size);
