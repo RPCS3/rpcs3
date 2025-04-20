@@ -214,6 +214,14 @@ using atomic_be_t = atomic_t<be_t<T>, Align>;
 template <typename T, usz Align = alignof(T)>
 using atomic_le_t = atomic_t<le_t<T>, Align>;
 
+// Primary template (handles non-be_t types)
+template<typename T>
+struct remove_be { using type = T; };
+template<typename T>
+struct remove_be<be_t<T>> { using type = T; };
+template<typename T>
+using remove_be_t = typename remove_be<T>::type;
+
 // Bool type equivalent
 class b8
 {

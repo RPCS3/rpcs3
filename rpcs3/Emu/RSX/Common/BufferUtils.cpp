@@ -432,36 +432,30 @@ namespace
 		return std::make_tuple(min_index, max_index, written);
 	}
 
-	template<typename T>
+	template<typename T, typename U = remove_be_t<T>>
+		requires std::is_same_v<U, u32> || std::is_same_v<U, u16>
 	std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
+		if constexpr (std::is_same_v<T, u16>)
+		{
+			if (primitive_restart_index > 0xffff)
+			{
+				// Will never trip index restart, unpload untouched
+				is_primitive_restart_enabled = false;
+			}
+		}
+
 		if (!is_primitive_restart_enabled)
 		{
 			return untouched_impl::upload_untouched(src, dst);
 		}
-		else if constexpr (std::is_same_v<T, u16>)
+
+		if (is_primitive_disjointed(draw_mode))
 		{
-			if (primitive_restart_index > 0xffff)
-			{
-				return untouched_impl::upload_untouched(src, dst);
-			}
-			else if (is_primitive_disjointed(draw_mode))
-			{
-				return upload_untouched_skip_restart(src, dst, static_cast<u16>(primitive_restart_index));
-			}
-			else
-			{
-				return primitive_restart_impl::upload_untouched(src, dst, static_cast<u16>(primitive_restart_index));
-			}
+			return upload_untouched_skip_restart(src, dst, static_cast<U>(primitive_restart_index));
 		}
-		else if (is_primitive_disjointed(draw_mode))
-		{
-			return upload_untouched_skip_restart(src, dst, primitive_restart_index);
-		}
-		else
-		{
-			return primitive_restart_impl::upload_untouched(src, dst, primitive_restart_index);
-		}
+
+		return primitive_restart_impl::upload_untouched(src, dst, static_cast<U>(primitive_restart_index));
 	}
 
 	void iota16(u16* dst, u32 count)
