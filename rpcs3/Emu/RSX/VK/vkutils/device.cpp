@@ -524,6 +524,11 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		}
 
+		if (pgpu->multidraw_support)
+		{
+			requested_extensions.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+		}
+
 		if (pgpu->optional_features_support.conditional_rendering)
 		{
 			requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
