@@ -2,6 +2,7 @@
 #include "Emu/Cell/Modules/cellMusic.h"
 #include "Emu/System.h"
 #include "util/logs.hpp"
+#include "Utilities/File.h"
 
 #include <QAudioOutput>
 #include <QUrl>
@@ -117,13 +118,18 @@ void qt_music_handler::play(const std::string& path)
 
 	Emu.BlockingCallFromMainThread([&path, this]()
 	{
+		if (!fs::is_file(path))
+		{
+			music_log.error("play: File does not exist: '%s'", path);
+		}
+
 		if (m_path != path)
 		{
 			m_path = path;
 			m_media_player->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
 		}
 
-		music_log.notice("Playing music: %s", path);
+		music_log.notice("Playing music: '%s'", path);
 		m_media_player->setPlaybackRate(1.0);
 		m_media_player->play();
 	});
@@ -137,13 +143,18 @@ void qt_music_handler::fast_forward(const std::string& path)
 
 	Emu.BlockingCallFromMainThread([&path, this]()
 	{
+		if (!fs::is_file(path))
+		{
+			music_log.error("fast_forward: File does not exist: '%s'", path);
+		}
+
 		if (m_path != path)
 		{
 			m_path = path;
 			m_media_player->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
 		}
 
-		music_log.notice("Fast-forwarding music...");
+		music_log.notice("Fast-forwarding music: '%s'", path);
 		m_media_player->setPlaybackRate(2.0);
 		m_media_player->play();
 	});
@@ -157,13 +168,18 @@ void qt_music_handler::fast_reverse(const std::string& path)
 
 	Emu.BlockingCallFromMainThread([&path, this]()
 	{
+		if (!fs::is_file(path))
+		{
+			music_log.error("fast_reverse: File does not exist: '%s'", path);
+		}
+
 		if (m_path != path)
 		{
 			m_path = path;
 			m_media_player->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
 		}
 
-		music_log.notice("Fast-reversing music...");
+		music_log.notice("Fast-reversing music: '%s'", path);
 		m_media_player->setPlaybackRate(-2.0); // NOTE: This doesn't work on the current Qt version
 		m_media_player->play();
 	});
