@@ -69,11 +69,12 @@ qt_music_handler::qt_music_handler()
 	music_log.notice("Constructing Qt music handler...");
 
 	m_media_player = std::make_unique<QMediaPlayer>();
-	m_media_player->setAudioOutput(new QAudioOutput());
+	m_media_player->setAudioOutput(new QAudioOutput(m_media_player.get()));
 
 	connect(m_media_player.get(), &QMediaPlayer::mediaStatusChanged, this, &qt_music_handler::handle_media_status);
 	connect(m_media_player.get(), &QMediaPlayer::playbackStateChanged, this, &qt_music_handler::handle_music_state);
 	connect(m_media_player.get(), &QMediaPlayer::errorOccurred, this, &qt_music_handler::handle_music_error);
+	connect(m_media_player->audioOutput(), &QAudioOutput::volumeChanged, this, &qt_music_handler::handle_volume_change);
 }
 
 qt_music_handler::~qt_music_handler()
@@ -249,4 +250,9 @@ void qt_music_handler::handle_music_state(QMediaPlayer::PlaybackState state)
 void qt_music_handler::handle_music_error(QMediaPlayer::Error error, const QString& errorString)
 {
 	music_log.error("Error event: \"%s\" (error=%s)", errorString, error);
+}
+
+void qt_music_handler::handle_volume_change(float volume) const
+{
+	music_log.notice("Volume changed: %f", volume);
 }
