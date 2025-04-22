@@ -41,6 +41,7 @@
 #include "basic_mouse_settings_dialog.h"
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
+#include "music_player_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -3141,6 +3142,12 @@ void main_window::CreateConnects()
 	{
 		vfs_tool_dialog* dlg = new vfs_tool_dialog(this);
 		dlg->show();
+	});
+
+	connect(ui->actionMusic_Player, &QAction::triggered, this, [this]()
+	{
+		music_player_dialog* dlg = new music_player_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->showDebuggerAct, &QAction::triggered, this, [this](bool checked)

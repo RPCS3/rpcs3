@@ -273,6 +273,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_main_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_music_player_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_music_player_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -434,6 +440,9 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\main_window.cpp">
       <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\music_player_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_syntax_highlighter.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1202,6 +1211,9 @@
     <ClInclude Include="QTGeneratedFiles\ui_main_window.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_music_player_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_pad_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
@@ -1423,6 +1435,9 @@
     <CustomBuild Include="rpcs3qt\main_window.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\music_player_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
@@ -1479,6 +1494,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\main_window.h">
       <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\music_player_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\kernel_explorer.h">
       <Filter>Gui\dev tools</Filter>
