@@ -759,6 +759,15 @@ namespace vk
 			device.pNext = &custom_border_color_features;
 		}
 
+		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_features{};
+		if (pgpu->multidraw_support)
+		{
+			multidraw_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+			multidraw_features.multiDraw = VK_TRUE;
+			multidraw_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &multidraw_features;
+		}
+
 		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loop_features{};
 		if (pgpu->optional_features_support.framebuffer_loops)
 		{
