@@ -345,6 +345,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
 			const usz view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
+			vk::get_resource_manager()->dispose(m_persistent_attribute_storage);
 			m_persistent_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_range_base, view_size);
 			persistent_range_base = 0;
 		}
@@ -362,6 +363,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			}
 
 			const usz view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
+			vk::get_resource_manager()->dispose(m_volatile_attribute_storage);
 			m_volatile_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_range_base, view_size);
 			volatile_range_base = 0;
 		}
