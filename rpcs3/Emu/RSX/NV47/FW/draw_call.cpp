@@ -138,7 +138,7 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
-	simple_array<draw_range_t> draw_clause::get_subranges() const
+	const simple_array<draw_range_t>& draw_clause::get_subranges() const
 	{
 		ensure(!is_single_draw());
 
@@ -146,7 +146,8 @@ namespace rsx
 		const auto limit = range.first + range.count;
 		const auto _pass_count = pass_count();
 
-		simple_array<draw_range_t> ret;
+		auto &ret = subranges_store;
+		ret.clear();
 		ret.reserve(_pass_count);
 
 		u32 previous_barrier = range.first;
