@@ -558,12 +558,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		});
 	}
 
-	if (m_device->get_multidraw_support().supported)
-	{
-		m_draw_indirect_count_ring_info.create(VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, 16 * 0x100000, "multidraw indirect buffer", 1024);
-		vk::data_heap_manager::register_ring_buffer(m_draw_indirect_count_ring_info);
-	}
-
 	// Initialize optional allocation information with placeholders
 	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 16 };
 	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 16 };
