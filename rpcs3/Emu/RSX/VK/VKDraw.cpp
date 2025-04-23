@@ -947,6 +947,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			{
 				_ptr->firstVertex = range.first;
 				_ptr->vertexCount = range.count;
+				_ptr++;
 			}
 			_vkCmdDrawMultiEXT(*m_current_command_buffer, subranges_count, ptr, 1, 0, sizeof(VkMultiDrawInfoEXT));
 		}
@@ -990,6 +991,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 				_ptr->vertexOffset = 0;
 				_ptr->firstIndex = vertex_offset;
 				_ptr->indexCount = count;
+
+				_ptr++;
 				vertex_offset += count;
 			}
 			_vkCmdDrawMultiIndexedEXT(*m_current_command_buffer, subranges_count, ptr, 1, 0, sizeof(VkMultiDrawIndexedInfoEXT), nullptr);
