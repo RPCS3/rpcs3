@@ -145,7 +145,7 @@ void music_selection_context::create_playlist(const std::string& new_hash)
 
 	fs::pending_file file(yaml_path);
 
-	if (!file.file || file.file.write(out.c_str(), out.size() < out.size() || !file.commit()))
+	if (!file.file || file.file.write(out.c_str(), out.size()) < out.size() || !file.commit())
 	{
 		cellMusicSelectionContext.error("create_playlist: Failed to create music playlist file '%s' (error=%s)", yaml_path, fs::g_tls_error);
 	}
