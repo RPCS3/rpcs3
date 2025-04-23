@@ -1279,7 +1279,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		// Overwrite current patch file
 		fs::pending_file patch_file(path);
 
-		if (!patch_file.file || (patch_file.file.write(content), !patch_file.commit()))
+		if (!patch_file.file || !patch_file.file.write(content) || !patch_file.commit())
 		{
 			patch_log.error("Could not save new patches to %s (error=%s)", path, fs::g_tls_error);
 			return false;
