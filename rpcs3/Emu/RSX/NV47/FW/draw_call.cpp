@@ -183,11 +183,11 @@ namespace rsx
 	u32 draw_clause::execute_pipeline_dependencies(context* ctx, instanced_draw_config_t* instance_config) const
 	{
 		u32 result = 0u;
-		for (;
-			current_barrier_it != draw_command_barriers.end() && current_barrier_it->draw_id == current_range_index;
-			current_barrier_it++)
+		for (auto it = current_barrier_it;
+			it != draw_command_barriers.end() && it->draw_id == current_range_index;
+			it++)
 		{
-			const auto& barrier = *current_barrier_it;
+			const auto& barrier = *it;
 			switch (barrier.type)
 			{
 			case primitive_restart_barrier:
