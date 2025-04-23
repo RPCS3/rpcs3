@@ -35,6 +35,9 @@ namespace rsx
 		// Draw-time iterator to the draw_command_barriers struct
 		mutable simple_array<barrier_t>::iterator current_barrier_it;
 
+		// Subranges memory cache
+		mutable rsx::simple_array<draw_range_t> subranges_store;
+
 		// Helper functions
 		// Add a new draw command
 		void append_draw_command(const draw_range_t& range)
@@ -298,6 +301,6 @@ namespace rsx
 		 * Returns a compiled list of all subdraws.
 		 * NOTE: This is a non-trivial operation as it takes disjoint primitive boundaries into account.
 		 */
-		simple_array<draw_range_t> get_subranges() const;
+		const simple_array<draw_range_t>& get_subranges() const;
 	};
 }
