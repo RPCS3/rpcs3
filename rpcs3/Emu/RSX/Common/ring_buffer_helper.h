@@ -15,15 +15,12 @@ class data_heap
 {
 protected:
 	/**
-	* Does alloc cross get position ?
+	* Internal implementation of allocation test
+	* Does alloc cross get position?
 	*/
-	template<int Alignment>
-	bool can_alloc(usz size) const
+	bool can_alloc_impl(usz aligned_put_pos, usz aligned_alloc_size) const
 	{
-		const usz alloc_size = utils::align(size, Alignment);
-		const usz aligned_put_pos = utils::align(m_put_pos, Alignment);
-		const usz alloc_end = aligned_put_pos + alloc_size;
-
+		const usz alloc_end = aligned_put_pos + aligned_alloc_size;
 		if (alloc_end < m_size) [[ likely ]]
 		{
 			// Range before get
@@ -43,10 +40,21 @@ protected:
 
 		// ..get..]...[...
 		// Actually all resources extending beyond heap space starts at 0
-		if (alloc_size > m_get_pos)
+		if (aligned_alloc_size > m_get_pos)
 			return false;
 
 		return true;
+	}
+
+	/**
+	* Does alloc cross get position?
+	*/
+	template<int Alignment>
+	bool can_alloc(usz size) const
+	{
+		const usz alloc_size = utils::align(size, Alignment);
+		const usz aligned_put_pos = utils::align(m_put_pos, Alignment);
+		return can_alloc_impl(aligned_put_pos, alloc_size);
 	}
 
 	// Grow the buffer to hold at least size bytes
@@ -112,17 +120,18 @@ public:
 		static_assert((Size & (Alignment - 1)) == 0);
 		ensure((m_put_pos & (Alignment - 1)) == 0);
 
-		if (!can_alloc<Alignment>(Size) && !grow(Size))
+		if (!can_alloc_impl(m_put_pos, Size) && !grow(Size))
 		{
 			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d requested=%d guard=%d",
 					m_name, m_size, Size, m_min_guard_size);
 		}
 
 		const usz alloc_end = m_put_pos + Size;
-		if (m_put_pos + Size < m_size)
+		if (alloc_end < m_size)
 		{
+			const auto ret_pos = m_put_pos;
 			m_put_pos = alloc_end;
-			return m_put_pos;
+			return ret_pos;
 		}
 
 		m_put_pos = Size;
