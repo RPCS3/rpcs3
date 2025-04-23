@@ -252,6 +252,12 @@ namespace rsx
 				return false;
 			}
 
+			// Advance barrier iterator so it always points to the current draw
+			for (;
+				current_barrier_it != draw_command_barriers.end() &&
+				current_barrier_it->draw_id < current_range_index;
+				++current_barrier_it);
+
 			if (draw_command_ranges[current_range_index].count == 0)
 			{
 				// Dangling execution barrier
