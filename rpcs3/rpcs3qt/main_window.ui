@@ -318,6 +318,7 @@
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="toolsVfsDialogAct"/>
+    <addaction name="actionMusic_Player"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
     <addaction name="separator"/>
@@ -1422,6 +1423,11 @@
    </property>
    <property name="text">
     <string>Prefer Game Data Icons</string>
+   </property>
+  </action>
+  <action name="actionMusic_Player">
+   <property name="text">
+    <string>Music Player</string>
    </property>
   </action>
  </widget>

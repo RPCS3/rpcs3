@@ -177,6 +177,11 @@ struct music_state
 				return CELL_MUSIC_ERROR_NO_MORE_CONTENT;
 			}
 
+			if (!fs::is_file(path))
+			{
+				cellMusic.error("set_playback_command: File does not exist: '%s'", path);
+			}
+
 			switch (command)
 			{
 			case CELL_MUSIC_PB_CMD_FASTFORWARD:
