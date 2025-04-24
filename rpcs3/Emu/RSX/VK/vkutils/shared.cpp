@@ -235,14 +235,9 @@ namespace vk
 		return false;
 	}
 
-	// Temporarily
-#ifndef _MSC_VER
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
-	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-		u64 srcObject, usz location, s32 msgCode,
-		const char* pLayerPrefix, const char* pMsg, void* pUserData)
+	VkBool32 BreakCallback(VkFlags /*msgFlags*/, VkDebugReportObjectTypeEXT /*objType*/,
+		u64 /*srcObject*/, usz /*location*/, s32 /*msgCode*/,
+		const char* /*pLayerPrefix*/, const char* /*pMsg*/, void* /*pUserData*/)
 	{
 #ifdef _WIN32
 		DebugBreak();

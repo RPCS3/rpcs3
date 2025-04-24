@@ -11,11 +11,6 @@
 
 LOG_CHANNEL(cellJpgDec);
 
-// Temporarily
-#ifndef _MSC_VER
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 template <>
 void fmt_class_string<CellJpgDecError>::format(std::string& out, u64 arg)
 {
@@ -40,19 +35,19 @@ void fmt_class_string<CellJpgDecError>::format(std::string& out, u64 arg)
 
 error_code cellJpgDecCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam)
 {
-	UNIMPLEMENTED_FUNC(cellJpgDec);
+	cellJpgDec.todo("cellJpgDecCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam);
 	return CELL_OK;
 }
 
 error_code cellJpgDecExtCreate(u32 mainHandle, u32 threadInParam, u32 threadOutParam, u32 extThreadInParam, u32 extThreadOutParam)
 {
-	UNIMPLEMENTED_FUNC(cellJpgDec);
+	cellJpgDec.todo("cellJpgDecExtCreate(mainHandle=0x%x, threadInParam=0x%x, threadOutParam=0x%x, extThreadInParam=0x%x, extThreadOutParam=0x%x)", mainHandle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 	return CELL_OK;
 }
 
 error_code cellJpgDecDestroy(u32 mainHandle)
 {
-	UNIMPLEMENTED_FUNC(cellJpgDec);
+	cellJpgDec.todo("cellJpgDecDestroy(mainHandle=0x%x)", mainHandle);
 	return CELL_OK;
 }
 
@@ -230,7 +225,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 	}
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
-	int width, height, actual_components;
+	int width = 0, height = 0, actual_components = 0;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
 			stbi_load_from_memory(jpg.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
@@ -275,7 +270,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 		{
 			//TODO: Find out if we can't do padding without an extra copy
 			const int linesize = std::min(bytesPerLine, width * nComponents);
-			const auto output = std::make_unique<char[]>(linesize);
+			std::vector<char> output(image_size);
 			for (int i = 0; i < height; i++)
 			{
 				const int dstOffset = i * bytesPerLine;
@@ -287,22 +282,22 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				std::memcpy(&data[dstOffset], output.get(), linesize);
+				std::memcpy(&data[dstOffset], output.data(), linesize);
 			}
 		}
 		else
 		{
-			const auto img = std::make_unique<uint[]>(image_size);
-			uint* source_current = reinterpret_cast<uint*>(image.get());
-			uint* dest_current = img.get();
-			for (uint i = 0; i < image_size / nComponents; i++)
+			std::vector<u32> img(image_size);
+			const u32* source_current = reinterpret_cast<const u32*>(image.get());
+			u32* dest_current = img.data();
+			for (u32 i = 0; i < image_size / nComponents; i++)
 			{
-				uint val = *source_current;
+				const u32 val = *source_current;
 				*dest_current = (val >> 24) | (val << 8); // set alpha (A8) as leftmost byte
 				source_current++;
 				dest_current++;
 			}
-			std::memcpy(data.get_ptr(), img.get(), image_size);
+			std::memcpy(data.get_ptr(), img.data(), image_size);
 		}
 		break;
 	}

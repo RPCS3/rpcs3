@@ -2500,12 +2500,7 @@ error_code cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf set
 	return savedata_op(ppu, SAVEDATA_OP_LIST_DELETE, 0, vm::null, 0, setList, setBuf, funcList, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone);
 }
 
-// Temporarily
-#ifndef _MSC_VER
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
-error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataListImport(ppu_thread& /*ppu*/, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataListImport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
 
@@ -2520,7 +2515,7 @@ error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSize
 	return CELL_OK;
 }
 
-error_code cellSaveDataListExport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataListExport(ppu_thread& /*ppu*/, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataListExport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
 	
@@ -2535,7 +2530,7 @@ error_code cellSaveDataListExport(ppu_thread& ppu, PSetList setList, u32 maxSize
 	return CELL_OK;
 }
 
-error_code cellSaveDataFixedImport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataFixedImport(ppu_thread& /*ppu*/, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataFixedImport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
 
@@ -2550,7 +2545,7 @@ error_code cellSaveDataFixedImport(ppu_thread& ppu, vm::cptr<char> dirName, u32 
 	return CELL_OK;
 }
 
-error_code cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataFixedExport(ppu_thread& /*ppu*/, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataFixedExport(dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", dirName, maxSizeKB, funcDone, container, userdata);
 
@@ -2581,7 +2576,7 @@ error_code cellSaveDataUserListDelete(ppu_thread& ppu, u32 userId, PSetList setL
 	return savedata_op(ppu, SAVEDATA_OP_LIST_DELETE, 0, vm::null, 0, setList, setBuf, funcList, vm::null, vm::null, vm::null, container, 0x40, userdata, userId, funcDone);
 }
 
-error_code cellSaveDataUserListImport(ppu_thread& ppu, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataUserListImport(ppu_thread& /*ppu*/, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataUserListImport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
 
@@ -2596,7 +2591,7 @@ error_code cellSaveDataUserListImport(ppu_thread& ppu, u32 userId, PSetList setL
 	return CELL_OK;
 }
 
-error_code cellSaveDataUserListExport(ppu_thread& ppu, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataUserListExport(ppu_thread& /*ppu*/, u32 userId, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataUserListExport(userId=%d, setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, setList, maxSizeKB, funcDone, container, userdata);
 
@@ -2611,7 +2606,7 @@ error_code cellSaveDataUserListExport(ppu_thread& ppu, u32 userId, PSetList setL
 	return CELL_OK;
 }
 
-error_code cellSaveDataUserFixedImport(ppu_thread& ppu, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataUserFixedImport(ppu_thread& /*ppu*/, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataUserFixedImport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
 
@@ -2626,7 +2621,7 @@ error_code cellSaveDataUserFixedImport(ppu_thread& ppu, u32 userId, vm::cptr<cha
 	return CELL_OK;
 }
 
-error_code cellSaveDataUserFixedExport(ppu_thread& ppu, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
+error_code cellSaveDataUserFixedExport(ppu_thread& /*ppu*/, u32 userId, vm::cptr<char> dirName, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataUserFixedExport(userId=%d, dirName=%s, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", userId, dirName, maxSizeKB, funcDone, container, userdata);
 

@@ -26,11 +26,6 @@ void fmt_class_string<CellDaisyError>::format(std::string& out, u64 arg)
 	});
 }
 
-// Temporarily
-#ifndef _MSC_VER
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;
 using ScatterGatherInterlock = struct CellDaisyScatterGatherInterlock;
@@ -38,134 +33,134 @@ using AtomicInterlock = volatile struct CellDaisyAtomicInterlock;
 
 error_code cellDaisyLFQueue2GetPopPointer(vm::ptr<LFQueue2> queue, vm::ptr<s32> pPointer, u32 isBlocking)
 {
-	cellDaisy.todo("cellDaisyLFQueue2GetPopPointer()");
+	cellDaisy.todo("cellDaisyLFQueue2GetPopPointer(queue=*0x%x, pPointer=*0x%x, isBlocking=%d)", queue, pPointer, isBlocking);
 	return CELL_OK;
 }
 
 error_code cellDaisyLFQueue2CompletePopPointer(vm::ptr<LFQueue2> queue, s32 pointer, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal, u32 isQueueFull)
 {
-	cellDaisy.todo("cellDaisyLFQueue2CompletePopPointer()");
+	cellDaisy.todo("cellDaisyLFQueue2CompletePopPointer(queue=*0x%x, pointer=0x%x, fpSendSignal=*0x%x, isQueueFull=%d)", queue, pointer, fpSendSignal, isQueueFull);
 	return CELL_OK;
 }
 
 void cellDaisyLFQueue2PushOpen(vm::ptr<LFQueue2> queue)
 {
-	cellDaisy.todo("cellDaisyLFQueue2PushOpen()");
+	cellDaisy.todo("cellDaisyLFQueue2PushOpen(queue=*0x%x)", queue);
 }
 
 error_code cellDaisyLFQueue2PushClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	cellDaisy.todo("cellDaisyLFQueue2PushClose()");
+	cellDaisy.todo("cellDaisyLFQueue2PushClose(queue=*0x%x, fpSendSignal=*0x%x)", queue, fpSendSignal);
 	return CELL_OK;
 }
 
 void cellDaisyLFQueue2PopOpen(vm::ptr<LFQueue2> queue)
 {
-	cellDaisy.todo("cellDaisyLFQueue2PopOpen()");
+	cellDaisy.todo("cellDaisyLFQueue2PopOpen(queue=*0x%x)", queue);
 }
 
 error_code cellDaisyLFQueue2PopClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	cellDaisy.todo("cellDaisyLFQueue2PopClose()");
+	cellDaisy.todo("cellDaisyLFQueue2PopClose(queue=*0x%x, fpSendSignal=*0x%x)", queue, fpSendSignal);
 	return CELL_OK;
 }
 
 error_code cellDaisyLFQueue2HasUnfinishedConsumer(vm::ptr<LFQueue2> queue, u32 isCancelled)
 {
-	cellDaisy.todo("cellDaisyLFQueue2HasUnfinishedConsumer()");
+	cellDaisy.todo("cellDaisyLFQueue2HasUnfinishedConsumer(queue=*0x%x, isCancelled=%d)", queue, isCancelled);
 	return CELL_OK;
 }
 
 error_code cellDaisy_snprintf(vm::ptr<char> buffer, u32 count, vm::cptr<char> fmt, ppu_va_args_t fmt_args)
 {
-	cellDaisy.todo("cellDaisy_snprintf()");
+	cellDaisy.todo("cellDaisy_snprintf(buffer=*0x%x, count=%d, fmt=*0x%x, fmt_args=%d)", buffer, count, fmt, fmt_args.count);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_initialize(vm::ptr<Lock> _this, u32 depth)
 {
-	cellDaisy.todo("cellDaisyLock_initialize()");
+	cellDaisy.todo("cellDaisyLock_initialize(_this=*0x%x, depth=%d)", _this, depth);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_getNextHeadPointer(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_getNextHeadPointer()");
+	cellDaisy.todo("cellDaisyLock_getNextHeadPointer(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_getNextTailPointer(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_getNextTailPointer()");
+	cellDaisy.todo("cellDaisyLock_getNextTailPointer(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_completeConsume(vm::ptr<Lock> _this, u32 pointer)
 {
-	cellDaisy.todo("cellDaisyLock_completeConsume()");
+	cellDaisy.todo("cellDaisyLock_completeConsume(_this=*0x%x, pointer=0x%x)", _this, pointer);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_completeProduce(vm::ptr<Lock> _this, u32 pointer)
 {
-	cellDaisy.todo("cellDaisyLock_completeProduce()");
+	cellDaisy.todo("cellDaisyLock_completeProduce(_this=*0x%x, pointer=0x%x)", _this, pointer);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_pushOpen(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_pushOpen()");
+	cellDaisy.todo("cellDaisyLock_pushOpen(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_pushClose(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_pushClose()");
+	cellDaisy.todo("cellDaisyLock_pushClose(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_popOpen(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_popOpen()");
+	cellDaisy.todo("cellDaisyLock_popOpen(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 error_code cellDaisyLock_popClose(vm::ptr<Lock> _this)
 {
-	cellDaisy.todo("cellDaisyLock_popClose()");
+	cellDaisy.todo("cellDaisyLock_popClose(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 void cellDaisyScatterGatherInterlock_1(vm::ptr<ScatterGatherInterlock> _this, vm::ptr<AtomicInterlock> ea, u32 size, vm::ptr<void> eaSignal, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_1()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_1(_this=*0x%x, ea=*0x%x, size=%d, eaSignal=*0x%x, fpSendSignal=*0x%x)", _this, ea, size, eaSignal, fpSendSignal);
 }
 
 void cellDaisyScatterGatherInterlock_2(vm::ptr<ScatterGatherInterlock> _this, u32 size, vm::ptr<u32> ids, u32 numSpus, u8 spup)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_2()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_2(_this=*0x%x, size=%d, ids=*0x%x, numSpus=%d, spup=%d)", _this, size, ids, numSpus, spup);
 }
 
 void cellDaisyScatterGatherInterlock_9tor(vm::ptr<ScatterGatherInterlock> _this)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_9tor()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_9tor(_this=*0x%x)", _this);
 }
 
 error_code cellDaisyScatterGatherInterlock_probe(vm::ptr<ScatterGatherInterlock> _this, u32 isBlocking)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_probe()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_probe(_this=*0x%x, isBlocking=%d)", _this, isBlocking);
 	return CELL_OK;
 }
 
 error_code cellDaisyScatterGatherInterlock_release(vm::ptr<ScatterGatherInterlock> _this)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_release()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_release(_this=*0x%x)", _this);
 	return CELL_OK;
 }
 
 void cellDaisyScatterGatherInterlock_proceedSequenceNumber(vm::ptr<ScatterGatherInterlock> _this)
 {
-	cellDaisy.todo("cellDaisyScatterGatherInterlock_proceedSequenceNumber()");
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_proceedSequenceNumber(_this=*0x%x)", _this);
 }
 
 

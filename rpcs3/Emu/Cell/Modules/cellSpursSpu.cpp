@@ -15,7 +15,6 @@ LOG_CHANNEL(cellSpurs);
 // Temporarily
 #ifndef _MSC_VER
 #pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 //----------------------------------------------------------------------------
@@ -89,7 +88,7 @@ void spursJobchainPopUrgentCommand(spu_thread& spu);
 //----------------------------------------------------------------------------
 
 // Output trace information
-void cellSpursModulePutTrace(CellSpursTracePacket* packet, u32 dmaTagId)
+void cellSpursModulePutTrace(CellSpursTracePacket* /*packet*/, u32 /*dmaTagId*/)
 {
 	// TODO: Implement this
 }
@@ -871,7 +870,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 }
 
 // Main function for the system service
-void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
+void spursSysServiceMain(spu_thread& spu, u32 /*pollStatus*/)
 {
 	const auto ctxt = spu._ptr<SpursKernelContext>(0x100);
 
@@ -1166,7 +1165,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelC
 }
 
 // Update the trace count for this SPU
-void spursSysServiceTraceSaveCount(spu_thread& spu, SpursKernelContext* ctxt)
+void spursSysServiceTraceSaveCount(spu_thread& /*spu*/, SpursKernelContext* ctxt)
 {
 	if (ctxt->traceBuffer)
 	{
@@ -2056,7 +2055,7 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 //----------------------------------------------------------------------------
 // SPURS taskset policy module functions
 //----------------------------------------------------------------------------
-bool spursJobChainEntry(spu_thread& spu)
+bool spursJobChainEntry(spu_thread& /*spu*/)
 {
 	//const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
 	//auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
