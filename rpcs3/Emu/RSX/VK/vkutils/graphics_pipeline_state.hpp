@@ -23,7 +23,7 @@ namespace vk
 		graphics_pipeline_state()
 		{
 			// NOTE: Vk** structs have padding bytes
-			memset(this, 0, sizeof(graphics_pipeline_state));
+			std::memset(static_cast<void*>(this), 0, sizeof(graphics_pipeline_state));
 
 			ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 			cs.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -43,7 +43,7 @@ namespace vk
 		graphics_pipeline_state(const graphics_pipeline_state& other)
 		{
 			// NOTE: Vk** structs have padding bytes
-			memcpy(this, &other, sizeof(graphics_pipeline_state));
+			std::memcpy(static_cast<void*>(this), &other, sizeof(graphics_pipeline_state));
 
 			if (other.cs.pAttachments == other.att_state)
 			{
@@ -59,7 +59,7 @@ namespace vk
 			if (this != &other)
 			{
 				// NOTE: Vk** structs have padding bytes
-				memcpy(this, &other, sizeof(graphics_pipeline_state));
+				std::memcpy(static_cast<void*>(this), &other, sizeof(graphics_pipeline_state));
 
 				if (other.cs.pAttachments == other.att_state)
 				{
