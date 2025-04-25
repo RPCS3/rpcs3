@@ -449,6 +449,7 @@ void pad_settings_dialog::InitButtons()
 		{
 			std::lock_guard lock(m_input_mutex);
 			data = m_input_callback_data;
+			m_input_callback_data.values.clear();
 			m_input_callback_data.has_new_data = false;
 		}
 
@@ -498,17 +499,18 @@ void pad_settings_dialog::InitButtons()
 		// Enable Button Remapping
 		update_preview(data.pad_name, true, data.battery_level, data.preview_values[0], data.preview_values[1], data.preview_values[2], data.preview_values[3], data.preview_values[4], data.preview_values[5]);
 
-		if (data.val <= 0 || data.status == PadHandlerBase::connection::no_data)
+		// Handle Button Presses
+		for (const input_callback_data::input_values& values : data.values)
 		{
-			return;
-		}
+			if (values.val <= 0) continue;
 
-		cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, data.pad_name, data.name, data.val);
+			cfg_log.notice("get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, data.pad_name, values.button_name, values.val);
 
-		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == data.button_id)
-		{
-			m_cfg_entries[m_button_id].insert_key(data.name, m_enable_multi_binding);
-			ReactivateButtons();
+			if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == values.button_id)
+			{
+				m_cfg_entries[m_button_id].insert_key(values.button_name, m_enable_multi_binding);
+				ReactivateButtons();
+			}
 		}
 	});
 
@@ -559,35 +561,47 @@ void pad_settings_dialog::InitButtons()
 			const PadHandlerBase::gui_call_type call_type = first_call ? PadHandlerBase::gui_call_type::reset_input : PadHandlerBase::gui_call_type::normal;
 
 			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
-				[this, button_id](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+				[this, button_id](u16 val, std::string button_name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 				{
 					std::lock_guard lock(m_input_mutex);
-					m_input_callback_data.val = val;
-					m_input_callback_data.name = std::move(name);
-					m_input_callback_data.pad_name = std::move(pad_name);
+					if (m_input_callback_data.pad_name != pad_name)
+					{
+						m_input_callback_data = {};
+						m_input_callback_data.pad_name = std::move(pad_name);
+					}
 					m_input_callback_data.battery_level = battery_level;
 					m_input_callback_data.preview_values = std::move(preview_values);
 					m_input_callback_data.has_new_data = true;
 					m_input_callback_data.status = PadHandlerBase::connection::connected;
-					m_input_callback_data.button_id = button_id;
+					if (val > 0)
+					{
+						m_input_callback_data.values.push_back(input_callback_data::input_values
+						{
+							.button_name = std::move(button_name),
+							.button_id = button_id,
+							.val = val,
+						});
+					}
 				},
-				[this, button_id](std::string pad_name)
+				[this](std::string pad_name)
 				{
 					std::lock_guard lock(m_input_mutex);
+					m_input_callback_data = {};
 					m_input_callback_data.pad_name = std::move(pad_name);
 					m_input_callback_data.has_new_data = true;
-					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
-					m_input_callback_data.button_id = button_id;
 				},
 				call_type, buttons);
 
 			if (status == PadHandlerBase::connection::no_data)
 			{
 				std::lock_guard lock(m_input_mutex);
-				m_input_callback_data.pad_name = m_device_name;
+				if (m_input_callback_data.pad_name != m_device_name)
+				{
+					m_input_callback_data = {};
+					m_input_callback_data.pad_name = m_device_name;
+				}
 				m_input_callback_data.has_new_data = true;
 				m_input_callback_data.status = status;
-				m_input_callback_data.button_id = button_id;
 			}
 		}
 	});

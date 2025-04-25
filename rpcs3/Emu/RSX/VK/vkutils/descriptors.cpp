@@ -430,6 +430,17 @@ namespace vk
 		}
 	}
 
+	void descriptor_set::push(const descriptor_set_dynamic_offset_t& offset)
+	{
+		ensure(offset.location >= 0 && offset.location <= 16);
+		while (m_dynamic_offsets.size() < (static_cast<u32>(offset.location) + 1u))
+		{
+			m_dynamic_offsets.push_back(0);
+		}
+
+		m_dynamic_offsets[offset.location] = offset.value;
+	}
+
 	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
 		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
@@ -437,7 +448,7 @@ namespace vk
 			flush();
 		}
 
-		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, 0, nullptr);
+		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
 	}
 
 	void descriptor_set::flush()

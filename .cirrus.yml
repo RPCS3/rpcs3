@@ -7,7 +7,7 @@ env:
   BUILD_SOURCEBRANCHNAME: $CIRRUS_BRANCH
   RPCS3_TOKEN: ENCRYPTED[100ebb8e3552bf2021d0ef55dccda3e58d27be5b6cab0b0b92843ef490195d3c4edaefa087e4a3b425caa6392300b9b1]
   QT_VER_MAIN: '6'
-  QT_VER: '6.8.3'
+  QT_VER: '6.9.0'
   LLVM_COMPILER_VER: '19'
   LLVM_VER: '19.1.7'
 
@@ -23,7 +23,7 @@ env:
 #     COMPILER: msvc
 #     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}\artifacts\
 #     QT_VER_MSVC: 'msvc2022'
-#     QT_DATE: '202503201308'
+#     QT_DATE: '202503301022'
 #     QTDIR: C:\Qt\${QT_VER}\${QT_VER_MSVC}_64
 #     VULKAN_VER: '1.3.268.0'
 #     VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'
@@ -58,7 +58,7 @@ env:
 
 # linux_task:
 #   container:
-#     image: rpcs3/rpcs3-ci-jammy:1.2
+#     image: rpcs3/rpcs3-ci-jammy:1.5
 #     cpu: 4
 #     memory: 16G
 #   env:
@@ -134,7 +134,7 @@ freebsd_task:
 #   matrix:
 #     - name: Cirrus Linux AArch64 Clang
 #       arm_container:
-#         image: 'docker.io/rpcs3/rpcs3-ci-jammy-aarch64:1.2'
+#         image: 'docker.io/rpcs3/rpcs3-ci-jammy-aarch64:1.5'
 #         cpu: 8
 #         memory: 8G
 #       clang_script:

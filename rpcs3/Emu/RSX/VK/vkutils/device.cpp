@@ -2,6 +2,7 @@
 #include "instance.h"
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
+#include <vulkan/vulkan_core.h>
 
 namespace vk
 {
@@ -36,6 +37,7 @@ namespace vk
 			VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_info{};
 			VkPhysicalDeviceBorderColorSwizzleFeaturesEXT border_color_swizzle_info{};
 			VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
+			VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -86,6 +88,13 @@ namespace vk
 				features2.pNext         = &device_fault_info;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_MULTI_DRAW_EXTENSION_NAME))
+			{
+				multidraw_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+				multidraw_info.pNext = features2.pNext;
+				features2.pNext      = &multidraw_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -97,6 +106,9 @@ namespace vk
 			custom_border_color_support.supported = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
 			custom_border_color_support.swizzle_extension_supported = border_color_swizzle_info.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
 			custom_border_color_support.require_border_color_remap = !border_color_swizzle_info.borderColorSwizzleFromImage;
+
+			multidraw_support.supported = !!multidraw_info.multiDraw;
+			multidraw_support.max_batch_size = 65536;
 
 			optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
 			optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
@@ -164,12 +176,20 @@ namespace vk
 			properties2.pNext = nullptr;
 
 			VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
+			VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
 
 			if (descriptor_indexing_support)
 			{
 				descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
 				descriptor_indexing_props.pNext = properties2.pNext;
 				properties2.pNext = &descriptor_indexing_props;
+			}
+
+			if (multidraw_support.supported)
+			{
+				multidraw_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT;
+				multidraw_props.pNext = properties2.pNext;
+				properties2.pNext = &multidraw_props;
 			}
 
 			if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
@@ -196,6 +216,17 @@ namespace vk
 				{
 					rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
 					descriptor_max_draw_calls = 8192;
+				}
+			}
+
+			if (multidraw_support.supported)
+			{
+				multidraw_support.max_batch_size = multidraw_props.maxMultiDrawCount;
+
+				if (!multidraw_props.maxMultiDrawCount)
+				{
+					rsx_log.error("Physical device reports 0 support maxMultiDraw count. Multidraw support will be disabled.");
+					multidraw_support.supported = false;
 				}
 			}
 		}
@@ -493,6 +524,11 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
 		}
 
+		if (pgpu->multidraw_support)
+		{
+			requested_extensions.push_back(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+		}
+
 		if (pgpu->optional_features_support.conditional_rendering)
 		{
 			requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
@@ -723,6 +759,15 @@ namespace vk
 			device.pNext = &custom_border_color_features;
 		}
 
+		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_features{};
+		if (pgpu->multidraw_support)
+		{
+			multidraw_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+			multidraw_features.multiDraw = VK_TRUE;
+			multidraw_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &multidraw_features;
+		}
+
 		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loop_features{};
 		if (pgpu->optional_features_support.framebuffer_loops)
 		{
@@ -791,40 +836,9 @@ namespace vk
 			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
 		}
 
-		// Import optional function endpoints
-		if (pgpu->optional_features_support.conditional_rendering)
-		{
-			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
-			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
-		}
-
-		if (pgpu->optional_features_support.debug_utils)
-		{
-			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
-			_vkQueueInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkQueueInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkQueueInsertDebugUtilsLabelEXT"));
-			_vkCmdInsertDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdInsertDebugUtilsLabelEXT>(vkGetDeviceProcAddr(dev, "vkCmdInsertDebugUtilsLabelEXT"));
-		}
-
-		if (pgpu->optional_features_support.synchronization_2)
-		{
-			_vkCmdSetEvent2KHR = reinterpret_cast<PFN_vkCmdSetEvent2KHR>(vkGetDeviceProcAddr(dev, "vkCmdSetEvent2KHR"));
-			_vkCmdWaitEvents2KHR = reinterpret_cast<PFN_vkCmdWaitEvents2KHR>(vkGetDeviceProcAddr(dev, "vkCmdWaitEvents2KHR"));
-			_vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>(vkGetDeviceProcAddr(dev, "vkCmdPipelineBarrier2KHR"));
-		}
-
-		if (pgpu->optional_features_support.extended_device_fault)
-		{
-			_vkGetDeviceFaultInfoEXT = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(vkGetDeviceProcAddr(dev, "vkGetDeviceFaultInfoEXT"));
-		}
-
 		memory_map = vk::get_memory_mapping(pdev);
 		m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		m_pipeline_binding_table = vk::get_pipeline_binding_table(pdev);
-
-		if (pgpu->optional_features_support.external_memory_host)
-		{
-			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
-		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
 		{

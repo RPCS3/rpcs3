@@ -25,11 +25,20 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Remove libvulkan because it causes issues with gamescope
     rm -f ./AppDir/usr/lib/libvulkan.so*
 
+    # Remove unused Qt6 libraries
+    rm -f ./AppDir/usr/lib/libQt6OpenGL.so*
+    rm -f ./AppDir/usr/lib/libQt6Qml*.so*
+    rm -f ./AppDir/usr/lib/libQt6Quick.so*
+    rm -f ./AppDir/usr/lib/libQt6VirtualKeyboard.so*
+    rm -f ./AppDir/usr/plugins/platforminputcontexts/libqtvirtualkeyboardplugin.so*
+
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
 
-    linuxdeploy --appimage-extract
-    ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
+    curl -fsSLo /uruntime "https://github.com/VHSgunzo/uruntime/releases/download/v0.3.4/uruntime-appimage-dwarfs-$CPU_ARCH"
+    chmod +x /uruntime
+    /uruntime --appimage-mkdwarfs -f --set-owner 0 --set-group 0 --no-history --no-create-timestamp \
+    --compression zstd:level=22 -S26 -B32 --header /uruntime -i AppDir -o RPCS3.AppImage
 
     APPIMAGE_SUFFIX="linux_${CPU_ARCH}"
     if [ "$CPU_ARCH" = "x86_64" ]; then

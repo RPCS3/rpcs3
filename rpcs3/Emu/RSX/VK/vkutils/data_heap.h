@@ -6,6 +6,7 @@
 #include "commands.h"
 
 #include <memory>
+#include <type_traits>
 #include <vector>
 
 namespace vk
@@ -38,11 +39,19 @@ namespace vk
 		void* map(usz offset, usz size);
 		void unmap(bool force = false);
 
+		template<int Alignment, typename T = char>
+			requires std::is_trivially_destructible_v<T>
+		std::pair<usz, T*> alloc_and_map(usz count)
+		{
+			const auto size_bytes = count * sizeof(T);
+			const auto addr = alloc<Alignment>(size_bytes);
+			return { addr, reinterpret_cast<T*>(map(addr, size_bytes)) };
+		}
+
 		void sync(const vk::command_buffer& cmd);
 
 		// Properties
 		bool is_dirty() const;
-		bool is_critical() const override;
 	};
 
 	extern data_heap* get_upload_heap();

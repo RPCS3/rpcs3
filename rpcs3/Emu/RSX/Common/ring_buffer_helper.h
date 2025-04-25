@@ -15,34 +15,46 @@ class data_heap
 {
 protected:
 	/**
-	* Does alloc cross get position ?
+	* Internal implementation of allocation test
+	* Does alloc cross get position?
+	*/
+	bool can_alloc_impl(usz aligned_put_pos, usz aligned_alloc_size) const
+	{
+		const usz alloc_end = aligned_put_pos + aligned_alloc_size;
+		if (alloc_end < m_size) [[ likely ]]
+		{
+			// Range before get
+			if (alloc_end < m_get_pos)
+				return true;
+
+			// Range after get
+			if (aligned_put_pos > m_get_pos)
+				return true;
+
+			return false;
+		}
+
+		// ..]....[..get..
+		if (aligned_put_pos < m_get_pos)
+			return false;
+
+		// ..get..]...[...
+		// Actually all resources extending beyond heap space starts at 0
+		if (aligned_alloc_size > m_get_pos)
+			return false;
+
+		return true;
+	}
+
+	/**
+	* Does alloc cross get position?
 	*/
 	template<int Alignment>
 	bool can_alloc(usz size) const
 	{
-		usz alloc_size = utils::align(size, Alignment);
-		usz aligned_put_pos = utils::align(m_put_pos, Alignment);
-		if (aligned_put_pos + alloc_size < m_size)
-		{
-			// range before get
-			if (aligned_put_pos + alloc_size < m_get_pos)
-				return true;
-			// range after get
-			if (aligned_put_pos > m_get_pos)
-				return true;
-			return false;
-		}
-		else
-		{
-			// ..]....[..get..
-			if (aligned_put_pos < m_get_pos)
-				return false;
-			// ..get..]...[...
-			// Actually all resources extending beyond heap space starts at 0
-			if (alloc_size > m_get_pos)
-				return false;
-			return true;
-		}
+		const usz alloc_size = utils::align(size, Alignment);
+		const usz aligned_put_pos = utils::align(m_put_pos, Alignment);
+		return can_alloc_impl(aligned_put_pos, alloc_size);
 	}
 
 	// Grow the buffer to hold at least size bytes
@@ -53,10 +65,9 @@ protected:
 	}
 
 	usz m_size;
-	usz m_put_pos; // Start of free space
-	usz m_min_guard_size; //If an allocation touches the guard region, reset the heap to avoid going over budget
-	usz m_current_allocated_size;
-	usz m_largest_allocated_pool;
+	usz m_put_pos;                 // Start of free space
+	usz m_get_pos;                 // End of free space
+	usz m_min_guard_size;          // If an allocation touches the guard region, reset the heap to avoid going over budget
 
 	char* m_name;
 public:
@@ -64,8 +75,6 @@ public:
 	~data_heap() = default;
 	data_heap(const data_heap&) = delete;
 	data_heap(data_heap&&) = delete;
-
-	usz m_get_pos; // End of free space
 
 	void init(usz heap_size, const char* buffer_name = "unnamed", usz min_guard_size=0x10000)
 	{
@@ -75,10 +84,8 @@ public:
 		m_put_pos = 0;
 		m_get_pos = heap_size - 1;
 
-		//allocation stats
+		// Allocation stats
 		m_min_guard_size = min_guard_size;
-		m_current_allocated_size = 0;
-		m_largest_allocated_pool = 0;
 	}
 
 	template<int Alignment>
@@ -89,24 +96,46 @@ public:
 
 		if (!can_alloc<Alignment>(size) && !grow(alloc_size))
 		{
-			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d",
-					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
+			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d requested=%d guard=%d",
+					m_name, m_size, size, m_min_guard_size);
 		}
 
-		const usz block_length = (aligned_put_pos - m_put_pos) + alloc_size;
-		m_current_allocated_size += block_length;
-		m_largest_allocated_pool = std::max(m_largest_allocated_pool, block_length);
-
-		if (aligned_put_pos + alloc_size < m_size)
+		const usz alloc_end = aligned_put_pos + alloc_size;
+		if (alloc_end < m_size)
 		{
-			m_put_pos = aligned_put_pos + alloc_size;
+			m_put_pos = alloc_end;
 			return aligned_put_pos;
 		}
-		else
+
+		m_put_pos = alloc_size;
+		return 0;
+	}
+
+	/*
+	 * For use in cases where we take a fixed amount each time
+	 */
+	template<int Alignment, usz Size = Alignment>
+	usz static_alloc()
+	{
+		static_assert((Size & (Alignment - 1)) == 0);
+		ensure((m_put_pos & (Alignment - 1)) == 0);
+
+		if (!can_alloc_impl(m_put_pos, Size) && !grow(Size))
 		{
-			m_put_pos = alloc_size;
-			return 0;
+			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d requested=%d guard=%d",
+					m_name, m_size, Size, m_min_guard_size);
 		}
+
+		const usz alloc_end = m_put_pos + Size;
+		if (alloc_end < m_size)
+		{
+			const auto ret_pos = m_put_pos;
+			m_put_pos = alloc_end;
+			return ret_pos;
+		}
+
+		m_put_pos = Size;
+		return 0;
 	}
 
 	/**
@@ -117,30 +146,20 @@ public:
 		return (m_put_pos > 0) ? m_put_pos - 1 : m_size - 1;
 	}
 
-	virtual bool is_critical() const
+	inline void set_get_pos(usz value)
 	{
-		const usz guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);
-		return (m_current_allocated_size + guard_length) >= m_size;
+		m_get_pos = value;
 	}
 
 	void reset_allocation_stats()
 	{
-		m_current_allocated_size = 0;
-		m_largest_allocated_pool = 0;
 		m_get_pos = get_current_put_pos_minus_one();
 	}
 
 	// Updates the current_allocated_size metrics
-	void notify()
+	inline void notify()
 	{
-		if (m_get_pos == umax)
-			m_current_allocated_size = 0;
-		else if (m_get_pos < m_put_pos)
-			m_current_allocated_size = (m_put_pos - m_get_pos - 1);
-		else if (m_get_pos > m_put_pos)
-			m_current_allocated_size = (m_put_pos + (m_size - m_get_pos - 1));
-		else
-			fmt::throw_exception("m_put_pos == m_get_pos!");
+		// @unused
 	}
 
 	usz size() const

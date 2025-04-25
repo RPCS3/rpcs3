@@ -83,10 +83,9 @@ void game_list_table::restore_layout(const QByteArray& state)
 
 void game_list_table::resize_columns_to_contents(int spacing)
 {
-	verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 
-	// Make non-icon columns slighty bigger for better visuals
+	// Make non-icon columns slightly bigger for better visuals
 	for (int i = 1; i < columnCount(); i++)
 	{
 		if (isColumnHidden(i))
@@ -102,6 +101,7 @@ void game_list_table::resize_columns_to_contents(int spacing)
 void game_list_table::adjust_icon_column()
 {
 	// Fixate vertical header and row height
+	verticalHeader()->setDefaultSectionSize(m_icon_size.height());
 	verticalHeader()->setMinimumSectionSize(m_icon_size.height());
 	verticalHeader()->setMaximumSectionSize(m_icon_size.height());
 
@@ -158,9 +158,9 @@ void game_list_table::sort(usz game_count, int sort_column, Qt::SortOrder col_so
 	}
 
 	// Fixate vertical header and row height
+	verticalHeader()->setDefaultSectionSize(m_icon_size.height());
 	verticalHeader()->setMinimumSectionSize(m_icon_size.height());
 	verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-	resizeRowsToContents();
 
 	// Resize columns if the game list was empty before
 	if (!old_row_count && !old_game_count)
@@ -252,19 +252,19 @@ void game_list_table::populate(
 			if (const QPixmap pixmap = icon_item->get_movie_image(frame); icon_item->get_active() && !pixmap.isNull())
 			{
 				icon_item->setData(Qt::DecorationRole, pixmap.scaled(m_icon_size, Qt::KeepAspectRatio));
+				return;
 			}
-			else
-			{
-				std::lock_guard lock(icon_item->pixmap_mutex);
 
+			std::lock_guard lock(icon_item->pixmap_mutex);
+
+			if (!game->pxmap.isNull())
+			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
 
 				if (!game->has_hover_gif && !game->has_hover_pam)
 				{
 					game->pxmap = {};
 				}
-
-				icon_item->stop_movie();
 			}
 		});
 

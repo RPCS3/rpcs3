@@ -6,6 +6,14 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
+#if defined(ARCH_ARM64)
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+#undef FORCE_INLINE
+#include "Emu/CPU/sse2neon.h"
+#endif
+
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -404,57 +412,70 @@ namespace
 		}
 	};
 
-template <typename T>
-NEVER_INLINE std::tuple<T, T, u32> upload_untouched_skip_restart(std::span<to_be_t<const T>> src, std::span<T> dst, T restart_index)
-{
-	T min_index = index_limit<T>();
-	T max_index = 0;
-	u32 written = 0;
-	u32 length = ::size32(src);
-
-	for (u32 i = written; i < length; ++i)
+	template <typename T>
+	NEVER_INLINE std::tuple<T, T, u32> upload_untouched_skip_restart(std::span<to_be_t<const T>> src, std::span<T> dst, T restart_index)
 	{
-		T index = src[i];
-		if (index != restart_index)
+		T min_index = index_limit<T>();
+		T max_index = 0;
+		u32 written = 0;
+		u32 length = ::size32(src);
+
+		for (u32 i = written; i < length; ++i)
 		{
-			dst[written++] = min_max(min_index, max_index, index);
+			T index = src[i];
+			if (index != restart_index)
+			{
+				dst[written++] = min_max(min_index, max_index, index);
+			}
 		}
+
+		return std::make_tuple(min_index, max_index, written);
 	}
 
-	return std::make_tuple(min_index, max_index, written);
-}
+	template<typename T, typename U = remove_be_t<T>>
+		requires std::is_same_v<U, u32> || std::is_same_v<U, u16>
+	std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
+	{
+		if constexpr (std::is_same_v<T, u16>)
+		{
+			if (primitive_restart_index > 0xffff)
+			{
+				// Will never trip index restart, unpload untouched
+				is_primitive_restart_enabled = false;
+			}
+		}
 
-template<typename T>
-std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
-{
-	if (!is_primitive_restart_enabled)
-	{
-		return untouched_impl::upload_untouched(src, dst);
-	}
-	else if constexpr (std::is_same_v<T, u16>)
-	{
-		if (primitive_restart_index > 0xffff)
+		if (!is_primitive_restart_enabled)
 		{
 			return untouched_impl::upload_untouched(src, dst);
 		}
-		else if (is_primitive_disjointed(draw_mode))
+
+		if (is_primitive_disjointed(draw_mode))
 		{
-			return upload_untouched_skip_restart(src, dst, static_cast<u16>(primitive_restart_index));
+			return upload_untouched_skip_restart(src, dst, static_cast<U>(primitive_restart_index));
 		}
-		else
+
+		return primitive_restart_impl::upload_untouched(src, dst, static_cast<U>(primitive_restart_index));
+	}
+
+	void iota16(u16* dst, u32 count)
+	{
+		unsigned i = 0;
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+		const unsigned step = 8;                          // We do 8 entries per step
+		const __m128i vec_step = _mm_set1_epi16(8);     // Constant to increment the raw values
+		__m128i values = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
+		__m128i* vec_ptr = reinterpret_cast<__m128i*>(dst);
+
+		for (; (i + step) <= count; i += step, vec_ptr++)
 		{
-			return primitive_restart_impl::upload_untouched(src, dst, static_cast<u16>(primitive_restart_index));
+			_mm_stream_si128(vec_ptr, values);
+			_mm_add_epi16(values,  vec_step);
 		}
+#endif
+		for (; i < count; ++i)
+			dst[i] = i;
 	}
-	else if (is_primitive_disjointed(draw_mode))
-	{
-		return upload_untouched_skip_restart(src, dst, primitive_restart_index);
-	}
-	else
-	{
-		return primitive_restart_impl::upload_untouched(src, dst, primitive_restart_index);
-	}
-}
 
 	template<typename T>
 	std::tuple<T, T, u32> expand_indexed_triangle_fan(std::span<to_be_t<const T>> src, std::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
@@ -624,8 +645,7 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	switch (draw_mode)
 	{
 	case rsx::primitive_type::line_loop:
-		for (unsigned i = 0; i < count; ++i)
-			typedDst[i] = i;
+		iota16(typedDst, count);
 		typedDst[count] = 0;
 		return;
 	case rsx::primitive_type::triangle_fan:

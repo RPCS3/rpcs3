@@ -627,6 +627,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKCommonDecompiler.cpp
         RSX/VK/VKCommonPipelineLayout.cpp
         RSX/VK/VKCompute.cpp
+        RSX/VK/VKDataHeapManager.cpp
         RSX/VK/VKDMA.cpp
         RSX/VK/VKDraw.cpp
         RSX/VK/VKFormats.cpp
@@ -649,6 +650,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKVertexBuffers.cpp
         RSX/VK/VKVertexProgram.cpp
         RSX/VK/VKTextureCache.cpp
+        RSX/VK/VulkanAPI.cpp
     )
 endif()
 

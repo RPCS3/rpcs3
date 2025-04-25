@@ -4139,6 +4139,31 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	return game_boot_result::invalid_file_or_folder;
 }
 
+u32 Emulator::RemoveGamesFromDir(const std::string& games_dir, const std::vector<std::string>& serials_to_remove_from_yml, bool save_on_disk)
+{
+	// List of serials (title id) to remove in "games.yml" file (if any)
+	std::vector<std::string> serials_to_remove = serials_to_remove_from_yml; // Initialize the list with the specified serials (if any)
+
+	if (!games_dir.empty()) // Skip an empty folder, otherwise we'll remove all games (which is not the intention)
+	{
+		// Scan game list to detect the titles belonging to auto-detection "games_dir" folder
+		for (const auto& [serial, path] : Emu.GetGamesConfig().get_games()) // Loop on game list file
+		{
+			// NOTE: Used starts_with(games_dir) instead of Emu.IsPathInsideDir(path, games_dir) due the latter would check
+			//       also the existence of the paths
+			//
+			if (path.starts_with(games_dir)) // If game path belongs to auto-detection "games_dir" folder, add the serial to the removal list
+			{
+				serials_to_remove.push_back(serial);
+			}
+		}
+	}
+
+	// Remove the specified and detected serials (title id) belonging to "games_dir" from the game list in memory
+	// or also in "games.yml" file according to the value of "save_on_disk"
+	return RemoveGames(serials_to_remove, save_on_disk);
+}
+
 u32 Emulator::RemoveGames(const std::vector<std::string>& title_id_list, bool save_on_disk)
 {
 	if (title_id_list.empty())

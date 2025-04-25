@@ -29,8 +29,14 @@ namespace rsx
 		// Location of last execution barrier
 		u32 last_execution_barrier_index{};
 
+		// Mask of all active barriers
+		u32 draw_command_barrier_mask = 0;
+
 		// Draw-time iterator to the draw_command_barriers struct
 		mutable simple_array<barrier_t>::iterator current_barrier_it;
+
+		// Subranges memory cache
+		mutable rsx::simple_array<draw_range_t> subranges_store;
 
 		// Helper functions
 		// Add a new draw command
@@ -246,6 +252,12 @@ namespace rsx
 				return false;
 			}
 
+			// Advance barrier iterator so it always points to the current draw
+			for (;
+				current_barrier_it != draw_command_barriers.end() &&
+				current_barrier_it->draw_id < current_range_index;
+				++current_barrier_it);
+
 			if (draw_command_ranges[current_range_index].count == 0)
 			{
 				// Dangling execution barrier
@@ -282,48 +294,19 @@ namespace rsx
 		 */
 		u32 execute_pipeline_dependencies(struct context* ctx, instanced_draw_config_t* instance_config = nullptr) const;
 
+		/**
+		 * Returns the first-count data for the current subdraw
+		 */
 		const draw_range_t& get_range() const
 		{
 			ensure(current_range_index < draw_command_ranges.size());
 			return draw_command_ranges[current_range_index];
 		}
 
-		simple_array<draw_range_t> get_subranges() const
-		{
-			ensure(!is_single_draw());
-
-			const auto range = get_range();
-			const auto limit = range.first + range.count;
-
-			simple_array<draw_range_t> ret;
-			u32 previous_barrier = range.first;
-			u32 vertex_counter = 0;
-
-			for (const auto& barrier : draw_command_barriers)
-			{
-				if (barrier.draw_id != current_range_index)
-					continue;
-
-				if (barrier.type != primitive_restart_barrier)
-					continue;
-
-				if (barrier.address <= range.first)
-					continue;
-
-				if (barrier.address >= limit)
-					break;
-
-				const u32 count = barrier.address - previous_barrier;
-				ret.push_back({ 0, vertex_counter, count });
-				previous_barrier = barrier.address;
-				vertex_counter += count;
-			}
-
-			ensure(!ret.empty());
-			ensure(previous_barrier < limit);
-			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
-
-			return ret;
-		}
+		/*
+		 * Returns a compiled list of all subdraws.
+		 * NOTE: This is a non-trivial operation as it takes disjoint primitive boundaries into account.
+		 */
+		const simple_array<draw_range_t>& get_subranges() const;
 	};
 }

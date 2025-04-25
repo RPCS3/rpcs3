@@ -55,9 +55,6 @@
 /bin/GuiConfigs/*.dat
 /bin/GuiConfigs/*.dat.*
 
-# Some data from git
-!/bin/git/
-
 # Visual Studio Files
 .vs/*
 .vscode/*

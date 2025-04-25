@@ -1732,7 +1732,7 @@ void patch_engine::save_config(const patch_map& patches_map)
 
 	fs::pending_file file(path);
 
-	if (!file.file || (file.file.write(out.c_str(), out.size()), !file.commit()))
+	if (!file.file || file.file.write(out.c_str(), out.size()) < out.size() || !file.commit())
 	{
 		patch_log.error("Failed to create patch config file %s (error=%s)", path, fs::g_tls_error);
 	}

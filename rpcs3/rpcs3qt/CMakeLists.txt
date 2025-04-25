@@ -57,6 +57,7 @@ add_library(rpcs3_ui STATIC
     movie_item.cpp
     movie_item_base.cpp
     msg_dialog_frame.cpp
+    music_player_dialog.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
     pad_motion_settings_dialog.cpp
@@ -119,6 +120,7 @@ add_library(rpcs3_ui STATIC
     about_dialog.ui
     camera_settings_dialog.ui
     main_window.ui
+    music_player_dialog.ui
     pad_led_settings_dialog.ui
     pad_motion_settings_dialog.ui
     pad_settings_dialog.ui

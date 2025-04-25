@@ -170,12 +170,17 @@ private:
 	{
 		PadHandlerBase::connection status = PadHandlerBase::connection::disconnected;
 		bool has_new_data = false;
-		u32 button_id = button_ids::id_pad_begin;
-		u16 val = 0;
-		std::string name;
 		std::string pad_name;
 		u32 battery_level = 0;
 		std::array<int, 6> preview_values{};
+
+		struct input_values
+		{
+			std::string button_name;
+			u32 button_id = button_ids::id_pad_begin;
+			u16 val = 0;
+		};
+		std::vector<input_values> values;
 	} m_input_callback_data;
 
 	// Input thread. Its Callback handles the input

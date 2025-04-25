@@ -155,17 +155,7 @@ void VKGSRender::advance_queued_frames()
 	vk::remove_unused_framebuffers();
 
 	m_vertex_cache->purge();
-	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
-		m_vertex_env_ring_info.get_current_put_pos_minus_one(),
-		m_fragment_env_ring_info.get_current_put_pos_minus_one(),
-		m_vertex_layout_ring_info.get_current_put_pos_minus_one(),
-		m_fragment_texture_params_ring_info.get_current_put_pos_minus_one(),
-		m_fragment_constants_ring_info.get_current_put_pos_minus_one(),
-		m_transform_constants_ring_info.get_current_put_pos_minus_one(),
-		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
-		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one(),
-		m_raster_env_ring_info.get_current_put_pos_minus_one(),
-		m_instancing_buffer_ring_info.get_current_put_pos_minus_one());
+	m_current_frame->tag_frame_end();
 
 	m_queued_frames.push_back(m_current_frame);
 	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
@@ -219,7 +209,6 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	}
 
 	// Resource cleanup.
-	// TODO: This is some outdated crap.
 	{
 		if (m_overlay_manager && m_overlay_manager->has_dirty())
 		{
@@ -243,45 +232,12 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 
 		vk::reset_global_resources();
 
-		ctx->buffer_views_to_clean.clear();
-
-		const auto shadermode = g_cfg.video.shadermode.get();
-
-		if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
-		{
-			// TODO: This is jank AF
-			m_vertex_instructions_buffer.reset_allocation_stats();
-			m_fragment_instructions_buffer.reset_allocation_stats();
-		}
-
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
 			m_last_heap_sync_time = ctx->last_frame_sync_time;
 
 			// Heap cleanup; deallocates memory consumed by the frame if it is still held
-			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
-			m_vertex_env_ring_info.m_get_pos = ctx->vtx_env_heap_ptr;
-			m_fragment_env_ring_info.m_get_pos = ctx->frag_env_heap_ptr;
-			m_fragment_constants_ring_info.m_get_pos = ctx->frag_const_heap_ptr;
-			m_transform_constants_ring_info.m_get_pos = ctx->vtx_const_heap_ptr;
-			m_vertex_layout_ring_info.m_get_pos = ctx->vtx_layout_heap_ptr;
-			m_fragment_texture_params_ring_info.m_get_pos = ctx->frag_texparam_heap_ptr;
-			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
-			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
-			m_raster_env_ring_info.m_get_pos = ctx->rasterizer_env_heap_ptr;
-			m_instancing_buffer_ring_info.m_get_pos = ctx->instancing_heap_ptr;
-
-			m_attrib_ring_info.notify();
-			m_vertex_env_ring_info.notify();
-			m_fragment_env_ring_info.notify();
-			m_fragment_constants_ring_info.notify();
-			m_transform_constants_ring_info.notify();
-			m_vertex_layout_ring_info.notify();
-			m_fragment_texture_params_ring_info.notify();
-			m_index_buffer_ring_info.notify();
-			m_texture_upload_buffer_ring_info.notify();
-			m_raster_env_ring_info.notify();
-			m_instancing_buffer_ring_info.notify();
+			vk::data_heap_manager::restore_snapshot(ctx->heap_snapshot);
 		}
 	}
 
@@ -450,7 +406,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		// Swap aux storage and current frame; aux storage should always be ready for use at all times
-		m_current_frame->swap_storage(m_aux_frame_context);
 		m_current_frame->grab_resources(m_aux_frame_context);
 	}
 	else if (m_current_frame->swap_command_buffer)

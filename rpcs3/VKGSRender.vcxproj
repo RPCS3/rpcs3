@@ -19,6 +19,7 @@
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDataHeapManager.h" />
     <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
     <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
     <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
@@ -28,6 +29,7 @@
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
     <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
     <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
     <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
@@ -73,6 +75,7 @@
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDataHeapManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
@@ -112,6 +115,7 @@
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">

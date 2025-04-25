@@ -512,7 +512,6 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 	if (restore_layout && !m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
-		//m_game_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 		//m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
@@ -520,7 +519,6 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 	if (restore_layout && !m_trophy_table->horizontalHeader()->restoreState(trophy_table_state) && m_trophy_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
-		//m_trophy_table->verticalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 		//m_trophy_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
@@ -1222,9 +1220,9 @@ void trophy_manager_dialog::PopulateTrophyTable()
 void trophy_manager_dialog::ReadjustGameTable() const
 {
 	// Fixate vertical header and row height
+	m_game_table->verticalHeader()->setDefaultSectionSize(m_game_icon_size.height());
 	m_game_table->verticalHeader()->setMinimumSectionSize(m_game_icon_size.height());
 	m_game_table->verticalHeader()->setMaximumSectionSize(m_game_icon_size.height());
-	m_game_table->resizeRowsToContents();
 
 	// Resize and fixate icon column
 	m_game_table->resizeColumnToContents(static_cast<int>(gui::trophy_game_list_columns::icon));
@@ -1237,9 +1235,9 @@ void trophy_manager_dialog::ReadjustGameTable() const
 void trophy_manager_dialog::ReadjustTrophyTable() const
 {
 	// Fixate vertical header and row height
+	m_trophy_table->verticalHeader()->setDefaultSectionSize(m_icon_height);
 	m_trophy_table->verticalHeader()->setMinimumSectionSize(m_icon_height);
 	m_trophy_table->verticalHeader()->setMaximumSectionSize(m_icon_height);
-	m_trophy_table->resizeRowsToContents();
 
 	// Resize and fixate icon column
 	m_trophy_table->resizeColumnToContents(static_cast<int>(gui::trophy_list_columns::icon));

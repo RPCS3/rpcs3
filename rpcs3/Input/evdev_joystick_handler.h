@@ -57,31 +57,9 @@ struct positive_axis : cfg::node
 	cfg::_bool abs_mt_tool_x{ this, "ABS_MT_TOOL_X", false };
 	cfg::_bool abs_mt_tool_y{ this, "ABS_MT_TOOL_Y", false };
 
-	bool load()
-	{
-		if (fs::file cfg_file{ cfg_name, fs::read })
-		{
-			return from_string(cfg_file.to_string());
-		}
-
-		return false;
-	}
-
-	void save()
-	{
-		fs::pending_file file(cfg_name);
-
-		if (file.file)
-		{
-			file.file.write(to_string());
-			file.commit();
-		}
-	}
-
-	bool exist()
-	{
-		return fs::is_file(cfg_name);
-	}
+	bool load();
+	void save() const;
+	bool exist() const;
 };
 
 class evdev_joystick_handler final : public PadHandlerBase
@@ -102,6 +80,8 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ KEY_DOWN            , "Down Key"    },
 		{ KEY_NEXT            , "Next Key"    },
 		{ KEY_PREVIOUS        , "Previous Key"},
+		// 8bitdo Pro 2 controller uses this for the button below "b"
+		{ KEY_MENU            , "Menu"        },
 		//{ BTN_MISC            , "Misc"        }, same as BTN_0
 		{ BTN_0               , "0"           },
 		{ BTN_1               , "1"           },

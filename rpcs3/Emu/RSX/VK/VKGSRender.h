@@ -20,6 +20,8 @@
 
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
+#include <functional>
+#include <initializer_list>
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
@@ -32,21 +34,6 @@ namespace vk
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
-	enum
-	{
-		VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE = 0x1,
-		VK_HEAP_CHECK_VERTEX_STORAGE = 0x2,
-		VK_HEAP_CHECK_VERTEX_ENV_STORAGE = 0x4,
-		VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE = 0x8,
-		VK_HEAP_CHECK_TEXTURE_ENV_STORAGE = 0x10,
-		VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE = 0x20,
-		VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE = 0x40,
-		VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE = 0x80,
-
-		VK_HEAP_CHECK_MAX_ENUM = VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE,
-		VK_HEAP_CHECK_ALL = 0xFF,
-	};
-
 	enum frame_context_state : u32
 	{
 		dirty = 1
@@ -160,6 +147,9 @@ private:
 	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
 	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
 
+	rsx::simple_array<u32> m_multidraw_parameters_buffer;
+	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
+
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	vk::frame_context_t m_aux_frame_context;
@@ -228,8 +218,6 @@ private:
 	VkRenderPass get_render_pass();
 
 	void update_draw_state();
-
-	void check_heap_status(u32 flags = VK_HEAP_CHECK_ALL);
 	void check_present_status();
 
 	VkDescriptorSet allocate_descriptor_set();

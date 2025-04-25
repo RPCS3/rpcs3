@@ -44,6 +44,8 @@ namespace rsx
 			}
 		};
 
+		draw_command_barrier_mask |= (1u << type);
+
 		if (type == primitive_restart_barrier)
 		{
 			// Rasterization flow barrier
@@ -97,48 +99,32 @@ namespace rsx
 			return false;
 		}
 
-		// For instancing all draw calls must be identical
-		const auto& ref = draw_command_ranges.front();
-		for (const auto& range : draw_command_ranges)
-		{
-			if (range.first != ref.first || range.count != ref.count)
-			{
-				return false;
-			}
-		}
-
 		if (draw_command_barriers.empty())
 		{
-			// Raise alarm here for investigation, we may be missing a corner case.
-			rsx_log.error("Instanced draw detected, but no command barriers found!");
 			return false;
 		}
 
 		// Barriers must exist, but can only involve updating transform constants (for now)
-		for (const auto& barrier : draw_command_barriers)
-		{
-			if (barrier.type != rsx::transform_constant_load_modifier_barrier &&
-				barrier.type != rsx::transform_constant_update_barrier)
-			{
-				ensure(barrier.draw_id < ::size32(draw_command_ranges));
-				if (draw_command_ranges[barrier.draw_id].count == 0)
-				{
-					// Dangling command barriers are ignored. We're also at the end of the command, so abort.
-					break;
-				}
+		const u32 compatible_barrier_mask =
+			(1u << rsx::transform_constant_load_modifier_barrier) |
+			(1u << rsx::transform_constant_update_barrier);
 
-				// Fail. Only transform constant instancing is supported at the moment.
-				return false;
-			}
+		if (draw_command_barrier_mask & ~compatible_barrier_mask)
+		{
+			return false;
 		}
 
-		return true;
+		// For instancing all draw calls must be identical
+		// FIXME: This requirement can be easily lifted by chunking contiguous chunks.
+		const auto& ref = draw_command_ranges.front();
+		return !draw_command_ranges.any(FN(x.first != ref.first || x.count != ref.count));
 	}
 
 	void draw_clause::reset(primitive_type type)
 	{
 		current_range_index = ~0u;
 		last_execution_barrier_index = 0;
+		draw_command_barrier_mask = 0;
 
 		command = draw_command::none;
 		primitive = type;
@@ -152,14 +138,56 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
+	const simple_array<draw_range_t>& draw_clause::get_subranges() const
+	{
+		ensure(!is_single_draw());
+
+		const auto range = get_range();
+		const auto limit = range.first + range.count;
+		const auto _pass_count = pass_count();
+
+		auto &ret = subranges_store;
+		ret.clear();
+		ret.reserve(_pass_count);
+
+		u32 previous_barrier = range.first;
+		u32 vertex_counter = 0;
+
+		for (auto it = current_barrier_it;
+			it != draw_command_barriers.end() && it->draw_id == current_range_index;
+			it++)
+		{
+			const auto& barrier = *it;
+			if (barrier.type != primitive_restart_barrier)
+				continue;
+
+			if (barrier.address <= range.first)
+				continue;
+
+			if (barrier.address >= limit)
+				break;
+
+			const u32 count = barrier.address - previous_barrier;
+			ret.push_back({ 0, vertex_counter, count });
+			previous_barrier = barrier.address;
+			vertex_counter += count;
+		}
+
+		ensure(!ret.empty());
+		ensure(previous_barrier < limit);
+		ret.push_back({ 0, vertex_counter, limit - previous_barrier });
+
+		return ret;
+	}
+
 	u32 draw_clause::execute_pipeline_dependencies(context* ctx, instanced_draw_config_t* instance_config) const
 	{
 		u32 result = 0u;
-		for (;
-			current_barrier_it != draw_command_barriers.end() && current_barrier_it->draw_id == current_range_index;
-			current_barrier_it++)
+		for (auto it = current_barrier_it;
+			it != draw_command_barriers.end() && it->draw_id == current_range_index;
+			it++)
 		{
-			const auto& barrier = *current_barrier_it;
+			const auto& barrier = *it;
 			switch (barrier.type)
 			{
 			case primitive_restart_barrier:

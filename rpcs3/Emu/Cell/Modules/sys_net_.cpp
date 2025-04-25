@@ -4,11 +4,6 @@
 
 LOG_CHANNEL(libnet);
 
-// Temporarily
-#ifndef _MSC_VER
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 s32 sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
 	libnet.todo("accept(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
@@ -44,19 +39,22 @@ s32 sys_net_gethostbyname()
 
 s32 sys_net_getpeername(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("getpeername(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+
 	return CELL_OK;
 }
 
 s32 sys_net_getsockname(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("getsockname(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
+
 	return CELL_OK;
 }
 
 s32 sys_net_getsockopt(s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("getsockopt(s=%d, level=%d, optname=%d, optval=*0x%x, optlen=*0x%x)", s, level, optname, optval, optlen);
+
 	return CELL_OK;
 }
 
@@ -141,7 +139,8 @@ s32 sys_net_recvfrom(s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_n
 
 s32 sys_net_recvmsg(s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("recvmsg(s=%d, msg=*0x%x, flags=0x%x)", s, msg, flags);
+
 	return CELL_OK;
 }
 
@@ -154,7 +153,8 @@ s32 sys_net_send(s32 s, vm::cptr<void> buf, u32 len, s32 flags)
 
 s32 sys_net_sendmsg(s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("sendmsg(s=%d, msg=*0x%x, flags=0x%x)", s, msg, flags);
+
 	return CELL_OK;
 }
 
@@ -195,7 +195,8 @@ s32 sys_net_socketclose(s32 s)
 
 s32 sys_net_socketpoll(vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("socketpoll(fds=*0x%x, nfds=%d, ms=%d)", fds, nfds, ms);
+
 	return CELL_OK;
 }
 
@@ -270,7 +271,8 @@ s32 sys_net_get_sockinfo(s32 s, vm::ptr<sys_net_sockinfo_t> p, s32 n)
 
 s32 sys_net_close_dump(s32 id, vm::ptr<s32> pflags)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("sys_net_close_dump(id=%d, pflags=*0x%x)", id, pflags);
+
 	return CELL_OK;
 }
 
@@ -308,7 +310,8 @@ s32 sys_net_show_route()
 
 s32 sys_net_read_dump(s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("sys_net_read_dump(id=%d, buf=*0x%x, len=%d, pflags=*0x%x)", id, buf, len, pflags);
+
 	return CELL_OK;
 }
 
@@ -344,7 +347,8 @@ s32 sys_net_get_sockinfo_ex()
 
 s32 sys_net_open_dump(s32 len, s32 flags)
 {
-	UNIMPLEMENTED_FUNC(libnet);
+	libnet.todo("sys_net_open_dump(len=%d, flags=0x%x)", len, flags);
+
 	return CELL_OK;
 }
 

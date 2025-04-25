@@ -320,13 +320,13 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (m_persistent_attribute_storage &&
 			m_persistent_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
 		{
-			m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+			vk::get_resource_manager()->dispose(m_persistent_attribute_storage);
 		}
 
 		if (m_volatile_attribute_storage &&
 			m_volatile_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
 		{
-			m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+			vk::get_resource_manager()->dispose(m_volatile_attribute_storage);
 		}
 
 		vk::clear_status_interrupt(vk::heap_changed);
@@ -337,9 +337,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
 		{
 			ensure(m_texbuffer_view_size >= required.first); // "Incompatible driver (MacOS?)"
-
-			if (m_persistent_attribute_storage)
-				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+			vk::get_resource_manager()->dispose(m_persistent_attribute_storage);
 
 			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
 			const usz view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
@@ -353,9 +351,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
 		{
 			ensure(m_texbuffer_view_size >= required.second); // "Incompatible driver (MacOS?)"
-
-			if (m_volatile_attribute_storage)
-				m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+			vk::get_resource_manager()->dispose(m_volatile_attribute_storage);
 
 			const usz view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
 			m_volatile_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_range_base, view_size);

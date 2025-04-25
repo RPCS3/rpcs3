@@ -1,7 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDataHeapManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
@@ -9,20 +13,22 @@
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKPresent.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
@@ -65,10 +71,6 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
-    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\VK\upscalers\fsr1\fsr_pass.cpp">
       <Filter>upscalers\fsr1</Filter>
     </ClCompile>
@@ -83,6 +85,7 @@
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDataHeapManager.h" />
     <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
     <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
     <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
@@ -196,6 +199,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_core.h">
       <Filter>vkutils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">

@@ -4665,7 +4665,7 @@ void PPUTranslator::MTFSF(ppu_opcode_t op)
 
 	for (u32 i = 16; i < 20; i++)
 	{
-		if (i != 1 && i != 2 && (op.flm & (128 >> (i / 4))) != 0)
+		if ((op.flm & (128 >> (i / 4))) != 0)
 		{
 			SetFPSCRBit(i, Trunc(m_ir->CreateLShr(value, i ^ 31), GetType<bool>()), false);
 		}

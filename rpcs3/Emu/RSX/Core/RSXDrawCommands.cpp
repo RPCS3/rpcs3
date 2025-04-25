@@ -4,7 +4,6 @@
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/buffer_stream.hpp"
 #include "Emu/RSX/Common/io_buffer.h"
-#include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -759,7 +758,8 @@ namespace rsx
 		ensure(draw_call.is_trivial_instanced_draw);
 
 		// Temp indirection table. Used to track "running" updates.
-		rsx::simple_array<u32> instancing_indirection_table;
+		auto& instancing_indirection_table = m_scratch_buffers.u32buf;
+
 		// indirection table size
 		const auto full_reupload = !prog || prog->has_indexed_constants;
 		const auto reloc_table = full_reupload ? decltype(prog->constant_ids){} : prog->constant_ids;
@@ -767,7 +767,8 @@ namespace rsx
 		instancing_indirection_table.resize(redirection_table_size);
 
 		// Temp constants data
-		rsx::simple_array<u128> constants_data;
+		auto& constants_data = m_scratch_buffers.u128buf;
+		constants_data.clear();
 		constants_data.reserve(redirection_table_size * draw_call.pass_count());
 
 		// Allocate indirection buffer on GPU stream

@@ -446,7 +446,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg.zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
 	gcm_cfg.tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
 
-	vm::_ref<CellGcmContextData>(gcm_cfg.gcm_info.context_addr) = gcm_cfg.current_context;
+	vm::write<CellGcmContextData>(gcm_cfg.gcm_info.context_addr, gcm_cfg.current_context);
 	context->set(gcm_cfg.gcm_info.context_addr);
 
 	// 0x40 is to offset CellGcmControl from RsxDmaControl
@@ -590,7 +590,7 @@ ret_type gcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u3
 
 	if (!old_api && ctxt.addr() == gcm_cfg.gcm_info.context_addr)
 	{
-		vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr).put += cmd_size;
+		vm::_ptr<CellGcmControl>(gcm_cfg.gcm_info.control_addr)->put += cmd_size;
 	}
 
 	return static_cast<ret_type>(not_an_error(id));
@@ -1463,7 +1463,7 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
-	auto& ctrl = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr);
+	auto& ctrl = *vm::_ptr<CellGcmControl>(gcm_cfg.gcm_info.control_addr);
 
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));

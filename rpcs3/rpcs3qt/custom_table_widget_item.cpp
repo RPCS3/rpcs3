@@ -28,8 +28,8 @@ bool custom_table_widget_item::operator<(const QTableWidgetItem& other) const
 		return QTableWidgetItem::operator<(other);
 	}
 
-	const QVariant data_l       = data(m_sort_role);
-	const QVariant data_r       = other.data(m_sort_role);
+	const QVariant data_l = data(m_sort_role);
+	const QVariant data_r = other.data(m_sort_role);
 	const int type_l = data_l.metaType().id();
 	const int type_r = data_r.metaType().id();
 
