@@ -1191,17 +1191,17 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 	u32 prev_bound = 0;
 
-	for (u32 i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, utils::align<u32>(i + 1, 4)))
+	for (u32 i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, i + 4))
 	{
 		const auto elf_header = ensure(mod.get_ptr<u8>(seg.addr + i));
 
-		if (i % 4 == 0 && std::memcmp(elf_header, "\x24\0\x40\x80", 4) == 0)
+		if (std::memcmp(elf_header, "\x24\0\x40\x80", 4) == 0)
 		{
 			bool next = true;
 			const u32 old_i = i;
 			u32 guid_start = umax, guid_end = umax;
 
-			for (u32 search = i & -128, tries = 10; tries && search >= prev_bound; tries--, search = utils::sub_saturate<u32>(search, 128))
+			for (u32 search = i & -128, tries = 10; tries && search >= prev_bound; tries = search == 0 ? 0 : tries - 1, search = utils::sub_saturate<u32>(search, 128))
 			{
 				if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
 				{
@@ -1232,13 +1232,13 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 			std::string_view ls_segment = seg_view.substr(i);
 
 			// Bound to a bit less than LS size
-			ls_segment = ls_segment.substr(0, 0x38000);
+			ls_segment = ls_segment.substr(0, SPU_LS_SIZE - 0x8000);
 
 			for (u32 addr_last = 0, valid_count = 0, invalid_count = 0;;)
 			{
-				const u32 instruction = static_cast<u32>(ls_segment.find("\x24\0\x40\x80"sv, addr_last));
+				const u32 instruction = find_first_of_multiple(ls_segment, prefixes, addr_last);
 
-				if (instruction != umax)
+				if (instruction != umax && std::memcmp(ls_segment.data() + instruction, "\x24\0\x40\x80", 4) == 0)
 				{
 					if (instruction % 4 != i % 4)
 					{
@@ -1270,8 +1270,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 				if (addr_last >= 0x80 && valid_count >= 2)
 				{
-					const u32 begin = i & -128;
-					u32 end = std::min<u32>(seg.size, utils::align<u32>(i + addr_last + 256, 128));
+					u32 end = std::min<u32>({instruction, seg.size - i, utils::align<u32>(addr_last + 256, 128)});
 
 					u32 guessed_ls_addr = 0;
 
@@ -1279,12 +1278,12 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 					// ILA R2, PC + 8
 					// BIE/BID R2
 
-					for (u32 found = 0, last_vaddr = 0, it = begin + 16; it < end - 16; it += 4)
+					for (u32 found = 0, last_vaddr = 0, it = 16; it < end - 16; it += 4)
 					{
-						const u32 inst1 = read_from_ptr<be_t<u32>>(seg_view, it);
-						const u32 inst2 = read_from_ptr<be_t<u32>>(seg_view, it + 4);
-						const u32 inst3 = read_from_ptr<be_t<u32>>(seg_view, it + 8);
-						const u32 inst4 = read_from_ptr<be_t<u32>>(seg_view, it + 12);
+						const u32 inst1 = read_from_ptr<be_t<u32>>(ls_segment, it);
+						const u32 inst2 = read_from_ptr<be_t<u32>>(ls_segment, it + 4);
+						const u32 inst3 = read_from_ptr<be_t<u32>>(ls_segment, it + 8);
+						const u32 inst4 = read_from_ptr<be_t<u32>>(ls_segment, it + 12);
 
 						if ((inst1 & 0xfe'00'00'7f) == 0x42000002 && (inst2 & 0xfe'00'00'7f) == 0x42000002 && (inst3 & 0xfe'00'00'7f) == 0x42000002 && (inst4 & 0xfe'00'00'7f) == 0x42000002)
 						{
@@ -1298,7 +1297,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 						{
 							const u32 addr_inst = (inst1 >> 7) % 0x40000;
 
-							if (u32 addr_seg = addr_inst - std::min<u32>(it + 8 - begin, addr_inst))
+							if (u32 addr_seg = addr_inst - std::min<u32>(it + 8, addr_inst))
 							{
 								if (last_vaddr != addr_seg)
 								{
@@ -1321,15 +1320,19 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 					if (guessed_ls_addr)
 					{
-						end = begin + std::min<u32>(end - begin, SPU_LS_SIZE - guessed_ls_addr);
+						end = i + std::min<u32>(end, SPU_LS_SIZE - guessed_ls_addr);
+					}
+					else
+					{
+						end = i + std::min<u32>(end, SPU_LS_SIZE);
 					}
 
-					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x, GUID=0x%05x..0x%05x)", seg.addr + begin, seg.addr + end, guessed_ls_addr, guid_start, guid_end);
+					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x, GUID=0x%05x..0x%05x)", seg.addr + i, seg.addr + end, guessed_ls_addr, guid_start, guid_end);
 
 					if (!is_firmware && _main == &mod)
 					{
 						// Siginify that the base address is unknown by passing 0
-						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + begin, end - begin);
+						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + i, end - i);
 					}
 
 					i = std::max<u32>(end, i + 4) - 4;
@@ -1451,7 +1454,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 			ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied.size(), dump);
 		}
 
-		i += ::narrow<u32>(obj.highest_offset) - 4;
+		i += ::narrow<u32>(obj.highest_offset - 4);
 		prev_bound = i + 4;
 	}
 }
