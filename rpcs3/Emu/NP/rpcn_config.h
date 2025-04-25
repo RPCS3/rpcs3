@@ -36,4 +36,6 @@ private:
 	void set_hosts(const std::vector<std::pair<std::string, std::string>>& vec_hosts);
 };
 
+std::optional<std::pair<std::string, u16>> parse_rpcn_host(std::string_view host);
+
 extern cfg_rpcn g_cfg_rpcn;

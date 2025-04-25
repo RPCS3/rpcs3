@@ -48,8 +48,6 @@ struct nt_p2p_port
 	socket_type p2p_socket = 0;
 	u16 port               = 0;
 
-	bool is_ipv6 = false;
-
 	shared_mutex bound_p2p_vports_mutex;
 	// For DGRAM_P2P sockets (vport, sock_ids)
 	std::map<u16, std::set<s32>> bound_p2p_vports{};
