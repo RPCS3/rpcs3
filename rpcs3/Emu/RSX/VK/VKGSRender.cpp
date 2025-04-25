@@ -2187,15 +2187,10 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	if (!m_vertex_layout_storage || !m_vertex_layout_storage->in_range(offset32, range32, base_offset))
 	{
 		ensure(m_texbuffer_view_size >= m_vertex_layout_stream_info.range);
-
-		if (m_vertex_layout_storage)
-		{
-			vk::get_gc()->dispose(m_vertex_layout_storage);
-		}
+		vk::get_resource_manager()->dispose(m_vertex_layout_storage);
 
 		const usz alloc_addr = m_vertex_layout_stream_info.offset;
 		const usz view_size = (alloc_addr + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - alloc_addr : m_texbuffer_view_size;
-		vk::get_resource_manager()->dispose(m_vertex_layout_storage);
 		m_vertex_layout_storage = std::make_unique<vk::buffer_view>(*m_device, m_vertex_layout_ring_info.heap->value, VK_FORMAT_R32G32_UINT, alloc_addr, view_size);
 		base_offset = 0;
 	}
