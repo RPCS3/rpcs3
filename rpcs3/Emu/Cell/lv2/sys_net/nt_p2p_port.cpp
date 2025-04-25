@@ -40,10 +40,10 @@ namespace sys_net_helpers
 nt_p2p_port::nt_p2p_port(u16 port)
 	: port(port)
 {
-	is_ipv6 = np::is_ipv6_supported();
+	const bool is_ipv6 = np::is_ipv6_supported();
 
 	// Creates and bind P2P Socket
-	p2p_socket = is_ipv6 ? ::socket(AF_INET6, SOCK_DGRAM, 0) : ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	p2p_socket = ::socket(is_ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, 0);
 #ifdef _WIN32
 	if (p2p_socket == INVALID_SOCKET)
 #else
@@ -145,13 +145,13 @@ bool nt_p2p_port::recv_data()
 {
 	::sockaddr_storage native_addr{};
 	::socklen_t native_addrlen = sizeof(native_addr);
-	const auto recv_res        = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), ::size32(p2p_recv_data), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+	const auto recv_res = ::recvfrom(p2p_socket, reinterpret_cast<char*>(p2p_recv_data.data()), ::size32(p2p_recv_data), 0, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 	if (recv_res == -1)
 	{
 		auto lerr = get_last_error(false);
 		if (lerr != SYS_NET_EINPROGRESS && lerr != SYS_NET_EWOULDBLOCK)
-			sys_net.error("Error recvfrom on %s P2P socket: %d", is_ipv6 ? "IPv6" : "IPv4", lerr);
+			sys_net.error("Error recvfrom on %s P2P socket: %d", np::is_ipv6_supported() ? "IPv6" : "IPv4", lerr);
 
 		return false;
 	}
@@ -164,7 +164,7 @@ bool nt_p2p_port::recv_data()
 
 	u16 dst_vport = reinterpret_cast<le_t<u16>&>(p2p_recv_data[0]);
 
-	if (is_ipv6)
+	if (np::is_ipv6_supported())
 	{
 		const auto* addr_ipv6 = reinterpret_cast<sockaddr_in6*>(&native_addr);
 		const auto addr_ipv4 = np::sockaddr6_to_sockaddr(*addr_ipv6);

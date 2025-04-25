@@ -18,7 +18,7 @@ bool send_packet_from_p2p_port_ipv4(const std::vector<u8>& data, const sockaddr_
 		{
 			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
 
-			if (def_port.is_ipv6)
+			if (np::is_ipv6_supported())
 			{
 				const auto addr6 = np::sockaddr_to_sockaddr6(addr);
 
@@ -52,7 +52,7 @@ bool send_packet_from_p2p_port_ipv6(const std::vector<u8>& data, const sockaddr_
 		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
 			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
-			ensure(def_port.is_ipv6);
+			ensure(np::is_ipv6_supported());
 
 			if (::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), ::size32(data), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in6)) == -1)
 			{

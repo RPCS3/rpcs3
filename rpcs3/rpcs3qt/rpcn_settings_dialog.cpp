@@ -200,9 +200,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			g_cfg_rpcn.set_host(host.toString().toStdString());
 			g_cfg_rpcn.save();
 
-			// Resets the state in case the support was limited by the RPCN server
-			if (!np::is_ipv6_supported())
-				np::is_ipv6_supported(np::IPV6_SUPPORT::IPV6_UNKNOWN);
+			// Resets the ipv6 support as it depends on availability of the feature on the server
+			np::is_ipv6_supported(np::IPV6_SUPPORT::IPV6_UNKNOWN);
 		});
 
 	connect(btn_add_server, &QAbstractButton::clicked, this, [this]()

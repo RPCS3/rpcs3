@@ -211,3 +211,33 @@ bool cfg_rpcn::del_host(std::string_view del_description, std::string_view del_h
 
 	return false;
 }
+
+std::optional<std::pair<std::string, u16>> parse_rpcn_host(std::string_view host)
+{
+	if (host.empty())
+	{
+		rpcn_log.error("RPCN host is empty!");
+		return std::nullopt;
+	}
+
+	auto splithost = fmt::split(host, {":"});
+	if (splithost.size() != 1 && splithost.size() != 2)
+	{
+		rpcn_log.error("RPCN host is invalid!");
+		return std::nullopt;
+	}
+
+	u16 port = 31313;
+
+	if (splithost.size() == 2)
+	{
+		port = ::narrow<u16>(std::stoul(splithost[1]));
+		if (port == 0)
+		{
+			rpcn_log.error("RPCN port is invalid!");
+			return std::nullopt;
+		}
+	}
+
+	return std::make_pair(std::move(splithost[0]), port);
+}

@@ -970,33 +970,15 @@ namespace rpcn
 
 		state = rpcn_state::failure_no_failure;
 
-		if (host.empty())
+		const auto hostname_and_port = parse_rpcn_host(host);
+
+		if (!hostname_and_port)
 		{
-			rpcn_log.error("connect: RPCN host is empty!");
 			state = rpcn_state::failure_input;
 			return false;
 		}
 
-		auto splithost = fmt::split(host, {":"});
-		if (splithost.size() != 1 && splithost.size() != 2)
-		{
-			rpcn_log.error("connect: RPCN host is invalid!");
-			state = rpcn_state::failure_input;
-			return false;
-		}
-
-		u16 port = 31313;
-
-		if (splithost.size() == 2)
-		{
-			port = ::narrow<u16>(std::stoul(splithost[1]));
-			if (port == 0)
-			{
-				rpcn_log.error("connect: RPCN port is invalid!");
-				state = rpcn_state::failure_input;
-				return false;
-			}
-		}
+		const auto [hostname, port] = *hostname_and_port;
 
 		{
 			// Ensures both read & write threads are in waiting state
@@ -1037,14 +1019,14 @@ namespace rpcn
 
 			addrinfo* addr_info{};
 
-			if (getaddrinfo(splithost[0].c_str(), nullptr, nullptr, &addr_info))
+			if (getaddrinfo(hostname.c_str(), nullptr, nullptr, &addr_info))
 			{
 				rpcn_log.error("connect: Failed to getaddrinfo %s", host);
 				state = rpcn_state::failure_resolve;
 				return false;
 			}
 
-			bool found_ipv4 = false, found_ipv6 = false;
+			bool found_ipv4 = false;
 			addrinfo* found = addr_info;
 
 			while (found != nullptr)
@@ -1059,13 +1041,9 @@ namespace rpcn
 				}
 				case AF_INET6:
 				{
-					if (np::is_ipv6_supported())
-					{
-						addr_rpcn_udp_ipv6.sin6_family = AF_INET6;
-						addr_rpcn_udp_ipv6.sin6_port = std::bit_cast<u16, be_t<u16>>(3657);
-						addr_rpcn_udp_ipv6.sin6_addr = reinterpret_cast<sockaddr_in6*>(found->ai_addr)->sin6_addr;
-						found_ipv6 = true;
-					}
+					addr_rpcn_udp_ipv6.sin6_family = AF_INET6;
+					addr_rpcn_udp_ipv6.sin6_port = std::bit_cast<u16, be_t<u16>>(3657);
+					addr_rpcn_udp_ipv6.sin6_addr = reinterpret_cast<sockaddr_in6*>(found->ai_addr)->sin6_addr;
 					break;
 				}
 				default: break;
@@ -1079,12 +1057,6 @@ namespace rpcn
 				rpcn_log.error("connect: Failed to find IPv4 for %s", host);
 				state = rpcn_state::failure_resolve;
 				return false;
-			}
-
-			if (np::is_ipv6_supported() && !found_ipv6)
-			{
-				rpcn_log.warning("IPv6 seems supported but no IPv6 could be found for the RPCN server, IPv6 is disabled!");
-				is_ipv6_supported(np::IPV6_SUPPORT::IPV6_UNSUPPORTED);
 			}
 
 			memcpy(&addr_rpcn_udp_ipv4, &addr_rpcn, sizeof(addr_rpcn_udp_ipv4));
