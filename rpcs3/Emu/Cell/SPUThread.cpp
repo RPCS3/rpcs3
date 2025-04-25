@@ -1209,8 +1209,6 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	u32 saved_pc = umax;
 	const u8* lsa_state_ptr = nullptr;
 
-	const u8* lsa_ptr = _ptr<u8>(ch_mfc_cmd.lsa);
-
 	// Load PC, GPRs and reservation data atomically
 	// We may not load the entire context atomically, but there is importance their state being intact for debugging
 	do
