@@ -1210,7 +1210,7 @@ constexpr void write_to_ptr(U&& array, const T& value)
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
 	if (!std::is_constant_evaluated())
-		std::memcpy(&array[0], &value, sizeof(value));
+		std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
 	else
 		ensure(!"Unimplemented");
 }
