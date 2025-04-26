@@ -390,22 +390,29 @@ namespace rsx
 			}
 
 			bool ret = false;
-			for (auto last = _data + (_size - 1), ptr = last; ptr >= _data; ptr--)
+			for (auto ptr = _data, last = _data + _size - 1; ptr <= last;)
 			{
 				if (predicate(*ptr))
 				{
 					ret = true;
 
-					if (ptr != last) // If not last
+					if (ptr == last)
 					{
-						// Move last item into current one
-						std::memcpy(ptr, last, sizeof(Ty));
+						// Popping the last entry from list. Just set the new size and exit
+						_size--;
+						break;
 					}
 
-					// Pop last entry from list and set new last item
+					// Move item to the end of the list and shrink by 1
+					std::memcpy(ptr, last, sizeof(Ty));
 					_size--;
 					last--;
+
+					// Retest the same ptr which now has the previous tail item
+					continue;
 				}
+
+				ptr++;
 			}
 
 			return ret;
