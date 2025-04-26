@@ -36,8 +36,8 @@ using namespace program_hash_util;
 AVX512_ICL_FUNC usz get_vertex_program_ucode_hash_512(const RSXVertexProgram &program)
 {
 	// Load all elements of the instruction_mask bitset
-	const __m512i* instMask512 = reinterpret_cast<const __m512i*>(&program.instruction_mask);
-	const __m128i* instMask128 = reinterpret_cast<const __m128i*>(&program.instruction_mask);
+	const __m512i* instMask512 = utils::bless<const __m512i>(&program.instruction_mask);
+	const __m128i* instMask128 = utils::bless<const __m128i>(&program.instruction_mask);
 
 	const __m512i lowerMask = _mm512_loadu_si512(instMask512);
 	const __m128i upper128 = _mm_loadu_si128(instMask128 + 4);
@@ -453,8 +453,8 @@ usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) con
 AVX512_ICL_FUNC bool vertex_program_compare_512(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2)
 	{
 		// Load all elements of the instruction_mask bitset
-		const __m512i* instMask512 = reinterpret_cast<const __m512i*>(&binary1.instruction_mask);
-		const __m128i* instMask128 = reinterpret_cast<const __m128i*>(&binary1.instruction_mask);
+		const __m512i* instMask512 = utils::bless<const __m512i>(&binary1.instruction_mask);
+		const __m128i* instMask128 = utils::bless<const __m128i>(&binary1.instruction_mask);
 
 		const __m512i lowerMask = _mm512_loadu_si512(instMask512);
 		const __m128i upper128 = _mm_loadu_si128(instMask128 + 4);

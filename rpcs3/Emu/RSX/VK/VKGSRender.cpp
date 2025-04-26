@@ -2196,7 +2196,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	}
 
 	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
-	const volatile u32 constant_id_offset = static_cast<volatile u32>(m_xform_constants_dynamic_offset) / 16u;
+	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
 
 	u32 push_constants[6];
 	u32 data_length = 20;
