@@ -51,26 +51,10 @@ endif()
 gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
 
 if (NOT ANDROID)
-    if(WIN32)
-        add_executable(rpcs3 WIN32)
-        target_sources(rpcs3 PRIVATE rpcs3.rc)
-        target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
-    elseif(APPLE)
-        add_executable(rpcs3 MACOSX_BUNDLE)
-        target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
-        set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-        set_target_properties(rpcs3
-            PROPERTIES
-                MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")
-    else()
-        add_executable(rpcs3)
-    endif()
-
-    target_sources(rpcs3
-        PRIVATE
+    # Build rpcs3_lib
+    add_library(rpcs3_lib STATIC
         display_sleep_control.cpp
         headless_application.cpp
-        main.cpp
         main_application.cpp
         module_verifier.cpp
         rpcs3.cpp
@@ -102,12 +86,16 @@ if (NOT ANDROID)
         Input/xinput_pad_handler.cpp
     )
 
-    set_target_properties(rpcs3
+    if(WIN32)
+        target_compile_definitions(rpcs3_lib PRIVATE UNICODE _UNICODE)
+    endif()
+
+    set_target_properties(rpcs3_lib
         PROPERTIES
             AUTOMOC ON
             AUTOUIC ON)
 
-    target_link_libraries(rpcs3
+    target_link_libraries(rpcs3_lib
         PRIVATE
             rpcs3_emu
             rpcs3_ui
@@ -124,7 +112,7 @@ if (NOT ANDROID)
 
     # Unix display manager
     if(X11_FOUND)
-        target_link_libraries(rpcs3 PRIVATE X11::X11)
+        target_link_libraries(rpcs3_lib PRIVATE X11::X11)
     elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
         # Wayland has been checked in 3rdparty/CMakeLists.txt already.
         message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
@@ -133,19 +121,48 @@ if (NOT ANDROID)
     if(UNIX)
         set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
         find_package(Threads REQUIRED)
-        target_link_libraries(rpcs3 PRIVATE Threads::Threads)
+        target_link_libraries(rpcs3_lib PRIVATE Threads::Threads)
     endif()
 
     if(WIN32)
-        target_link_libraries(rpcs3 PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
+        target_link_libraries(rpcs3_lib PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
     else()
-        target_link_libraries(rpcs3 PRIVATE ${CMAKE_DL_LIBS})
+        target_link_libraries(rpcs3_lib PRIVATE ${CMAKE_DL_LIBS})
     endif()
+
+    if(USE_PRECOMPILED_HEADERS)
+        target_precompile_headers(rpcs3_lib PRIVATE stdafx.h)
+    endif()
+
+    # Build rpcs3 executable
+    if(WIN32)
+        add_executable(rpcs3 WIN32)
+        target_sources(rpcs3 PRIVATE rpcs3.rc)
+        target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
+    elseif(APPLE)
+        add_executable(rpcs3 MACOSX_BUNDLE)
+        target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
+        set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+        set_target_properties(rpcs3
+            PROPERTIES
+                MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")
+    else()
+        add_executable(rpcs3)
+    endif()
+
+    target_sources(rpcs3
+        PRIVATE
+            main.cpp
+    )
+
+    target_link_libraries(rpcs3
+        PRIVATE
+            rpcs3_lib
+    )
 
     if(USE_PRECOMPILED_HEADERS)
         target_precompile_headers(rpcs3 PRIVATE stdafx.h)
     endif()
-
 
     # Copy icons to executable directory
     if(APPLE)
