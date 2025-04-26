@@ -1,4 +1,4 @@
-﻿# Define GNU standard installation directories
+# Define GNU standard installation directories
 include(GNUInstallDirs)
 
 # Generate git-version.h at build time.
@@ -213,4 +213,30 @@ if (NOT ANDROID)
         install(DIRECTORY ../bin/test
             DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     endif()
+endif()
+
+# Unit tests
+if(BUILD_RPCS3_TESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+
+    message(STATUS "Building unit tests...")
+
+    add_executable(rpcs3_test
+        tests/test_fmt.cpp
+    )
+
+    target_link_libraries(rpcs3_test
+        rpcs3_lib
+        GTest::gtest_main
+    )
+
+    target_include_directories(rpcs3_test
+        PUBLIC
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+
+    include(GoogleTest)
+    gtest_discover_tests(rpcs3_test)
 endif()
