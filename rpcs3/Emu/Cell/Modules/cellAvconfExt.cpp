@@ -237,17 +237,57 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 	return CELL_OK;
 }
 
+template <bool Is_Float, bool Range_Limited>
+void convert_cursor_color(const u8* src, u8* dst, s32 num, f32 gamma)
+{
+	for (s32 i = 0; i < num; i++, src += 4, dst += 4)
+	{
+		for (s32 c = 1; c < 4; c++)
+		{
+			if constexpr (Is_Float)
+			{
+				if constexpr (Range_Limited)
+				{
+					const f32 val = (src[c] / 255.0f) * 219.0f + 16.0f;
+					dst[c] = static_cast<u8>(val + 0.5f);
+				}
+				else
+				{
+					dst[c] = src[c];
+				}
+			}
+			else
+			{
+				f32 val = std::clamp(std::pow(src[c] / 255.0f, gamma), 0.0f, 1.0f);
+
+				if constexpr (Range_Limited)
+				{
+					val = val * 219.0f + 16.0f;
+				}
+				else
+				{
+					val *= 255.0f;
+				}
+
+				dst[c] = static_cast<u8>(val + 0.5f);
+			}
+		}
+	}
+}
+
 error_code cellVideoOutConvertCursorColor(u32 videoOut, s32 displaybuffer_format, f32 gamma, s32 source_buffer_format, vm::ptr<void> src_addr, vm::ptr<u32> dest_addr, s32 num)
 {
-	cellAvconfExt.todo("cellVideoOutConvertCursorColor(videoOut=%d, displaybuffer_format=0x%x, gamma=0x%x, source_buffer_format=0x%x, src_addr=*0x%x, dest_addr=*0x%x, num=0x%x)", videoOut,
+	cellAvconfExt.warning("cellVideoOutConvertCursorColor(videoOut=%d, displaybuffer_format=0x%x, gamma=%f, source_buffer_format=0x%x, src_addr=*0x%x, dest_addr=*0x%x, num=0x%x)", videoOut,
 			displaybuffer_format, gamma, source_buffer_format, src_addr, dest_addr, num);
 
-	if (!dest_addr || num == 0)
+	if (!src_addr || !dest_addr)
 	{
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	if (displaybuffer_format > CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT || src_addr)
+	if (displaybuffer_format < 0 ||
+		displaybuffer_format > CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT ||
+		source_buffer_format != CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8)
 	{
 		return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
 	}
@@ -266,6 +306,32 @@ error_code cellVideoOutConvertCursorColor(u32 videoOut, s32 displaybuffer_format
 	if (error_code error = cellVideoOutGetConvertCursorColorInfo(rgbOutputRange))
 	{
 		return error;
+	}
+
+	const u8* src = reinterpret_cast<const u8*>(src_addr.get_ptr());
+	u8* dst = reinterpret_cast<u8*>(dest_addr.get_ptr());
+
+	if (displaybuffer_format == CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT)
+	{
+		if (*rgbOutputRange == CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_LIMITED)
+		{
+			convert_cursor_color<true, true>(src, dst, num, gamma);
+		}
+		else
+		{
+			convert_cursor_color<true, false>(src, dst, num, gamma);
+		}
+	}
+	else
+	{
+		if (*rgbOutputRange == CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_LIMITED)
+		{
+			convert_cursor_color<false, true>(src, dst, num, gamma);
+		}
+		else
+		{
+			convert_cursor_color<false, false>(src, dst, num, gamma);
+		}
 	}
 
 	return CELL_OK;
