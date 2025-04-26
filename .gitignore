@@ -35,6 +35,7 @@
 /lib
 /tmp
 /ipch
+/packages
 /rpcs3/Debug
 /rpcs3/Release
 

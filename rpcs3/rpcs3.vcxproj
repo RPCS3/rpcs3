@@ -120,6 +120,15 @@
       <Message>
       </Message>
     </PostBuildEvent>
+    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+      <Command>@echo off
+&gt; "$(IntermediateOutputPath)obj_files.rsp" (
+  for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
+    echo "$(IntermediateOutputPath)%%i"
+  )
+)
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -171,6 +180,15 @@
       <Message>
       </Message>
     </PostBuildEvent>
+    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+      <Command>@echo off
+&gt; "$(IntermediateOutputPath)obj_files.rsp" (
+  for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
+    echo "$(IntermediateOutputPath)%%i"
+  )
+)
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3d.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />

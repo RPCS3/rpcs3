@@ -107,6 +107,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openal-soft", "3rdparty\ope
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fusion", "3rdparty\fusion\fusion.vcxproj", "{3C67A2FF-4710-402A-BE3E-31B0CB0576DF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rpcs3.test", "rpcs3.test", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3_test", "rpcs3\tests\rpcs3_test.vcxproj", "{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12} = {70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -219,6 +226,10 @@ Global
 		{3C67A2FF-4710-402A-BE3E-31B0CB0576DF}.Debug|x64.Build.0 = Debug|x64
 		{3C67A2FF-4710-402A-BE3E-31B0CB0576DF}.Release|x64.ActiveCfg = Release|x64
 		{3C67A2FF-4710-402A-BE3E-31B0CB0576DF}.Release|x64.Build.0 = Release|x64
+		{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E}.Debug|x64.ActiveCfg = Debug|x64
+		{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E}.Debug|x64.Build.0 = Debug|x64
+		{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E}.Release|x64.ActiveCfg = Release|x64
+		{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -252,6 +263,7 @@ Global
 		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{8846A9AA-5539-4C91-8301-F54260E1A07A} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{3C67A2FF-4710-402A-BE3E-31B0CB0576DF} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
+		{D1CBF84E-07F8-4ACB-9CD2-BD205FDEEE1E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}
