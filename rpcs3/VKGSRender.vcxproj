@@ -124,7 +124,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{3EE5F075-B546-42C4-B6A8-E3CCEF38B78D}</ProjectGuid>
-    <Keyword>Win32Proj</Keyword>
     <RootNamespace>VKGSRender</RootNamespace>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
