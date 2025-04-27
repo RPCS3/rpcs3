@@ -147,7 +147,7 @@ private:
 	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
 	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
 
-	rsx::simple_array<u32> m_multidraw_parameters_buffer;
+	rsx::simple_array<u8> m_multidraw_parameters_buffer;
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
