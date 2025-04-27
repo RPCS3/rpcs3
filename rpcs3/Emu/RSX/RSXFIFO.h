@@ -109,8 +109,8 @@ namespace rsx
 			bool in_begin_end = false;
 
 			bool enabled = false;
-			u32  num_collapsed = 0;
 			optimization_hint fifo_hint = unknown;
+			u32  num_collapsed = 0;
 
 			void reset(bool _enabled);
 
