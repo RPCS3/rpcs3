@@ -30,7 +30,7 @@ else
     export RANLIB=/usr/bin/llvm-ranlib-"$LLVMVER"
 fi
 
-export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
+export LINKER_FLAG="-fuse-ld=${LINKER}"
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
@@ -38,6 +38,9 @@ cmake ..                                               \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
     -DCMAKE_C_FLAGS="$CFLAGS"                          \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
+    -DCMAKE_EXE_LINKER_FLAGS="${LINKER_FLAG}"          \
+    -DCMAKE_MODULE_LINKER_FLAGS="${LINKER_FLAG}"       \
+    -DCMAKE_SHARED_LINKER_FLAGS="${LINKER_FLAG}"       \
     -DCMAKE_AR="$AR"                                   \
     -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \

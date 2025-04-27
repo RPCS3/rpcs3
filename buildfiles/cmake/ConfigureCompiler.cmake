@@ -93,6 +93,9 @@ else()
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 
+	# Note that this refers to binary size optimization during linking, it differs from optimization compiler level
+	add_link_options(-Wl,-O2)
+
 	if(NOT APPLE AND NOT WIN32)
 		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		add_link_options(-Wl,--exclude-libs,ALL)
