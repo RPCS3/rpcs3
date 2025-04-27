@@ -14,6 +14,9 @@ void breakpoint_handler::SetBreakOnBPM(bool break_on_bpm)
 
 bool breakpoint_handler::HasBreakpoint(u32 loc, bs_t<breakpoint_types> type)
 {
+	if (m_empty.load(std::memory_order_acquire))
+		return false;
+
 	std::lock_guard lock(mutex_breakpoints);
 
 	return m_breakpoints.contains(loc) && ((m_breakpoints.at(loc) & type) == type);
@@ -28,7 +31,14 @@ bool breakpoint_handler::AddBreakpoint(u32 loc, bs_t<breakpoint_types> type)
 		return false;
 	}
 
-	return m_breakpoints.insert({loc, type}).second;
+	bool result = m_breakpoints.insert({loc, type}).second;
+	
+	if (result)
+	{
+		m_empty.store(false, std::memory_order_release);
+	}
+
+	return result;
 }
 
 bool breakpoint_handler::RemoveBreakpoint(u32 loc)
@@ -50,5 +60,11 @@ bool breakpoint_handler::RemoveBreakpoint(u32 loc)
 	{
 		ensure(ppu_breakpoint(loc, false));
 	}
+
+	if (m_breakpoints.empty())
+	{
+		m_empty.store(true, std::memory_order_release);
+	}
+
 	return true;
 }
