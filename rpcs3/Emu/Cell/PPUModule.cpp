@@ -1171,7 +1171,9 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 	auto find_first_of_multiple = [](std::string_view data, std::initializer_list<std::string_view> values, usz index)
 	{
-		u32 pos = static_cast<u32>(data.size());
+		u32 pos = umax;
+
+		ensure(data.size() <= pos && index <= data.size());
 
 		for (std::string_view value : values)
 		{
@@ -1191,65 +1193,74 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 	u32 prev_bound = 0;
 
-	for (u32 i = find_first_of_multiple(seg_view, prefixes, 0); i < seg.size; i = find_first_of_multiple(seg_view, prefixes, i + 4))
+	for (u32 prefix_addr = find_first_of_multiple(seg_view, prefixes, 0); prefix_addr < seg.size; prefix_addr = find_first_of_multiple(seg_view, prefixes, prefix_addr + 4))
 	{
-		const auto elf_header = ensure(mod.get_ptr<u8>(seg.addr + i));
+		const auto elf_header = ensure(mod.get_ptr<u8>(seg.addr + prefix_addr));
 
 		if (std::memcmp(elf_header, "\x24\0\x40\x80", 4) == 0)
 		{
-			bool next = true;
-			const u32 old_i = i;
-			u32 guid_start = umax, guid_end = umax;
+			const u32 old_prefix_addr = prefix_addr;
 
-			for (u32 search = i & -128, tries = 10; tries && search >= prev_bound; tries = search == 0 ? 0 : tries - 1, search = utils::sub_saturate<u32>(search, 128))
+			auto search_guid_pattern = [&](u32 index, std::string_view data_span, s32 advance_index, u32 lower_bound, u32 uppper_bound) -> u32
 			{
-				if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
+				for (u32 search = index & -16, tries = 16 * 64; tries && search >= lower_bound && search < uppper_bound; tries = tries - 1, search = advance_index < 0 ? utils::sub_saturate<u32>(search, 0 - advance_index) : search + advance_index)
 				{
-					continue;
+					if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
+					{
+						continue;
+					}
+
+					const u32 inst1 = read_from_ptr<be_t<u32>>(data_span, search);
+					const u32 inst2 = read_from_ptr<be_t<u32>>(data_span, search + 4);
+					const u32 inst3 = read_from_ptr<be_t<u32>>(data_span, search + 8);
+					const u32 inst4 = read_from_ptr<be_t<u32>>(data_span, search + 12);
+
+					if ((inst1 & 0xfe'00'00'7f) != 0x42000002 || (inst2 & 0xfe'00'00'7f) != 0x42000002 || (inst3 & 0xfe'00'00'7f) != 0x42000002 || (inst4 & 0xfe'00'00'7f) != 0x42000002)
+					{
+						continue;
+					}
+
+					if (!spu_thread::is_exec_code(search, {reinterpret_cast<const u8*>(data_span.data()), data_span.size()}, 0, true, true))
+					{
+						continue;
+					}
+
+					return search;
 				}
 
-				const u32 inst1 = read_from_ptr<be_t<u32>>(seg_view, search);
-				const u32 inst2 = read_from_ptr<be_t<u32>>(seg_view, search + 4);
-				const u32 inst3 = read_from_ptr<be_t<u32>>(seg_view, search + 8);
-				const u32 inst4 = read_from_ptr<be_t<u32>>(seg_view, search + 12);
+				return umax;
+			};
 
-				if ((inst1 & 0xfe'00'00'7f) != 0x42000002 || (inst2 & 0xfe'00'00'7f) != 0x42000002 || (inst3 & 0xfe'00'00'7f) != 0x42000002 || (inst4 & 0xfe'00'00'7f) != 0x42000002)
-				{
-					continue;
-				}
+			prefix_addr = search_guid_pattern(prefix_addr, seg_view, -16, prev_bound, seg.size);
 
-				guid_start = search + seg.addr;
-				i = search;
-				next = false;
-				break;
-			}
-
-			if (next)
+			if (prefix_addr == umax)
 			{
+				prefix_addr = old_prefix_addr;
 				continue;
 			}
 
-			std::string_view ls_segment = seg_view.substr(i);
+			u32 guid_start = seg.addr + prefix_addr, guid_end = umax;
+
+			std::string_view ls_segment = seg_view.substr(prefix_addr);
 
 			// Bound to a bit less than LS size
 			ls_segment = ls_segment.substr(0, SPU_LS_SIZE - 0x8000);
 
 			for (u32 addr_last = 0, valid_count = 0, invalid_count = 0;;)
 			{
-				const u32 instruction = find_first_of_multiple(ls_segment, prefixes, addr_last);
+				const u32 instruction = std::min<u32>(search_guid_pattern(addr_last, ls_segment, +16, 0, ::size32(ls_segment)), find_first_of_multiple(ls_segment, prefixes, addr_last));
 
 				if (instruction != umax && std::memcmp(ls_segment.data() + instruction, "\x24\0\x40\x80", 4) == 0)
 				{
-					if (instruction % 4 != i % 4)
+					if (instruction % 4 != prefix_addr % 4)
 					{
 						// Unaligned, continue
-						addr_last = instruction + (i % 4 - instruction % 4) % 4;
+						addr_last = instruction + (prefix_addr % 4 - instruction % 4) % 4;
 						continue;
 					}
 
-					// FIXME: This seems to terminate SPU code prematurely in some cases
-					// Likely due to absolute branches
-					if (spu_thread::is_exec_code(instruction, {reinterpret_cast<const u8*>(ls_segment.data()), ls_segment.size()}, 0))
+					// Check execution compatibility
+					if (spu_thread::is_exec_code(instruction, {reinterpret_cast<const u8*>(ls_segment.data()), ls_segment.size()}, 0, true, true))
 					{
 						addr_last = instruction + 4;
 						valid_count++;
@@ -1270,7 +1281,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 				if (addr_last >= 0x80 && valid_count >= 2)
 				{
-					u32 end = std::min<u32>({instruction, seg.size - i, utils::align<u32>(addr_last + 256, 128)});
+					u32 end = std::min<u32>({instruction, seg.size - prefix_addr, utils::align<u32>(addr_last + 256, 128)});
 
 					u32 guessed_ls_addr = 0;
 
@@ -1320,27 +1331,27 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 					if (guessed_ls_addr)
 					{
-						end = i + std::min<u32>(end, SPU_LS_SIZE - guessed_ls_addr);
+						end = prefix_addr + std::min<u32>(end, SPU_LS_SIZE - guessed_ls_addr);
 					}
 					else
 					{
-						end = i + std::min<u32>(end, SPU_LS_SIZE);
+						end = prefix_addr + std::min<u32>(end, SPU_LS_SIZE);
 					}
 
-					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x, GUID=0x%05x..0x%05x)", seg.addr + i, seg.addr + end, guessed_ls_addr, guid_start, guid_end);
+					ppu_log.success("Found valid roaming SPU code at 0x%x..0x%x (guessed_ls_addr=0x%x, GUID=0x%05x..0x%05x)", seg.addr + prefix_addr, seg.addr + end, guessed_ls_addr, guid_start, guid_end);
 
 					if (!is_firmware && _main == &mod)
 					{
 						// Siginify that the base address is unknown by passing 0
-						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + i, end - i);
+						utilize_spu_data_segment(guessed_ls_addr ? guessed_ls_addr : 0x4000, seg_view.data() + prefix_addr, end - prefix_addr);
 					}
 
-					i = std::max<u32>(end, i + 4) - 4;
-					prev_bound = i + 4;
+					prefix_addr = std::max<u32>(end, prefix_addr + 4) - 4;
+					prev_bound = prefix_addr + 4;
 				}
 				else
 				{
-					i = old_i;
+					prefix_addr = old_prefix_addr;
 				}
 
 				break;
@@ -1350,7 +1361,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 		}
 
 		// Try to load SPU image
-		const spu_exec_object obj(fs::file(elf_header, seg.size - i));
+		const spu_exec_object obj(fs::file(elf_header, seg.size - prefix_addr));
 
 		if (obj != elf_error::ok)
 		{
@@ -1395,7 +1406,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 				sha1_update(&sha2, (elf_header + prog.p_offset), prog.p_filesz);
 
 				// We assume that the string SPUNAME exists 0x14 bytes into the NOTE segment
-				name = ensure(mod.get_ptr<const char>(seg.addr + i + prog.p_offset + 0x14));
+				name = ensure(mod.get_ptr<const char>(seg.addr + prefix_addr + prog.p_offset + 0x14));
 
 				if (!name.empty())
 				{
@@ -1404,7 +1415,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 			}
 		}
 
-		fmt::append(dump, " (image addr: 0x%x, size: 0x%x)", seg.addr + i, obj.highest_offset);
+		fmt::append(dump, " (image addr: 0x%x, size: 0x%x)", seg.addr + prefix_addr, obj.highest_offset);
 
 		sha1_finish(&sha2, sha1_hash);
 
@@ -1454,8 +1465,8 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 			ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied.size(), dump);
 		}
 
-		i += ::narrow<u32>(obj.highest_offset - 4);
-		prev_bound = i + 4;
+		prefix_addr += ::narrow<u32>(obj.highest_offset - 4);
+		prev_bound = prefix_addr + 4;
 	}
 }
 
