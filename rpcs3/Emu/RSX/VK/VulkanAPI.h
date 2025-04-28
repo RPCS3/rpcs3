@@ -1,5 +1,6 @@
 #pragma once
 
+// Configure vulkan.h
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif defined(__APPLE__)
@@ -25,6 +26,13 @@
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
+// Undefine header configuration variables
+#undef VK_USE_PLATFORM_WIN32_KHR
+#undef VK_USE_PLATFORM_MACOS_MVK
+#undef VK_USE_PLATFORM_ANDROID_KHR
+#undef VK_USE_PLATFORM_XLIB_KHR
+#undef VK_USE_PLATFORM_WAYLAND_KHR
 
 #include <util/types.hpp>
 
