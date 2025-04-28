@@ -11,7 +11,7 @@ using Display = struct _XDisplay;
 using Window  = unsigned long;
 #endif
 
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 #include <wayland-client.h>
 #endif
 
@@ -22,14 +22,14 @@ using display_handle_t = void*; // NSView
 #else
 #include <variant>
 using display_handle_t = std::variant<
-#if defined(HAVE_X11) && defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#if defined(HAVE_X11) && defined(HAVE_WAYLAND)
 	std::pair<Display*, Window>, std::pair<wl_display*, wl_surface*>
 #elif defined(HAVE_X11)
 	std::pair<Display*, Window>
-#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+#elif defined(HAVE_WAYLAND)
 	std::pair<wl_display*, wl_surface*>
 #elif defined(ANDROID)
-	struct ANativeWindow *
+	struct ANativeWindow*
 #endif
 >;
 #endif
