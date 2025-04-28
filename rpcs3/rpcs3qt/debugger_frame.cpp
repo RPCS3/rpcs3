@@ -1452,7 +1452,7 @@ void debugger_frame::ShowGotoAddressDialog()
 		// This also works if no thread is selected and has been selected before
 		if (result == QDialog::Accepted && cpu == get_cpu() && cpu == cpu_check())
 		{
-			PerformGoToRequest(normalizeHexQString(expression_input->text()));
+			PerformGoToRequest(normalize_hex_qstring(expression_input->text()));
 		}
 
 		m_goto_dialog = nullptr;

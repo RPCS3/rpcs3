@@ -425,7 +425,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok = false;
-		const u32 addr = normalizeHexQString(m_addr_line->text()).toULong(&ok, 16);
+		const u32 addr = normalize_hex_qstring(m_addr_line->text()).toULong(&ok, 16);
 		if (ok) m_addr = addr;
 
 		scroll(0); // Refresh

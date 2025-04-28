@@ -110,7 +110,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 		}
 
 		bool ok;
-		const ulong opcode = normalizeHexQString(m_instr->text()).toULong(&ok, 16);
+		const ulong opcode = normalize_hex_qstring(m_instr->text()).toULong(&ok, 16);
 		if (!ok || opcode > u32{umax})
 		{
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
@@ -153,7 +153,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 void instruction_editor_dialog::updatePreview() const
 {
 	bool ok;
-	const be_t<u32> opcode{static_cast<u32>(normalizeHexQString(m_instr->text()).toULong(&ok, 16))};
+	const be_t<u32> opcode{static_cast<u32>(normalize_hex_qstring(m_instr->text()).toULong(&ok, 16))};
 	m_disasm->change_ptr(reinterpret_cast<const u8*>(&opcode) - std::intptr_t{m_pc});
 
 	if (ok && m_disasm->disasm(m_pc))
