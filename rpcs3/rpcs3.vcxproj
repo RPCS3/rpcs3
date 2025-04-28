@@ -762,6 +762,7 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_raw_mouse_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="rpcs3qt\about_dialog.cpp" />
     <ClCompile Include="rpcs3qt\basic_mouse_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\breakpoint_handler.cpp" />

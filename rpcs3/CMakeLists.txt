@@ -73,6 +73,7 @@ if (NOT ANDROID)
         main.cpp
         main_application.cpp
         module_verifier.cpp
+        rpcs3.cpp
         rpcs3_version.cpp
         stb_image.cpp
         stdafx.cpp
