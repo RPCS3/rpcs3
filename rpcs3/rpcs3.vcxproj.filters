@@ -1421,6 +1421,9 @@
     <ClInclude Include="rpcs3qt\hex_validator.h">
       <Filter>Gui\utils</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">
