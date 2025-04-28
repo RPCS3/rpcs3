@@ -526,7 +526,7 @@ void run_platform_sanity_checks()
 #endif
 }
 
-int main(int argc, char** argv)
+int run_rpcs3(int argc, char** argv)
 {
 #ifdef _WIN32
 	ULONG64 intro_cycles{};
