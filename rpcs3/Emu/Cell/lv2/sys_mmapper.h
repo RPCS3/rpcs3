@@ -5,6 +5,8 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+#include "util/shared_ptr.hpp"
+
 #include <vector>
 
 struct lv2_memory_container;
@@ -24,7 +26,7 @@ struct lv2_memory : lv2_obj
 	const u64 key; // IPC key
 	const bool pshared; // Process shared flag
 	lv2_memory_container* const ct; // Associated memory container
-	const std::shared_ptr<utils::shm> shm;
+	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
 	atomic_t<u32> counter{0};
 
