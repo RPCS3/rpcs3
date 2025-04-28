@@ -10,6 +10,7 @@
 #include "call_stack_list.h"
 #include "input_dialog.h"
 #include "qt_utils.h"
+#include "hex_validator.h"
 
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -1408,11 +1409,11 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (const auto thread = get_cpu(); !thread || thread->get_class() != thread_class::spu)
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
+		expression_input->setValidator(new HexValidator(8, expression_input));
 	}
 	else
 	{
-		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$"), this));
+		expression_input->setValidator(new HexValidator(5, expression_input));
 	}
 
 	// Ok/Cancel
@@ -1451,7 +1452,7 @@ void debugger_frame::ShowGotoAddressDialog()
 		// This also works if no thread is selected and has been selected before
 		if (result == QDialog::Accepted && cpu == get_cpu() && cpu == cpu_check())
 		{
-			PerformGoToRequest(expression_input->text());
+			PerformGoToRequest(normalizeHexQString(expression_input->text()));
 		}
 
 		m_goto_dialog = nullptr;
