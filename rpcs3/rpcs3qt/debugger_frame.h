@@ -141,6 +141,7 @@ private Q_SLOTS:
 	void ShowPC(bool user_requested = false);
 	void EnableUpdateTimer(bool enable) const;
 	void RunBtnPress();
+	void RegsShowMemoryViewerAction();
 };
 
 Q_DECLARE_METATYPE(u32)

@@ -1716,46 +1716,53 @@ void debugger_frame::OnRegsContextMenu(const QPoint& pos)
 	QMenu* menu = m_regs->createStandardContextMenu();
 	QAction* memory_viewer_action = new QAction(tr("Show in Memory Viewer"), menu);
 
-	connect(memory_viewer_action, &QAction::triggered, this, [this]()
-	{
-		QTextCursor cursor = m_regs->textCursor();
-		if (!cursor.hasSelection()) {
-			QMessageBox::warning(this,tr("No Selection"), tr("Please select a hex value first."));
-			return;
-		}
-	
-		QTextDocumentFragment frag(cursor);
-		QString selected = frag.toPlainText().trimmed();
-	
-		int pos = 0;
-		HexValidator validator(this);
-		QValidator::State st = validator.validate(selected, pos);
-		if (st != QValidator::Acceptable) {
-			QMessageBox::critical(this, tr("Invalid Hex"), tr("“%1” is not a valid 32-bit hex value.").arg(selected));
-			return;
-		}
-	
-		QString norm = normalize_hex_qstring(selected);
-		bool ok = false;
-		quint64 value = norm.toULongLong(&ok, 16);
-		auto pc = static_cast<uint32_t>(value);
-	
-		const u32 id = idm::last_id();
-		auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
-		
-		if (!handle_ptr)
-		{
-			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm(), pc);
-			return;
-		}
-	
-		handle_ptr->m_mvp->SetPC(pc);
-		handle_ptr->m_mvp->raise();
-		handle_ptr->m_mvp->scroll(0);
-		handle_ptr->m_mvp->show();
-	});
+	connect(memory_viewer_action, &QAction::triggered, this, &debugger_frame::RegsShowMemoryViewerAction);
 
 	menu->addSeparator();
 	menu->addAction(memory_viewer_action);
 	menu->exec(m_regs->mapToGlobal(pos));
+}
+
+void debugger_frame::RegsShowMemoryViewerAction()
+{
+	const QTextCursor cursor = m_regs->textCursor();
+	if (!cursor.hasSelection())
+	{
+		QMessageBox::warning(this, tr("No Selection"), tr("Please select a hex value first."));
+		return;
+	}
+
+	const QTextDocumentFragment frag(cursor);
+	QString selected = frag.toPlainText().trimmed();
+
+	int pos = 0;
+	const HexValidator validator(this);
+	const QValidator::State st = validator.validate(selected, pos);
+	if (st != QValidator::Acceptable)
+	{
+		QMessageBox::critical(this, tr("Invalid Hex"), tr("“%0” is not a valid 32-bit hex value.").arg(selected));
+		return;
+	}
+
+	const QString norm = normalize_hex_qstring(selected);
+	bool ok = false;
+	const quint64 value = norm.toULongLong(&ok, 16);
+	const u32 pc = static_cast<u32>(value);
+
+	const u32 id = idm::last_id();
+	auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
+
+	if (!handle_ptr)
+	{
+		idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm(), pc);
+		return;
+	}
+
+	handle_ptr->m_mvp->SetPC(pc);
+	handle_ptr->m_mvp->raise();
+	handle_ptr->m_mvp->scroll(0);
+	if (!handle_ptr->m_mvp->isVisible())
+	{
+		handle_ptr->m_mvp->show();
+	}
 }
