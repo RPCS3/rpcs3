@@ -969,19 +969,23 @@ namespace utils
 	{
 		void* ptr = m_ptr;
 
-		while (!ptr)
+		for (void* mapped = nullptr; !ptr;)
 		{
-			const auto mapped = this->map(nullptr, prot);
+			if (!mapped)
+			{
+				mapped = this->map(nullptr, prot);
+			}
 
 			// Install mapped memory
-			if (!m_ptr.compare_exchange(ptr, mapped))
-			{
-				// Mapped already, nothing to do.
-				this->unmap(mapped);
-			}
-			else
+			if (m_ptr.compare_exchange(ptr, mapped))
 			{
 				ptr = mapped;
+			}
+			else if (ptr)
+			{
+				// Mapped already, nothing to do.
+				ensure(ptr != mapped);
+				this->unmap(mapped);
 			}
 		}
 
