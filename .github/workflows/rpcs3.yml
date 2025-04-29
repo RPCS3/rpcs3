@@ -77,7 +77,7 @@ jobs:
             -v $PWD:/rpcs3              \
             --env-file .ci/docker.env \
             -v ${{ env.CCACHE_DIR }}:/root/.ccache  \
-            -v ${{ github.workspace }}/artifacts:/root/artifacts \
+            -v ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}:${{ env.ARTDIR }} \
             ${{ matrix.docker_img }} \
             ${{ matrix.build_sh }}
 
