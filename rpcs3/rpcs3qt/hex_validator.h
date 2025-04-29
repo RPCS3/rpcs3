@@ -6,48 +6,66 @@
 class HexValidator : public QValidator
 {
 public:
-	explicit HexValidator(int max_nibbles, QObject* parent = nullptr)
-		: QValidator(parent), m_max_nibbles(max_nibbles)
-    {}
+	explicit HexValidator(QObject* parent = nullptr, int max_bits = 32)
+		: QValidator(parent)
+		, m_max_bits(max_bits)
+	{}
 
-    State validate(QString& input, int& pos) const override
-    {
-        Q_UNUSED(pos);
+	State validate(QString& input, int& pos) const override
+	{
+		Q_UNUSED(pos);
 
-        QString stripped = input;
-        stripped.remove(' ');
+		QString stripped = input.toLower().remove(' ');
 
-        if (stripped.startsWith("0x", Qt::CaseInsensitive)) 
-            stripped = stripped.mid(2);
+		if (stripped.startsWith("0x"))
+			stripped = stripped.mid(2);
 
-        if (stripped.endsWith("h", Qt::CaseInsensitive))
+		if (stripped.endsWith("h"))
 			stripped.chop(1);
 
-        if (stripped.isEmpty())
-            return QValidator::Intermediate;
+		if (stripped.isEmpty())
+			return QValidator::Intermediate;
 
-        static const QRegularExpression hex_re("^[0-9A-Fa-f]*$");
+		if (stripped.length() > 16)
+			return QValidator::Invalid;
+
+		static const QRegularExpression hex_re("^[0-9a-f]+$");
 		if (!hex_re.match(stripped).hasMatch())
-            return QValidator::Invalid;
+			return QValidator::Invalid;
 
-        if (stripped.length() > m_max_nibbles)
-            return QValidator::Invalid;
+		QString sig = stripped;
+		sig.remove(QRegularExpression("^0+"));
+		int sig_nibbles = sig.isEmpty() ? 1 : sig.length();
+		if (sig_nibbles > (m_max_bits + 3) / 4)
+			return QValidator::Invalid;
 
-        return QValidator::Acceptable;
-    }
+		bool ok = false;
+		qulonglong value = stripped.toULongLong(&ok, 16);
+		if (!ok)
+			return QValidator::Invalid;
+
+		if (m_max_bits < 64) 
+		{
+			qulonglong max_val = (qulonglong(1) << m_max_bits) - 1;
+			if (value > max_val)
+				return QValidator::Invalid;
+		}
+
+		return QValidator::Acceptable;
+	}
 
 private:
-	const int m_max_nibbles;
+	const int m_max_bits;
 };
 
 inline QString normalize_hex_qstring(const QString& input)
 {
-    QString s = input;
-    s.remove(' ');
+	QString s = input;
+	s.remove(' ');
 	s = s.toLower();
-    if (s.startsWith("0x"))
-        s = s.mid(2);
+	if (s.startsWith("0x"))
+		s = s.mid(2);
 	if (s.endsWith('h'))
 		s.chop(1);
-    return s;
+	return s;
 }

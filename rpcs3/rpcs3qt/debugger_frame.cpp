@@ -1405,15 +1405,14 @@ void debugger_frame::ShowGotoAddressDialog()
 	// Address expression input
 	QLineEdit* expression_input(new QLineEdit(m_goto_dialog));
 	expression_input->setFont(m_mono);
-	expression_input->setMaxLength(18);
 
 	if (const auto thread = get_cpu(); !thread || thread->get_class() != thread_class::spu)
 	{
-		expression_input->setValidator(new HexValidator(8, expression_input));
+		expression_input->setValidator(new HexValidator(expression_input));
 	}
 	else
 	{
-		expression_input->setValidator(new HexValidator(5, expression_input));
+		expression_input->setValidator(new HexValidator(expression_input));
 	}
 
 	// Ok/Cancel

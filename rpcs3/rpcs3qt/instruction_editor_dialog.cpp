@@ -45,7 +45,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 	m_instr = new QLineEdit(this);
 	m_instr->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	m_instr->setValidator(new HexValidator(8, m_instr));
+	m_instr->setValidator(new HexValidator(m_instr));
 	m_instr->setMaximumWidth(130);
 
 	m_disasm->change_mode(cpu_disasm_mode::normal);

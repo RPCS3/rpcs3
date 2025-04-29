@@ -95,7 +95,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setFont(mono);
-	m_addr_line->setValidator(new HexValidator(m_type == thread_class::spu ? 5 : 8, m_addr_line));
+	m_addr_line->setValidator(new HexValidator(m_addr_line));
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
 	hbox_tools_mem_addr->addWidget(m_addr_line);
