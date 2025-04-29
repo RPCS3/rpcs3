@@ -124,7 +124,7 @@ namespace fmt
 		EXPECT_EQ(lowercase, to_lower_res);
 
 		EXPECT_EQ(""s, fmt::to_upper(""));
-		EXPECT_EQ(uppercase, fmt::to_upper(uppercase));
+		EXPECT_EQ(uppercase, fmt::to_lower(uppercase));
 		EXPECT_EQ(uppercase, to_upper_res);
 	}
 
