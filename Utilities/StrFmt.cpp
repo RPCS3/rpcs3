@@ -824,7 +824,12 @@ std::string fmt::trim(const std::string& source, std::string_view values)
 	if (begin == source.npos)
 		return {};
 
-	return source.substr(begin, source.find_last_not_of(values) + 1);
+	const usz end = source.find_last_not_of(values);
+
+	if (end == source.npos)
+		return source.substr(begin);
+
+	return source.substr(begin, end + 1 - begin);
 }
 
 std::string fmt::trim_front(const std::string& source, std::string_view values)
