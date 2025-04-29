@@ -28,6 +28,9 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+class CPUDisAsm;
+std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
+
 constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr, std::function<cpu_thread*()> func)
@@ -1243,4 +1246,24 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		// sizeHint() evaluates properly after events have been processed
 		f_image_viewer->setFixedSize(f_image_viewer->sizeHint());
 	});
+}
+
+void memory_viewer_panel::ShowAtPC(u32 pc)
+{
+	const u32 id = idm::last_id();
+	auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
+
+	if (!handle_ptr)
+	{
+		idm::make<memory_viewer_handle>(nullptr, make_basic_ppu_disasm(), pc);
+		return;
+	}
+
+	handle_ptr->m_mvp->SetPC(pc);
+	handle_ptr->m_mvp->raise();
+	handle_ptr->m_mvp->scroll(0);
+	if (!handle_ptr->m_mvp->isVisible())
+	{
+		handle_ptr->m_mvp->show();
+	}
 }

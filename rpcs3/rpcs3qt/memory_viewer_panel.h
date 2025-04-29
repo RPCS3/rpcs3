@@ -55,8 +55,7 @@ public:
 	memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
 	~memory_viewer_panel();
 
-	void scroll(s32 steps);
-	void SetPC(const uint pc);
+	static void ShowAtPC(u32 pc);
 
 	enum class color_format : int
 	{
@@ -109,7 +108,9 @@ private:
 	search_mode m_modes{};
 
 	std::string getHeaderAtAddr(u32 addr) const;
+	void scroll(s32 steps);
 	void* to_ptr(u32 addr, u32 size = 1) const;
+	void SetPC(const uint pc);
 
 	void ShowMemory();
 

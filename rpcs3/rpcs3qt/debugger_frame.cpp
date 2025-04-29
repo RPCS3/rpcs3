@@ -55,9 +55,6 @@ extern bool is_using_interpreter(thread_class t_class);
 
 extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
 
-class CPUDisAsm;
-std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
-
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -1749,20 +1746,5 @@ void debugger_frame::RegsShowMemoryViewerAction()
 	const quint64 value = norm.toULongLong(&ok, 16);
 	const u32 pc = static_cast<u32>(value);
 
-	const u32 id = idm::last_id();
-	auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
-
-	if (!handle_ptr)
-	{
-		idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm(), pc);
-		return;
-	}
-
-	handle_ptr->m_mvp->SetPC(pc);
-	handle_ptr->m_mvp->raise();
-	handle_ptr->m_mvp->scroll(0);
-	if (!handle_ptr->m_mvp->isVisible())
-	{
-		handle_ptr->m_mvp->show();
-	}
+	memory_viewer_panel::ShowAtPC(pc);
 }
