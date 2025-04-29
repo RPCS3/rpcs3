@@ -82,6 +82,9 @@
     <ClCompile Include="Emu\games_config.cpp" />
     <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
+    <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Emu\Io\GameTablet.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
@@ -530,7 +533,7 @@
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="rpcs3_version.cpp" />
-    <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="Emu\stb_image.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -574,6 +577,9 @@
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
     <ClInclude Include="Emu\Io\emulated_pad_config.h" />
+    <ClInclude Include="Emu\Io\evdev_gun_handler.h">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Emu\Io\GameTablet.h" />
     <ClInclude Include="Emu\Io\gem_config.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />

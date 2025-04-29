@@ -64,6 +64,9 @@ if (NOT ANDROID)
             AUTOUIC ON)
 
     target_link_libraries(rpcs3_lib
+        PUBLIC
+            3rdparty::stblib
+            3rdparty::libevdev
         PRIVATE
             rpcs3_emu
             rpcs3_ui
@@ -93,7 +96,7 @@ if (NOT ANDROID)
     endif()
 
     if(WIN32)
-        target_link_libraries(rpcs3_lib PRIVATE bcrypt ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
+        target_link_libraries(rpcs3_lib PRIVATE ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi)
     else()
         target_link_libraries(rpcs3_lib PRIVATE ${CMAKE_DL_LIBS})
     endif()

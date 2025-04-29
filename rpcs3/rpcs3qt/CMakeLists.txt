@@ -137,7 +137,6 @@ add_library(rpcs3_ui STATIC
     ../module_verifier.cpp
     ../rpcs3.cpp
     ../rpcs3_version.cpp
-    ../stb_image.cpp
     ../stdafx.cpp
 
     ../Input/basic_keyboard_handler.cpp
@@ -146,7 +145,6 @@ add_library(rpcs3_ui STATIC
     ../Input/ds4_pad_handler.cpp
     ../Input/dualsense_pad_handler.cpp
     ../Input/evdev_joystick_handler.cpp
-    ../Input/evdev_gun_handler.cpp
     ../Input/gui_pad_thread.cpp
     ../Input/hid_pad_handler.cpp
     ../Input/keyboard_pad_handler.cpp
@@ -189,20 +187,20 @@ target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
+        rpcs3_emu
         3rdparty::qt6
         3rdparty::yaml-cpp
-
-    PRIVATE
-        rpcs3_emu
         3rdparty::zlib
-        3rdparty::pugixml
         3rdparty::discordRPC
         3rdparty::hidapi
         3rdparty::libusb
-        3rdparty::libpng
-        3rdparty::7zip
         3rdparty::wolfssl
         3rdparty::libcurl
         3rdparty::opencv
         3rdparty::fusion
+
+    PRIVATE
+        3rdparty::pugixml
+        3rdparty::libpng
+        3rdparty::7zip
         3rdparty::rtmidi)
