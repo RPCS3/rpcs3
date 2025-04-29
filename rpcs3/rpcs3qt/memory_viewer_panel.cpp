@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
+#include "hex_validator.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
@@ -94,10 +95,10 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setFont(mono);
-	m_addr_line->setMaxLength(18);
-	m_addr_line->setFixedWidth(75);
+	m_addr_line->setValidator(new HexValidator(m_addr_line));
+	m_addr_line->setFixedWidth(100);
 	m_addr_line->setFocus();
-	m_addr_line->setValidator(new QRegularExpressionValidator(QRegularExpression(m_type == thread_class::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$"), this));
+	m_addr_line->setAlignment(Qt::AlignCenter);
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
@@ -287,7 +288,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	QGroupBox* group_search = new QGroupBox(tr("Memory Search"), this);
 	QPushButton* button_collapse_viewer = new QPushButton(reinterpret_cast<const char*>(u8"Ʌ"), group_search);
 	button_collapse_viewer->setFixedWidth(QLabel(button_collapse_viewer->text()).sizeHint().width() * 3);
-
+	button_collapse_viewer->setAutoDefault(false);
+	
 	m_search_line = new QLineEdit(group_search);
 	m_search_line->setFixedWidth(QLabel(QString("This is the very length of the lineedit due to hidpi reasons.").chopped(4)).sizeHint().width());
 	m_search_line->setPlaceholderText(tr("Search..."));
@@ -424,8 +426,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok = false;
-		const QString text = m_addr_line->text();
-		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		const u32 addr = normalize_hex_qstring(m_addr_line->text()).toULong(&ok, 16);
 		if (ok) m_addr = addr;
 
 		scroll(0); // Refresh
