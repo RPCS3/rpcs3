@@ -2361,7 +2361,9 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				}
 				case ppu_itype::MTSPR:
 				{
-					switch (const u32 n = (op.spr >> 5) | ((op.spr & 0x1f) << 5))
+					const u32 spr_idx = (op.spr >> 5) | ((op.spr & 0x1f) << 5);
+
+					switch (spr_idx)
 					{
 					case 0x001: // MTXER
 					{
@@ -2459,7 +2461,6 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						const reg_state_t rb = get_reg(op.rb);
 
 						const bool is_ra = ra(is_const) && (ra(minv) >= start && ra(minv) < segs_end);
-						const bool is_rb = rb(is_const) && (rb(minv) >= start && rb(minv) < segs_end);
 
 						if (ra(is_const) == rb(is_const))
 						{

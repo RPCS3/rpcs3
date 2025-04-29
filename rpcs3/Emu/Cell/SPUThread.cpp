@@ -1233,8 +1233,6 @@ void spu_thread::dump_regs(std::string& ret, std::any& /*custom_data*/) const
 	u32 saved_pc = umax;
 	const u8* lsa_state_ptr = nullptr;
 
-	const u8* lsa_ptr = _ptr<u8>(ch_mfc_cmd.lsa);
-
 	// Load PC, GPRs and reservation data atomically
 	// We may not load the entire context atomically, but there is importance their state being intact for debugging
 	do
@@ -4375,7 +4373,7 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr, bool avoid_dead_code)
+bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr, bool avoid_dead_code, bool is_range_limited)
 {
 	bool had_conditional = false;
 
@@ -4383,12 +4381,12 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 	{
 		if (addr & ~0x3FFFC)
 		{
-			return false;
+			return is_range_limited;
 		}
 
 		if (addr < base_addr || addr >= base_addr + ls_ptr.size())
 		{
-			return false;
+			return is_range_limited;
 		}
 
 		const u32 addr0 = spu_branch_target(addr);
@@ -4498,12 +4496,12 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 					{
 						if (addr < 0u - rel)
 						{
-							return false;
+							return is_range_limited;
 						}
 					}
 					else if (SPU_LS_SIZE - addr <= rel + 0u)
 					{
-						return false;
+						return is_range_limited;
 					}
 
 					if (type == spu_itype::BRSL)
@@ -4533,7 +4531,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 
 				if (route_pc < base_addr || route_pc >= base_addr + ls_ptr.size())
 				{
-					return false;
+					return is_range_limited;
 				}
 
 				// Test the validity of a single instruction of the optional target

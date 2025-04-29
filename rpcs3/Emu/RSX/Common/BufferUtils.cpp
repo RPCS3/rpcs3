@@ -465,7 +465,7 @@ namespace
 		const unsigned step = 8;                          // We do 8 entries per step
 		const __m128i vec_step = _mm_set1_epi16(8);     // Constant to increment the raw values
 		__m128i values = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
-		__m128i* vec_ptr = reinterpret_cast<__m128i*>(dst);
+		__m128i* vec_ptr = utils::bless<__m128i>(dst);
 
 		for (; (i + step) <= count; i += step, vec_ptr++)
 		{

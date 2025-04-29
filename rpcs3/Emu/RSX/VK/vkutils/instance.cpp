@@ -174,14 +174,14 @@ namespace vk
 				found_surface_ext = true;
 			}
 #endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+#ifdef HAVE_WAYLAND
 			if (support.is_supported(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME))
 			{
 				extensions.push_back(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
 				found_surface_ext = true;
 			}
 #endif //(WAYLAND)
-#ifdef VK_USE_PLATFORM_ANDROID_KHR
+#ifdef ANDROID
 			if (support.is_supported(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME))
 			{
 				extensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);

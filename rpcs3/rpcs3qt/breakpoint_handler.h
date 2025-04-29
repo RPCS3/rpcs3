@@ -4,6 +4,7 @@
 #include "Utilities/bit_set.h"
 #include <map>
 #include "Utilities/mutex.h"
+#include <atomic>
 
 enum class breakpoint_types
 {
@@ -46,6 +47,7 @@ private:
 	// TODO : generalize to hold multiple games and handle flags.Probably do : std::map<std::string (gameid), std::set<breakpoint>>.
 	// Although, externally, they'll only be accessed by loc (I think) so a map of maps may also do?
 	shared_mutex mutex_breakpoints;
+	std::atomic<bool> m_empty{true};
 	std::map<u32, bs_t<breakpoint_types>> m_breakpoints; //! Holds all breakpoints.
 	bool m_break_on_bpm = false;
 };
