@@ -52,39 +52,7 @@ gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
 
 if (NOT ANDROID)
     # Build rpcs3_lib
-    add_library(rpcs3_lib STATIC
-        display_sleep_control.cpp
-        headless_application.cpp
-        main_application.cpp
-        module_verifier.cpp
-        rpcs3.cpp
-        rpcs3_version.cpp
-        stb_image.cpp
-        stdafx.cpp
-
-        Input/basic_keyboard_handler.cpp
-        Input/basic_mouse_handler.cpp
-        Input/ds3_pad_handler.cpp
-        Input/ds4_pad_handler.cpp
-        Input/dualsense_pad_handler.cpp
-        Input/evdev_joystick_handler.cpp
-        Input/evdev_gun_handler.cpp
-        Input/gui_pad_thread.cpp
-        Input/hid_pad_handler.cpp
-        Input/keyboard_pad_handler.cpp
-        Input/mm_joystick_handler.cpp
-        Input/pad_thread.cpp
-        Input/product_info.cpp
-        Input/ps_move_calibration.cpp
-        Input/ps_move_config.cpp
-        Input/ps_move_handler.cpp
-        Input/ps_move_tracker.cpp
-        Input/raw_mouse_config.cpp
-        Input/raw_mouse_handler.cpp
-        Input/sdl_pad_handler.cpp
-        Input/skateboard_pad_handler.cpp
-        Input/xinput_pad_handler.cpp
-    )
+    add_library(rpcs3_lib STATIC)
 
     if(WIN32)
         target_compile_definitions(rpcs3_lib PRIVATE UNICODE _UNICODE)

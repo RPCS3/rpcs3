@@ -2166,6 +2166,10 @@
     <None Include="..\Utilities\git-version-gen.cmd" />
     <None Include="update_helper.sh" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="rpcs3qt\CMakeLists.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
   <ProjectExtensions>
