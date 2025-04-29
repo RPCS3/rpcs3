@@ -239,4 +239,12 @@ if(BUILD_RPCS3_TESTS)
 
     include(GoogleTest)
     gtest_discover_tests(rpcs3_test)
+
+    if(RUN_RPCS3_TESTS)
+        add_custom_target(run_tests
+            ALL
+            COMMAND ${CMAKE_CTEST_COMMAND} -j -VV --output-on-failure
+            DEPENDS rpcs3_test
+     )
+    endif()
 endif()
