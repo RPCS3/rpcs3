@@ -5,6 +5,8 @@ defaults:
     shell: bash
 on:
   push:
+    branches:
+      - master # Only trigger push event on 'master' branch
   pull_request:
   workflow_dispatch:
 
@@ -20,6 +22,8 @@ env:
 
 jobs:
   Linux_Build:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
       matrix:
@@ -100,6 +104,8 @@ jobs:
           .ci/github-upload.sh
 
   Windows_Build:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 Windows
     runs-on: windows-2025
     env:
