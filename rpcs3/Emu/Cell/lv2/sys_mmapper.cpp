@@ -629,13 +629,17 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 			return CELL_EALIGN;
 		}
 
-		while (!mem.shm)
+		for (stx::shared_ptr<std::shared_ptr<utils::shm>> to_insert, null; !mem.shm;)
 		{
 			// Insert atomically the memory handle (laziliy allocated)
-			auto shm = make_single_value(std::make_shared<utils::shm>(mem.size, 1 /* shareable flag */));
-			stx::shared_ptr<std::shared_ptr<utils::shm>> null;
+			if (!to_insert)
+			{
+				to_insert = make_single_value(std::make_shared<utils::shm>(mem.size, 1 /* shareable flag */));
+			}
 
-			if (mem.shm.compare_exchange(null, std::move(shm)))
+			null.reset();
+
+			if (mem.shm.compare_exchange(null, to_insert))
 			{
 				break;
 			}
@@ -695,13 +699,17 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 			return CELL_EALIGN;
 		}
 
-		while (!mem.shm)
+		for (stx::shared_ptr<std::shared_ptr<utils::shm>> to_insert, null; !mem.shm;)
 		{
 			// Insert atomically the memory handle (laziliy allocated)
-			auto shm = make_single_value(std::make_shared<utils::shm>(mem.size, 1 /* shareable flag */));
-			stx::shared_ptr<std::shared_ptr<utils::shm>> null;
+			if (!to_insert)
+			{
+				to_insert = make_single_value(std::make_shared<utils::shm>(mem.size, 1 /* shareable flag */));
+			}
 
-			if (mem.shm.compare_exchange(null, std::move(shm)))
+			null.reset();
+
+			if (mem.shm.compare_exchange(null, to_insert))
 			{
 				break;
 			}
@@ -767,7 +775,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 
 	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem) -> u32
 	{
-		if (mem.shm.load()->get() == shm.second.get())
+		if (auto shm0 = mem.shm.load(); shm0 && shm0->get() == shm.second.get())
 		{
 			return id;
 		}
