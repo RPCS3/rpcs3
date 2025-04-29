@@ -1,9 +1,9 @@
 #!/bin/sh -ex
 
-# Pull all the submodules except llvm and opencv
+# Pull all the submodules except llvm, opencv, libpng, sdl and curl
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libpng/ && !/libsdl-org/ && !/curl/ { print $3 }' .gitmodules)
 
 CONFIGURE_ARGS="
 	-DWITH_LLVM=ON

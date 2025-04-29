@@ -6,9 +6,9 @@ fi
 
 git config --global --add safe.directory '*'
 
-# Pull all the submodules except llvm and opencv
+# Pull all the submodules except llvm, opencv, sdl and curl
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ { print $3 }' .gitmodules)
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/libsdl-org/ && !/curl/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
