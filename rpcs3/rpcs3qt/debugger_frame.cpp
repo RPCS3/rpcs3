@@ -32,6 +32,8 @@
 #include <QTimer>
 #include <QCheckBox>
 #include <QMessageBox>
+#include <QMenu>
+#include <QTextDocumentFragment>
 #include <algorithm>
 #include <functional>
 
@@ -52,6 +54,9 @@ breakpoint_handler g_breakpoint_handler = breakpoint_handler();
 extern bool is_using_interpreter(thread_class t_class);
 
 extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thread> handle);
+
+class CPUDisAsm;
+std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
@@ -125,7 +130,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	m_regs = new QPlainTextEdit(this);
 	m_regs->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-
+	m_regs->setContextMenuPolicy(Qt::CustomContextMenu);
+	
 	m_debugger_list->setFont(m_mono);
 	m_misc_state->setFont(m_mono);
 	m_regs->setFont(m_mono);
@@ -157,6 +163,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QWidget* body = new QWidget(this);
 	body->setLayout(vbox_p_main);
 	setWidget(body);
+
+	connect(m_regs, &QPlainTextEdit::customContextMenuRequested, this, &debugger_frame::OnRegsContextMenu);
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]() { ShowPC(true); });
@@ -1701,4 +1709,53 @@ void debugger_frame::EnableButtons(bool enable)
 	m_btn_step->setEnabled(step);
 	m_btn_step_over->setEnabled(step);
 	m_btn_run->setEnabled(enable);
+}
+
+void debugger_frame::OnRegsContextMenu(const QPoint& pos)
+{
+	QMenu* menu = m_regs->createStandardContextMenu();
+	QAction* memory_viewer_action = new QAction(tr("Show in Memory Viewer"), menu);
+
+	connect(memory_viewer_action, &QAction::triggered, this, [this]()
+	{
+		QTextCursor cursor = m_regs->textCursor();
+		if (!cursor.hasSelection()) {
+			QMessageBox::warning(this,tr("No Selection"), tr("Please select a hex value first."));
+			return;
+		}
+	
+		QTextDocumentFragment frag(cursor);
+		QString selected = frag.toPlainText().trimmed();
+	
+		int pos = 0;
+		HexValidator validator(this);
+		QValidator::State st = validator.validate(selected, pos);
+		if (st != QValidator::Acceptable) {
+			QMessageBox::critical(this, tr("Invalid Hex"), tr("“%1” is not a valid 32-bit hex value.").arg(selected));
+			return;
+		}
+	
+		QString norm = normalize_hex_qstring(selected);
+		bool ok = false;
+		quint64 value = norm.toULongLong(&ok, 16);
+		auto pc = static_cast<uint32_t>(value);
+	
+		const u32 id = idm::last_id();
+		auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
+		
+		if (!handle_ptr)
+		{
+			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm(), pc);
+			return;
+		}
+	
+		handle_ptr->m_mvp->SetPC(pc);
+		handle_ptr->m_mvp->raise();
+		handle_ptr->m_mvp->scroll(0);
+		handle_ptr->m_mvp->show();
+	});
+
+	menu->addSeparator();
+	menu->addAction(memory_viewer_action);
+	menu->exec(m_regs->mapToGlobal(pos));
 }
