@@ -35,18 +35,18 @@ public:
 
 		QString sig = stripped;
 		sig.remove(QRegularExpression("^0+"));
-		int sig_nibbles = sig.isEmpty() ? 1 : sig.length();
+		const int sig_nibbles = sig.isEmpty() ? 1 : sig.length();
 		if (sig_nibbles > (m_max_bits + 3) / 4)
 			return QValidator::Invalid;
 
 		bool ok = false;
-		qulonglong value = stripped.toULongLong(&ok, 16);
+		const qulonglong value = stripped.toULongLong(&ok, 16);
 		if (!ok)
 			return QValidator::Invalid;
 
 		if (m_max_bits < 64) 
 		{
-			qulonglong max_val = (qulonglong(1) << m_max_bits) - 1;
+			const qulonglong max_val = (qulonglong(1) << m_max_bits) - 1;
 			if (value > max_val)
 				return QValidator::Invalid;
 		}
