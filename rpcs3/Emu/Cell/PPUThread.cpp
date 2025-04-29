@@ -5748,14 +5748,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 
 	// Define some types
 	const auto _func = FunctionType::get(translator.get_type<void>(), {
-		translator.get_type<u8*>(), // Exec base
-		translator.GetContextType()->getPointerTo(), // PPU context
-		translator.get_type<u64>(), // Segment address (for PRX)
-		translator.get_type<u8*>(), // Memory base
-		translator.get_type<u64>(), // r0
-		translator.get_type<u64>(), // r1
-		translator.get_type<u64>(), // r2
-		}, false);
+																		  translator.get_type<u8*>(),             // Exec base
+																		  PointerType::get(jit.get_context(), 0), // PPU context
+																		  translator.get_type<u64>(),             // Segment address (for PRX)
+																		  translator.get_type<u8*>(),             // Memory base
+																		  translator.get_type<u64>(),             // r0
+																		  translator.get_type<u64>(),             // r1
+																		  translator.get_type<u64>(),             // r2
+																	  },
+		false);
 
 	// Difference between function name and current location
 	const u32 reloc = module_part.is_relocatable ? ::at32(module_part.segs, 0).addr : 0;

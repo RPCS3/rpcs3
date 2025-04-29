@@ -1707,7 +1707,7 @@ fs::file fs::file::from_native_handle(native_handle handle)
 	fs::file result;
 
 #ifdef _WIN32
-	result.m_file = std::make_unique<windows_file>((const HANDLE)handle);
+	result.m_file = std::make_unique<windows_file>(static_cast<HANDLE>(handle));
 #else
 	result.m_file = std::make_unique<unix_file>(handle);
 #endif
