@@ -993,9 +993,6 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_motion_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="Input\evdev_gun_handler.cpp">
-      <Filter>Io\evdev</Filter>
-    </ClCompile>
     <ClCompile Include="Input\sdl_pad_handler.cpp">
       <Filter>Io\SDL</Filter>
     </ClCompile>
@@ -1348,9 +1345,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\pad_device_info.h">
       <Filter>Gui\settings</Filter>
-    </ClInclude>
-    <ClInclude Include="Input\evdev_gun_handler.h">
-      <Filter>Io\evdev</Filter>
     </ClInclude>
     <ClInclude Include="module_verifier.hpp">
       <Filter>rpcs3</Filter>

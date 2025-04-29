@@ -19,7 +19,7 @@
 #include "Input/ps_move_tracker.h"
 
 #ifdef HAVE_LIBEVDEV
-#include "Input/evdev_gun_handler.h"
+#include "Emu/Io/evdev_gun_handler.h"
 #endif
 
 #include <cmath> // for fmod

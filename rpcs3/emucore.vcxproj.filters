@@ -1083,7 +1083,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="Emu\stb_image.cpp" />
     <ClCompile Include="Emu\RSX\Program\FragmentProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
@@ -1356,6 +1356,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2724,6 +2727,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\evdev_gun_handler.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
