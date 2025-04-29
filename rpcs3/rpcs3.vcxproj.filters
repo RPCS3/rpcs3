@@ -1900,4 +1900,12 @@
       <Filter>CI</Filter>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="rpcs3qt\CMakeLists.txt">
+      <Filter>buildfiles\cmake</Filter>
+    </Text>
+    <Text Include="CMakeLists.txt">
+      <Filter>buildfiles\cmake</Filter>
+    </Text>
+  </ItemGroup>
 </Project>
