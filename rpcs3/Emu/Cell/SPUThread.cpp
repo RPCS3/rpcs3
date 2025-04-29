@@ -4327,7 +4327,7 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr, bool avoid_dead_code)
+bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_addr, bool avoid_dead_code, bool is_range_limited)
 {
 	bool had_conditional = false;
 
@@ -4335,12 +4335,12 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 	{
 		if (addr & ~0x3FFFC)
 		{
-			return false;
+			return is_range_limited;
 		}
 
 		if (addr < base_addr || addr >= base_addr + ls_ptr.size())
 		{
-			return false;
+			return is_range_limited;
 		}
 
 		const u32 addr0 = spu_branch_target(addr);
@@ -4450,12 +4450,12 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 					{
 						if (addr < 0u - rel)
 						{
-							return false;
+							return is_range_limited;
 						}
 					}
 					else if (SPU_LS_SIZE - addr <= rel + 0u)
 					{
-						return false;
+						return is_range_limited;
 					}
 
 					if (type == spu_itype::BRSL)
@@ -4485,7 +4485,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 
 				if (route_pc < base_addr || route_pc >= base_addr + ls_ptr.size())
 				{
-					return false;
+					return is_range_limited;
 				}
 
 				// Test the validity of a single instruction of the optional target

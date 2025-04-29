@@ -193,9 +193,6 @@ if(USE_VULKAN)
 			if (WAYLAND_FOUND)
 				target_include_directories(3rdparty_vulkan
 					INTERFACE ${WAYLAND_INCLUDE_DIR})
-
-				target_compile_definitions(3rdparty_vulkan
-					INTERFACE -DVK_USE_PLATFORM_WAYLAND_KHR)
 			endif()
 		endif()
 
