@@ -28,9 +28,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-class CPUDisAsm;
-std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
-
 constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr, std::function<cpu_thread*()> func)
@@ -1255,7 +1252,7 @@ void memory_viewer_panel::ShowAtPC(u32 pc)
 
 	if (!handle_ptr)
 	{
-		idm::make<memory_viewer_handle>(nullptr, make_basic_ppu_disasm(), pc);
+		idm::make<memory_viewer_handle>(nullptr, nullptr, pc);
 		return;
 	}
 

@@ -851,7 +851,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			update_cheat_list();
 		});
 
-		connect(show_in_mem_viewer, &QAction::triggered, [offset]()
+		connect(show_in_mem_viewer, &QAction::triggered, this, [offset]()
 		{
 			memory_viewer_panel::ShowAtPC(offset);
 		});

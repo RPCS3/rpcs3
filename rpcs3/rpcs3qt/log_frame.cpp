@@ -253,9 +253,9 @@ void log_frame::CreateAndConnectActions()
 	});
 
 	m_perform_show_in_mem_viewer = new QAction(tr("Show in Memory Viewer"), this);
-	connect(m_perform_show_in_mem_viewer, &QAction::triggered, [this]()
+	connect(m_perform_show_in_mem_viewer, &QAction::triggered, this, [this]()
 	{
-		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
+		const QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
 		const QString selected = pte->textCursor().selectedText();
 		quint64 pc = 0;
 		if (!parse_hex_qstring(selected, &pc))

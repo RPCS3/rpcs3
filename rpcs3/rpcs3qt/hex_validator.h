@@ -84,7 +84,7 @@ inline bool parse_hex_qstring(const QString& input, quint64* result, int max_bit
 	bool ok = false;
 	const quint64 value = norm.toULongLong(&ok, 16);
 
-	if (ok)
+	if (ok && result)
 		*result = static_cast<u64>(value);
 
 	return ok;
