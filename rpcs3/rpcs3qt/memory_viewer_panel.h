@@ -139,3 +139,12 @@ struct memory_viewer_handle
 public:
 	const std::add_pointer_t<memory_viewer_panel> m_mvp;
 };
+
+struct memory_viewer_fxo
+{
+	memory_viewer_panel* last_opened = nullptr;
+
+	memory_viewer_fxo() = default;
+	memory_viewer_fxo(const memory_viewer_fxo&) = delete;
+	memory_viewer_fxo& operator=(const memory_viewer_fxo&) = delete;
+};

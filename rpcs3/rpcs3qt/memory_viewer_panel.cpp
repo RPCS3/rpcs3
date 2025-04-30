@@ -9,6 +9,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QSpinBox>
@@ -589,6 +590,14 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 		idm::remove_verify<memory_viewer_handle>(id, handle_ptr);
 	});
+
+	if (!g_fxo->try_get<memory_viewer_fxo>())
+	{
+		g_fxo->init<memory_viewer_fxo>();
+	}
+
+	auto& fxo = g_fxo->get<memory_viewer_fxo>();
+	fxo.last_opened = this;
 }
 
 memory_viewer_panel::~memory_viewer_panel()
@@ -1247,20 +1256,23 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 
 void memory_viewer_panel::ShowAtPC(u32 pc)
 {
-	const u32 id = idm::last_id();
-	auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
-
-	if (!handle_ptr)
-	{
-		idm::make<memory_viewer_handle>(nullptr, nullptr, pc);
+	if (Emu.IsStopped())
 		return;
+
+	if (const auto* fxo = g_fxo->try_get<memory_viewer_fxo>())
+	{
+		if (auto* panel = fxo->last_opened)
+		{
+			panel->SetPC(pc);
+			panel->raise();
+			panel->scroll(0);
+			if (!panel->isVisible())
+			{
+				panel->show();
+			}
+			return;
+		}
 	}
 
-	handle_ptr->m_mvp->SetPC(pc);
-	handle_ptr->m_mvp->raise();
-	handle_ptr->m_mvp->scroll(0);
-	if (!handle_ptr->m_mvp->isVisible())
-	{
-		handle_ptr->m_mvp->show();
-	}
+	idm::make<memory_viewer_handle>(nullptr, nullptr, pc);
 }
