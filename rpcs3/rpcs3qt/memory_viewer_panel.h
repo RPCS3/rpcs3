@@ -136,7 +136,7 @@ struct memory_viewer_handle
 
 	~memory_viewer_handle() { m_mvp->close(); m_mvp->deleteLater(); }
 
-public:
+private:
 	const std::add_pointer_t<memory_viewer_panel> m_mvp;
 };
 
