@@ -193,13 +193,18 @@ if(BUILD_RPCS3_TESTS)
 
     message(STATUS "Building unit tests...")
 
-    add_executable(rpcs3_test
-        tests/test_fmt.cpp
+    add_executable(rpcs3_test)
+
+    target_sources(rpcs3_test
+        PRIVATE
+            tests/test.cpp
+            tests/test_fmt.cpp
     )
 
     target_link_libraries(rpcs3_test
-        rpcs3_lib
-        GTest::gtest_main
+        PRIVATE
+            rpcs3_lib
+            GTest::gtest
     )
 
     target_include_directories(rpcs3_test
