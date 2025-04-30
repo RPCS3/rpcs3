@@ -1197,6 +1197,9 @@
     <ClCompile Include="rpcs3qt\video_label.cpp">
       <Filter>Gui\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1417,6 +1420,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\hex_validator.h">
       <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3.h">
+      <Filter>rpcs3</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

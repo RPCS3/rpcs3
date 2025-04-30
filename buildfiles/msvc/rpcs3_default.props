@@ -3,10 +3,12 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>.\;..\;..\3rdparty\asmjit\asmjit\src;..\..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\libpng\libpng;..\3rdparty\GL;..\3rdparty\stblib\stb;..\3rdparty\openal\openal-soft\include\AL;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi</IncludePath>
+    <IncludePath>.\;..\;$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\hidapi\hidapi</IncludePath>
     <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.7\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
+    <GTestInstalled Condition="Exists('$(GTestPath)')">true</GTestInstalled>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Lib>
@@ -130,7 +132,7 @@
         LLVMX86TargetMCA.lib;
         LLVMXRay.lib;
       </AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
     </Link>

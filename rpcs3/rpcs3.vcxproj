@@ -13,7 +13,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}</ProjectGuid>
     <RootNamespace>rpcs3</RootNamespace>
-    <Keyword>Qt4VSv1.0</Keyword>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -113,13 +112,22 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
-        xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
+        xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
       </Message>
     </PostBuildEvent>
+    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+      <Command>@echo off
+&gt; "$(IntermediateOutputPath)obj_files.rsp" (
+  for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
+    echo "$(IntermediateOutputPath)%%i"
+  )
+)
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -165,13 +173,22 @@
     <PostBuildEvent>
       <Command>
         $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
-        xcopy /y /d "..\3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
+        xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
       <Message>
       </Message>
     </PostBuildEvent>
+    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+      <Command>@echo off
+&gt; "$(IntermediateOutputPath)obj_files.rsp" (
+  for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
+    echo "$(IntermediateOutputPath)%%i"
+  )
+)
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3d.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
@@ -763,6 +780,7 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_raw_mouse_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="rpcs3qt\about_dialog.cpp" />
     <ClCompile Include="rpcs3qt\basic_mouse_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\breakpoint_handler.cpp" />
@@ -1104,6 +1122,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
+    <ClInclude Include="rpcs3.h" />
     <ClInclude Include="rpcs3qt\breakpoint_handler.h" />
     <CustomBuild Include="rpcs3qt\breakpoint_list.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
