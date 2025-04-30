@@ -532,7 +532,7 @@ namespace ppu_patterns
 }
 
 static constexpr struct const_tag{} is_const;
-static constexpr struct range_tag{} is_range;
+/*static constexpr*/ struct range_tag{} /*is_range*/;
 static constexpr struct min_value_tag{} minv;
 static constexpr struct max_value_tag{} maxv;
 static constexpr struct sign_bit_tag{} sign_bitv;
