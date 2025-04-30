@@ -74,6 +74,7 @@ private:
 	QAction* m_clear_tty_act = nullptr;
 	QAction* m_perform_goto_on_debugger = nullptr;
 	QAction* m_perform_goto_thread_on_debugger = nullptr;
+	QAction* m_perform_show_in_mem_viewer = nullptr;
 
 	QActionGroup* m_log_level_acts = nullptr;
 	QAction* m_nothing_act = nullptr;

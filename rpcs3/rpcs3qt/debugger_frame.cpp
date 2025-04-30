@@ -1730,21 +1730,13 @@ void debugger_frame::RegsShowMemoryViewerAction()
 	}
 
 	const QTextDocumentFragment frag(cursor);
-	QString selected = frag.toPlainText().trimmed();
-
-	int pos = 0;
-	const HexValidator validator(this);
-	const QValidator::State st = validator.validate(selected, pos);
-	if (st != QValidator::Acceptable)
+	const QString selected = frag.toPlainText().trimmed();
+	quint64 pc = 0;
+	if (!parse_hex_qstring(selected, &pc))
 	{
 		QMessageBox::critical(this, tr("Invalid Hex"), tr("“%0” is not a valid 32-bit hex value.").arg(selected));
 		return;
 	}
 
-	const QString norm = normalize_hex_qstring(selected);
-	bool ok = false;
-	const quint64 value = norm.toULongLong(&ok, 16);
-	const u32 pc = static_cast<u32>(value);
-
-	memory_viewer_panel::ShowAtPC(pc);
+	memory_viewer_panel::ShowAtPC(static_cast<u32>(pc));
 }
