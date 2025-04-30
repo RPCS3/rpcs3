@@ -187,7 +187,9 @@ if (NOT ANDROID)
 endif()
 
 # Unit tests
-if(BUILD_RPCS3_TESTS)
+if(BUILD_RPCS3_TESTS AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    message(STATUS "FIXME: Unit tests are currently not linking with GCC")
+elseif(BUILD_RPCS3_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
 
