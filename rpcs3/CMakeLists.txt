@@ -13,23 +13,23 @@ set(CMAKE_CXX_STANDARD 20)
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
+    list(APPEND ADDITIONAL_LIBS "rt")
 elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
     #it seems like glibc includes the iconv functions we use but other libc
     #implementations like the one on OSX don't seem implement them
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
+    list(APPEND ADDITIONAL_LIBS "iconv")
 endif()
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
+    add_compile_definitions(DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
     # Optionally enable X11 for window management
     find_package(X11)
     if(X11_FOUND)
-        add_definitions(-DHAVE_X11)
+        add_compile_definitions(HAVE_X11)
     endif()
     find_package(Wayland)
     if(WAYLAND_FOUND)
-        add_definitions(-DHAVE_WAYLAND)
+        add_compile_definitions(HAVE_WAYLAND)
     endif()
 endif()
 
@@ -188,7 +188,6 @@ endif()
 
 # Unit tests
 if(BUILD_RPCS3_TESTS)
-    enable_testing()
     find_package(GTest REQUIRED)
 
     message(STATUS "Building unit tests...")
@@ -205,6 +204,7 @@ if(BUILD_RPCS3_TESTS)
     target_link_libraries(rpcs3_test
         PRIVATE
             rpcs3_lib
+            rpcs3_emu
             GTest::gtest
     )
 
