@@ -158,8 +158,6 @@
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <SubSystem>Windows</SubSystem>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <BaseAddress>
-      </BaseAddress>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
     <Midl>
