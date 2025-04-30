@@ -1731,7 +1731,7 @@ void debugger_frame::RegsShowMemoryViewerAction()
 
 	const QTextDocumentFragment frag(cursor);
 	const QString selected = frag.toPlainText().trimmed();
-	quint64 pc = 0;
+	u64 pc = 0;
 	if (!parse_hex_qstring(selected, &pc))
 	{
 		QMessageBox::critical(this, tr("Invalid Hex"), tr("“%0” is not a valid 32-bit hex value.").arg(selected));

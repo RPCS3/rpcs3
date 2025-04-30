@@ -257,7 +257,7 @@ void log_frame::CreateAndConnectActions()
 	{
 		const QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
 		const QString selected = pte->textCursor().selectedText();
-		quint64 pc = 0;
+		u64 pc = 0;
 		if (!parse_hex_qstring(selected, &pc))
 		{
 			QMessageBox::critical(this, tr("Invalid Hex"), tr("“%0” is not a valid 32-bit hex value.").arg(selected));

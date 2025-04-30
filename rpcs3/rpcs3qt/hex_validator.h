@@ -70,7 +70,7 @@ inline QString normalize_hex_qstring(const QString& input)
 	return s;
 }
 
-inline bool parse_hex_qstring(const QString& input, quint64* result, int max_bits = 32)
+inline bool parse_hex_qstring(const QString& input, u64* result, int max_bits = 32)
 {
 	QString s = input;
 	int pos = 0;
