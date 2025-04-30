@@ -201,8 +201,6 @@ namespace fmt
 	// Returns the string shortened to length
 	std::string truncate(std::string_view src, usz length);
 
-	bool match(const std::string& source, const std::string& mask);
-
 	struct buf_to_hexstring
 	{
 		buf_to_hexstring(const u8* buf, usz len, usz line_length = 16, bool with_prefix = false)
