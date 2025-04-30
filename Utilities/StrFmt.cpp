@@ -875,45 +875,6 @@ std::string fmt::truncate(std::string_view src, usz length)
 	return std::string(src.begin(), src.begin() + std::min(src.size(), length));
 }
 
-bool fmt::match(const std::string& source, const std::string& mask)
-{
-	usz source_position = 0, mask_position = 0;
-
-	for (; source_position < source.size() && mask_position < mask.size(); ++mask_position, ++source_position)
-	{
-		switch (mask[mask_position])
-		{
-		case '?': break;
-
-		case '*':
-			for (usz test_source_position = source_position; test_source_position < source.size(); ++test_source_position)
-			{
-				if (match(source.substr(test_source_position), mask.substr(mask_position + 1)))
-				{
-					return true;
-				}
-			}
-			return false;
-
-		default:
-			if (source[source_position] != mask[mask_position])
-			{
-				return false;
-			}
-
-			break;
-		}
-	}
-
-	if (source_position != source.size())
-		return false;
-
-	if (mask_position != mask.size())
-		return false;
-
-	return true;
-}
-
 std::string get_file_extension(const std::string& file_path)
 {
 	if (usz dotpos = file_path.find_last_of('.'); dotpos != std::string::npos && dotpos + 1 < file_path.size())
