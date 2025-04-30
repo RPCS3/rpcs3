@@ -748,6 +748,12 @@ void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup
 
 std::string fmt::replace_all(std::string_view src, std::string_view from, std::string_view to, usz count)
 {
+	if (src.empty())
+		return {};
+
+	if (from.empty() || count == 0)
+		return std::string(src);
+
 	std::string target;
 	target.reserve(src.size() + to.size());
 
