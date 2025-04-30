@@ -598,6 +598,15 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 	auto& fxo = g_fxo->get<memory_viewer_fxo>();
 	fxo.last_opened = this;
+
+	connect(this, &memory_viewer_panel::destroyed, this, [this]()
+	{
+		if (auto fxo = g_fxo->try_get<memory_viewer_fxo>())
+		{
+			if (this == fxo->last_opened)
+				fxo->last_opened = nullptr;
+		}
+	});
 }
 
 memory_viewer_panel::~memory_viewer_panel()
