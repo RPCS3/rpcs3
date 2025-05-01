@@ -15,6 +15,7 @@
 #include <QScrollBar>
 #include <QTimer>
 #include <QSlider>
+#include <QComboBox>
 
 LOG_CHANNEL(logitech_g27_cfg_log, "LOGIG27");
 
@@ -27,49 +28,151 @@ struct joystick_state
 	std::vector<hat_component> hats;
 };
 
+enum mapping_device_choice
+{
+	CHOICE_NONE = -1,
+	CHOICE_STEERING = 0,
+	CHOICE_THROTTLE,
+	CHOICE_BRAKE,
+	CHOICE_CLUTCH,
+	CHOICE_SHIFT_UP,
+	CHOICE_SHIFT_DOWN,
+
+	CHOICE_UP,
+	CHOICE_DOWN,
+	CHOICE_LEFT,
+	CHOICE_RIGHT,
+
+	CHOICE_TRIANGLE,
+	CHOICE_CROSS,
+	CHOICE_SQUARE,
+	CHOICE_CIRCLE,
+
+	CHOICE_L2,
+	CHOICE_L3,
+	CHOICE_R2,
+	CHOICE_R3,
+
+	CHOICE_PLUS,
+	CHOICE_MINUS,
+
+	CHOICE_DIAL_CLOCKWISE,
+	CHOICE_DIAL_ANTICLOCKWISE,
+
+	CHOICE_SELECT,
+	CHOICE_PAUSE,
+
+	CHOICE_SHIFTER_1,
+	CHOICE_SHIFTER_2,
+	CHOICE_SHIFTER_3,
+	CHOICE_SHIFTER_4,
+	CHOICE_SHIFTER_5,
+	CHOICE_SHIFTER_6,
+	CHOICE_SHIFTER_R
+};
+
 class DeviceChoice : public QWidget
 {
 
 public:
-	DeviceChoice(QWidget* parent, uint32_t device_type_id, const char* name)
-		: QWidget(parent), m_device_type_id(device_type_id)
+	DeviceChoice(QWidget* parent, const char* name)
+		: QWidget(parent)
 	{
 		auto layout = new QHBoxLayout(this);
+		setLayout(layout);
 
 		QLabel* label = new QLabel(this);
 		label->setText(QString(name));
+		label->setMinimumWidth(500);
 		layout->addWidget(label);
-		setLayout(layout);
 
-		m_display_box = new QLabel(this);
-		m_display_box->setTextFormat(Qt::RichText);
-		m_display_box->setWordWrap(true);
-		m_display_box->setFrameStyle(QFrame::Box);
-		m_display_box->setMinimumWidth(100);
-		layout->addWidget(m_display_box);
+		m_dropdown = new QComboBox(this);
+		layout->addWidget(m_dropdown);
+
+		m_disable_button = new QPushButton(QString("DISABLE"), this);
+		layout->addWidget(m_disable_button);
+
+		connect(m_dropdown, &QComboBox::currentIndexChanged, this, [this]()
+			{
+				m_device_choice = static_cast<mapping_device_choice>(this->m_dropdown->currentIndex());
+				update_display();
+			});
+
+		connect(m_disable_button, &QPushButton::clicked, this, [this]()
+			{
+				m_device_choice = CHOICE_NONE;
+				update_display();
+			});
+
+		m_dropdown->setPlaceholderText(QString("-- Disabled --"));
+
+		m_dropdown->addItem(QString("Steering"), QVariant(CHOICE_STEERING));
+		m_dropdown->addItem(QString("Throttle"), QVariant(CHOICE_THROTTLE));
+		m_dropdown->addItem(QString("Brake"), QVariant(CHOICE_BRAKE));
+		m_dropdown->addItem(QString("Clutch"), QVariant(CHOICE_CLUTCH));
+		m_dropdown->addItem(QString("Shift up"), QVariant(CHOICE_SHIFT_UP));
+		m_dropdown->addItem(QString("Shift down"), QVariant(CHOICE_SHIFT_DOWN));
+
+		m_dropdown->addItem(QString("Up"), QVariant(CHOICE_UP));
+		m_dropdown->addItem(QString("Down"), QVariant(CHOICE_DOWN));
+		m_dropdown->addItem(QString("Left"), QVariant(CHOICE_LEFT));
+		m_dropdown->addItem(QString("Right"), QVariant(CHOICE_RIGHT));
+
+		m_dropdown->addItem(QString("Triangle"), QVariant(CHOICE_TRIANGLE));
+		m_dropdown->addItem(QString("Cross"), QVariant(CHOICE_CROSS));
+		m_dropdown->addItem(QString("Square"), QVariant(CHOICE_SQUARE));
+		m_dropdown->addItem(QString("Circle"), QVariant(CHOICE_CIRCLE));
+
+		m_dropdown->addItem(QString("L2"), QVariant(CHOICE_L2));
+		m_dropdown->addItem(QString("L3"), QVariant(CHOICE_L3));
+		m_dropdown->addItem(QString("R2"), QVariant(CHOICE_R2));
+		m_dropdown->addItem(QString("R3"), QVariant(CHOICE_R3));
+
+		m_dropdown->addItem(QString("L4"), QVariant(CHOICE_PLUS));
+		m_dropdown->addItem(QString("L5"), QVariant(CHOICE_MINUS));
+
+		m_dropdown->addItem(QString("R4"), QVariant(CHOICE_DIAL_CLOCKWISE));
+		m_dropdown->addItem(QString("R5"), QVariant(CHOICE_DIAL_ANTICLOCKWISE));
+
+		m_dropdown->addItem(QString("Select"), QVariant(CHOICE_SELECT));
+		m_dropdown->addItem(QString("Pause"), QVariant(CHOICE_PAUSE));
+
+		m_dropdown->addItem(QString("Gear 1"), QVariant(CHOICE_SHIFTER_1));
+		m_dropdown->addItem(QString("Gear 2"), QVariant(CHOICE_SHIFTER_2));
+		m_dropdown->addItem(QString("Gear 3"), QVariant(CHOICE_SHIFTER_3));
+		m_dropdown->addItem(QString("Gear 4"), QVariant(CHOICE_SHIFTER_4));
+		m_dropdown->addItem(QString("Gear 5"), QVariant(CHOICE_SHIFTER_5));
+		m_dropdown->addItem(QString("Gear 6"), QVariant(CHOICE_SHIFTER_6));
+		m_dropdown->addItem(QString("Gear r"), QVariant(CHOICE_SHIFTER_R));
 
 		update_display();
 	}
 
-	uint32_t get_device_type_id()
+	mapping_device_choice get_device_choice()
 	{
-		return m_device_type_id;
+		return m_device_choice;
 	}
 
-	void set_device_type_id(uint32_t device_type_id)
+	void set_device_choice(mapping_device_choice choice)
 	{
-		this->m_device_type_id = device_type_id;
+		m_device_choice = choice;
 		update_display();
+	}
+
+	void set_enable(bool enable)
+	{
+		m_dropdown->setEnabled(enable);
+		m_disable_button->setEnabled(enable);
 	}
 
 private:
-	uint32_t m_device_type_id = 0;
-	QLabel* m_display_box = nullptr;
+	mapping_device_choice m_device_choice = CHOICE_NONE;
+	QComboBox* m_dropdown = nullptr;
+	QPushButton* m_disable_button = nullptr;
+
 	void update_display()
 	{
-		char text_buf[32];
-		sprintf(text_buf, "%04x:%04x", m_device_type_id >> 16, m_device_type_id & 0xFFFF);
-		m_display_box->setText(QString(text_buf));
+		m_dropdown->setCurrentIndex(static_cast<int>(m_device_choice));
 	}
 };
 
@@ -77,8 +180,8 @@ class Mapping : public QGroupBox
 {
 
 public:
-	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, DeviceChoice* ffb_device, DeviceChoice* led_device, bool is_axis, const char* name, bool flip_axis_display)
-		: QGroupBox(parent), m_setting_dialog(dialog), m_ffb_device(ffb_device), m_led_device(led_device), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)
+	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, bool is_axis, const char* name, bool flip_axis_display)
+		: QGroupBox(parent), m_setting_dialog(dialog), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)
 	{
 		QVBoxLayout* layout = new QVBoxLayout(this);
 		setLayout(layout);
@@ -98,8 +201,6 @@ public:
 		m_display_box->setFrameStyle(QFrame::Box);
 		m_display_box->setMinimumWidth(150);
 
-		m_ffb_set_button = new QPushButton(QString("FFB"), horizontal_container);
-		m_led_set_button = new QPushButton(QString("LED"), horizontal_container);
 		m_map_button = new QPushButton(QString("MAP"), horizontal_container);
 		m_unmap_button = new QPushButton(QString("UNMAP"), horizontal_container);
 		m_reverse_checkbox = new QCheckBox(QString("Reverse"), horizontal_container);
@@ -126,24 +227,12 @@ public:
 		horizontal_layout->addWidget(m_display_box);
 		if (!this->m_is_axis)
 			horizontal_layout->addWidget(m_button_status);
-		horizontal_layout->addWidget(m_ffb_set_button);
-		horizontal_layout->addWidget(m_led_set_button);
 		horizontal_layout->addWidget(m_map_button);
 		horizontal_layout->addWidget(m_unmap_button);
 		horizontal_layout->addWidget(m_reverse_checkbox);
 
 		if (this->m_is_axis)
 			layout->addWidget(m_axis_status);
-
-		connect(m_ffb_set_button, &QPushButton::clicked, this, [this]()
-			{
-				this->m_ffb_device->set_device_type_id(this->m_mapping.device_type_id);
-			});
-
-		connect(m_led_set_button, &QPushButton::clicked, this, [this]()
-			{
-				this->m_led_device->set_device_type_id(this->m_mapping.device_type_id);
-			});
 
 		connect(m_map_button, &QPushButton::clicked, this, [this]()
 			{
@@ -269,8 +358,6 @@ public:
 
 	void set_enable(bool enable)
 	{
-		m_ffb_set_button->setEnabled(enable);
-		m_led_set_button->setEnabled(enable);
 		m_map_button->setEnabled(enable);
 		m_unmap_button->setEnabled(enable);
 		m_reverse_checkbox->setEnabled(enable);
@@ -297,8 +384,6 @@ private:
 	bool m_flip_axis_display = false;
 
 	QLabel* m_display_box = nullptr;
-	QPushButton* m_ffb_set_button = nullptr;
-	QPushButton* m_led_set_button = nullptr;
 	QPushButton* m_map_button = nullptr;
 	QPushButton* m_unmap_button = nullptr;
 	QCheckBox* m_reverse_checkbox = nullptr;
@@ -418,121 +503,141 @@ private:
 
 void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 {
-#define SAVE_MAPPING(name)                                            \
-	{                                                                 \
-		const sdl_mapping& m = m_##name->get_mapping();               \
-		g_cfg_logitech_g27.name.device_type_id.set(m.device_type_id); \
-		g_cfg_logitech_g27.name.type.set(m.type);                     \
-		g_cfg_logitech_g27.name.id.set(m.id);                         \
-		g_cfg_logitech_g27.name.hat.set(m.hat);                       \
-		g_cfg_logitech_g27.name.reverse.set(m.reverse);               \
+#define SAVE_MAPPING(name, device_choice)                                \
+	{                                                                    \
+		const sdl_mapping& m = m_##name->get_mapping();                  \
+		g_cfg_logitech_g27.name.device_type_id.set(m.device_type_id);    \
+		g_cfg_logitech_g27.name.type.set(m.type);                        \
+		g_cfg_logitech_g27.name.id.set(m.id);                            \
+		g_cfg_logitech_g27.name.hat.set(m.hat);                          \
+		g_cfg_logitech_g27.name.reverse.set(m.reverse);                  \
+		if (m_ffb_device->get_device_choice() == device_choice)          \
+		{                                                                \
+			g_cfg_logitech_g27.ffb_device_type_id.set(m.device_type_id); \
+		}                                                                \
+		if (m_led_device->get_device_choice() == device_choice)          \
+		{                                                                \
+			g_cfg_logitech_g27.led_device_type_id.set(m.device_type_id); \
+		}                                                                \
 	}
 
-	SAVE_MAPPING(steering);
-	SAVE_MAPPING(throttle);
-	SAVE_MAPPING(brake);
-	SAVE_MAPPING(clutch);
-	SAVE_MAPPING(shift_up);
-	SAVE_MAPPING(shift_down);
+	SAVE_MAPPING(steering, CHOICE_STEERING);
+	SAVE_MAPPING(throttle, CHOICE_THROTTLE);
+	SAVE_MAPPING(brake, CHOICE_BRAKE);
+	SAVE_MAPPING(clutch, CHOICE_CLUTCH);
+	SAVE_MAPPING(shift_up, CHOICE_SHIFT_UP);
+	SAVE_MAPPING(shift_down, CHOICE_SHIFT_DOWN);
 
-	SAVE_MAPPING(up);
-	SAVE_MAPPING(down);
-	SAVE_MAPPING(left);
-	SAVE_MAPPING(right);
+	SAVE_MAPPING(up, CHOICE_UP);
+	SAVE_MAPPING(down, CHOICE_DOWN);
+	SAVE_MAPPING(left, CHOICE_LEFT);
+	SAVE_MAPPING(right, CHOICE_RIGHT);
 
-	SAVE_MAPPING(triangle);
-	SAVE_MAPPING(cross);
-	SAVE_MAPPING(square);
-	SAVE_MAPPING(circle);
+	SAVE_MAPPING(triangle, CHOICE_TRIANGLE);
+	SAVE_MAPPING(cross, CHOICE_CROSS);
+	SAVE_MAPPING(square, CHOICE_SQUARE);
+	SAVE_MAPPING(circle, CHOICE_CIRCLE);
 
-	SAVE_MAPPING(l2);
-	SAVE_MAPPING(l3);
-	SAVE_MAPPING(r2);
-	SAVE_MAPPING(r3);
+	SAVE_MAPPING(l2, CHOICE_L2);
+	SAVE_MAPPING(l3, CHOICE_L3);
+	SAVE_MAPPING(r2, CHOICE_R2);
+	SAVE_MAPPING(r3, CHOICE_R3);
 
-	SAVE_MAPPING(plus);
-	SAVE_MAPPING(minus);
+	SAVE_MAPPING(plus, CHOICE_PLUS);
+	SAVE_MAPPING(minus, CHOICE_MINUS);
 
-	SAVE_MAPPING(dial_clockwise);
-	SAVE_MAPPING(dial_anticlockwise);
+	SAVE_MAPPING(dial_clockwise, CHOICE_DIAL_CLOCKWISE);
+	SAVE_MAPPING(dial_anticlockwise, CHOICE_DIAL_ANTICLOCKWISE);
 
-	SAVE_MAPPING(select);
-	SAVE_MAPPING(pause);
+	SAVE_MAPPING(select, CHOICE_SELECT);
+	SAVE_MAPPING(pause, CHOICE_PAUSE);
 
-	SAVE_MAPPING(shifter_1);
-	SAVE_MAPPING(shifter_2);
-	SAVE_MAPPING(shifter_3);
-	SAVE_MAPPING(shifter_4);
-	SAVE_MAPPING(shifter_5);
-	SAVE_MAPPING(shifter_6);
-	SAVE_MAPPING(shifter_r);
+	SAVE_MAPPING(shifter_1, CHOICE_SHIFTER_1);
+	SAVE_MAPPING(shifter_2, CHOICE_SHIFTER_2);
+	SAVE_MAPPING(shifter_3, CHOICE_SHIFTER_3);
+	SAVE_MAPPING(shifter_4, CHOICE_SHIFTER_4);
+	SAVE_MAPPING(shifter_5, CHOICE_SHIFTER_5);
+	SAVE_MAPPING(shifter_6, CHOICE_SHIFTER_6);
+	SAVE_MAPPING(shifter_r, CHOICE_SHIFTER_R);
 
 #undef SAVE_MAPPING
 
-	g_cfg_logitech_g27.ffb_device_type_id.set(m_ffb_device->get_device_type_id());
-	g_cfg_logitech_g27.led_device_type_id.set(m_led_device->get_device_type_id());
-
 	g_cfg_logitech_g27.enabled.set(m_enabled->isChecked());
 	g_cfg_logitech_g27.reverse_effects.set(m_reverse_effects->isChecked());
+
+	if (m_ffb_device->get_device_choice() == CHOICE_NONE)
+	{
+		g_cfg_logitech_g27.ffb_device_type_id.set(0);
+	}
+
+	if (m_led_device->get_device_choice() == CHOICE_NONE)
+	{
+		g_cfg_logitech_g27.led_device_type_id.set(0);
+	}
 }
 
 void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 {
-#define LOAD_MAPPING(name)                                                                         \
-	{                                                                                              \
-		sdl_mapping m = {                                                                          \
-			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()), \
-			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),             \
-			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                          \
-			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                  \
-			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                      \
-			.positive_axis = false};                                                               \
-		m_##name->set_mapping(m);                                                                  \
+#define LOAD_MAPPING(name, device_choice)                                                                                        \
+	{                                                                                                                            \
+		const sdl_mapping m = {                                                                                                  \
+			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()),                               \
+			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),                                           \
+			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                                                        \
+			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                                                \
+			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                                                    \
+			.positive_axis = false};                                                                                             \
+		m_##name->set_mapping(m);                                                                                                \
+		if (g_cfg_logitech_g27.ffb_device_type_id.get() == m.device_type_id && m_ffb_device->get_device_choice() == CHOICE_NONE) \
+		{                                                                                                                        \
+			m_ffb_device->set_device_choice(device_choice);                                                                      \
+		}                                                                                                                        \
+		if (g_cfg_logitech_g27.led_device_type_id.get() == m.device_type_id && m_led_device->get_device_choice() == CHOICE_NONE) \
+		{                                                                                                                        \
+			m_led_device->set_device_choice(device_choice);                                                                      \
+		}                                                                                                                        \
 	}
 
-	LOAD_MAPPING(steering);
-	LOAD_MAPPING(throttle);
-	LOAD_MAPPING(brake);
-	LOAD_MAPPING(clutch);
-	LOAD_MAPPING(shift_up);
-	LOAD_MAPPING(shift_down);
+	LOAD_MAPPING(steering, CHOICE_STEERING);
+	LOAD_MAPPING(throttle, CHOICE_THROTTLE);
+	LOAD_MAPPING(brake, CHOICE_BRAKE);
+	LOAD_MAPPING(clutch, CHOICE_CLUTCH);
+	LOAD_MAPPING(shift_up, CHOICE_SHIFT_UP);
+	LOAD_MAPPING(shift_down, CHOICE_SHIFT_DOWN);
 
-	LOAD_MAPPING(up);
-	LOAD_MAPPING(down);
-	LOAD_MAPPING(left);
-	LOAD_MAPPING(right);
+	LOAD_MAPPING(up, CHOICE_UP);
+	LOAD_MAPPING(down, CHOICE_DOWN);
+	LOAD_MAPPING(left, CHOICE_LEFT);
+	LOAD_MAPPING(right, CHOICE_RIGHT);
 
-	LOAD_MAPPING(triangle);
-	LOAD_MAPPING(cross);
-	LOAD_MAPPING(square);
-	LOAD_MAPPING(circle);
+	LOAD_MAPPING(triangle, CHOICE_TRIANGLE);
+	LOAD_MAPPING(cross, CHOICE_CROSS);
+	LOAD_MAPPING(square, CHOICE_SQUARE);
+	LOAD_MAPPING(circle, CHOICE_CIRCLE);
 
-	LOAD_MAPPING(l2);
-	LOAD_MAPPING(l3);
-	LOAD_MAPPING(r2);
-	LOAD_MAPPING(r3);
+	LOAD_MAPPING(l2, CHOICE_L2);
+	LOAD_MAPPING(l3, CHOICE_L3);
+	LOAD_MAPPING(r2, CHOICE_R2);
+	LOAD_MAPPING(r3, CHOICE_R3);
 
-	LOAD_MAPPING(plus);
-	LOAD_MAPPING(minus);
+	LOAD_MAPPING(plus, CHOICE_PLUS);
+	LOAD_MAPPING(minus, CHOICE_MINUS);
 
-	LOAD_MAPPING(dial_clockwise);
-	LOAD_MAPPING(dial_anticlockwise);
+	LOAD_MAPPING(dial_clockwise, CHOICE_DIAL_CLOCKWISE);
+	LOAD_MAPPING(dial_anticlockwise, CHOICE_DIAL_ANTICLOCKWISE);
 
-	LOAD_MAPPING(select);
-	LOAD_MAPPING(pause);
+	LOAD_MAPPING(select, CHOICE_SELECT);
+	LOAD_MAPPING(pause, CHOICE_PAUSE);
 
-	LOAD_MAPPING(shifter_1);
-	LOAD_MAPPING(shifter_2);
-	LOAD_MAPPING(shifter_3);
-	LOAD_MAPPING(shifter_4);
-	LOAD_MAPPING(shifter_5);
-	LOAD_MAPPING(shifter_6);
-	LOAD_MAPPING(shifter_r);
+	LOAD_MAPPING(shifter_1, CHOICE_SHIFTER_1);
+	LOAD_MAPPING(shifter_2, CHOICE_SHIFTER_2);
+	LOAD_MAPPING(shifter_3, CHOICE_SHIFTER_3);
+	LOAD_MAPPING(shifter_4, CHOICE_SHIFTER_4);
+	LOAD_MAPPING(shifter_5, CHOICE_SHIFTER_5);
+	LOAD_MAPPING(shifter_6, CHOICE_SHIFTER_6);
+	LOAD_MAPPING(shifter_r, CHOICE_SHIFTER_R);
 
 #undef LOAD_MAPPING
-
-	m_ffb_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.ffb_device_type_id.get()));
-	m_led_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.led_device_type_id.get()));
 
 	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
 	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
@@ -584,6 +689,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 	QLabel* warning = new QLabel(QString("Warning: Force feedback output were meant for Logitech G27, on stronger wheels please adjust force strength accordingly in your wheel software."), this);
 	warning->setStyleSheet("color: red;");
+	warning->setWordWrap(true);
 	v_layout->addWidget(warning);
 
 	m_enabled = new QCheckBox(QString("Enabled (requires game restart)"), this);
@@ -595,8 +701,8 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	m_state_text = new QLabel(QString(DEFAULT_STATUS), this);
 	v_layout->addWidget(m_state_text);
 
-	m_ffb_device = new DeviceChoice(this, g_cfg_logitech_g27.ffb_device_type_id.get(), "Force Feedback Device");
-	m_led_device = new DeviceChoice(this, g_cfg_logitech_g27.led_device_type_id.get(), "LED Device");
+	m_ffb_device = new DeviceChoice(this, "Use the device with the following mapping for force feedback:");
+	m_led_device = new DeviceChoice(this, "Use the device with the following mapping for LED:");
 
 	m_mapping_scroll_area = new QScrollArea(this);
 	QWidget* mapping_widget = new QWidget(m_mapping_scroll_area);
@@ -606,7 +712,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	m_mapping_scroll_area->setWidgetResizable(true);
 	m_mapping_scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 	m_mapping_scroll_area->setMinimumHeight(400);
-	m_mapping_scroll_area->setMinimumWidth(800);
+	m_mapping_scroll_area->setMinimumWidth(700);
 
 	v_layout->addWidget(m_mapping_scroll_area);
 
@@ -615,7 +721,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 	auto add_mapping_setting = [mapping_widget, this, mapping_layout](Mapping*& target, bool is_axis, const char* display_name, bool flip_axis_display)
 	{
-		target = new Mapping(mapping_widget, this, m_ffb_device, m_led_device, is_axis, display_name, flip_axis_display);
+		target = new Mapping(mapping_widget, this, is_axis, display_name, flip_axis_display);
 		mapping_layout->addWidget(target);
 	};
 
@@ -661,6 +767,8 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	add_mapping_setting(m_shifter_5, false, "Gear 5", false);
 	add_mapping_setting(m_shifter_6, false, "Gear 6", false);
 	add_mapping_setting(m_shifter_r, false, "Gear R", false);
+
+	v_layout->addSpacing(20);
 
 	v_layout->addWidget(m_ffb_device);
 	v_layout->addWidget(m_led_device);
@@ -853,6 +961,9 @@ void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 
 	m_enabled->setEnabled(enable);
 	m_reverse_effects->setEnabled(enable);
+
+	m_ffb_device->set_enable(enable);
+	m_led_device->set_enable(enable);
 
 	m_mapping_scroll_area->verticalScrollBar()->setEnabled(enable);
 	m_mapping_scroll_area->verticalScrollBar()->setSliderPosition(slider_position);
