@@ -5,11 +5,18 @@
 #include <QCheckBox>
 #include <QScrollArea>
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+#include "SDL3/SDL.h"
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 #include <map>
 #include <vector>
 #include <Emu/Io/LogitechG27Config.h>
-
-#include <SDL3/SDL.h>
 
 struct joystick_state;
 

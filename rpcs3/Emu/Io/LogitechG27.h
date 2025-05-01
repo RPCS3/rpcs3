@@ -2,7 +2,15 @@
 
 #include "Emu/Io/usb_device.h"
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include "SDL3/SDL.h"
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 #include <mutex>
 #include <map>
 #include <vector>
