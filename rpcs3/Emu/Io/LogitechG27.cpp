@@ -105,11 +105,12 @@ bool usb_device_logitech_g27::open_device()
 
 static void clear_sdl_joysticks(std::map<uint32_t, std::vector<SDL_Joystick*>>& joysticks)
 {
-	for (auto joystick_type = joysticks.begin(); joystick_type != joysticks.end(); joystick_type++)
+	for (auto joystick_type : joysticks)
 	{
-		for (auto joystick = joystick_type->second.begin(); joystick != joystick_type->second.end(); joystick++)
+		for (auto joystick : joystick_type.second)
 		{
-			SDL_CloseJoystick(*joystick);
+			if (joystick)
+				SDL_CloseJoystick(joystick);
 		}
 	}
 	joysticks.clear();
@@ -164,23 +165,23 @@ static bool sdl_joysticks_equal(std::map<uint32_t, std::vector<SDL_Joystick*>>& 
 	{
 		return false;
 	}
-	for (auto left_joysticks_of_type = left.begin(); left_joysticks_of_type != left.end(); left_joysticks_of_type++)
+	for (auto left_joysticks_of_type : left)
 	{
-		auto right_joysticks_of_type = right.find(left_joysticks_of_type->first);
+		auto right_joysticks_of_type = right.find(left_joysticks_of_type.first);
 		if (right_joysticks_of_type == right.end())
 		{
 			return false;
 		}
-		if (left_joysticks_of_type->second.size() != right_joysticks_of_type->second.size())
+		if (left_joysticks_of_type.second.size() != right_joysticks_of_type->second.size())
 		{
 			return false;
 		}
-		for (auto left_joystick = left_joysticks_of_type->second.begin(); left_joystick != left_joysticks_of_type->second.end(); left_joystick++)
+		for (auto left_joystick : left_joysticks_of_type.second)
 		{
 			bool found = false;
-			for (auto right_joystick = right_joysticks_of_type->second.begin(); right_joystick != right_joysticks_of_type->second.end(); right_joystick++)
+			for (auto right_joystick : right_joysticks_of_type->second)
 			{
-				if (*left_joystick == *right_joystick)
+				if (left_joystick == right_joystick)
 				{
 					found = true;
 					break;
@@ -632,9 +633,9 @@ static int16_t fetch_sdl_axis_avg(std::map<uint32_t, std::vector<SDL_Joystick*>>
 
 	// TODO account for deadzone and only pick up active devices
 	int32_t sdl_joysticks_total_value = 0;
-	for (auto joystick = joysticks_of_type->second.begin(); joystick != joysticks_of_type->second.end(); joystick++)
+	for (auto joystick : joysticks_of_type->second)
 	{
-		sdl_joysticks_total_value += fetch_sdl_as_axis(*joystick, mapping);
+		sdl_joysticks_total_value += fetch_sdl_as_axis(joystick, mapping);
 	}
 
 	return sdl_joysticks_total_value / joysticks_of_type->second.size();
@@ -654,9 +655,9 @@ static bool sdl_to_logitech_g27_button(std::map<uint32_t, std::vector<SDL_Joysti
 	}
 
 	bool pressed = false;
-	for (auto joystick = joysticks_of_type->second.begin(); joystick != joysticks_of_type->second.end(); joystick++)
+	for (auto joystick : joysticks_of_type->second)
 	{
-		pressed = pressed || fetch_sdl_as_button(*joystick, mapping);
+		pressed = pressed || fetch_sdl_as_button(joystick, mapping);
 	}
 	return pressed;
 }

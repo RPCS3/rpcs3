@@ -178,9 +178,9 @@ public:
 					sprintf(text_buf, "Input %s for %s, timeout in %d %s", this->m_is_axis ? "axis" : "button/hat", this->m_name.c_str(), timeout_sec, timeout_sec >= 2 ? "seconds" : "second");
 					this->m_setting_dialog->set_state_text(text_buf);
 
-					for (auto new_joystick_state = new_joystick_states.begin(); new_joystick_state != new_joystick_states.end(); new_joystick_state++)
+					for (auto new_joystick_state : new_joystick_states)
 					{
-						auto last_joystick_state = this->m_last_joystick_states.find(new_joystick_state->first);
+						auto last_joystick_state = this->m_last_joystick_states.find(new_joystick_state.first);
 						if (last_joystick_state == this->m_last_joystick_states.end())
 						{
 							continue;
@@ -189,20 +189,20 @@ public:
 						if (this->m_is_axis)
 						{
 							const static int16_t axis_change_threshold = 0x7FFF / 5;
-							if (last_joystick_state->second.axes.size() != new_joystick_state->second.axes.size())
+							if (last_joystick_state->second.axes.size() != new_joystick_state.second.axes.size())
 							{
-								logitech_g27_cfg_log.error("during input state change diff, number of axes on %04x:%04x changed", new_joystick_state->first >> 16, new_joystick_state->first & 0xFFFF);
+								logitech_g27_cfg_log.error("during input state change diff, number of axes on %04x:%04x changed", new_joystick_state.first >> 16, new_joystick_state.first & 0xFFFF);
 								continue;
 							}
-							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state->second.axes.size(); i++)
+							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state.second.axes.size(); i++)
 							{
-								int32_t diff = std::abs(last_joystick_state->second.axes[i] - new_joystick_state->second.axes[i]);
+								int32_t diff = std::abs(last_joystick_state->second.axes[i] - new_joystick_state.second.axes[i]);
 								if (diff > axis_change_threshold)
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
 									this->m_setting_dialog->enable();
-									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_AXIS;
 									this->m_mapping.id = i;
 									this->m_mapping.hat = HAT_NONE;
@@ -212,41 +212,41 @@ public:
 						}
 						else
 						{
-							if (last_joystick_state->second.buttons.size() != new_joystick_state->second.buttons.size())
+							if (last_joystick_state->second.buttons.size() != new_joystick_state.second.buttons.size())
 							{
-								logitech_g27_cfg_log.error("during input state change diff, number of buttons on %04x:%04x changed", new_joystick_state->first >> 16, new_joystick_state->first & 0xFFFF);
+								logitech_g27_cfg_log.error("during input state change diff, number of buttons on %04x:%04x changed", new_joystick_state.first >> 16, new_joystick_state.first & 0xFFFF);
 								continue;
 							}
-							if (last_joystick_state->second.hats.size() != new_joystick_state->second.hats.size())
+							if (last_joystick_state->second.hats.size() != new_joystick_state.second.hats.size())
 							{
-								logitech_g27_cfg_log.error("during input state change diff, number of hats on %04x:%04x changed", new_joystick_state->first >> 16, new_joystick_state->first & 0xFFFF);
+								logitech_g27_cfg_log.error("during input state change diff, number of hats on %04x:%04x changed", new_joystick_state.first >> 16, new_joystick_state.first & 0xFFFF);
 								continue;
 							}
-							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state->second.buttons.size(); i++)
+							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state.second.buttons.size(); i++)
 							{
-								if (last_joystick_state->second.buttons[i] != new_joystick_state->second.buttons[i])
+								if (last_joystick_state->second.buttons[i] != new_joystick_state.second.buttons[i])
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
 									this->m_setting_dialog->enable();
-									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_BUTTON;
 									this->m_mapping.id = i;
 									this->m_mapping.hat = HAT_NONE;
 									break;
 								}
 							}
-							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state->second.hats.size(); i++)
+							for (std::vector<int16_t>::size_type i = 0; i < new_joystick_state.second.hats.size(); i++)
 							{
-								if (last_joystick_state->second.hats[i] != new_joystick_state->second.hats[i] && new_joystick_state->second.hats[i] != HAT_NONE)
+								if (last_joystick_state->second.hats[i] != new_joystick_state.second.hats[i] && new_joystick_state.second.hats[i] != HAT_NONE)
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
 									this->m_setting_dialog->enable();
-									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_HAT;
 									this->m_mapping.id = i;
-									this->m_mapping.hat = new_joystick_state->second.hats[i];
+									this->m_mapping.hat = new_joystick_state.second.hats[i];
 									break;
 								}
 							}
@@ -696,9 +696,10 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 emulated_logitech_g27_settings_dialog::~emulated_logitech_g27_settings_dialog()
 {
-	for (auto joystick_handle = m_joystick_handles.begin(); joystick_handle != m_joystick_handles.end(); joystick_handle++)
+	for (auto joystick_handle : m_joystick_handles)
 	{
-		SDL_CloseJoystick(*joystick_handle);
+		if (joystick_handle)
+			SDL_CloseJoystick(joystick_handle);
 	}
 }
 
@@ -808,9 +809,10 @@ const std::map<uint32_t, joystick_state>& emulated_logitech_g27_settings_dialog:
 		}
 	}
 
-	for (auto joystick_handle = m_joystick_handles.begin(); joystick_handle != m_joystick_handles.end(); joystick_handle++)
+	for (auto joystick_handle : m_joystick_handles)
 	{
-		SDL_CloseJoystick(*joystick_handle);
+		if (joystick_handle)
+			SDL_CloseJoystick(joystick_handle);
 	}
 
 	m_joystick_handles = new_joystick_handles;
