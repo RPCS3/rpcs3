@@ -28,19 +28,17 @@ sdl_instance& sdl_instance::get_instance()
 
 void sdl_instance::pump_events()
 {
-	instance_mutex.lock();
+	const std::lock_guard<std::mutex> lock(m_instance_mutex);
 	if (m_initialized)
 		SDL_PumpEvents();
-	instance_mutex.unlock();
 }
 
 bool sdl_instance::initialize()
 {
-	instance_mutex.lock();
+	const std::lock_guard<std::mutex> lock(m_instance_mutex);
 	// Only init SDL once. SDL uses a global state internally...
 	if (m_initialized)
 	{
-		instance_mutex.unlock();
 		return true;
 	}
 
@@ -55,7 +53,6 @@ bool sdl_instance::initialize()
 	if (!SDL_Init(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD))
 	{
 		sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
-		instance_mutex.unlock();
 		return false;
 	}
 
@@ -122,7 +119,6 @@ bool sdl_instance::initialize()
 		nullptr);
 
 	m_initialized = true;
-	instance_mutex.unlock();
 	return true;
 }
 

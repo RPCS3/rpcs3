@@ -15,5 +15,5 @@ public:
 
 private:
 	bool m_initialized = false;
-	std::mutex instance_mutex;
+	std::mutex m_instance_mutex;
 };
