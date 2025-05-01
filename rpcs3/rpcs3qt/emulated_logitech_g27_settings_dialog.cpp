@@ -438,14 +438,14 @@ private:
 
 void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 {
-#define SAVE_MAPPING(name)                                              \
-	{                                                                   \
-		const sdl_mapping& m = name->get_mapping();                     \
-		g_cfg_logitech_g27.name##_device_type_id.set(m.device_type_id); \
-		g_cfg_logitech_g27.name##_type.set(m.type);                     \
-		g_cfg_logitech_g27.name##_id.set(m.id);                         \
-		g_cfg_logitech_g27.name##_hat.set(m.hat);                       \
-		g_cfg_logitech_g27.name##_reverse.set(m.reverse);               \
+#define SAVE_MAPPING(name)                                            \
+	{                                                                 \
+		const sdl_mapping& m = name->get_mapping();                   \
+		g_cfg_logitech_g27.name.device_type_id.set(m.device_type_id); \
+		g_cfg_logitech_g27.name.type.set(m.type);                     \
+		g_cfg_logitech_g27.name.id.set(m.id);                         \
+		g_cfg_logitech_g27.name.hat.set(m.hat);                       \
+		g_cfg_logitech_g27.name.reverse.set(m.reverse);               \
 	}
 
 	SAVE_MAPPING(steering);
@@ -498,16 +498,16 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 
 void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 {
-#define LOAD_MAPPING(name)                                                                           \
-	{                                                                                                \
-		sdl_mapping m = {                                                                            \
-			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name##_device_type_id.get()), \
-			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name##_type.get()),             \
-			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name##_id.get()),                          \
-			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name##_hat.get()),                  \
-			.reverse = g_cfg_logitech_g27.name##_reverse.get(),                                      \
-			.positive_axis = false};                                                                 \
-		name->set_mapping(m);                                                                        \
+#define LOAD_MAPPING(name)                                                                         \
+	{                                                                                              \
+		sdl_mapping m = {                                                                          \
+			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()), \
+			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),             \
+			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                          \
+			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                  \
+			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                      \
+			.positive_axis = false};                                                               \
+		name->set_mapping(m);                                                                      \
 	}
 
 	LOAD_MAPPING(steering);
@@ -592,7 +592,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 			{
 				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all?")) != QMessageBox::Yes)
 					return;
-				g_cfg_logitech_g27.fill_defaults();
+				g_cfg_logitech_g27.from_default();
 				load_ui_state_from_config();
 				g_cfg_logitech_g27.save();
 			}
@@ -635,11 +635,11 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 #define ADD_MAPPING_SETTING(name, is_axis, display_name, flip_axis_display)                                            \
 	{                                                                                                                  \
 		sdl_mapping m = {                                                                                              \
-			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name##_device_type_id.get()),                   \
-			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name##_type.get()),                               \
-			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name##_id.get()),                                            \
-			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name##_hat.get()),                                    \
-			.reverse = g_cfg_logitech_g27.name##_reverse.get(),                                                        \
+			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()),                     \
+			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),                                 \
+			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                                              \
+			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                                      \
+			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                                          \
 			.positive_axis = false};                                                                                   \
 		name = new Mapping(mapping_widget, this, ffb_device, led_device, m, is_axis, display_name, flip_axis_display); \
 		mapping_layout->addWidget(name);                                                                               \

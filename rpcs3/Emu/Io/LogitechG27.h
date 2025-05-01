@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include "LogitechG27Config.h"
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -11,7 +12,6 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include <mutex>
 #include <map>
 #include <vector>
 
@@ -28,23 +28,6 @@ struct logitech_g27_ffb_slot
 	uint64_t last_update;
 	SDL_HapticEffect last_effect;
 	int effect_id;
-};
-
-// TODO maybe push these into cfg
-enum sdl_mapping_type
-{
-	MAPPING_BUTTON = 0,
-	MAPPING_HAT,
-	MAPPING_AXIS,
-};
-
-enum hat_component
-{
-	HAT_NONE = 0,
-	HAT_UP,
-	HAT_DOWN,
-	HAT_LEFT,
-	HAT_RIGHT
 };
 
 struct sdl_mapping

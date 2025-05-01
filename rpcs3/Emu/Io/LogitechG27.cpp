@@ -14,7 +14,6 @@
 #include <thread>
 
 #include "LogitechG27.h"
-#include "LogitechG27Config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
 #include "Input/pad_thread.h"
@@ -199,14 +198,14 @@ static inline logitech_g27_sdl_mapping get_runtime_mapping()
 {
 	logitech_g27_sdl_mapping mapping;
 
-#define CONVERT_MAPPING(name)                                                                    \
-	{                                                                                            \
-		mapping.name.device_type_id = g_cfg_logitech_g27.name##_device_type_id.get();            \
-		mapping.name.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name##_type.get()); \
-		mapping.name.id = static_cast<uint8_t>(g_cfg_logitech_g27.name##_id.get());              \
-		mapping.name.hat = static_cast<hat_component>(g_cfg_logitech_g27.name##_hat.get());      \
-		mapping.name.reverse = g_cfg_logitech_g27.name##_reverse.get();                          \
-		mapping.name.positive_axis = false;                                                      \
+#define CONVERT_MAPPING(name)                                                                  \
+	{                                                                                          \
+		mapping.name.device_type_id = g_cfg_logitech_g27.name.device_type_id.get();            \
+		mapping.name.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()); \
+		mapping.name.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get());              \
+		mapping.name.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get());      \
+		mapping.name.reverse = g_cfg_logitech_g27.name.reverse.get();                          \
+		mapping.name.positive_axis = false;                                                    \
 	}
 
 	CONVERT_MAPPING(steering);
