@@ -201,6 +201,7 @@ elseif(BUILD_RPCS3_TESTS)
         PRIVATE
             tests/test.cpp
             tests/test_fmt.cpp
+            tests/test_simple_array.cpp
     )
 
     target_link_libraries(rpcs3_test
