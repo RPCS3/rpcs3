@@ -10,6 +10,9 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <PropertyGroup>
+    <BuildInSolution Condition="'$(GTestInstalled)' != 'true'">false</BuildInSolution>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{d1cbf84e-07f8-4acb-9cd2-bd205fdeee1e}</ProjectGuid>
     <ConfigurationType>Application</ConfigurationType>
@@ -77,10 +80,10 @@
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemGroup Condition="'$(GTestInstalled)' == 'true'">
+  <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup Condition="'$(GTestInstalled)' == 'true'">
+  <ItemGroup>
     <ClCompile Include="test.cpp" />
     <ClCompile Include="test_fmt.cpp" />
   </ItemGroup>
