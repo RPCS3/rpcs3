@@ -14,6 +14,7 @@
 
 #include <map>
 #include <vector>
+#include <thread>
 
 enum logitech_g27_ffb_state
 {
@@ -96,12 +97,6 @@ public:
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	bool open_device() override;
 
-	std::mutex thread_control_mutex;
-	bool stop_thread;
-	char thread_name[64];
-	SDL_Thread* thread = nullptr;
-	void sdl_refresh();
-
 private:
 	u32 m_controller_index;
 
@@ -119,4 +114,10 @@ private:
 	int m_default_spring_effect_id = -1;
 
 	bool m_enabled = false;
+
+	std::thread m_house_keeping_thread;
+	std::mutex m_thread_control_mutex;
+	bool m_stop_thread;
+
+	void sdl_refresh();
 };

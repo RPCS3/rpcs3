@@ -11,8 +11,6 @@
 
 #ifdef HAVE_SDL3
 
-#include <thread>
-
 #include "LogitechG27.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
@@ -20,26 +18,6 @@
 #include "Input/sdl_instance.h"
 
 LOG_CHANNEL(logitech_g27_log, "LOGIG27");
-
-static int SDLCALL refresh_thread(void* arg)
-{
-	auto ctx = reinterpret_cast<usb_device_logitech_g27*>(arg);
-
-	while (true)
-	{
-		ctx->thread_control_mutex.lock();
-		if (ctx->stop_thread)
-		{
-			break;
-		}
-		ctx->thread_control_mutex.unlock();
-		ctx->sdl_refresh();
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-	}
-	ctx->thread_control_mutex.unlock();
-
-	return 0;
-}
 
 usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std::array<u8, 7>& location)
 	: usb_device_emulated(location), m_controller_index(controller_index)
@@ -77,9 +55,10 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 		m_default_spring_effect.condition.left_coeff[i] = 0x7FFF;
 	}
 
-	thread_control_mutex.lock();
-	stop_thread = false;
-	thread_control_mutex.unlock();
+	{
+		const std::lock_guard<std::mutex> lock(m_thread_control_mutex);
+		m_stop_thread = false;
+	}
 
 	g_cfg_logitech_g27.load();
 
@@ -90,12 +69,21 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 	if (!m_enabled)
 		return;
 
-	sprintf(thread_name, "LogiG27 %p", this);
-	thread = SDL_CreateThread(refresh_thread, thread_name, this);
-	if (thread == nullptr)
-	{
-		logitech_g27_log.error("Failed creating sdl housekeeping thread, %s", SDL_GetError());
-	}
+	m_house_keeping_thread = std::thread([this]()
+		{
+			while (true)
+			{
+				this->m_thread_control_mutex.lock();
+				if (this->m_stop_thread)
+				{
+					break;
+				}
+				this->m_thread_control_mutex.unlock();
+				this->sdl_refresh();
+				std::this_thread::sleep_for(std::chrono::seconds(5));
+			}
+			this->m_thread_control_mutex.unlock();
+		});
 }
 
 bool usb_device_logitech_g27::open_device()
@@ -118,10 +106,11 @@ static void clear_sdl_joysticks(std::map<uint32_t, std::vector<SDL_Joystick*>>& 
 
 usb_device_logitech_g27::~usb_device_logitech_g27()
 {
-	// stop the background thread
-	thread_control_mutex.lock();
-	stop_thread = true;
-	thread_control_mutex.unlock();
+	// stop the house keeping thread
+	{
+		const std::lock_guard<std::mutex> lock(m_thread_control_mutex);
+		m_stop_thread = true;
+	}
 
 	// Close sdl handles
 	{
@@ -133,9 +122,9 @@ usb_device_logitech_g27::~usb_device_logitech_g27()
 		clear_sdl_joysticks(m_joysticks);
 	}
 
-	// wait for the background thread to finish
-	if (thread != nullptr)
-		SDL_WaitThread(thread, nullptr);
+	// wait for the house keeping thread to finish
+	if (m_enabled)
+		m_house_keeping_thread.join();
 }
 
 std::shared_ptr<usb_device> usb_device_logitech_g27::make_instance(u32 controller_index, const std::array<u8, 7>& location)
