@@ -77,8 +77,8 @@ class Mapping : public QGroupBox
 {
 
 public:
-	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, DeviceChoice* ffb_device, DeviceChoice* led_device, sdl_mapping mapping, bool is_axis, const char* name, bool flip_axis_display)
-		: QGroupBox(parent), m_setting_dialog(dialog), m_ffb_device(ffb_device), m_led_device(led_device), m_mapping(mapping), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)
+	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, DeviceChoice* ffb_device, DeviceChoice* led_device, bool is_axis, const char* name, bool flip_axis_display)
+		: QGroupBox(parent), m_setting_dialog(dialog), m_ffb_device(ffb_device), m_led_device(led_device), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)
 	{
 		QVBoxLayout* layout = new QVBoxLayout(this);
 		setLayout(layout);
@@ -587,11 +587,9 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	v_layout->addWidget(warning);
 
 	m_enabled = new QCheckBox(QString("Enabled (requires game restart)"), this);
-	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
 	v_layout->addWidget(m_enabled);
 
 	m_reverse_effects = new QCheckBox(QString("Reverse force feedback effects"), this);
-	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
 	v_layout->addWidget(m_reverse_effects);
 
 	m_state_text = new QLabel(QString(DEFAULT_STATUS), this);
@@ -612,72 +610,65 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 	v_layout->addWidget(m_mapping_scroll_area);
 
-#define ADD_MAPPING_SETTING(name, is_axis, display_name, flip_axis_display)                                                    \
-	{                                                                                                                          \
-		sdl_mapping m = {                                                                                                      \
-			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()),                             \
-			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),                                         \
-			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                                                      \
-			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                                              \
-			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                                                  \
-			.positive_axis = false};                                                                                           \
-		m_##name = new Mapping(mapping_widget, this, m_ffb_device, m_led_device, m, is_axis, display_name, flip_axis_display); \
-		mapping_layout->addWidget(m_##name);                                                                                   \
-	}
-
 	QLabel* axis_label = new QLabel(QString("Axes:"), mapping_widget);
 	mapping_layout->addWidget(axis_label);
 
-	ADD_MAPPING_SETTING(steering, true, "Steering", false);
-	ADD_MAPPING_SETTING(throttle, true, "Throttle", true);
-	ADD_MAPPING_SETTING(brake, true, "Brake", true);
-	ADD_MAPPING_SETTING(clutch, true, "Clutch", true);
+	auto add_mapping_setting = [mapping_widget, this, mapping_layout](Mapping*& target, bool is_axis, const char* display_name, bool flip_axis_display)
+	{
+		target = new Mapping(mapping_widget, this, m_ffb_device, m_led_device, is_axis, display_name, flip_axis_display);
+		mapping_layout->addWidget(target);
+	};
+
+	add_mapping_setting(m_steering, true, "Steering", false);
+	add_mapping_setting(m_throttle, true, "Throttle", true);
+	add_mapping_setting(m_brake, true, "Brake", true);
+	add_mapping_setting(m_clutch, true, "Clutch", true);
 
 	QLabel* button_label = new QLabel(QString("Buttons:"), mapping_widget);
 	mapping_layout->addWidget(button_label);
 
-	ADD_MAPPING_SETTING(shift_up, false, "Shift up", false);
-	ADD_MAPPING_SETTING(shift_down, false, "Shift down", false);
+	add_mapping_setting(m_shift_up, false, "Shift up", false);
+	add_mapping_setting(m_shift_down, false, "Shift down", false);
 
-	ADD_MAPPING_SETTING(up, false, "Up", false);
-	ADD_MAPPING_SETTING(down, false, "Down", false);
-	ADD_MAPPING_SETTING(left, false, "Left", false);
-	ADD_MAPPING_SETTING(right, false, "Right", false);
+	add_mapping_setting(m_up, false, "Up", false);
+	add_mapping_setting(m_down, false, "Down", false);
+	add_mapping_setting(m_left, false, "Left", false);
+	add_mapping_setting(m_right, false, "Right", false);
 
-	ADD_MAPPING_SETTING(triangle, false, "Triangle", false);
-	ADD_MAPPING_SETTING(cross, false, "Cross", false);
-	ADD_MAPPING_SETTING(square, false, "Square", false);
-	ADD_MAPPING_SETTING(circle, false, "Circle", false);
+	add_mapping_setting(m_triangle, false, "Triangle", false);
+	add_mapping_setting(m_cross, false, "Cross", false);
+	add_mapping_setting(m_square, false, "Square", false);
+	add_mapping_setting(m_circle, false, "Circle", false);
 
-	ADD_MAPPING_SETTING(l2, false, "L2", false);
-	ADD_MAPPING_SETTING(l3, false, "L3", false);
-	ADD_MAPPING_SETTING(r2, false, "R2", false);
-	ADD_MAPPING_SETTING(r3, false, "R3", false);
+	add_mapping_setting(m_l2, false, "L2", false);
+	add_mapping_setting(m_l3, false, "L3", false);
+	add_mapping_setting(m_r2, false, "R2", false);
+	add_mapping_setting(m_r3, false, "R3", false);
 
-	ADD_MAPPING_SETTING(plus, false, "L4", false);
-	ADD_MAPPING_SETTING(minus, false, "L5", false);
+	add_mapping_setting(m_plus, false, "L4", false);
+	add_mapping_setting(m_minus, false, "L5", false);
 
-	ADD_MAPPING_SETTING(dial_clockwise, false, "R4", false);
-	ADD_MAPPING_SETTING(dial_anticlockwise, false, "R5", false);
+	add_mapping_setting(m_dial_clockwise, false, "R4", false);
+	add_mapping_setting(m_dial_anticlockwise, false, "R5", false);
 
-	ADD_MAPPING_SETTING(select, false, "Select", false);
-	ADD_MAPPING_SETTING(pause, false, "Start", false);
+	add_mapping_setting(m_select, false, "Select", false);
+	add_mapping_setting(m_pause, false, "Start", false);
 
-	ADD_MAPPING_SETTING(shifter_1, false, "Gear 1", false);
-	ADD_MAPPING_SETTING(shifter_2, false, "Gear 2", false);
-	ADD_MAPPING_SETTING(shifter_3, false, "Gear 3", false);
-	ADD_MAPPING_SETTING(shifter_4, false, "Gear 4", false);
-	ADD_MAPPING_SETTING(shifter_5, false, "Gear 5", false);
-	ADD_MAPPING_SETTING(shifter_6, false, "Gear 6", false);
-	ADD_MAPPING_SETTING(shifter_r, false, "Gear R", false);
-
-#undef ADD_MAPPING_SETTING
+	add_mapping_setting(m_shifter_1, false, "Gear 1", false);
+	add_mapping_setting(m_shifter_2, false, "Gear 2", false);
+	add_mapping_setting(m_shifter_3, false, "Gear 3", false);
+	add_mapping_setting(m_shifter_4, false, "Gear 4", false);
+	add_mapping_setting(m_shifter_5, false, "Gear 5", false);
+	add_mapping_setting(m_shifter_6, false, "Gear 6", false);
+	add_mapping_setting(m_shifter_r, false, "Gear R", false);
 
 	v_layout->addWidget(m_ffb_device);
 	v_layout->addWidget(m_led_device);
 
 	v_layout->addWidget(buttons);
 	setLayout(v_layout);
+
+	load_ui_state_from_config();
 
 	m_sdl_initialized = sdl_instance::get_instance().initialize();
 
