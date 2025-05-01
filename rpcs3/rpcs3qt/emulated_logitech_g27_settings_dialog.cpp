@@ -817,7 +817,7 @@ void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 	m_brake->set_enable(enable);
 	m_clutch->set_enable(enable);
 	m_shift_up->set_enable(enable);
-	m_shift_up->set_enable(enable);
+	m_shift_down->set_enable(enable);
 
 	m_up->set_enable(enable);
 	m_down->set_enable(enable);
