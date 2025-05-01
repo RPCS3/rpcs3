@@ -18,7 +18,7 @@
 
 LOG_CHANNEL(logitech_g27_cfg_log, "LOGIG27");
 
-#define DEFAULT_STATUS " "
+static constexpr const char* DEFAULT_STATUS = " ";
 
 struct joystick_state
 {
@@ -149,7 +149,7 @@ public:
 			{
 				this->m_mapping_in_progress = true;
 				this->m_timeout_msec = 5500;
-				this->m_setting_dialog->disable();
+				this->m_setting_dialog->set_enable(false);
 				this->m_last_joystick_states = this->m_setting_dialog->get_joystick_states();
 			});
 
@@ -201,7 +201,7 @@ public:
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->m_setting_dialog->enable();
+									this->m_setting_dialog->set_enable(true);
 									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_AXIS;
 									this->m_mapping.id = i;
@@ -228,7 +228,7 @@ public:
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->m_setting_dialog->enable();
+									this->m_setting_dialog->set_enable(true);
 									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_BUTTON;
 									this->m_mapping.id = i;
@@ -242,7 +242,7 @@ public:
 								{
 									this->m_mapping_in_progress = false;
 									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->m_setting_dialog->enable();
+									this->m_setting_dialog->set_enable(true);
 									this->m_mapping.device_type_id = new_joystick_state.first;
 									this->m_mapping.type = MAPPING_HAT;
 									this->m_mapping.id = i;
@@ -258,7 +258,7 @@ public:
 					{
 						this->m_mapping_in_progress = false;
 						this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
-						this->m_setting_dialog->enable();
+						this->m_setting_dialog->set_enable(true);
 					}
 				}
 
@@ -267,22 +267,13 @@ public:
 		m_tick_timer->start(25);
 	}
 
-	void disable()
+	void set_enable(bool enable)
 	{
-		m_ffb_set_button->setDisabled(true);
-		m_led_set_button->setDisabled(true);
-		m_map_button->setDisabled(true);
-		m_unmap_button->setDisabled(true);
-		m_reverse_checkbox->setDisabled(true);
-	}
-
-	void enable()
-	{
-		m_ffb_set_button->setEnabled(true);
-		m_led_set_button->setEnabled(true);
-		m_map_button->setEnabled(true);
-		m_unmap_button->setEnabled(true);
-		m_reverse_checkbox->setEnabled(true);
+		m_ffb_set_button->setEnabled(enable);
+		m_led_set_button->setEnabled(enable);
+		m_map_button->setEnabled(enable);
+		m_unmap_button->setEnabled(enable);
+		m_reverse_checkbox->setEnabled(enable);
 	}
 
 	void set_mapping(const sdl_mapping& mapping)
@@ -826,74 +817,54 @@ void emulated_logitech_g27_settings_dialog::set_state_text(const char* text)
 	m_state_text->setText(QString(text));
 }
 
-void emulated_logitech_g27_settings_dialog::toggle_state(bool enable)
+void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 {
+	const int slider_position = m_mapping_scroll_area->verticalScrollBar()->sliderPosition();
 
-	int slider_position = m_mapping_scroll_area->verticalScrollBar()->sliderPosition();
+	m_steering->set_enable(enable);
+	m_throttle->set_enable(enable);
+	m_brake->set_enable(enable);
+	m_clutch->set_enable(enable);
+	m_shift_up->set_enable(enable);
+	m_shift_up->set_enable(enable);
 
-#define TOGGLE_STATE(name)       \
-	{                            \
-		if (enable)              \
-			m_##name->enable();  \
-		else                     \
-			m_##name->disable(); \
-	}
-	TOGGLE_STATE(steering);
-	TOGGLE_STATE(throttle);
-	TOGGLE_STATE(brake);
-	TOGGLE_STATE(clutch);
-	TOGGLE_STATE(shift_up);
-	TOGGLE_STATE(shift_down);
+	m_up->set_enable(enable);
+	m_down->set_enable(enable);
+	m_left->set_enable(enable);
+	m_right->set_enable(enable);
 
-	TOGGLE_STATE(up);
-	TOGGLE_STATE(down);
-	TOGGLE_STATE(left);
-	TOGGLE_STATE(right);
+	m_triangle->set_enable(enable);
+	m_cross->set_enable(enable);
+	m_square->set_enable(enable);
+	m_circle->set_enable(enable);
 
-	TOGGLE_STATE(triangle);
-	TOGGLE_STATE(cross);
-	TOGGLE_STATE(square);
-	TOGGLE_STATE(circle);
+	m_l2->set_enable(enable);
+	m_l3->set_enable(enable);
+	m_r2->set_enable(enable);
+	m_r3->set_enable(enable);
 
-	TOGGLE_STATE(l2);
-	TOGGLE_STATE(l3);
-	TOGGLE_STATE(r2);
-	TOGGLE_STATE(r3);
+	m_plus->set_enable(enable);
+	m_minus->set_enable(enable);
 
-	TOGGLE_STATE(plus);
-	TOGGLE_STATE(minus);
+	m_dial_clockwise->set_enable(enable);
+	m_dial_anticlockwise->set_enable(enable);
 
-	TOGGLE_STATE(dial_clockwise);
-	TOGGLE_STATE(dial_anticlockwise);
+	m_select->set_enable(enable);
+	m_pause->set_enable(enable);
 
-	TOGGLE_STATE(select);
-	TOGGLE_STATE(pause);
-
-	TOGGLE_STATE(shifter_1);
-	TOGGLE_STATE(shifter_2);
-	TOGGLE_STATE(shifter_3);
-	TOGGLE_STATE(shifter_4);
-	TOGGLE_STATE(shifter_5);
-	TOGGLE_STATE(shifter_6);
-	TOGGLE_STATE(shifter_r);
-
-#undef TOGGLE_STATE
+	m_shifter_1->set_enable(enable);
+	m_shifter_2->set_enable(enable);
+	m_shifter_3->set_enable(enable);
+	m_shifter_4->set_enable(enable);
+	m_shifter_5->set_enable(enable);
+	m_shifter_6->set_enable(enable);
+	m_shifter_r->set_enable(enable);
 
 	m_enabled->setEnabled(enable);
 	m_reverse_effects->setEnabled(enable);
 
 	m_mapping_scroll_area->verticalScrollBar()->setEnabled(enable);
 	m_mapping_scroll_area->verticalScrollBar()->setSliderPosition(slider_position);
-}
-
-void emulated_logitech_g27_settings_dialog::enable()
-{
-	toggle_state(true);
-}
-
-void emulated_logitech_g27_settings_dialog::disable()
-{
-	toggle_state(false);
 }
 
 #endif

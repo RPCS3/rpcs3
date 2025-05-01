@@ -28,13 +28,11 @@ class emulated_logitech_g27_settings_dialog : public QDialog
 public:
 	emulated_logitech_g27_settings_dialog(QWidget* parent = nullptr);
 	~emulated_logitech_g27_settings_dialog();
-	void disable();
-	void enable();
 	void set_state_text(const char*);
 	const std::map<uint32_t, joystick_state>& get_joystick_states();
+	void set_enable(bool enable);
 
 private:
-	void toggle_state(bool enable);
 	void load_ui_state_from_config();
 	void save_ui_state_to_config();
 
