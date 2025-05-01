@@ -58,23 +58,23 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 	// Initialize effect slots
 	for (int i = 0; i < 4; i++)
 	{
-		effect_slots[i].state = G27_FFB_INACTIVE;
-		effect_slots[i].effect_id = -1;
+		m_effect_slots[i].state = G27_FFB_INACTIVE;
+		m_effect_slots[i].effect_id = -1;
 	}
 
 	SDL_HapticDirection direction = {
 		.type = SDL_HAPTIC_POLAR,
 		.dir = {27000, 0}};
-	default_spring_effect.type = SDL_HAPTIC_SPRING;
-	default_spring_effect.condition.direction = direction;
-	default_spring_effect.condition.length = SDL_HAPTIC_INFINITY;
+	m_default_spring_effect.type = SDL_HAPTIC_SPRING;
+	m_default_spring_effect.condition.direction = direction;
+	m_default_spring_effect.condition.length = SDL_HAPTIC_INFINITY;
 	// for (int i = 0;i < 3;i++)
 	for (int i = 0; i < 1; i++)
 	{
-		default_spring_effect.condition.right_sat[i] = 0x7FFF;
-		default_spring_effect.condition.left_sat[i] = 0x7FFF;
-		default_spring_effect.condition.right_coeff[i] = 0x7FFF;
-		default_spring_effect.condition.left_coeff[i] = 0x7FFF;
+		m_default_spring_effect.condition.right_sat[i] = 0x7FFF;
+		m_default_spring_effect.condition.left_sat[i] = 0x7FFF;
+		m_default_spring_effect.condition.right_coeff[i] = 0x7FFF;
+		m_default_spring_effect.condition.left_coeff[i] = 0x7FFF;
 	}
 
 	thread_control_mutex.lock();
@@ -85,9 +85,9 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 
 	bool sdl_init_state = sdl_instance::get_instance().initialize();
 
-	enabled = g_cfg_logitech_g27.enabled.get() && sdl_init_state;
+	m_enabled = g_cfg_logitech_g27.enabled.get() && sdl_init_state;
 
-	if (!enabled)
+	if (!m_enabled)
 		return;
 
 	sprintf(thread_name, "LogiG27 %p", this);
@@ -100,7 +100,7 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 
 bool usb_device_logitech_g27::open_device()
 {
-	return enabled;
+	return m_enabled;
 }
 
 static void clear_sdl_joysticks(std::map<uint32_t, std::vector<SDL_Joystick*>>& joysticks)
@@ -123,13 +123,14 @@ usb_device_logitech_g27::~usb_device_logitech_g27()
 	thread_control_mutex.unlock();
 
 	// Close sdl handles
-	sdl_handles_mutex.lock();
-	if (haptic_handle != nullptr)
 	{
-		SDL_CloseHaptic(haptic_handle);
+		const std::lock_guard<std::mutex> lock(m_sdl_handles_mutex);
+		if (m_haptic_handle != nullptr)
+		{
+			SDL_CloseHaptic(m_haptic_handle);
+		}
+		clear_sdl_joysticks(m_joysticks);
 	}
-	clear_sdl_joysticks(joysticks);
-	sdl_handles_mutex.unlock();
 
 	// wait for the background thread to finish
 	if (thread != nullptr)
@@ -255,9 +256,9 @@ static inline logitech_g27_sdl_mapping get_runtime_mapping()
 void usb_device_logitech_g27::sdl_refresh()
 {
 	g_cfg_logitech_g27.m_mutex.lock();
-	mapping = get_runtime_mapping();
+	m_mapping = get_runtime_mapping();
 
-	reverse_effects = g_cfg_logitech_g27.reverse_effects.get();
+	m_reverse_effects = g_cfg_logitech_g27.reverse_effects.get();
 
 	uint32_t ffb_vendor_id = g_cfg_logitech_g27.ffb_device_type_id.get() >> 16;
 	uint32_t ffb_product_id = g_cfg_logitech_g27.ffb_device_type_id.get() & 0xFFFF;
@@ -321,36 +322,36 @@ void usb_device_logitech_g27::sdl_refresh()
 		logitech_g27_log.error("Failed fetching joystick list, %s", SDL_GetError());
 	}
 
-	bool joysticks_changed = !sdl_joysticks_equal(joysticks, new_joysticks);
-	bool haptic_changed = haptic_handle != new_haptic_handle;
-	bool led_joystick_changed = led_joystick_handle != new_led_joystick_handle;
+	bool joysticks_changed = !sdl_joysticks_equal(m_joysticks, new_joysticks);
+	bool haptic_changed = m_haptic_handle != new_haptic_handle;
+	bool led_joystick_changed = m_led_joystick_handle != new_led_joystick_handle;
 
 	// if we should touch the mutex
 	if (joysticks_changed || haptic_changed || led_joystick_changed)
 	{
-		sdl_handles_mutex.lock();
+		const std::lock_guard<std::mutex> lock(m_sdl_handles_mutex);
 		if (joysticks_changed)
 		{
-			clear_sdl_joysticks(joysticks);
-			joysticks = new_joysticks;
+			clear_sdl_joysticks(m_joysticks);
+			m_joysticks = new_joysticks;
 		}
 		// reset effects if the ffb device is changed
 		if (haptic_changed)
 		{
-			SDL_CloseHaptic(haptic_handle);
+			if (m_haptic_handle)
+				SDL_CloseHaptic(m_haptic_handle);
 			for (int i = 0; i < 4; i++)
 			{
-				effect_slots[i].effect_id = -1;
+				m_effect_slots[i].effect_id = -1;
 			}
-			default_spring_effect_id = -1;
-			led_joystick_handle = new_led_joystick_handle;
-			haptic_handle = new_haptic_handle;
+			m_default_spring_effect_id = -1;
+			m_led_joystick_handle = new_led_joystick_handle;
+			m_haptic_handle = new_haptic_handle;
 		}
 		if (led_joystick_changed)
 		{
-			led_joystick_handle = new_led_joystick_handle;
+			m_led_joystick_handle = new_led_joystick_handle;
 		}
-		sdl_handles_mutex.unlock();
 	}
 
 	if (!joysticks_changed)
@@ -360,7 +361,8 @@ void usb_device_logitech_g27::sdl_refresh()
 
 	if (!haptic_changed)
 	{
-		SDL_CloseHaptic(new_haptic_handle);
+		if (new_haptic_handle)
+			SDL_CloseHaptic(new_haptic_handle);
 	}
 }
 
@@ -706,46 +708,46 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		sdl_instance::get_instance().pump_events();
 
 		// Fetch input states from SDL
-		sdl_handles_mutex.lock();
-		uint16_t steering = sdl_to_logitech_g27_steering(joysticks, mapping.steering);
-		uint8_t throttle = sdl_to_logitech_g27_pedal(joysticks, mapping.throttle);
-		uint8_t brake = sdl_to_logitech_g27_pedal(joysticks, mapping.brake);
-		uint8_t clutch = sdl_to_logitech_g27_pedal(joysticks, mapping.clutch);
-		bool shift_up = sdl_to_logitech_g27_button(joysticks, mapping.shift_up);
-		bool shift_down = sdl_to_logitech_g27_button(joysticks, mapping.shift_down);
+		m_sdl_handles_mutex.lock();
+		uint16_t steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+		uint8_t throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+		uint8_t brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+		uint8_t clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.clutch);
+		bool shift_up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+		bool shift_down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
 
-		bool up = sdl_to_logitech_g27_button(joysticks, mapping.up);
-		bool down = sdl_to_logitech_g27_button(joysticks, mapping.down);
-		bool left = sdl_to_logitech_g27_button(joysticks, mapping.left);
-		bool right = sdl_to_logitech_g27_button(joysticks, mapping.right);
+		bool up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.up);
+		bool down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.down);
+		bool left = sdl_to_logitech_g27_button(m_joysticks, m_mapping.left);
+		bool right = sdl_to_logitech_g27_button(m_joysticks, m_mapping.right);
 
-		bool triangle = sdl_to_logitech_g27_button(joysticks, mapping.triangle);
-		bool cross = sdl_to_logitech_g27_button(joysticks, mapping.cross);
-		bool square = sdl_to_logitech_g27_button(joysticks, mapping.square);
-		bool circle = sdl_to_logitech_g27_button(joysticks, mapping.circle);
+		bool triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+		bool cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+		bool square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+		bool circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
 
-		bool l2 = sdl_to_logitech_g27_button(joysticks, mapping.l2);
-		bool l3 = sdl_to_logitech_g27_button(joysticks, mapping.l3);
-		bool r2 = sdl_to_logitech_g27_button(joysticks, mapping.r2);
-		bool r3 = sdl_to_logitech_g27_button(joysticks, mapping.r3);
+		bool l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+		bool l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+		bool r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+		bool r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
 
-		bool plus = sdl_to_logitech_g27_button(joysticks, mapping.plus);
-		bool minus = sdl_to_logitech_g27_button(joysticks, mapping.minus);
+		bool plus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.plus);
+		bool minus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.minus);
 
-		bool dial_clockwise = sdl_to_logitech_g27_button(joysticks, mapping.dial_clockwise);
-		bool dial_anticlockwise = sdl_to_logitech_g27_button(joysticks, mapping.dial_anticlockwise);
+		bool dial_clockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_clockwise);
+		bool dial_anticlockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_anticlockwise);
 
-		bool select = sdl_to_logitech_g27_button(joysticks, mapping.select);
-		bool pause = sdl_to_logitech_g27_button(joysticks, mapping.pause);
+		bool select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+		bool pause = sdl_to_logitech_g27_button(m_joysticks, m_mapping.pause);
 
-		bool shifter_1 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_1);
-		bool shifter_2 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_2);
-		bool shifter_3 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_3);
-		bool shifter_4 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_4);
-		bool shifter_5 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_5);
-		bool shifter_6 = sdl_to_logitech_g27_button(joysticks, mapping.shifter_6);
-		bool shifter_r = sdl_to_logitech_g27_button(joysticks, mapping.shifter_r);
-		sdl_handles_mutex.unlock();
+		bool shifter_1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_1);
+		bool shifter_2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_2);
+		bool shifter_3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_3);
+		bool shifter_4 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_4);
+		bool shifter_5 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_5);
+		bool shifter_6 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_6);
+		bool shifter_r = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_r);
+		m_sdl_handles_mutex.unlock();
 
 		// populate buffer
 		buf[0] = hat_components_to_logitech_g27_hat(up, down, left, right);
@@ -794,7 +796,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 
 		buf[8] = 0x80; // shifter x, don't own one to test gear/coord mapping
 		buf[9] = 0x80; // shifter y
-		buf[10] = buf[10] | (wheel_range > 360 ? 0x90 : 0x10);
+		buf[10] = buf[10] | (m_wheel_range > 360 ? 0x90 : 0x10);
 
 		// logitech_g27_log.error("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10]);
 
@@ -826,21 +828,20 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		// logitech_g27_log.error("%02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 		// printf("%02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
-		sdl_handles_mutex.lock();
-
 		SDL_HapticDirection direction = {
 			.type = SDL_HAPTIC_POLAR,
 			.dir = {27000, 0}};
-		if (reverse_effects)
+		if (m_reverse_effects)
 		{
 			direction.dir[0] = 9000;
 		}
 
-		// TODO force clipping from cfg
+		// TODO maybe force clipping from cfg
 
 		// Process effects
 		if (buf[0] == 0xf8)
 		{
+			const std::lock_guard<std::mutex> lock(m_sdl_handles_mutex);
 			switch (buf[1])
 			{
 			case 0x01:
@@ -853,14 +854,14 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			{
 				// Change wheel range to 200 degrees
 				logitech_g27_log.error("Change wheel range to 200 degrees command not forwarded");
-				wheel_range = 200;
+				m_wheel_range = 200;
 				break;
 			}
 			case 0x03:
 			{
 				// Change wheel range to 900 degrees
 				logitech_g27_log.error("Change wheel range to 900 degrees command not forwarded");
-				wheel_range = 900;
+				m_wheel_range = 900;
 				break;
 			}
 			case 0x09:
@@ -890,7 +891,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			case 0x12:
 			{
 				// Incoming data is a 5 bit mask, for each individual bulb
-				if (led_joystick_handle == nullptr)
+				if (m_led_joystick_handle == nullptr)
 				{
 					break;
 				}
@@ -902,14 +903,14 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				}
 
 				uint8_t intensity = new_led_level * 255 / 5;
-				SDL_SetJoystickLED(led_joystick_handle, intensity, intensity, intensity);
+				SDL_SetJoystickLED(m_led_joystick_handle, intensity, intensity, intensity);
 				break;
 			}
 			case 0x81:
 			{
 				// Wheel range change
-				wheel_range = (buf[3] << 8) | buf[2];
-				logitech_g27_log.error("Wheel range change to %u command not forwarded", wheel_range);
+				m_wheel_range = (buf[3] << 8) | buf[2];
+				logitech_g27_log.error("Wheel range change to %u command not forwarded", m_wheel_range);
 				break;
 			}
 			default:
@@ -921,6 +922,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		}
 		else
 		{
+			const std::lock_guard<std::mutex> lock(m_sdl_handles_mutex);
 			uint8_t cmd = buf[0] & 0xf;
 			uint8_t slot_mask = buf[0] >> 4;
 			switch (cmd)
@@ -988,7 +990,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							left_coeff = logitech_g27_high_resolution_coeff_to_coeff(k1, s1);
 							right_coeff = logitech_g27_high_resolution_coeff_to_coeff(k2, s2);
 						}
-						if (reverse_effects)
+						if (m_reverse_effects)
 						{
 							int16_t coeff = right_coeff;
 							right_coeff = left_coeff;
@@ -1034,7 +1036,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							right_coeff = logitech_g27_high_resolution_coeff_to_coeff(k2, s2);
 							saturation = logitech_g27_clip_to_saturation(buf[6]);
 						}
-						if (reverse_effects)
+						if (m_reverse_effects)
 						{
 							int16_t coeff = right_coeff;
 							right_coeff = left_coeff;
@@ -1064,7 +1066,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						int16_t left_coeff = logitech_g27_friction_coeff_to_coeff(k1, s1);
 						int16_t right_coeff = logitech_g27_friction_coeff_to_coeff(k2, s2);
 						int16_t saturation = logitech_g27_clip_to_saturation(buf[4]);
-						if (reverse_effects)
+						if (m_reverse_effects)
 						{
 							int16_t coeff = right_coeff;
 							right_coeff = left_coeff;
@@ -1107,7 +1109,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							left_coeff = logitech_g27_high_resolution_coeff_to_coeff(k1, 0);
 							right_coeff = logitech_g27_high_resolution_coeff_to_coeff(k2, 0);
 						}
-						if (reverse_effects)
+						if (m_reverse_effects)
 						{
 							int16_t coeff = right_coeff;
 							right_coeff = left_coeff;
@@ -1138,7 +1140,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						uint8_t t3 = buf[6] >> 4;
 						uint8_t inc = buf[6] & 0xf;
 						if (inc != 0)
-							new_effect.periodic.period = ((l1 - l2) * logitech_g27_loops_to_ms(t3, !fixed_loop)) / inc;
+							new_effect.periodic.period = ((l1 - l2) * logitech_g27_loops_to_ms(t3, !m_fixed_loop)) / inc;
 						else
 						{
 							logitech_g27_log.error("cannot evaluate slope for saw tooth effect, loops per step %u level per step %u", t3, inc);
@@ -1160,8 +1162,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						uint8_t t2 = buf[5];
 						uint8_t t3 = buf[6] >> 4;
 						uint8_t s = buf[6] & 0xf;
-						uint16_t total_flat_time = logitech_g27_loops_to_ms(t1 + t2, !fixed_loop);
-						uint16_t total_slope_time = (((l1 - l2) * logitech_g27_loops_to_ms(t3, !fixed_loop)) / s) * 2;
+						uint16_t total_flat_time = logitech_g27_loops_to_ms(t1 + t2, !m_fixed_loop);
+						uint16_t total_slope_time = (((l1 - l2) * logitech_g27_loops_to_ms(t3, !m_fixed_loop)) / s) * 2;
 						if (total_flat_time > total_slope_time)
 						{
 							new_effect.type = SDL_HAPTIC_SQUARE;
@@ -1186,11 +1188,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						uint8_t t1 = buf[4];
 						uint8_t t2 = buf[5];
 						uint8_t p = buf[6];
-						new_effect.periodic.period = logitech_g27_loops_to_ms(t1, !fixed_loop) + logitech_g27_loops_to_ms(t2, !fixed_loop);
+						new_effect.periodic.period = logitech_g27_loops_to_ms(t1, !m_fixed_loop) + logitech_g27_loops_to_ms(t2, !m_fixed_loop);
 						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2);
 						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - new_effect.periodic.offset;
 						if (new_effect.periodic.period != 0)
-							new_effect.periodic.phase = 36000 * logitech_g27_loops_to_ms(p, !fixed_loop) / new_effect.periodic.period;
+							new_effect.periodic.phase = 36000 * logitech_g27_loops_to_ms(p, !m_fixed_loop) / new_effect.periodic.period;
 						else
 						{
 							logitech_g27_log.error("cannot evaluate phase for square effect");
@@ -1236,12 +1238,12 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 								if (d)
 								{
 									new_effect.constant.level = 0;
-									new_effect.constant.attack_length = l * logitech_g27_loops_to_ms(t, !fixed_loop) / s;
+									new_effect.constant.attack_length = l * logitech_g27_loops_to_ms(t, !m_fixed_loop) / s;
 								}
 								else
 								{
 									new_effect.constant.level = 0x7FFF;
-									new_effect.constant.attack_length = (255 - l) * logitech_g27_loops_to_ms(t, !fixed_loop) / s;
+									new_effect.constant.attack_length = (255 - l) * logitech_g27_loops_to_ms(t, !m_fixed_loop) / s;
 								}
 							}
 						}
@@ -1253,7 +1255,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							}
 							else
 							{
-								new_effect.constant.length = (l1 - l2) * logitech_g27_loops_to_ms(t2, !fixed_loop) / s2;
+								new_effect.constant.length = (l1 - l2) * logitech_g27_loops_to_ms(t2, !m_fixed_loop) / s2;
 								new_effect.constant.attack_length = new_effect.constant.length;
 								new_effect.constant.attack_level = d1 ? logitech_g27_force_to_level(l1) : logitech_g27_force_to_level(l2);
 							}
@@ -1271,7 +1273,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						uint8_t th = buf[4];
 						uint8_t n = buf[5];
 						uint16_t t = (th << 8) | tl;
-						new_effect.periodic.period = logitech_g27_loops_to_ms(t * 2, !fixed_loop);
+						new_effect.periodic.period = logitech_g27_loops_to_ms(t * 2, !m_fixed_loop);
 						new_effect.periodic.magnitude = logitech_g27_amplitude_to_magnitude(a);
 						if (n == 0)
 							new_effect.periodic.length = new_effect.periodic.period * 256;
@@ -1291,58 +1293,58 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						continue;
 					}
 
-					bool play_effect = (cmd == 0x01 || (cmd == 0x0c && effect_slots[i].effect_id == -1));
+					bool play_effect = (cmd == 0x01 || (cmd == 0x0c && m_effect_slots[i].effect_id == -1));
 
 					if (update_hack)
 					{
-						if (effect_slots[i].effect_id == -1)
+						if (m_effect_slots[i].effect_id == -1)
 							update_hack = false;
-						if (effect_slots[i].last_effect.type != new_effect.type)
+						if (m_effect_slots[i].last_effect.type != new_effect.type)
 							update_hack = false;
 					}
 
 					if (cmd == 0x00 || play_effect)
 					{
-						if (effect_slots[i].effect_id != -1 && haptic_handle != nullptr && !update_hack)
+						if (m_effect_slots[i].effect_id != -1 && m_haptic_handle != nullptr && !update_hack)
 						{
-							SDL_DestroyHapticEffect(haptic_handle, effect_slots[i].effect_id);
-							effect_slots[i].effect_id = -1;
+							SDL_DestroyHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id);
+							m_effect_slots[i].effect_id = -1;
 						}
-						if (haptic_handle != nullptr && effect_slots[i].effect_id == -1)
+						if (m_haptic_handle != nullptr && m_effect_slots[i].effect_id == -1)
 						{
-							effect_slots[i].effect_id = SDL_CreateHapticEffect(haptic_handle, &new_effect);
+							m_effect_slots[i].effect_id = SDL_CreateHapticEffect(m_haptic_handle, &new_effect);
 						}
 						if (update_hack)
 						{
-							if (!SDL_UpdateHapticEffect(haptic_handle, effect_slots[i].effect_id, &new_effect))
+							if (!SDL_UpdateHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, &new_effect))
 								logitech_g27_log.error("Failed refreshing slot %d sdl effect %d, %s", i, new_effect.type, SDL_GetError());
 						}
-						effect_slots[i].state = G27_FFB_DOWNLOADED;
-						effect_slots[i].last_effect = new_effect;
-						effect_slots[i].last_update = SDL_GetTicks();
-						if (effect_slots[i].effect_id == -1 && haptic_handle != nullptr)
+						m_effect_slots[i].state = G27_FFB_DOWNLOADED;
+						m_effect_slots[i].last_effect = new_effect;
+						m_effect_slots[i].last_update = SDL_GetTicks();
+						if (m_effect_slots[i].effect_id == -1 && m_haptic_handle != nullptr)
 						{
 							logitech_g27_log.error("Failed uploading effect %02x %02x %02x %02x %02x %02x %02x to slot %i, %s", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], i, SDL_GetError());
 						}
 					}
-					if (play_effect && haptic_handle != nullptr)
+					if (play_effect && m_haptic_handle != nullptr)
 					{
-						if (effect_slots[i].effect_id != -1)
+						if (m_effect_slots[i].effect_id != -1)
 						{
-							if (!SDL_RunHapticEffect(haptic_handle, effect_slots[i].effect_id, 1))
+							if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 							{
-								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", effect_slots[i].last_effect.type, i, SDL_GetError());
+								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 							}
 						}
 						else
 						{
-							logitech_g27_log.error("Tried to play effect slot %d with sdl effect %d, but upload failed previously", i, effect_slots[i].last_effect.type);
+							logitech_g27_log.error("Tried to play effect slot %d with sdl effect %d, but upload failed previously", i, m_effect_slots[i].last_effect.type);
 						}
-						effect_slots[i].state = G27_FFB_PLAYING;
+						m_effect_slots[i].state = G27_FFB_PLAYING;
 					}
-					if (cmd == 0xc && !play_effect && haptic_handle != nullptr)
+					if (cmd == 0xc && !play_effect && m_haptic_handle != nullptr)
 					{
-						if (!SDL_UpdateHapticEffect(haptic_handle, effect_slots[i].effect_id, &new_effect))
+						if (!SDL_UpdateHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, &new_effect))
 						{
 							logitech_g27_log.error("Failed refreshing slot %d sdl effect %d, %s", i, new_effect.type, SDL_GetError());
 						}
@@ -1360,29 +1362,29 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					{
 						continue;
 					}
-					if (effect_slots[i].state == G27_FFB_PLAYING || effect_slots[i].state == G27_FFB_DOWNLOADED)
+					if (m_effect_slots[i].state == G27_FFB_PLAYING || m_effect_slots[i].state == G27_FFB_DOWNLOADED)
 					{
-						effect_slots[i].state = cmd == 0x02 ? G27_FFB_PLAYING : G27_FFB_DOWNLOADED;
-						if (haptic_handle != nullptr)
+						m_effect_slots[i].state = cmd == 0x02 ? G27_FFB_PLAYING : G27_FFB_DOWNLOADED;
+						if (m_haptic_handle != nullptr)
 						{
-							if (effect_slots[i].effect_id == -1)
+							if (m_effect_slots[i].effect_id == -1)
 							{
-								effect_slots[i].effect_id = SDL_CreateHapticEffect(haptic_handle, &effect_slots[i].last_effect);
+								m_effect_slots[i].effect_id = SDL_CreateHapticEffect(m_haptic_handle, &m_effect_slots[i].last_effect);
 							}
-							if (effect_slots[i].effect_id != -1)
+							if (m_effect_slots[i].effect_id != -1)
 							{
 								if (cmd == 0x02)
 								{
-									if (!SDL_RunHapticEffect(haptic_handle, effect_slots[i].effect_id, 1))
+									if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 									{
-										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 								else
 								{
-									if (!SDL_StopHapticEffect(haptic_handle, effect_slots[i].effect_id))
+									if (!SDL_StopHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id))
 									{
-										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s\n", effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 							}
@@ -1390,11 +1392,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							{
 								if (cmd == 0x02)
 								{
-									logitech_g27_log.error("Tried to play effect slot %d with sdl effect %d, but upload failed previously", i, effect_slots[i].last_effect.type);
+									logitech_g27_log.error("Tried to play effect slot %d with sdl effect %d, but upload failed previously", i, m_effect_slots[i].last_effect.type);
 								}
 								else
 								{
-									logitech_g27_log.error("Tried to stop effect slot %d with sdl effect %d, but upload failed previously", i, effect_slots[i].last_effect.type);
+									logitech_g27_log.error("Tried to stop effect slot %d with sdl effect %d, but upload failed previously", i, m_effect_slots[i].last_effect.type);
 								}
 							}
 						}
@@ -1423,7 +1425,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				int16_t right_coeff = logitech_g27_coeff_to_coeff(k2, 0);
 				uint16_t deadband = 2 * 0xFFFF / 255;
 				int16_t center = 0;
-				if (reverse_effects)
+				if (m_reverse_effects)
 				{
 					int16_t coeff = right_coeff;
 					right_coeff = left_coeff;
@@ -1433,30 +1435,30 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				for (int i = 0; i < 1; i++)
 				{
 					// TODO direction cfg
-					default_spring_effect.condition.right_sat[i] = saturation;
-					default_spring_effect.condition.left_sat[i] = saturation;
-					default_spring_effect.condition.right_coeff[i] = right_coeff;
-					default_spring_effect.condition.left_coeff[i] = left_coeff;
-					default_spring_effect.condition.deadband[i] = deadband;
-					default_spring_effect.condition.center[i] = center;
+					m_default_spring_effect.condition.right_sat[i] = saturation;
+					m_default_spring_effect.condition.left_sat[i] = saturation;
+					m_default_spring_effect.condition.right_coeff[i] = right_coeff;
+					m_default_spring_effect.condition.left_coeff[i] = left_coeff;
+					m_default_spring_effect.condition.deadband[i] = deadband;
+					m_default_spring_effect.condition.center[i] = center;
 				}
 
-				if (haptic_handle == nullptr)
+				if (m_haptic_handle == nullptr)
 				{
 					break;
 				}
 
-				if (default_spring_effect_id == -1)
+				if (m_default_spring_effect_id == -1)
 				{
-					default_spring_effect_id = SDL_CreateHapticEffect(haptic_handle, &default_spring_effect);
-					if (default_spring_effect_id == -1)
+					m_default_spring_effect_id = SDL_CreateHapticEffect(m_haptic_handle, &m_default_spring_effect);
+					if (m_default_spring_effect_id == -1)
 					{
 						logitech_g27_log.error("Failed creating default spring effect, %s", SDL_GetError());
 					}
 				}
 				else
 				{
-					if (!SDL_UpdateHapticEffect(haptic_handle, default_spring_effect_id, &default_spring_effect))
+					if (!SDL_UpdateHapticEffect(m_haptic_handle, m_default_spring_effect_id, &m_default_spring_effect))
 					{
 						logitech_g27_log.error("Failed updating default spring effect, %s", SDL_GetError());
 					}
@@ -1467,31 +1469,31 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			case 0x05:
 			{
 				// Default spring on/Default spring off
-				if (haptic_handle == nullptr)
+				if (m_haptic_handle == nullptr)
 				{
 					break;
 				}
 
-				if (default_spring_effect_id == -1)
+				if (m_default_spring_effect_id == -1)
 				{
-					default_spring_effect_id = SDL_CreateHapticEffect(haptic_handle, &default_spring_effect);
-					if (default_spring_effect_id == -1)
+					m_default_spring_effect_id = SDL_CreateHapticEffect(m_haptic_handle, &m_default_spring_effect);
+					if (m_default_spring_effect_id == -1)
 					{
 						logitech_g27_log.error("Failed creating default spring effect, %s", SDL_GetError());
 					}
 				}
-				if (default_spring_effect_id != -1)
+				if (m_default_spring_effect_id != -1)
 				{
 					if (cmd == 0x04)
 					{
-						if (!SDL_RunHapticEffect(haptic_handle, default_spring_effect_id, 1))
+						if (!SDL_RunHapticEffect(m_haptic_handle, m_default_spring_effect_id, 1))
 						{
 							logitech_g27_log.error("Failed playing default spring effect, %s", SDL_GetError());
 						}
 					}
 					else
 					{
-						if (!SDL_StopHapticEffect(haptic_handle, default_spring_effect_id))
+						if (!SDL_StopHapticEffect(m_haptic_handle, m_default_spring_effect_id))
 						{
 							logitech_g27_log.error("Failed stopping default spring effect, %s", SDL_GetError());
 						}
@@ -1508,7 +1510,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			case 0x09:
 			{
 				// Set LED
-				if (led_joystick_handle == nullptr)
+				if (m_led_joystick_handle == nullptr)
 				{
 					break;
 				}
@@ -1519,7 +1521,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					new_led_level += (buf[1] & (1 << i)) ? 1 : 0;
 				}
 				uint8_t intensity = new_led_level * 255 / 7;
-				SDL_SetJoystickLED(led_joystick_handle, intensity, intensity, intensity);
+				SDL_SetJoystickLED(m_led_joystick_handle, intensity, intensity, intensity);
 				break;
 			}
 			case 0x0a:
@@ -1537,8 +1539,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			case 0x0d:
 			{
 				// Fixed time loop toggle
-				fixed_loop = buf[1] ? true : false;
-				if (!fixed_loop)
+				m_fixed_loop = buf[1] ? true : false;
+				if (!m_fixed_loop)
 				{
 					logitech_g27_log.error("as fast as possible mode requested, effect durations might be inaccurate");
 				}
@@ -1556,7 +1558,6 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			}
 			}
 		}
-		sdl_handles_mutex.unlock();
 	}
 }
 

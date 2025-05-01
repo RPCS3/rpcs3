@@ -38,58 +38,58 @@ private:
 	void load_ui_state_from_config();
 	void save_ui_state_to_config();
 
-	std::map<uint32_t, joystick_state> last_joystick_states;
-	std::vector<SDL_Joystick*> joystick_handles;
-	uint64_t last_joystick_states_update = 0;
-	bool sdl_initialized = false;
+	std::map<uint32_t, joystick_state> m_last_joystick_states;
+	std::vector<SDL_Joystick*> m_joystick_handles;
+	uint64_t m_last_joystick_states_update = 0;
+	bool m_sdl_initialized = false;
 
 	// ui elements
-	QLabel* state_text;
+	QLabel* m_state_text = nullptr;
 
-	QCheckBox* enabled;
-	QCheckBox* reverse_effects;
+	QCheckBox* m_enabled = nullptr;
+	QCheckBox* m_reverse_effects = nullptr;
 
-	Mapping* steering;
-	Mapping* throttle;
-	Mapping* brake;
-	Mapping* clutch;
-	Mapping* shift_up;
-	Mapping* shift_down;
+	Mapping* m_steering = nullptr;
+	Mapping* m_throttle = nullptr;
+	Mapping* m_brake = nullptr;
+	Mapping* m_clutch = nullptr;
+	Mapping* m_shift_up = nullptr;
+	Mapping* m_shift_down = nullptr;
 
-	Mapping* up;
-	Mapping* down;
-	Mapping* left;
-	Mapping* right;
+	Mapping* m_up = nullptr;
+	Mapping* m_down = nullptr;
+	Mapping* m_left = nullptr;
+	Mapping* m_right = nullptr;
 
-	Mapping* triangle;
-	Mapping* cross;
-	Mapping* square;
-	Mapping* circle;
+	Mapping* m_triangle = nullptr;
+	Mapping* m_cross = nullptr;
+	Mapping* m_square = nullptr;
+	Mapping* m_circle = nullptr;
 
-	Mapping* l2;
-	Mapping* l3;
-	Mapping* r2;
-	Mapping* r3;
+	Mapping* m_l2 = nullptr;
+	Mapping* m_l3 = nullptr;
+	Mapping* m_r2 = nullptr;
+	Mapping* m_r3 = nullptr;
 
-	Mapping* plus;
-	Mapping* minus;
+	Mapping* m_plus = nullptr;
+	Mapping* m_minus = nullptr;
 
-	Mapping* dial_clockwise;
-	Mapping* dial_anticlockwise;
+	Mapping* m_dial_clockwise = nullptr;
+	Mapping* m_dial_anticlockwise = nullptr;
 
-	Mapping* select;
-	Mapping* pause;
+	Mapping* m_select = nullptr;
+	Mapping* m_pause = nullptr;
 
-	Mapping* shifter_1;
-	Mapping* shifter_2;
-	Mapping* shifter_3;
-	Mapping* shifter_4;
-	Mapping* shifter_5;
-	Mapping* shifter_6;
-	Mapping* shifter_r;
+	Mapping* m_shifter_1 = nullptr;
+	Mapping* m_shifter_2 = nullptr;
+	Mapping* m_shifter_3 = nullptr;
+	Mapping* m_shifter_4 = nullptr;
+	Mapping* m_shifter_5 = nullptr;
+	Mapping* m_shifter_6 = nullptr;
+	Mapping* m_shifter_r = nullptr;
 
-	DeviceChoice* ffb_device;
-	DeviceChoice* led_device;
+	DeviceChoice* m_ffb_device = nullptr;
+	DeviceChoice* m_led_device = nullptr;
 
-	QScrollArea* mapping_scroll_area;
+	QScrollArea* m_mapping_scroll_area = nullptr;
 };

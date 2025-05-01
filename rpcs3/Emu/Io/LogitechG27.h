@@ -105,18 +105,18 @@ public:
 private:
 	u32 m_controller_index;
 
-	logitech_g27_sdl_mapping mapping;
-	bool reverse_effects;
+	logitech_g27_sdl_mapping m_mapping;
+	bool m_reverse_effects;
 
-	std::mutex sdl_handles_mutex;
-	SDL_Joystick* led_joystick_handle = nullptr;
-	SDL_Haptic* haptic_handle = nullptr;
-	std::map<uint32_t, std::vector<SDL_Joystick*>> joysticks;
-	bool fixed_loop = false;
-	uint16_t wheel_range = 200;
-	logitech_g27_ffb_slot effect_slots[4];
-	SDL_HapticEffect default_spring_effect = {0};
-	int default_spring_effect_id = -1;
+	std::mutex m_sdl_handles_mutex;
+	SDL_Joystick* m_led_joystick_handle = nullptr;
+	SDL_Haptic* m_haptic_handle = nullptr;
+	std::map<uint32_t, std::vector<SDL_Joystick*>> m_joysticks;
+	bool m_fixed_loop = false;
+	uint16_t m_wheel_range = 200;
+	logitech_g27_ffb_slot m_effect_slots[4];
+	SDL_HapticEffect m_default_spring_effect = {0};
+	int m_default_spring_effect_id = -1;
 
-	bool enabled;
+	bool m_enabled = false;
 };

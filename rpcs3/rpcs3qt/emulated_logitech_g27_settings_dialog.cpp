@@ -32,45 +32,44 @@ class DeviceChoice : public QWidget
 
 public:
 	DeviceChoice(QWidget* parent, uint32_t device_type_id, const char* name)
-		: QWidget(parent)
+		: QWidget(parent), m_device_type_id(device_type_id)
 	{
-		this->device_type_id = device_type_id;
-
 		auto layout = new QHBoxLayout(this);
 
 		QLabel* label = new QLabel(this);
 		label->setText(QString(name));
 		layout->addWidget(label);
+		setLayout(layout);
 
-		display_box = new QLabel(this);
-		display_box->setTextFormat(Qt::RichText);
-		display_box->setWordWrap(true);
-		display_box->setFrameStyle(QFrame::Box);
-		display_box->setMinimumWidth(100);
-		layout->addWidget(display_box);
+		m_display_box = new QLabel(this);
+		m_display_box->setTextFormat(Qt::RichText);
+		m_display_box->setWordWrap(true);
+		m_display_box->setFrameStyle(QFrame::Box);
+		m_display_box->setMinimumWidth(100);
+		layout->addWidget(m_display_box);
 
 		update_display();
 	}
 
 	uint32_t get_device_type_id()
 	{
-		return device_type_id;
+		return m_device_type_id;
 	}
 
 	void set_device_type_id(uint32_t device_type_id)
 	{
-		this->device_type_id = device_type_id;
+		this->m_device_type_id = device_type_id;
 		update_display();
 	}
 
 private:
-	uint32_t device_type_id;
-	QLabel* display_box;
+	uint32_t m_device_type_id = 0;
+	QLabel* m_display_box = nullptr;
 	void update_display()
 	{
 		char text_buf[32];
-		sprintf(text_buf, "%04x:%04x", device_type_id >> 16, device_type_id & 0xFFFF);
-		display_box->setText(QString(text_buf));
+		sprintf(text_buf, "%04x:%04x", m_device_type_id >> 16, m_device_type_id & 0xFFFF);
+		m_display_box->setText(QString(text_buf));
 	}
 };
 
@@ -79,17 +78,8 @@ class Mapping : public QGroupBox
 
 public:
 	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, DeviceChoice* ffb_device, DeviceChoice* led_device, sdl_mapping mapping, bool is_axis, const char* name, bool flip_axis_display)
-		: QGroupBox(parent)
+		: QGroupBox(parent), m_setting_dialog(dialog), m_ffb_device(ffb_device), m_led_device(led_device), m_mapping(mapping), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)
 	{
-		this->setting_dialog = dialog;
-		this->ffb_device = ffb_device;
-		this->led_device = led_device;
-		this->mapping = mapping;
-		this->is_axis = is_axis;
-		this->name = std::string(name);
-		this->mapping_in_progress = false;
-		this->flip_axis_display = flip_axis_display;
-
 		QVBoxLayout* layout = new QVBoxLayout(this);
 		setLayout(layout);
 
@@ -102,101 +92,101 @@ public:
 		QLabel* label = new QLabel(horizontal_container);
 		label->setText(QString(name));
 
-		display_box = new QLabel(horizontal_container);
-		display_box->setTextFormat(Qt::RichText);
-		display_box->setWordWrap(true);
-		display_box->setFrameStyle(QFrame::Box);
-		display_box->setMinimumWidth(150);
+		m_display_box = new QLabel(horizontal_container);
+		m_display_box->setTextFormat(Qt::RichText);
+		m_display_box->setWordWrap(true);
+		m_display_box->setFrameStyle(QFrame::Box);
+		m_display_box->setMinimumWidth(150);
 
-		ffb_set_button = new QPushButton(QString("FFB"), horizontal_container);
-		led_set_button = new QPushButton(QString("LED"), horizontal_container);
-		map_button = new QPushButton(QString("MAP"), horizontal_container);
-		unmap_button = new QPushButton(QString("UNMAP"), horizontal_container);
-		reverse_checkbox = new QCheckBox(QString("Reverse"), horizontal_container);
+		m_ffb_set_button = new QPushButton(QString("FFB"), horizontal_container);
+		m_led_set_button = new QPushButton(QString("LED"), horizontal_container);
+		m_map_button = new QPushButton(QString("MAP"), horizontal_container);
+		m_unmap_button = new QPushButton(QString("UNMAP"), horizontal_container);
+		m_reverse_checkbox = new QCheckBox(QString("Reverse"), horizontal_container);
 
-		if (!this->is_axis)
+		if (!this->m_is_axis)
 		{
-			axis_status = nullptr;
-			button_status = new QCheckBox(QString("Pressed"), horizontal_container);
-			button_status->setDisabled(true);
+			m_axis_status = nullptr;
+			m_button_status = new QCheckBox(QString("Pressed"), horizontal_container);
+			m_button_status->setDisabled(true);
 		}
 		else
 		{
-			button_status = nullptr;
-			axis_status = new QSlider(Qt::Horizontal, this);
-			axis_status->setDisabled(true);
-			axis_status->setMinimum(-0x8000);
-			axis_status->setMaximum(0x7FFF);
-			axis_status->setValue(-0x8000);
+			m_button_status = nullptr;
+			m_axis_status = new QSlider(Qt::Horizontal, this);
+			m_axis_status->setDisabled(true);
+			m_axis_status->setMinimum(-0x8000);
+			m_axis_status->setMaximum(0x7FFF);
+			m_axis_status->setValue(-0x8000);
 		}
 
 		update_display();
 
 		horizontal_layout->addWidget(label);
-		horizontal_layout->addWidget(display_box);
-		if (!this->is_axis)
-			horizontal_layout->addWidget(button_status);
-		horizontal_layout->addWidget(ffb_set_button);
-		horizontal_layout->addWidget(led_set_button);
-		horizontal_layout->addWidget(map_button);
-		horizontal_layout->addWidget(unmap_button);
-		horizontal_layout->addWidget(reverse_checkbox);
+		horizontal_layout->addWidget(m_display_box);
+		if (!this->m_is_axis)
+			horizontal_layout->addWidget(m_button_status);
+		horizontal_layout->addWidget(m_ffb_set_button);
+		horizontal_layout->addWidget(m_led_set_button);
+		horizontal_layout->addWidget(m_map_button);
+		horizontal_layout->addWidget(m_unmap_button);
+		horizontal_layout->addWidget(m_reverse_checkbox);
 
-		if (this->is_axis)
-			layout->addWidget(axis_status);
+		if (this->m_is_axis)
+			layout->addWidget(m_axis_status);
 
-		connect(ffb_set_button, &QPushButton::clicked, this, [this]()
+		connect(m_ffb_set_button, &QPushButton::clicked, this, [this]()
 			{
-				this->ffb_device->set_device_type_id(this->mapping.device_type_id);
+				this->m_ffb_device->set_device_type_id(this->m_mapping.device_type_id);
 			});
 
-		connect(led_set_button, &QPushButton::clicked, this, [this]()
+		connect(m_led_set_button, &QPushButton::clicked, this, [this]()
 			{
-				this->led_device->set_device_type_id(this->mapping.device_type_id);
+				this->m_led_device->set_device_type_id(this->m_mapping.device_type_id);
 			});
 
-		connect(map_button, &QPushButton::clicked, this, [this]()
+		connect(m_map_button, &QPushButton::clicked, this, [this]()
 			{
-				this->mapping_in_progress = true;
-				this->timeout_msec = 5500;
-				this->setting_dialog->disable();
-				this->last_joystick_states = this->setting_dialog->get_joystick_states();
+				this->m_mapping_in_progress = true;
+				this->m_timeout_msec = 5500;
+				this->m_setting_dialog->disable();
+				this->m_last_joystick_states = this->m_setting_dialog->get_joystick_states();
 			});
 
-		connect(unmap_button, &QPushButton::clicked, this, [this]()
+		connect(m_unmap_button, &QPushButton::clicked, this, [this]()
 			{
-				this->mapping.device_type_id = 0;
+				this->m_mapping.device_type_id = 0;
 				update_display();
 			});
 
-		connect(reverse_checkbox, &QCheckBox::clicked, this, [this]()
+		connect(m_reverse_checkbox, &QCheckBox::clicked, this, [this]()
 			{
-				this->mapping.reverse = this->reverse_checkbox->isChecked();
+				this->m_mapping.reverse = this->m_reverse_checkbox->isChecked();
 			});
 
-		tick_timer = new QTimer(this);
-		connect(tick_timer, &QTimer::timeout, this, [this]()
+		m_tick_timer = new QTimer(this);
+		connect(m_tick_timer, &QTimer::timeout, this, [this]()
 			{
-				if (this->mapping_in_progress)
+				if (this->m_mapping_in_progress)
 				{
 					char text_buf[128];
 
-					int timeout_sec = this->timeout_msec / 1000;
+					int timeout_sec = this->m_timeout_msec / 1000;
 
-					const std::map<uint32_t, joystick_state>& new_joystick_states = this->setting_dialog->get_joystick_states();
+					const std::map<uint32_t, joystick_state>& new_joystick_states = this->m_setting_dialog->get_joystick_states();
 
-					sprintf(text_buf, "Input %s for %s, timeout in %d %s", this->is_axis ? "axis" : "button/hat", this->name.c_str(), timeout_sec, timeout_sec >= 2 ? "seconds" : "second");
-					this->setting_dialog->set_state_text(text_buf);
+					sprintf(text_buf, "Input %s for %s, timeout in %d %s", this->m_is_axis ? "axis" : "button/hat", this->m_name.c_str(), timeout_sec, timeout_sec >= 2 ? "seconds" : "second");
+					this->m_setting_dialog->set_state_text(text_buf);
 
 					for (auto new_joystick_state = new_joystick_states.begin(); new_joystick_state != new_joystick_states.end(); new_joystick_state++)
 					{
-						auto last_joystick_state = this->last_joystick_states.find(new_joystick_state->first);
-						if (last_joystick_state == this->last_joystick_states.end())
+						auto last_joystick_state = this->m_last_joystick_states.find(new_joystick_state->first);
+						if (last_joystick_state == this->m_last_joystick_states.end())
 						{
 							continue;
 						}
 
-						if (this->is_axis)
+						if (this->m_is_axis)
 						{
 							const static int16_t axis_change_threshold = 0x7FFF / 5;
 							if (last_joystick_state->second.axes.size() != new_joystick_state->second.axes.size())
@@ -209,13 +199,13 @@ public:
 								int32_t diff = std::abs(last_joystick_state->second.axes[i] - new_joystick_state->second.axes[i]);
 								if (diff > axis_change_threshold)
 								{
-									this->mapping_in_progress = false;
-									this->setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->setting_dialog->enable();
-									this->mapping.device_type_id = new_joystick_state->first;
-									this->mapping.type = MAPPING_AXIS;
-									this->mapping.id = i;
-									this->mapping.hat = HAT_NONE;
+									this->m_mapping_in_progress = false;
+									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
+									this->m_setting_dialog->enable();
+									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.type = MAPPING_AXIS;
+									this->m_mapping.id = i;
+									this->m_mapping.hat = HAT_NONE;
 									break;
 								}
 							}
@@ -236,13 +226,13 @@ public:
 							{
 								if (last_joystick_state->second.buttons[i] != new_joystick_state->second.buttons[i])
 								{
-									this->mapping_in_progress = false;
-									this->setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->setting_dialog->enable();
-									this->mapping.device_type_id = new_joystick_state->first;
-									this->mapping.type = MAPPING_BUTTON;
-									this->mapping.id = i;
-									this->mapping.hat = HAT_NONE;
+									this->m_mapping_in_progress = false;
+									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
+									this->m_setting_dialog->enable();
+									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.type = MAPPING_BUTTON;
+									this->m_mapping.id = i;
+									this->m_mapping.hat = HAT_NONE;
 									break;
 								}
 							}
@@ -250,92 +240,91 @@ public:
 							{
 								if (last_joystick_state->second.hats[i] != new_joystick_state->second.hats[i] && new_joystick_state->second.hats[i] != HAT_NONE)
 								{
-									this->mapping_in_progress = false;
-									this->setting_dialog->set_state_text(DEFAULT_STATUS);
-									this->setting_dialog->enable();
-									this->mapping.device_type_id = new_joystick_state->first;
-									this->mapping.type = MAPPING_HAT;
-									this->mapping.id = i;
-									this->mapping.hat = new_joystick_state->second.hats[i];
+									this->m_mapping_in_progress = false;
+									this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
+									this->m_setting_dialog->enable();
+									this->m_mapping.device_type_id = new_joystick_state->first;
+									this->m_mapping.type = MAPPING_HAT;
+									this->m_mapping.id = i;
+									this->m_mapping.hat = new_joystick_state->second.hats[i];
 									break;
 								}
 							}
 						}
 					}
 
-					this->timeout_msec = this->timeout_msec - 25;
-					if (this->timeout_msec <= 0)
+					this->m_timeout_msec = this->m_timeout_msec - 25;
+					if (this->m_timeout_msec <= 0)
 					{
-						this->mapping_in_progress = false;
-						this->setting_dialog->set_state_text(DEFAULT_STATUS);
-						this->setting_dialog->enable();
+						this->m_mapping_in_progress = false;
+						this->m_setting_dialog->set_state_text(DEFAULT_STATUS);
+						this->m_setting_dialog->enable();
 					}
 				}
 
 				update_display();
 			});
-		tick_timer->start(25);
+		m_tick_timer->start(25);
 	}
 
 	void disable()
 	{
-		ffb_set_button->setDisabled(true);
-		led_set_button->setDisabled(true);
-		map_button->setDisabled(true);
-		unmap_button->setDisabled(true);
-		reverse_checkbox->setDisabled(true);
+		m_ffb_set_button->setDisabled(true);
+		m_led_set_button->setDisabled(true);
+		m_map_button->setDisabled(true);
+		m_unmap_button->setDisabled(true);
+		m_reverse_checkbox->setDisabled(true);
 	}
 
 	void enable()
 	{
-		ffb_set_button->setEnabled(true);
-		led_set_button->setEnabled(true);
-		map_button->setEnabled(true);
-		unmap_button->setEnabled(true);
-		reverse_checkbox->setEnabled(true);
+		m_ffb_set_button->setEnabled(true);
+		m_led_set_button->setEnabled(true);
+		m_map_button->setEnabled(true);
+		m_unmap_button->setEnabled(true);
+		m_reverse_checkbox->setEnabled(true);
 	}
 
 	void set_mapping(const sdl_mapping& mapping)
 	{
-		this->mapping = mapping;
+		this->m_mapping = mapping;
 		update_display();
 	}
 
 	const sdl_mapping& get_mapping()
 	{
-		return mapping;
+		return m_mapping;
 	}
 
 private:
-	sdl_mapping mapping;
-	bool is_axis;
-	std::string name;
+	emulated_logitech_g27_settings_dialog* m_setting_dialog = nullptr;
+	DeviceChoice* m_ffb_device = nullptr;
+	DeviceChoice* m_led_device = nullptr;
+	sdl_mapping m_mapping = {0};
+	bool m_is_axis = false;
+	std::string m_name = "";
+	bool m_flip_axis_display = false;
 
-	DeviceChoice* ffb_device;
-	DeviceChoice* led_device;
-	QLabel* display_box;
-	QPushButton* ffb_set_button;
-	QPushButton* led_set_button;
-	QPushButton* map_button;
-	QPushButton* unmap_button;
-	QCheckBox* reverse_checkbox;
+	QLabel* m_display_box = nullptr;
+	QPushButton* m_ffb_set_button = nullptr;
+	QPushButton* m_led_set_button = nullptr;
+	QPushButton* m_map_button = nullptr;
+	QPushButton* m_unmap_button = nullptr;
+	QCheckBox* m_reverse_checkbox = nullptr;
 
-	bool mapping_in_progress;
-	int timeout_msec = 5000;
-	QTimer* tick_timer;
-	std::map<uint32_t, joystick_state> last_joystick_states;
+	bool m_mapping_in_progress = false;
+	int m_timeout_msec = 5500;
+	QTimer* m_tick_timer = nullptr;
+	std::map<uint32_t, joystick_state> m_last_joystick_states;
 
-	QCheckBox* button_status;
-	QSlider* axis_status;
-	bool flip_axis_display;
-
-	emulated_logitech_g27_settings_dialog* setting_dialog;
+	QCheckBox* m_button_status = nullptr;
+	QSlider* m_axis_status = nullptr;
 
 	void update_display()
 	{
 		char text_buf[64];
 		const char* type_string = nullptr;
-		switch (mapping.type)
+		switch (m_mapping.type)
 		{
 		case MAPPING_BUTTON:
 			type_string = "button";
@@ -348,7 +337,7 @@ private:
 			break;
 		}
 		const char* hat_string = nullptr;
-		switch (mapping.hat)
+		switch (m_mapping.hat)
 		{
 		case HAT_UP:
 			hat_string = "up";
@@ -366,69 +355,69 @@ private:
 			hat_string = "";
 			break;
 		}
-		sprintf(text_buf, "%04x:%04x, %s %u %s", mapping.device_type_id >> 16, mapping.device_type_id & 0xFFFF, type_string, mapping.id, hat_string);
-		display_box->setText(QString(text_buf));
+		sprintf(text_buf, "%04x:%04x, %s %u %s", m_mapping.device_type_id >> 16, m_mapping.device_type_id & 0xFFFF, type_string, m_mapping.id, hat_string);
+		m_display_box->setText(QString(text_buf));
 
-		reverse_checkbox->setChecked(mapping.reverse);
+		m_reverse_checkbox->setChecked(m_mapping.reverse);
 
-		if (button_status)
-			button_status->setChecked(mapping.reverse);
+		if (m_button_status)
+			m_button_status->setChecked(m_mapping.reverse);
 
-		if (axis_status)
+		if (m_axis_status)
 		{
 			int32_t axis_value = (-0x8000);
-			if (mapping.reverse)
+			if (m_mapping.reverse)
 				axis_value = axis_value * (-1);
-			if (flip_axis_display)
+			if (m_flip_axis_display)
 				axis_value = axis_value * (-1);
 			if (axis_value > 0x7FFF)
 				axis_value = 0x7FFF;
 			if (axis_value < (-0x8000))
 				axis_value = (-0x8000);
-			axis_status->setValue(axis_value);
+			m_axis_status->setValue(axis_value);
 		}
 
-		const std::map<uint32_t, joystick_state>& joystick_states = setting_dialog->get_joystick_states();
-		auto joystick_state = joystick_states.find(mapping.device_type_id);
+		const std::map<uint32_t, joystick_state>& joystick_states = m_setting_dialog->get_joystick_states();
+		auto joystick_state = joystick_states.find(m_mapping.device_type_id);
 
 		if (joystick_state != joystick_states.end())
 		{
-			switch (mapping.type)
+			switch (m_mapping.type)
 			{
 			case MAPPING_BUTTON:
 			{
-				if (joystick_state->second.buttons.size() <= mapping.id)
+				if (joystick_state->second.buttons.size() <= m_mapping.id)
 					break;
-				bool value = joystick_state->second.buttons[mapping.id];
-				if (mapping.reverse)
+				bool value = joystick_state->second.buttons[m_mapping.id];
+				if (m_mapping.reverse)
 					value = !value;
-				button_status->setChecked(value);
+				m_button_status->setChecked(value);
 				break;
 			}
 			case MAPPING_HAT:
 			{
-				if (joystick_state->second.hats.size() <= mapping.id)
+				if (joystick_state->second.hats.size() <= m_mapping.id)
 					break;
-				bool value = joystick_state->second.hats[mapping.id] == mapping.hat;
-				if (mapping.reverse)
+				bool value = joystick_state->second.hats[m_mapping.id] == m_mapping.hat;
+				if (m_mapping.reverse)
 					value = !value;
-				button_status->setChecked(value);
+				m_button_status->setChecked(value);
 				break;
 			}
 			case MAPPING_AXIS:
 			{
-				if (joystick_state->second.axes.size() <= mapping.id)
+				if (joystick_state->second.axes.size() <= m_mapping.id)
 					break;
-				int32_t value = joystick_state->second.axes[mapping.id];
-				if (mapping.reverse)
+				int32_t value = joystick_state->second.axes[m_mapping.id];
+				if (m_mapping.reverse)
 					value = value * (-1);
-				if (flip_axis_display)
+				if (m_flip_axis_display)
 					value = value * (-1);
 				if (value > 0x7FFF)
 					value = 0x7FFF;
 				else if (value < (-0x8000))
 					value = (-0x8000);
-				axis_status->setValue(value);
+				m_axis_status->setValue(value);
 				break;
 			}
 			}
@@ -440,7 +429,7 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 {
 #define SAVE_MAPPING(name)                                            \
 	{                                                                 \
-		const sdl_mapping& m = name->get_mapping();                   \
+		const sdl_mapping& m = m_##name->get_mapping();               \
 		g_cfg_logitech_g27.name.device_type_id.set(m.device_type_id); \
 		g_cfg_logitech_g27.name.type.set(m.type);                     \
 		g_cfg_logitech_g27.name.id.set(m.id);                         \
@@ -489,11 +478,11 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 
 #undef SAVE_MAPPING
 
-	g_cfg_logitech_g27.ffb_device_type_id.set(ffb_device->get_device_type_id());
-	g_cfg_logitech_g27.led_device_type_id.set(led_device->get_device_type_id());
+	g_cfg_logitech_g27.ffb_device_type_id.set(m_ffb_device->get_device_type_id());
+	g_cfg_logitech_g27.led_device_type_id.set(m_led_device->get_device_type_id());
 
-	g_cfg_logitech_g27.enabled.set(enabled->isChecked());
-	g_cfg_logitech_g27.reverse_effects.set(reverse_effects->isChecked());
+	g_cfg_logitech_g27.enabled.set(m_enabled->isChecked());
+	g_cfg_logitech_g27.reverse_effects.set(m_reverse_effects->isChecked());
 }
 
 void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
@@ -507,7 +496,7 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                  \
 			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                      \
 			.positive_axis = false};                                                               \
-		name->set_mapping(m);                                                                      \
+		m_##name->set_mapping(m);                                                                  \
 	}
 
 	LOAD_MAPPING(steering);
@@ -551,11 +540,11 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 
 #undef LOAD_MAPPING
 
-	ffb_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.ffb_device_type_id.get()));
-	led_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.led_device_type_id.get()));
+	m_ffb_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.ffb_device_type_id.get()));
+	m_led_device->set_device_type_id(static_cast<uint32_t>(g_cfg_logitech_g27.led_device_type_id.get()));
 
-	enabled->setChecked(g_cfg_logitech_g27.enabled.get());
-	reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
+	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
+	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
 }
 
 emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWidget* parent)
@@ -606,43 +595,43 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	warning->setStyleSheet("color: red;");
 	v_layout->addWidget(warning);
 
-	enabled = new QCheckBox(QString("Enabled (requires game restart)"), this);
-	enabled->setChecked(g_cfg_logitech_g27.enabled.get());
-	v_layout->addWidget(enabled);
+	m_enabled = new QCheckBox(QString("Enabled (requires game restart)"), this);
+	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
+	v_layout->addWidget(m_enabled);
 
-	reverse_effects = new QCheckBox(QString("Reverse force feedback effects"), this);
-	reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
-	v_layout->addWidget(reverse_effects);
+	m_reverse_effects = new QCheckBox(QString("Reverse force feedback effects"), this);
+	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
+	v_layout->addWidget(m_reverse_effects);
 
-	state_text = new QLabel(QString(DEFAULT_STATUS), this);
-	v_layout->addWidget(state_text);
+	m_state_text = new QLabel(QString(DEFAULT_STATUS), this);
+	v_layout->addWidget(m_state_text);
 
-	ffb_device = new DeviceChoice(this, g_cfg_logitech_g27.ffb_device_type_id.get(), "Force Feedback Device");
-	led_device = new DeviceChoice(this, g_cfg_logitech_g27.led_device_type_id.get(), "LED Device");
+	m_ffb_device = new DeviceChoice(this, g_cfg_logitech_g27.ffb_device_type_id.get(), "Force Feedback Device");
+	m_led_device = new DeviceChoice(this, g_cfg_logitech_g27.led_device_type_id.get(), "LED Device");
 
-	mapping_scroll_area = new QScrollArea(this);
-	QWidget* mapping_widget = new QWidget(mapping_scroll_area);
+	m_mapping_scroll_area = new QScrollArea(this);
+	QWidget* mapping_widget = new QWidget(m_mapping_scroll_area);
 	QVBoxLayout* mapping_layout = new QVBoxLayout(mapping_widget);
 	mapping_widget->setLayout(mapping_layout);
-	mapping_scroll_area->setWidget(mapping_widget);
-	mapping_scroll_area->setWidgetResizable(true);
-	mapping_scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-	mapping_scroll_area->setMinimumHeight(400);
-	mapping_scroll_area->setMinimumWidth(800);
+	m_mapping_scroll_area->setWidget(mapping_widget);
+	m_mapping_scroll_area->setWidgetResizable(true);
+	m_mapping_scroll_area->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	m_mapping_scroll_area->setMinimumHeight(400);
+	m_mapping_scroll_area->setMinimumWidth(800);
 
-	v_layout->addWidget(mapping_scroll_area);
+	v_layout->addWidget(m_mapping_scroll_area);
 
-#define ADD_MAPPING_SETTING(name, is_axis, display_name, flip_axis_display)                                            \
-	{                                                                                                                  \
-		sdl_mapping m = {                                                                                              \
-			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()),                     \
-			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),                                 \
-			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                                              \
-			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                                      \
-			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                                          \
-			.positive_axis = false};                                                                                   \
-		name = new Mapping(mapping_widget, this, ffb_device, led_device, m, is_axis, display_name, flip_axis_display); \
-		mapping_layout->addWidget(name);                                                                               \
+#define ADD_MAPPING_SETTING(name, is_axis, display_name, flip_axis_display)                                                    \
+	{                                                                                                                          \
+		sdl_mapping m = {                                                                                                      \
+			.device_type_id = static_cast<uint32_t>(g_cfg_logitech_g27.name.device_type_id.get()),                             \
+			.type = static_cast<sdl_mapping_type>(g_cfg_logitech_g27.name.type.get()),                                         \
+			.id = static_cast<uint8_t>(g_cfg_logitech_g27.name.id.get()),                                                      \
+			.hat = static_cast<hat_component>(g_cfg_logitech_g27.name.hat.get()),                                              \
+			.reverse = g_cfg_logitech_g27.name.reverse.get(),                                                                  \
+			.positive_axis = false};                                                                                           \
+		m_##name = new Mapping(mapping_widget, this, m_ffb_device, m_led_device, m, is_axis, display_name, flip_axis_display); \
+		mapping_layout->addWidget(m_##name);                                                                                   \
 	}
 
 	QLabel* axis_label = new QLabel(QString("Axes:"), mapping_widget);
@@ -693,21 +682,21 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 #undef ADD_MAPPING_SETTING
 
-	v_layout->addWidget(ffb_device);
-	v_layout->addWidget(led_device);
+	v_layout->addWidget(m_ffb_device);
+	v_layout->addWidget(m_led_device);
 
 	v_layout->addWidget(buttons);
 	setLayout(v_layout);
 
-	sdl_initialized = sdl_instance::get_instance().initialize();
+	m_sdl_initialized = sdl_instance::get_instance().initialize();
 
-	if (sdl_initialized)
+	if (m_sdl_initialized)
 		get_joystick_states();
 }
 
 emulated_logitech_g27_settings_dialog::~emulated_logitech_g27_settings_dialog()
 {
-	for (auto joystick_handle = joystick_handles.begin(); joystick_handle != joystick_handles.end(); joystick_handle++)
+	for (auto joystick_handle = m_joystick_handles.begin(); joystick_handle != m_joystick_handles.end(); joystick_handle++)
 	{
 		SDL_CloseJoystick(*joystick_handle);
 	}
@@ -740,19 +729,19 @@ static inline hat_component get_sdl_hat_component(uint8_t sdl_hat)
 
 const std::map<uint32_t, joystick_state>& emulated_logitech_g27_settings_dialog::get_joystick_states()
 {
-	if (!sdl_initialized)
+	if (!m_sdl_initialized)
 	{
-		return last_joystick_states;
+		return m_last_joystick_states;
 	}
 
 	uint64_t now = SDL_GetTicks();
 
-	if (SDL_GetTicks() - last_joystick_states_update < 25)
+	if (SDL_GetTicks() - m_last_joystick_states_update < 25)
 	{
-		return last_joystick_states;
+		return m_last_joystick_states;
 	}
 
-	last_joystick_states_update = now;
+	m_last_joystick_states_update = now;
 
 	std::map<uint32_t, joystick_state> new_joystick_states;
 
@@ -819,33 +808,33 @@ const std::map<uint32_t, joystick_state>& emulated_logitech_g27_settings_dialog:
 		}
 	}
 
-	for (auto joystick_handle = joystick_handles.begin(); joystick_handle != joystick_handles.end(); joystick_handle++)
+	for (auto joystick_handle = m_joystick_handles.begin(); joystick_handle != m_joystick_handles.end(); joystick_handle++)
 	{
 		SDL_CloseJoystick(*joystick_handle);
 	}
 
-	joystick_handles = new_joystick_handles;
-	last_joystick_states = new_joystick_states;
+	m_joystick_handles = new_joystick_handles;
+	m_last_joystick_states = new_joystick_states;
 
-	return last_joystick_states;
+	return m_last_joystick_states;
 }
 
 void emulated_logitech_g27_settings_dialog::set_state_text(const char* text)
 {
-	state_text->setText(QString(text));
+	m_state_text->setText(QString(text));
 }
 
 void emulated_logitech_g27_settings_dialog::toggle_state(bool enable)
 {
 
-	int slider_position = mapping_scroll_area->verticalScrollBar()->sliderPosition();
+	int slider_position = m_mapping_scroll_area->verticalScrollBar()->sliderPosition();
 
-#define TOGGLE_STATE(name)   \
-	{                        \
-		if (enable)          \
-			name->enable();  \
-		else                 \
-			name->disable(); \
+#define TOGGLE_STATE(name)       \
+	{                            \
+		if (enable)              \
+			m_##name->enable();  \
+		else                     \
+			m_##name->disable(); \
 	}
 	TOGGLE_STATE(steering);
 	TOGGLE_STATE(throttle);
@@ -888,11 +877,11 @@ void emulated_logitech_g27_settings_dialog::toggle_state(bool enable)
 
 #undef TOGGLE_STATE
 
-	enabled->setEnabled(enable);
-	reverse_effects->setEnabled(enable);
+	m_enabled->setEnabled(enable);
+	m_reverse_effects->setEnabled(enable);
 
-	mapping_scroll_area->verticalScrollBar()->setEnabled(enable);
-	mapping_scroll_area->verticalScrollBar()->setSliderPosition(slider_position);
+	m_mapping_scroll_area->verticalScrollBar()->setEnabled(enable);
+	m_mapping_scroll_area->verticalScrollBar()->setSliderPosition(slider_position);
 }
 
 void emulated_logitech_g27_settings_dialog::enable()
