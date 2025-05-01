@@ -29,7 +29,7 @@ struct emulated_logitech_g27_mapping : cfg::node
 	cfg::_bool reverse;
 
 	emulated_logitech_g27_mapping(cfg::node* owner, std::string name, uint32_t device_type_id_def, sdl_mapping_type type_def, uint64_t id_def, hat_component hat_def, bool reverse_def)
-		: cfg::node(owner, name),
+		: cfg::node(owner, std::move(name)),
 		  device_type_id(this, "device_type_id", device_type_id_def),
 		  type(this, "type", type_def),
 		  id(this, "id", id_def),
