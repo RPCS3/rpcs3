@@ -10,17 +10,18 @@ emulated_logitech_g27_config g_cfg_logitech_g27;
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-void emulated_logitech_g27_config::fill_defaults(){
+void emulated_logitech_g27_config::fill_defaults()
+{
 	// a shifter-less g29 with a xbox 360 controller shifter place holder...
 	m_mutex.lock();
 
-	#define INIT_AXIS_MAPPING(name, device_type_id, id, reverse) \
-	{ \
-		name##_device_type_id.set(device_type_id); \
-		name##_type.set(MAPPING_AXIS); \
-		name##_id.set(id); \
-		name##_hat.set(HAT_NONE); \
-		name##_reverse.set(reverse); \
+#define INIT_AXIS_MAPPING(name, device_type_id, id, reverse) \
+	{                                                        \
+		name##_device_type_id.set(device_type_id);           \
+		name##_type.set(MAPPING_AXIS);                       \
+		name##_id.set(id);                                   \
+		name##_hat.set(HAT_NONE);                            \
+		name##_reverse.set(reverse);                         \
 	}
 
 	INIT_AXIS_MAPPING(steering, 0x046dc24f, 0, false);
@@ -28,15 +29,15 @@ void emulated_logitech_g27_config::fill_defaults(){
 	INIT_AXIS_MAPPING(brake, 0x046dc24f, 3, false);
 	INIT_AXIS_MAPPING(clutch, 0x046dc24f, 1, false);
 
-	#undef INIT_AXIS_MAPPING
+#undef INIT_AXIS_MAPPING
 
-	#define INIT_BUTTON_MAPPING(name, device_type_id, id, reverse) \
-	{ \
-		name##_device_type_id.set(device_type_id); \
-		name##_type.set(MAPPING_BUTTON); \
-		name##_id.set(id); \
-		name##_hat.set(HAT_NONE); \
-		name##_reverse.set(reverse); \
+#define INIT_BUTTON_MAPPING(name, device_type_id, id, reverse) \
+	{                                                          \
+		name##_device_type_id.set(device_type_id);             \
+		name##_type.set(MAPPING_BUTTON);                       \
+		name##_id.set(id);                                     \
+		name##_hat.set(HAT_NONE);                              \
+		name##_reverse.set(reverse);                           \
 	}
 
 	INIT_BUTTON_MAPPING(shift_up, 0x046dc24f, 4, false);
@@ -66,15 +67,15 @@ void emulated_logitech_g27_config::fill_defaults(){
 	INIT_BUTTON_MAPPING(shifter_3, 0x045e028e, 2, false);
 	INIT_BUTTON_MAPPING(shifter_4, 0x045e028e, 1, false);
 
-	#undef INIT_BUTTON_MAPPING
+#undef INIT_BUTTON_MAPPING
 
-	#define INIT_HAT_MAPPING(name, device_type_id, id, hat, reverse) \
-	{ \
-		name##_device_type_id.set(device_type_id); \
-		name##_type.set(MAPPING_HAT); \
-		name##_id.set(id); \
-		name##_hat.set(hat); \
-		name##_reverse.set(reverse); \
+#define INIT_HAT_MAPPING(name, device_type_id, id, hat, reverse) \
+	{                                                            \
+		name##_device_type_id.set(device_type_id);               \
+		name##_type.set(MAPPING_HAT);                            \
+		name##_id.set(id);                                       \
+		name##_hat.set(hat);                                     \
+		name##_reverse.set(reverse);                             \
 	}
 
 	INIT_HAT_MAPPING(up, 0x046dc24f, 0, HAT_UP, false);
@@ -86,7 +87,7 @@ void emulated_logitech_g27_config::fill_defaults(){
 	INIT_HAT_MAPPING(shifter_6, 0x045e028e, 0, HAT_DOWN, false);
 	INIT_HAT_MAPPING(shifter_r, 0x045e028e, 0, HAT_LEFT, false);
 
-	#undef INIT_HAT_MAPPING
+#undef INIT_HAT_MAPPING
 
 	reverse_effects.set(true);
 	ffb_device_type_id.set(0x046dc24f);
@@ -97,7 +98,8 @@ void emulated_logitech_g27_config::fill_defaults(){
 	m_mutex.unlock();
 }
 
-void emulated_logitech_g27_config::save(){
+void emulated_logitech_g27_config::save()
+{
 	m_mutex.lock();
 	const std::string cfg_name = fmt::format("%s%s.yml", fs::get_config_dir(true), "LogitechG27");
 	cfg_log.notice("Saving LogitechG27 config: %s", cfg_name);
@@ -112,7 +114,6 @@ void emulated_logitech_g27_config::save(){
 		cfg_log.error("Failed to save LogitechG27 config to '%s' (error=%s)", cfg_name, fs::g_tls_error);
 	}
 	m_mutex.unlock();
-
 }
 
 bool emulated_logitech_g27_config::load()
@@ -125,7 +126,7 @@ bool emulated_logitech_g27_config::load()
 
 	m_mutex.lock();
 
-	if (fs::file cfg_file{ cfg_name, fs::read })
+	if (fs::file cfg_file{cfg_name, fs::read})
 	{
 		if (const std::string content = cfg_file.to_string(); !content.empty())
 		{

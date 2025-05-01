@@ -116,8 +116,9 @@ public:
 	std::mutex thread_control_mutex;
 	bool stop_thread;
 	char thread_name[64];
-	SDL_Thread *thread = nullptr;
+	SDL_Thread* thread = nullptr;
 	void sdl_refresh();
+
 private:
 	u32 m_controller_index;
 
@@ -125,9 +126,9 @@ private:
 	bool reverse_effects;
 
 	std::mutex sdl_handles_mutex;
-	SDL_Joystick *led_joystick_handle = nullptr;
-	SDL_Haptic *haptic_handle = nullptr;
-	std::map<uint32_t, std::vector<SDL_Joystick *>> joysticks;
+	SDL_Joystick* led_joystick_handle = nullptr;
+	SDL_Haptic* haptic_handle = nullptr;
+	std::map<uint32_t, std::vector<SDL_Joystick*>> joysticks;
 	bool fixed_loop = false;
 	uint16_t wheel_range = 200;
 	logitech_g27_ffb_slot effect_slots[4];

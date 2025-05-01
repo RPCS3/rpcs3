@@ -4,19 +4,20 @@
 
 #include <mutex>
 
-struct emulated_logitech_g27_config : cfg::node {
+struct emulated_logitech_g27_config : cfg::node
+{
 	std::mutex m_mutex;
 	bool load();
 	void save();
 	void fill_defaults();
 
-	#define STR(s) #s
-	#define MAPPING_ENTRY(name) \
-		cfg::uint<0, 0xFFFFFFFF> name##_device_type_id{this, STR(name##_device_type_id)}; \
-		cfg::uint<0, 0xFFFFFFFF> name##_type{this, STR(name##_type)}; \
-		cfg::uint<0, 0xFFFFFFFFFFFFFFFF> name##_id{this, STR(name##_id)}; \
-		cfg::uint<0, 0xFFFFFFFF> name##_hat{this, STR(name##_hat)}; \
-		cfg::_bool name##_reverse{this, STR(name##_reverse)};
+#define STR(s) #s
+#define MAPPING_ENTRY(name)                                                           \
+	cfg::uint<0, 0xFFFFFFFF> name##_device_type_id{this, STR(name##_device_type_id)}; \
+	cfg::uint<0, 0xFFFFFFFF> name##_type{this, STR(name##_type)};                     \
+	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> name##_id{this, STR(name##_id)};                 \
+	cfg::uint<0, 0xFFFFFFFF> name##_hat{this, STR(name##_hat)};                       \
+	cfg::_bool name##_reverse{this, STR(name##_reverse)};
 
 	MAPPING_ENTRY(steering);
 	MAPPING_ENTRY(throttle);
@@ -57,8 +58,8 @@ struct emulated_logitech_g27_config : cfg::node {
 	MAPPING_ENTRY(shifter_6);
 	MAPPING_ENTRY(shifter_r);
 
-	#undef MAPPING_ENTRY
-	#undef STR
+#undef MAPPING_ENTRY
+#undef STR
 
 	cfg::_bool reverse_effects{this, "reverse_effects"};
 	cfg::uint<0, 0xFFFFFFFF> ffb_device_type_id{this, "ffb_device_type_id"};

@@ -22,7 +22,7 @@ add_library(rpcs3_ui STATIC
     emu_settings.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
-	emulated_logitech_g27_settings_dialog.cpp
+    emulated_logitech_g27_settings_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
     flow_layout.cpp

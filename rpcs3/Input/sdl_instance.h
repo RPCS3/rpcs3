@@ -12,6 +12,7 @@ public:
 
 	bool initialize();
 	void pump_events();
+
 private:
 	bool m_initialized = false;
 	std::mutex instance_mutex;
