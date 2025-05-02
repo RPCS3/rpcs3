@@ -604,7 +604,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	{
 		if (auto fxo = g_fxo->try_get<memory_viewer_fxo>())
 		{
-			if (this == fxo->last_opened.at(m_type))
+			if (this == fxo->last_opened[m_type])
 				fxo->last_opened.erase(m_type);
 		}
 	});
