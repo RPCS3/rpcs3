@@ -1,6 +1,6 @@
-#ifdef HAVE_SDL3
-
 #include "stdafx.h"
+
+#ifdef HAVE_SDL3
 
 #include "emulated_logitech_g27_settings_dialog.h"
 #include "Emu/Io/LogitechG27.cpp"
@@ -20,13 +20,6 @@
 LOG_CHANNEL(logitech_g27_cfg_log, "LOGIG27");
 
 static constexpr const char* DEFAULT_STATUS = " ";
-
-struct joystick_state
-{
-	std::vector<int16_t> axes;
-	std::vector<bool> buttons;
-	std::vector<hat_component> hats;
-};
 
 enum mapping_device_choice
 {
@@ -787,7 +780,7 @@ emulated_logitech_g27_settings_dialog::~emulated_logitech_g27_settings_dialog()
 	for (auto joystick_handle : m_joystick_handles)
 	{
 		if (joystick_handle)
-			SDL_CloseJoystick(joystick_handle);
+			SDL_CloseJoystick(reinterpret_cast<SDL_Joystick*>(joystick_handle));
 	}
 }
 
@@ -839,7 +832,7 @@ const std::map<uint32_t, joystick_state>& emulated_logitech_g27_settings_dialog:
 	int joystick_count;
 	SDL_JoystickID* joystick_ids = SDL_GetJoysticks(&joystick_count);
 
-	std::vector<SDL_Joystick*> new_joystick_handles;
+	std::vector<void*> new_joystick_handles;
 
 	if (joystick_ids != nullptr)
 	{
@@ -900,7 +893,7 @@ const std::map<uint32_t, joystick_state>& emulated_logitech_g27_settings_dialog:
 	for (auto joystick_handle : m_joystick_handles)
 	{
 		if (joystick_handle)
-			SDL_CloseJoystick(joystick_handle);
+			SDL_CloseJoystick(reinterpret_cast<SDL_Joystick*>(joystick_handle));
 	}
 
 	m_joystick_handles = new_joystick_handles;
@@ -966,5 +959,14 @@ void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 	m_mapping_scroll_area->verticalScrollBar()->setEnabled(enable);
 	m_mapping_scroll_area->verticalScrollBar()->setSliderPosition(slider_position);
 }
+
+#else
+
+// minimal symbols for sdl-less builds automoc
+#include "emulated_logitech_g27_settings_dialog.h"
+
+emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWidget* parent)
+	: QDialog(parent) {}
+emulated_logitech_g27_settings_dialog::~emulated_logitech_g27_settings_dialog() {};
 
 #endif

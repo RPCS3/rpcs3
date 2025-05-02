@@ -5,6 +5,7 @@
 #include <QCheckBox>
 #include <QScrollArea>
 
+#ifdef HAVE_SDL3
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -13,12 +14,18 @@
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
+#endif
 
 #include <map>
 #include <vector>
 #include <Emu/Io/LogitechG27Config.h>
 
-struct joystick_state;
+struct joystick_state
+{
+	std::vector<int16_t> axes;
+	std::vector<bool> buttons;
+	std::vector<hat_component> hats;
+};
 
 class Mapping;
 class DeviceChoice;
@@ -35,11 +42,9 @@ public:
 	void set_enable(bool enable);
 
 private:
-	void load_ui_state_from_config();
-	void save_ui_state_to_config();
-
 	std::map<uint32_t, joystick_state> m_last_joystick_states;
-	std::vector<SDL_Joystick*> m_joystick_handles;
+	// hack: need a completed dummy class when linking automoc generated with sdl-less build
+	std::vector<void*> m_joystick_handles;
 	uint64_t m_last_joystick_states_update = 0;
 	bool m_sdl_initialized = false;
 
@@ -92,4 +97,7 @@ private:
 	DeviceChoice* m_led_device = nullptr;
 
 	QScrollArea* m_mapping_scroll_area = nullptr;
+
+	void load_ui_state_from_config();
+	void save_ui_state_to_config();
 };
