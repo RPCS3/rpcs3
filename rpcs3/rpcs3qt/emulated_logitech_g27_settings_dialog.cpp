@@ -73,7 +73,6 @@ enum mapping_device_choice
 
 class DeviceChoice : public QWidget
 {
-
 public:
 	DeviceChoice(QWidget* parent, const char* name)
 		: QWidget(parent)
@@ -83,7 +82,7 @@ public:
 
 		QLabel* label = new QLabel(this);
 		label->setText(QString(name));
-		label->setMinimumWidth(500);
+		label->setMinimumWidth(400);
 		layout->addWidget(label);
 
 		m_dropdown = new QComboBox(this);
@@ -178,7 +177,6 @@ private:
 
 class Mapping : public QGroupBox
 {
-
 public:
 	Mapping(QWidget* parent, emulated_logitech_g27_settings_dialog* dialog, bool is_axis, const char* name, bool flip_axis_display)
 		: QGroupBox(parent), m_setting_dialog(dialog), m_is_axis(is_axis), m_name(name), m_flip_axis_display(flip_axis_display)

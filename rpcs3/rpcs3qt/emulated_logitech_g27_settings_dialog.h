@@ -25,6 +25,8 @@ class DeviceChoice;
 
 class emulated_logitech_g27_settings_dialog : public QDialog
 {
+	Q_OBJECT
+
 public:
 	emulated_logitech_g27_settings_dialog(QWidget* parent = nullptr);
 	~emulated_logitech_g27_settings_dialog();
