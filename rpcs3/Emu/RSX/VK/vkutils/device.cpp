@@ -150,6 +150,12 @@ namespace vk
 		// v3dv and PanVK support BC1-BC3 which is all we require, support is reported as false since not all formats are supported
 		optional_features_support.texture_compression_bc = features.textureCompressionBC
 				|| get_driver_vendor() == driver_vendor::V3DV || get_driver_vendor() == driver_vendor::PANVK;
+
+		// Texel buffer UAB is reported to the trigger for some driver crashes on NV
+		if (get_driver_vendor() == driver_vendor::NVIDIA)
+		{
+			descriptor_indexing_support.update_after_bind_mask &= ~(1ull << VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+		}
 	}
 
 	void physical_device::get_physical_device_properties(bool allow_extensions)
