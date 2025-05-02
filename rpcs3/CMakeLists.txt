@@ -67,8 +67,8 @@ if (NOT ANDROID)
         PUBLIC
             3rdparty::stblib
             3rdparty::libevdev
-        PRIVATE
             rpcs3_emu
+        PRIVATE
             rpcs3_ui
             3rdparty::discordRPC
             3rdparty::qt6
@@ -187,9 +187,7 @@ if (NOT ANDROID)
 endif()
 
 # Unit tests
-if(BUILD_RPCS3_TESTS AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    message(STATUS "FIXME: Unit tests are currently not linking with GCC")
-elseif(BUILD_RPCS3_TESTS)
+if(BUILD_RPCS3_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)
 
@@ -201,6 +199,7 @@ elseif(BUILD_RPCS3_TESTS)
         PRIVATE
             tests/test.cpp
             tests/test_fmt.cpp
+            tests/test_simple_array.cpp
     )
 
     target_link_libraries(rpcs3_test
