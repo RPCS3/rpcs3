@@ -257,6 +257,7 @@
      <addaction name="confGunCon3Act"/>
      <addaction name="confTopShotEliteAct"/>
      <addaction name="confTopShotFearmasterAct"/>
+     <addaction name="confLogitechG27Act"/>
     </widget>
     <widget class="QMenu" name="menuMice">
      <property name="title">
@@ -1364,6 +1365,11 @@
   <action name="confTopShotFearmasterAct">
    <property name="text">
     <string>Top Shot Fearmaster</string>
+   </property>
+  </action>
+  <action name="confLogitechG27Act">
+   <property name="text">
+    <string>Logitech G27 Wheel</string>
    </property>
   </action>
   <action name="actionBasic_Mouse">

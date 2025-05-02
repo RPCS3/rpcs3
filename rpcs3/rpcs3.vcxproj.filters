@@ -996,6 +996,9 @@
     <ClCompile Include="Input\sdl_pad_handler.cpp">
       <Filter>Io\SDL</Filter>
     </ClCompile>
+    <ClCompile Include="Input\sdl_instance.cpp">
+      <Filter>Io\SDL</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\config_checker.cpp">
       <Filter>Gui\log</Filter>
     </ClCompile>
@@ -1138,6 +1141,15 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_emulated_pad_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\emulated_logitech_g27_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_emulated_logitech_g27_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_emulated_logitech_g27_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\localized_emu.cpp">
@@ -1350,6 +1362,9 @@
       <Filter>rpcs3</Filter>
     </ClInclude>
     <ClInclude Include="Input\sdl_pad_handler.h">
+      <Filter>Io\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_instance.h">
       <Filter>Io\SDL</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
@@ -1733,6 +1748,9 @@
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\emulated_pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\emulated_logitech_g27_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\midi_creator.h">
