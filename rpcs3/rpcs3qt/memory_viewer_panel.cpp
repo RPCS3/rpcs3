@@ -26,6 +26,7 @@
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "debugger_frame.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -597,14 +598,14 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	}
 
 	auto& fxo = g_fxo->get<memory_viewer_fxo>();
-	fxo.last_opened = this;
+	fxo.last_opened[m_type] = this;
 
 	connect(this, &memory_viewer_panel::destroyed, this, [this]()
 	{
 		if (auto fxo = g_fxo->try_get<memory_viewer_fxo>())
 		{
-			if (this == fxo->last_opened)
-				fxo->last_opened = nullptr;
+			if (this == fxo->last_opened[m_type])
+				fxo->last_opened.erase(m_type);
 		}
 	});
 }
@@ -1263,25 +1264,42 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	});
 }
 
-void memory_viewer_panel::ShowAtPC(u32 pc)
+void memory_viewer_panel::ShowAtPC(u32 pc, std::function<cpu_thread*()> func)
 {
 	if (Emu.IsStopped())
 		return;
 
+	cpu_thread* cpu = func ? func() : nullptr;
+	thread_class type = cpu ? cpu->get_class() : thread_class::ppu;
+
+	if (type == thread_class::spu)
+	{
+		idm::make<memory_viewer_handle>(nullptr, nullptr, pc, std::move(func));
+		return;
+	}
+
 	if (const auto* fxo = g_fxo->try_get<memory_viewer_fxo>())
 	{
-		if (auto* panel = fxo->last_opened)
+		auto it = fxo->last_opened.find(type);
+
+		if (it != fxo->last_opened.end())
 		{
-			panel->SetPC(pc);
-			panel->raise();
-			panel->scroll(0);
-			if (!panel->isVisible())
+			memory_viewer_panel* panel = it->second;
+
+			if (panel)
 			{
-				panel->show();
+				panel->SetPC(pc);
+				panel->scroll(0);
+
+				if (!panel->isVisible())
+					panel->show();
+				
+				panel->raise();
+
+				return;
 			}
-			return;
 		}
 	}
 
-	idm::make<memory_viewer_handle>(nullptr, nullptr, pc);
+	idm::make<memory_viewer_handle>(nullptr, nullptr, pc, std::move(func));
 }

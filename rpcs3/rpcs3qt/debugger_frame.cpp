@@ -1738,5 +1738,5 @@ void debugger_frame::RegsShowMemoryViewerAction()
 		return;
 	}
 
-	memory_viewer_panel::ShowAtPC(static_cast<u32>(pc));
+	memory_viewer_panel::ShowAtPC(static_cast<u32>(pc), make_check_cpu(get_cpu()));
 }
