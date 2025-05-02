@@ -3,7 +3,7 @@
 #ifdef HAVE_SDL3
 
 #include "emulated_logitech_g27_settings_dialog.h"
-#include "Emu/Io/LogitechG27.cpp"
+#include "Emu/Io/LogitechG27.h"
 #include "Input/sdl_instance.h"
 
 #include <QDialogButtonBox>
