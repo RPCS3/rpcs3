@@ -2908,7 +2908,7 @@ void main_window::CreateConnects()
 #else
 	connect(ui->confLogitechG27Act, &QAction::triggered, this, [this]
 	{
-		emulated_logitech_g27_settings_dialog *dlg = new emulated_logitech_g27_settings_dialog(this);
+		emulated_logitech_g27_settings_dialog* dlg = new emulated_logitech_g27_settings_dialog(this);
 		dlg->show();
 	});
 #endif
