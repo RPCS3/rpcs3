@@ -41,10 +41,8 @@ struct emulated_logitech_g27_mapping : cfg::node
 
 struct emulated_logitech_g27_config : cfg::node
 {
+public:
 	std::mutex m_mutex;
-	bool load();
-	void save();
-	void from_default() override;
 
 	// TODO these defaults are for a shifter-less G29 + a xbox controller for shifter testing, perhaps find a new default
 
@@ -92,6 +90,15 @@ struct emulated_logitech_g27_config : cfg::node
 	cfg::uint<0, 0xFFFFFFFF> led_device_type_id{this, "led_device_type_id", 0x046dc24f};
 
 	cfg::_bool enabled{this, "enabled", false};
+
+	emulated_logitech_g27_config();
+
+	bool load();
+	void save(bool lock_mutex = true);
+	void reset();
+
+private:
+	const std::string m_path;
 };
 
 extern emulated_logitech_g27_config g_cfg_logitech_g27;

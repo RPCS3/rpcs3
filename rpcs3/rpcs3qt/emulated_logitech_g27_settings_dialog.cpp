@@ -668,7 +668,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 			{
 				if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all?")) != QMessageBox::Yes)
 					return;
-				g_cfg_logitech_g27.from_default();
+				g_cfg_logitech_g27.reset();
 				load_ui_state_from_config();
 				g_cfg_logitech_g27.save();
 			}
