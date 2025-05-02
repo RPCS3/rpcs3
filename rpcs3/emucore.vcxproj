@@ -579,6 +579,7 @@
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
     <ClInclude Include="Emu\Io\emulated_pad_config.h" />
+    <ClInclude Include="Emu\Io\emulated_logitech_g27_settings_dialog.h" />
     <ClInclude Include="Emu\Io\evdev_gun_handler.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
@@ -610,6 +611,8 @@
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\usio.h" />
     <ClInclude Include="Emu\Io\usio_config.h" />
+    <ClInclude Include="Emu\Io\LogitechG27.h" />
+    <ClInclude Include="Emu\Io\LogitechG27Config.h" />
     <ClInclude Include="Emu\IPC_config.h" />
     <ClInclude Include="Emu\IPC_socket.h" />
     <ClInclude Include="Emu\localized_string.h" />
