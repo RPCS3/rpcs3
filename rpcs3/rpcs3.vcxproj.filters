@@ -996,6 +996,9 @@
     <ClCompile Include="Input\sdl_pad_handler.cpp">
       <Filter>Io\SDL</Filter>
     </ClCompile>
+    <ClCompile Include="Input\sdl_instance.cpp">
+      <Filter>Io\SDL</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\config_checker.cpp">
       <Filter>Gui\log</Filter>
     </ClCompile>
@@ -1359,6 +1362,9 @@
       <Filter>rpcs3</Filter>
     </ClInclude>
     <ClInclude Include="Input\sdl_pad_handler.h">
+      <Filter>Io\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_instance.h">
       <Filter>Io\SDL</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
