@@ -1140,6 +1140,15 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_emulated_pad_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\emulated_logitech_g27_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_emulated_logitech_g27_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_emulated_logitech_g27_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\localized_emu.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
@@ -1733,6 +1742,9 @@
       <Filter>Gui\dev tools</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\emulated_pad_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\emulated_logitech_g27_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\midi_creator.h">
