@@ -1,11 +1,12 @@
 #pragma once
 
+#ifdef HAVE_SDL3
+
 #include <QDialog>
 #include <QLabel>
 #include <QCheckBox>
 #include <QScrollArea>
 
-#ifdef HAVE_SDL3
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -14,7 +15,6 @@
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
-#endif
 
 #include <map>
 #include <vector>
@@ -22,7 +22,7 @@
 
 struct joystick_state
 {
-	std::vector<int16_t> axes;
+	std::vector<s16> axes;
 	std::vector<bool> buttons;
 	std::vector<hat_component> hats;
 };
@@ -36,15 +36,17 @@ class emulated_logitech_g27_settings_dialog : public QDialog
 
 public:
 	emulated_logitech_g27_settings_dialog(QWidget* parent = nullptr);
-	~emulated_logitech_g27_settings_dialog();
-	void set_state_text(const char*);
-	const std::map<uint32_t, joystick_state>& get_joystick_states();
+	virtual ~emulated_logitech_g27_settings_dialog();
+	void set_state_text(const QString& text);
+	const std::map<u32, joystick_state>& get_joystick_states();
 	void set_enable(bool enable);
 
 private:
-	std::map<uint32_t, joystick_state> m_last_joystick_states;
-	// hack: need a completed dummy class when linking automoc generated with sdl-less build
-	std::vector<void*> m_joystick_handles;
+	void load_ui_state_from_config();
+	void save_ui_state_to_config();
+
+	std::map<u32, joystick_state> m_last_joystick_states;
+	std::vector<SDL_Joystick*> m_joystick_handles;
 	uint64_t m_last_joystick_states_update = 0;
 	bool m_sdl_initialized = false;
 
@@ -97,7 +99,6 @@ private:
 	DeviceChoice* m_led_device = nullptr;
 
 	QScrollArea* m_mapping_scroll_area = nullptr;
-
-	void load_ui_state_from_config();
-	void save_ui_state_to_config();
 };
+
+#endif
