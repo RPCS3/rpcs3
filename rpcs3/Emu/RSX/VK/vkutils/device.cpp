@@ -151,9 +151,12 @@ namespace vk
 		optional_features_support.texture_compression_bc = features.textureCompressionBC
 				|| get_driver_vendor() == driver_vendor::V3DV || get_driver_vendor() == driver_vendor::PANVK;
 
-		// Texel buffer UAB is reported to the trigger for some driver crashes on NV
-		if (get_driver_vendor() == driver_vendor::NVIDIA)
+		// Texel buffer UAB is reported to the trigger for some driver crashes on older NV cards
+		if (get_driver_vendor() == driver_vendor::NVIDIA &&
+			get_chip_class() >= chip_class::NV_kepler &&
+			get_chip_class() <= chip_class::NV_pascal)
 		{
+			// UBOs are unsupported on these cards anyway, disable texel buffers as well
 			descriptor_indexing_support.update_after_bind_mask &= ~(1ull << VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
 		}
 	}
