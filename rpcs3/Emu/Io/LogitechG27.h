@@ -28,7 +28,10 @@ struct logitech_g27_ffb_slot
 	logitech_g27_ffb_state state = logitech_g27_ffb_state::inactive;
 	u64 last_update = 0;
 	SDL_HapticEffect last_effect {};
-	s32 effect_id = -1;
+
+	// TODO switch to SDL_HapticEffectID when it becomes available in a future SDL release
+	// Match the return of SDL_CreateHapticEffect for now
+	int effect_id = -1;
 };
 
 struct sdl_mapping
@@ -113,7 +116,9 @@ private:
 	u16 m_wheel_range = 200;
 	std::array<logitech_g27_ffb_slot, 4> m_effect_slots {};
 	SDL_HapticEffect m_default_spring_effect {};
-	s32 m_default_spring_effect_id = -1;
+
+	// TODO switch to SDL_HapticEffectID when it becomes available in a future SDL release
+	int m_default_spring_effect_id = -1;
 
 	bool m_enabled = false;
 
