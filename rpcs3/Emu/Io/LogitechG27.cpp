@@ -309,11 +309,11 @@ void usb_device_logitech_g27::sdl_refresh()
 				slot.effect_id = -1;
 			}
 			m_default_spring_effect_id = -1;
-			m_led_joystick_handle = new_led_joystick_handle;
 			m_haptic_handle = new_haptic_handle;
 		}
 		if (led_joystick_changed)
 		{
+			SDL_SetJoystickLED(m_led_joystick_handle, 0, 0, 0);
 			m_led_joystick_handle = new_led_joystick_handle;
 		}
 	}
@@ -1456,7 +1456,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				{
 					new_led_level += (buf[1] & (1 << i)) ? 1 : 0;
 				}
-				const u8 intensity = new_led_level * 255 / 7;
+				const u8 intensity = new_led_level * 255 / 8;
 				SDL_SetJoystickLED(m_led_joystick_handle, intensity, intensity, intensity);
 				break;
 			}
