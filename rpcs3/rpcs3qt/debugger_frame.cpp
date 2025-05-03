@@ -32,6 +32,8 @@
 #include <QTimer>
 #include <QCheckBox>
 #include <QMessageBox>
+#include <QMenu>
+#include <QTextDocumentFragment>
 #include <algorithm>
 #include <functional>
 
@@ -125,7 +127,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	m_regs = new QPlainTextEdit(this);
 	m_regs->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-
+	m_regs->setContextMenuPolicy(Qt::CustomContextMenu);
+	
 	m_debugger_list->setFont(m_mono);
 	m_misc_state->setFont(m_mono);
 	m_regs->setFont(m_mono);
@@ -157,6 +160,8 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QWidget* body = new QWidget(this);
 	body->setLayout(vbox_p_main);
 	setWidget(body);
+
+	connect(m_regs, &QPlainTextEdit::customContextMenuRequested, this, &debugger_frame::OnRegsContextMenu);
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
 	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]() { ShowPC(true); });
@@ -1701,4 +1706,37 @@ void debugger_frame::EnableButtons(bool enable)
 	m_btn_step->setEnabled(step);
 	m_btn_step_over->setEnabled(step);
 	m_btn_run->setEnabled(enable);
+}
+
+void debugger_frame::OnRegsContextMenu(const QPoint& pos)
+{
+	QMenu* menu = m_regs->createStandardContextMenu();
+	QAction* memory_viewer_action = new QAction(tr("Show in Memory Viewer"), menu);
+
+	connect(memory_viewer_action, &QAction::triggered, this, &debugger_frame::RegsShowMemoryViewerAction);
+
+	menu->addSeparator();
+	menu->addAction(memory_viewer_action);
+	menu->exec(m_regs->mapToGlobal(pos));
+}
+
+void debugger_frame::RegsShowMemoryViewerAction()
+{
+	const QTextCursor cursor = m_regs->textCursor();
+	if (!cursor.hasSelection())
+	{
+		QMessageBox::warning(this, tr("No Selection"), tr("Please select a hex value first."));
+		return;
+	}
+
+	const QTextDocumentFragment frag(cursor);
+	const QString selected = frag.toPlainText().trimmed();
+	u64 pc = 0;
+	if (!parse_hex_qstring(selected, &pc))
+	{
+		QMessageBox::critical(this, tr("Invalid Hex"), tr("“%0” is not a valid 32-bit hex value.").arg(selected));
+		return;
+	}
+
+	memory_viewer_panel::ShowAtPC(static_cast<u32>(pc), make_check_cpu(get_cpu()));
 }

@@ -10,6 +10,7 @@
 #include <QFontDatabase>
 
 #include <string>
+#include <map>
 
 class QLineEdit;
 class QCheckBox;
@@ -54,6 +55,8 @@ class memory_viewer_panel final : public QDialog
 public:
 	memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
 	~memory_viewer_panel();
+
+	static void ShowAtPC(u32 pc, std::function<cpu_thread*()> func = nullptr);
 
 	enum class color_format : int
 	{
@@ -136,4 +139,13 @@ struct memory_viewer_handle
 
 private:
 	const std::add_pointer_t<memory_viewer_panel> m_mvp;
+};
+
+struct memory_viewer_fxo
+{
+	std::map<thread_class, memory_viewer_panel*> last_opened;
+
+	memory_viewer_fxo() = default;
+	memory_viewer_fxo(const memory_viewer_fxo&) = delete;
+	memory_viewer_fxo& operator=(const memory_viewer_fxo&) = delete;
 };

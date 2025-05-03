@@ -137,9 +137,11 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void OnSelectUnit();
 	void OnSelectSPUDisassembler();
+	void OnRegsContextMenu(const QPoint& pos);
 	void ShowPC(bool user_requested = false);
 	void EnableUpdateTimer(bool enable) const;
 	void RunBtnPress();
+	void RegsShowMemoryViewerAction();
 };
 
 Q_DECLARE_METATYPE(u32)

@@ -9,6 +9,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QSpinBox>
@@ -25,6 +26,7 @@
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "debugger_frame.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -588,6 +590,24 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 		}
 
 		idm::remove_verify<memory_viewer_handle>(id, handle_ptr);
+	});
+
+	if (!g_fxo->try_get<memory_viewer_fxo>())
+	{
+		g_fxo->init<memory_viewer_fxo>();
+	}
+
+	auto& fxo = g_fxo->get<memory_viewer_fxo>();
+	fxo.last_opened[m_type] = this;
+
+	connect(this, &memory_viewer_panel::destroyed, this, [this]()
+	{
+		if (auto fxo = g_fxo->try_get<memory_viewer_fxo>())
+		{
+			auto it = fxo->last_opened.find(m_type);
+			if (it != fxo->last_opened.end() && it->second == this)
+				fxo->last_opened.erase(it);
+		}
 	});
 }
 
@@ -1243,4 +1263,44 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		// sizeHint() evaluates properly after events have been processed
 		f_image_viewer->setFixedSize(f_image_viewer->sizeHint());
 	});
+}
+
+void memory_viewer_panel::ShowAtPC(u32 pc, std::function<cpu_thread*()> func)
+{
+	if (Emu.IsStopped())
+		return;
+
+	cpu_thread* cpu = func ? func() : nullptr;
+	thread_class type = cpu ? cpu->get_class() : thread_class::ppu;
+
+	if (type == thread_class::spu)
+	{
+		idm::make<memory_viewer_handle>(nullptr, nullptr, pc, std::move(func));
+		return;
+	}
+
+	if (const auto* fxo = g_fxo->try_get<memory_viewer_fxo>())
+	{
+		auto it = fxo->last_opened.find(type);
+
+		if (it != fxo->last_opened.end())
+		{
+			memory_viewer_panel* panel = it->second;
+
+			if (panel)
+			{
+				panel->SetPC(pc);
+				panel->scroll(0);
+
+				if (!panel->isVisible())
+					panel->show();
+				
+				panel->raise();
+
+				return;
+			}
+		}
+	}
+
+	idm::make<memory_viewer_handle>(nullptr, nullptr, pc, std::move(func));
 }

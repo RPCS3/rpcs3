@@ -69,3 +69,23 @@ inline QString normalize_hex_qstring(const QString& input)
 		s.chop(1);
 	return s;
 }
+
+inline bool parse_hex_qstring(const QString& input, u64* result, int max_bits = 32)
+{
+	QString s = input;
+	int pos = 0;
+	const HexValidator validator(nullptr, max_bits);
+	const QValidator::State st = validator.validate(s, pos);
+
+	if (st != QValidator::Acceptable)
+		return false;
+
+	const QString norm = normalize_hex_qstring(input);
+	bool ok = false;
+	const quint64 value = norm.toULongLong(&ok, 16);
+
+	if (ok && result)
+		*result = static_cast<u64>(value);
+
+	return ok;
+}

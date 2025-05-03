@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 
 #include "cheat_manager.h"
+#include "memory_viewer_panel.h"
 
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
@@ -829,6 +830,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		QMenu* menu = new QMenu();
 
 		QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
+		QAction* show_in_mem_viewer = new QAction(tr("Show in Memory Viewer"), menu);
 
 		const u32 offset       = offsets_found[current_row];
 		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
@@ -849,7 +851,13 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			update_cheat_list();
 		});
 
+		connect(show_in_mem_viewer, &QAction::triggered, this, [offset]()
+		{
+			memory_viewer_panel::ShowAtPC(offset);
+		});
+
 		menu->addAction(add_to_cheat_list);
+		menu->addAction(show_in_mem_viewer);
 		menu->exec(globalPos);
 	});
 
