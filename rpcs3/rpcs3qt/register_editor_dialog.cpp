@@ -62,7 +62,7 @@ enum registers : int
 register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_disasm(_disasm)
-	, m_get_cpu(std::move(func))
+	, m_get_cpu(func ? std::move(func) : std::function<cpu_thread*()>(FN(nullptr)))
 {
 	setWindowTitle(tr("Edit registers"));
 	setAttribute(Qt::WA_DeleteOnClose);
