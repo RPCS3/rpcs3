@@ -33,6 +33,8 @@ option(USE_SYSTEM_CURL "Prefer system Curl instead of the prebuild one" ON)
 option(USE_SYSTEM_OPENCV "Prefer system OpenCV instead of the builtin one" ON)
 option(HAS_MEMORY_BREAKPOINTS "Add support for memory breakpoints to the interpreter" OFF)
 option(USE_LTO "Use LTO for building" ON)
+option(BUILD_RPCS3_TESTS "Build RPCS3 unit tests." OFF)
+option(RUN_RPCS3_TESTS "Run RPCS3 unit tests. Requires BUILD_RPCS3_TESTS" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
 

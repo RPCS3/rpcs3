@@ -39,11 +39,15 @@ std::string get_file_extension(const std::string& file_path);
 
 namespace fmt
 {
-	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
+	// Replaces all occurrences of 'from' with 'to' until 'count' substrings were replaced.
+	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = umax);
 
 	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string_view, std::string> (&list)[list_size])
 	{
+		if constexpr (list_size == 0)
+			return src;
+
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
 			for (usz i = 0; i < list_size; ++i)
@@ -71,6 +75,9 @@ namespace fmt
 	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string_view, std::function<std::string()>> (&list)[list_size])
 	{
+		if constexpr (list_size == 0)
+			return src;
+
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
 			for (usz i = 0; i < list_size; ++i)
@@ -99,6 +106,9 @@ namespace fmt
 	static inline
 	std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
 	{
+		if (list.empty())
+			return src;
+
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
 			for (usz i = 0; i < list.size(); ++i)
@@ -123,9 +133,16 @@ namespace fmt
 		return src;
 	}
 
+	// Splits the string into a vector of strings using the separators. The vector may contain empty strings unless is_skip_empty is true.
 	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
+
+	// Removes all preceding and trailing characters specified by 'values' from 'source'.
 	std::string trim(const std::string& source, std::string_view values = " \t");
+
+	// Removes all preceding characters specified by 'values' from 'source'.
 	std::string trim_front(const std::string& source, std::string_view values = " \t");
+
+	// Removes all trailing characters specified by 'values' from 'source'.
 	void trim_back(std::string& source, std::string_view values = " \t");
 
 	template <typename T>
@@ -175,12 +192,14 @@ namespace fmt
 		return result;
 	}
 
+	// Returns the string transformed to uppercase
 	std::string to_upper(std::string_view string);
+
+	// Returns the string transformed to lowercase
 	std::string to_lower(std::string_view string);
 
+	// Returns the string shortened to length
 	std::string truncate(std::string_view src, usz length);
-
-	bool match(const std::string& source, const std::string& mask);
 
 	struct buf_to_hexstring
 	{

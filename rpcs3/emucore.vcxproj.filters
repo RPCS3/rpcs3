@@ -945,6 +945,12 @@
     <ClCompile Include="Emu\Io\Buzz.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\LogitechG27.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\LogitechG27Config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\usio.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -1083,7 +1089,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="stb_image.cpp" />
+    <ClCompile Include="Emu\stb_image.cpp" />
     <ClCompile Include="Emu\RSX\Program\FragmentProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
@@ -1356,6 +1362,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2157,6 +2166,12 @@
     <ClInclude Include="Emu\Io\Buzz.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\LogitechG27.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\LogitechG27Config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\usio.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2724,6 +2739,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\evdev_gun_handler.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

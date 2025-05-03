@@ -22,6 +22,7 @@ add_library(rpcs3_ui STATIC
     emu_settings.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
+    emulated_logitech_g27_settings_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
     flow_layout.cpp
@@ -131,6 +132,37 @@ add_library(rpcs3_ui STATIC
     shortcut_dialog.ui
     welcome_dialog.ui
 
+    ../display_sleep_control.cpp
+    ../headless_application.cpp
+    ../main_application.cpp
+    ../module_verifier.cpp
+    ../rpcs3.cpp
+    ../rpcs3_version.cpp
+    ../stdafx.cpp
+
+    ../Input/basic_keyboard_handler.cpp
+    ../Input/basic_mouse_handler.cpp
+    ../Input/ds3_pad_handler.cpp
+    ../Input/ds4_pad_handler.cpp
+    ../Input/dualsense_pad_handler.cpp
+    ../Input/evdev_joystick_handler.cpp
+    ../Input/gui_pad_thread.cpp
+    ../Input/hid_pad_handler.cpp
+    ../Input/keyboard_pad_handler.cpp
+    ../Input/mm_joystick_handler.cpp
+    ../Input/pad_thread.cpp
+    ../Input/product_info.cpp
+    ../Input/ps_move_calibration.cpp
+    ../Input/ps_move_config.cpp
+    ../Input/ps_move_handler.cpp
+    ../Input/ps_move_tracker.cpp
+    ../Input/raw_mouse_config.cpp
+    ../Input/raw_mouse_handler.cpp
+    ../Input/sdl_pad_handler.cpp
+    ../Input/sdl_instance.cpp
+    ../Input/skateboard_pad_handler.cpp
+    ../Input/xinput_pad_handler.cpp
+
     "../resources.qrc"
 )
 
@@ -157,20 +189,20 @@ target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC
+        rpcs3_emu
         3rdparty::qt6
         3rdparty::yaml-cpp
-
-    PRIVATE
-        rpcs3_emu
         3rdparty::zlib
-        3rdparty::pugixml
         3rdparty::discordRPC
         3rdparty::hidapi
         3rdparty::libusb
-        3rdparty::libpng
-        3rdparty::7zip
         3rdparty::wolfssl
         3rdparty::libcurl
         3rdparty::opencv
         3rdparty::fusion
+
+    PRIVATE
+        3rdparty::pugixml
+        3rdparty::libpng
+        3rdparty::7zip
         3rdparty::rtmidi)

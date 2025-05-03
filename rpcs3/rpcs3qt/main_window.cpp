@@ -38,6 +38,7 @@
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
+#include "emulated_logitech_g27_settings_dialog.h"
 #include "basic_mouse_settings_dialog.h"
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
@@ -2901,6 +2902,16 @@ void main_window::CreateConnects()
 		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::topshotfearmaster, this);
 		dlg->show();
 	});
+
+#ifndef HAVE_SDL3
+	ui->confLogitechG27Act->setVisible(false);
+#else
+	connect(ui->confLogitechG27Act, &QAction::triggered, this, [this]
+	{
+		emulated_logitech_g27_settings_dialog* dlg = new emulated_logitech_g27_settings_dialog(this);
+		dlg->show();
+	});
+#endif
 
 	connect(ui->actionBasic_Mouse, &QAction::triggered, this, [this]
 	{

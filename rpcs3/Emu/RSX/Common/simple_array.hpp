@@ -23,9 +23,9 @@ namespace rsx
 		Ty* _data = _local_capacity ? reinterpret_cast<Ty*>(_local_storage) : nullptr;
 		u32 _size = 0;
 
-		inline u64 offset(const_iterator pos)
+		inline u32 offset(const_iterator pos)
 		{
-			return (_data) ? u64(pos - _data) : 0ull;
+			return (_data) ? u32(pos - _data) : 0u;
 		}
 
 		bool is_local_storage() const

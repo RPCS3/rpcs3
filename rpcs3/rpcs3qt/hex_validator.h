@@ -44,7 +44,7 @@ public:
 		if (!ok)
 			return QValidator::Invalid;
 
-		if (m_max_bits < 64) 
+		if (m_max_bits < 64)
 		{
 			const qulonglong max_val = (qulonglong(1) << m_max_bits) - 1;
 			if (value > max_val)
