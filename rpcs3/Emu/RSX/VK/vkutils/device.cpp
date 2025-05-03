@@ -158,13 +158,46 @@ namespace vk
 		}
 	}
 
-	void physical_device::get_physical_device_properties(bool allow_extensions)
+	void physical_device::get_physical_device_properties_0(bool allow_extensions)
 	{
+		// Core properties only
 		vkGetPhysicalDeviceMemoryProperties(dev, &memory_properties);
+		vkGetPhysicalDeviceProperties(dev, &props);
 
 		if (!allow_extensions)
 		{
-			vkGetPhysicalDeviceProperties(dev, &props);
+			return;
+		}
+
+		// Try to query driver properties if possible
+		supported_extensions instance_extensions(supported_extensions::instance);
+		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
+
+		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) ||
+			!device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+		{
+			return;
+		}
+
+		VkPhysicalDeviceProperties2KHR properties2;
+		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+		properties2.pNext = nullptr;
+
+		driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+		driver_properties.pNext = properties2.pNext;
+		properties2.pNext = &driver_properties;
+
+		auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
+		ensure(_vkGetPhysicalDeviceProperties2KHR);
+
+		_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+	}
+
+	void physical_device::get_physical_device_properties_1(bool allow_extensions)
+	{
+		// Extended properties. Call after checking for features
+		if (!allow_extensions)
+		{
 			return;
 		}
 
@@ -173,67 +206,58 @@ namespace vk
 
 		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 		{
-			vkGetPhysicalDeviceProperties(dev, &props);
+			return;
 		}
-		else
+
+		VkPhysicalDeviceProperties2KHR properties2;
+		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+		properties2.pNext = nullptr;
+
+		VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
+		VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
+
+		if (descriptor_indexing_support)
 		{
-			VkPhysicalDeviceProperties2KHR properties2;
-			properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-			properties2.pNext = nullptr;
+			descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+			descriptor_indexing_props.pNext = properties2.pNext;
+			properties2.pNext = &descriptor_indexing_props;
+		}
 
-			VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
-			VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
+		if (multidraw_support.supported)
+		{
+			multidraw_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT;
+			multidraw_props.pNext = properties2.pNext;
+			properties2.pNext = &multidraw_props;
+		}
 
-			if (descriptor_indexing_support)
+		auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
+		ensure(_vkGetPhysicalDeviceProperties2KHR);
+
+		_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+		props = properties2.properties;
+
+		if (descriptor_indexing_support)
+		{
+			if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 800'000)
 			{
-				descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
-				descriptor_indexing_props.pNext = properties2.pNext;
-				properties2.pNext = &descriptor_indexing_props;
+				rsx_log.error("Physical device does not support enough descriptors for deferred updates to work effectively. Deferred updates are disabled.");
+				descriptor_indexing_support.update_after_bind_mask = 0;
 			}
-
-			if (multidraw_support.supported)
+			else if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 2'000'000)
 			{
-				multidraw_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_PROPERTIES_EXT;
-				multidraw_props.pNext = properties2.pNext;
-				properties2.pNext = &multidraw_props;
+				rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
+				descriptor_max_draw_calls = 8192;
 			}
+		}
 
-			if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+		if (multidraw_support.supported)
+		{
+			multidraw_support.max_batch_size = multidraw_props.maxMultiDrawCount;
+
+			if (!multidraw_props.maxMultiDrawCount)
 			{
-				driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
-				driver_properties.pNext = properties2.pNext;
-				properties2.pNext = &driver_properties;
-			}
-
-			auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
-			ensure(_vkGetPhysicalDeviceProperties2KHR);
-
-			_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
-			props = properties2.properties;
-
-			if (descriptor_indexing_support)
-			{
-				if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 800'000)
-				{
-					rsx_log.error("Physical device does not support enough descriptors for deferred updates to work effectively. Deferred updates are disabled.");
-					descriptor_indexing_support.update_after_bind_mask = 0;
-				}
-				else if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 2'000'000)
-				{
-					rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
-					descriptor_max_draw_calls = 8192;
-				}
-			}
-
-			if (multidraw_support.supported)
-			{
-				multidraw_support.max_batch_size = multidraw_props.maxMultiDrawCount;
-
-				if (!multidraw_props.maxMultiDrawCount)
-				{
-					rsx_log.error("Physical device reports 0 support maxMultiDraw count. Multidraw support will be disabled.");
-					multidraw_support.supported = false;
-				}
+				rsx_log.error("Physical device reports 0 support maxMultiDraw count. Multidraw support will be disabled.");
+				multidraw_support.supported = false;
 			}
 		}
 	}
@@ -243,8 +267,9 @@ namespace vk
 		dev    = pdev;
 		parent = context;
 
+		get_physical_device_properties_0(allow_extensions);
 		get_physical_device_features(allow_extensions);
-		get_physical_device_properties(allow_extensions);
+		get_physical_device_properties_1(allow_extensions);
 
 		rsx_log.always()("Found Vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
