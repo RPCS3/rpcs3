@@ -384,7 +384,7 @@ public:
 template <typename T>
 class lf_queue final
 {
-public:
+private:
 	struct fat_ptr
 	{
 		u64 ptr{};
@@ -392,7 +392,6 @@ public:
 		u32 reserved{};
 	};
 
-private:
 	atomic_t<fat_ptr> m_head{fat_ptr{}};
 
 	lf_queue_item<T>* load(fat_ptr value) const noexcept
@@ -439,8 +438,7 @@ public:
 			return *this;
 		}
 
-		delete load(m_head);
-		m_head.release(other.m_head.exchange(fat_ptr{}));
+		delete load(m_head.exchange(other.m_head.exchange(fat_ptr{})));
 		return *this;
 	}
 
@@ -453,8 +451,13 @@ public:
 	{
 		if (!operator bool())
 		{
-			utils::bless<atomic_t<u32>>(&m_head.raw().is_non_null)->wait(0);
+			get_wait_atomic().wait(0);
 		}
+	}
+
+	atomic_t<u32> &get_wait_atomic()
+	{
+		return *utils::bless<atomic_t<u32>>(&m_head.raw().is_non_null);
 	}
 
 	const volatile void* observe() const noexcept
@@ -491,7 +494,7 @@ public:
 	{
 		if (force || operator bool())
 		{
-			utils::bless<atomic_t<u32>>(&m_head.raw().is_non_null)->notify_one();
+			get_wait_atomic().notify_one();
 		}
 	}
 
