@@ -324,6 +324,12 @@ void VKGSRender::load_texture_env()
 					// Most PS3-like formats can be linearly filtered without problem
 					can_sample_linear = true;
 				}
+				else if (sampler_state->format_class != rsx::classify_format(texture_format) &&
+					(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
+				{
+					// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking
+					can_sample_linear = false;
+				}
 				else
 				{
 					// Not all GPUs support linear filtering of depth formats
