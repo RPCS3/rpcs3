@@ -207,7 +207,7 @@ namespace atomic_wait
 			static_assert(Index < Max);
 			static_assert(sizeof(var) == sizeof(uptr) * 2);
 
-			m_info[Index].data = reinterpret_cast<char*>(&var) + offsetof(typename lf_queue<T2>::fat_ptr, is_non_null);
+			m_info[Index].data = std::bit_cast<char*>(&var.get_wait_atomic().raw());
 			m_info[Index].old = 0;
 		}
 
@@ -217,7 +217,7 @@ namespace atomic_wait
 			static_assert(Index < Max);
 			static_assert(sizeof(var) == sizeof(uptr) * 2);
 
-			m_info[Index].data = reinterpret_cast<char*>(&var) + offsetof(typename stx::atomic_ptr<T2>::fat_ptr, is_non_null);
+			m_info[Index].data = std::bit_cast<char*>(&var.get_wait_atomic().raw());
 			m_info[Index].old = 0;
 		}
 
