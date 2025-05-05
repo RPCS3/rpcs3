@@ -34,10 +34,12 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 	}
 
 	m_default_spring_effect.type = SDL_HAPTIC_SPRING;
+
+	// ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
 	m_default_spring_effect.condition.direction = SDL_HapticDirection
 	{
-		.type = SDL_HAPTIC_POLAR,
-		.dir = {27000, 0}
+		.type = SDL_HAPTIC_STEERING_AXIS,
+		.dir = {0, 0, 0}
 	};
 	m_default_spring_effect.condition.length = SDL_HAPTIC_INFINITY;
 	for (int i = 0; i < 1 /*3*/; i++)
@@ -291,12 +293,6 @@ void usb_device_logitech_g27::sdl_refresh()
 	if (joysticks_changed || haptic_changed || led_joystick_changed)
 	{
 		const std::lock_guard<std::mutex> lock(m_sdl_handles_mutex);
-		if (joysticks_changed)
-		{
-			clear_sdl_joysticks(m_joysticks);
-			m_joysticks = new_joysticks;
-		}
-		// reset effects if the ffb device is changed
 		if (haptic_changed)
 		{
 			if (m_haptic_handle)
@@ -304,6 +300,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				SDL_CloseHaptic(m_haptic_handle);
 				m_haptic_handle = nullptr;
 			}
+			// reset effects if the ffb device is changed
 			for (logitech_g27_ffb_slot& slot : m_effect_slots)
 			{
 				slot.effect_id = -1;
@@ -315,6 +312,12 @@ void usb_device_logitech_g27::sdl_refresh()
 		{
 			SDL_SetJoystickLED(m_led_joystick_handle, 0, 0, 0);
 			m_led_joystick_handle = new_led_joystick_handle;
+		}
+		if (joysticks_changed)
+		{
+			// finally clear out previous joystick handles
+			clear_sdl_joysticks(m_joysticks);
+			m_joysticks = new_joysticks;
 		}
 	}
 
@@ -330,17 +333,27 @@ void usb_device_logitech_g27::sdl_refresh()
 	}
 }
 
-static inline s16 logitech_g27_force_to_level(u8 force)
+static inline s16 logitech_g27_force_to_level(u8 force, bool reverse = false)
 {
 	if (force == 127 || force == 128)
 	{
 		return 0;
 	}
+
+	s16 converted = 0;
 	if (force > 128)
 	{
-		return ((force - 128) * 0x7FFF) / (255 - 128);
+		converted = ((force - 128) * 0x7FFF) / (255 - 128);
 	}
-	return ((127 - force) * 0x7FFF * -1) / (127 - 0);
+	else
+	{
+		converted = ((127 - force) * 0x7FFF * -1) / (127 - 0);
+	}
+
+	if (reverse)
+		converted *= -1;
+
+	return converted;
 }
 
 static inline s16 logitech_g27_position_to_center(u8 left, u8 right)
@@ -777,14 +790,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		// logitech_g27_log.error("%02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 		// printf("%02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
 
+		// ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
 		SDL_HapticDirection direction = {
-			.type = SDL_HAPTIC_POLAR,
-			.dir = {27000, 0}
+			.type = SDL_HAPTIC_STEERING_AXIS,
+			.dir = {0, 0, 0}
 		};
-		if (m_reverse_effects)
-		{
-			direction.dir[0] = 9000;
-		}
 
 		// TODO maybe force clipping from cfg
 
@@ -900,7 +910,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						new_effect.type = SDL_HAPTIC_CONSTANT;
 						new_effect.constant.direction = direction;
 						new_effect.constant.length = SDL_HAPTIC_INFINITY;
-						new_effect.constant.level = logitech_g27_force_to_level(buf[2 + i]);
+						new_effect.constant.level = logitech_g27_force_to_level(buf[2 + i], m_reverse_effects);
 						break;
 					}
 					case 0x01:
@@ -912,7 +922,6 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						new_effect.condition.length = SDL_HAPTIC_INFINITY;
 						const u8 s1 = buf[5] & 1;
 						const u8 s2 = (buf[5] >> 4) & 1;
-						// TODO direction cfg
 						const u16 saturation = logitech_g27_clip_to_saturation(buf[6]);
 						s16 center = 0;
 						u16 deadband = 0;
@@ -1006,7 +1015,6 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						const u8 k2 = buf[3];
 						const u8 s1 = buf[5] & 1;
 						const u8 s2 = (buf[5] >> 4) & 1;
-						// TODO direction cfg
 						s16 left_coeff = logitech_g27_friction_coeff_to_coeff(k1, s1);
 						s16 right_coeff = logitech_g27_friction_coeff_to_coeff(k2, s2);
 						const s16 saturation = logitech_g27_clip_to_saturation(buf[4]);
@@ -1030,7 +1038,6 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						new_effect.type = SDL_HAPTIC_SPRING;
 						new_effect.condition.direction = direction;
 						new_effect.condition.length = SDL_HAPTIC_INFINITY;
-						// TODO direction cfg
 						const u16 saturation = logitech_g27_clip_to_saturation(buf[4]);
 						const u16 deadband = 2 * 0xFFFF / 255;
 						s16 center = 0;
@@ -1069,6 +1076,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					case 0x05:
 					{
 						// Sawtooth up/Sawtooth down
+						// for reversing sawtooth, it should be mirroring the offset, then play the up/down counterpart
+						if (buf[1] == 0x04)
+							new_effect.type = !m_reverse_effects ? SDL_HAPTIC_SAWTOOTHUP : SDL_HAPTIC_SAWTOOTHDOWN;
+						else
+							new_effect.type = m_reverse_effects ? SDL_HAPTIC_SAWTOOTHUP : SDL_HAPTIC_SAWTOOTHDOWN;
 						new_effect.type = buf[1] == 0x04 ? SDL_HAPTIC_SAWTOOTHUP : SDL_HAPTIC_SAWTOOTHDOWN;
 						new_effect.periodic.direction = direction;
 						new_effect.periodic.length = SDL_HAPTIC_INFINITY;
@@ -1082,16 +1094,18 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						else
 						{
 							logitech_g27_log.error("cannot evaluate slope for saw tooth effect, loops per step %u level per step %u", t3, inc);
-							new_effect.periodic.period = 1000;
+							unknown_effect = true;
+							break;
 						}
-						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2);
-						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - new_effect.periodic.offset;
+						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2, m_reverse_effects);
+						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - logitech_g27_force_to_level((l1 + l2) / 2);
 						new_effect.periodic.phase = buf[1] == 0x04 ? 36000 * (l1 - l0) / (l1 - l2) : 36000 * (l0 - l2) / (l1 - l2);
 						break;
 					}
 					case 0x06:
 					{
 						// Trapezoid, convert to SDL_HAPTIC_SQUARE or SDL_HAPTIC_TRIANGLE
+						// TODO full accuracy will need some kind of rendering thread, cannot be represented with a single effect
 						new_effect.periodic.direction = direction;
 						new_effect.periodic.length = SDL_HAPTIC_INFINITY;
 						const u8 l1 = buf[2];
@@ -1111,13 +1125,15 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							new_effect.type = SDL_HAPTIC_TRIANGLE;
 						}
 						new_effect.periodic.period = total_slope_time + total_flat_time;
-						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2);
-						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - new_effect.periodic.offset;
+						// when mirroring waves, both offset and magnitude should be mirrored
+						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2, m_reverse_effects);
+						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1, m_reverse_effects) - new_effect.periodic.offset;
 						break;
 					}
 					case 0x07:
 					{
 						// Rectangle, convert to SDL_HAPTIC_SQUARE
+						// TODO full accuracy will need some kind of rendering thread, cannot be represented with a single effect
 						new_effect.type = SDL_HAPTIC_SQUARE;
 						new_effect.periodic.direction = direction;
 						new_effect.periodic.length = SDL_HAPTIC_INFINITY;
@@ -1127,8 +1143,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						const u8 t2 = buf[5];
 						const u8 p = buf[6];
 						new_effect.periodic.period = logitech_g27_loops_to_ms(t1, !m_fixed_loop) + logitech_g27_loops_to_ms(t2, !m_fixed_loop);
-						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2);
-						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - new_effect.periodic.offset;
+						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2, m_reverse_effects);
+						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1, m_reverse_effects) - new_effect.periodic.offset;
 						if (new_effect.periodic.period != 0)
 							new_effect.periodic.phase = 36000 * logitech_g27_loops_to_ms(p, !m_fixed_loop) / new_effect.periodic.period;
 						else
@@ -1141,13 +1157,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					case 0x08:
 					case 0x09:
 					{
-						// Variable/Ramp, convert to SDL_HAPTIC_CONSTANT
+						// Variable/Ramp, convert to SDL_HAPTIC_CONSTANT / SDL_HAPTIC_RAMP
 						if (i % 2 != 0)
 						{
 							continue;
 						}
-						new_effect.type = SDL_HAPTIC_CONSTANT;
-						new_effect.constant.direction = direction;
 						const u8 l1 = buf[2];
 						const u8 l2 = buf[3];
 						const u8 t1 = buf[4] >> 4;
@@ -1158,46 +1172,48 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						const u8 d2 = (buf[6] >> 4) & 1;
 						if (buf[1] == 0x08)
 						{
+							new_effect.type = SDL_HAPTIC_CONSTANT;
 							const u8 t = i == 0 ? t1 : t2;
 							const u8 s = i == 0 ? s1 : s2;
 							const u8 d = i == 0 ? d1 : d2;
 							const u8 l = i == 0 ? l1 : l2;
 							new_effect.constant.length = SDL_HAPTIC_INFINITY;
+							new_effect.constant.direction = direction;
 							if (s == 0 || t == 0)
 							{
 								// gran turismo 6 does this, gives a variable force with no step so it just behaves as constant force
-								new_effect.constant.level = logitech_g27_force_to_level(l);
+								new_effect.constant.level = logitech_g27_force_to_level(l, m_reverse_effects);
 								// hack: gran turismo 6 spams download and play
 								update_hack = true;
 							}
 							else
 							{
-								new_effect.constant.attack_level = logitech_g27_force_to_level(l);
-								if (d)
+								new_effect.constant.level = d ? -0x7FFF : 0x7FFF;
+								if (m_reverse_effects)
+									new_effect.constant.level *= -1;
+
+								// TODO full accuracy will need some kind of rendering thread, cannot be represented with a single effect
+								const s16 begin_level = logitech_g27_force_to_level(l, m_reverse_effects);
+								if ((new_effect.constant.level > 0 && begin_level > 0) || (new_effect.constant.level < 0 && begin_level < 0))
 								{
-									new_effect.constant.level = 0;
-									new_effect.constant.attack_length = l * logitech_g27_loops_to_ms(t, !m_fixed_loop) / s;
-								}
-								else
-								{
-									new_effect.constant.level = 0x7FFF;
-									new_effect.constant.attack_length = (255 - l) * logitech_g27_loops_to_ms(t, !m_fixed_loop) / s;
+									new_effect.constant.attack_level = begin_level * 0x7FFF / new_effect.constant.level;
 								}
 							}
 						}
 						else
 						{
+
+							new_effect.type = SDL_HAPTIC_RAMP;
+							new_effect.ramp.direction = direction;
+							const s16 l1_converted = logitech_g27_force_to_level(l1, m_reverse_effects);
+							const s16 l2_converted = logitech_g27_force_to_level(l2, m_reverse_effects);
+							new_effect.ramp.start = d1 ? l1_converted : l2_converted;
+							new_effect.ramp.end = d1 ? l2_converted : l1_converted;
+							new_effect.ramp.length = 0;
 							if (s2 == 0 || t2 == 0)
-							{
 								logitech_g27_log.error("cannot evaluate slope for ramp effect, loops per step %u level per step %u", t2, s2);
-							}
 							else
-							{
-								new_effect.constant.length = (l1 - l2) * logitech_g27_loops_to_ms(t2, !m_fixed_loop) / s2;
-								new_effect.constant.attack_length = new_effect.constant.length;
-								new_effect.constant.attack_level = d1 ? logitech_g27_force_to_level(l1) : logitech_g27_force_to_level(l2);
-							}
-							new_effect.constant.level = d1 ? logitech_g27_force_to_level(l2) : logitech_g27_force_to_level(l1);
+								new_effect.ramp.length = (l1 - l2) * logitech_g27_loops_to_ms(t2, !m_fixed_loop) / s2;
 						}
 						break;
 					}
@@ -1446,6 +1462,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			case 0x09:
 			{
 				// Set LED
+				// TODO this is practically disabled at the moment, due to effect slot matching prior
+				// need to figure out what this command actually does first, since RPM light command has priority to SDL_SetJoystickLED
 				if (m_led_joystick_handle == nullptr)
 				{
 					break;
