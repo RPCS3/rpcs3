@@ -176,10 +176,6 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@main
 
-      - name: Compile glslang
-        shell: pwsh
-        run: msbuild 3rdparty/glslang/glslang.vcxproj /p:SolutionDir="${{ github.workspace }}\" /p:Configuration=Release /v:minimal /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_only.targets"
-      
       - name: Compile RPCS3
         shell: pwsh
         run: msbuild rpcs3.sln /p:Configuration=Release /v:minimal /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_only.targets"
