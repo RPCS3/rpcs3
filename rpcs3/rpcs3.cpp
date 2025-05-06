@@ -303,7 +303,7 @@ struct fatal_error_listener final : logs::listener
 public:
 	~fatal_error_listener() override = default;
 
-	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
+	void log(u64 /*stamp*/, const logs::message& msg, std::string_view prefix, std::string_view text) override
 	{
 		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
