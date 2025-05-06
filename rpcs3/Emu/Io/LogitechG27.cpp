@@ -1215,6 +1215,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						{
 							new_effect.type = SDL_HAPTIC_RAMP;
 							new_effect.ramp.direction = STEERING_DIRECTION;
+							if (l2 > l1)
+								logitech_g27_log.error("min force is larger than max force in ramp effect, l1 %u l2 %u", l1, l2);
 							const s16 l1_converted = logitech_g27_force_to_level(l1, m_reverse_effects);
 							const s16 l2_converted = logitech_g27_force_to_level(l2, m_reverse_effects);
 							new_effect.ramp.start = d1 ? l1_converted : l2_converted;
@@ -1223,7 +1225,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 							if (s2 == 0 || t2 == 0)
 								logitech_g27_log.error("cannot evaluate slope for ramp effect, loops per step %u level per step %u", t2, s2);
 							else
-								new_effect.ramp.length = (l1 - l2) * logitech_g27_loops_to_ms(t2, !m_fixed_loop) / s2;
+								new_effect.ramp.length = std::abs(l1 - l2) * logitech_g27_loops_to_ms(t2, !m_fixed_loop) / s2;
 						}
 						break;
 					}
