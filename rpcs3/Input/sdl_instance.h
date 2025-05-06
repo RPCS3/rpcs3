@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_SDL3
+
 #include <mutex>
 
 struct sdl_instance
@@ -14,6 +16,10 @@ public:
 	void pump_events();
 
 private:
+	void set_hint(const char* name, const char* value);
+
 	bool m_initialized = false;
 	std::mutex m_instance_mutex;
 };
+
+#endif

@@ -7376,7 +7376,7 @@ struct spu_llvm_worker
 				set_relax_flag = false;
 			}
 
-			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+			thread_ctrl::wait_on(registered.get_wait_atomic(), 0);
 			slice = registered.pop_all();
 		}())
 		{
@@ -7491,7 +7491,7 @@ struct spu_llvm
 		while (!registered && thread_ctrl::state() != thread_state::aborting)
 		{
 			// Wait for the first SPU block before launching any thread
-			thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+			thread_ctrl::wait_on(registered.get_wait_atomic(), 0);
 		}
 
 		if (thread_ctrl::state() == thread_state::aborting)
@@ -7594,7 +7594,7 @@ struct spu_llvm
 
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&registered)[1], 0);
+				thread_ctrl::wait_on(registered.get_wait_atomic(), 0);
 				std::fill(notify_compile.begin(), notify_compile.end(), 0); // Reset notification flags
 				notify_compile_count = 0;
 				compile_pending = 0;

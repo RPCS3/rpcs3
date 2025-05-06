@@ -159,7 +159,7 @@ jobs:
         uses: actions/cache@main
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
-          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}-${{ hashFiles('glslang.lock') }}"
+          key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}"
           restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
 
       - name: Download and unpack dependencies

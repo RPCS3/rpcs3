@@ -16,8 +16,8 @@ arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetyp
 arch -x86_64 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl3 vulkan-headers coreutils
 arch -x86_64 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5
 
-# moltenvk based on commit for 1.2.11 release
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/6bfc8950c696d1f952425e8af2a6248603dc0df9/Formula/m/molten-vk.rb
+# moltenvk based on commit for 1.3.0 release
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/7255441cbcafabaa8950f67c7ec55ff499dbb2d3/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 export CXX=clang++
 export CC=clang

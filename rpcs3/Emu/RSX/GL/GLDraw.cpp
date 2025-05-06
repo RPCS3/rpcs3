@@ -387,6 +387,16 @@ void GLGSRender::load_texture_env()
 					{
 						m_graphics_state |= rsx::fragment_program_state_dirty;
 					}
+
+					if (const auto texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+						sampler_state->format_class != rsx::classify_format(texture_format) &&
+						(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
+					{
+						// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
+						// If accurate graphics are desired, force a bitcast to COLOR as a workaround.
+						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					}
 				}
 			}
 			else

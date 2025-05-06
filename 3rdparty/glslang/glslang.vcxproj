@@ -39,17 +39,15 @@
   <PropertyGroup Label="UserMacros">
     <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DLLVM_USE_CRT_DEBUG=MDd -DLLVM_USE_CRT_RELEASE=MT -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=OFF -DBUILD_EXTERNAL=OFF -DENABLE_SPVREMAPPER=OFF -DENABLE_HLSL=OFF -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DLLVM_USE_CRT_DEBUG=MDd -DLLVM_USE_CRT_RELEASE=MT -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=OFF -DBUILD_EXTERNAL=OFF -DENABLE_SPVREMAPPER=OFF -DENABLE_HLSL=OFF -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
     </CmakeDebugCLI>
     <CmakeCopyCLI>
       echo Copying..
       mkdir "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
-      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\hlsl\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\SPIRV\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
-      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OGLCompilersDLL\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\OSDependent\Windows\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
     </CmakeCopyCLI>

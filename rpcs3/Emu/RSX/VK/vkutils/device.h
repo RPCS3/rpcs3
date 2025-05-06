@@ -106,7 +106,8 @@ namespace vk
 		friend class render_device;
 	private:
 		void get_physical_device_features(bool allow_extensions);
-		void get_physical_device_properties(bool allow_extensions);
+		void get_physical_device_properties_0(bool allow_extensions);
+		void get_physical_device_properties_1(bool allow_extensions);
 
 	public:
 
