@@ -2430,6 +2430,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="enableSpuEventsBusyLoop">
+                 <property name="text">
+                  <string>Enable SPU Events Busy Loop</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>
