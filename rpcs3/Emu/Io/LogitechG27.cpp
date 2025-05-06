@@ -425,18 +425,6 @@ static inline u16 logitech_g27_loops_to_ms(u16 loops, bool afap)
 	return loops * 2;
 }
 
-static inline u16 axis_to_logitech_g27_steering(s16 axis)
-{
-	const u16 unsigned_axis = axis + 0x8000;
-	return (unsigned_axis * (0xFFFF >> 2)) / 0xFFFF;
-}
-
-static inline u8 axis_to_logitech_g27_pedal(s16 axis)
-{
-	const u16 unsigned_axis = axis + 0x8000;
-	return (unsigned_axis * (0xFF)) / 0xFFFF;
-}
-
 extern bool is_input_allowed();
 
 static u8 sdl_hat_to_logitech_g27_hat(u8 sdl_hat)
