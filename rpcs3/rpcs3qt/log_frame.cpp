@@ -50,7 +50,7 @@ struct gui_listener : logs::listener
 	{
 	}
 
-	void log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& text) override
+	void log(u64 stamp, const logs::message& msg, std::string_view prefix, std::string_view text) override
 	{
 		Q_UNUSED(stamp)
 
