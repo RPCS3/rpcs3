@@ -20,7 +20,8 @@
 LOG_CHANNEL(logitech_g27_log, "LOGIG27");
 
 // ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
-static const SDL_HapticDirection STEERING_DIRECTION = {
+static const SDL_HapticDirection STEERING_DIRECTION =
+{
 	.type = SDL_HAPTIC_STEERING_AXIS,
 	.dir = {0, 0, 0}
 };
@@ -335,20 +336,20 @@ void usb_device_logitech_g27::sdl_refresh()
 
 static inline s16 logitech_g27_force_to_level(u8 force, bool reverse = false)
 {
+	/*
+	 * Wheel documentation:
+	 * level 0, maximum clock wise force
+	 * level 127-128, no force
+	 * level 255, maximum anticlockwise force
+	 */
+
 	if (force == 127 || force == 128)
 	{
 		return 0;
 	}
 
-	s16 converted = 0;
-	if (force > 128)
-	{
-		converted = ((force - 128) * 0x7FFF) / (255 - 128);
-	}
-	else
-	{
-		converted = ((127 - force) * 0x7FFF * -1) / (127 - 0);
-	}
+	const s16 subtrahend = force > 128 ? 128 : 127;
+	s16 converted = ((force - subtrahend) * 0x7FFF) / 127;
 
 	if (reverse)
 		converted *= -1;
@@ -1083,17 +1084,33 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						const u8 l0 = buf[4];
 						const u8 t3 = buf[6] >> 4;
 						const u8 inc = buf[6] & 0xf;
-						if (inc != 0)
-							new_effect.periodic.period = ((l1 - l2) * logitech_g27_loops_to_ms(t3, !m_fixed_loop)) / inc;
+
+						const s16 amplitude = (l1 - l2);
+						const s16 progress = buf[1] == 0x04 ? l0 - l2 : l1 - l0;
+
+						if (amplitude <= 0 || inc == 0 || t3 == 0)
+						{
+							logitech_g27_log.error("cannot evaluate period and phase for saw tooth effect, l1 %u l2 %u inc %u t3 %u", l1, l2, inc, t3);
+							new_effect.periodic.period = 0;
+							new_effect.periodic.phase = 0;
+						}
 						else
 						{
-							logitech_g27_log.error("cannot evaluate slope for saw tooth effect, loops per step %u level per step %u", t3, inc);
-							unknown_effect = true;
-							break;
+							new_effect.periodic.period = (amplitude * logitech_g27_loops_to_ms(t3, !m_fixed_loop)) / inc;
+							if (progress < 0)
+							{
+								logitech_g27_log.error("cannot evaluate phase for saw tooth effect, l1 %u l2 %u l0 %u", l1, l2, l0);
+								new_effect.periodic.phase = 0;
+							}
+							else
+								new_effect.periodic.phase = 36000 * progress / amplitude;
 						}
+
+						// TODO implement fallback if we actually find games abusing the above fail cases for constant force on l0
+
 						new_effect.periodic.offset = logitech_g27_force_to_level((l1 + l2) / 2, m_reverse_effects);
-						new_effect.periodic.magnitude = logitech_g27_force_to_level(l1) - logitech_g27_force_to_level((l1 + l2) / 2);
-						new_effect.periodic.phase = buf[1] == 0x04 ? 36000 * (l1 - l0) / (l1 - l2) : 36000 * (l0 - l2) / (l1 - l2);
+						new_effect.periodic.magnitude = logitech_g27_force_to_level(std::abs(amplitude) / 2);
+
 						break;
 					}
 					case 0x06:
@@ -1196,7 +1213,6 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						}
 						else
 						{
-
 							new_effect.type = SDL_HAPTIC_RAMP;
 							new_effect.ramp.direction = STEERING_DIRECTION;
 							const s16 l1_converted = logitech_g27_force_to_level(l1, m_reverse_effects);
