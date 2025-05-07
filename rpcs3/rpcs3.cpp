@@ -1192,7 +1192,7 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); (!args.isEmpty() || !emu_argv.empty()) && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		const std::string spath = (args.isEmpty() ? emu_argv[0] : ::at32(args, 0).toStdString());
+		std::string spath = (args.isEmpty() ? emu_argv[0] : ::at32(args, 0).toStdString());
 
 		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
@@ -1275,8 +1275,13 @@ int run_rpcs3(int argc, char** argv)
 			}
 		}
 
+		if (!spath.starts_with("%RPCS3_"))
+		{
+			spath = QFileInfo(::at32(args, 0)).absoluteFilePath().toStdString();
+		}
+
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : QFileInfo(::at32(args, 0)).absoluteFilePath().toStdString(), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = std::move(spath), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
