@@ -138,7 +138,7 @@ namespace rsx
 				rsx_log.notice("User selected exit game in home menu");
 				Emu.CallFromMainThread([]
 				{
-					Emu.GracefulShutdown(false, true);
+					Emu.GracefulShutdown(true, true);
 				});
 				return page_navigation::stay;
 			});
