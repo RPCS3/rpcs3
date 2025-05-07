@@ -638,6 +638,7 @@ public:
 	virtual ~spu_thread() override;
 	void cleanup();
 	void cpu_init();
+	void init_spu_decoder();
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
