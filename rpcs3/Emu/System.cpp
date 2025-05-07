@@ -2920,11 +2920,18 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	const u64 read_counter = get_sysutil_cb_manager_read_count();
 
-	if (old_state == system_state::frozen || savestate || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
+	const bool force_termination = old_state == system_state::frozen || savestate;
+
+	if (!force_termination)
 	{
-		if (old_state != system_state::frozen && !savestate)
+		sys_log.notice("Requesting game to exit...");
+	}
+
+	if (force_termination || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
+	{
+		if (!force_termination)
 		{
-			sys_log.warning("The running game ignored the exit request. Forcing termination...");
+			sys_log.warning("The game ignored the exit request. Forcing termination...");
 		}
 
 		// The callback has been rudely ignored, we have no other option but to force termination
@@ -2941,15 +2948,20 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		return;
 	}
 
+	sys_log.notice("The game was requested to exit. Waiting for its reaction...");
+
 	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
 		bool read_sysutil_signal = false;
 
-		u32 i = 100;
+		// If EXITGAME signal is not read, force kill after a couple of seconds.
+		constexpr int loop_timeout_ms = 50;
+		int kill_timeout_ms = 2000;
+		int elapsed_ms = 0;
 
-		qt_events_aware_op(50, [&]()
+		qt_events_aware_op(loop_timeout_ms, [&]()
 		{
-			if (i >= 140)
+			if (elapsed_ms >= kill_timeout_ms)
 			{
 				return true;
 			}
@@ -2960,9 +2972,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				Resume();
 			}, nullptr, true, read_counter);
 
+			// Check if the EXITGAME signal was read. We allow the game to terminate itself if that's the case.
 			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
 			{
-				i -= 100; // Grant 5 seconds (if signal is not read force kill after two second)
+				sys_log.notice("The game received the exit request. Waiting for it to terminate itself...");
+				kill_timeout_ms += 5000; // Grant a couple more seconds
 				read_sysutil_signal = true;
 			}
 
@@ -2972,13 +2986,14 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 			}
 
 			// Process events
-			i++;
+			elapsed_ms += loop_timeout_ms;
 			return false;
 		});
 
-		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
-		CallFromMainThread([allow_autoexit, this]()
+		// An inevitable attempt to terminate the *current* emulation course will be issued after the timeout was reached.
+		CallFromMainThread([this, allow_autoexit, elapsed_ms, read_sysutil_signal]()
 		{
+			sys_log.error("The game did not react to the exit request in time. Terminating manually... (read_sysutil_signal=%d, elapsed_ms=%d)", read_sysutil_signal, elapsed_ms);
 			Kill(allow_autoexit);
 		}, info);
 	};
