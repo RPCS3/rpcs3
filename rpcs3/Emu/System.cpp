@@ -2873,7 +2873,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		Emu.SetContinuousMode(false);
 	}
 
-	// Ensure no game has booted inbetween
+	// Ensure no game has booted in between
 	const auto guard = Emu.MakeEmulationStateGuard();
 
 	stop_counter_t old_emu_id{};
@@ -2922,6 +2922,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	if (old_state == system_state::frozen || savestate || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
 	{
+		if (old_state != system_state::frozen && !savestate)
+		{
+			sys_log.warning("The running game ignored the exit request. Forcing termination...");
+		}
+
 		// The callback has been rudely ignored, we have no other option but to force termination
 		Kill(allow_autoexit && !savestate, savestate);
 
