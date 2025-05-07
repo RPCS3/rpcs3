@@ -12,6 +12,8 @@
 
 #include <clocale>
 
+LOG_CHANNEL(sys_log, "SYS");
+
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 // For now, a trivial constructor/destructor. May add command line usage later.
@@ -56,6 +58,7 @@ void headless_application::InitializeCallbacks()
 				on_exit();
 			}
 
+			sys_log.notice("Quitting headless application");
 			quit();
 			return true;
 		}
