@@ -2155,6 +2155,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	const auto old_process_info = g_ps3_process_info;
 
+	u32 segs_size = 0;
+
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
 	{
@@ -2249,6 +2251,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			{
 				ppu_register_range(addr, size);
 			}
+
+			segs_size += utils::align<u32>(size + (addr % 0x10000), 0x10000);
 		}
 	}
 
@@ -2773,7 +2777,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	ppu->gpr[1] -= stack_alloc_size;
 
-	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize));
+	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize + segs_size));
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 

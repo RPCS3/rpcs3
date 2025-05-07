@@ -129,19 +129,17 @@ Start **Visual Studio**, click on `Open a project or solution` and select the `r
 
 **NOTE:** The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
-To speed up the compilation time, you may want to download and extract to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64` (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created) some of the following precompiled libs:
+To speed up the compilation time, you may want to download and extract to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64` (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created) the following precompiled lib:
 - [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-19.1.7/llvmlibs_mt.7z)
-- [additional libs](https://github.com/RPCS3/glslang/releases/latest/download/glslanglibs_mt.7z)
 
 **NOTES:**
 - `<$(Configuration)>` can assume values `Release` or `Debug`.
-- Unoptimised/debug libs are currently not available precompiled for both **LLVM** and **glslang**. Trying to use them when building the **RPCS3** application in `Debug` mode will provide a `cannot open file` error.
+- Unoptimised/debug libs are currently not available precompiled for **LLVM**. Trying to use it when building the **RPCS3** application in `Debug` mode will provide a `cannot open file` error.
 
 If you're not using the precompiled libs, those dependency libs need to be compiled first. From the `Solution Explorer` panel:
 1) expand `__BUILD_BEFORE`
 2) from the `Solution Configurations` drop-down menu, select `Release` (select `Debug` if you want to build in `Debug` mode)
-3) one after another, right-click on the following projects and then click on `Build` to build the selected lib:
-   - `glslang`
+3) right-click one of the following projects and then click on `Build` to build the selected lib:
    - `llvm_build`
    - or `llvm_build_clang_cl` (if you have also the **clang** compiler installed on VS)
 

@@ -105,7 +105,7 @@ jobs:
 
 #     - task: Cache@2
 #       inputs:
-#         key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | $(CCACHE_SHA) | llvm.lock | glslang.lock
+#         key: $(Agent.OS) | $(COMPILER) | "$(QT_VER)" | $(VULKAN_SDK_SHA) | $(CCACHE_SHA) | llvm.lock
 #         path: $(DEPS_CACHE_DIR)
 #       displayName: Dependencies Cache
 
