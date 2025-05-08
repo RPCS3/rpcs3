@@ -1858,7 +1858,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		if (g_recording_mode != recording_mode::stopped)
 		{
 			utils::video_provider& provider = g_fxo->get<utils::video_provider>();
-			provider.present_samples(reinterpret_cast<u8*>(callback_tmp_buf.data()), sample_cnt / cb_cfg.input_ch_cnt, cb_cfg.input_ch_cnt);
+			provider.present_samples(reinterpret_cast<const u8*>(callback_tmp_buf.data()), sample_cnt / cb_cfg.input_ch_cnt, cb_cfg.input_ch_cnt);
 		}
 
 		// Downmix if necessary
