@@ -23,7 +23,7 @@ namespace utils
 		bool can_consume_frame();
 		void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra);
 
-		void present_samples(u8* buf, u32 sample_count, u16 channels);
+		void present_samples(const u8* buf, u32 sample_count, u16 channels);
 
 	private:
 		recording_mode check_mode();
