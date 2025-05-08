@@ -266,7 +266,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				SDL_Haptic* cur_haptic = SDL_OpenHapticFromJoystick(cur_joystick);
 				if (cur_haptic == nullptr)
 				{
-					logitech_g27_log.error("Failed opening haptic device from selected ffb device %04x:%04x", cur_vendor_id, cur_product_id);
+					logitech_g27_log.error("Failed opening haptic device from selected ffb device %04x:%04x, %s", cur_vendor_id, cur_product_id, SDL_GetError());
 				}
 				else
 				{
