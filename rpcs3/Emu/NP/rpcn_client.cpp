@@ -659,7 +659,7 @@ namespace rpcn
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
-				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
+				command == CommandType::SendResetToken || command == CommandType::ResetPassword || command == CommandType::RecoverAccount ||
 				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate)
 			{
 				std::lock_guard lock(mutex_replies_sync);
@@ -1419,6 +1419,31 @@ namespace rpcn
 		if (error == rpcn::ErrorType::NoError)
 		{
 			rpcn_log.success("Password has successfully been reset!");
+		}
+
+		return error;
+	}
+
+	ErrorType rpcn_client::recover_account(std::string_view email) {
+		std::vector<u8> data;
+		std::copy(email.begin(), email.end(), std::back_inserter(data));
+		data.push_back(0);
+
+		u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		if (!forge_send_reply(CommandType::RecoverAccount, req_id, data, packet_data))
+		{
+			state = rpcn_state::failure_other;
+			return ErrorType::EmailFail;
+		}
+
+		vec_stream reply(packet_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			rpcn_log.success("Account recovery email has successfully been sent!");
 		}
 
 		return error;

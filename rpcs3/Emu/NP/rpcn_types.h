@@ -12,6 +12,7 @@ namespace rpcn
 		SendToken,
 		SendResetToken,
 		ResetPassword,
+		RecoverAccount,
 		ResetState,
 		AddFriend,
 		RemoveFriend,

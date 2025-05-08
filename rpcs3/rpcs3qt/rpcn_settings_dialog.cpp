@@ -159,6 +159,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QVBoxLayout* vbox_buttons = new QVBoxLayout();
 	QPushButton* btn_create   = new QPushButton(tr("Create Account"));
 	QPushButton* btn_edit     = new QPushButton(tr("Edit Account"));
+	QPushButton* btn_recover  = new QPushButton(tr("Recover Account"));
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
@@ -177,6 +178,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	vbox_buttons->addWidget(btn_create);
 	vbox_buttons->addSpacing(10);
 	vbox_buttons->addWidget(btn_edit);
+	vbox_buttons->addSpacing(10);
+	vbox_buttons->addWidget(btn_recover);
 	vbox_buttons->addSpacing(10);
 	vbox_buttons->addWidget(btn_test);
 	vbox_buttons->addSpacing(10);
@@ -322,6 +325,41 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			dlg_edit.exec();
 			update_npid_label();
 		});
+
+	connect(btn_recover, &QAbstractButton::clicked, this, [this, update_npid_label]() {
+
+			rpcn_ask_email_dialog dlg_email(this, tr("Please enter the email associated with the RPCN account"));
+			dlg_email.exec();
+			const auto& email = dlg_email.get_email();
+
+			if (!email)
+				return;
+
+			const auto rpcn = rpcn::rpcn_client::get_instance();
+			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
+			{
+				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
+				QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+				return;
+			}
+
+			if (auto error = rpcn->recover_account(*email); error != rpcn::ErrorType::NoError)
+				{
+					QString error_message;
+					switch (error)
+					{
+						case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server!"); break;
+						case rpcn::ErrorType::TooSoon: error_message = tr("You can only recovery your account once every 24 hours!"); break;
+						case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
+						default: error_message = tr("Unknown error"); break;
+					}
+					QMessageBox::critical(this, tr("Error Sending Account Recovery Email!"), tr("Failed to send the account recovery email:\n%0").arg(error_message), QMessageBox::Ok);
+					return;
+
+				}
+			QMessageBox::information(this, tr("Email Sent!"), tr("Your account information was successfully sent to the email specified!"), QMessageBox::Ok);
+			update_npid_label();
+	});
 
 	connect(btn_test, &QAbstractButton::clicked, this, [this]()
 		{
