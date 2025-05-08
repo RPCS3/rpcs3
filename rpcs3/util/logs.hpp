@@ -79,7 +79,7 @@ namespace logs
 		virtual ~listener();
 
 		// Process log message
-		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) = 0;
+		virtual void log(u64 stamp, const message& msg, std::string_view prefix, std::string_view text) = 0;
 
 		// Flush contents (file writer)
 		virtual void sync();

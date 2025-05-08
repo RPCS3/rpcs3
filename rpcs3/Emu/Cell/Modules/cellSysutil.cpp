@@ -580,8 +580,6 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	bool read = false;
-
 	for (auto&& func : cbm.registered.pop_all())
 	{
 		if (func.call_active && !*func.call_active)
@@ -589,7 +587,11 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 			continue;
 		}
 
-		read = true;
+		// Increase read counter before we call the callback.
+		// We use this counter to check if the game reacts to a command during game termination and calls sys_process_exit.
+		// We would not realize that the game reacted in time and terminate it prematurely if we increased
+		// the counter after we called the callback and the callback did some time-consuming work.
+		cbm.read_counter++;
 
 		if (s32 res = func.func(ppu))
 		{
@@ -601,11 +603,6 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 		{
 			return {};
 		}
-	}
-
-	if (read)
-	{
-		cbm.read_counter++;
 	}
 
 	return CELL_OK;

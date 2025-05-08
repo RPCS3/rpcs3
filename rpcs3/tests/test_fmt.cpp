@@ -5,7 +5,7 @@ using namespace std::literals::string_literals;
 
 namespace fmt
 {
-	TEST(StrUtil, test_trim)
+	TEST(StrUtil, Trim)
 	{
 		EXPECT_EQ(""s, fmt::trim("", ""));
 		EXPECT_EQ(""s, fmt::trim("", " "));
@@ -25,7 +25,7 @@ namespace fmt
 		EXPECT_EQ("b"s, fmt::trim("    aba    ", " a"));
 	}
 
-	TEST(StrUtil, test_trim_front)
+	TEST(StrUtil, TrimFront)
 	{
 		EXPECT_EQ(""s, fmt::trim_front("", ""));
 		EXPECT_EQ(""s, fmt::trim_front("", " "));
@@ -45,7 +45,7 @@ namespace fmt
 		EXPECT_EQ("ba    "s, fmt::trim_front("    aba    ", " a"));
 	}
 
-	TEST(StrUtil, test_trim_back)
+	TEST(StrUtil, TrimBack)
 	{
 		std::string str;
 		fmt::trim_back(str, "");
@@ -112,7 +112,7 @@ namespace fmt
 		EXPECT_EQ("    ab"s, str);
 	}
 
-	TEST(StrUtil, test_to_upper_to_lower)
+	TEST(StrUtil, ToUpperToLower)
 	{
 		const std::string lowercase = "abcdefghijklmnopqrstuvwxyzäüöß0123456789 .,-<#+";
 		const std::string uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZäüöß0123456789 .,-<#+";
@@ -128,7 +128,7 @@ namespace fmt
 		EXPECT_EQ(uppercase, to_upper_res);
 	}
 
-	TEST(StrUtil, test_truncate)
+	TEST(StrUtil, Truncate)
 	{
 		const std::string str = "abcdefghijklmnopqrstuvwxyzäüöß0123456789 .,-<#+";
 
@@ -145,7 +145,7 @@ namespace fmt
 		EXPECT_EQ(str, fmt::truncate(str, str.size() + 1));
 	}
 
-	TEST(StrUtil, test_replace_all)
+	TEST(StrUtil, ReplaceAll)
 	{
 		EXPECT_EQ(""s, fmt::replace_all("", "", ""));
 		EXPECT_EQ(""s, fmt::replace_all("", "", " "));
@@ -191,7 +191,7 @@ namespace fmt
 		EXPECT_EQ("drow drow drow"s, fmt::replace_all("word word word", "word", "drow", -1));
 	}
 
-	TEST(StrUtil, test_split)
+	TEST(StrUtil, Split)
 	{
 		using vec = std::vector<std::string>;
 
@@ -340,7 +340,7 @@ namespace fmt
 		EXPECT_EQ(vec({"This", "is", "test!"}), fmt::split(" This is a test! ", {"a", " ", "b"}, true));
 	}
 
-	TEST(StrUtil, test_merge)
+	TEST(StrUtil, Merge)
 	{
 		using vec = std::vector<std::string>;
 		using lst = std::initializer_list<std::vector<std::string>>;
@@ -413,7 +413,7 @@ namespace fmt
 		EXPECT_EQ("a *-* 1 *-* b *-* 2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, " *-* "));
 	}
 
-	TEST(StrUtil, test_get_file_extension)
+	TEST(StrUtil, GetFileExtension)
 	{
 		EXPECT_EQ(""s, get_file_extension(""));
 		EXPECT_EQ(""s, get_file_extension("."));
@@ -434,5 +434,29 @@ namespace fmt
 		EXPECT_EQ("txt"s, get_file_extension("qwe..abc..txt"));
 		EXPECT_EQ(""s, get_file_extension("my_file/asd"));
 		EXPECT_EQ("txt"s, get_file_extension("my_file/asd.txt"));
+	}
+
+	TEST(StrUtil, StrcpyTrunc)
+	{
+		char dst[13];
+		std::memset(dst, 'A', sizeof(dst));
+		strcpy_trunc(dst, "");
+		EXPECT_TRUE(std::all_of(dst, dst + sizeof(dst), [](char c){ return c == '\0'; }));
+
+		std::memset(dst, 'A', sizeof(dst));
+		strcpy_trunc(dst, "Hello");
+		EXPECT_EQ('\0', dst[5]);
+		EXPECT_EQ(std::string(dst), "Hello");
+		EXPECT_TRUE(std::all_of(dst + 5, dst + sizeof(dst), [](char c){ return c == '\0'; }));
+
+		std::memset(dst, 'A', sizeof(dst));
+		strcpy_trunc(dst, "Hello World!");
+		EXPECT_EQ('\0', dst[12]);
+		EXPECT_EQ(std::string(dst), "Hello World!");
+
+		std::memset(dst, 'A', sizeof(dst));
+		strcpy_trunc(dst, "Hello World! Here I am!");
+		EXPECT_EQ('\0', dst[12]);
+		EXPECT_EQ(std::string(dst), "Hello World!");
 	}
 }

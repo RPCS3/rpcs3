@@ -593,6 +593,8 @@ void gui_application::InitializeCallbacks()
 				// Close main window in order to save its window state
 				m_main_window->close();
 			}
+
+			gui_log.notice("Quitting gui application");
 			quit();
 			return true;
 		}

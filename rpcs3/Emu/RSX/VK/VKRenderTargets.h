@@ -683,4 +683,3 @@ namespace vk
 		void trim(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
 	};
 }
-//h
