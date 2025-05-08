@@ -2129,6 +2129,41 @@ u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
 	return ls;
 }
 
+void spu_thread::init_spu_decoder()
+{
+	ensure(!jit);
+
+#if !defined(ARCH_X64) && !defined(ARCH_ARM64)
+#error "Unimplemented"
+#else
+	const spu_decoder_type spu_decoder = g_cfg.core.spu_decoder;
+
+#if defined(ARCH_X64)
+	if (spu_decoder == spu_decoder_type::asmjit)
+	{
+		jit = spu_recompiler_base::make_asmjit_recompiler();
+	}
+	else
+#endif
+	if (spu_decoder == spu_decoder_type::llvm)
+	{
+#if defined(ARCH_X64)
+		jit = spu_recompiler_base::make_fast_llvm_recompiler();
+#elif defined(ARCH_ARM64)
+		jit = spu_recompiler_base::make_llvm_recompiler();
+#endif
+	}
+	else if (spu_decoder == spu_decoder_type::_static || spu_decoder == spu_decoder_type::dynamic)
+	{
+		//
+	}
+	else
+	{
+		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
+	}
+#endif
+}
+
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
 	: cpu_thread(idm::last_id())
 	, group(group)
@@ -2140,31 +2175,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
 {
-#if defined(ARCH_X64)
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-	{
-		jit = spu_recompiler_base::make_asmjit_recompiler();
-	}
-	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-	{
-		jit = spu_recompiler_base::make_fast_llvm_recompiler();
-	}
-	else
-	{
-		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
-	}
-#elif defined(ARCH_ARM64)
-	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-	{
-		jit = spu_recompiler_base::make_llvm_recompiler();
-	}
-	else
-	{
-		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
-	}
-#else
-#error "Unimplemented"
-#endif
+	init_spu_decoder();
 
 	if (g_cfg.core.mfc_debug)
 	{
@@ -2226,31 +2237,7 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	, lv2_id(ar)
 	, spu_tname(make_single<std::string>(ar.operator std::string()))
 {
-#if defined(ARCH_X64)
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-	{
-		jit = spu_recompiler_base::make_asmjit_recompiler();
-	}
-	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-	{
-		jit = spu_recompiler_base::make_fast_llvm_recompiler();
-	}
-	else
-	{
-		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
-	}
-#elif defined(ARCH_ARM64)
-	if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-	{
-		jit = spu_recompiler_base::make_llvm_recompiler();
-	}
-	else
-	{
-		fmt::throw_exception("Unsupported spu decoder '%s'", g_cfg.core.spu_decoder);
-	}
-#else
-#error "Unimplemented"
-#endif
+	init_spu_decoder();
 
 	if (g_cfg.core.mfc_debug)
 	{
