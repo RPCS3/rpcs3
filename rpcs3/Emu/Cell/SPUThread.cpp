@@ -6160,7 +6160,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				{
 					if (utils::has_waitpkg())
 					{
-						__tpause(std::min<u32>(eventstat_spin_count, 10) * 500, 0x1);
+						__tpause(static_cast<u32>(std::min<u64>(eventstat_spin_count, 10) * 500), 0x1);
 					}
 					else
 					{
@@ -6173,7 +6173,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						};
 
 						// Provide the first X64 cache line of the reservation to be tracked
-						__mwaitx<check_wait_t>(std::min<u32>(eventstat_spin_count, 17) * 500, 0xf0, std::addressof(*resrv_mem), +rtime, vm::reservation_acquire(raddr));
+						__mwaitx<check_wait_t>(static_cast<u32>(std::min<u64>(eventstat_spin_count, 17) * 500), 0xf0, std::addressof(*resrv_mem), +rtime, vm::reservation_acquire(raddr));
 					}
 				}
 				else
