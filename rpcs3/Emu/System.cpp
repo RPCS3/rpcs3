@@ -2953,10 +2953,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
 	{
 		bool read_sysutil_signal = false;
+		std::vector<stx::shared_ptr<named_thread<ppu_thread>>> ppu_thread_list;
 
-		// If EXITGAME signal is not read, force kill after a couple of seconds.
+		// If EXITGAME signal is not read, force kill after a second.
 		constexpr int loop_timeout_ms = 50;
-		int kill_timeout_ms = 2000;
+		int kill_timeout_ms = 1000;
 		int elapsed_ms = 0;
 
 		qt_events_aware_op(loop_timeout_ms, [&]()
@@ -2978,17 +2979,49 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				sys_log.notice("The game received the exit request. Waiting for it to terminate itself...");
 				kill_timeout_ms += 5000; // Grant a couple more seconds
 				read_sysutil_signal = true;
+
+				// Observe PPU threads state since this stage
+				idm::select<named_thread<ppu_thread>>([&](u32 id, cpu_thread&)
+				{
+					ppu_thread_list.emplace_back(idm::get_unlocked<named_thread<ppu_thread>>(id));
+				});
 			}
 
-			if (static_cast<u64>(info) != m_stop_ctr)
+			if (static_cast<u64>(info) != m_stop_ctr || Emu.IsStopped())
 			{
 				return true;
+			}
+
+			if (read_sysutil_signal && kill_timeout_ms - elapsed_ms <= 1'500)
+			{
+				int thread_exited_count = 0;
+
+				for (auto& ppu : ppu_thread_list)
+				{
+					if (ppu && (ppu->state & cpu_flag::exit || ppu->joiner == ppu_join_status::zombie))
+					{
+						ppu.reset();
+						thread_exited_count++;
+					}
+				}
+
+				if (thread_exited_count)
+				{
+					// If some threads exited since last check, grant additional 250 miliseconds
+					kill_timeout_ms += 250;
+					sys_log.notice("Threads were terminated.. increasing termination timeout (threads=%d)", thread_exited_count);
+				}
 			}
 
 			// Process events
 			elapsed_ms += loop_timeout_ms;
 			return false;
 		});
+
+		if (Emu.IsStopped(true))
+		{
+			return;
+		}
 
 		// An inevitable attempt to terminate the *current* emulation course will be issued after the timeout was reached.
 		CallFromMainThread([this, allow_autoexit, elapsed_ms, read_sysutil_signal]()

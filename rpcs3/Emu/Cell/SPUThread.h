@@ -806,6 +806,14 @@ public:
 	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 	u64 getllar_evaluate_time = 0;
 
+	u32 eventstat_raddr = 0;
+	u32 eventstat_getllar = 0;
+	u64 eventstat_block_counter = 0;
+	u64 eventstat_spu_group_restart = 0;
+	u64 eventstat_spin_count = 0;
+	u64 eventstat_evaluate_time = 0;
+	u32 eventstat_busy_waiting_switch = 0;
+
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 4096;
@@ -829,6 +837,7 @@ public:
 	bool stop_flag_removal_protection = false;
 
 	std::array<std::array<u8, 4>, SPU_LS_SIZE / 128> getllar_wait_time{};
+	std::array<std::array<u8, 16>, SPU_LS_SIZE / 128> eventstat_wait_time{};
  
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);

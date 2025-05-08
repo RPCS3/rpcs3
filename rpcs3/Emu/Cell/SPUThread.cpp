@@ -4549,6 +4549,126 @@ u32 spu_thread::get_mfc_completed() const
 	return ch_tag_mask & ~mfc_fence;
 }
 
+u32 evaluate_spin_optimization(std::span<u8> stats, u64 evaluate_time, const cfg::uint<0, 100>& wait_percent, bool inclined_for_responsiveness = false)
+{
+	ensure(stats.size() >= 2 && stats.size() <= 16);
+
+	const u32 percent = wait_percent;
+
+	// Predict whether or not to use operating system sleep based on history
+
+	std::array<u8, 16> old_stats{};
+	std::copy_n(stats.data(), stats.size(), old_stats.data());
+
+	// Rotate history (prepare newest entry)
+	stats[0] = 0;
+	std::copy_n(old_stats.data(), stats.size() - 1, stats.data() + 1);
+
+	u32 total_wait = 0;
+	u32 zero_count = 0; // Try to ignore major inconsistencies
+	u32 consecutive_zero = 0;
+	u32 consecutive_zero_or_one = 0;
+	u32 consecutive_zero_or_one_tally = 0;
+
+	usz index = umax;
+
+	for (u8 val : old_stats)
+	{
+		index++;
+
+		if (index == stats.size())
+		{
+			break;
+		}
+
+		total_wait += val;
+
+		if (val == 0)
+		{
+			if (consecutive_zero == index)
+			{
+				consecutive_zero++;
+				consecutive_zero_or_one++;
+				//consecutive_zero_or_one_tally += 0;
+			}
+
+			++zero_count;
+		}
+
+		if (val == 1)
+		{
+			if (consecutive_zero_or_one == index)
+			{
+				consecutive_zero_or_one++;
+				consecutive_zero_or_one_tally++;
+			}
+		}
+	}
+
+	if (inclined_for_responsiveness)
+	{
+		total_wait /= 2;
+	}
+
+	// Add to chance if previous wait was long enough
+	u32 add_count = 0;
+
+	if (stats.size() == 4)
+	{
+		add_count = zero_count == 3 && total_wait >= 9 ? (total_wait - 8) * 40
+			: zero_count == 2 && total_wait >= 8 ? (total_wait - 7) * 40 
+			: zero_count == 1 && total_wait >= 7 ? (total_wait - 6) * 40
+			: zero_count == 0 && total_wait >= 4 ? (total_wait - 3) * 40
+			: 0;
+	}
+	else
+	{
+		add_count = zero_count >= 12 && total_wait >= 80 ? (total_wait - 80) * 30
+			: zero_count >= 7 && total_wait >= 30 ? (total_wait - 30) * 10 
+			: zero_count >= 4 && total_wait >= 20 ? (total_wait - 20) * 10
+			: zero_count >= 0 && total_wait >= 10 ? (total_wait - 10) * 10
+			: 0;
+	}
+
+	if (stats.size() == 16 && (consecutive_zero >= 2 || (consecutive_zero_or_one >= 3 && consecutive_zero_or_one_tally < consecutive_zero_or_one * 2 / 3)))
+	{
+		// Thread is back to action after some sleep
+		add_count = 0;
+	}
+
+	if (inclined_for_responsiveness && std::count(old_stats.data(), old_stats.data() + 3, 0) >= 2)
+	{
+		add_count = 0;
+	}
+
+	// Evalute its value (shift-right to ensure its randomness with different CPUs)
+	const u32 busy_waiting_switch = ((evaluate_time >> 8) % 100 + add_count < percent) ? 1 : 0;
+
+	thread_local usz g_system_wait = 0, g_busy_wait = 0;
+
+	if (busy_waiting_switch)
+	{
+		g_busy_wait++;
+	}
+	else
+	{
+		g_system_wait++;
+	}
+
+	if ((g_system_wait + g_busy_wait) && (g_system_wait + g_busy_wait) % 200 == 0)
+	{
+		spu_log.trace("SPU wait: count=%d. switch=%d, spin=%d, busy=%d, system=%d, {%d, %d, %d, %d}", total_wait, busy_waiting_switch, !"TODO: Spin", +g_busy_wait, +g_system_wait, old_stats[0], old_stats[1], old_stats[2], old_stats[3]);
+	}
+
+	if ((g_system_wait + g_busy_wait) % 5000 == 0)
+	{
+		g_system_wait = 0;
+		g_busy_wait = 0;
+	}
+
+	return busy_waiting_switch;
+}
+
 bool spu_thread::process_mfc_cmd()
 {
 	// Stall infinitely if MFC queue is full
@@ -4663,61 +4783,16 @@ bool spu_thread::process_mfc_cmd()
 
 							getllar_spin_count = std::min<u32>(getllar_spin_count + 1, u16{umax});
 
-							static atomic_t<usz> g_ok = 0, g_fail = 0;
-
 							if (getllar_busy_waiting_switch == umax && getllar_spin_count == 4)
 							{
 								// Hidden value to force busy waiting (100 to 1 are dynamically adjusted, 0 is not)
 								if (!g_cfg.core.spu_getllar_spin_optimization_disabled)
 								{
-									const u32 percent = g_cfg.core.spu_getllar_busy_waiting_percentage;
-
-									// Predict whether or not to use operating system sleep based on history
-									auto& stats = getllar_wait_time[(addr % SPU_LS_SIZE) / 128];
-
-									const std::array<u8, 4> old_stats = stats;
-									std::array<u8, 4> new_stats{};
-
-									// Rotate history (prepare newest entry)
-									new_stats[0] = 0;
-									new_stats[1] = old_stats[0];
-									new_stats[2] = old_stats[1];
-									new_stats[3] = old_stats[2];
-
-									stats = new_stats;
-
-									u32 total_wait = 0;
-									u32 zero_count = 0; // Try to ignore major inconsistencies
-
-									for (u8 val : old_stats)
-									{
-										total_wait += val;
-										if (val == 0) ++zero_count;
-									}
-
-									// Add to chance if previous wait was long enough
-									const u32 add_count = zero_count == 3 && total_wait >= 40 ? (total_wait - 39) * 40
-										: zero_count == 2 && total_wait >= 11 ? (total_wait - 10) * 40
-										: zero_count == 1 && total_wait >= 8 ? (total_wait - 7) * 40
-										: zero_count == 0 && total_wait >= 6 ? (total_wait - 5) * 40
-										: 0;
-
-									// Evalute its value (shift-right to ensure its randomness with different CPUs)
-									getllar_busy_waiting_switch = ((perf0.get() >> 8) % 100 + add_count < percent) ? 1 : 0;
-
 									getllar_evaluate_time = perf0.get();
+									auto& history = getllar_wait_time[(addr % SPU_LS_SIZE) / 128];
 
-									if (getllar_busy_waiting_switch)
-									{
-										g_fail++;
-									}
-									else
-									{
-										g_ok++;
-									}
-
-									if ((g_ok + g_fail) % 200 == 0 && !getllar_busy_waiting_switch)
-										spu_log.trace("SPU wait: count=%d. switch=%d, spin=%d, fail=%d, ok=%d, {%d, %d, %d, %d}", total_wait, getllar_busy_waiting_switch, getllar_spin_count, +g_fail, +g_ok, old_stats[0], old_stats[1], old_stats[2], old_stats[3] );
+									getllar_busy_waiting_switch =
+										evaluate_spin_optimization({ history.data(), history.size() }, getllar_evaluate_time, g_cfg.core.spu_getllar_busy_waiting_percentage);
 								}
 								else
 								{
@@ -5968,7 +6043,52 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return true;
 		};
 
-		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
+		const bool is_LR_wait = raddr && mask1 & SPU_EVENT_LR;
+
+		auto& history = eventstat_wait_time[(raddr % SPU_LS_SIZE) / 128];
+
+		if (is_LR_wait)
+		{
+			const u32 spu_group_restart = group ? +group->stop_count : 0;
+
+			// Check if waiting session changed
+			if (eventstat_raddr != raddr || eventstat_block_counter != block_counter || last_getllar != eventstat_getllar || eventstat_spu_group_restart != spu_group_restart)
+			{
+				eventstat_raddr = raddr;
+				eventstat_block_counter = block_counter;
+				eventstat_getllar = last_getllar;
+				eventstat_spu_group_restart = spu_group_restart;
+				eventstat_spin_count = 0;
+				eventstat_evaluate_time = get_system_time();
+				eventstat_busy_waiting_switch = umax;
+			}
+			else
+			{
+				u8& val = history.front();
+				val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
+			}
+		}
+		else
+		{
+			eventstat_busy_waiting_switch = 0;
+			eventstat_raddr = 0;
+			eventstat_block_counter = 0;
+		}
+
+		if (eventstat_busy_waiting_switch == umax)
+		{
+			bool value = false;
+
+			if (is_LR_wait && g_cfg.core.spu_reservation_busy_waiting_enabled)
+			{
+				// Make single-threaded groups inclined for busy-waiting
+				value = evaluate_spin_optimization({ history.data(), history.size() }, eventstat_evaluate_time, g_cfg.core.spu_reservation_busy_waiting_percentage, group && group->max_num == 1) != 0;
+			}
+
+			eventstat_busy_waiting_switch = value ? 1 : 0;
+		}
+		
+		for (bool is_first = true; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true), is_first = false)
 		{
 			const auto old = +state;
 
@@ -5983,7 +6103,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 
 			// Optimized check
-			if (raddr && mask1 & SPU_EVENT_LR)
+			if (is_LR_wait)
 			{
 				if (cache_line_waiter_index == umax)
 				{
@@ -6014,6 +6134,59 @@ s64 spu_thread::get_ch_value(u32 ch)
 					set_events(SPU_EVENT_LR);
 					continue;
 				}
+
+				if (!is_first && eventstat_busy_waiting_switch != 1)
+				{
+					u8& val = history.front();
+					val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
+				}
+			}
+
+			if (eventstat_busy_waiting_switch == 1)
+			{
+				// Don't be stubborn, force operating sleep if too much time has passed
+				const u64 time_since = get_system_time() - eventstat_evaluate_time;
+
+				if (time_since >= (utils::get_thread_count() >= 9 ? 50'000 : 3000))
+				{
+					spu_log.trace("SPU RdEventStat wait for 0x%x failed", raddr);
+					history.front() = 2;
+					eventstat_busy_waiting_switch = 0;
+					continue;
+				}
+
+#if defined(ARCH_X64)
+				if (utils::has_um_wait())
+				{
+					if (utils::has_waitpkg())
+					{
+						__tpause(std::min<u32>(eventstat_spin_count, 10) * 500, 0x1);
+					}
+					else
+					{
+						struct check_wait_t
+						{
+							static FORCE_INLINE bool needs_wait(u64 rtime, const atomic_t<u64>& mem_rtime) noexcept
+							{
+								return rtime == mem_rtime;
+							}
+						};
+
+						// Provide the first X64 cache line of the reservation to be tracked
+						__mwaitx<check_wait_t>(std::min<u32>(eventstat_spin_count, 17) * 500, 0xf0, std::addressof(*resrv_mem), +rtime, vm::reservation_acquire(raddr));
+					}
+				}
+				else
+#endif
+				{
+					busy_wait(300);
+				}
+
+				// Check other reservations in other threads
+				lv2_obj::notify_all();
+
+				eventstat_spin_count++;
+				continue;
 			}
 
 			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
