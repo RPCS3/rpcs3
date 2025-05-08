@@ -341,14 +341,14 @@ void qt_camera_handler::update_camera_settings()
 
 		// Load selected settings from config file
 		bool success = false;
-		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(camera_id, success);
+		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(fmt::format("%s", camera_handler::qt), camera_id, success);
 
 		if (success)
 		{
 			camera_log.notice("Found config entry for camera \"%s\" (m_camera_id='%s')", camera_id, m_camera_id);
 
 			// List all available settings and choose the proper value if possible.
-			const double epsilon = 0.001;
+			constexpr double epsilon = 0.001;
 			success = false;
 			for (const QCameraFormat& supported_setting : m_camera->cameraDevice().videoFormats())
 			{

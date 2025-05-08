@@ -2931,8 +2931,8 @@ void main_window::CreateConnects()
 
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{
-		camera_settings_dialog dlg(this);
-		dlg.exec();
+		camera_settings_dialog* dlg = new camera_settings_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
