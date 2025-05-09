@@ -2950,7 +2950,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	sys_log.notice("The game was requested to exit. Waiting for its reaction...");
 
-	auto perform_kill = [read_counter, allow_autoexit, this, info = GetEmulationIdentifier()]()
+	auto perform_kill = [read_counter, allow_autoexit, this, info = old_emu_id]()
 	{
 		bool read_sysutil_signal = false;
 		std::vector<stx::shared_ptr<named_thread<ppu_thread>>> ppu_thread_list;
@@ -3018,14 +3018,14 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 			return false;
 		});
 
-		if (Emu.IsStopped(true))
-		{
-			return;
-		}
-
 		// An inevitable attempt to terminate the *current* emulation course will be issued after the timeout was reached.
 		CallFromMainThread([this, allow_autoexit, elapsed_ms, read_sysutil_signal]()
 		{
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+
 			sys_log.error("The game did not react to the exit request in time. Terminating manually... (read_sysutil_signal=%d, elapsed_ms=%d)", read_sysutil_signal, elapsed_ms);
 			Kill(allow_autoexit);
 		}, info);
