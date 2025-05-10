@@ -1,3 +1,4 @@
+#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
 #include "stdafx.h"
 #include "Emu/system_config.h"
 #include "ip_address.h"
@@ -6,6 +7,7 @@
 #include "util/endian.hpp"
 #include "util/types.hpp"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
 #include <algorithm>
 
 #ifndef _WIN32
@@ -103,6 +105,7 @@ namespace np
 	// -IPv6 is not disabled in config
 	// -Internet config is Connected
 	// -PSN config is RPCN
+	// -Bind IP is not set
 	// -RPCN host has an IPv6
 	// -Can connect to ipv6.google.com:413
 	bool is_ipv6_supported(std::optional<IPV6_SUPPORT> force_state)
@@ -134,6 +137,9 @@ namespace np
 
 		if (g_cfg.net.net_active != np_internet_status::enabled || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 			return notice_and_disable("RPCN is disabled");
+
+		if (resolve_binding_ip())
+			return notice_and_disable("Bind IP is used");
 
 		addrinfo* addr_info{};
 		socket_type socket_ipv6{};

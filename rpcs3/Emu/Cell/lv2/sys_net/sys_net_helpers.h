@@ -25,6 +25,7 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 bool is_ip_public_address(const ::sockaddr_in& addr);
 u32 network_clear_queue(ppu_thread& ppu);
 void clear_ppu_to_awake(ppu_thread& ppu);
+be_t<u32> resolve_binding_ip();
 
 #ifdef _WIN32
 void windows_poll(std::vector<pollfd>& fds, unsigned long nfds, int timeout, std::vector<bool>& connecting);

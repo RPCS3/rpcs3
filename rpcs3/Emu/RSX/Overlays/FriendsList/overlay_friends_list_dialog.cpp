@@ -655,7 +655,7 @@ namespace rsx
 
 			g_cfg_rpcn.load(); // Ensures config is loaded even if rpcn is not running for simulated
 
-			m_rpcn = rpcn::rpcn_client::get_instance();
+			m_rpcn = rpcn::rpcn_client::get_instance(0);
 
 			m_rpcn->register_friend_cb(friend_callback, this);
 

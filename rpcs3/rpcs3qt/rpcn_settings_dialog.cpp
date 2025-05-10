@@ -270,7 +270,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 				return;
 
 			{
-				const auto rpcn       = rpcn::rpcn_client::get_instance();
+				const auto rpcn = rpcn::rpcn_client::get_instance(0);
 				const auto avatar_url = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
 
 				if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
@@ -325,7 +325,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	connect(btn_test, &QAbstractButton::clicked, this, [this]()
 		{
-			auto rpcn = rpcn::rpcn_client::get_instance();
+			auto rpcn = rpcn::rpcn_client::get_instance(0);
 
 			if (auto res = rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
 			{
@@ -342,7 +342,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
-	
+
 	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
 	{
 		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
@@ -761,7 +761,7 @@ void rpcn_account_edit_dialog::resend_token()
 	if (!save_config())
 		return;
 
-	const auto rpcn = rpcn::rpcn_client::get_instance();
+	const auto rpcn = rpcn::rpcn_client::get_instance(0);
 
 	const std::string npid     = g_cfg_rpcn.get_npid();
 	const std::string password = g_cfg_rpcn.get_password();
@@ -814,7 +814,7 @@ void rpcn_account_edit_dialog::change_password()
 			return;
 
 		{
-			const auto rpcn = rpcn::rpcn_client::get_instance();
+			const auto rpcn = rpcn::rpcn_client::get_instance(0);
 			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 			{
 				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
@@ -859,7 +859,7 @@ void rpcn_account_edit_dialog::change_password()
 			return;
 
 		{
-			const auto rpcn = rpcn::rpcn_client::get_instance();
+			const auto rpcn = rpcn::rpcn_client::get_instance(0);
 			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
 			{
 				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
@@ -1048,7 +1048,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	setLayout(vbox_global);
 
 	// Tries to connect to RPCN
-	m_rpcn = rpcn::rpcn_client::get_instance();
+	m_rpcn = rpcn::rpcn_client::get_instance(0);
 
 	if (auto res = m_rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
 	{

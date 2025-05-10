@@ -212,6 +212,7 @@ namespace rpcn
 		case rpcn::rpcn_state::failure_input: return localized_string_id::RPCN_ERROR_INVALID_INPUT;
 		case rpcn::rpcn_state::failure_wolfssl: return localized_string_id::RPCN_ERROR_WOLFSSL;
 		case rpcn::rpcn_state::failure_resolve: return localized_string_id::RPCN_ERROR_RESOLVE;
+		case rpcn::rpcn_state::failure_binding: return localized_string_id::RPCN_ERROR_BINDING;
 		case rpcn::rpcn_state::failure_connect: return localized_string_id::RPCN_ERROR_CONNECT;
 		case rpcn::rpcn_state::failure_id: return localized_string_id::RPCN_ERROR_LOGIN_ERROR;
 		case rpcn::rpcn_state::failure_id_already_logged_in: return localized_string_id::RPCN_ERROR_ALREADY_LOGGED;
@@ -316,8 +317,8 @@ namespace rpcn
 
 	// Constructor, destructor & singleton manager
 
-	rpcn_client::rpcn_client()
-		: sem_connected(0), sem_authentified(0), sem_reader(0), sem_writer(0), sem_rpcn(0),
+	rpcn_client::rpcn_client(u32 binding_address)
+		: binding_address(binding_address), sem_connected(0), sem_authentified(0), sem_reader(0), sem_writer(0), sem_rpcn(0),
 		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)),
 		  thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
 		  thread_rpcn_writer(std::thread(&rpcn_client::rpcn_writer_thread, this))
@@ -349,7 +350,7 @@ namespace rpcn
 		sem_authentified.release();
 	}
 
-	std::shared_ptr<rpcn_client> rpcn_client::get_instance(bool check_config)
+	std::shared_ptr<rpcn_client> rpcn_client::get_instance(u32 binding_address, bool check_config)
 	{
 		if (check_config && g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 		{
@@ -362,7 +363,7 @@ namespace rpcn
 		sptr = instance.lock();
 		if (!sptr)
 		{
-			sptr = std::shared_ptr<rpcn_client>(new rpcn_client());
+			sptr = std::shared_ptr<rpcn_client>(new rpcn_client(binding_address));
 			sptr->register_friend_cb(overlay_friend_callback, nullptr);
 			instance = sptr;
 		}
@@ -1071,6 +1072,16 @@ namespace rpcn
 			{
 				rpcn_log.error("connect: Failed to connect to RPCN server!");
 				state = rpcn_state::failure_connect;
+				return false;
+			}
+
+			sockaddr_in sock_addr = {.sin_family = AF_INET};
+			sock_addr.sin_addr.s_addr = binding_address;
+
+			if (::bind(sockfd, reinterpret_cast<const sockaddr*>(&sock_addr), sizeof(sock_addr)) == -1)
+			{
+				rpcn_log.error("bind: Failed to bind RPCN client socket to binding address!");
+				state = rpcn_state::failure_binding;
 				return false;
 			}
 

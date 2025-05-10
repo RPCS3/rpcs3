@@ -42,7 +42,7 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 
 	m_dialog->setWindowTitle(tr("Choose message:"));
 
-	m_rpcn = rpcn::rpcn_client::get_instance(true);
+	m_rpcn = rpcn::rpcn_client::get_instance(0, true);
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 

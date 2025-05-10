@@ -412,7 +412,7 @@ namespace np
 			nc.bind_sce_np_port();
 
 			std::lock_guard lock(mutex_rpcn);
-			rpcn = rpcn::rpcn_client::get_instance();
+			rpcn = rpcn::rpcn_client::get_instance(bind_ip);
 		}
 	}
 
@@ -455,19 +455,10 @@ namespace np
 			}
 
 			// Convert bind address
-			conv = {};
-			if (!inet_pton(AF_INET, g_cfg.net.bind_address.to_string().c_str(), &conv))
-			{
-				// Do not set to disconnected on invalid IP just error and continue using default (0.0.0.0)
-				nph_log.error("Provided IP(%s) address for bind is invalid!", g_cfg.net.bind_address.to_string());
-			}
-			else
-			{
-				bind_ip = conv.s_addr;
+			bind_ip = resolve_binding_ip();
 
-				if (bind_ip)
-					local_ip_addr = bind_ip;
-			}
+			if (bind_ip)
+				local_ip_addr = bind_ip;
 
 			if (g_cfg.net.upnp_enabled)
 				upnp.upnp_enable();
@@ -793,7 +784,7 @@ namespace np
 
 			if (!rpcn)
 			{
-				rpcn = rpcn::rpcn_client::get_instance();
+				rpcn = rpcn::rpcn_client::get_instance(bind_ip);
 				was_already_started = false;
 			}
 

@@ -98,6 +98,7 @@ namespace rpcn
 		failure_input,
 		failure_wolfssl,
 		failure_resolve,
+		failure_binding,
 		failure_connect,
 		failure_id,
 		failure_id_already_logged_in,
