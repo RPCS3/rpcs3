@@ -40,7 +40,7 @@ error_code sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::
 
 	m_dialog->setWindowTitle(tr("Choose friend to message:"));
 
-	m_rpcn = rpcn::rpcn_client::get_instance(true);
+	m_rpcn = rpcn::rpcn_client::get_instance(0, true);
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 

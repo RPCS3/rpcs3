@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUThread.h"
 #include "lv2_socket.h"
 #include "sys_net_helpers.h"
@@ -197,6 +198,26 @@ void clear_ppu_to_awake(ppu_thread& ppu)
 {
 	g_fxo->get<network_context>().del_ppu_to_awake(&ppu);
 	g_fxo->get<p2p_context>().del_ppu_to_awake(&ppu);
+}
+
+be_t<u32> resolve_binding_ip()
+{
+	in_addr conv{};
+	const std::string cfg_bind_addr = g_cfg.net.bind_address.to_string();
+
+	if (cfg_bind_addr == "0.0.0.0" || cfg_bind_addr == "")
+	{
+		return 0;
+	}
+
+	if (!inet_pton(AF_INET, cfg_bind_addr.c_str(), &conv))
+	{
+		// Do not set to disconnected on invalid IP just error and continue using default (0.0.0.0)
+		sys_net.error("Provided IP(%s) address for bind is invalid!", g_cfg.net.bind_address.to_string());
+		return 0;
+	}
+
+	return conv.s_addr;
 }
 
 #ifdef _WIN32

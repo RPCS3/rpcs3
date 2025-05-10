@@ -183,7 +183,7 @@ namespace rsx
 				break; // Title already set in constructor
 			}
 
-			m_rpcn = rpcn::rpcn_client::get_instance(true);
+			m_rpcn = rpcn::rpcn_client::get_instance(0, true);
 
 			// Get list of messages
 			rpcn::friend_data data;

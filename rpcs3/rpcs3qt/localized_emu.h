@@ -185,6 +185,7 @@ private:
 		case localized_string_id::RPCN_ERROR_INVALID_INPUT: return tr("RPCN: Invalid Input (Wrong Host/Port)");
 		case localized_string_id::RPCN_ERROR_WOLFSSL: return tr("RPCN Connection Error: WolfSSL Error");
 		case localized_string_id::RPCN_ERROR_RESOLVE: return tr("RPCN Connection Error: Resolve Error");
+		case localized_string_id::RPCN_ERROR_BINDING: return tr("RPCN Connection Error: Failed to bind to given binding IP");
 		case localized_string_id::RPCN_ERROR_CONNECT: return tr("RPCN Connection Error");
 		case localized_string_id::RPCN_ERROR_LOGIN_ERROR: return tr("RPCN Login Error: Identification Error");
 		case localized_string_id::RPCN_ERROR_ALREADY_LOGGED: return tr("RPCN Login Error: User Already Logged In");

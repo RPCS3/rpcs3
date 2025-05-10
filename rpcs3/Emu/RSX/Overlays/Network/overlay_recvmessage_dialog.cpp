@@ -213,7 +213,7 @@ namespace rsx
 			const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 			const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
-			m_rpcn = rpcn::rpcn_client::get_instance(true);
+			m_rpcn = rpcn::rpcn_client::get_instance(0, true);
 
 			// Get list of messages
 			const auto messages = m_rpcn->get_messages_and_register_cb(type, include_bootable, recvmessage_callback, this);

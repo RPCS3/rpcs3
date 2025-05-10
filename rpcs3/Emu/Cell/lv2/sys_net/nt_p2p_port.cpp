@@ -7,6 +7,7 @@
 #include "sys_net_helpers.h"
 #include "Emu/NP/vport0.h"
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -59,6 +60,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 
 	int ret_bind = 0;
 	const u16 be_port = std::bit_cast<u16, be_t<u16>>(port);
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (is_ipv6)
 	{
@@ -73,15 +75,23 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	else
 	{
 		::sockaddr_in p2p_ipv4_addr{.sin_family = AF_INET, .sin_port = be_port};
-		ret_bind = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr));
+		p2p_ipv4_addr.sin_addr.s_addr = nph.get_bind_ip();
+
+		if (ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr)); ret_bind == -1)
+		{
+			if (nph.get_bind_ip())
+			{
+				sys_net.error("Failed to bind to %s:%d, falling back to 0.0.0.0:%d", np::ip_to_string(nph.get_bind_ip()), port, port);
+				p2p_ipv4_addr.sin_addr.s_addr = 0;
+				ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr));
+			}
+		}
 	}
 
 	if (ret_bind == -1)
 		fmt::throw_exception("Failed to bind DGRAM socket to %d for P2P: %s!", port, get_last_error(true));
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	nph.upnp_add_port_mapping(port, "UDP");
-
 	sys_net.notice("P2P port %d was bound!", port);
 }
 
