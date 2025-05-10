@@ -99,6 +99,7 @@ public:
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	bool open_device() override;
+	bool set_configuration(u8 cfg_num) override;
 
 private:
 	void sdl_refresh();
