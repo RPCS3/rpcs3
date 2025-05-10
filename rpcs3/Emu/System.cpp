@@ -2987,7 +2987,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				});
 			}
 
-			if (static_cast<u64>(info) != m_stop_ctr || Emu.IsStopped())
+			if (static_cast<u64>(info) != m_stop_ctr || Emu.IsStopped(true))
 			{
 				return true;
 			}
