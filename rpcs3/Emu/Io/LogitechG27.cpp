@@ -119,12 +119,14 @@ u16 usb_device_logitech_g27::get_num_emu_devices()
 
 void usb_device_logitech_g27::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
+	// log these explicitly for now
+	logitech_g27_log.todo("control transfer bmRequestType %02x, bRequest %02x, wValue %04x, wIndex %04x, wLength %04x, %s", bmRequestType, bRequest, wValue, wIndex, wLength, fmt::buf_to_hexstring(buf, buf_size));
+
 	transfer->fake = true;
 	transfer->expected_count = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	transfer->expected_time = get_timestamp() + 100;
 
-	// Log these for now, might not need to implement anything
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }
 
@@ -746,8 +748,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 
 		// calibrated, unsure
 		set_bit(buf, 82, true);
-		// shifter connected
-		set_bit(buf, 83, true);
+		// shifter connected, 0 for now until it can be verified
+		set_bit(buf, 83, false);
 		// shifter stick down
 		set_bit(buf, 86, shifter_1 || shifter_2 || shifter_3 || shifter_4 || shifter_5 || shifter_6 || shifter_r);
 
