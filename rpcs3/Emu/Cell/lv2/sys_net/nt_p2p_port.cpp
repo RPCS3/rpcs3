@@ -75,16 +75,14 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	else
 	{
 		::sockaddr_in p2p_ipv4_addr{.sin_family = AF_INET, .sin_port = be_port};
-		p2p_ipv4_addr.sin_addr.s_addr = nph.get_bind_ip();
+		const u32 bind_ip = nph.get_bind_ip();
+		p2p_ipv4_addr.sin_addr.s_addr = bind_ip;
 
-		if (ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr)); ret_bind == -1)
+		if (ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr)); ret_bind == -1 && bind_ip)
 		{
-			if (nph.get_bind_ip())
-			{
-				sys_net.error("Failed to bind to %s:%d, falling back to 0.0.0.0:%d", np::ip_to_string(nph.get_bind_ip()), port, port);
-				p2p_ipv4_addr.sin_addr.s_addr = 0;
-				ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr));
-			}
+			sys_net.error("Failed to bind to %s:%d, falling back to 0.0.0.0:%d", np::ip_to_string(bind_ip), port, port);
+			p2p_ipv4_addr.sin_addr.s_addr = 0;
+			ret_bind = ::bind(p2p_socket, reinterpret_cast<const sockaddr*>(&p2p_ipv4_addr), sizeof(p2p_ipv4_addr));
 		}
 	}
 
