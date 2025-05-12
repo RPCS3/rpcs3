@@ -1078,9 +1078,9 @@ namespace rpcn
 			sockaddr_in sock_addr = {.sin_family = AF_INET};
 			sock_addr.sin_addr.s_addr = binding_address;
 
-			if (::bind(sockfd, reinterpret_cast<const sockaddr*>(&sock_addr), sizeof(sock_addr)) == -1)
+			if (binding_address != 0 && ::bind(sockfd, reinterpret_cast<const sockaddr*>(&sock_addr), sizeof(sock_addr)) == -1)
 			{
-				rpcn_log.error("bind: Failed to bind RPCN client socket to binding address!");
+				rpcn_log.error("bind: Failed to bind RPCN client socket to binding address(%s): 0x%x!", np::ip_to_string(binding_address), get_native_error());
 				state = rpcn_state::failure_binding;
 				return false;
 			}

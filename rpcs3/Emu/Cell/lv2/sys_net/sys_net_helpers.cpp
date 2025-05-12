@@ -6,6 +6,11 @@
 #include "sys_net_helpers.h"
 #include "network_context.h"
 
+#ifdef _WIN32
+#include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
+#endif
+
 LOG_CHANNEL(sys_net);
 
 int get_native_error()
@@ -159,8 +164,19 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 	// Windows doesn't support sending packets to 0.0.0.0 but it works on unixes, send to 127.0.0.1 instead
 	if (native_addr.sin_addr.s_addr == 0x00000000)
 	{
-		sys_net.warning("[Native] Redirected 0.0.0.0 to 127.0.0.1");
-		native_addr.sin_addr.s_addr = std::bit_cast<u32, be_t<u32>>(0x7F000001);
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		if (const u32 bind_addr = nph.get_bind_ip(); bind_addr != 0)
+		{
+			// If bind IP is set 0.0.0.0 was bound to binding_ip so we need to connect to that ip
+			sys_net.warning("[Native] Redirected 0.0.0.0 to %s", np::ip_to_string(bind_addr));
+			native_addr.sin_addr.s_addr = bind_addr;
+		}
+		else
+		{
+			// Otherwise we connect to localhost which should be bound
+			sys_net.warning("[Native] Redirected 0.0.0.0 to 127.0.0.1");
+			native_addr.sin_addr.s_addr = std::bit_cast<u32, be_t<u32>>(0x7F000001);
+		}
 	}
 #endif
 
