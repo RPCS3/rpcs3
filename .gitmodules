@@ -106,5 +106,5 @@
 	ignore = dirty
 [submodule "3rdparty/GPUOpen/VulkanMemoryAllocator"]
 	path = 3rdparty/GPUOpen/VulkanMemoryAllocator
-	url = ../../Megamouse/VulkanMemoryAllocator.git
+	url = ../../GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 	ignore = dirty
