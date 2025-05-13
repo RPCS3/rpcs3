@@ -802,6 +802,7 @@ public:
 	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
 	u32 last_getllar_gpr1 = umax;
 	u32 last_getllar_addr = umax;
+	u32 last_getllar_lsa = umax;
 	u32 getllar_spin_count = 0;
 	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 	u64 getllar_evaluate_time = 0;
