@@ -159,20 +159,6 @@ static bool sdl_joysticks_equal(std::map<u64, std::vector<SDL_Joystick*>>& left,
 	return true;
 }
 
-static std::map<u64, std::vector<SDL_Joystick*>> get_sdl_joysticks_v1(std::map<u64, std::vector<SDL_Joystick*>>& v2)
-{
-	std::map<u64, std::vector<SDL_Joystick*>> v1;
-
-	for (const auto& [v2_key, joysticks] : v2)
-	{
-		const u64 v1_key = v2_key & 0xFFFFFFFF;
-		// this only works with wheels that worked with v1, and that's okay, Fanatec users need to re-map anyway
-		v1[v1_key] = joysticks;
-	}
-
-	return v1;
-}
-
 static inline logitech_g27_sdl_mapping get_runtime_mapping()
 {
 	logitech_g27_sdl_mapping mapping {};
@@ -280,11 +266,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				joysticks_of_type->second.push_back(cur_joystick);
 			}
 
-			u64 joystick_type_id_for_ffb = joystick_type_id;
-			if (emulated_g27_device_type_id::is_v1(ffb_device_type_id))
-				joystick_type_id_for_ffb = joystick_type_id & 0xFFFFFFFF;
-
-			if (joystick_type_id_for_ffb == ffb_device_type_id && new_haptic_handle == nullptr)
+			if (joystick_type_id == ffb_device_type_id && new_haptic_handle == nullptr)
 			{
 				SDL_Haptic* cur_haptic = SDL_OpenHapticFromJoystick(cur_joystick);
 				if (cur_haptic == nullptr)
@@ -297,11 +279,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				}
 			}
 
-			u64 joystick_type_id_for_led = joystick_type_id;
-			if (emulated_g27_device_type_id::is_v1(led_device_type_id))
-				joystick_type_id_for_led = joystick_type_id & 0xFFFFFFFF;
-
-			if (joystick_type_id_for_led == led_device_type_id && new_led_joystick_handle == nullptr)
+			if (joystick_type_id == led_device_type_id && new_led_joystick_handle == nullptr)
 			{
 				new_led_joystick_handle = cur_joystick;
 			}
@@ -346,7 +324,6 @@ void usb_device_logitech_g27::sdl_refresh()
 			// finally clear out previous joystick handles
 			clear_sdl_joysticks(m_joysticks);
 			m_joysticks = new_joysticks;
-			m_joysticks_v1 = get_sdl_joysticks_v1(new_joysticks);
 		}
 	}
 
@@ -604,7 +581,7 @@ static s16 fetch_sdl_as_axis(SDL_Joystick* joystick, const sdl_mapping& mapping)
 	return 0;
 }
 
-static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, std::map<u64, std::vector<SDL_Joystick*>>& joysticks_v1, const sdl_mapping& mapping)
+static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	constexpr s16 MAX = 0x7FFF;
 	constexpr s16 MIN = -0x8000;
@@ -612,9 +589,7 @@ static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joystic
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
 	{
-		joysticks_of_type = joysticks_v1.find(mapping.device_type_id);
-		if (joysticks_of_type == joysticks_v1.end())
-			return mapping.reverse ? MAX : MIN;
+		return mapping.reverse ? MAX : MIN;
 	}
 
 	if (joysticks_of_type->second.empty())
@@ -632,14 +607,12 @@ static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joystic
 	return std::clamp<s16>(sdl_joysticks_total_value / static_cast<s32>(joysticks_of_type->second.size()), MIN, MAX);
 }
 
-static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, std::map<u64, std::vector<SDL_Joystick*>>& joysticks_v1, const sdl_mapping& mapping)
+static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
 	{
-		joysticks_of_type = joysticks_v1.find(mapping.device_type_id);
-		if (joysticks_of_type == joysticks_v1.end())
-			return mapping.reverse;
+		return mapping.reverse;
 	}
 
 	if (joysticks_of_type->second.empty())
@@ -655,16 +628,16 @@ static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>
 	return pressed;
 }
 
-static u16 sdl_to_logitech_g27_steering(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, std::map<u64, std::vector<SDL_Joystick*>>& joysticks_v1, const sdl_mapping& mapping)
+static u16 sdl_to_logitech_g27_steering(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, joysticks_v1, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * (0xFFFF >> 2) / 0xFFFF;
 }
 
-static u8 sdl_to_logitech_g27_pedal(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, std::map<u64, std::vector<SDL_Joystick*>>& joysticks_v1, const sdl_mapping& mapping)
+static u8 sdl_to_logitech_g27_pedal(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, joysticks_v1, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * 0xFF / 0xFFFF;
 }
@@ -704,44 +677,44 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 
 		// Fetch input states from SDL
 		m_sdl_handles_mutex.lock();
-		const u16 steering = sdl_to_logitech_g27_steering(m_joysticks, m_joysticks_v1, m_mapping.steering);
-		const u8 throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_joysticks_v1, m_mapping.throttle);
-		const u8 brake = sdl_to_logitech_g27_pedal(m_joysticks, m_joysticks_v1, m_mapping.brake);
-		const u8 clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_joysticks_v1, m_mapping.clutch);
-		const bool shift_up = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shift_up);
-		const bool shift_down = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shift_down);
+		const u16 steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+		const u8 throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+		const u8 brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+		const u8 clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.clutch);
+		const bool shift_up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+		const bool shift_down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
 
-		const bool up = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.up);
-		const bool down = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.down);
-		const bool left = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.left);
-		const bool right = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.right);
+		const bool up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.up);
+		const bool down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.down);
+		const bool left = sdl_to_logitech_g27_button(m_joysticks, m_mapping.left);
+		const bool right = sdl_to_logitech_g27_button(m_joysticks, m_mapping.right);
 
-		const bool triangle = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.triangle);
-		const bool cross = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.cross);
-		const bool square = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.square);
-		const bool circle = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.circle);
+		const bool triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+		const bool cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+		const bool square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+		const bool circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
 
-		const bool l2 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.l2);
-		const bool l3 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.l3);
-		const bool r2 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.r2);
-		const bool r3 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.r3);
+		const bool l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+		const bool l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+		const bool r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+		const bool r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
 
-		const bool plus = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.plus);
-		const bool minus = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.minus);
+		const bool plus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.plus);
+		const bool minus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.minus);
 
-		const bool dial_clockwise = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.dial_clockwise);
-		const bool dial_anticlockwise = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.dial_anticlockwise);
+		const bool dial_clockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_clockwise);
+		const bool dial_anticlockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_anticlockwise);
 
-		const bool select = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.select);
-		const bool pause = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.pause);
+		const bool select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+		const bool pause = sdl_to_logitech_g27_button(m_joysticks, m_mapping.pause);
 
-		const bool shifter_1 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_1);
-		const bool shifter_2 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_2);
-		const bool shifter_3 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_3);
-		const bool shifter_4 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_4);
-		const bool shifter_5 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_5);
-		const bool shifter_6 = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_6);
-		const bool shifter_r = sdl_to_logitech_g27_button(m_joysticks, m_joysticks_v1, m_mapping.shifter_r);
+		const bool shifter_1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_1);
+		const bool shifter_2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_2);
+		const bool shifter_3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_3);
+		const bool shifter_4 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_4);
+		const bool shifter_5 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_5);
+		const bool shifter_6 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_6);
+		const bool shifter_r = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_r);
 		m_sdl_handles_mutex.unlock();
 
 		// populate buffer

@@ -40,30 +40,6 @@ struct emulated_g27_device_type_id
 		value |= (num_buttons & ((1 << 10) - 1)) << 52;
 		return value;
 	}
-
-	bool is_v1()
-	{
-		return !num_axes && !num_hats && !num_buttons;
-	}
-
-	static emulated_g27_device_type_id from_u64(u64 data)
-	{
-		const emulated_g27_device_type_id id =
-		{
-			.product_id = static_cast<u64>(data & 0xFFFF),
-			.vendor_id = static_cast<u64>((data >> 16) & 0xFFFF),
-			.num_axes = static_cast<u64>((data >> 32) & ((1 << 10) - 1)),
-			.num_hats = static_cast<u64>((data >> 42) & ((1 << 10) - 1)),
-			.num_buttons = static_cast<u64>((data >> 52) & ((1 << 10) - 1))
-		};
-		return id;
-	}
-
-	static bool is_v1(u64 data)
-	{
-		emulated_g27_device_type_id id = from_u64(data);
-		return id.is_v1();
-	}
 };
 
 struct emulated_logitech_g27_mapping : cfg::node

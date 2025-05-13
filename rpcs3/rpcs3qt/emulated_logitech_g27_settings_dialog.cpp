@@ -525,46 +525,6 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 	}
 }
 
-static void migrate_device_type_id(emulated_g27_device_type_id& device_type_id_struct)
-{
-	if (!device_type_id_struct.is_v1())
-		return;
-
-	sdl_instance::get_instance().pump_events();
-	int joystick_count = 0;
-	SDL_JoystickID* joystick_ids = SDL_GetJoysticks(&joystick_count);
-
-	if (!joystick_ids)
-		return;
-
-	for (int i = 0; i < joystick_count; i++)
-	{
-		SDL_Joystick* cur_joystick = SDL_OpenJoystick(joystick_ids[i]);
-		if (!cur_joystick)
-			continue;
-
-		const u16 vendor_id = SDL_GetJoystickVendor(cur_joystick);
-		const u16 product_id = SDL_GetJoystickProduct(cur_joystick);
-		if (vendor_id == device_type_id_struct.vendor_id && product_id == device_type_id_struct.product_id)
-		{
-			device_type_id_struct.num_axes = SDL_GetNumJoystickAxes(cur_joystick);
-			device_type_id_struct.num_hats = SDL_GetNumJoystickHats(cur_joystick);
-			device_type_id_struct.num_buttons = SDL_GetNumJoystickButtons(cur_joystick);
-			SDL_CloseJoystick(cur_joystick);
-			break;
-		}
-		SDL_CloseJoystick(cur_joystick);
-	}
-	SDL_free(joystick_ids);
-}
-
-static u64 migrate_device_type_id(u64 old_id)
-{
-	emulated_g27_device_type_id old_id_struct = emulated_g27_device_type_id::from_u64(old_id);
-	migrate_device_type_id(old_id_struct);
-	return old_id_struct.as_u64();
-}
-
 void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 {
 	const auto load_mapping = [this](const emulated_logitech_g27_mapping& mapping, Mapping* ui_mapping, mapping_device_choice device_choice)
@@ -579,18 +539,10 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 			.positive_axis = false
 		};
 
-		if (m_sdl_initialized)
-			m.device_type_id = migrate_device_type_id(m.device_type_id);
-
 		ui_mapping->set_mapping(m);
 
-		u64 ffb_device_type_id = g_cfg_logitech_g27.ffb_device_type_id.get();
-		u64 led_device_type_id = g_cfg_logitech_g27.led_device_type_id.get();
-		if (m_sdl_initialized)
-		{
-			ffb_device_type_id = migrate_device_type_id(ffb_device_type_id);
-			led_device_type_id = migrate_device_type_id(led_device_type_id);
-		}
+		const u64 ffb_device_type_id = g_cfg_logitech_g27.ffb_device_type_id.get();
+		const u64 led_device_type_id = g_cfg_logitech_g27.led_device_type_id.get();
 
 		if (ffb_device_type_id == m.device_type_id && m_ffb_device->get_device_choice() == mapping_device_choice::NONE)
 		{
@@ -682,7 +634,6 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all?")) != QMessageBox::Yes)
 				return;
 			g_cfg_logitech_g27.reset();
-			g_cfg_logitech_g27.save();
 			load_ui_state_from_config();
 		}
 		else if (button == buttons->button(QDialogButtonBox::Cancel))

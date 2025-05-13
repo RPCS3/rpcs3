@@ -121,7 +121,6 @@ private:
 	SDL_Joystick* m_led_joystick_handle = nullptr;
 	SDL_Haptic* m_haptic_handle = nullptr;
 	std::map<u64, std::vector<SDL_Joystick*>> m_joysticks;
-	std::map<u64, std::vector<SDL_Joystick*>> m_joysticks_v1;
 	bool m_fixed_loop = false;
 	u16 m_wheel_range = 200;
 	std::array<logitech_g27_ffb_slot, 4> m_effect_slots {};
