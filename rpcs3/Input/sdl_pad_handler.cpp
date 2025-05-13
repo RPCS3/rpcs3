@@ -11,6 +11,15 @@
 
 LOG_CHANNEL(sdl_log, "SDL");
 
+template <>
+void fmt_class_string<SDL_GUID>::format(std::string& out, u64 arg)
+{
+	const SDL_GUID& guid = get_object(arg);
+	char str[sizeof(SDL_GUID) * 2 + 1] {};
+	SDL_GUIDToString(guid, str, sizeof(str));
+	fmt::append(out, "%s", str);
+}
+
 sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 {
 	button_list =
@@ -258,6 +267,7 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 
 	info.type = SDL_GetGamepadType(info.gamepad);
 	info.real_type = SDL_GetRealGamepadType(info.gamepad);
+	info.guid = SDL_GetGamepadGUIDForID(id);
 	info.vid = SDL_GetGamepadVendor(info.gamepad);
 	info.pid = SDL_GetGamepadProduct(info.gamepad);
 	info.product_version = SDL_GetGamepadProductVersion(info.gamepad);
@@ -291,8 +301,8 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 		}
 	}
 
-	sdl_log.notice("Found game pad %d: type=%d, real_type=%d, name='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_player_led=%d, has_mono_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
-		id, static_cast<int>(info.type), static_cast<int>(info.real_type), info.name, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_player_led, info.has_mono_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
+	sdl_log.error("Found game pad %d: type=%d, real_type=%d, name='%s', guid='%s', path='%s', serial='%s', vid=0x%x, pid=0x%x, product_version=0x%x, firmware_version=0x%x, has_led=%d, has_player_led=%d, has_mono_led=%d, has_rumble=%d, has_rumble_triggers=%d, has_accel=%d, has_gyro=%d",
+		id, static_cast<int>(info.type), static_cast<int>(info.real_type), info.name, info.guid, info.path, info.serial, info.vid, info.pid, info.product_version, info.firmware_version, info.has_led, info.has_player_led, info.has_mono_led, info.has_rumble, info.has_rumble_triggers, info.has_accel, info.has_gyro);
 
 	if (info.has_accel)
 	{
