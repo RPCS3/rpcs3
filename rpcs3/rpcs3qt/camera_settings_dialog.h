@@ -11,6 +11,8 @@
 #endif
 #include <QVideoFrame>
 
+#include <mutex>
+
 #ifdef HAVE_SDL3
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -62,6 +64,7 @@ private:
 	SDL_Camera* m_sdl_camera = nullptr;
 	SDL_CameraID m_sdl_camera_id = 0;
 	QImage m_sdl_image;
+	std::mutex m_sdl_image_mutex;
 	std::unique_ptr<named_thread<std::function<void()>>> m_sdl_thread;
 #if (QT_VERSION_MAJOR >= 6 && QT_VERSION_MINOR >= 8) // TODO: Remove when MacOs is at Qt 6.8+
 	std::unique_ptr<QVideoFrameInput> m_video_frame_input;
