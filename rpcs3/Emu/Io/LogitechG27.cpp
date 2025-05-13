@@ -58,12 +58,12 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 	if (!m_enabled)
 		return;
 
-	m_house_keeping_thread = std::thread([this]()
+	m_house_keeping_thread = std::make_unique<named_thread<std::function<void()>>>("Logitech G27", [this]()
 	{
-		while (!m_stop_thread)
+		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			sdl_refresh();
-			std::this_thread::sleep_for(std::chrono::seconds(5));
+			thread_ctrl::wait_for(5'000'000);
 		}
 	});
 }
@@ -88,12 +88,14 @@ static void clear_sdl_joysticks(std::map<u32, std::vector<SDL_Joystick*>>& joyst
 
 usb_device_logitech_g27::~usb_device_logitech_g27()
 {
-	// stop the house keeping thread
-	m_stop_thread = true;
-
 	// wait for the house keeping thread to finish
-	if (m_house_keeping_thread.joinable())
-		m_house_keeping_thread.join();
+	if (m_house_keeping_thread)
+	{
+		auto& thread = *m_house_keeping_thread;
+		thread = thread_state::aborting;
+		thread();
+		m_house_keeping_thread.reset();
+	}
 
 	// Close sdl handles
 	{
