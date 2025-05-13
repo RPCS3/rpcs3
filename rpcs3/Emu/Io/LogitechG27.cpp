@@ -88,14 +88,8 @@ static void clear_sdl_joysticks(std::map<u64, std::vector<SDL_Joystick*>>& joyst
 
 usb_device_logitech_g27::~usb_device_logitech_g27()
 {
-	// wait for the house keeping thread to finish
-	if (m_house_keeping_thread)
-	{
-		auto& thread = *m_house_keeping_thread;
-		thread = thread_state::aborting;
-		thread();
-		m_house_keeping_thread.reset();
-	}
+	// Wait for the house keeping thread to finish
+	m_house_keeping_thread.reset();
 
 	// Close sdl handles
 	{
