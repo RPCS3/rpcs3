@@ -169,10 +169,10 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 
 void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, std::source_location src_loc) const
 {
-	std::function<void()> final_func = [this, before = IsStopped(), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
+	std::function<void()> final_func = [this, before = IsStopped(true), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
 		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
-		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped()));
+		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped(true)));
 
 		sys_log.trace("Callback from thread '%s' at [%s] is %s", thread_name, src, call_it ? "called" : "skipped");
 

@@ -36,6 +36,7 @@ public:
 		SDL_Gamepad* gamepad = nullptr;
 		SDL_GamepadType type = SDL_GamepadType::SDL_GAMEPAD_TYPE_UNKNOWN;
 		SDL_GamepadType real_type = SDL_GamepadType::SDL_GAMEPAD_TYPE_UNKNOWN;
+		SDL_GUID guid {};
 		int power_level = 0;
 		int last_power_level = 0;
 

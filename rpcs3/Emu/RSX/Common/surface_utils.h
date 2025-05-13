@@ -435,7 +435,7 @@ namespace rsx
 			memory_tag_samples[0].second = ~memory_tag_samples[0].second;
 		}
 
-		bool test()
+		bool test() const
 		{
 			for (const auto& e : memory_tag_samples)
 			{
