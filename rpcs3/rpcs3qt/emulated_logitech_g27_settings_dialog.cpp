@@ -537,7 +537,7 @@ static void migrate_device_type_id(emulated_g27_device_type_id& device_type_id_s
 	if (!joystick_ids)
 		return;
 
-	for (int i = 0;i < joystick_count;i++)
+	for (int i = 0; i < joystick_count; i++)
 	{
 		SDL_Joystick* cur_joystick = SDL_OpenJoystick(joystick_ids[i]);
 		if (!cur_joystick)

@@ -25,11 +25,11 @@ enum class hat_component
 struct emulated_g27_device_type_id
 {
 	// big types to keep 64bit bit shift operations sane
-	u64 product_id;
-	u64 vendor_id;
-	u64 num_axes;
-	u64 num_hats;
-	u64 num_buttons;
+	u64 product_id = 0;
+	u64 vendor_id = 0;
+	u64 num_axes = 0;
+	u64 num_hats = 0;
+	u64 num_buttons = 0;
 
 	u64 as_u64() const
 	{
