@@ -162,7 +162,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
-	QCheckBox* checkbox_disable_ipv6 = new QCheckBox("Disable IPv6");
+	QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Disable IPv6"));
 	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
 
 	const auto update_npid_label = [label_npid]()
