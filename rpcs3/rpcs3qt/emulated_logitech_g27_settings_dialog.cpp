@@ -529,7 +529,7 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 {
 	const auto load_mapping = [this](const emulated_logitech_g27_mapping& mapping, Mapping* ui_mapping, mapping_device_choice device_choice)
 	{
-		sdl_mapping m =
+		const sdl_mapping m =
 		{
 			.device_type_id = mapping.device_type_id.get(),
 			.type = mapping.type.get(),
