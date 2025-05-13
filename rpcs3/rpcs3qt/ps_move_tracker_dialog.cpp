@@ -269,13 +269,8 @@ ps_move_tracker_dialog::~ps_move_tracker_dialog()
 		m_camera_handler->close_camera();
 	}
 
-	if (m_input_thread)
-	{
-		auto& thread = *m_input_thread;
-		thread = thread_state::aborting;
-		thread();
-		m_input_thread.reset();
-	}
+	// Join thread
+	m_input_thread.reset();
 }
 
 void ps_move_tracker_dialog::update_color(bool update_sliders)

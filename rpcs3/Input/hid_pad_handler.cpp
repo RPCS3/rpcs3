@@ -101,12 +101,8 @@ hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> 
 template <class Device>
 hid_pad_handler<Device>::~hid_pad_handler()
 {
-	if (m_enumeration_thread)
-	{
-		auto& enumeration_thread = *m_enumeration_thread;
-		enumeration_thread = thread_state::aborting;
-		enumeration_thread();
-	}
+	// Join thread
+	m_enumeration_thread.reset();
 
 	for (auto& controller : m_controllers)
 	{
