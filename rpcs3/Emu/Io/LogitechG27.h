@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include "Utilities/Thread.h"
 #include "LogitechG27Config.h"
 
 #ifndef _MSC_VER
@@ -14,7 +15,6 @@
 
 #include <map>
 #include <vector>
-#include <thread>
 
 enum class logitech_g27_ffb_state
 {
@@ -122,6 +122,5 @@ private:
 
 	bool m_enabled = false;
 
-	std::thread m_house_keeping_thread;
-	atomic_t<bool> m_stop_thread { false };
+	std::unique_ptr<named_thread<std::function<void()>>> m_house_keeping_thread;
 };
