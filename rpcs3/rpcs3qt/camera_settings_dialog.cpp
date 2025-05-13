@@ -630,8 +630,12 @@ void camera_settings_dialog::handle_sdl_settings_change(const QVariant& item_dat
 		{
 			// It was observed that connecting sendVideoFrame directly can soft-lock the software.
 			// So let's just create the video frame here and call it manually.
-			const QVideoFrame video_frame(m_sdl_image);
-			m_video_frame_input->sendVideoFrame(video_frame);
+			std::unique_lock lock(m_sdl_image_mutex, std::defer_lock);
+			if (lock.try_lock())
+			{
+				const QVideoFrame video_frame(m_sdl_image);
+				m_video_frame_input->sendVideoFrame(video_frame);
+			}
 		});
 #endif
 
@@ -674,18 +678,20 @@ void camera_settings_dialog::run_sdl()
 		}
 
 #if (QT_VERSION_MAJOR >= 6 && QT_VERSION_MINOR >= 8) // TODO: Remove when MacOs is at Qt 6.8+
-		Emu.BlockingCallFromMainThread([this, frame]()
 		{
 			// Map image
 			const QImage::Format format = SDL_ISPIXELFORMAT_ALPHA(frame->format) ? QImage::Format_RGBA8888 : QImage::Format_RGB888;
 			const QImage image = QImage(reinterpret_cast<const u8*>(frame->pixels), frame->w, frame->h, format);
 
 			// Copy image to prevent memory access violations
-			m_sdl_image = image.copy();
+			{
+				std::lock_guard lock(m_sdl_image_mutex);
+				m_sdl_image = image.copy();
+			}
 
 			// Notify UI
 			Q_EMIT sdl_frame_ready();
-		});
+		}
 #endif
 
 		SDL_ReleaseCameraFrame(m_sdl_camera, frame);
