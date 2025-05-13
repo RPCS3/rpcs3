@@ -36,7 +36,16 @@ struct logitech_g27_ffb_slot
 
 struct sdl_mapping
 {
-	u32 device_type_id = 0; // (vendor_id << 16) | product_id
+	/*
+	 * orginally 32bit, just vendor product match
+	 * v1: (vendor_id << 16) | product_id
+	 *
+	 * now 64bit, matching more to handle Fanatec's shenanigans, should be good until Fanatec desides that it's funny to register > 1023 axes/hats/buttons, then have two hid devices with the exact same numbers with one single wheel base
+	 * serial/version/firmware/guid is not used for now because those are still unreliable in SDL in the context of config
+	 * not migrating to string yet, don't want to make joystick look up heavy
+	 * v2: (num_buttons:10 << 52) | (num_hats:10 << 42) | (num_axes:10 << 32) | (vendor_id:16 << 16) | product_id:16
+	 */
+	u64 device_type_id = 0;
 	sdl_mapping_type type = sdl_mapping_type::button;
 	u64 id = 0;
 	hat_component hat = hat_component::none;
@@ -111,7 +120,8 @@ private:
 	std::mutex m_sdl_handles_mutex;
 	SDL_Joystick* m_led_joystick_handle = nullptr;
 	SDL_Haptic* m_haptic_handle = nullptr;
-	std::map<u32, std::vector<SDL_Joystick*>> m_joysticks;
+	std::map<u64, std::vector<SDL_Joystick*>> m_joysticks;
+	std::map<u64, std::vector<SDL_Joystick*>> m_joysticks_v1;
 	bool m_fixed_loop = false;
 	u16 m_wheel_range = 200;
 	std::array<logitech_g27_ffb_slot, 4> m_effect_slots {};
