@@ -30,6 +30,8 @@ struct joystick_state
 class Mapping;
 class DeviceChoice;
 
+enum class mapping_device;
+
 class emulated_logitech_g27_settings_dialog : public QDialog
 {
 	Q_OBJECT
@@ -56,44 +58,7 @@ private:
 	QCheckBox* m_enabled = nullptr;
 	QCheckBox* m_reverse_effects = nullptr;
 
-	Mapping* m_steering = nullptr;
-	Mapping* m_throttle = nullptr;
-	Mapping* m_brake = nullptr;
-	Mapping* m_clutch = nullptr;
-	Mapping* m_shift_up = nullptr;
-	Mapping* m_shift_down = nullptr;
-
-	Mapping* m_up = nullptr;
-	Mapping* m_down = nullptr;
-	Mapping* m_left = nullptr;
-	Mapping* m_right = nullptr;
-
-	Mapping* m_triangle = nullptr;
-	Mapping* m_cross = nullptr;
-	Mapping* m_square = nullptr;
-	Mapping* m_circle = nullptr;
-
-	Mapping* m_l2 = nullptr;
-	Mapping* m_l3 = nullptr;
-	Mapping* m_r2 = nullptr;
-	Mapping* m_r3 = nullptr;
-
-	Mapping* m_plus = nullptr;
-	Mapping* m_minus = nullptr;
-
-	Mapping* m_dial_clockwise = nullptr;
-	Mapping* m_dial_anticlockwise = nullptr;
-
-	Mapping* m_select = nullptr;
-	Mapping* m_pause = nullptr;
-
-	Mapping* m_shifter_1 = nullptr;
-	Mapping* m_shifter_2 = nullptr;
-	Mapping* m_shifter_3 = nullptr;
-	Mapping* m_shifter_4 = nullptr;
-	Mapping* m_shifter_5 = nullptr;
-	Mapping* m_shifter_6 = nullptr;
-	Mapping* m_shifter_r = nullptr;
+	std::map<mapping_device, Mapping*> m_mappings;
 
 	DeviceChoice* m_ffb_device = nullptr;
 	DeviceChoice* m_led_device = nullptr;

@@ -21,14 +21,19 @@ LOG_CHANNEL(logitech_g27_cfg_log, "LOGIG27");
 
 static const QString DEFAULT_STATUS = " ";
 
-enum class mapping_device_choice
+enum class mapping_device
 {
 	NONE = -1,
+
+	// Axis
 	STEERING = 0,
 	THROTTLE,
 	BRAKE,
 	CLUTCH,
-	SHIFT_UP,
+
+	// Buttons
+	FIRST_BUTTON,
+	SHIFT_UP = FIRST_BUTTON,
 	SHIFT_DOWN,
 
 	UP,
@@ -61,8 +66,93 @@ enum class mapping_device_choice
 	SHIFTER_4,
 	SHIFTER_5,
 	SHIFTER_6,
-	SHIFTER_R
+	SHIFTER_R,
+
+	// Enum count
+	COUNT
 };
+
+QString device_name(mapping_device dev)
+{
+	switch (dev)
+	{
+	case mapping_device::NONE: return "";
+	case mapping_device::STEERING: return QObject::tr("Steering");
+	case mapping_device::THROTTLE: return QObject::tr("Throttle");
+	case mapping_device::BRAKE: return QObject::tr("Brake");
+	case mapping_device::CLUTCH: return QObject::tr("Clutch");
+	case mapping_device::SHIFT_UP: return QObject::tr("Shift up");
+	case mapping_device::SHIFT_DOWN: return QObject::tr("Shift down");
+	case mapping_device::UP: return QObject::tr("Up");
+	case mapping_device::DOWN: return QObject::tr("Down");
+	case mapping_device::LEFT: return QObject::tr("Left");
+	case mapping_device::RIGHT: return QObject::tr("Right");
+	case mapping_device::TRIANGLE: return QObject::tr("Triangle");
+	case mapping_device::CROSS: return QObject::tr("Cross");
+	case mapping_device::SQUARE: return QObject::tr("Square");
+	case mapping_device::CIRCLE: return QObject::tr("Circle");
+	case mapping_device::L2: return QObject::tr("L2");
+	case mapping_device::L3: return QObject::tr("L3");
+	case mapping_device::R2: return QObject::tr("R2");
+	case mapping_device::R3: return QObject::tr("R3");
+	case mapping_device::PLUS: return QObject::tr("L4");
+	case mapping_device::MINUS: return QObject::tr("L5");
+	case mapping_device::DIAL_CLOCKWISE: return QObject::tr("R4");
+	case mapping_device::DIAL_ANTICLOCKWISE: return QObject::tr("R5");
+	case mapping_device::SELECT: return QObject::tr("Select");
+	case mapping_device::PAUSE: return QObject::tr("Pause");
+	case mapping_device::SHIFTER_1: return QObject::tr("Gear 1");
+	case mapping_device::SHIFTER_2: return QObject::tr("Gear 2");
+	case mapping_device::SHIFTER_3: return QObject::tr("Gear 3");
+	case mapping_device::SHIFTER_4: return QObject::tr("Gear 4");
+	case mapping_device::SHIFTER_5: return QObject::tr("Gear 5");
+	case mapping_device::SHIFTER_6: return QObject::tr("Gear 6");
+	case mapping_device::SHIFTER_R: return QObject::tr("Gear R");
+	case mapping_device::COUNT: return "";
+	}
+	return "";
+}
+
+emulated_logitech_g27_mapping& device_cfg(mapping_device dev)
+{
+	auto& cfg = g_cfg_logitech_g27;
+
+	switch (dev)
+	{
+	case mapping_device::STEERING: return cfg.steering;
+	case mapping_device::THROTTLE: return cfg.throttle;
+	case mapping_device::BRAKE: return cfg.brake;
+	case mapping_device::CLUTCH: return cfg.clutch;
+	case mapping_device::SHIFT_UP: return cfg.shift_up;
+	case mapping_device::SHIFT_DOWN: return cfg.shift_down;
+	case mapping_device::UP: return cfg.up;
+	case mapping_device::DOWN: return cfg.down;
+	case mapping_device::LEFT: return cfg.left;
+	case mapping_device::RIGHT: return cfg.right;
+	case mapping_device::TRIANGLE: return cfg.triangle;
+	case mapping_device::CROSS: return cfg.cross;
+	case mapping_device::SQUARE: return cfg.square;
+	case mapping_device::CIRCLE: return cfg.circle;
+	case mapping_device::L2: return cfg.l2;
+	case mapping_device::L3: return cfg.l3;
+	case mapping_device::R2: return cfg.r2;
+	case mapping_device::R3: return cfg.r3;
+	case mapping_device::PLUS: return cfg.plus;
+	case mapping_device::MINUS: return cfg.minus;
+	case mapping_device::DIAL_CLOCKWISE: return cfg.dial_clockwise;
+	case mapping_device::DIAL_ANTICLOCKWISE: return cfg.dial_anticlockwise;
+	case mapping_device::SELECT: return cfg.select;
+	case mapping_device::PAUSE: return cfg.pause;
+	case mapping_device::SHIFTER_1: return cfg.shifter_1;
+	case mapping_device::SHIFTER_2: return cfg.shifter_2;
+	case mapping_device::SHIFTER_3: return cfg.shifter_3;
+	case mapping_device::SHIFTER_4: return cfg.shifter_4;
+	case mapping_device::SHIFTER_5: return cfg.shifter_5;
+	case mapping_device::SHIFTER_6: return cfg.shifter_6;
+	case mapping_device::SHIFTER_R: return cfg.shifter_r;
+	default: fmt::throw_exception("Unexpected mapping_device %d", static_cast<int>(dev));
+	}
+}
 
 class DeviceChoice : public QWidget
 {
@@ -91,66 +181,33 @@ public:
 			const QVariant var = m_dropdown->currentData();
 			if (!var.canConvert<int>()) return;
 
-			m_device_choice = static_cast<mapping_device_choice>(var.toInt());
+			m_device_choice = static_cast<mapping_device>(var.toInt());
 			update_display();
 		});
 
 		connect(m_disable_button, &QPushButton::clicked, this, [this]()
 		{
-			m_device_choice = mapping_device_choice::NONE;
+			m_device_choice = mapping_device::NONE;
 			update_display();
 		});
 
 		m_dropdown->setPlaceholderText(tr("-- Disabled --"));
 
-		m_dropdown->addItem(tr("Steering"), static_cast<int>(mapping_device_choice::STEERING));
-		m_dropdown->addItem(tr("Throttle"), static_cast<int>(mapping_device_choice::THROTTLE));
-		m_dropdown->addItem(tr("Brake"), static_cast<int>(mapping_device_choice::BRAKE));
-		m_dropdown->addItem(tr("Clutch"), static_cast<int>(mapping_device_choice::CLUTCH));
-		m_dropdown->addItem(tr("Shift up"), static_cast<int>(mapping_device_choice::SHIFT_UP));
-		m_dropdown->addItem(tr("Shift down"), static_cast<int>(mapping_device_choice::SHIFT_DOWN));
-
-		m_dropdown->addItem(tr("Up"), static_cast<int>(mapping_device_choice::UP));
-		m_dropdown->addItem(tr("Down"), static_cast<int>(mapping_device_choice::DOWN));
-		m_dropdown->addItem(tr("Left"), static_cast<int>(mapping_device_choice::LEFT));
-		m_dropdown->addItem(tr("Right"), static_cast<int>(mapping_device_choice::RIGHT));
-
-		m_dropdown->addItem(tr("Triangle"), static_cast<int>(mapping_device_choice::TRIANGLE));
-		m_dropdown->addItem(tr("Cross"), static_cast<int>(mapping_device_choice::CROSS));
-		m_dropdown->addItem(tr("Square"), static_cast<int>(mapping_device_choice::SQUARE));
-		m_dropdown->addItem(tr("Circle"), static_cast<int>(mapping_device_choice::CIRCLE));
-
-		m_dropdown->addItem(tr("L2"), static_cast<int>(mapping_device_choice::L2));
-		m_dropdown->addItem(tr("L3"), static_cast<int>(mapping_device_choice::L3));
-		m_dropdown->addItem(tr("R2"), static_cast<int>(mapping_device_choice::R2));
-		m_dropdown->addItem(tr("R3"), static_cast<int>(mapping_device_choice::R3));
-
-		m_dropdown->addItem(tr("L4"), static_cast<int>(mapping_device_choice::PLUS));
-		m_dropdown->addItem(tr("L5"), static_cast<int>(mapping_device_choice::MINUS));
-
-		m_dropdown->addItem(tr("R4"), static_cast<int>(mapping_device_choice::DIAL_CLOCKWISE));
-		m_dropdown->addItem(tr("R5"), static_cast<int>(mapping_device_choice::DIAL_ANTICLOCKWISE));
-
-		m_dropdown->addItem(tr("Select"), static_cast<int>(mapping_device_choice::SELECT));
-		m_dropdown->addItem(tr("Pause"), static_cast<int>(mapping_device_choice::PAUSE));
-
-		m_dropdown->addItem(tr("Gear 1"), static_cast<int>(mapping_device_choice::SHIFTER_1));
-		m_dropdown->addItem(tr("Gear 2"), static_cast<int>(mapping_device_choice::SHIFTER_2));
-		m_dropdown->addItem(tr("Gear 3"), static_cast<int>(mapping_device_choice::SHIFTER_3));
-		m_dropdown->addItem(tr("Gear 4"), static_cast<int>(mapping_device_choice::SHIFTER_4));
-		m_dropdown->addItem(tr("Gear 5"), static_cast<int>(mapping_device_choice::SHIFTER_5));
-		m_dropdown->addItem(tr("Gear 6"), static_cast<int>(mapping_device_choice::SHIFTER_6));
-		m_dropdown->addItem(tr("Gear r"), static_cast<int>(mapping_device_choice::SHIFTER_R));
+		for (int i = 0; i < static_cast<int>(mapping_device::COUNT); i++)
+		{
+			const mapping_device dev = static_cast<mapping_device>(i);
+			m_dropdown->addItem(device_name(dev), i);
+		}
 
 		update_display();
 	}
 
-	mapping_device_choice get_device_choice() const
+	mapping_device get_device_choice() const
 	{
 		return m_device_choice;
 	}
 
-	void set_device_choice(mapping_device_choice choice)
+	void set_device_choice(mapping_device choice)
 	{
 		m_device_choice = choice;
 		update_display();
@@ -168,7 +225,7 @@ private:
 		m_dropdown->setCurrentIndex(static_cast<int>(m_device_choice));
 	}
 
-	mapping_device_choice m_device_choice = mapping_device_choice::NONE;
+	mapping_device m_device_choice = mapping_device::NONE;
 	QComboBox* m_dropdown = nullptr;
 	QPushButton* m_disable_button = nullptr;
 };
@@ -452,14 +509,16 @@ private:
 
 void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 {
-	const auto save_mapping = [this](emulated_logitech_g27_mapping& mapping, Mapping* ui_mapping, mapping_device_choice device_choice)
+	const auto save_mapping = [this](mapping_device device_choice)
 	{
-		const sdl_mapping& m = ui_mapping->get_mapping();
+		emulated_logitech_g27_mapping& mapping = device_cfg(device_choice);
+		const sdl_mapping& m = ::at32(m_mappings, device_choice)->get_mapping();
 		mapping.device_type_id.set(m.device_type_id);
 		mapping.type.set(m.type);
 		mapping.id.set(m.id);
 		mapping.hat.set(m.hat);
 		mapping.reverse.set(m.reverse);
+
 		if (m_ffb_device->get_device_choice() == device_choice)
 		{
 			g_cfg_logitech_g27.ffb_device_type_id.set(m.device_type_id);
@@ -470,56 +529,20 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 		}
 	};
 
-	auto& cfg = g_cfg_logitech_g27;
-
-	save_mapping(cfg.steering, m_steering, mapping_device_choice::STEERING);
-	save_mapping(cfg.throttle, m_throttle, mapping_device_choice::THROTTLE);
-	save_mapping(cfg.brake, m_brake, mapping_device_choice::BRAKE);
-	save_mapping(cfg.clutch, m_clutch, mapping_device_choice::CLUTCH);
-	save_mapping(cfg.shift_up, m_shift_up, mapping_device_choice::SHIFT_UP);
-	save_mapping(cfg.shift_down, m_shift_down, mapping_device_choice::SHIFT_DOWN);
-
-	save_mapping(cfg.up, m_up, mapping_device_choice::UP);
-	save_mapping(cfg.down, m_down, mapping_device_choice::DOWN);
-	save_mapping(cfg.left, m_left, mapping_device_choice::LEFT);
-	save_mapping(cfg.right, m_right, mapping_device_choice::RIGHT);
-
-	save_mapping(cfg.triangle, m_triangle, mapping_device_choice::TRIANGLE);
-	save_mapping(cfg.cross, m_cross, mapping_device_choice::CROSS);
-	save_mapping(cfg.square, m_square, mapping_device_choice::SQUARE);
-	save_mapping(cfg.circle, m_circle, mapping_device_choice::CIRCLE);
-
-	save_mapping(cfg.l2, m_l2, mapping_device_choice::L2);
-	save_mapping(cfg.l3, m_l3, mapping_device_choice::L3);
-	save_mapping(cfg.r2, m_r2, mapping_device_choice::R2);
-	save_mapping(cfg.r3, m_r3, mapping_device_choice::R3);
-
-	save_mapping(cfg.plus, m_plus, mapping_device_choice::PLUS);
-	save_mapping(cfg.minus, m_minus, mapping_device_choice::MINUS);
-
-	save_mapping(cfg.dial_clockwise, m_dial_clockwise, mapping_device_choice::DIAL_CLOCKWISE);
-	save_mapping(cfg.dial_anticlockwise, m_dial_anticlockwise, mapping_device_choice::DIAL_ANTICLOCKWISE);
-
-	save_mapping(cfg.select, m_select, mapping_device_choice::SELECT);
-	save_mapping(cfg.pause, m_pause, mapping_device_choice::PAUSE);
-
-	save_mapping(cfg.shifter_1, m_shifter_1, mapping_device_choice::SHIFTER_1);
-	save_mapping(cfg.shifter_2, m_shifter_2, mapping_device_choice::SHIFTER_2);
-	save_mapping(cfg.shifter_3, m_shifter_3, mapping_device_choice::SHIFTER_3);
-	save_mapping(cfg.shifter_4, m_shifter_4, mapping_device_choice::SHIFTER_4);
-	save_mapping(cfg.shifter_5, m_shifter_5, mapping_device_choice::SHIFTER_5);
-	save_mapping(cfg.shifter_6, m_shifter_6, mapping_device_choice::SHIFTER_6);
-	save_mapping(cfg.shifter_r, m_shifter_r, mapping_device_choice::SHIFTER_R);
+	for (int i = 0; i < static_cast<int>(mapping_device::COUNT); i++)
+	{
+		save_mapping(static_cast<mapping_device>(i));
+	}
 
 	g_cfg_logitech_g27.enabled.set(m_enabled->isChecked());
 	g_cfg_logitech_g27.reverse_effects.set(m_reverse_effects->isChecked());
 
-	if (m_ffb_device->get_device_choice() == mapping_device_choice::NONE)
+	if (m_ffb_device->get_device_choice() == mapping_device::NONE)
 	{
 		g_cfg_logitech_g27.ffb_device_type_id.set(0);
 	}
 
-	if (m_led_device->get_device_choice() == mapping_device_choice::NONE)
+	if (m_led_device->get_device_choice() == mapping_device::NONE)
 	{
 		g_cfg_logitech_g27.led_device_type_id.set(0);
 	}
@@ -527,8 +550,9 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 
 void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 {
-	const auto load_mapping = [this](const emulated_logitech_g27_mapping& mapping, Mapping* ui_mapping, mapping_device_choice device_choice)
+	const auto load_mapping = [this](mapping_device device_choice)
 	{
+		const emulated_logitech_g27_mapping& mapping = device_cfg(device_choice);
 		const sdl_mapping m =
 		{
 			.device_type_id = mapping.device_type_id.get(),
@@ -539,61 +563,25 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 			.positive_axis = false
 		};
 
-		ui_mapping->set_mapping(m);
+		::at32(m_mappings, device_choice)->set_mapping(m);
 
 		const u64 ffb_device_type_id = g_cfg_logitech_g27.ffb_device_type_id.get();
 		const u64 led_device_type_id = g_cfg_logitech_g27.led_device_type_id.get();
 
-		if (ffb_device_type_id == m.device_type_id && m_ffb_device->get_device_choice() == mapping_device_choice::NONE)
+		if (ffb_device_type_id == m.device_type_id && m_ffb_device->get_device_choice() == mapping_device::NONE)
 		{
 			m_ffb_device->set_device_choice(device_choice);
 		}
-		if (led_device_type_id == m.device_type_id && m_led_device->get_device_choice() == mapping_device_choice::NONE)
+		if (led_device_type_id == m.device_type_id && m_led_device->get_device_choice() == mapping_device::NONE)
 		{
 			m_led_device->set_device_choice(device_choice);
 		}
 	};
 
-	const auto& cfg = g_cfg_logitech_g27;
-
-	load_mapping(cfg.steering, m_steering, mapping_device_choice::STEERING);
-	load_mapping(cfg.throttle, m_throttle, mapping_device_choice::THROTTLE);
-	load_mapping(cfg.brake, m_brake, mapping_device_choice::BRAKE);
-	load_mapping(cfg.clutch, m_clutch, mapping_device_choice::CLUTCH);
-	load_mapping(cfg.shift_up, m_shift_up, mapping_device_choice::SHIFT_UP);
-	load_mapping(cfg.shift_down, m_shift_down, mapping_device_choice::SHIFT_DOWN);
-
-	load_mapping(cfg.up, m_up, mapping_device_choice::UP);
-	load_mapping(cfg.down, m_down, mapping_device_choice::DOWN);
-	load_mapping(cfg.left, m_left, mapping_device_choice::LEFT);
-	load_mapping(cfg.right, m_right, mapping_device_choice::RIGHT);
-
-	load_mapping(cfg.triangle, m_triangle, mapping_device_choice::TRIANGLE);
-	load_mapping(cfg.cross, m_cross, mapping_device_choice::CROSS);
-	load_mapping(cfg.square, m_square, mapping_device_choice::SQUARE);
-	load_mapping(cfg.circle, m_circle, mapping_device_choice::CIRCLE);
-
-	load_mapping(cfg.l2, m_l2, mapping_device_choice::L2);
-	load_mapping(cfg.l3, m_l3, mapping_device_choice::L3);
-	load_mapping(cfg.r2, m_r2, mapping_device_choice::R2);
-	load_mapping(cfg.r3, m_r3, mapping_device_choice::R3);
-
-	load_mapping(cfg.plus, m_plus, mapping_device_choice::PLUS);
-	load_mapping(cfg.minus, m_minus, mapping_device_choice::MINUS);
-
-	load_mapping(cfg.dial_clockwise, m_dial_clockwise, mapping_device_choice::DIAL_CLOCKWISE);
-	load_mapping(cfg.dial_anticlockwise, m_dial_anticlockwise, mapping_device_choice::DIAL_ANTICLOCKWISE);
-
-	load_mapping(cfg.select, m_select, mapping_device_choice::SELECT);
-	load_mapping(cfg.pause, m_pause, mapping_device_choice::PAUSE);
-
-	load_mapping(cfg.shifter_1, m_shifter_1, mapping_device_choice::SHIFTER_1);
-	load_mapping(cfg.shifter_2, m_shifter_2, mapping_device_choice::SHIFTER_2);
-	load_mapping(cfg.shifter_3, m_shifter_3, mapping_device_choice::SHIFTER_3);
-	load_mapping(cfg.shifter_4, m_shifter_4, mapping_device_choice::SHIFTER_4);
-	load_mapping(cfg.shifter_5, m_shifter_5, mapping_device_choice::SHIFTER_5);
-	load_mapping(cfg.shifter_6, m_shifter_6, mapping_device_choice::SHIFTER_6);
-	load_mapping(cfg.shifter_r, m_shifter_r, mapping_device_choice::SHIFTER_R);
+	for (int i = 0; i < static_cast<int>(mapping_device::COUNT); i++)
+	{
+		load_mapping(static_cast<mapping_device>(i));
+	}
 
 	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
 	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
@@ -678,54 +666,30 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	QLabel* axis_label = new QLabel(tr("Axes:"), mapping_widget);
 	mapping_layout->addWidget(axis_label);
 
-	const auto add_mapping_setting = [mapping_widget, this, mapping_layout](Mapping*& target, bool is_axis, const QString& display_name, bool flip_axis_display)
+	const auto add_axis = [this, mapping_widget, mapping_layout](mapping_device dev, bool flip_axis_display)
 	{
-		target = new Mapping(mapping_widget, this, is_axis, display_name, flip_axis_display);
-		mapping_layout->addWidget(target);
+		m_mappings[dev] = new Mapping(mapping_widget, this, true, device_name(dev), flip_axis_display);
+		mapping_layout->addWidget(m_mappings[dev]);
 	};
 
-	add_mapping_setting(m_steering, true, tr("Steering"), false);
-	add_mapping_setting(m_throttle, true, tr("Throttle"), true);
-	add_mapping_setting(m_brake, true, tr("Brake"), true);
-	add_mapping_setting(m_clutch, true, tr("Clutch"), true);
+	const auto add_button = [this, mapping_widget, mapping_layout](mapping_device dev)
+	{
+		m_mappings[dev] = new Mapping(mapping_widget, this, false, device_name(dev), false);
+		mapping_layout->addWidget(m_mappings[dev]);
+	};
+
+	add_axis(mapping_device::STEERING, false);
+	add_axis(mapping_device::THROTTLE, true);
+	add_axis(mapping_device::BRAKE, true);
+	add_axis(mapping_device::CLUTCH, true);
 
 	QLabel* button_label = new QLabel(tr("Buttons:"), mapping_widget);
 	mapping_layout->addWidget(button_label);
 
-	add_mapping_setting(m_shift_up, false, tr("Shift up"), false);
-	add_mapping_setting(m_shift_down, false, tr("Shift down"), false);
-
-	add_mapping_setting(m_up, false, tr("Up"), false);
-	add_mapping_setting(m_down, false, tr("Down"), false);
-	add_mapping_setting(m_left, false, tr("Left"), false);
-	add_mapping_setting(m_right, false, tr("Right"), false);
-
-	add_mapping_setting(m_triangle, false, tr("Triangle"), false);
-	add_mapping_setting(m_cross, false, tr("Cross"), false);
-	add_mapping_setting(m_square, false, tr("Square"), false);
-	add_mapping_setting(m_circle, false, tr("Circle"), false);
-
-	add_mapping_setting(m_l2, false, tr("L2"), false);
-	add_mapping_setting(m_l3, false, tr("L3"), false);
-	add_mapping_setting(m_r2, false, tr("R2"), false);
-	add_mapping_setting(m_r3, false, tr("R3"), false);
-
-	add_mapping_setting(m_plus, false, tr("L4"), false);
-	add_mapping_setting(m_minus, false, tr("L5"), false);
-
-	add_mapping_setting(m_dial_clockwise, false, tr("R4"), false);
-	add_mapping_setting(m_dial_anticlockwise, false, tr("R5"), false);
-
-	add_mapping_setting(m_select, false, tr("Select"), false);
-	add_mapping_setting(m_pause, false, tr("Start"), false);
-
-	add_mapping_setting(m_shifter_1, false, tr("Gear 1"), false);
-	add_mapping_setting(m_shifter_2, false, tr("Gear 2"), false);
-	add_mapping_setting(m_shifter_3, false, tr("Gear 3"), false);
-	add_mapping_setting(m_shifter_4, false, tr("Gear 4"), false);
-	add_mapping_setting(m_shifter_5, false, tr("Gear 5"), false);
-	add_mapping_setting(m_shifter_6, false, tr("Gear 6"), false);
-	add_mapping_setting(m_shifter_r, false, tr("Gear R"), false);
+	for (int i = static_cast<int>(mapping_device::FIRST_BUTTON); i < static_cast<int>(mapping_device::COUNT); i++)
+	{
+		add_button(static_cast<mapping_device>(i));
+	}
 
 	v_layout->addSpacing(20);
 
@@ -840,7 +804,7 @@ const std::map<u64, joystick_state>& emulated_logitech_g27_settings_dialog::get_
 					const u8 sdl_hat = SDL_GetJoystickHat(cur_joystick, j);
 					s.hats.push_back(get_sdl_hat_component(sdl_hat));
 				}
-				new_joystick_states[device_type_id] = s;
+				new_joystick_states[device_type_id] = std::move(s);
 			}
 			else
 			{
@@ -884,44 +848,10 @@ void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 {
 	const int slider_position = m_mapping_scroll_area->verticalScrollBar()->sliderPosition();
 
-	m_steering->set_enable(enable);
-	m_throttle->set_enable(enable);
-	m_brake->set_enable(enable);
-	m_clutch->set_enable(enable);
-	m_shift_up->set_enable(enable);
-	m_shift_down->set_enable(enable);
-
-	m_up->set_enable(enable);
-	m_down->set_enable(enable);
-	m_left->set_enable(enable);
-	m_right->set_enable(enable);
-
-	m_triangle->set_enable(enable);
-	m_cross->set_enable(enable);
-	m_square->set_enable(enable);
-	m_circle->set_enable(enable);
-
-	m_l2->set_enable(enable);
-	m_l3->set_enable(enable);
-	m_r2->set_enable(enable);
-	m_r3->set_enable(enable);
-
-	m_plus->set_enable(enable);
-	m_minus->set_enable(enable);
-
-	m_dial_clockwise->set_enable(enable);
-	m_dial_anticlockwise->set_enable(enable);
-
-	m_select->set_enable(enable);
-	m_pause->set_enable(enable);
-
-	m_shifter_1->set_enable(enable);
-	m_shifter_2->set_enable(enable);
-	m_shifter_3->set_enable(enable);
-	m_shifter_4->set_enable(enable);
-	m_shifter_5->set_enable(enable);
-	m_shifter_6->set_enable(enable);
-	m_shifter_r->set_enable(enable);
+	for (auto& [dev, mapping] : m_mappings)
+	{
+		mapping->set_enable(enable);
+	}
 
 	m_enabled->setEnabled(enable);
 	m_reverse_effects->setEnabled(enable);
