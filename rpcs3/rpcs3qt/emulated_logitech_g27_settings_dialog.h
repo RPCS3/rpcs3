@@ -38,14 +38,14 @@ public:
 	emulated_logitech_g27_settings_dialog(QWidget* parent = nullptr);
 	virtual ~emulated_logitech_g27_settings_dialog();
 	void set_state_text(const QString& text);
-	const std::map<u32, joystick_state>& get_joystick_states();
+	const std::map<u64, joystick_state>& get_joystick_states();
 	void set_enable(bool enable);
 
 private:
 	void load_ui_state_from_config();
 	void save_ui_state_to_config();
 
-	std::map<u32, joystick_state> m_last_joystick_states;
+	std::map<u64, joystick_state> m_last_joystick_states;
 	std::vector<SDL_Joystick*> m_joystick_handles;
 	uint64_t m_last_joystick_states_update = 0;
 	bool m_sdl_initialized = false;

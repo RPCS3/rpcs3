@@ -73,7 +73,7 @@ bool usb_device_logitech_g27::open_device()
 	return m_enabled;
 }
 
-static void clear_sdl_joysticks(std::map<u32, std::vector<SDL_Joystick*>>& joystick_map)
+static void clear_sdl_joysticks(std::map<u64, std::vector<SDL_Joystick*>>& joystick_map)
 {
 	for (auto& [type, joysticks] : joystick_map)
 	{
@@ -130,7 +130,7 @@ void usb_device_logitech_g27::control_transfer(u8 bmRequestType, u8 bRequest, u1
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }
 
-static bool sdl_joysticks_equal(std::map<u32, std::vector<SDL_Joystick*>>& left, std::map<u32, std::vector<SDL_Joystick*>>& right)
+static bool sdl_joysticks_equal(std::map<u64, std::vector<SDL_Joystick*>>& left, std::map<u64, std::vector<SDL_Joystick*>>& right)
 {
 	if (left.size() != right.size())
 	{
@@ -227,17 +227,14 @@ void usb_device_logitech_g27::sdl_refresh()
 
 	m_reverse_effects = g_cfg_logitech_g27.reverse_effects.get();
 
-	const u32 ffb_vendor_id = g_cfg_logitech_g27.ffb_device_type_id.get() >> 16;
-	const u32 ffb_product_id = g_cfg_logitech_g27.ffb_device_type_id.get() & 0xFFFF;
-
-	const u32 led_vendor_id = g_cfg_logitech_g27.led_device_type_id.get() >> 16;
-	const u32 led_product_id = g_cfg_logitech_g27.led_device_type_id.get() & 0xFFFF;
+	const u64 ffb_device_type_id = g_cfg_logitech_g27.ffb_device_type_id.get();
+	const u64 led_device_type_id = g_cfg_logitech_g27.led_device_type_id.get();
 
 	lock.unlock();
 
 	SDL_Joystick* new_led_joystick_handle = nullptr;
 	SDL_Haptic* new_haptic_handle = nullptr;
-	std::map<u32, std::vector<SDL_Joystick*>> new_joysticks;
+	std::map<u64, std::vector<SDL_Joystick*>> new_joysticks;
 
 	int joystick_count = 0;
 	if (SDL_JoystickID* joystick_ids = SDL_GetJoysticks(&joystick_count))
@@ -252,7 +249,15 @@ void usb_device_logitech_g27::sdl_refresh()
 			}
 			const u16 cur_vendor_id = SDL_GetJoystickVendor(cur_joystick);
 			const u16 cur_product_id = SDL_GetJoystickProduct(cur_joystick);
-			const u32 joystick_type_id = (cur_vendor_id << 16) | cur_product_id;
+			const emulated_g27_device_type_id joystick_type_id_struct =
+			{
+				.product_id = static_cast<u64>(cur_product_id),
+				.vendor_id = static_cast<u64>(cur_vendor_id),
+				.num_axes = static_cast<u64>(SDL_GetNumJoystickAxes(cur_joystick)),
+				.num_hats = static_cast<u64>(SDL_GetNumJoystickHats(cur_joystick)),
+				.num_buttons = static_cast<u64>(SDL_GetNumJoystickButtons(cur_joystick))
+			};
+			const u64 joystick_type_id = joystick_type_id_struct.as_u64();
 			auto joysticks_of_type = new_joysticks.find(joystick_type_id);
 			if (joysticks_of_type == new_joysticks.end())
 			{
@@ -263,7 +268,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				joysticks_of_type->second.push_back(cur_joystick);
 			}
 
-			if (cur_vendor_id == ffb_vendor_id && cur_product_id == ffb_product_id && new_haptic_handle == nullptr)
+			if (joystick_type_id == ffb_device_type_id && new_haptic_handle == nullptr)
 			{
 				SDL_Haptic* cur_haptic = SDL_OpenHapticFromJoystick(cur_joystick);
 				if (cur_haptic == nullptr)
@@ -276,7 +281,7 @@ void usb_device_logitech_g27::sdl_refresh()
 				}
 			}
 
-			if (cur_vendor_id == led_vendor_id && cur_product_id == led_product_id && new_led_joystick_handle == nullptr)
+			if (joystick_type_id == led_device_type_id && new_led_joystick_handle == nullptr)
 			{
 				new_led_joystick_handle = cur_joystick;
 			}
@@ -578,7 +583,7 @@ static s16 fetch_sdl_as_axis(SDL_Joystick* joystick, const sdl_mapping& mapping)
 	return 0;
 }
 
-static s16 fetch_sdl_axis_avg(std::map<u32, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	constexpr s16 MAX = 0x7FFF;
 	constexpr s16 MIN = -0x8000;
@@ -604,7 +609,7 @@ static s16 fetch_sdl_axis_avg(std::map<u32, std::vector<SDL_Joystick*>>& joystic
 	return std::clamp<s16>(sdl_joysticks_total_value / static_cast<s32>(joysticks_of_type->second.size()), MIN, MAX);
 }
 
-static bool sdl_to_logitech_g27_button(std::map<u32, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
@@ -625,14 +630,14 @@ static bool sdl_to_logitech_g27_button(std::map<u32, std::vector<SDL_Joystick*>>
 	return pressed;
 }
 
-static u16 sdl_to_logitech_g27_steering(std::map<u32, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static u16 sdl_to_logitech_g27_steering(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * (0xFFFF >> 2) / 0xFFFF;
 }
 
-static u8 sdl_to_logitech_g27_pedal(std::map<u32, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static u8 sdl_to_logitech_g27_pedal(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
