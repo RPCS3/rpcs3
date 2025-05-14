@@ -5,6 +5,7 @@
 #include "emulated_logitech_g27_settings_dialog.h"
 #include "Emu/Io/LogitechG27.h"
 #include "Input/sdl_instance.h"
+#include "qt_utils.h"
 
 #include <QDialogButtonBox>
 #include <QGroupBox>
@@ -633,7 +634,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	});
 
 	QLabel* warning = new QLabel(tr("Warning: Force feedback output were meant for Logitech G27, on stronger wheels please adjust force strength accordingly in your wheel software."), this);
-	warning->setStyleSheet("color: red;");
+	warning->setStyleSheet(QString("color: %0;").arg(gui::utils::get_label_color("emulated_logitech_g27_warning_label", Qt::red, Qt::red).name()));
 	warning->setWordWrap(true);
 	v_layout->addWidget(warning);
 
