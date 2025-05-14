@@ -69,48 +69,48 @@ public:
 	// TODO these defaults are for a shifter-less G29 + a xbox controller for shifter testing, perhaps find a new default
 	// TODO, when a new default is found, use the new device type id style
 
-	emulated_logitech_g27_mapping steering{this, "steering", 0x046dc24f, sdl_mapping_type::axis, 0, hat_component::none, false};
-	emulated_logitech_g27_mapping throttle{this, "throttle", 0x046dc24f, sdl_mapping_type::axis, 2, hat_component::none, false};
-	emulated_logitech_g27_mapping brake{this, "brake", 0x046dc24f, sdl_mapping_type::axis, 3, hat_component::none, false};
-	emulated_logitech_g27_mapping clutch{this, "clutch", 0x046dc24f, sdl_mapping_type::axis, 1, hat_component::none, false};
-	emulated_logitech_g27_mapping shift_up{this, "shift_up", 0x046dc24f, sdl_mapping_type::button, 4, hat_component::none, false};
-	emulated_logitech_g27_mapping shift_down{this, "shift_down", 0x046dc24f, sdl_mapping_type::button, 5, hat_component::none, false};
+	emulated_logitech_g27_mapping steering{this, "steering", 0, sdl_mapping_type::axis, 0, hat_component::none, false};
+	emulated_logitech_g27_mapping throttle{this, "throttle", 0, sdl_mapping_type::axis, 2, hat_component::none, false};
+	emulated_logitech_g27_mapping brake{this, "brake", 0, sdl_mapping_type::axis, 3, hat_component::none, false};
+	emulated_logitech_g27_mapping clutch{this, "clutch", 0, sdl_mapping_type::axis, 1, hat_component::none, false};
+	emulated_logitech_g27_mapping shift_up{this, "shift_up", 0, sdl_mapping_type::button, 4, hat_component::none, false};
+	emulated_logitech_g27_mapping shift_down{this, "shift_down", 0, sdl_mapping_type::button, 5, hat_component::none, false};
 
-	emulated_logitech_g27_mapping up{this, "up", 0x046dc24f, sdl_mapping_type::hat, 0, hat_component::up, false};
-	emulated_logitech_g27_mapping down{this, "down", 0x046dc24f, sdl_mapping_type::hat, 0, hat_component::down, false};
-	emulated_logitech_g27_mapping left{this, "left", 0x046dc24f, sdl_mapping_type::hat, 0, hat_component::left, false};
-	emulated_logitech_g27_mapping right{this, "right", 0x046dc24f, sdl_mapping_type::hat, 0, hat_component::right, false};
+	emulated_logitech_g27_mapping up{this, "up", 0, sdl_mapping_type::hat, 0, hat_component::up, false};
+	emulated_logitech_g27_mapping down{this, "down", 0, sdl_mapping_type::hat, 0, hat_component::down, false};
+	emulated_logitech_g27_mapping left{this, "left", 0, sdl_mapping_type::hat, 0, hat_component::left, false};
+	emulated_logitech_g27_mapping right{this, "right", 0, sdl_mapping_type::hat, 0, hat_component::right, false};
 
-	emulated_logitech_g27_mapping triangle{this, "triangle", 0x046dc24f, sdl_mapping_type::button, 3, hat_component::none, false};
-	emulated_logitech_g27_mapping cross{this, "cross", 0x046dc24f, sdl_mapping_type::button, 0, hat_component::none, false};
-	emulated_logitech_g27_mapping square{this, "square", 0x046dc24f, sdl_mapping_type::button, 1, hat_component::none, false};
-	emulated_logitech_g27_mapping circle{this, "circle", 0x046dc24f, sdl_mapping_type::button, 2, hat_component::none, false};
+	emulated_logitech_g27_mapping triangle{this, "triangle", 0, sdl_mapping_type::button, 3, hat_component::none, false};
+	emulated_logitech_g27_mapping cross{this, "cross", 0, sdl_mapping_type::button, 0, hat_component::none, false};
+	emulated_logitech_g27_mapping square{this, "square", 0, sdl_mapping_type::button, 1, hat_component::none, false};
+	emulated_logitech_g27_mapping circle{this, "circle", 0, sdl_mapping_type::button, 2, hat_component::none, false};
 
-	emulated_logitech_g27_mapping l2{this, "l2", 0x046dc24f, sdl_mapping_type::button, 7, hat_component::none, false};
-	emulated_logitech_g27_mapping l3{this, "l3", 0x046dc24f, sdl_mapping_type::button, 11, hat_component::none, false};
-	emulated_logitech_g27_mapping r2{this, "r2", 0x046dc24f, sdl_mapping_type::button, 6, hat_component::none, false};
-	emulated_logitech_g27_mapping r3{this, "r3", 0x046dc24f, sdl_mapping_type::button, 10, hat_component::none, false};
+	emulated_logitech_g27_mapping l2{this, "l2", 0, sdl_mapping_type::button, 7, hat_component::none, false};
+	emulated_logitech_g27_mapping l3{this, "l3", 0, sdl_mapping_type::button, 11, hat_component::none, false};
+	emulated_logitech_g27_mapping r2{this, "r2", 0, sdl_mapping_type::button, 6, hat_component::none, false};
+	emulated_logitech_g27_mapping r3{this, "r3", 0, sdl_mapping_type::button, 10, hat_component::none, false};
 
-	emulated_logitech_g27_mapping plus{this, "plus", 0x046dc24f, sdl_mapping_type::button, 19, hat_component::none, false};
-	emulated_logitech_g27_mapping minus{this, "minus", 0x046dc24f, sdl_mapping_type::button, 20, hat_component::none, false};
+	emulated_logitech_g27_mapping plus{this, "plus", 0, sdl_mapping_type::button, 19, hat_component::none, false};
+	emulated_logitech_g27_mapping minus{this, "minus", 0, sdl_mapping_type::button, 20, hat_component::none, false};
 
-	emulated_logitech_g27_mapping dial_clockwise{this, "dial_clockwise", 0x046dc24f, sdl_mapping_type::button, 21, hat_component::none, false};
-	emulated_logitech_g27_mapping dial_anticlockwise{this, "dial_anticlockwise", 0x046dc24f, sdl_mapping_type::button, 22, hat_component::none, false};
+	emulated_logitech_g27_mapping dial_clockwise{this, "dial_clockwise", 0, sdl_mapping_type::button, 21, hat_component::none, false};
+	emulated_logitech_g27_mapping dial_anticlockwise{this, "dial_anticlockwise", 0, sdl_mapping_type::button, 22, hat_component::none, false};
 
-	emulated_logitech_g27_mapping select{this, "select", 0x046dc24f, sdl_mapping_type::button, 8, hat_component::none, false};
-	emulated_logitech_g27_mapping pause{this, "pause", 0x046dc24f, sdl_mapping_type::button, 9, hat_component::none, false};
+	emulated_logitech_g27_mapping select{this, "select", 0, sdl_mapping_type::button, 8, hat_component::none, false};
+	emulated_logitech_g27_mapping pause{this, "pause", 0, sdl_mapping_type::button, 9, hat_component::none, false};
 
-	emulated_logitech_g27_mapping shifter_1{this, "shifter_1", 0x045e028e, sdl_mapping_type::button, 3, hat_component::none, false};
-	emulated_logitech_g27_mapping shifter_2{this, "shifter_2", 0x045e028e, sdl_mapping_type::button, 0, hat_component::none, false};
-	emulated_logitech_g27_mapping shifter_3{this, "shifter_3", 0x045e028e, sdl_mapping_type::button, 2, hat_component::none, false};
-	emulated_logitech_g27_mapping shifter_4{this, "shifter_4", 0x045e028e, sdl_mapping_type::button, 1, hat_component::none, false};
-	emulated_logitech_g27_mapping shifter_5{this, "shifter_5", 0x045e028e, sdl_mapping_type::hat, 0, hat_component::up, false};
-	emulated_logitech_g27_mapping shifter_6{this, "shifter_6", 0x045e028e, sdl_mapping_type::hat, 0, hat_component::down, false};
-	emulated_logitech_g27_mapping shifter_r{this, "shifter_r", 0x045e028e, sdl_mapping_type::hat, 0, hat_component::left, false};
+	emulated_logitech_g27_mapping shifter_1{this, "shifter_1", 0, sdl_mapping_type::button, 3, hat_component::none, false};
+	emulated_logitech_g27_mapping shifter_2{this, "shifter_2", 0, sdl_mapping_type::button, 0, hat_component::none, false};
+	emulated_logitech_g27_mapping shifter_3{this, "shifter_3", 0, sdl_mapping_type::button, 2, hat_component::none, false};
+	emulated_logitech_g27_mapping shifter_4{this, "shifter_4", 0, sdl_mapping_type::button, 1, hat_component::none, false};
+	emulated_logitech_g27_mapping shifter_5{this, "shifter_5", 0, sdl_mapping_type::hat, 0, hat_component::up, false};
+	emulated_logitech_g27_mapping shifter_6{this, "shifter_6", 0, sdl_mapping_type::hat, 0, hat_component::down, false};
+	emulated_logitech_g27_mapping shifter_r{this, "shifter_r", 0, sdl_mapping_type::hat, 0, hat_component::left, false};
 
-	cfg::_bool reverse_effects{this, "reverse_effects", true};
-	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> ffb_device_type_id{this, "ffb_device_type_id", 0x046dc24f};
-	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> led_device_type_id{this, "led_device_type_id", 0x046dc24f};
+	cfg::_bool reverse_effects{this, "reverse_effects", false};
+	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> ffb_device_type_id{this, "ffb_device_type_id", 0};
+	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> led_device_type_id{this, "led_device_type_id", 0};
 
 	cfg::_bool enabled{this, "enabled", false};
 
