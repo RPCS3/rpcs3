@@ -274,13 +274,15 @@ public:
 
 		update_display();
 
-		horizontal_layout->addWidget(label);
-		horizontal_layout->addWidget(m_display_box);
+		horizontal_layout->addWidget(label, 1);
+		horizontal_layout->addWidget(m_display_box, 2);
 		if (m_button_status)
-			horizontal_layout->addWidget(m_button_status);
-		horizontal_layout->addWidget(m_map_button);
-		horizontal_layout->addWidget(m_unmap_button);
-		horizontal_layout->addWidget(m_reverse_checkbox);
+			horizontal_layout->addWidget(m_button_status, 1);
+		else
+			horizontal_layout->addStretch(1); // For a more consistent layout
+		horizontal_layout->addWidget(m_map_button, 1);
+		horizontal_layout->addWidget(m_unmap_button, 1);
+		horizontal_layout->addWidget(m_reverse_checkbox, 1);
 
 		if (m_axis_status)
 			layout->addWidget(m_axis_status);
