@@ -431,7 +431,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, button.m_value); break;
 				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, button.m_value); break;
 				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, button.m_value); break;
-				// These arent pressure btns
+				// These aren't pressure btns
 				case CELL_PAD_CTRL_R3:
 				case CELL_PAD_CTRL_L3:
 				case CELL_PAD_CTRL_START:
