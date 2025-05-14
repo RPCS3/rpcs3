@@ -394,6 +394,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/Dimensions.cpp
     Io/evdev_gun_handler.cpp
     Io/GameTablet.cpp
+    Io/gem_config.cpp
     Io/GHLtar.cpp
     Io/GunCon3.cpp
     Io/Infinity.cpp

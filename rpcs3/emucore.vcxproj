@@ -86,6 +86,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\Io\GameTablet.cpp" />
+    <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
