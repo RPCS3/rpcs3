@@ -635,7 +635,7 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 	warning->setWordWrap(true);
 	v_layout->addWidget(warning);
 
-	QLabel* mapping_note = new QLabel(tr("Note: Please DO NOT map your wheel onto gamepads, only map it here. If your wheel was mapped onto gamepads, go to gamepad settings and unmap it. If you used vJoy to map your wheel onto a gamepad before for rpcs3, undo that."), this);
+	QLabel* mapping_note = new QLabel(tr("Note: Please DO NOT map your wheel onto gamepads, only map it here. If your wheel was mapped onto gamepads, go to gamepad settings and unmap it. If you used vJoy to map your wheel onto a gamepad before for RPCS3, undo that."), this);
 	mapping_note->setWordWrap(true);
 	v_layout->addWidget(mapping_note);
 
