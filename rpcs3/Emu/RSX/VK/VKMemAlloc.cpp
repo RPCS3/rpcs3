@@ -49,6 +49,7 @@ private:
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#pragma clang diagnostic ignored "-Wnullability-completeness"
 #else
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
