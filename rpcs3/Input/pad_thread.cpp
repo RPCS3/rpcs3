@@ -309,13 +309,10 @@ void pad_thread::operator()()
 
 		for (auto& thread : threads)
 		{
-			if (thread)
-			{
-				auto& enumeration_thread = *thread;
-				enumeration_thread = thread_state::aborting;
-				enumeration_thread();
-			}
+			// Join thread (ordered explicitly)
+			thread.reset();
 		}
+
 		threads.clear();
 
 		input_log.notice("Pad threads stopped");

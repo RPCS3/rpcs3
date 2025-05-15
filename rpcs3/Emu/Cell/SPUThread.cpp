@@ -4781,6 +4781,26 @@ bool spu_thread::process_mfc_cmd()
 								return true;
 							}
 
+							if (last_getllar != pc || last_getllar_lsa != ch_mfc_cmd.lsa)
+							{
+								getllar_busy_waiting_switch = umax;
+								getllar_spin_count = 0;
+								return true;
+							}
+
+							// Check if LSA points to an OUT buffer on the stack from a caller - unlikely to be a loop
+							if (last_getllar_lsa >= SPU_LS_SIZE - 0x10000 && last_getllar_lsa > last_getllar_gpr1)
+							{
+								auto cs = dump_callstack_list();
+
+								if (!cs.empty() && last_getllar_lsa > cs[0].second)
+								{
+									getllar_busy_waiting_switch = umax;
+									getllar_spin_count = 0;
+									return true;
+								}
+							}
+
 							getllar_spin_count = std::min<u32>(getllar_spin_count + 1, u16{umax});
 
 							if (getllar_busy_waiting_switch == umax && getllar_spin_count == 4)
@@ -4826,6 +4846,7 @@ bool spu_thread::process_mfc_cmd()
 
 							last_getllar = pc;
 							last_getllar_gpr1 = gpr[1]._u32[3];
+							last_getllar_lsa = ch_mfc_cmd.lsa;
 
 							if (getllar_busy_waiting_switch == 1)
 							{

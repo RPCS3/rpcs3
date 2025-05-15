@@ -828,13 +828,8 @@ void rec_info::stop_video_provider(bool flush)
 {
 	cellRec.notice("Stopping video provider.");
 
-	if (video_provider_thread)
-	{
-		auto& thread = *video_provider_thread;
-		thread = thread_state::aborting;
-		thread();
-		video_provider_thread.reset();
-	}
+	// Join thread
+	video_provider_thread.reset();
 
 	// Flush the ringbuffer if necessary.
 	// This should only happen if the video sink is not the encoder itself.

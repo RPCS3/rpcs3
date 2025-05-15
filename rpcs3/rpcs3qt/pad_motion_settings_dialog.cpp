@@ -231,13 +231,9 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 
 pad_motion_settings_dialog::~pad_motion_settings_dialog()
 {
-	if (m_input_thread)
-	{
-		m_input_thread_state = input_thread_state::pausing;
-		auto& thread = *m_input_thread;
-		thread = thread_state::aborting;
-		thread();
-	}
+	// Join thread
+	m_input_thread_state = input_thread_state::pausing;
+	m_input_thread.reset();
 }
 
 void pad_motion_settings_dialog::change_device(int index)

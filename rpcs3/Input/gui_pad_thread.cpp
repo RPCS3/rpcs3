@@ -47,13 +47,8 @@ gui_pad_thread::gui_pad_thread()
 
 gui_pad_thread::~gui_pad_thread()
 {
-	if (m_thread)
-	{
-		auto& thread = *m_thread;
-		thread = thread_state::aborting;
-		thread();
-		m_thread.reset();
-	}
+	// Join thread
+	m_thread.reset();
 
 #ifdef __linux__
 	if (m_uinput_fd != 1)
