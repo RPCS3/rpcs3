@@ -107,6 +107,7 @@ public:
 	emulated_logitech_g27_mapping shifter_5{this, "shifter_5", 0, sdl_mapping_type::hat, 0, hat_component::up, false};
 	emulated_logitech_g27_mapping shifter_6{this, "shifter_6", 0, sdl_mapping_type::hat, 0, hat_component::down, false};
 	emulated_logitech_g27_mapping shifter_r{this, "shifter_r", 0, sdl_mapping_type::hat, 0, hat_component::left, false};
+	emulated_logitech_g27_mapping shifter_press{this, "shifter_press", 0, sdl_mapping_type::hat, 0, hat_component::right, false};
 
 	cfg::_bool reverse_effects{this, "reverse_effects", false};
 	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> ffb_device_type_id{this, "ffb_device_type_id", 0};
