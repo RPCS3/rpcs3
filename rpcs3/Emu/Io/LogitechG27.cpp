@@ -763,12 +763,12 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		// rough analog values recorded in https://github.com/RPCS3/rpcs3/pull/17199#issuecomment-2883934412
 		// buf[8] shifter x
 		// buf[9] shifter y
-		static const u8 shifter_coord_center = 0x80;
-		static const u8 shifter_coord_top = 0xb7;
-		static const u8 shifter_coord_bottom = 0x32;
-		static const u8 shifter_coord_left = 0x30;
-		static const u8 shifter_coord_right = 0xb3;
-		static const u8 shifter_coord_right_reverse = 0xaa;
+		constexpr u8 shifter_coord_center = 0x80;
+		constexpr u8 shifter_coord_top = 0xb7;
+		constexpr u8 shifter_coord_bottom = 0x32;
+		constexpr u8 shifter_coord_left = 0x30;
+		constexpr u8 shifter_coord_right = 0xb3;
+		constexpr u8 shifter_coord_right_reverse = 0xaa;
 		if (shifter_1)
 		{
 			buf[8] = shifter_coord_left;
