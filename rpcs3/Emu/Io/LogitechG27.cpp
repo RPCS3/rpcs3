@@ -751,8 +751,16 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		set_bit(buf, 82, true);
 		// shifter connected
 		set_bit(buf, 83, true);
-		// shifter stick down
-		set_bit(buf, 86, shifter_press);
+		/*
+		 * shifter pressed/down bit
+		 * mechanical references:
+		 * - G29 shifter mechanical explanation https://youtu.be/d7qCn3o8K98?t=1124
+		 * - same mechanism on the G27 https://youtu.be/rdjejtIfkVA?t=760
+		 * - same mechanism on the G25 https://youtu.be/eCyt_4luwF0?t=130
+		 * on healthy G29/G27/G25 shifters, shifter is mechnically kept pressed in reverse, the bit should be set
+		 * the shifter_press mapping alone captures instead a shifter press without going into reverse, ie. neutral press, just in case there are games using it for input
+		 */
+		set_bit(buf, 86, shifter_press | shifter_r);
 
 		buf[3] = (steering << 2) | buf[3];
 		buf[4] = steering >> 6;
