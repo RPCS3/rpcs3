@@ -115,12 +115,8 @@ u16 usb_device_logitech_g27::get_num_emu_devices()
 
 void usb_device_logitech_g27::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake = true;
-	transfer->expected_count = buf_size;
-	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time = get_timestamp() + 100;
+	logitech_g27_log.todo("control transfer bmRequestType %02x, bRequest %02x, wValue %04x, wIndex %04x, wLength %04x, %s", bmRequestType, bRequest, wValue, wIndex, wLength, fmt::buf_to_hexstring(buf, buf_size));
 
-	// Log these for now, might not need to implement anything
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }
 
