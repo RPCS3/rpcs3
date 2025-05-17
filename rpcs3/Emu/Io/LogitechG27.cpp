@@ -115,12 +115,8 @@ u16 usb_device_logitech_g27::get_num_emu_devices()
 
 void usb_device_logitech_g27::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	transfer->fake = true;
-	transfer->expected_count = buf_size;
-	transfer->expected_result = HC_CC_NOERR;
-	transfer->expected_time = get_timestamp() + 100;
+	logitech_g27_log.todo("control transfer bmRequestType %02x, bRequest %02x, wValue %04x, wIndex %04x, wLength %04x, %s", bmRequestType, bRequest, wValue, wIndex, wLength, fmt::buf_to_hexstring(buf, buf_size));
 
-	// Log these for now, might not need to implement anything
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }
 
@@ -751,8 +747,16 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 		set_bit(buf, 82, true);
 		// shifter connected
 		set_bit(buf, 83, true);
-		// shifter stick down
-		set_bit(buf, 86, shifter_press);
+		/*
+		 * shifter pressed/down bit
+		 * mechanical references:
+		 * - G29 shifter mechanical explanation https://youtu.be/d7qCn3o8K98?t=1124
+		 * - same mechanism on the G27 https://youtu.be/rdjejtIfkVA?t=760
+		 * - same mechanism on the G25 https://youtu.be/eCyt_4luwF0?t=130
+		 * on healthy G29/G27/G25 shifters, shifter is mechnically kept pressed in reverse, the bit should be set
+		 * the shifter_press mapping alone captures instead a shifter press without going into reverse, ie. neutral press, just in case there are games using it for input
+		 */
+		set_bit(buf, 86, shifter_press | shifter_r);
 
 		buf[3] = (steering << 2) | buf[3];
 		buf[4] = steering >> 6;
