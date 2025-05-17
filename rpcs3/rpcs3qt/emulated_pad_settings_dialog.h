@@ -2,6 +2,7 @@
 
 #include <QComboBox>
 #include <QDialog>
+#include <QGroupBox>
 #include <QTabWidget>
 
 #include <vector>
@@ -37,5 +38,5 @@ private:
 
 	pad_type m_type;
 
-	std::vector<std::vector<QComboBox*>> m_combos;
+	std::vector<std::vector<std::pair<QComboBox*, QGroupBox*>>> m_combos;
 };
