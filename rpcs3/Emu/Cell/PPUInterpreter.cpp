@@ -139,7 +139,7 @@ struct ppu_exec_select
 #define RETURN_(...) \
 	if constexpr (Build == 0) { \
 		static_cast<void>(exec); \
-		if (is_debugger_present()) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn) { \
+		if (is_debugger_present() || g_cfg.core.ppu_debug) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn) { \
 			exec(__VA_ARGS__); \
 			const auto next_op = this_op + 1; \
 			const auto fn = atomic_storage<ppu_intrp_func_t>::load(next_fn->fn); \
