@@ -63,7 +63,7 @@ bool sdl_instance::initialize()
 	Emu.BlockingCallFromMainThread([this, &instance_success]()
 	{
 		instance_success = initialize_impl();
-	});
+	}, false);
 
 	return instance_success;
 }

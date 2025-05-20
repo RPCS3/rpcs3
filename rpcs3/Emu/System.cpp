@@ -185,13 +185,13 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 	m_cb.call_from_main_thread(std::move(final_func), wake_up);
 }
 
-void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, std::source_location src_loc) const
+void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool track_emu_state, std::source_location src_loc) const
 {
 	atomic_t<u32> wake_up = 0;
 
 	sys_log.trace("Blocking Callback from thread '%s' at [%s] is queued", thread_ctrl::get_name(), src_loc);
 
-	CallFromMainThread(std::move(func), &wake_up, true, umax, src_loc);
+	CallFromMainThread(std::move(func), &wake_up, track_emu_state, umax, src_loc);
 
 	bool logged = false;
 
