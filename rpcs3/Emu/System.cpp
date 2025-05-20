@@ -3895,6 +3895,40 @@ bool Emulator::Quit(bool force_quit)
 
 void Emulator::CleanUp()
 {
+	// Signal threads
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
+	{
+		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
+	}
+
+	for (const auto& [type, data] : *g_fxo)
+	{
+		if (type.thread_op)
+		{
+			type.thread_op(data, thread_state::aborting);
+		}
+	}
+
+	// Join threads
+	qt_events_aware_op(50, [&]()
+	{
+		bool has_running = false;
+
+		for (const auto& [type, data] : *g_fxo)
+		{
+			if (type.thread_op)
+			{
+				if (type.thread_op(data, thread_state::aborting) != thread_state::finished)
+				{
+					has_running = true;
+					break;
+				}
+			}
+		}
+
+		return has_running == false;
+	});
+
 	// Deinitialize object manager to prevent any hanging objects at program exit
 	g_fxo->clear();
 }
