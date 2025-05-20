@@ -1,6 +1,8 @@
 #ifdef HAVE_SDL3
 
 #include "stdafx.h"
+#include "sdl_instance.h"
+#include "Emu/System.h"
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -10,10 +12,6 @@
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
-
-#include "util/logs.hpp"
-
-#include "sdl_instance.h"
 
 LOG_CHANNEL(sdl_log, "SDL");
 
@@ -35,9 +33,12 @@ sdl_instance& sdl_instance::get_instance()
 
 void sdl_instance::pump_events()
 {
-	const std::lock_guard<std::mutex> lock(m_instance_mutex);
+	std::lock_guard lock(m_instance_mutex);
+
 	if (m_initialized)
+	{
 		SDL_PumpEvents();
+	}
 }
 
 void sdl_instance::set_hint(const char* name, const char* value)
@@ -50,7 +51,25 @@ void sdl_instance::set_hint(const char* name, const char* value)
 
 bool sdl_instance::initialize()
 {
-	const std::lock_guard<std::mutex> lock(m_instance_mutex);
+	std::lock_guard lock(m_instance_mutex);
+
+	if (m_initialized)
+	{
+		return true;
+	}
+
+	bool instance_success = false;
+
+	Emu.BlockingCallFromMainThread([this, &instance_success]()
+	{
+		instance_success = initialize_impl();
+	});
+
+	return instance_success;
+}
+
+bool sdl_instance::initialize_impl()
+{
 	// Only init SDL once. SDL uses a global state internally...
 	if (m_initialized)
 	{
