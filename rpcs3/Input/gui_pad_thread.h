@@ -15,6 +15,8 @@ class gui_pad_thread
 {
 public:
 	gui_pad_thread();
+	gui_pad_thread& operator=(thread_state state) noexcept;
+	operator thread_state() const noexcept;
 	virtual ~gui_pad_thread();
 
 	void update_settings(const std::shared_ptr<gui_settings>& settings);

@@ -45,8 +45,18 @@ gui_pad_thread::gui_pad_thread()
 	m_thread = std::make_unique<named_thread<std::function<void()>>>("Gui Pad Thread", [this](){ run(); });
 }
 
-gui_pad_thread::~gui_pad_thread()
+gui_pad_thread& gui_pad_thread::operator=(thread_state state) noexcept
 {
+	if (state == thread_state::aborting)
+	{
+		if (m_thread)
+		{
+			*m_thread = state;
+		}
+
+		return *this;
+	}
+
 	// Join thread
 	m_thread.reset();
 
@@ -63,6 +73,18 @@ gui_pad_thread::~gui_pad_thread()
 		m_uinput_fd = -1;
 	}
 #endif
+
+	return *this;
+}
+
+gui_pad_thread::operator thread_state() const noexcept
+{
+	return m_thread && *m_thread != thread_state::finished ? m_thread->operator thread_state() : thread_state::finished;
+}
+
+gui_pad_thread::~gui_pad_thread()
+{
+	*this = thread_state::finished;
 }
 
 void gui_pad_thread::update_settings(const std::shared_ptr<gui_settings>& settings)
