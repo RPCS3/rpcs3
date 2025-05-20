@@ -180,12 +180,7 @@ bool sdl_pad_handler::Init()
 	if (m_is_init)
 		return true;
 
-	bool instance_success;
-
-	Emu.BlockingCallFromMainThread([&instance_success]()
-	{
-		instance_success = sdl_instance::get_instance().initialize();
-	});
+	const bool instance_success = sdl_instance::get_instance().initialize();
 
 	if (!instance_success)
 		return false;
