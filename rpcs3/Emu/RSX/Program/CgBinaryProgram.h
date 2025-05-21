@@ -133,8 +133,7 @@ class CgBinaryDisasm
 
 	std::string m_path; // used for FP decompiler thread, delete this later
 
-	u8* m_buffer = nullptr;
-	usz m_buffer_size = 0;
+	std::vector<char> m_buffer;
 	std::string m_arb_shader;
 	std::string m_glsl_shader;
 	std::string m_dst_reg_name;
@@ -196,16 +195,21 @@ public:
 		fs::file f(path);
 		if (!f) return;
 
-		m_buffer_size = f.size();
-		m_buffer = new u8[m_buffer_size];
-		f.read(m_buffer, m_buffer_size);
+		usz buffer_size = f.size();
+		m_buffer.resize(buffer_size);
+		f.read(m_buffer, buffer_size);
 		fmt::append(m_arb_shader, "Loading... [%s]\n", path.c_str());
 	}
 
-	~CgBinaryDisasm()
+	template <typename T>
+	CgBinaryDisasm(const std::span<T>& data)
+		: m_path("<raw>")
 	{
-		delete[] m_buffer;
+		m_buffer.resize(data.size_bytes());
+		std::memcpy(m_buffer.data(), data.data(), data.size_bytes());
 	}
+
+	~CgBinaryDisasm() = default;
 
 	static std::string GetCgParamType(u32 type)
 	{
@@ -226,7 +230,7 @@ public:
 
 	std::string GetCgParamName(u32 offset) const
 	{
-		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
+		return std::string(&m_buffer[offset]);
 	}
 
 	std::string GetCgParamRes(u32 /*offset*/) const
@@ -238,7 +242,7 @@ public:
 
 	std::string GetCgParamSemantic(u32 offset) const
 	{
-		return std::string(reinterpret_cast<char*>(&m_buffer[offset]));
+		return std::string(&m_buffer[offset]);
 	}
 
 	std::string GetCgParamValue(u32 offset, u32 end_offset) const
@@ -274,8 +278,8 @@ public:
 
 		auto swap_be32 = [&](u32 start_offset, size_t size_bytes)
 		{
-			auto start = reinterpret_cast<u32*>(m_buffer + start_offset);
-			auto end = reinterpret_cast<u32*>(m_buffer + start_offset + size_bytes);
+			auto start = reinterpret_cast<u32*>(m_buffer.data() + start_offset);
+			auto end = reinterpret_cast<u32*>(m_buffer.data() + start_offset + size_bytes);
 
 			for (auto data = start; data < end; ++data)
 			{
@@ -290,7 +294,7 @@ public:
 		swap_be32(prog.parameterArray, sizeof(CgBinaryParameter) * prog.parameterCount);
 
 		// 3. Swap the ucode
-		swap_be32(prog.ucode, m_buffer_size - prog.ucode);
+		swap_be32(prog.ucode, m_buffer.size() - prog.ucode);
 
 		// 4. Swap the domain header
 		if (be_profile == 7004u)
@@ -311,7 +315,7 @@ public:
 		}
 	}
 
-	void BuildShaderBody()
+	void BuildShaderBody(bool include_glsl = true)
 	{
 		ParamArray param_array;
 
@@ -355,27 +359,32 @@ public:
 			m_offset = prog.ucode;
 			TaskFP();
 
+			if (!include_glsl)
+			{
+				return;
+			}
+
 			u32 unused;
 			std::vector<u32> be_data;
 
 			// Swap bytes. FP decompiler expects input in BE
-			for (u32* ptr = reinterpret_cast<u32*>(m_buffer + m_offset),
-				*end = reinterpret_cast<u32*>(m_buffer + m_buffer_size);
+			for (u32* ptr = reinterpret_cast<u32*>(m_buffer.data() + m_offset),
+				*end = reinterpret_cast<u32*>(m_buffer.data() + m_buffer.size());
 				ptr < end; ++ptr)
 			{
 				be_data.push_back(std::bit_cast<be_t<u32>>(*ptr));
 			}
 
-			RSXFragmentProgram prog;
+			RSXFragmentProgram rsx_prog;
 			auto metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(be_data.data());
-			prog.ctrl = (fprog.outputFromH0 ? 0 : 0x40) | (fprog.depthReplace ? 0xe : 0);
-			prog.offset = metadata.program_start_offset;
-			prog.ucode_length = metadata.program_ucode_length;
-			prog.total_length = metadata.program_ucode_length + metadata.program_start_offset;
-			prog.data = reinterpret_cast<u8*>(be_data.data()) + metadata.program_start_offset;
-			for (u32 i = 0; i < 16; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
+			rsx_prog.ctrl = (fprog.outputFromH0 ? 0 : 0x40) | (fprog.depthReplace ? 0xe : 0);
+			rsx_prog.offset = metadata.program_start_offset;
+			rsx_prog.ucode_length = metadata.program_ucode_length;
+			rsx_prog.total_length = metadata.program_ucode_length + metadata.program_start_offset;
+			rsx_prog.data = reinterpret_cast<u8*>(be_data.data()) + metadata.program_start_offset;
+			for (u32 i = 0; i < 16; ++i) rsx_prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
-			GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, unused).Task();
+			GLFragmentDecompilerThread(m_glsl_shader, param_array, rsx_prog, unused).Task();
 #endif
 		}
 
@@ -409,18 +418,23 @@ public:
 
 			m_arb_shader += "\n";
 			m_offset = prog.ucode;
-			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
+			ensure((m_buffer.size() - m_offset) % sizeof(u32) == 0);
 
 			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 			m_data.resize(prog.ucodeSize / sizeof(u32));
 			std::memcpy(m_data.data(), vdata, prog.ucodeSize);
 			TaskVP();
 
-			RSXVertexProgram prog;
-			program_hash_util::vertex_program_utils::analyse_vertex_program(vdata, 0, prog);
-			for (u32 i = 0; i < 4; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
+			if (!include_glsl)
+			{
+				return;
+			}
+
+			RSXVertexProgram rsx_prog;
+			program_hash_util::vertex_program_utils::analyse_vertex_program(vdata, 0, rsx_prog);
+			for (u32 i = 0; i < 4; ++i) rsx_prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
-			GLVertexDecompilerThread(prog, m_glsl_shader, param_array).Task();
+			GLVertexDecompilerThread(rsx_prog, m_glsl_shader, param_array).Task();
 #endif
 		}
 	}
