@@ -4,6 +4,8 @@
 #include "table_item_delegate.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/gcm_printing.h"
+#include "Emu/RSX/Common/BufferUtils.h"
+#include "Emu/RSX/Program/CgBinaryProgram.h"
 #include "Utilities/File.h"
 
 #include <QHBoxLayout>
@@ -123,17 +125,6 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	vbox_tools->addLayout(hbox_controls);
 	vbox_tools->addWidget(m_tw_rsx);
 
-	// State explorer
-	m_text_transform_program = new QLabel();
-	m_text_transform_program->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	m_text_transform_program->setFont(mono);
-	m_text_transform_program->setText("");
-
-	m_text_shader_program = new QLabel();
-	m_text_shader_program->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
-	m_text_shader_program->setFont(mono);
-	m_text_shader_program->setText("");
-
 	m_list_index_buffer = new QListWidget();
 	m_list_index_buffer->setFont(mono);
 
@@ -208,11 +199,31 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	QWidget* buffers = new QWidget();
 	buffers->setLayout(buffer_layout);
 
+	auto xp_layout = new QHBoxLayout();
+	m_transform_disasm = new QTextEdit(this);
+	m_transform_disasm->setReadOnly(true);
+	m_transform_disasm->setWordWrapMode(QTextOption::NoWrap);
+	m_transform_disasm->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	xp_layout->addWidget(m_transform_disasm);
+
+	auto xp_tab = new QWidget();
+	xp_tab->setLayout(xp_layout);
+
+	auto fp_layout = new QHBoxLayout();
+	m_fragment_disasm = new QTextEdit(this);
+	m_fragment_disasm->setReadOnly(true);
+	m_fragment_disasm->setWordWrapMode(QTextOption::NoWrap);
+	m_fragment_disasm->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+	fp_layout->addWidget(m_fragment_disasm);
+
+	auto fp_tab = new QWidget();
+	fp_tab->setLayout(fp_layout);
+
 	QTabWidget* state_rsx = new QTabWidget();
 	state_rsx->addTab(buffers, tr("RTTs and DS"));
-	state_rsx->addTab(m_text_transform_program, tr("Transform program"));
-	state_rsx->addTab(m_text_shader_program, tr("Shader program"));
-	state_rsx->addTab(m_list_index_buffer, tr("Index buffer"));
+	state_rsx->addTab(xp_tab, tr("Vertex Program"));
+	state_rsx->addTab(fp_tab, tr("Fragment Program"));
+	state_rsx->addTab(m_list_index_buffer, tr("Index Buffer"));
 
 	QHBoxLayout* main_layout = new QHBoxLayout();
 	main_layout->addLayout(vbox_tools, 1);
@@ -592,10 +603,10 @@ void rsx_debugger::OnClickDrawCalls()
 	}
 
 	// Programs
-	m_text_transform_program->clear();
-	m_text_transform_program->setText(qstr(frame_debug.draw_calls[draw_id].programs.first));
-	m_text_shader_program->clear();
-	m_text_shader_program->setText(qstr(frame_debug.draw_calls[draw_id].programs.second));
+	m_transform_disasm->clear();
+	m_transform_disasm->setText(qstr(frame_debug.draw_calls[draw_id].programs.first));
+	m_fragment_disasm->clear();
+	m_fragment_disasm->setText(qstr(frame_debug.draw_calls[draw_id].programs.second));
 
 	m_list_index_buffer->clear();
 	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
@@ -621,6 +632,8 @@ void rsx_debugger::UpdateInformation() const
 {
 	GetMemory();
 	GetBuffers();
+	GetVertexProgram();
+	GetFragmentProgram();
 }
 
 void rsx_debugger::GetMemory() const
@@ -1201,4 +1214,104 @@ void rsx_debugger::GetBuffers() const
 	}
 
 	m_buffer_tex->showImage(QImage(m_buffer_tex->cache.data(), width, height, QImage::Format_RGB32));
+}
+
+void rsx_debugger::GetVertexProgram() const
+{
+	const auto render = rsx::get_current_renderer();
+	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
+	{
+		return;
+	}
+
+	RSXVertexProgram vp;
+	vp.data.reserve(512 * 4);
+
+	const u32 vp_entry = rsx::method_registers.transform_program_start();
+	const auto vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
+	(
+		rsx::method_registers.transform_program.data(),  // Input raw block
+		vp_entry,                                        // Address of entry point
+		vp                                               // [out] Program object
+	);
+
+	const u32 ucode_len = static_cast<u32>(vp.data.size() * sizeof(u32));
+	std::vector<u32> vp_blob = {
+		7003u,             // Type
+		6u,                // Revision
+		56u + ucode_len,   // Total size
+		0,                 // paramCount
+		0,                 // paramArray
+		32u,               // Program header offset
+		ucode_len,         // Ucode length
+		56u,               // Ucode start
+
+		::size32(vp.data) / 4, // Instruction count
+		0,                     // Slot
+		16u,                   // Registers used
+		rsx::method_registers.vertex_attrib_input_mask(),
+		rsx::method_registers.vertex_attrib_output_mask(),
+		rsx::method_registers.clip_planes_mask()
+	};
+
+	vp_blob.resize(vp_blob.size() + vp.data.size());
+	std::copy(vp.data.begin(), vp.data.end(), vp_blob.begin() + 14);
+
+	std::span<u32> vp_binary(vp_blob);
+	CgBinaryDisasm vp_disasm(vp_binary);
+	vp_disasm.BuildShaderBody(false);
+
+	m_transform_disasm->clear();
+	m_transform_disasm->setText(QString::fromStdString(vp_disasm.GetArbShader()));
+}
+
+void rsx_debugger::GetFragmentProgram() const
+{
+	const auto render = rsx::get_current_renderer();
+	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
+	{
+		return;
+	}
+
+	const auto [program_offset, program_location] = rsx::method_registers.shader_program_address();
+	auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
+	const auto fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
+
+	const bool output_h0 = rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? false : true;
+	const bool depth_replace = rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT ? true : false;
+	const u32 flags = 16u /* Reg count */ | ((output_h0 /* 16-bit exports? */ ? 1u : 0u) << 8u) | ((depth_replace /* Export depth? */ ? 1u : 0u) << 16u) | (0u /* Uses KILL? */ << 24u);
+	const auto ucode_len = fp_metadata.program_ucode_length;
+
+	std::vector<u32> blob = {
+		7004u,             // Type
+		6u,                // Revision
+		56u + ucode_len,   // Total size
+		0,                 // paramCount
+		0,                 // paramArray
+		32u,               // Program header offset
+		ucode_len,         // Ucode length
+		56u,               // Ucode start
+
+		ucode_len / 16,                                               // Instruction count
+		rsx::method_registers.vertex_attrib_output_mask(),            // Slot
+		0u,                                                           // Partial load
+		0u | (rsx::method_registers.texcoord_control_mask() << 16u),  // Texcoord input mask | tex2d control
+		0u | (flags << 16u),                                          // Centroid inputs (xor tex2d control) | flags (regs, 16-bit, fragDepth, KILL)
+
+		0u,                                                           // Padding
+	};
+
+	// Copy in the program bytes, swapped
+	const u32 start_offset_in_words = fp_metadata.program_start_offset / 4;
+	const u32 ucode_length_in_words = fp_metadata.program_ucode_length / 4;
+	blob.resize(blob.size() + ucode_length_in_words);
+	copy_data_swap_u32(blob.data() + 14, utils::bless<u32>(data_ptr) + start_offset_in_words, ucode_length_in_words);
+	//std::memcpy(blob.data() + 14, utils::bless<char>(data_ptr) + fp_metadata.program_start_offset, fp_metadata.program_ucode_length);
+
+	std::span<u32> fp_binary(blob);
+	CgBinaryDisasm fp_disasm(fp_binary);
+	fp_disasm.BuildShaderBody(false);
+
+	m_fragment_disasm->clear();
+	m_fragment_disasm->setText(QString::fromStdString(fp_disasm.GetArbShader()));
 }
