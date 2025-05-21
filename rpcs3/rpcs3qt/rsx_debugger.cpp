@@ -1228,11 +1228,11 @@ void rsx_debugger::GetVertexProgram() const
 	vp.data.reserve(512 * 4);
 
 	const u32 vp_entry = rsx::method_registers.transform_program_start();
-	const auto vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
+	program_hash_util::vertex_program_utils::analyse_vertex_program
 	(
 		rsx::method_registers.transform_program.data(),  // Input raw block
-		vp_entry,                                        // Address of entry point
-		vp                                               // [out] Program object
+		vp_entry,                                       // Address of entry point
+		vp                                          // [out] Program object
 	);
 
 	const u32 ucode_len = static_cast<u32>(vp.data.size() * sizeof(u32));

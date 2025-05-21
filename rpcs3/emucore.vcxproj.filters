@@ -1099,6 +1099,9 @@
     <ClCompile Include="Emu\RSX\Program\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\CgBinaryProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
