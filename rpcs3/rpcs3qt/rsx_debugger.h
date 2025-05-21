@@ -11,6 +11,7 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QTabWidget>
+#include <QTextEdit>
 
 #include <memory>
 
@@ -61,8 +62,8 @@ class rsx_debugger : public QDialog
 	Buffer* m_buffer_tex;
 	QLabel* m_enabled_textures_label;
 
-	QLabel* m_text_transform_program;
-	QLabel* m_text_shader_program;
+	QTextEdit* m_transform_disasm;
+	QTextEdit* m_fragment_disasm;
 
 	u32 m_cur_texture = 0;
 	u32 m_texture_format_override = 0;
@@ -87,4 +88,7 @@ protected:
 
 private:
 	void PerformJump(u32 address);
+
+	void GetVertexProgram() const;
+	void GetFragmentProgram() const;
 };
