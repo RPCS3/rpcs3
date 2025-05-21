@@ -1274,7 +1274,15 @@ void rsx_debugger::GetFragmentProgram() const
 	}
 
 	const auto [program_offset, program_location] = rsx::method_registers.shader_program_address();
-	auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
+	const auto address = rsx::get_address(program_offset, program_location, 4);
+	if (!address)
+	{
+		m_fragment_disasm->clear();
+		return;
+	}
+
+	// NOTE: Reading through super ptr while crash-safe means we're probably reading incorrect bytes, but should be fine in 99% of cases
+	auto data_ptr = vm::get_super_ptr(address);
 	const auto fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
 	const bool output_h0 = rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? false : true;
