@@ -8,7 +8,7 @@ struct sdl_instance
 {
 public:
 	sdl_instance() = default;
-	~sdl_instance();
+	virtual ~sdl_instance();
 
 	static sdl_instance& get_instance();
 
@@ -17,6 +17,7 @@ public:
 
 private:
 	void set_hint(const char* name, const char* value);
+	bool initialize_impl();
 
 	bool m_initialized = false;
 	std::mutex m_instance_mutex;
