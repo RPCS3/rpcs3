@@ -705,6 +705,11 @@ namespace rsx
 			return decode<NV4097_SET_USER_CLIP_PLANE_CONTROL>().clip_plane5();
 		}
 
+		u32 clip_planes_mask() const
+		{
+			return registers[NV4097_SET_USER_CLIP_PLANE_CONTROL];
+		}
+
 		front_face front_face_mode() const
 		{
 			return decode<NV4097_SET_FRONT_FACE>().front_face_mode();

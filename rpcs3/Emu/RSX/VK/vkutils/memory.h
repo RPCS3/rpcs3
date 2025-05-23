@@ -4,7 +4,15 @@
 #include "../../rsx_utils.h"
 #include "shared.h"
 
-#include "3rdparty/GPUOpen/VulkanMemoryAllocator/src/vk_mem_alloc.h"
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
+#endif
+#define VMA_VULKAN_VERSION 1000000
+#include "3rdparty/GPUOpen/VulkanMemoryAllocator/include/vk_mem_alloc.h"
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 namespace vk
 {
@@ -55,7 +63,7 @@ namespace vk
 	public:
 		using mem_handle_t = void*;
 
-		mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice /*pdev*/);
+		mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice pdev);
 		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
@@ -83,7 +91,7 @@ namespace vk
 	class mem_allocator_vma : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev);
+		mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev, VkInstance inst);
 		~mem_allocator_vma() override = default;
 
 		void destroy() override;

@@ -1,4 +1,5 @@
 #define VMA_IMPLEMENTATION
+#define VMA_VULKAN_VERSION 1000000
 
 #include "util/atomic.hpp"
 #include "Utilities/mutex.h"
@@ -49,11 +50,12 @@ private:
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#pragma clang diagnostic ignored "-Wnullability-completeness"
 #else
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 #endif
-#include "3rdparty/GPUOpen/VulkanMemoryAllocator/src/vk_mem_alloc.h"
+#include "3rdparty/GPUOpen/VulkanMemoryAllocator/include/vk_mem_alloc.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else

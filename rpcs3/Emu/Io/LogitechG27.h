@@ -94,6 +94,7 @@ struct logitech_g27_sdl_mapping
 	sdl_mapping shifter_5 {};
 	sdl_mapping shifter_6 {};
 	sdl_mapping shifter_r {};
+	sdl_mapping shifter_press {};
 };
 
 class usb_device_logitech_g27 : public usb_device_emulated

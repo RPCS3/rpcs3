@@ -153,11 +153,11 @@ namespace vk
 		rsx_log.warning("Rebalanced memory types successfully");
 	}
 
-	mem_allocator_base::mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice)
+	mem_allocator_base::mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice /*pdev*/)
 		: m_device(dev), m_allocation_flags(0)
 	{}
 
-	mem_allocator_vma::mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev)
+	mem_allocator_vma::mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev, VkInstance inst)
 		: mem_allocator_base(dev, pdev)
 	{
 		// Initialize stats pool
@@ -166,6 +166,8 @@ namespace vk
 		VmaAllocatorCreateInfo allocatorInfo = {};
 		allocatorInfo.physicalDevice = pdev;
 		allocatorInfo.device = dev;
+		allocatorInfo.instance = inst;
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_0;
 
 		std::vector<VkDeviceSize> heap_limits;
 		const auto vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
@@ -299,7 +301,7 @@ namespace vk
 
 	f32 mem_allocator_vma::get_memory_usage()
 	{
-		vmaGetBudget(m_allocator, stats.data());
+		vmaGetHeapBudgets(m_allocator, stats.data());
 
 		float max_usage = 0.f;
 		for (const auto& info : stats)
