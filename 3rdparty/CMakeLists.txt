@@ -131,7 +131,14 @@ add_subdirectory(stblib)
 add_subdirectory(discord-rpc)
 
 # Cubeb
-add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+if(USE_SYSTEM_CUBEB)
+	find_package(cubeb REQUIRED GLOBAL)
+	message(STATUS "Using system cubeb version '${cubeb_VERSION}'")
+	add_library(3rdparty::cubeb ALIAS cubeb::cubeb)
+else()
+	message(STATUS "Using static cubeb from 3rdparty")
+	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+endif()
 
 # SoundTouch
 add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
