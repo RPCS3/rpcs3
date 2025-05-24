@@ -582,7 +582,7 @@ namespace gl
 			const std::vector<rsx::subresource_layout> &input_layouts,
 			bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
 	{
-		const auto driver_caps = gl::get_driver_caps();
+		const auto& driver_caps = gl::get_driver_caps();
 		rsx::texture_uploader_capabilities caps
 		{
 			.supports_byteswap = true,

@@ -50,7 +50,7 @@ namespace vk
 	{
 		// For any managed resources, try to keep the number of unused/idle resources as low as possible.
 		// Improves search times as well as keeping us below the hardware limit.
-		const auto limits = get_current_renderer()->gpu().get_limits();
+		const auto& limits = get_current_renderer()->gpu().get_limits();
 		const auto allocated_sampler_count = vmm_get_application_pool_usage(VMM_ALLOCATION_POOL_SAMPLER);
 		const auto max_allowed_samplers = std::min((limits.maxSamplerAllocationCount * 3u) / 4u, 2048u);
 
