@@ -21,7 +21,7 @@
 if (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
   # in cache already
   set(FFMPEG_FOUND TRUE)
-else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
+else ()
   # use pkg-config to get the directories and then use these values
   # in the FIND_PATH() and FIND_LIBRARY() calls
   find_package(PkgConfig)
@@ -31,7 +31,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     pkg_check_modules(_FFMPEG_AVUTIL libavutil)
     pkg_check_modules(_FFMPEG_SWSCALE libswscale)
     pkg_check_modules(_FFMPEG_SWRESAMPLE libswresample)
-  endif (PKG_CONFIG_FOUND)
+  endif ()
 
   find_path(FFMPEG_AVCODEC_INCLUDE_DIR
     NAMES libavcodec/avcodec.h
@@ -64,9 +64,10 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     PATHS ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
   )
 
-  if (FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT AND FFMPEG_LIBSWSCALE AND FFMPEG_LIBSWRESAMPLE)
-    set(FFMPEG_FOUND TRUE)
-  endif()
+  find_package_handle_standard_args(FFMPEG
+    DEFAULT_MSG
+    FFMPEG_LIBAVCODEC FFMPEG_LIBAVFORMAT FFMPEG_LIBSWSCALE FFMPEG_LIBSWRESAMPLE
+  )
 
   if (FFMPEG_FOUND)
     set(FFMPEG_INCLUDE_DIR ${FFMPEG_AVCODEC_INCLUDE_DIR})
@@ -79,17 +80,6 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
       ${FFMPEG_LIBSWRESAMPLE}
     )
 
-  endif (FFMPEG_FOUND)
+  endif ()
 
-  if (FFMPEG_FOUND)
-    if (NOT FFMPEG_FIND_QUIETLY)
-      message(STATUS "Found FFMPEG or Libav: ${FFMPEG_LIBRARIES}, ${FFMPEG_INCLUDE_DIR}")
-    endif (NOT FFMPEG_FIND_QUIETLY)
-  else (FFMPEG_FOUND)
-    if (FFMPEG_FIND_REQUIRED)
-      message(FATAL_ERROR "Could not find libavcodec or libavformat or libavutil or libswscale or libswresample")
-    endif (FFMPEG_FIND_REQUIRED)
-  endif (FFMPEG_FOUND)
-
-endif (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
-
+endif ()

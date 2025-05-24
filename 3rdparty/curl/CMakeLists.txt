@@ -26,8 +26,8 @@ else()
 	endif()
 	set(CURL_USE_LIBSSH2 OFF CACHE BOOL "Use libSSH2")
 	set(CURL_USE_LIBPSL OFF CACHE BOOL "Use libPSL")
-
-	set(CURL_DISABLE_TESTS ON)
+	option(BUILD_TESTING "Build tests" OFF)
+	option(BUILD_EXAMPLES "Build libcurl examples" OFF)
 
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
 
