@@ -569,7 +569,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 	if (vertex_state && !m_vertex_layout.validate())
 	{
 		// No vertex inputs enabled
-		// Execute remainining pipeline barriers with NOP draw
+		// Execute remaining pipeline barriers with NOP draw
 		do
 		{
 			draw_call.execute_pipeline_dependencies(m_ctx);
@@ -619,9 +619,9 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 		else
 		{
-			const auto subranges = draw_call.get_subranges();
+			const auto& subranges = draw_call.get_subranges();
 			const auto draw_count = subranges.size();
-			const auto driver_caps = gl::get_driver_caps();
+			const auto& driver_caps = gl::get_driver_caps();
 			bool use_draw_arrays_fallback = false;
 
 			m_scratch_buffer.resize(draw_count * 24);
@@ -631,7 +631,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 			u32 first = 0;
 			u32 dst_index = 0;
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				firsts[dst_index] = first;
 				counts[dst_index] = range.count;

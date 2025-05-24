@@ -11,7 +11,7 @@ namespace vk
 {
 	void image::validate(const vk::render_device& dev, const VkImageCreateInfo& info) const
 	{
-		const auto gpu_limits = dev.gpu().get_limits();
+		const auto& gpu_limits = dev.gpu().get_limits();
 		u32 longest_dim, dim_limit;
 
 		switch (info.imageType)

@@ -565,7 +565,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
-	const auto limits = m_device->gpu().get_limits();
+	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
 
 	if (m_texbuffer_view_size < 0x800000)
