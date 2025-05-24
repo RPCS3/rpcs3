@@ -459,11 +459,11 @@ struct VibrateMotor
 
 struct ps_move_data
 {
-	bool external_device_connected = false;
 	u32 external_device_id = 0;
-	std::array<u8, 5> external_device_data{};
 	std::array<u8, 38> external_device_read{};  // CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE
 	std::array<u8, 40> external_device_write{}; // CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE
+	std::array<u8, 5> external_device_data{};
+	bool external_device_connected = false;
 	bool external_device_read_requested = false;
 	bool external_device_write_requested = false;
 
