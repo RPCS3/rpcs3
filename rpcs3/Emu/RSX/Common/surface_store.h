@@ -504,6 +504,7 @@ namespace rsx
 						{
 							// Exchange this surface with the invalidated one
 							surface = std::move(old_surface_storage);
+							old_surface_storage = {};
 						}
 						else
 						{
