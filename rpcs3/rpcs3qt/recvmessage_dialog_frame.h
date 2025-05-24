@@ -11,7 +11,7 @@
 struct recvmessage_signal_struct
 {
 	shared_ptr<std::pair<std::string, message_data>> msg;
-	u64 msg_id;
+	u64 msg_id = 0;
 };
 
 Q_DECLARE_METATYPE(recvmessage_signal_struct);

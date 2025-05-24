@@ -86,13 +86,12 @@ std::array<midi_device, max_midi_devices> midi_creator::get_selection_list() con
 
 std::string midi_creator::set_device(u32 num, const midi_device& device)
 {
-	ensure(num < m_sel_list.size());
-
-	m_sel_list[num] = device;
+	midi_device& dev = ::at32(m_sel_list, num);
+	dev = device;
 
 	if (device.name == get_none().toStdString())
 	{
-		m_sel_list[num].name.clear();
+		dev.name.clear();
 	}
 
 	std::string result;

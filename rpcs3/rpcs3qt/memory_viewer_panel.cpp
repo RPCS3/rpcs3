@@ -425,7 +425,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	setLayout(vbox_panel);
 
 	// Events
-	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
+	connect(m_addr_line, &QLineEdit::returnPressed, this, [this]()
 	{
 		bool ok = false;
 		const u32 addr = normalize_hex_qstring(m_addr_line->text()).toULong(&ok, 16);
@@ -433,17 +433,17 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 		scroll(0); // Refresh
 	});
-	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
+	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, [=, this]()
 	{
 		m_colcount = 1 << sb_words->value();
 		ShowMemory();
 	});
 
-	connect(b_prev, &QAbstractButton::clicked, [this]() { scroll(-1); });
-	connect(b_next, &QAbstractButton::clicked, [this]() { scroll(1); });
-	connect(b_fprev, &QAbstractButton::clicked, [this]() { scroll(m_rowcount * -1); });
-	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
-	connect(b_img, &QAbstractButton::clicked, [=, this]()
+	connect(b_prev, &QAbstractButton::clicked, this, [this]() { scroll(-1); });
+	connect(b_next, &QAbstractButton::clicked, this, [this]() { scroll(1); });
+	connect(b_fprev, &QAbstractButton::clicked, this, [this]() { scroll(m_rowcount * -1); });
+	connect(b_fnext, &QAbstractButton::clicked, this, [this]() { scroll(m_rowcount); });
+	connect(b_img, &QAbstractButton::clicked, this, [=, this]()
 	{
 		const color_format format = cbox_img_mode->currentData().value<color_format>();
 		const int sizex = sb_img_size_x->value();
@@ -580,7 +580,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	const u32 id = idm::last_id();
 	auto handle_ptr = idm::get_unlocked<memory_viewer_handle>(id);
 
-	connect(this, &memory_viewer_panel::finished, [handle_ptr = std::move(handle_ptr), id, this](int)
+	connect(this, &memory_viewer_panel::finished, this, [handle_ptr = std::move(handle_ptr), id, this](int)
 	{
 		if (m_search_thread)
 		{
@@ -617,7 +617,7 @@ memory_viewer_panel::~memory_viewer_panel()
 
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 {
-	// Set some scrollspeed modifiers:
+	// Set some scroll speed modifiers:
 	u32 step_size = 1;
 	if (event->modifiers().testFlag(Qt::ControlModifier))
 		step_size *= m_rowcount;
@@ -986,6 +986,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	const u32 memsize = utils::mul_saturate<u32>(utils::mul_saturate<u32>(texel_bytes, width), height);
 	if (memsize == 0)
 	{
+		gui_log.error("Can not show image. memsize is 0 (texel_bytes=%d, width=%d, height=%d)", texel_bytes, width, height);
 		return;
 	}
 
@@ -993,6 +994,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 
 	if (!originalBuffer)
 	{
+		gui_log.error("Can not show image. originalBuffer is null (addr=%d, memsize=%d)", addr, memsize);
 		return;
 	}
 
@@ -1001,6 +1003,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	if (!convertedBuffer)
 	{
 		// OOM or invalid memory address, give up
+		gui_log.error("Can not show image. convertedBuffer is null (addr=%d, memsize=%d)", addr, memsize);
 		return;
 	}
 
@@ -1014,7 +1017,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		{
 			const u32 offset = y * pitch;
 			const u32 offset_new = y * pitch_new;
-			for (u32 x = 0, x_new = 0; x < pitch; x += 3, x_new += 4)
+			for (u32 x = 0, x_new = 0; x < pitch && x_new < pitch_new; x += 3, x_new += 4)
 			{
 				convertedBuffer[offset_new + x_new + 0] = originalBuffer[offset + x + 2];
 				convertedBuffer[offset_new + x_new + 1] = originalBuffer[offset + x + 1];
@@ -1116,19 +1119,20 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	}
 
 	// Flip vertically
-	if (flipv && height > 1 && memsize > 1)
+	if (flipv && width > 0 && height > 1 && memsize > 1)
 	{
 		const u32 pitch = width * 4;
+		std::vector<u8> tmp_row(pitch);
+
 		for (u32 y = 0; y < height / 2; y++)
 		{
-			const u32 offset = y * pitch;
-			const u32 flip_offset = (height - y - 1) * pitch;
-			for (u32 x = 0; x < pitch; x++)
-			{
-				const u8 tmp = convertedBuffer[offset + x];
-				convertedBuffer[offset + x] = convertedBuffer[flip_offset + x];
-				convertedBuffer[flip_offset + x] = tmp;
-			}
+			u8* row_top = &convertedBuffer[y * pitch];
+			u8* row_bottom = &convertedBuffer[(height - y - 1) * pitch];
+
+			// Swap rows
+			std::memcpy(tmp_row.data(), row_top, pitch);
+			std::memcpy(row_top, row_bottom, pitch);
+			std::memcpy(row_bottom, tmp_row.data(), pitch);
 		}
 	}
 
