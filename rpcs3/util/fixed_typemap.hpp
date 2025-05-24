@@ -71,7 +71,7 @@ namespace stx
 		struct typeinfo
 		{
 			bool(*create)(uchar* ptr, manual_typemap&, utils::serial*, std::string_view) noexcept = nullptr;
-			void(*thread_op)(void* ptr, thread_state) noexcept = nullptr;
+			thread_state(*thread_op)(void* ptr, thread_state) noexcept = nullptr;
 			void(*save)(void* ptr, utils::serial&) noexcept = nullptr;
 			bool(*saveable)(bool) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
@@ -137,10 +137,20 @@ namespace stx
 			}
 
 			template <typename T>
-			static void call_thread_op(void* ptr, thread_state state) noexcept
+			static thread_state call_thread_op(void* ptr, thread_state state) noexcept
 			{
 				// Abort and/or join (expected thread_state::aborting or thread_state::finished)
 				*std::launder(static_cast<T*>(ptr)) = state;
+
+				if constexpr (std::is_convertible_v<const T&, thread_state>)
+				{
+					return *std::launder(static_cast<T*>(ptr));
+				}
+				else
+				{
+					constexpr thread_state context_finished{3};
+					return context_finished;
+				}
 			}
 
 			template <typename T>
