@@ -143,10 +143,10 @@ class CgBinaryDisasm
 	std::vector<u32> m_loop_end_offsets;
 
 	// VP members
-	u32 m_sca_opcode;
-	u32 m_vec_opcode;
-	static const usz m_max_instr_count = 512;
-	usz m_instr_count;
+	u32 m_sca_opcode = 0;
+	u32 m_vec_opcode = 0;
+	static constexpr usz m_max_instr_count = 512;
+	usz m_instr_count = 0;
 	std::vector<u32> m_data;
 
 public:
