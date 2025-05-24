@@ -278,3 +278,37 @@ struct CellGemVideoConvertAttribute
 
 	ENABLE_BITWISE_SERIALIZATION;
 };
+
+namespace
+{
+	enum button_flags : u16
+	{
+		select   = 0x01,
+		start    = 0x08,
+		triangle = 0x10,
+		circle   = 0x20,
+		cross    = 0x40,
+		square   = 0x80,
+		ps       = 0x0001,
+		move     = 0x4008,
+		t        = 0x8010,
+		ext_dev  = 0x1000,
+
+		// Sharpshooter
+		ss_firing_mode_1 = 0x01,
+		ss_firing_mode_2 = 0x02,
+		ss_firing_mode_3 = 0x04,
+		ss_trigger       = 0x40,
+		ss_reload        = 0x80,
+
+		// Racing Wheel
+		rw_d_pad_up    = 0x10,
+		rw_d_pad_right = 0x20,
+		rw_d_pad_down  = 0x40,
+		rw_d_pad_left  = 0x80,
+		rw_l1          = 0x04,
+		rw_r1          = 0x08,
+		rw_paddle_l    = 0x01,
+		rw_paddle_r    = 0x02,
+	};
+}

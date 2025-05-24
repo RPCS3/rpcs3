@@ -13,11 +13,13 @@
 #include "Emu/Io/usio_config.h"
 #include "util/asm.hpp"
 
+#include <QButtonGroup>
 #include <QDialogButtonBox>
 #include <QGroupBox>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QRadioButton>
 #include <QVBoxLayout>
 
 enum button_role
@@ -123,11 +125,34 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 {
 	ensure(!!tabs);
 
+	const bool show_mouse_legend = m_type == pad_type::mousegem;
+	const bool show_external_device_selection = m_type == pad_type::mousegem || m_type == pad_type::ds3gem;
+
+	if (show_mouse_legend)
+	{
+		if (!g_cfg_mouse.load())
+		{
+			cfg_log.notice("Could not restore mouse config. Using defaults.");
+		}
+
+		if (!g_cfg_raw_mouse.load())
+		{
+			cfg_log.notice("Could not restore raw mouse config. Using defaults.");
+		}
+	}
+
 	std::set<int> ignored_values;
 
 	const auto remove_value = [&ignored_values](int value)
 	{
 		ignored_values.insert(static_cast<int>(value));
+	};
+	const auto remove_values = [remove_value](int begin, int end)
+	{
+		for (int i = begin; i <= end; i++)
+		{
+			remove_value(i);
+		}
 	};
 
 	usz players = 0;
@@ -148,22 +173,22 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 	case pad_type::gem:
 		players = g_cfg_gem_real.players.size();
 
-		// Ignore combo, x and y axis
+		// Ignore combo, sharpshooter, wheel, x and y axis
 		remove_value(static_cast<int>(gem_btn::x_axis));
 		remove_value(static_cast<int>(gem_btn::y_axis));
-		for (int i = static_cast<int>(gem_btn::combo_begin); i <= static_cast<int>(gem_btn::combo_end); i++)
-		{
-			remove_value(i);
-		}
+		remove_values(static_cast<int>(gem_btn::sharpshooter_begin), static_cast<int>(gem_btn::sharpshooter_end));
+		remove_values(static_cast<int>(gem_btn::racing_wheel_begin), static_cast<int>(gem_btn::racing_wheel_end));
+		remove_values(static_cast<int>(gem_btn::combo_begin), static_cast<int>(gem_btn::combo_end));
+		remove_values(static_cast<int>(gem_btn::combo_sharpshooter_begin), static_cast<int>(gem_btn::combo_sharpshooter_end));
+		remove_values(static_cast<int>(gem_btn::combo_racing_wheel_begin), static_cast<int>(gem_btn::combo_racing_wheel_end));
 		break;
 	case pad_type::ds3gem:
 		players = g_cfg_gem_fake.players.size();
 
 		// Ignore combo
-		for (int i = static_cast<int>(gem_btn::combo_begin); i <= static_cast<int>(gem_btn::combo_end); i++)
-		{
-			remove_value(i);
-		}
+		remove_values(static_cast<int>(gem_btn::combo_begin), static_cast<int>(gem_btn::combo_end));
+		remove_values(static_cast<int>(gem_btn::combo_sharpshooter_begin), static_cast<int>(gem_btn::combo_sharpshooter_end));
+		remove_values(static_cast<int>(gem_btn::combo_racing_wheel_begin), static_cast<int>(gem_btn::combo_racing_wheel_end));
 		break;
 	case pad_type::mousegem:
 		players = g_cfg_gem_mouse.players.size();
@@ -185,29 +210,17 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 
 	constexpr u32 max_items_per_column = 6;
 	const int count = static_cast<int>(T::count) - static_cast<int>(ignored_values.size());
-	int rows = count;
+	int rows = show_external_device_selection ? max_items_per_column : count;
 
-	for (u32 cols = 1; utils::aligned_div(static_cast<u32>(count), cols) > max_items_per_column;)
+	if (!show_external_device_selection)
 	{
-		rows = utils::aligned_div(static_cast<u32>(count), ++cols);
+		for (u32 cols = 1; utils::aligned_div(static_cast<u32>(count), cols) > max_items_per_column;)
+		{
+			rows = utils::aligned_div(static_cast<u32>(count), ++cols);
+		}
 	}
 
 	m_combos.resize(players);
-
-	const bool show_mouse_legend = m_type == pad_type::mousegem;
-
-	if (show_mouse_legend)
-	{
-		if (!g_cfg_mouse.load())
-		{
-			cfg_log.notice("Could not restore mouse config. Using defaults.");
-		}
-
-		if (!g_cfg_raw_mouse.load())
-		{
-			cfg_log.notice("Could not restore raw mouse config. Using defaults.");
-		}
-	}
 
 	for (usz player = 0; player < players; player++)
 	{
@@ -228,7 +241,9 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			if constexpr (std::is_same_v<T, gem_btn>)
 			{
 				const gem_btn btn = static_cast<gem_btn>(i);
-				if (btn >= gem_btn::combo_begin && btn <= gem_btn::combo_end)
+				if ((btn >= gem_btn::combo_begin && btn <= gem_btn::combo_end) ||
+					(btn >= gem_btn::combo_sharpshooter_begin && btn <= gem_btn::combo_sharpshooter_end) ||
+					(btn >= gem_btn::combo_racing_wheel_begin && btn <= gem_btn::combo_racing_wheel_end))
 				{
 					gb->setToolTip(tr("Press the \"Combo\" button in combination with any of the other combo buttons to trigger their related PS Move button.\n"
 					                  "This can be useful if your device does not have enough regular buttons."));
@@ -348,13 +363,19 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				}
 			});
 
-			if (row >= rows)
+			if (row >= rows ||
+				(show_external_device_selection &&
+					(i == static_cast<int>(gem_btn::combo_buttons_begin) ||
+					 i == static_cast<int>(gem_btn::sharpshooter_begin) ||
+					 i == static_cast<int>(gem_btn::racing_wheel_begin) ||
+					 i == static_cast<int>(gem_btn::combo_sharpshooter_begin) ||
+					 i == static_cast<int>(gem_btn::combo_racing_wheel_begin))))
 			{
 				row = 0;
 				col++;
 			}
 
-			::at32(m_combos, player).push_back(combo);
+			::at32(m_combos, player).push_back(std::make_pair(combo, gb));
 			h_layout->addWidget(combo);
 			gb->setLayout(h_layout);
 			grid_layout->addWidget(gb, row, col);
@@ -363,6 +384,100 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 		}
 
 		QVBoxLayout* v_layout = new QVBoxLayout(this);
+
+		// Allow to select external devices
+		if (show_external_device_selection)
+		{
+			QRadioButton* rb_disconnected = new QRadioButton(tr("Disconnected"), this);
+			QRadioButton* rb_sharpshooter = new QRadioButton(tr("Sharpshooter"), this);
+			QRadioButton* rb_racing_wheel = new QRadioButton(tr("Racing Wheel"), this);
+			QButtonGroup* bg = new QButtonGroup(this);
+			bg->addButton(rb_disconnected, static_cast<int>(gem_ext_id::disconnected));
+			bg->addButton(rb_sharpshooter, static_cast<int>(gem_ext_id::sharpshooter));
+			bg->addButton(rb_racing_wheel, static_cast<int>(gem_ext_id::racing_wheel));
+			QHBoxLayout* h_layout = new QHBoxLayout(this);
+			h_layout->addWidget(rb_disconnected);
+			h_layout->addWidget(rb_sharpshooter);
+			h_layout->addWidget(rb_racing_wheel);
+			QGroupBox* gb = new QGroupBox(tr("External Device"), this);
+			gb->setToolTip(tr("Select an external device to emulate."));
+			gb->setLayout(h_layout);
+			v_layout->addWidget(gb);
+
+			const auto enable_buttons = [this, player](gem_ext_id id)
+			{
+				for (auto& [combo, gb] : m_combos.at(player))
+				{
+					if (!combo || !gb)
+						continue;
+
+					const QVariant data = combo->itemData(0, button_role::emulated_button);
+					if (!data.isValid() || !data.canConvert<int>())
+						continue;
+
+					const int button = data.value<int>();
+
+					switch (id)
+					{
+					case gem_ext_id::disconnected:
+						gb->setEnabled(!(
+							(button >= static_cast<int>(gem_btn::sharpshooter_begin) && button <= static_cast<int>(gem_btn::sharpshooter_end)) ||
+							(button >= static_cast<int>(gem_btn::racing_wheel_begin) && button <= static_cast<int>(gem_btn::racing_wheel_end)) ||
+							(button >= static_cast<int>(gem_btn::combo_sharpshooter_begin) && button <= static_cast<int>(gem_btn::combo_sharpshooter_end)) ||
+							(button >= static_cast<int>(gem_btn::combo_racing_wheel_begin) && button <= static_cast<int>(gem_btn::combo_racing_wheel_end))));
+						break;
+					case gem_ext_id::sharpshooter:
+						gb->setEnabled(!(
+							(button >= static_cast<int>(gem_btn::racing_wheel_begin) && button <= static_cast<int>(gem_btn::racing_wheel_end)) ||
+							(button >= static_cast<int>(gem_btn::combo_racing_wheel_begin) && button <= static_cast<int>(gem_btn::combo_racing_wheel_end))));
+						break;
+					case gem_ext_id::racing_wheel:
+						gb->setEnabled(!(
+							(button >= static_cast<int>(gem_btn::sharpshooter_begin) && button <= static_cast<int>(gem_btn::sharpshooter_end)) ||
+							(button >= static_cast<int>(gem_btn::combo_sharpshooter_begin) && button <= static_cast<int>(gem_btn::combo_sharpshooter_end))));
+						break;
+					default:
+						break;
+					}
+				}
+			};
+
+			gem_ext_id ext_id = gem_ext_id::disconnected;
+			switch (m_type)
+			{
+			case pad_type::ds3gem:
+				ext_id = ::at32(g_cfg_gem_fake.players, player)->external_device.get();
+				break;
+			case pad_type::mousegem:
+				ext_id = ::at32(g_cfg_gem_mouse.players, player)->external_device.get();
+				break;
+			default:
+				break;
+			}
+
+			bg->button(static_cast<int>(ext_id))->setChecked(true);
+			enable_buttons(ext_id);
+
+			connect(bg, &QButtonGroup::idToggled, [this, player, enable_buttons](int id, bool checked)
+			{
+				if (!checked) return;
+
+				const gem_ext_id ext_id = static_cast<gem_ext_id>(id);
+				enable_buttons(ext_id);
+
+				switch (m_type)
+				{
+				case pad_type::ds3gem:
+					::at32(g_cfg_gem_fake.players, player)->external_device.set(ext_id);
+					break;
+				case pad_type::mousegem:
+					::at32(g_cfg_gem_mouse.players, player)->external_device.set(ext_id);
+					break;
+				default:
+					break;
+				}
+			});
+		}
 
 		// Create a legend of the current mouse settings
 		if (show_mouse_legend)
@@ -558,7 +673,7 @@ void emulated_pad_settings_dialog::reset_config()
 
 	for (usz player = 0; player < m_combos.size(); player++)
 	{
-		for (QComboBox* combo : m_combos.at(player))
+		for (auto& [combo, gb] : m_combos.at(player))
 		{
 			if (!combo)
 				continue;
