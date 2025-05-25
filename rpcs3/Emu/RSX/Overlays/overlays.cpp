@@ -225,7 +225,7 @@ namespace rsx
 						continue;
 					}
 
-					if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					if (!pad->is_connected())
 					{
 						continue;
 					}

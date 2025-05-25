@@ -183,6 +183,13 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->chooseClass->addItem(tr("Top Shot Elite"),     u32{CELL_PAD_FAKE_TYPE_TOP_SHOT_ELITE});
 	ui->chooseClass->addItem(tr("Top Shot Fearmaster"),u32{CELL_PAD_FAKE_TYPE_TOP_SHOT_FEARMASTER});
 	ui->chooseClass->addItem(tr("uDraw GameTablet"),   u32{CELL_PAD_FAKE_TYPE_GAMETABLET});
+	ui->chooseClass->addItem(tr("Copilot for Player 1"), u32{CELL_PAD_FAKE_TYPE_COPILOT_1});
+	ui->chooseClass->addItem(tr("Copilot for Player 2"), u32{CELL_PAD_FAKE_TYPE_COPILOT_2});
+	ui->chooseClass->addItem(tr("Copilot for Player 3"), u32{CELL_PAD_FAKE_TYPE_COPILOT_3});
+	ui->chooseClass->addItem(tr("Copilot for Player 4"), u32{CELL_PAD_FAKE_TYPE_COPILOT_4});
+	ui->chooseClass->addItem(tr("Copilot for Player 5"), u32{CELL_PAD_FAKE_TYPE_COPILOT_5});
+	ui->chooseClass->addItem(tr("Copilot for Player 6"), u32{CELL_PAD_FAKE_TYPE_COPILOT_6});
+	ui->chooseClass->addItem(tr("Copilot for Player 7"), u32{CELL_PAD_FAKE_TYPE_COPILOT_7});
 
 	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{

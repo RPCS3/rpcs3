@@ -351,7 +351,7 @@ public:
 			for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				const bool connected = pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED) && i < attribute.max_connect;
+				const bool connected = pad && pad->is_connected() && i < attribute.max_connect;
 				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
 
 				update_connection(i, connected && is_real_move);
@@ -469,7 +469,7 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && pad->m_pad_handler == pad_handler::move && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+				if (pad && pad->m_pad_handler == pad_handler::move && pad->is_connected())
 				{
 					connected_controllers++;
 
@@ -490,7 +490,7 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+				if (pad && pad->is_connected())
 				{
 					connected_controllers++;
 
@@ -1776,7 +1776,7 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!pad->is_connected())
 	{
 		return;
 	}
@@ -1864,7 +1864,7 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!pad->is_connected())
 	{
 		return;
 	}
@@ -1895,7 +1895,7 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->m_pad_handler != pad_handler::move || !pad->is_connected())
 	{
 		return;
 	}
@@ -1940,7 +1940,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!pad->is_connected())
 	{
 		return;
 	}
@@ -2777,7 +2777,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-				if (pad && (pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+				if (pad && pad->is_connected())
 				{
 					inertial_state->temperature = pad->move_data.temperature;
 					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
@@ -3392,7 +3392,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 				const auto handler = pad::get_pad_thread();
 				const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-				if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+				if (pad->m_pad_handler != pad_handler::move || !pad->is_connected())
 				{
 					return CELL_GEM_NOT_CONNECTED;
 				}
@@ -3706,7 +3706,7 @@ error_code cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PO
 		const auto handler = pad::get_pad_thread();
 		const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-		if (pad->m_pad_handler != pad_handler::move || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		if (pad->m_pad_handler != pad_handler::move || !pad->is_connected())
 		{
 			return CELL_GEM_NOT_CONNECTED;
 		}

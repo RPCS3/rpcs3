@@ -283,7 +283,7 @@ void gui_pad_thread::run()
 
 void gui_pad_thread::process_input()
 {
-	if (!m_pad || !(m_pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!m_pad || !m_pad->is_connected())
 	{
 		return;
 	}
