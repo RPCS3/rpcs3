@@ -93,7 +93,7 @@ namespace vk
 
 			// Drop MSAA resolve/unresolve caches. Only trigger when a hard sync is guaranteed to follow else it will cause even more problems!
 			// 2-pass to ensure resources are available where they are most needed
-			auto relieve_memory_pressure = [&](auto& list, const utils::address_range& range)
+			auto relieve_memory_pressure = [&](auto& list, const utils::address_range32& range)
 			{
 				for (auto it = list.begin_range(range); it != list.end(); ++it)
 				{
@@ -254,7 +254,7 @@ namespace vk
 		std::vector<render_target*> sorted_list;
 		sorted_list.reserve(1024);
 
-		auto process_list_function = [&](auto& list, const utils::address_range& range)
+		auto process_list_function = [&](auto& list, const utils::address_range32& range)
 		{
 			for (auto it = list.begin_range(range); it != list.end(); ++it)
 			{

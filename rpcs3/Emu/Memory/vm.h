@@ -22,7 +22,7 @@ void ppubreak(ppu_thread& ppu);
 namespace utils
 {
 	class shm;
-	class address_range;
+	class address_range32;
 }
 
 namespace vm

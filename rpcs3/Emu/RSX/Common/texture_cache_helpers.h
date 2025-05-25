@@ -69,9 +69,9 @@ namespace rsx
 		blit_op_result(bool success) : succeeded(success)
 		{}
 
-		inline address_range to_address_range() const
+		inline address_range32 to_address_range() const
 		{
-			return address_range::start_length(real_dst_address, real_dst_size);
+			return address_range32::start_length(real_dst_address, real_dst_size);
 		}
 	};
 
@@ -182,7 +182,7 @@ namespace rsx
 
 		static inline blit_target_properties get_optimal_blit_target_properties(
 			bool src_is_render_target,
-			address_range dst_range,
+			address_range32 dst_range,
 			u32 dst_pitch,
 			const sizeu src_dimensions,
 			const sizeu dst_dimensions)
@@ -209,7 +209,7 @@ namespace rsx
 						continue;
 					}
 
-					const auto buffer_range = address_range::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
+					const auto buffer_range = address_range32::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found

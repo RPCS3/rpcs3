@@ -153,7 +153,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	{
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			const utils::address_range surface_range = m_surface_info[i].get_memory_range();
+			const utils::address_range32 surface_range = m_surface_info[i].get_memory_range();
 			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
@@ -182,7 +182,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 	{
-		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+		const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
 		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 		m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 	}

@@ -58,10 +58,10 @@ namespace rsx
 
 			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
-			rsx::simple_array<utils::address_range> flush_mm_ranges =
+			rsx::simple_array<utils::address_range32> flush_mm_ranges =
 			{
-				utils::address_range::start_length(write_address, write_length).to_page_range(),
-				utils::address_range::start_length(read_address, read_length).to_page_range()
+				utils::address_range32::start_length(write_address, write_length).to_page_range(),
+				utils::address_range32::start_length(read_address, read_length).to_page_range()
 			};
 			rsx::mm_flush(flush_mm_ranges);
 

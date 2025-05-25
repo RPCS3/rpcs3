@@ -1083,7 +1083,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(_body);
 	}
 
-	void putllc16_pattern(const spu_program& /*prog*/, utils::address_range range)
+	void putllc16_pattern(const spu_program& /*prog*/, utils::address_range32 range)
 	{
 		// Prevent store elimination
 		m_block->store_context_ctr[s_reg_mfc_eal]++;
@@ -1376,7 +1376,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(_final);
 	}
 
-	void putllc0_pattern(const spu_program& /*prog*/, utils::address_range /*range*/)
+	void putllc0_pattern(const spu_program& /*prog*/, utils::address_range32 /*range*/)
 	{
 		// Prevent store elimination
 		m_block->store_context_ctr[s_reg_mfc_eal]++;

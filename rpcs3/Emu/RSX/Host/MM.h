@@ -39,6 +39,6 @@ namespace rsx
 	void mm_protect(void* start, u64 length, utils::protection prot);
 	void mm_flush_lazy();
 	void mm_flush(u32 vm_address);
-	void mm_flush(const rsx::simple_array<utils::address_range>& ranges);
+	void mm_flush(const rsx::simple_array<utils::address_range32>& ranges);
 	void mm_flush();
 }

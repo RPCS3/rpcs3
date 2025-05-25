@@ -8314,7 +8314,7 @@ void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, 
 		end = start;
 	}
 
-	m_patterns[start] = pattern_info{utils::address_range::start_end(start, end)};
+	m_patterns[start] = pattern_info{utils::address_range32::start_end(start, end)};
 
 	for (u32 i = start; i <= (fill_all ? end : start); i += 4)
 	{

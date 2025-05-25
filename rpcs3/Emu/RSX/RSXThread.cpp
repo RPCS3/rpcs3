@@ -1233,7 +1233,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_mtx_task);
 
-			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
+			m_invalidated_memory_range = utils::address_range32::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
 			handle_invalidated_memory_range();
 		}
 	}
@@ -2299,8 +2299,8 @@ namespace rsx
 			return false;
 		}
 
-		const auto current_fragment_shader_range = address_range::start_length(shader_offset, current_fragment_program.total_length);
-		if (!current_fragment_shader_range.overlaps(address_range::start_length(dst_offset, size)))
+		const auto current_fragment_shader_range = address_range32::start_length(shader_offset, current_fragment_program.total_length);
+		if (!current_fragment_shader_range.overlaps(address_range32::start_length(dst_offset, size)))
 		{
 			// No range overlap
 			return false;
@@ -2832,7 +2832,7 @@ namespace rsx
 
 		reader_lock lock(m_mtx_task);
 
-		const auto map_range = address_range::start_length(address, size);
+		const auto map_range = address_range32::start_length(address, size);
 
 		if (!m_invalidated_memory_range.valid())
 			return;
@@ -2918,7 +2918,7 @@ namespace rsx
 			// Queue up memory invalidation
 			std::lock_guard lock(m_mtx_task);
 			const bool existing_range_valid = m_invalidated_memory_range.valid();
-			const auto unmap_range = address_range::start_length(address, size);
+			const auto unmap_range = address_range32::start_length(address, size);
 
 			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
 			{
