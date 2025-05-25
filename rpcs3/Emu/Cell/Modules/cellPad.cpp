@@ -272,7 +272,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 
 	for (usz i = 0; i < config.get_max_connect(); ++i)
 	{
-		if (!pads[i]->is_fake_pad && (pads[i]->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		if (!pads[i]->is_fake_pad && pads[i]->is_connected())
 		{
 			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
 		}
@@ -339,7 +339,7 @@ error_code cellPadClearBuf(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
@@ -411,26 +411,59 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		};
 
-		for (Button& button : pad->m_buttons)
+		for (const Button& button : pad->m_buttons)
 		{
 			// here we check btns, and set pad accordingly,
 			// if something changed, set btnChanged
+
+			bool pressed = button.m_pressed;
+			u16 value = button.m_value;
+
+			// Merge copilots
+			if (!pad->copilots.empty())
+			{
+				for (const auto& copilot : pad->copilots)
+				{
+					if (!copilot || !copilot->is_connected())
+					{
+						continue;
+					}
+
+					for (const Button& other : copilot->m_buttons)
+					{
+						if (button.m_offset == other.m_offset && button.m_outKeyCode == other.m_outKeyCode)
+						{
+							if (other.m_pressed)
+							{
+								pressed = true;
+
+								if (value < other.m_value)
+								{
+									value = other.m_value;
+								}
+							}
+
+							break;
+						}
+					}
+				}
+			}
 
 			switch (button.m_offset)
 			{
 			case CELL_PAD_BTN_OFFSET_DIGITAL1:
 			{
-				if (button.m_pressed)
+				if (pressed)
 					pad->m_digital_1 |= button.m_outKeyCode;
 				else
 					pad->m_digital_1 &= ~button.m_outKeyCode;
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_LEFT: set_value(pad->m_press_left, button.m_value); break;
-				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, button.m_value); break;
-				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, button.m_value); break;
-				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, button.m_value); break;
+				case CELL_PAD_CTRL_LEFT: set_value(pad->m_press_left, value); break;
+				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, value); break;
+				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, value); break;
+				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, value); break;
 				// These arent pressure btns
 				case CELL_PAD_CTRL_R3:
 				case CELL_PAD_CTRL_L3:
@@ -442,21 +475,21 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 			case CELL_PAD_BTN_OFFSET_DIGITAL2:
 			{
-				if (button.m_pressed)
+				if (pressed)
 					pad->m_digital_2 |= button.m_outKeyCode;
 				else
 					pad->m_digital_2 &= ~button.m_outKeyCode;
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_SQUARE: set_value(pad->m_press_square, button.m_value); break;
-				case CELL_PAD_CTRL_CROSS: set_value(pad->m_press_cross, button.m_value); break;
-				case CELL_PAD_CTRL_CIRCLE: set_value(pad->m_press_circle, button.m_value); break;
-				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, button.m_value); break;
-				case CELL_PAD_CTRL_R1: set_value(pad->m_press_R1, button.m_value); break;
-				case CELL_PAD_CTRL_L1: set_value(pad->m_press_L1, button.m_value); break;
-				case CELL_PAD_CTRL_R2: set_value(pad->m_press_R2, button.m_value); break;
-				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, button.m_value); break;
+				case CELL_PAD_CTRL_SQUARE: set_value(pad->m_press_square, value); break;
+				case CELL_PAD_CTRL_CROSS: set_value(pad->m_press_cross, value); break;
+				case CELL_PAD_CTRL_CIRCLE: set_value(pad->m_press_circle, value); break;
+				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, value); break;
+				case CELL_PAD_CTRL_R1: set_value(pad->m_press_R1, value); break;
+				case CELL_PAD_CTRL_L1: set_value(pad->m_press_L1, value); break;
+				case CELL_PAD_CTRL_R2: set_value(pad->m_press_R2, value); break;
+				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, value); break;
 				default: break;
 				}
 				break;
@@ -465,18 +498,18 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			{
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       button.m_value, true); break;
-				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    value, true); break;
+				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     value, true); break;
+				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       value, true); break;
+				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     value, true); break;
+				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       value, true); break;
+				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       value, true); break;
+				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       value, true); break;
+				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       value, true); break;
 				default: break;
 				}
 				break;
@@ -488,12 +521,44 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 
 		for (const AnalogStick& stick : pad->m_sticks)
 		{
+			u16 value = stick.m_value;
+
+			// Merge copilots
+			if (!pad->copilots.empty())
+			{
+				const auto normalize = [](s32 value)
+				{
+					return (value - 128) / 127.0f;
+				};
+
+				f32 accumulated_value = normalize(value);
+
+				for (const auto& copilot : pad->copilots)
+				{
+					if (!copilot || !copilot->is_connected())
+					{
+						continue;
+					}
+
+					for (const AnalogStick& other : copilot->m_sticks)
+					{
+						if (stick.m_offset == other.m_offset)
+						{
+							accumulated_value += normalize(other.m_value);
+							break;
+						}
+					}
+				}
+
+				value = static_cast<u16>(std::round(std::clamp(accumulated_value * 127.0f + 128.0f, 0.0f, 255.0f)));
+			}
+
 			switch (stick.m_offset)
 			{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: set_value(pad->m_analog_left_x, stick.m_value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: set_value(pad->m_analog_left_y, stick.m_value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, stick.m_value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: set_value(pad->m_analog_left_x, value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: set_value(pad->m_analog_left_y, value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, value); break;
 			default: break;
 			}
 		}
@@ -712,7 +777,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
@@ -798,7 +863,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, &data->cellpad_data, true);
@@ -830,7 +895,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
@@ -843,7 +908,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 	cellPad.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 
 	// TODO: This is used just to get data from a BD/CEC remote,
-	// but if the port isnt a remote, device type is set to CELL_PAD_DEV_TYPE_STANDARD and just regular cellPadGetData is returned
+	// but if the port isn't a remote, device type is set to CELL_PAD_DEV_TYPE_STANDARD and just regular cellPadGetData is returned
 
 	if (auto err = cellPadGetData(port_no, data))
 	{
@@ -894,7 +959,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
@@ -1021,7 +1086,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
@@ -1077,7 +1142,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
@@ -1104,7 +1169,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	const auto& pads = handler->GetPads();
 	const auto& pad = pads[port_no];
 
-	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);

@@ -151,6 +151,13 @@ enum
 	CELL_PAD_FAKE_TYPE_TOP_SHOT_ELITE      = 0xa001,
 	CELL_PAD_FAKE_TYPE_TOP_SHOT_FEARMASTER = 0xa002,
 	CELL_PAD_FAKE_TYPE_GAMETABLET          = 0xa003,
+	CELL_PAD_FAKE_TYPE_COPILOT_1           = 0xa004,
+	CELL_PAD_FAKE_TYPE_COPILOT_2           = 0xa005,
+	CELL_PAD_FAKE_TYPE_COPILOT_3           = 0xa006,
+	CELL_PAD_FAKE_TYPE_COPILOT_4           = 0xa007,
+	CELL_PAD_FAKE_TYPE_COPILOT_5           = 0xa008,
+	CELL_PAD_FAKE_TYPE_COPILOT_6           = 0xa009,
+	CELL_PAD_FAKE_TYPE_COPILOT_7           = 0xa00a,
 	CELL_PAD_FAKE_TYPE_LAST,
 
 	CELL_PAD_PCLASS_TYPE_MAX // last item
@@ -536,6 +543,8 @@ struct Pad
 	std::array<AnalogSensor, 4> m_sensors{};
 	std::array<VibrateMotor, 2> m_vibrateMotors{};
 
+	std::vector<std::shared_ptr<Pad>> copilots;
+
 	// These hold bits for their respective buttons
 	u16 m_digital_1{0};
 	u16 m_digital_2{0};
@@ -591,5 +600,20 @@ struct Pad
 		m_vendor_id = vendor_id;
 		m_product_id = product_id;
 		m_pressure_intensity = (255 * pressure_intensity_percent) / 100;
+	}
+
+	u32 copilot_player() const
+	{
+		if (m_class_type >= CELL_PAD_FAKE_TYPE_COPILOT_1 && m_class_type <= CELL_PAD_FAKE_TYPE_COPILOT_7)
+		{
+			return m_class_type - CELL_PAD_FAKE_TYPE_COPILOT_1;
+		}
+
+		return umax;
+	}
+
+	bool is_connected() const
+	{
+		return !!(m_port_status & CELL_PAD_STATUS_CONNECTED);
 	}
 };

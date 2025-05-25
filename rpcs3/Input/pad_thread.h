@@ -26,7 +26,7 @@ public:
 
 	PadInfo& GetInfo() { return m_info; }
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM>& GetPads() { return m_pads; }
-	void SetRumble(const u32 pad, u8 large_motor, bool small_motor);
+	void SetRumble(u32 pad, u8 large_motor, bool small_motor);
 	void SetIntercepted(bool intercepted);
 
 	s32 AddLddPad();
