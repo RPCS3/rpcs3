@@ -170,7 +170,7 @@ private:
 
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
-	utils::address_range m_offloader_fault_range;
+	utils::address_range32 m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
 	vk::draw_call_t m_current_draw {};
@@ -289,6 +289,6 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
 };

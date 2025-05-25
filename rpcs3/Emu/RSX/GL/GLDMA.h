@@ -21,17 +21,17 @@ namespace gl
 
 		void allocate(u32 base_address, u32 block_size);
 		void resize(u32 new_length);
-		void* map(const utils::address_range& range) const;
+		void* map(const utils::address_range32& range) const;
 
 		void set_parent(const dma_block* other);
 		const dma_block* head() const { return m_parent ? m_parent : this; }
-		bool can_map(const utils::address_range& range) const;
+		bool can_map(const utils::address_range32& range) const;
 
 		u32 base_addr() const { return m_base_address; }
 		u32 length() const { return m_data ? static_cast<u32>(m_data->size()) : 0; }
 		bool empty() const { return length() == 0; }
 		buffer* get() const { return m_data.get(); }
-		utils::address_range range() const { return utils::address_range::start_length(m_base_address, length()); }
+		utils::address_range32 range() const { return utils::address_range32::start_length(m_base_address, length()); }
 
 	protected:
 		u32 m_base_address = 0;

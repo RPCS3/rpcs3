@@ -7,7 +7,7 @@ namespace rsx
 {
 	constexpr u32 min_lockable_data_size = 4096; // Increasing this value has worse results even on systems with pages > 4k
 
-	void buffered_section::init_lockable_range(const address_range& range)
+	void buffered_section::init_lockable_range(const address_range32& range)
 	{
 		locked_range = range.to_page_range();
 		AUDIT((locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)));
@@ -15,11 +15,11 @@ namespace rsx
 		ensure(locked_range.is_page_range());
 	}
 
-	void buffered_section::reset(const address_range& memory_range)
+	void buffered_section::reset(const address_range32& memory_range)
 	{
 		ensure(memory_range.valid() && locked == false);
 
-		cpu_range = address_range(memory_range);
+		cpu_range = address_range32(memory_range);
 		confirmed_range.invalidate();
 		locked_range.invalidate();
 
@@ -110,7 +110,7 @@ namespace rsx
 			}
 			else
 			{
-				confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
+				confirmed_range = address_range32::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
 				ensure(!locked || locked_range.inside(confirmed_range.to_page_range()));
 			}
 
@@ -139,7 +139,7 @@ namespace rsx
 		locked = false;
 	}
 
-	const address_range& buffered_section::get_bounds(section_bounds bounds) const
+	const address_range32& buffered_section::get_bounds(section_bounds bounds) const
 	{
 		switch (bounds)
 		{

@@ -112,7 +112,7 @@ namespace rsx {
 		}
 
 	public:
-		void set_protection(const address_range& range, utils::protection prot)
+		void set_protection(const address_range32& range, utils::protection prot)
 		{
 			AUDIT(range.is_page_range());
 			AUDIT(prot == utils::protection::no || prot == utils::protection::ro || prot == utils::protection::rw);
@@ -123,7 +123,7 @@ namespace rsx {
 			}
 		}
 
-		void discard(const address_range& range)
+		void discard(const address_range32& range)
 		{
 			set_protection(range, utils::protection::rw);
 		}
@@ -136,7 +136,7 @@ namespace rsx {
 			}
 		}
 
-		void add(const address_range& range, utils::protection prot)
+		void add(const address_range32& range, utils::protection prot)
 		{
 			AUDIT(range.is_page_range());
 			AUDIT(prot == utils::protection::no || prot == utils::protection::ro);
@@ -147,7 +147,7 @@ namespace rsx {
 			}
 		}
 
-		void remove(const address_range& range, utils::protection prot)
+		void remove(const address_range32& range, utils::protection prot)
 		{
 			AUDIT(range.is_page_range());
 			AUDIT(prot == utils::protection::no || prot == utils::protection::ro);
@@ -160,7 +160,7 @@ namespace rsx {
 
 		// Returns the a lower bound as to how many locked sections are known to be within the given range with each protection {NA,RO}
 		// The assumption here is that the page in the given range with the largest number of refcounted sections represents the lower bound to how many there must be
-		std::pair<u8,u8> get_minimum_number_of_sections(const address_range& range) const
+		std::pair<u8,u8> get_minimum_number_of_sections(const address_range32& range) const
 		{
 			AUDIT(range.is_page_range());
 
@@ -175,7 +175,7 @@ namespace rsx {
 			return { no,ro };
 		}
 
-		void check_unprotected(const address_range& range, bool allow_ro = false, bool must_be_empty = true) const
+		void check_unprotected(const address_range32& range, bool allow_ro = false, bool must_be_empty = true) const
 		{
 			AUDIT(range.is_page_range());
 			for (const per_page_info_t* ptr = rsx_address_to_info_pointer(range.start); ptr <= rsx_address_to_info_pointer(range.end); ptr++)

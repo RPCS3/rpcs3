@@ -86,7 +86,7 @@ namespace vk
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
 	std::pair<buffer*, u32> detile_memory_block(
-		const vk::command_buffer& cmd, const rsx::GCM_tile_reference& tiled_region, const utils::address_range& range,
+		const vk::command_buffer& cmd, const rsx::GCM_tile_reference& tiled_region, const utils::address_range32& range,
 		u16 width, u16 height, u8 bpp);
 
 	// Other texture management helpers

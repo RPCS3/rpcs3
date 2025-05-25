@@ -149,7 +149,7 @@ namespace rsx
 		virtual f64 get_display_refresh_rate() const = 0;
 
 		// Invalidated memory range
-		address_range m_invalidated_memory_range;
+		address_range32 m_invalidated_memory_range;
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
@@ -353,7 +353,7 @@ namespace rsx
 		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
+		virtual void on_invalidate_memory_range(const address_range32 & /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// control

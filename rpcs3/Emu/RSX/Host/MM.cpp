@@ -90,7 +90,7 @@ namespace rsx
 		}
 	}
 
-	void mm_flush(const rsx::simple_array<utils::address_range>& ranges)
+	void mm_flush(const rsx::simple_array<utils::address_range32>& ranges)
 	{
 		std::lock_guard lock(g_mprotect_queue_lock);
 		if (g_deferred_mprotect_queue.empty())

@@ -36,7 +36,7 @@ namespace rsx
 			return block_id * BlockSize;
 		}
 
-		void broadcast_insert(const utils::address_range& range)
+		void broadcast_insert(const utils::address_range32& range)
 		{
 			const auto head_block = block_for(range.start);
 			for (auto meta = &m_metadata[head_block]; meta <= &m_metadata[block_for(range.end)]; ++meta)
@@ -98,7 +98,7 @@ namespace rsx
 				m_it = where;
 			}
 
-			void begin_range(const utils::address_range& range)
+			void begin_range(const utils::address_range32& range)
 			{
 				const auto start_block_id = range.start / BlockSize;
 				const auto& metadata = m_metadata_ptr[start_block_id];
@@ -177,7 +177,7 @@ namespace rsx
 			std::for_each(m_metadata.begin(), m_metadata.end(), [&](auto& meta) { meta.id = static_cast<u32>(&meta - m_metadata.data()); });
 		}
 
-		void emplace(const utils::address_range& range, T&& value)
+		void emplace(const utils::address_range32& range, T&& value)
 		{
 			broadcast_insert(range);
 			m_data[block_for(range.start)].insert_or_assign(range.start, std::forward<T>(value));
@@ -220,7 +220,7 @@ namespace rsx
 			m_data[block_for(address)].erase(address);
 		}
 
-		iterator begin_range(const utils::address_range& range)
+		iterator begin_range(const utils::address_range32& range)
 		{
 			iterator ret = { this };
 			ret.begin_range(range);
