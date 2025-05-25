@@ -3,6 +3,9 @@
 #include <util/types.hpp>
 #include <util/vm.hpp>
 
+#include "Emu/RSX/Common/simple_array.hpp"
+#include "Utilities/address_range.h"
+
 namespace rsx
 {
 	struct MM_block
@@ -36,5 +39,6 @@ namespace rsx
 	void mm_protect(void* start, u64 length, utils::protection prot);
 	void mm_flush_lazy();
 	void mm_flush(u32 vm_address);
+	void mm_flush(const rsx::simple_array<utils::address_range>& ranges);
 	void mm_flush();
 }

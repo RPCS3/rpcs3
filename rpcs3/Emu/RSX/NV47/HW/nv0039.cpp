@@ -3,6 +3,7 @@
 
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
+#include "Emu/RSX/Host/MM.h"
 
 #include "context_accessors.define.h"
 
@@ -56,6 +57,13 @@ namespace rsx
 			}
 
 			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
+
+			rsx::simple_array<utils::address_range> flush_mm_ranges =
+			{
+				utils::address_range::start_length(write_address, write_length).to_page_range(),
+				utils::address_range::start_length(read_address, read_length).to_page_range()
+			};
+			rsx::mm_flush(flush_mm_ranges);
 
 			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
