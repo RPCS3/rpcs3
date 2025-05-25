@@ -529,6 +529,20 @@ namespace utils
 				return !cur.valid() || cur.inside(range);
 			});
 		}
+
+		// Count valid entries
+		usz valid_count() const
+		{
+			usz count = 0;
+			for (const auto& e : data)
+			{
+				if (e.valid())
+				{
+					count++;
+				}
+			}
+			return count;
+		}
 	};
 
 
