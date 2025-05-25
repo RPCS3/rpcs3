@@ -90,6 +90,31 @@ namespace rsx
 		}
 	}
 
+	void mm_flush(const rsx::simple_array<utils::address_range>& ranges)
+	{
+		std::lock_guard lock(g_mprotect_queue_lock);
+		if (g_deferred_mprotect_queue.empty())
+		{
+			return;
+		}
+
+		const auto ranges64 = ranges.map([](const auto& r)
+		{
+			const u64 start = reinterpret_cast<uintptr_t>(vm::base(r.start));
+			const u64 end = start + r.length();
+			return std::make_pair(start, end);
+		});
+
+		for (const auto& block : g_deferred_mprotect_queue)
+		{
+			if (ranges64.any(FN(block.overlaps(x.first, x.second))))
+			{
+				mm_flush_mprotect_queue_internal();
+				return;
+			}
+		}
+	}
+
 	void mm_flush_lazy()
 	{
 		if (!g_cfg.video.multithreaded_rsx)
