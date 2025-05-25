@@ -93,7 +93,7 @@ namespace rsx
 
 				std::array<u8, 0x10000 / 4> register_properties{};
 
-				for (const auto &method : ignorable_ranges)
+				for (const auto& method : ignorable_ranges)
 				{
 					for (u32 i = 0; i < method.second; ++i)
 					{
