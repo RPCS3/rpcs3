@@ -10,24 +10,17 @@ namespace rsx
 {
 	struct MM_block
 	{
-		u64 start;
-		u64 length;
+		utils::address_range64 range;
 		utils::protection prot;
 
-		inline bool overlaps(u64 start, u64 end) const
+		inline bool overlaps(const utils::address_range64& test) const
 		{
-			// [Start, End] is not a proper closed range, there is an off-by-one by design.
-			// FIXME: Use address_range64
-			const u64 this_end = this->start + this->length;
-			return (this->start < end && start < this_end);
+			return range.overlaps(test);
 		}
 
 		inline bool overlaps(u64 addr) const
 		{
-			// [Start, End] is not a proper closed range, there is an off-by-one by design.
-			// FIXME: Use address_range64
-			const u64 this_end = this->start + this->length;
-			return (addr >= start && addr < this_end);
+			return range.overlaps(addr);
 		}
 	};
 
@@ -39,6 +32,6 @@ namespace rsx
 	void mm_protect(void* start, u64 length, utils::protection prot);
 	void mm_flush_lazy();
 	void mm_flush(u32 vm_address);
-	void mm_flush(const rsx::simple_array<utils::address_range32>& ranges);
+	void mm_flush(const rsx::simple_array<utils::address_range64>& ranges);
 	void mm_flush();
 }
