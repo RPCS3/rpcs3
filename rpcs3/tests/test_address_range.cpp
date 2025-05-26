@@ -302,10 +302,10 @@ namespace utils
 		EXPECT_NE(str.find("1fff"), std::string::npos);
 	}
 
-	// Tests for address_range_vector
+	// Tests for address_range_vector32
 	TEST(AddressRangeVector, BasicOperations)
 	{
-		address_range_vector vec;
+		address_range_vector32 vec;
 		EXPECT_TRUE(vec.empty());
 		EXPECT_EQ(vec.size(), 0);
 
@@ -322,7 +322,7 @@ namespace utils
 
 	TEST(AddressRangeVector, MergeOperations)
 	{
-		address_range_vector vec;
+		address_range_vector32 vec;
 
 		// Add non-touching ranges
 		vec.merge(address_range32::start_length(0x1000, 0x1000)); // 0x1000-0x1FFF
@@ -347,7 +347,7 @@ namespace utils
 
 	TEST(AddressRangeVector, ExcludeOperations)
 	{
-		address_range_vector vec;
+		address_range_vector32 vec;
 		vec.merge(address_range32::start_length(0x1000, 0x4000)); // 0x1000-0x4FFF
 
 		// Exclude from the middle
@@ -378,7 +378,7 @@ namespace utils
 		// Test excluding with another vector
 		vec.merge(address_range32::start_length(0x1000, 0x4000)); // 0x1000-0x4FFF
 
-		address_range_vector vec2;
+		address_range_vector32 vec2;
 		vec2.merge(address_range32::start_length(0x2000, 0x1000)); // 0x2000-0x2FFF
 		vec2.merge(address_range32::start_length(0x4000, 0x1000)); // 0x4000-0x4FFF
 
@@ -391,7 +391,7 @@ namespace utils
 
 	TEST(AddressRangeVector, ConsistencyCheck)
 	{
-		address_range_vector vec;
+		address_range_vector32 vec;
 		vec.merge(address_range32::start_length(0x1000, 0x1000)); // 0x1000-0x1FFF
 		vec.merge(address_range32::start_length(0x3000, 0x1000)); // 0x3000-0x3FFF
 
@@ -405,7 +405,7 @@ namespace utils
 
 	TEST(AddressRangeVector, OverlapsAndContains)
 	{
-		address_range_vector vec;
+		address_range_vector32 vec;
 		vec.merge(address_range32::start_length(0x1000, 0x1000)); // 0x1000-0x1FFF
 		vec.merge(address_range32::start_length(0x3000, 0x1000)); // 0x3000-0x3FFF
 
@@ -420,11 +420,11 @@ namespace utils
 		EXPECT_FALSE(vec.contains(address_range32::start_length(0x1500, 0x1000))); // 0x1500-0x24FF
 
 		// Test overlaps with another vector
-		address_range_vector vec2;
+		address_range_vector32 vec2;
 		vec2.merge(address_range32::start_length(0x1500, 0x1000)); // 0x1500-0x24FF
 		EXPECT_TRUE(vec.overlaps(vec2));
 
-		address_range_vector vec3;
+		address_range_vector32 vec3;
 		vec3.merge(address_range32::start_length(0x2000, 0x1000)); // 0x2000-0x2FFF
 		EXPECT_FALSE(vec.overlaps(vec3));
 

@@ -685,7 +685,7 @@ namespace rsx
 
 
 		// Merges the protected ranges of the sections in "sections" into "result"
-		void merge_protected_ranges(address_range_vector &result, const std::vector<section_storage_type*> &sections)
+		void merge_protected_ranges(address_range_vector32 &result, const std::vector<section_storage_type*> &sections)
 		{
 			result.reserve(result.size() + sections.size());
 
@@ -704,7 +704,7 @@ namespace rsx
 		//       Otherwise the page protections will end up incorrect and things will break!
 		void unprotect_set(thrashed_set& data)
 		{
-			auto protect_ranges = [](address_range_vector& _set, utils::protection _prot)
+			auto protect_ranges = [](address_range_vector32& _set, utils::protection _prot)
 			{
 				//u32 count = 0;
 				for (auto &range : _set)
@@ -734,8 +734,8 @@ namespace rsx
 			AUDIT(data.is_flushed());
 
 			// Merge ranges to unprotect
-			address_range_vector ranges_to_unprotect;
-			address_range_vector ranges_to_protect_ro;
+			address_range_vector32 ranges_to_unprotect;
+			address_range_vector32 ranges_to_protect_ro;
 			ranges_to_unprotect.reserve(data.sections_to_unprotect.size() + data.sections_to_flush.size() + data.sections_to_exclude.size());
 
 			merge_protected_ranges(ranges_to_unprotect, data.sections_to_unprotect);

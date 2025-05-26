@@ -928,7 +928,7 @@ namespace rsx
 			return get_bounds(bounds).overlaps(other);
 		}
 
-		inline bool overlaps(const address_range_vector& other, section_bounds bounds) const
+		inline bool overlaps(const address_range_vector32& other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).overlaps(other);
 		}
@@ -943,7 +943,7 @@ namespace rsx
 			return get_bounds(bounds).inside(other);
 		}
 
-		inline bool inside(const address_range_vector& other, section_bounds bounds) const
+		inline bool inside(const address_range_vector32& other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).inside(other);
 		}
@@ -1088,7 +1088,7 @@ namespace rsx
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
 
-		address_range_vector flush_exclusions; // Address ranges that will be skipped during flush
+		address_range_vector32 flush_exclusions; // Address ranges that will be skipped during flush
 
 		predictor_type *m_predictor = nullptr;
 		usz m_predictor_key_hash = 0;
@@ -1553,7 +1553,7 @@ namespace rsx
 
 			// Otherwise, we need to filter the memcpy with our flush exclusions
 			// Should be relatively rare
-			address_range_vector vec;
+			address_range_vector32 vec;
 			vec.merge(copy_range);
 			vec.exclude(flush_exclusions);
 
