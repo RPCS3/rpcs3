@@ -200,6 +200,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test.cpp
             tests/test_fmt.cpp
             tests/test_simple_array.cpp
+            tests/test_address_range.cpp
     )
 
     target_link_libraries(rpcs3_test

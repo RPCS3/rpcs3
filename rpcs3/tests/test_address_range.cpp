@@ -447,4 +447,51 @@ namespace utils
 		EXPECT_EQ(hasher(r1), hasher(r2));
 		EXPECT_NE(hasher(r1), hasher(r3));
 	}
+
+	// Test invalidation rules around umax
+	TEST(AddressRange, Invalidate32)
+	{
+		address_range32 r1 = address_range32::start_length(0x0, 0x1000);
+		r1.invalidate();
+
+		EXPECT_FALSE(r1.valid());
+		EXPECT_EQ(r1.start, 0xffff'ffffu);
+		EXPECT_EQ(r1.end, 0u);
+	}
+
+	TEST(AddressRange, Invalidate64)
+	{
+		address_range64 r1 = address_range64::start_length(0x0, 0x1000);
+		r1.invalidate();
+
+		EXPECT_FALSE(r1.valid());
+		EXPECT_EQ(r1.start, 0xffff'ffff'ffff'ffffull);
+		EXPECT_EQ(r1.end, 0ull);
+	}
+
+	TEST(AddressRange, Invalidate16)
+	{
+		const u16 start = 0x1000, length = 0x1000;
+		address_range16 r1 = address_range16::start_length(start, length);
+		r1.invalidate();
+
+		EXPECT_FALSE(r1.valid());
+		EXPECT_EQ(r1.start, 0xffff);
+		EXPECT_EQ(r1.end, 0);
+	}
+
+	TEST(AddressRange, InvalidConstruction)
+	{
+		address_range32 r1 = address_range32::start_length(umax, u32{umax} / 2);
+		EXPECT_FALSE(r1.valid());
+	}
+
+	TEST(AddressRange, LargeValues64)
+	{
+		const u32 start = umax, length = u32{umax} / 2;
+		address_range64 r1 = address_range64::start_length(start, length);
+
+		EXPECT_EQ(r1.start, 0xffff'ffffull);
+		EXPECT_EQ(r1.end, 0x1'7fff'fffd);
+	}
 }
