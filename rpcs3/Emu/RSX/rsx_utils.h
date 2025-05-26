@@ -16,7 +16,7 @@ namespace rsx
 {
 	// Import address_range32 utilities
 	using utils::address_range32;
-	using utils::address_range_vector;
+	using utils::address_range_vector32;
 	using utils::page_for;
 	using utils::page_start;
 	using utils::page_end;
