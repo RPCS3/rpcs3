@@ -58,15 +58,15 @@ namespace rsx
 
 			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
-			rsx::simple_array<utils::address_range32> flush_mm_ranges =
+			u8* dst = vm::_ptr<u8>(write_address);
+			const u8* src = vm::_ptr<u8>(read_address);
+
+			rsx::simple_array<utils::address_range64> flush_mm_ranges =
 			{
-				utils::address_range32::start_length(write_address, write_length).to_page_range(),
-				utils::address_range32::start_length(read_address, read_length).to_page_range()
+				utils::address_range64::start_length(reinterpret_cast<u64>(dst), write_length),
+				utils::address_range64::start_length(reinterpret_cast<u64>(src), read_length)
 			};
 			rsx::mm_flush(flush_mm_ranges);
-
-			u8 *dst = vm::_ptr<u8>(write_address);
-			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
