@@ -81,7 +81,8 @@ namespace utils
 				return {};
 			}
 
-			return {_start, _start + (_length - 1)};
+			const T _end = static_cast<T>(_start + _length - 1);
+			return {_start, _end};
 		}
 
 		static constexpr address_range start_end(T _start, T _end)
