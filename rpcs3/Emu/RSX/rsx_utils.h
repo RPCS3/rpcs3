@@ -14,9 +14,9 @@ extern "C"
 
 namespace rsx
 {
-	// Import address_range utilities
-	using utils::address_range;
-	using utils::address_range_vector;
+	// Import address_range32 utilities
+	using utils::address_range32;
+	using utils::address_range_vector32;
 	using utils::page_for;
 	using utils::page_start;
 	using utils::page_end;
@@ -120,7 +120,7 @@ namespace rsx
 		u8  bpp = 0;
 		u8  samples = 0;
 
-		address_range range{};
+		address_range32 range{};
 
 		gcm_framebuffer_info() = default;
 
@@ -131,16 +131,16 @@ namespace rsx
 			// Account for the last line of the block not reaching the end
 			const u32 block_size = pitch * (height - 1) * aa_factor_v;
 			const u32 line_size = width * aa_factor_u * bpp;
-			range = address_range::start_length(address, block_size + line_size);
+			range = address_range32::start_length(address, block_size + line_size);
 		}
 
-		address_range get_memory_range(const u32* aa_factors)
+		address_range32 get_memory_range(const u32* aa_factors)
 		{
 			calculate_memory_range(aa_factors[0], aa_factors[1]);
 			return range;
 		}
 
-		address_range get_memory_range() const
+		address_range32 get_memory_range() const
 		{
 			ensure(range.start == address);
 			return range;
@@ -260,7 +260,7 @@ namespace rsx
 	static inline u32 get_location(u32 addr)
 	{
 		// We don't really care about the actual memory map, it shouldn't be possible to use the mmio bar region anyway
-		constexpr address_range local_mem_range = address_range::start_length(rsx::constants::local_mem_base, 0x1000'0000);
+		constexpr address_range32 local_mem_range = address_range32::start_length(rsx::constants::local_mem_base, 0x1000'0000);
 		return local_mem_range.overlaps(addr) ?
 			CELL_GCM_LOCATION_LOCAL :
 			CELL_GCM_LOCATION_MAIN;

@@ -328,8 +328,8 @@ namespace rsx
 			{
 				const bool is_overlapping = !src_is_modified && dst.dma == src.dma && [&]() -> bool
 				{
-					const auto src_range = utils::address_range::start_length(src.rsx_address, src.pitch * (src.height - 1) + (src.bpp * src.width));
-					const auto dst_range = utils::address_range::start_length(dst.rsx_address, dst.pitch * (dst.clip_height - 1) + (dst.bpp * dst.clip_width));
+					const auto src_range = utils::address_range32::start_length(src.rsx_address, src.pitch * (src.height - 1) + (src.bpp * src.width));
+					const auto dst_range = utils::address_range32::start_length(dst.rsx_address, dst.pitch * (dst.clip_height - 1) + (dst.bpp * dst.clip_width));
 					return src_range.overlaps(dst_range);
 				}();
 
@@ -612,7 +612,7 @@ namespace rsx
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
-			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
+			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
 			std::vector<u8> tmp;
 
 			if (tiled_region)

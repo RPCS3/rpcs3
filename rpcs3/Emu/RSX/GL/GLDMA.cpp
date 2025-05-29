@@ -29,7 +29,7 @@ namespace gl
 		gl::check_state();
 	}
 
-	void* dma_block::map(const utils::address_range& range) const
+	void* dma_block::map(const utils::address_range32& range) const
 	{
 		ensure(range.inside(this->range()));
 		return vm::get_super_ptr(range.start);
@@ -58,7 +58,7 @@ namespace gl
 		}
 	}
 
-	bool dma_block::can_map(const utils::address_range& range) const
+	bool dma_block::can_map(const utils::address_range32& range) const
 	{
 		if (m_parent)
 		{
@@ -73,11 +73,11 @@ namespace gl
 		g_dma_pool.clear();
 	}
 
-	utils::address_range to_dma_block_range(u32 start, u32 length)
+	utils::address_range32 to_dma_block_range(u32 start, u32 length)
 	{
 		const auto start_block_address = start & s_dma_block_mask;
 		const auto end_block_address = (start + length + s_dma_block_size - 1) & s_dma_block_mask;
-		return utils::address_range::start_end(start_block_address, end_block_address);
+		return utils::address_range32::start_end(start_block_address, end_block_address);
 	}
 
 	const dma_block& get_block(u32 start, u32 length)
@@ -91,7 +91,7 @@ namespace gl
 			return *block;
 		}
 
-		const auto range = utils::address_range::start_length(start, length);
+		const auto range = utils::address_range32::start_length(start, length);
 		if (block->can_map(range)) [[ likely ]]
 		{
 			return *block;

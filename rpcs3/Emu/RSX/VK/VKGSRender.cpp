@@ -976,7 +976,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void VKGSRender::on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause)
+void VKGSRender::on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause)
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
@@ -2438,7 +2438,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		// Flush old address if we keep missing it
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			const utils::address_range rsx_range = m_surface_info[i].get_memory_range();
+			const utils::address_range32 rsx_range = m_surface_info[i].get_memory_range();
 			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, rsx_range);
 		}
@@ -2455,7 +2455,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
-			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+			const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
 			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, surface_range);
 		}
@@ -2572,7 +2572,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
+		const utils::address_range32 surface_range = m_surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			m_texture_cache.lock_memory_region(
@@ -2588,7 +2588,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+		const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format == rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;

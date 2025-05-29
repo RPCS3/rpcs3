@@ -280,7 +280,7 @@ namespace gl
 
 	void scratch_ring_buffer::pop_barrier(u32 start, u32 length)
 	{
-		const auto range = utils::address_range::start_length(start, length);
+		const auto range = utils::address_range32::start_length(start, length);
 		m_barriers.erase(std::remove_if(m_barriers.begin(), m_barriers.end(), [&range](auto& barrier_)
 		{
 			if (barrier_.range.overlaps(range))
@@ -302,7 +302,7 @@ namespace gl
 		}
 
 		barrier barrier_;
-		barrier_.range = utils::address_range::start_length(start, length);
+		barrier_.range = utils::address_range32::start_length(start, length);
 		barrier_.signal.create();
 		m_barriers.emplace_back(barrier_);
 	}

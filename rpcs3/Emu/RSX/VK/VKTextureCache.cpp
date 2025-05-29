@@ -62,7 +62,7 @@ namespace vk
 		}
 	}
 
-	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
+	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range32& valid_range, u32 pitch)
 	{
 		ensure(src->samples() == 1);
 
@@ -921,7 +921,7 @@ namespace vk
 		dst->pop_layout(cmd);
 	}
 
-	cached_texture_section* texture_cache::create_new_texture(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
+	cached_texture_section* texture_cache::create_new_texture(vk::command_buffer& cmd, const utils::address_range32& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
 		u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t flags)
 	{
 		const auto section_depth = depth;
@@ -1076,7 +1076,7 @@ namespace vk
 
 	cached_texture_section* texture_cache::create_nul_section(
 		vk::command_buffer& /*cmd*/,
-		const utils::address_range& rsx_range,
+		const utils::address_range32& rsx_range,
 		const rsx::image_section_attributes_t& attrs,
 		const rsx::GCM_tile_reference& tile,
 		bool memory_load)
@@ -1101,7 +1101,7 @@ namespace vk
 		return &region;
 	}
 
-	cached_texture_section* texture_cache::upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
+	cached_texture_section* texture_cache::upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range32& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 		rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled)
 	{
 		if (context != rsx::texture_upload_context::shader_read)

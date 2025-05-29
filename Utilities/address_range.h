@@ -8,125 +8,134 @@
 
 namespace utils
 {
+	template <typename T>
 	class address_range_vector;
 
 	/**
 	 * Helpers
 	 */
-	static inline u32 page_start(u32 addr)
+	template <typename T>
+	T page_start(T addr)
 	{
-		return addr & ~(get_page_size() - 1);
+		return addr & ~static_cast<T>(get_page_size() - 1);
 	}
 
-	static inline u32 next_page(u32 addr)
+	template <typename T>
+	static inline T next_page(T addr)
 	{
-		return page_start(addr) + get_page_size();
+		return page_start(addr) + static_cast<T>(get_page_size());
 	}
 
-	static inline u32 page_end(u32 addr)
+	template <typename T>
+	static inline T page_end(T addr)
 	{
 		return next_page(addr) - 1;
 	}
 
-	static inline u32 is_page_aligned(u32 val)
+	template <typename T>
+	static inline T is_page_aligned(T val)
 	{
-		return (val & (get_page_size() - 1)) == 0;
+		return (val & static_cast<T>(get_page_size() - 1)) == 0;
 	}
 
 
 	/**
 	 * Address Range utility class
 	 */
+	template <typename T>
 	class address_range
 	{
 	public:
-		u32 start = umax; // First address in range
-		u32 end = 0; // Last address
+		T start = umax; // First address in range
+		T end = 0; // Last address
+
+		using signed_type_t = std::make_signed<T>::type;
 
 	private:
 		// Helper constexprs
-		static constexpr inline bool range_overlaps(u32 start1, u32 end1, u32 start2, u32 end2)
+		static constexpr inline bool range_overlaps(T start1, T end1, T start2, T end2)
 		{
 			return (start1 <= end2 && start2 <= end1);
 		}
 
-		static constexpr inline bool address_overlaps(u32 address, u32 start, u32 end)
+		static constexpr inline bool address_overlaps(T address, T start, T end)
 		{
 			return (start <= address && address <= end);
 		}
 
-		static constexpr inline bool range_inside_range(u32 start1, u32 end1, u32 start2, u32 end2)
+		static constexpr inline bool range_inside_range(T start1, T end1, T start2, T end2)
 		{
 			return (start1 >= start2 && end1 <= end2);
 		}
 
-		constexpr address_range(u32 _start, u32 _end) : start(_start), end(_end) {}
+		constexpr address_range(T _start, T _end) : start(_start), end(_end) {}
 
 	public:
 		// Constructors
 		constexpr address_range() = default;
 
-		static constexpr address_range start_length(u32 _start, u32 _length)
+		static constexpr address_range start_length(T _start, T _length)
 		{
 			if (!_length)
 			{
 				return {};
 			}
 
-			return {_start, _start + (_length - 1)};
+			const T _end = static_cast<T>(_start + _length - 1);
+			return {_start, _end};
 		}
 
-		static constexpr address_range start_end(u32 _start, u32 _end)
+		static constexpr address_range start_end(T _start, T _end)
 		{
 			return {_start, _end};
 		}
 
 		// Length
-		u32 length() const
+		T length() const
 		{
 			AUDIT(valid());
 			return end - start + 1;
 		}
 
-		void set_length(const u32 new_length)
+		void set_length(const T new_length)
 		{
 			end = start + new_length - 1;
 			ensure(valid());
 		}
 
-		u32 next_address() const
+		T next_address() const
 		{
 			return end + 1;
 		}
 
-		u32 prev_address() const
+		T prev_address() const
 		{
 			return start - 1;
 		}
 
 		// Overlapping checks
-		bool overlaps(const address_range &other) const
+		bool overlaps(const address_range<T>& other) const
 		{
 			AUDIT(valid() && other.valid());
 			return range_overlaps(start, end, other.start, other.end);
 		}
 
-		bool overlaps(const u32 addr) const
+		bool overlaps(const T addr) const
 		{
 			AUDIT(valid());
 			return address_overlaps(addr, start, end);
 		}
 
-		bool inside(const address_range &other) const
+		bool inside(const address_range<T>& other) const
 		{
 			AUDIT(valid() && other.valid());
 			return range_inside_range(start, end, other.start, other.end);
 		}
 
-		inline bool inside(const address_range_vector &vec) const;
-		inline bool overlaps(const address_range_vector &vec) const;
+		inline bool inside(const address_range_vector<T>& vec) const;
+		inline bool overlaps(const address_range_vector<T>& vec) const;
 
-		bool touches(const address_range &other) const
+		bool touches(const address_range<T>& other) const
 		{
 			AUDIT(valid() && other.valid());
 			// returns true if there is overlap, or if sections are side-by-side
@@ -134,7 +143,7 @@ namespace utils
 		}
 
 		// Utilities
-		s32 signed_distance(const address_range &other) const
+		signed_type_t signed_distance(const address_range<T>& other) const
 		{
 			if (touches(other))
 			{
@@ -144,15 +153,15 @@ namespace utils
 			// other after this
 			if (other.start > end)
 			{
-				return static_cast<s32>(other.start - end - 1);
+				return static_cast<signed_type_t>(other.start - end - 1);
 			}
 
 			// this after other
 			AUDIT(start > other.end);
-			return -static_cast<s32>(start - other.end - 1);
+			return -static_cast<signed_type_t>(start - other.end - 1);
 		}
 
-		u32 distance(const address_range &other) const
+		T distance(const address_range<T>& other) const
 		{
 			if (touches(other))
 			{
@@ -170,7 +179,7 @@ namespace utils
 			return (start - other.end - 1);
 		}
 
-		address_range get_min_max(const address_range &other) const
+		address_range<T> get_min_max(const address_range<T>& other) const
 		{
 			return {
 				std::min(valid() ? start : umax, other.valid() ? other.start : umax),
@@ -178,7 +187,7 @@ namespace utils
 			};
 		}
 
-		void set_min_max(const address_range &other)
+		void set_min_max(const address_range<T>& other)
 		{
 			*this = get_min_max(other);
 		}
@@ -188,7 +197,7 @@ namespace utils
 			return (valid() && is_page_aligned(start) && is_page_aligned(length()));
 		}
 
-		address_range to_page_range() const
+		address_range<T> to_page_range() const
 		{
 			AUDIT(valid());
 			return { page_start(start), page_end(end) };
@@ -202,7 +211,7 @@ namespace utils
 			AUDIT(is_page_range());
 		}
 
-		address_range get_intersect(const address_range &clamp) const
+		address_range<T> get_intersect(const address_range<T>& clamp) const
 		{
 			if (!valid() || !clamp.valid())
 			{
@@ -212,7 +221,7 @@ namespace utils
 			return { std::max(start, clamp.start), std::min(end, clamp.end) };
 		}
 
-		void intersect(const address_range &clamp)
+		void intersect(const address_range<T>& clamp)
 		{
 			if (!clamp.valid())
 			{
@@ -238,7 +247,7 @@ namespace utils
 		}
 
 		// Comparison Operators
-		bool operator ==(const address_range& other) const
+		bool operator ==(const address_range<T>& other) const
 		{
 			return (start == other.start && end == other.end);
 		}
@@ -252,21 +261,27 @@ namespace utils
 		}
 	};
 
-	static inline address_range page_for(u32 addr)
+	using address_range16 = address_range<u16>;
+	using address_range32 = address_range<u32>;
+	using address_range64 = address_range<u64>;
+
+	template <typename T>
+	static inline address_range<T> page_for(T addr)
 	{
-		return address_range::start_end(page_start(addr), page_end(addr));
+		return address_range<T>::start_end(page_start(addr), page_end(addr));
 	}
 
 
 	/**
 	 * Address Range Vector utility class
 	 *
-	 * Collection of address_range objects. Allows for merging and removing ranges from the set.
+	 * Collection of address_range<T> objects. Allows for merging and removing ranges from the set.
 	 */
+	template <typename T>
 	class address_range_vector
 	{
 	public:
-		using vector_type = std::vector<address_range>;
+		using vector_type = std::vector<address_range<T>>;
 		using iterator = vector_type::iterator;
 		using const_iterator = vector_type::const_iterator;
 		using size_type = vector_type::size_type;
@@ -280,8 +295,8 @@ namespace utils
 		inline void clear() { data.clear(); }
 		inline size_type size() const { return data.size(); }
 		inline bool empty() const { return data.empty(); }
-		inline address_range& operator[](size_type n) { return data[n]; }
-		inline const address_range& operator[](size_type n) const { return data[n]; }
+		inline address_range<T>& operator[](size_type n) { return data[n]; }
+		inline const address_range<T>& operator[](size_type n) const { return data[n]; }
 		inline iterator begin() { return data.begin(); }
 		inline const_iterator begin() const { return data.begin(); }
 		inline iterator end() { return data.end(); }
@@ -289,7 +304,7 @@ namespace utils
 
 		// Search for ranges that touch new_range. If found, merge instead of adding new_range.
 		// When adding a new range, re-use invalid ranges whenever possible
-		void merge(const address_range &new_range)
+		void merge(const address_range<T>& new_range)
 		{
 			// Note the case where we have
 			//   AAAA  BBBB
@@ -301,8 +316,8 @@ namespace utils
 				return;
 			}
 
-			address_range *found = nullptr;
-			address_range *invalid = nullptr;
+			address_range<T> *found = nullptr;
+			address_range<T> *invalid = nullptr;
 
 			for (auto &existing : data)
 			{
@@ -347,22 +362,22 @@ namespace utils
 			AUDIT(check_consistency());
 		}
 
-		void merge(const address_range_vector &other)
+		void merge(const address_range_vector<T>& other)
 		{
-			for (const address_range &new_range : other)
+			for (const address_range<T>& new_range : other)
 			{
 				merge(new_range);
 			}
 		}
 
 		// Exclude a given range from data
-		void exclude(const address_range &exclusion)
+		void exclude(const address_range<T>& exclusion)
 		{
 			// Note the case where we have
 			//    AAAAAAA
 			//      EEE
 			// where data={A} and exclusion=E.
-			// In this case, we need to reduce A to the head (before E starts), and then create a new address_range B for the tail (after E ends), i.e.
+			// In this case, we need to reduce A to the head (before E starts), and then create a new address_range<T> B for the tail (after E ends), i.e.
 			//    AA   BB
 			//      EEE
 
@@ -371,13 +386,13 @@ namespace utils
 				return;
 			}
 
-			address_range *invalid = nullptr; // try to re-use an invalid range instead of calling push_back
+			address_range<T> *invalid = nullptr; // try to re-use an invalid range instead of calling push_back
 
 			// We use index access because we might have to push_back within the loop, which could invalidate the iterators
 			size_type _size = data.size();
 			for (size_type n = 0; n < _size; ++n)
 			{
-				address_range &existing = data[n];
+				address_range<T>& existing = data[n];
 
 				if (!existing.valid())
 				{
@@ -430,7 +445,7 @@ namespace utils
 					else
 					{
 						// IMPORTANT: adding to data invalidates "existing". This must be done last!
-						data.push_back(address_range::start_end(exclusion.next_address(), tail_end));
+						data.push_back(address_range<T>::start_end(exclusion.next_address(), tail_end));
 					}
 				}
 			}
@@ -438,9 +453,9 @@ namespace utils
 			AUDIT(!overlaps(exclusion));
 		}
 
-		void exclude(const address_range_vector &other)
+		void exclude(const address_range_vector<T>& other)
 		{
-			for (const address_range &exclusion : other)
+			for (const address_range<T>& exclusion : other)
 			{
 				exclude(exclusion);
 			}
@@ -478,25 +493,25 @@ namespace utils
 		}
 
 		// Test for overlap with a given range
-		bool overlaps(const address_range &range) const
+		bool overlaps(const address_range<T>& range) const
 		{
-			return std::any_of(data.cbegin(), data.cend(), [&range](const address_range& cur)
+			return std::any_of(data.cbegin(), data.cend(), [&range](const address_range<T>& cur)
 			{
 				return cur.valid() && cur.overlaps(range);
 			});
 		}
 
-		// Test for overlap with a given address_range vector
-		bool overlaps(const address_range_vector &other) const
+		// Test for overlap with a given address_range<T> vector
+		bool overlaps(const address_range_vector<T>& other) const
 		{
-			for (const address_range &rng1 : data)
+			for (const address_range<T>& rng1 : data)
 			{
 				if (!rng1.valid())
 				{
 					continue;
 				}
 
-				for (const address_range &rng2 : other.data)
+				for (const address_range<T>& rng2 : other.data)
 				{
 					if (!rng2.valid())
 					{
@@ -513,35 +528,55 @@ namespace utils
 		}
 
 		// Test if a given range is fully contained inside this vector
-		bool contains(const address_range &range) const
+		bool contains(const address_range<T>& range) const
 		{
-			return std::any_of(this->begin(), this->end(), [&range](const address_range& cur)
+			return std::any_of(this->begin(), this->end(), [&range](const address_range<T>& cur)
 			{
 				return cur.valid() && cur.inside(range);
 			});
 		}
 
 		// Test if all ranges in this vector are full contained inside a specific range
-		bool inside(const address_range &range) const
+		bool inside(const address_range<T>& range) const
 		{
-			return std::all_of(this->begin(), this->end(), [&range](const address_range& cur)
+			return std::all_of(this->begin(), this->end(), [&range](const address_range<T>& cur)
 			{
 				return !cur.valid() || cur.inside(range);
 			});
+		}
+
+		// Count valid entries
+		usz valid_count() const
+		{
+			usz count = 0;
+			for (const auto& e : data)
+			{
+				if (e.valid())
+				{
+					count++;
+				}
+			}
+			return count;
 		}
 	};
 
 
 	// These declarations must be done after address_range_vector has been defined
-	bool address_range::inside(const address_range_vector &vec) const
+	template <typename T>
+	bool address_range<T>::inside(const address_range_vector<T>& vec) const
 	{
 		return vec.contains(*this);
 	}
 
-	bool address_range::overlaps(const address_range_vector &vec) const
+	template <typename T>
+	bool address_range<T>::overlaps(const address_range_vector<T>& vec) const
 	{
 		return vec.overlaps(*this);
 	}
+
+	using address_range_vector16 = address_range_vector<u16>;
+	using address_range_vector32 = address_range_vector<u32>;
+	using address_range_vector64 = address_range_vector<u64>;
 
 } // namespace utils
 
@@ -551,9 +586,9 @@ namespace std
 	static_assert(sizeof(usz) >= 2 * sizeof(u32), "usz must be at least twice the size of u32");
 
 	template <>
-	struct hash<utils::address_range>
+	struct hash<utils::address_range32>
 	{
-		usz operator()(const utils::address_range& k) const
+		usz operator()(const utils::address_range32& k) const
 		{
 			// we can guarantee a unique hash since our type is 64 bits and usz as well
 			return (usz{ k.start } << 32) | usz{ k.end };

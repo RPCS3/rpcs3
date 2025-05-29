@@ -49,9 +49,9 @@ namespace rsx
 				return;
 			}
 
-			const auto range1 = utils::address_range::start_length(dst_addr, dst_length);
-			const auto range2 = utils::address_range::start_length(src_addr, src_length);
-			utils::address_range target_range;
+			const auto range1 = utils::address_range32::start_length(dst_addr, dst_length);
+			const auto range2 = utils::address_range32::start_length(src_addr, src_length);
+			utils::address_range32 target_range;
 
 			if (!range1.overlaps(range2)) [[likely]]
 			{

@@ -325,7 +325,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 	if (!image_to_flip) [[ unlikely ]]
 	{
 		// Read from cell
-		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
+		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
 		const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 
