@@ -3,18 +3,16 @@
 # shellcheck disable=SC2086
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
-brew unlink certifi
-brew install -f --overwrite nasm ninja p7zip ccache pipenv #create-dmg
+export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
 arch -x86_64 /usr/local/bin/brew install -f --overwrite python || arch -x86_64 /usr/local/bin/brew link --overwrite python
-arch -x86_64 /usr/local/bin/brew uninstall -f --ignore-dependencies ffmpeg
-arch -x86_64 /usr/local/bin/brew install -f --build-from-source ffmpeg@5
-arch -x86_64 /usr/local/bin/brew reinstall -f --build-from-source gnutls freetype
-arch -x86_64 /usr/local/bin/brew install llvm@$LLVM_COMPILER_VER glew cmake sdl3 vulkan-headers coreutils
-arch -x86_64 /usr/local/bin/brew link -f llvm@$LLVM_COMPILER_VER ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv gnutls freetype #create-dmg
+arch -x86_64 /usr/local/bin/brew install -f ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install "llvm@$LLVM_COMPILER_VER" glew cmake sdl3 vulkan-headers coreutils
+arch -x86_64 /usr/local/bin/brew link -f "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.3.0 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/7255441cbcafabaa8950f67c7ec55ff499dbb2d3/Formula/m/molten-vk.rb
@@ -22,8 +20,6 @@ arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
 export CXX=clang++
 export CC=clang
 
-export BREW_PATH;
-BREW_PATH="$(brew --prefix)"
 export BREW_X64_PATH;
 BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
 export BREW_BIN="/usr/local/bin"
@@ -42,11 +38,13 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   # nested Qt 6.9.0 URL workaround
   # sed -i '' "s/'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/'qt{0}_{0}{1}{2}'.format(major, minor, patch), 'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/g" qt-downloader
   # sed -i '' "s/'{}\/{}\/qt{}_{}\/'/'{0}\/{1}\/qt{2}_{3}\/qt{2}_{3}\/'/g" qt-downloader
+  # archived Qt 6.7.3 URL workaround
+  sed -i '' "s/official_releases/archive/g" qt-downloader
   cd "/tmp/Qt"
-  "$BREW_X64_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
+  arch -x86_64 "$BREW_X64_PATH/bin/pipenv" --python "$BREW_X64_PATH/bin/python3" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
   # sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader" # Qt 6.9.0 workaround
-  "$BREW_X64_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats # -o "$QT_VER/clang_64"
+  arch -x86_64 "$BREW_X64_PATH/bin/pipenv"  --python "$BREW_X64_PATH/bin/python3" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats # -o "$QT_VER/clang_64"
 fi
 
 cd "$WORKDIR"
@@ -76,6 +74,7 @@ git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
+rm -rf build
 mkdir build && cd build || exit 1
 
 export MACOSX_DEPLOYMENT_TARGET=14.0
@@ -105,16 +104,17 @@ export MACOSX_DEPLOYMENT_TARGET=14.0
     -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
     -DUSE_SYSTEM_OPENCV=ON \
-    $CMAKE_EXTRA_OPTS \
+    "$CMAKE_EXTRA_OPTS" \
     -DLLVM_TARGET_ARCH=X86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
-    -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
+    -DCMAKE_IGNORE_PATH="$BREW_X64_PATH/lib" \
+    -DCMAKE_IGNORE_PREFIX_PATH=/usr/local/opt \
     -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=140000" \
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
     -G Ninja
 
-"$BREW_PATH/bin/ninja"; build_status=$?;
+"$BREW_X64_PATH/bin/ninja"; build_status=$?;
 
 cd ..
 

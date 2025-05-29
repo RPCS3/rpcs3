@@ -16,9 +16,9 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/" || true
 
-cp "$(realpath /opt/homebrew1/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
-cp "$(realpath /opt/homebrew1/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
-cp "$(realpath /opt/homebrew1/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
+cp "$(realpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
+cp "$(realpath /opt/homebrew/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
+cp "$(realpath /opt/homebrew/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
@@ -33,10 +33,8 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 # Hack
 install_name_tool \
--delete_rpath /opt/homebrew1/lib \
 -delete_rpath /opt/homebrew/lib \
--delete_rpath /opt/homebrew1/opt/llvm@$LLVM_COMPILER_VER/lib \
--delete_rpath /usr/local/lib RPCS3.app/Contents/MacOS/rpcs3
+-delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3
 #-delete_rpath /opt/homebrew1/Cellar/sdl3/3.2.8/lib
 
 # Need to do this rename hack due to case insensitive filesystem
@@ -67,7 +65,7 @@ echo "IconIndex=0" >> Quickstart.url
 #SHA256SUM=$(shasum -a 256 "$DMG_FILEPATH" | awk '{ print $1 }')
 
 ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos_arm64.7z"
-"$BREW_X64_PATH/bin/7z" a -mx9 "$ARCHIVE_FILEPATH" RPCS3.app Quickstart.url
+"$BREW_PATH/bin/7z" a -mx9 "$ARCHIVE_FILEPATH" RPCS3.app Quickstart.url
 FILESIZE=$(stat -f %z "$ARCHIVE_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$ARCHIVE_FILEPATH" | awk '{ print $1 }')
 
