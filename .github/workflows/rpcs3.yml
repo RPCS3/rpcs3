@@ -104,6 +104,83 @@ jobs:
           export AVVER="${COMM_TAG}-${COMM_COUNT}"
           .ci/github-upload.sh
 
+  Mac_Build:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Intel
+            build_sh: "arch -X86_64 .ci/build-mac.sh"
+            UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
+            UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
+          - name: Apple Silicon
+            build_sh: ".ci/build-mac-arm64.sh"
+            UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
+            UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac-arm64"
+    name: RPCS3 Mac ${{ matrix.name }} 
+    runs-on: macos-14
+    env:
+      CCACHE_DIR: "/tmp/ccache_dir"
+      CI_HAS_ARTIFACTS: true
+      QT_VER: '6.7.3'
+      QT_VER_MAIN: '6'
+      LLVM_COMPILER_VER: '19'
+      RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+      UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
+      UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup Cache
+        uses: actions/cache@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.name }}-${{github.run_id}}
+          restore-keys: | 
+            ${{ runner.os }}-ccache-${{ matrix.name }}-
+
+      - name: Setup Qt Cache
+        uses: actions/cache@main
+        with:
+          path: "/tmp/Qt"
+          key: ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
+          restore-keys: | 
+            ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
+
+      - name: Build
+        run: | 
+          ${{ matrix.build_sh }}      
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Mac (${{ matrix.name }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+
+      - name: Export Variables
+        run: |
+          while IFS='=' read -r key val; do
+            # Skip lines that are empty or start with '#'
+            [[ -z "$key" || "$key" =~ ^# ]] && continue
+            echo "$key=$val" >> "${{ github.env }}"
+          done < .ci/ci-vars.env
+
+      - name: Deploy master build to GitHub Releases
+        if: |
+          github.event_name != 'pull_request' &&
+          github.repository == 'RPCS3/rpcs3' &&
+          github.ref == 'refs/heads/master' 
+        env:
+          RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
+        run: |
+          .ci/github-upload.sh
+
   Windows_Build:
     # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
