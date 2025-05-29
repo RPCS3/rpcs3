@@ -129,7 +129,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		initialize_scratch_image();
 
 		gl::command_context cmd{ gl_state };
-		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
+		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
 		flip_image->copy_from(vm::base(info->address), static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);

@@ -49,7 +49,7 @@ namespace rsx
 			}
 		}
 
-		surface_cache_dma& with_range(command_list_type cmd, const utils::address_range& range)
+		surface_cache_dma& with_range(command_list_type cmd, const utils::address_range32& range)
 		{
 			// Prepare underlying memory so that the range specified is provisioned and contiguous
 			// 1. Check if we have a pre-existing bo layer
@@ -57,7 +57,7 @@ namespace rsx
 			if (this_entry)
 			{
 				const auto bo = this_entry.get();
-				const auto buffer_range = utils::address_range::start_length(bo.base_address, ::size32(*bo));
+				const auto buffer_range = utils::address_range32::start_length(bo.base_address, ::size32(*bo));
 
 				if (range.inside(buffer_range))
 				{
@@ -94,11 +94,11 @@ namespace rsx
 			return *this;
 		}
 
-		utils::address_range to_block_range(const utils::address_range& range)
+		utils::address_range32 to_block_range(const utils::address_range32& range)
 		{
 			u32 start = block_address(block_for(range.start));
 			u32 end = block_address(block_for(range.end + BlockSize - 1));
-			return utils::address_range::start_end(start, end - 1);
+			return utils::address_range32::start_end(start, end - 1);
 		}
 
 		std::tuple<buffer_object_type, u32, u64> get(u32 address)
@@ -107,7 +107,7 @@ namespace rsx
 			return { block.get(), block.base_address - address };
 		}
 
-		void touch(const utils::address_range& range)
+		void touch(const utils::address_range32& range)
 		{
 			const u64 stamp = rsx::get_shared_tag();
 			for (usz i = block_for(range.start); i <= block_for(range.end); i++)

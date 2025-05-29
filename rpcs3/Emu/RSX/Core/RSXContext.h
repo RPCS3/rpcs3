@@ -27,7 +27,7 @@ namespace rsx
 			return !!tile;
 		}
 
-		utils::address_range tile_align(const rsx::address_range& range) const;
+		utils::address_range32 tile_align(const rsx::address_range32& range) const;
 	};
 
 	struct GCM_context
@@ -53,6 +53,6 @@ namespace rsx
 
 		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
 
-		GCM_tile_reference get_tiled_memory_region(const utils::address_range& range) const;
+		GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
 	};
 }

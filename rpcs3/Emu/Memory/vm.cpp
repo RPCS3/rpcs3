@@ -342,7 +342,7 @@ namespace vm
 		utils::prefetch_read(g_range_lock_set + 2);
 		utils::prefetch_read(g_range_lock_set + 4);
 
-		const auto range = utils::address_range::start_length(addr, size);
+		const auto range = utils::address_range32::start_length(addr, size);
 
 		u64 to_clear = get_range_lock_bits(false).load();
 
@@ -350,7 +350,7 @@ namespace vm
 		{
 			to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
 			{
-				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
+				if (range.overlaps(utils::address_range32::start_length(addr2, size2))) [[unlikely]]
 				{
 					return 1;
 				}
@@ -1816,7 +1816,7 @@ namespace vm
 
 	static bool _test_map(u32 addr, u32 size)
 	{
-		const auto range = utils::address_range::start_length(addr, size);
+		const auto range = utils::address_range32::start_length(addr, size);
 
 		if (!range.valid())
 		{
@@ -1830,7 +1830,7 @@ namespace vm
 				continue;
 			}
 
-			if (range.overlaps(utils::address_range::start_length(block->addr, block->size)))
+			if (range.overlaps(utils::address_range32::start_length(block->addr, block->size)))
 			{
 				return false;
 			}
