@@ -28,39 +28,6 @@
 LOG_CHANNEL(cellGem);
 
 template <>
-void fmt_class_string<gem_btn>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](gem_btn value)
-	{
-		switch (value)
-		{
-		case gem_btn::start: return "Start";
-		case gem_btn::select: return "Select";
-		case gem_btn::triangle: return "Triangle";
-		case gem_btn::circle: return "Circle";
-		case gem_btn::cross: return "Cross";
-		case gem_btn::square: return "Square";
-		case gem_btn::move: return "Move";
-		case gem_btn::t: return "T";
-		case gem_btn::x_axis: return "X-Axis";
-		case gem_btn::y_axis: return "Y-Axis";
-		case gem_btn::combo: return "Combo";
-		case gem_btn::combo_start: return "Combo Start";
-		case gem_btn::combo_select: return "Combo Select";
-		case gem_btn::combo_triangle: return "Combo Triangle";
-		case gem_btn::combo_circle: return "Combo Circle";
-		case gem_btn::combo_cross: return "Combo Cross";
-		case gem_btn::combo_square: return "Combo Square";
-		case gem_btn::combo_move: return "Combo Move";
-		case gem_btn::combo_t: return "Combo T";
-		case gem_btn::count: return "Count";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<CellGemError>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
@@ -234,7 +201,7 @@ public:
 	struct gem_controller
 	{
 		u32 status = CELL_GEM_STATUS_DISCONNECTED;         // Connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
-		u32 ext_status = CELL_GEM_NO_EXTERNAL_PORT_DEVICE; // External port connection status
+		u32 ext_status = 0;                                // External port connection status
 		u32 ext_id = 0;                                    // External device ID (type). For example SHARP_SHOOTER_DEVICE_ID
 		u32 port = 0;                                      // Assigned port
 		bool enabled_magnetometer = true;                  // Whether the magnetometer is enabled (probably used for additional rotational precision)
@@ -1918,6 +1885,312 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	}
 }
 
+static const std::unordered_map<gem_btn, u16> ext_btn_map =
+{
+	{ gem_btn::sharpshooter_firing_mode_1, button_flags::ss_firing_mode_1 },
+	{ gem_btn::sharpshooter_firing_mode_2, button_flags::ss_firing_mode_2 },
+	{ gem_btn::sharpshooter_firing_mode_3, button_flags::ss_firing_mode_3 },
+	{ gem_btn::sharpshooter_trigger, button_flags::ss_trigger },
+	{ gem_btn::sharpshooter_reload, button_flags::ss_reload },
+	{ gem_btn::racing_wheel_d_pad_up, CELL_PAD_CTRL_UP },
+	{ gem_btn::racing_wheel_d_pad_right, CELL_PAD_CTRL_RIGHT },
+	{ gem_btn::racing_wheel_d_pad_down, CELL_PAD_CTRL_DOWN },
+	{ gem_btn::racing_wheel_d_pad_left, CELL_PAD_CTRL_LEFT },
+	{ gem_btn::racing_wheel_throttle, 0 },
+	{ gem_btn::racing_wheel_l1, CELL_PAD_CTRL_L1 },
+	{ gem_btn::racing_wheel_r1, CELL_PAD_CTRL_R1 },
+	{ gem_btn::racing_wheel_l2, 0 },
+	{ gem_btn::racing_wheel_r2, 0 },
+	{ gem_btn::racing_wheel_paddle_l, button_flags::rw_paddle_l },
+	{ gem_btn::racing_wheel_paddle_r, button_flags::rw_paddle_r },
+	{ gem_btn::combo_sharpshooter_firing_mode_1, button_flags::ss_firing_mode_1 },
+	{ gem_btn::combo_sharpshooter_firing_mode_2, button_flags::ss_firing_mode_2 },
+	{ gem_btn::combo_sharpshooter_firing_mode_3, button_flags::ss_firing_mode_3 },
+	{ gem_btn::combo_sharpshooter_trigger, button_flags::ss_trigger },
+	{ gem_btn::combo_sharpshooter_reload, button_flags::ss_reload },
+	{ gem_btn::combo_racing_wheel_d_pad_up, CELL_PAD_CTRL_UP },
+	{ gem_btn::combo_racing_wheel_d_pad_right, CELL_PAD_CTRL_RIGHT },
+	{ gem_btn::combo_racing_wheel_d_pad_down, CELL_PAD_CTRL_DOWN },
+	{ gem_btn::combo_racing_wheel_d_pad_left, CELL_PAD_CTRL_LEFT },
+	{ gem_btn::combo_racing_wheel_throttle, 0 },
+	{ gem_btn::combo_racing_wheel_l1, CELL_PAD_CTRL_L1 },
+	{ gem_btn::combo_racing_wheel_r1, CELL_PAD_CTRL_R1 },
+	{ gem_btn::combo_racing_wheel_l2, 0 },
+	{ gem_btn::combo_racing_wheel_r2, 0 },
+	{ gem_btn::combo_racing_wheel_paddle_l, button_flags::rw_paddle_l },
+	{ gem_btn::combo_racing_wheel_paddle_r, button_flags::rw_paddle_r },
+};
+
+static const std::unordered_map<gem_btn, u16> ext_btn_indices =
+{
+	{ gem_btn::racing_wheel_throttle, 0 },
+	{ gem_btn::racing_wheel_l2, 1 },
+	{ gem_btn::racing_wheel_r2, 2 },
+	{ gem_btn::racing_wheel_paddle_l, 3 },
+	{ gem_btn::racing_wheel_paddle_r, 4 },
+	{ gem_btn::combo_racing_wheel_throttle, 0 },
+	{ gem_btn::combo_racing_wheel_l2, 1 },
+	{ gem_btn::combo_racing_wheel_r2, 2 },
+	{ gem_btn::combo_racing_wheel_paddle_l, 3 },
+	{ gem_btn::combo_racing_wheel_paddle_r, 4 },
+};
+
+static u32 ext_device_id(gem_ext_id id)
+{
+	switch (id)
+	{
+		case gem_ext_id::disconnected: return 0;
+		case gem_ext_id::sharpshooter: return SHARP_SHOOTER_DEVICE_ID;
+		case gem_ext_id::racing_wheel: return RACING_WHEEL_DEVICE_ID;
+	}
+	fmt::throw_exception("Mo ID found for id = %d", static_cast<s32>(id));
+}
+
+template <bool has_combo, bool is_combo>
+static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::set<pad_button>& combos, gem_btn btn, pad_button pad_btn, u16 value, bool pressed)
+{
+	if (!pressed)
+		return;
+
+	if constexpr (has_combo && is_combo)
+	{
+		if (external_device_id == SHARP_SHOOTER_DEVICE_ID)
+		{
+			switch (btn)
+			{
+			case gem_btn::combo_sharpshooter_firing_mode_1:
+			case gem_btn::combo_sharpshooter_firing_mode_2:
+			case gem_btn::combo_sharpshooter_firing_mode_3:
+			case gem_btn::combo_sharpshooter_trigger:
+			case gem_btn::combo_sharpshooter_reload:
+				ext.custom[0] |= ::at32(ext_btn_map, btn);
+				combos.insert(pad_btn);
+				break;
+			default:
+				break;
+			}
+		}
+		else if (external_device_id == RACING_WHEEL_DEVICE_ID)
+		{
+			switch (btn)
+			{
+			case gem_btn::combo_racing_wheel_throttle:
+			case gem_btn::combo_racing_wheel_l2:
+			case gem_btn::combo_racing_wheel_r2:
+				ext.custom[::at32(ext_btn_indices, btn)] = static_cast<u8>(value);
+				combos.insert(pad_btn);
+				break;
+			case gem_btn::combo_racing_wheel_paddle_l:
+			case gem_btn::combo_racing_wheel_paddle_r:
+				ext.custom[::at32(ext_btn_indices, btn)] |= ::at32(ext_btn_map, btn);
+				combos.insert(pad_btn);
+				break;
+			case gem_btn::combo_racing_wheel_d_pad_up:
+			case gem_btn::combo_racing_wheel_d_pad_right:
+			case gem_btn::combo_racing_wheel_d_pad_down:
+			case gem_btn::combo_racing_wheel_d_pad_left:
+				ext.digital1 |= ::at32(ext_btn_map, btn);
+				combos.insert(pad_btn);
+				break;
+			case gem_btn::combo_racing_wheel_l1:
+			case gem_btn::combo_racing_wheel_r1:
+				ext.digital2 |= ::at32(ext_btn_map, btn);
+				combos.insert(pad_btn);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	else
+	{
+		if constexpr (has_combo)
+		{
+			if (combos.contains(pad_btn))
+			{
+				return;
+			}
+		}
+
+		if (external_device_id == SHARP_SHOOTER_DEVICE_ID)
+		{
+			switch (btn)
+			{
+			case gem_btn::sharpshooter_firing_mode_1:
+			case gem_btn::sharpshooter_firing_mode_2:
+			case gem_btn::sharpshooter_firing_mode_3:
+			case gem_btn::sharpshooter_trigger:
+			case gem_btn::sharpshooter_reload:
+				ext.custom[0] |= ::at32(ext_btn_map, btn);
+				break;
+			default:
+				break;
+			}
+		}
+		else if (external_device_id == RACING_WHEEL_DEVICE_ID)
+		{
+			switch (btn)
+			{
+			case gem_btn::combo_racing_wheel_throttle:
+			case gem_btn::combo_racing_wheel_l2:
+			case gem_btn::combo_racing_wheel_r2:
+				ext.custom[::at32(ext_btn_indices, btn)] = static_cast<u8>(value);
+				break;
+			case gem_btn::combo_racing_wheel_paddle_l:
+			case gem_btn::combo_racing_wheel_paddle_r:
+				ext.custom[::at32(ext_btn_indices, btn)] |= ::at32(ext_btn_map, btn);
+				break;
+			case gem_btn::combo_racing_wheel_d_pad_up:
+			case gem_btn::combo_racing_wheel_d_pad_right:
+			case gem_btn::combo_racing_wheel_d_pad_down:
+			case gem_btn::combo_racing_wheel_d_pad_left:
+				ext.digital1 |= ::at32(ext_btn_map, btn);
+				break;
+			case gem_btn::combo_racing_wheel_l1:
+			case gem_btn::combo_racing_wheel_r1:
+				ext.digital2 |= ::at32(ext_btn_map, btn);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
+
+static void real_input_to_ext(u32 gem_num, gem_config::gem_controller& controller, CellGemExtPortData& ext)
+{
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_pad_thread();
+	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+	if (!pad->is_connected())
+	{
+		controller.ext_status = 0;
+		controller.ext_id = 0;
+		return;
+	}
+
+	ps_move_data& move_data = pad->move_data;
+
+	controller.ext_status = move_data.external_device_connected ? CELL_GEM_EXT_CONNECTED : 0; // TODO: | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
+	controller.ext_id = move_data.external_device_connected ? move_data.external_device_id : 0;
+
+	if (!move_data.external_device_connected)
+	{
+		return;
+	}
+
+	// TODO:
+	// ext.analog_left_x
+	// ext.analog_left_y
+	// ext.analog_right_x
+	// ext.analog_right_y
+	// ext.digital1
+	// ext.digital2
+
+	ext.status = controller.ext_status;
+	std::memcpy(ext.custom, move_data.external_device_data.data(), 5);
+}
+
+static void fake_input_to_ext(u32 gem_num, gem_config::gem_controller& controller, CellGemExtPortData& ext)
+{
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_pad_thread();
+	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+	if (!pad->is_connected())
+	{
+		controller.ext_status = 0;
+		controller.ext_id = 0;
+		return;
+	}
+
+	ps_move_data& move_data = pad->move_data;
+	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
+
+	move_data.external_device_id = ext_device_id(cfg->external_device);
+	move_data.external_device_connected = move_data.external_device_id != 0;
+	move_data.external_device_data = {};
+
+	controller.ext_status = move_data.external_device_connected ? CELL_GEM_EXT_CONNECTED : 0; // TODO: | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
+	controller.ext_id = move_data.external_device_connected ? move_data.external_device_id : 0;
+
+	if (!move_data.external_device_connected)
+	{
+		return;
+	}
+
+	cfg->handle_input(pad, true, [&move_data, &ext](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+	{
+		static std::set<pad_button> s_combos = {};
+		input_to_ext<false, false>(move_data.external_device_id, ext, s_combos, btn, pad_btn, value, pressed);
+	});
+
+	ext.status = controller.ext_status;
+	std::memcpy(ext.custom, move_data.external_device_data.data(), 5);
+}
+
+static void mouse_input_to_ext(u32 mouse_no, gem_config::gem_controller& controller, CellGemExtPortData& ext)
+{
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	std::scoped_lock lock(handler.mutex);
+
+	// Make sure that the mouse handler is initialized
+	handler.Init(std::min<u32>(g_fxo->get<gem_config>().attribute.max_connect, CELL_GEM_MAX_NUM));
+
+	if (mouse_no >= handler.GetMice().size())
+	{
+		controller.ext_status = 0;
+		controller.ext_id = 0;
+		return;
+	}
+
+	const Mouse& mouse_data = ::at32(handler.GetMice(), mouse_no);
+	const auto& cfg = ::at32(g_cfg_gem_mouse.players, mouse_no);
+
+	const u32 external_device_id = ext_device_id(cfg->external_device);
+	const bool external_device_connected = external_device_id != 0;
+
+	controller.ext_status = external_device_connected ? CELL_GEM_EXT_CONNECTED : 0; // TODO: | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
+	controller.ext_id = external_device_connected ? external_device_id : 0;
+
+	if (!external_device_connected)
+	{
+		return;
+	}
+
+	bool combo_active = false;
+	std::set<pad_button> combos;
+
+	// Check combo button first
+	cfg->handle_input(mouse_data, [&combo_active](gem_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& abort)
+	{
+		if (pressed && btn == gem_btn::combo)
+		{
+			combo_active = true;
+			abort = true;
+		}
+	});
+
+	// Check combos
+	if (combo_active)
+	{
+		cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+		{
+			input_to_ext<true, true>(external_device_id, ext, combos, btn, pad_btn, value, pressed);
+		});
+	}
+
+	// Check normal buttons
+	cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+	{
+		input_to_ext<true, false>(external_device_id, ext, combos, btn, pad_btn, value, pressed);
+	});
+}
+
 /**
  * \brief Maps external Move controller data to DS3 input. (This can be input from any physical pad, not just the DS3)
  *        Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
@@ -1926,58 +2199,11 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
  * \param ext External data to modify
  * \return true on success, false if controller is disconnected
  */
-static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller, CellGemExtPortData& ext)
+static void get_external_device_input(u32 gem_num, gem_config::gem_controller& controller, CellGemExtPortData& ext)
 {
 	ext = {};
 
 	if (!is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
-	{
-		return;
-	}
-
-	std::lock_guard lock(pad::g_pad_mutex);
-
-	const auto handler = pad::get_pad_thread();
-	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
-
-	if (!pad->is_connected())
-	{
-		return;
-	}
-
-	const auto& move_data = pad->move_data;
-
-	controller.ext_status = move_data.external_device_connected ? CELL_GEM_EXT_CONNECTED : 0; // TODO: | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
-	controller.ext_id = move_data.external_device_connected ? move_data.external_device_id : 0;
-
-	ext.status = controller.ext_status;
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: ext.analog_left_x = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: ext.analog_left_y = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: ext.analog_right_x = stick.m_value; break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: ext.analog_right_y = stick.m_value; break;
-		default: break;
-		}
-	}
-
-	for (const Button& button : pad->m_buttons)
-	{
-		if (!button.m_pressed)
-			continue;
-
-		switch (button.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_DIGITAL1: ext.digital1 |= button.m_outKeyCode; break;
-		case CELL_PAD_BTN_OFFSET_DIGITAL2: ext.digital2 |= button.m_outKeyCode; break;
-		default: break;
-		}
-	}
-
-	if (!move_data.external_device_connected)
 	{
 		return;
 	}
@@ -1996,7 +2222,21 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 	// custom[3] (0x01): Left paddle
 	// custom[3] (0x02): Right paddle
 
-	std::memcpy(ext.custom, move_data.external_device_data.data(), 5);
+	switch (g_cfg.io.move)
+	{
+	case move_handler::real:
+		real_input_to_ext(gem_num, controller, ext);
+		break;
+	case move_handler::fake:
+		fake_input_to_ext(gem_num, controller, ext);
+		break;
+	case move_handler::mouse:
+	case move_handler::raw_mouse:
+		mouse_input_to_ext(gem_num, controller, ext);
+		break;
+	default:
+		break;
+	}
 }
 
 /**
@@ -2029,7 +2269,7 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 	}
 
 	const Mouse& mouse_data = ::at32(handler.GetMice(), mouse_no);
-	auto& cfg = ::at32(g_cfg_gem_mouse.players, mouse_no);
+	const auto& cfg = ::at32(g_cfg_gem_mouse.players, mouse_no);
 
 	bool combo_active = false;
 	std::set<pad_button> combos;
@@ -2759,7 +2999,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 	if (g_cfg.io.move != move_handler::null)
 	{
-		ds3_input_to_ext(gem_num, gem.controllers[gem_num], inertial_state->ext);
+		get_external_device_input(gem_num, gem.controllers[gem_num], inertial_state->ext);
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		inertial_state->counter = gem.inertial_counter++;
@@ -2953,7 +3193,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	if (g_cfg.io.move != move_handler::null)
 	{
-		ds3_input_to_ext(gem_num, controller, gem_state->ext);
+		get_external_device_input(gem_num, controller, gem_state->ext);
 
 		if (controller.enabled_tracking)
 		{
@@ -3370,7 +3610,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 	{
 		// Get external device status
 		CellGemExtPortData ext_port_data{};
-		ds3_input_to_ext(gem_num, controller, ext_port_data);
+		get_external_device_input(gem_num, controller, ext_port_data);
 	}
 
 	if (!(controller.ext_status & CELL_GEM_EXT_CONNECTED))
