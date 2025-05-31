@@ -1866,6 +1866,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->showMouseAndKeyboardToggleHint, emu_settings_type::ShowMouseAndKeyboardToggleHint);
 	SubscribeTooltip(ui->showMouseAndKeyboardToggleHint, tooltips.settings.show_mouse_and_keyboard_toggle_hint);
 
+	m_emu_settings->EnhanceCheckBox(ui->recordWithOverlays, emu_settings_type::RecordWithOverlays);
+	SubscribeTooltip(ui->recordWithOverlays, tooltips.settings.record_with_overlays);
+
 	m_emu_settings->EnhanceCheckBox(ui->pauseDuringHomeMenu, emu_settings_type::PauseDuringHomeMenu);
 	SubscribeTooltip(ui->pauseDuringHomeMenu, tooltips.settings.pause_during_home_menu);
 
