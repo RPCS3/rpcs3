@@ -19,6 +19,7 @@ env:
   BUILD_SOURCEBRANCHNAME: ${{ github.ref_name }}
   BUILD_SOURCEVERSION: ${{ github.sha }}
   BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}/artifacts/
+  BUILD_BUILDDIRECTORY: ${{ github.workspace }}/rpcs3_build/
 
 jobs:
   Linux_Build:
@@ -52,11 +53,13 @@ jobs:
       DEPLOY_APPIMAGE: true
       APPDIR: "/rpcs3/build/appdir"
       ARTDIR: "/root/artifacts"
+      BUILDDIR: "/root/rpcs3_build"
       RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
       COMPILER: ${{ matrix.compiler }}
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
-      RUN_UNIT_TESTS: github.event_name == 'pull_request' && 'ON' || 'OFF'
+      BUILD_UNIT_TESTS: github.event_name == 'pull_request' && 'ON' || 'OFF'
+      RUN_UNIT_TESTS: 'OFF'
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -79,15 +82,26 @@ jobs:
             --env-file .ci/docker.env \
             -v ${{ env.CCACHE_DIR }}:/root/.ccache  \
             -v ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}:${{ env.ARTDIR }} \
+            -v ${{ env.BUILD_BUILDDIRECTORY }}:${{ env.BUILDDIR }} \
             ${{ matrix.docker_img }} \
             ${{ matrix.build_sh }}
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@main
-        with:
-          name: RPCS3 for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
-          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/*.AppImage
-          compression-level: 0
+      - name: Unit tests
+        if: github.event_name == 'pull_request'
+        working-directory: ${{ github.workspace }}
+        run: |
+          ls -la -F
+          ls -la -F rpcs3
+          mkdir -p my_symlinks
+          ln -s ${{ env.BUILDDIR }} my_symlinks/build
+          ctest -j -VV -C Release --test-dir my_symlinks/build --output-on-failure
+
+      # - name: Upload artifacts
+      #   uses: actions/upload-artifact@main
+      #   with:
+      #     name: RPCS3 for Linux (${{ runner.arch }}, ${{ matrix.compiler }})
+      #     path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}/*.AppImage
+      #     compression-level: 0
 
       - name: Deploy master build to GitHub Releases
         if: |
