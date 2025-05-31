@@ -114,20 +114,20 @@ jobs:
           - name: Intel
             build_sh: "arch -X86_64 .ci/build-mac.sh"
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
-            UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
+            UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac
           - name: Apple Silicon
-            build_sh: ".ci/build-mac-arm64.sh"
+            build_sh: .ci/build-mac-arm64.sh
             UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
-            UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac-arm64"
+            UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
     name: RPCS3 Mac ${{ matrix.name }} 
     runs-on: macos-14
     env:
-      CCACHE_DIR: "/tmp/ccache_dir"
+      CCACHE_DIR: /tmp/ccache_dir
       CI_HAS_ARTIFACTS: true
       QT_VER: '6.7.3'
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '19'
-      RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+      RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
     steps:
@@ -141,28 +141,19 @@ jobs:
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-ccache-${{ matrix.name }}-${{github.run_id}}
-          restore-keys: | 
+          restore-keys: |
             ${{ runner.os }}-ccache-${{ matrix.name }}-
-
-      - name: Setup Homebrew Cache
-        uses: actions/cache@main
-        with:
-          path: "~/Library/Caches/Homebrew"
-          key: ${{ runner.os }}-homebrew-${{ matrix.name }}
-          restore-keys: | 
-            ${{ runner.os }}-homebrew-${{ matrix.name }}
 
       - name: Setup Qt Cache
         uses: actions/cache@main
         with:
-          path: "/tmp/Qt"
+          path: /tmp/Qt
           key: ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
-          restore-keys: | 
+          restore-keys: |
             ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
 
       - name: Build
-        run: | 
-          ${{ matrix.build_sh }}      
+        run: ${{ matrix.build_sh }}      
 
       - name: Upload artifacts
         uses: actions/upload-artifact@main
@@ -183,11 +174,10 @@ jobs:
         if: |
           github.event_name != 'pull_request' &&
           github.repository == 'RPCS3/rpcs3' &&
-          github.ref == 'refs/heads/master' 
+          github.ref == 'refs/heads/master'
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
-        run: |
-          .ci/github-upload.sh
+        run: .ci/github-upload.sh
 
   Windows_Build:
     # Only run push event on master branch of main repo, but run all PRs
