@@ -72,7 +72,6 @@ git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
-rm -rf build
 mkdir build && cd build || exit 1
 
 export MACOSX_DEPLOYMENT_TARGET=14.0
