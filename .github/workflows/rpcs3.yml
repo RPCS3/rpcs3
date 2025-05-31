@@ -63,13 +63,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Cache
-        uses: actions/cache@main
+      - name: Restore build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{github.run_id}}
-          restore-keys: | 
-            ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Docker setup and build
         run: |
@@ -103,6 +103,13 @@ jobs:
           COMM_HASH=$(git rev-parse --short=8 HEAD)
           export AVVER="${COMM_TAG}-${COMM_COUNT}"
           .ci/github-upload.sh
+      
+      - name: Save build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
   Mac_Build:
     # Only run push event on master branch of main repo, but run all PRs
@@ -136,21 +143,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Cache
-        uses: actions/cache@main
+      - name: Restore Build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ runner.os }}-ccache-${{ matrix.name }}-${{github.run_id}}
-          restore-keys: |
-            ${{ runner.os }}-ccache-${{ matrix.name }}-
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.name }}-
 
-      - name: Setup Qt Cache
-        uses: actions/cache@main
+      - name: Restore Qt Cache
+        uses: actions/cache/restore@main
+        id: restore-qt-cache
         with:
           path: /tmp/Qt
           key: ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
-          restore-keys: |
-            ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
+          restore-keys: ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
 
       - name: Build
         run: ${{ matrix.build_sh }}      
@@ -178,6 +185,20 @@ jobs:
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: .ci/github-upload.sh
+      
+      - name: Save Build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Save Qt Cache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: /tmp/Qt
+          key: ${{ steps.restore-qt-cache.outputs.cache-primary-key }}
 
   Windows_Build:
     # Only run push event on master branch of main repo, but run all PRs
@@ -223,15 +244,17 @@ jobs:
       - name: Get Cache Keys
         run: .ci/get_keys-windows.sh
 
-      - name: Setup Build Ccache
-        uses: actions/cache@main
+      - name: Restore Build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
           key: "${{ runner.os }}-ccache-${{ env.COMPILER }}-${{github.run_id}}"
           restore-keys: ${{ runner.os }}-ccache-${{ env.COMPILER }}-
 
-      - name: Setup Dependencies Cache
-        uses: actions/cache@main
+      - name: Restore Dependencies Cache
+        uses: actions/cache/restore@main
+        id: restore-dependencies-cache
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: "${{ runner.os }}-${{ env.COMPILER }}-${{ env.QT_VER }}-${{ env.VULKAN_SDK_SHA }}-${{ env.CCACHE_SHA }}-${{ hashFiles('llvm.lock') }}"
@@ -281,3 +304,17 @@ jobs:
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: .ci/github-upload.sh
+      
+      - name: Save Build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Save Dependencies Cache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.DEPS_CACHE_DIR }}
+          key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
