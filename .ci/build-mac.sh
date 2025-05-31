@@ -8,15 +8,15 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew update
-arch -x86_64 /usr/local/bin/brew install -f --overwrite python || arch -x86_64 /usr/local/bin/brew link --overwrite python
-arch -x86_64 /usr/local/bin/brew install -f --overwrite nasm ninja p7zip ccache pipenv gnutls freetype #create-dmg
-arch -x86_64 /usr/local/bin/brew install -f ffmpeg@5
-arch -x86_64 /usr/local/bin/brew install "llvm@$LLVM_COMPILER_VER" glew cmake sdl3 vulkan-headers coreutils
-arch -x86_64 /usr/local/bin/brew link -f "llvm@$LLVM_COMPILER_VER" ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python || arch -x86_64 /usr/local/bin/brew link --overwrite python
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet nasm ninja p7zip ccache pipenv gnutls freetype #create-dmg
+arch -x86_64 /usr/local/bin/brew install -f --quiet ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install --quiet "llvm@$LLVM_COMPILER_VER" glew cmake sdl3 vulkan-headers coreutils
+arch -x86_64 /usr/local/bin/brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.3.0 release
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/7255441cbcafabaa8950f67c7ec55ff499dbb2d3/Formula/m/molten-vk.rb
-arch -x86_64 /usr/local/bin/brew install -f --overwrite ./molten-vk.rb
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --formula --quiet ./molten-vk.rb
 export CXX=clang++
 export CC=clang
 
