@@ -144,6 +144,14 @@ jobs:
           restore-keys: | 
             ${{ runner.os }}-ccache-${{ matrix.name }}-
 
+      - name: Setup Homebrew Cache
+        uses: actions/cache@main
+        with:
+          path: "~/Library/Caches/Homebrew"
+          key: ${{ runner.os }}-homebrew-${{ matrix.name }}
+          restore-keys: | 
+            ${{ runner.os }}-homebrew-${{ matrix.name }}
+
       - name: Setup Qt Cache
         uses: actions/cache@main
         with:
