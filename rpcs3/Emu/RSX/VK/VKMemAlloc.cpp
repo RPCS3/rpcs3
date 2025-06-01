@@ -1,5 +1,5 @@
 #define VMA_IMPLEMENTATION
-#define VMA_VULKAN_VERSION 1000000
+#define VMA_VULKAN_VERSION 1002000
 
 #include "util/atomic.hpp"
 #include "Utilities/mutex.h"
