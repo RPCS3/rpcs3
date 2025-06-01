@@ -59,6 +59,7 @@ protected:
 	u32 num_ldd_pad = 0;
 
 private:
+	void apply_copilots();
 	void update_pad_states();
 
 	u32 m_mask_start_press_to_resume = 0;

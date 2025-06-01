@@ -411,60 +411,27 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		};
 
-		for (const Button& button : pad->m_buttons)
+		for (const Button& button : pad->m_buttons_external)
 		{
 			// here we check btns, and set pad accordingly,
 			// if something changed, set btnChanged
-
-			bool pressed = button.m_pressed;
-			u16 value = button.m_value;
-
-			// Merge copilots
-			if (!pad->copilots.empty())
-			{
-				for (const auto& copilot : pad->copilots)
-				{
-					if (!copilot || !copilot->is_connected())
-					{
-						continue;
-					}
-
-					for (const Button& other : copilot->m_buttons)
-					{
-						if (button.m_offset == other.m_offset && button.m_outKeyCode == other.m_outKeyCode)
-						{
-							if (other.m_pressed)
-							{
-								pressed = true;
-
-								if (value < other.m_value)
-								{
-									value = other.m_value;
-								}
-							}
-
-							break;
-						}
-					}
-				}
-			}
 
 			switch (button.m_offset)
 			{
 			case CELL_PAD_BTN_OFFSET_DIGITAL1:
 			{
-				if (pressed)
+				if (button.m_pressed)
 					pad->m_digital_1 |= button.m_outKeyCode;
 				else
 					pad->m_digital_1 &= ~button.m_outKeyCode;
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_LEFT: set_value(pad->m_press_left, value); break;
-				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, value); break;
-				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, value); break;
-				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, value); break;
-				// These arent pressure btns
+				case CELL_PAD_CTRL_LEFT:  set_value(pad->m_press_left,  button.m_value); break;
+				case CELL_PAD_CTRL_DOWN:  set_value(pad->m_press_down,  button.m_value); break;
+				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, button.m_value); break;
+				case CELL_PAD_CTRL_UP:    set_value(pad->m_press_up,    button.m_value); break;
+				// These aren't pressure btns
 				case CELL_PAD_CTRL_R3:
 				case CELL_PAD_CTRL_L3:
 				case CELL_PAD_CTRL_START:
@@ -475,21 +442,21 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 			case CELL_PAD_BTN_OFFSET_DIGITAL2:
 			{
-				if (pressed)
+				if (button.m_pressed)
 					pad->m_digital_2 |= button.m_outKeyCode;
 				else
 					pad->m_digital_2 &= ~button.m_outKeyCode;
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_SQUARE: set_value(pad->m_press_square, value); break;
-				case CELL_PAD_CTRL_CROSS: set_value(pad->m_press_cross, value); break;
-				case CELL_PAD_CTRL_CIRCLE: set_value(pad->m_press_circle, value); break;
-				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, value); break;
-				case CELL_PAD_CTRL_R1: set_value(pad->m_press_R1, value); break;
-				case CELL_PAD_CTRL_L1: set_value(pad->m_press_L1, value); break;
-				case CELL_PAD_CTRL_R2: set_value(pad->m_press_R2, value); break;
-				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, value); break;
+				case CELL_PAD_CTRL_SQUARE:   set_value(pad->m_press_square,   button.m_value); break;
+				case CELL_PAD_CTRL_CROSS:    set_value(pad->m_press_cross,    button.m_value); break;
+				case CELL_PAD_CTRL_CIRCLE:   set_value(pad->m_press_circle,   button.m_value); break;
+				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, button.m_value); break;
+				case CELL_PAD_CTRL_R1:       set_value(pad->m_press_R1,       button.m_value); break;
+				case CELL_PAD_CTRL_L1:       set_value(pad->m_press_L1,       button.m_value); break;
+				case CELL_PAD_CTRL_R2:       set_value(pad->m_press_R2,       button.m_value); break;
+				case CELL_PAD_CTRL_L2:       set_value(pad->m_press_L2,       button.m_value); break;
 				default: break;
 				}
 				break;
@@ -498,18 +465,18 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			{
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    value, true); break;
-				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     value, true); break;
-				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       value, true); break;
-				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     value, true); break;
-				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   value, true, 255, 63); break; // Infrared on RIDE Skateboard
-				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       value, true); break;
-				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       value, true); break;
-				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       value, true); break;
-				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       value, true); break;
+				case CELL_PAD_CTRL_PRESS_RIGHT:    set_value(pad->m_press_right,    button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_LEFT:     set_value(pad->m_press_left,     button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_UP:       set_value(pad->m_press_up,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_DOWN:     set_value(pad->m_press_down,     button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_TRIANGLE: set_value(pad->m_press_triangle, button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CIRCLE:   set_value(pad->m_press_circle,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_CROSS:    set_value(pad->m_press_cross,    button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_SQUARE:   set_value(pad->m_press_square,   button.m_value, true, 255, 63); break; // Infrared on RIDE Skateboard
+				case CELL_PAD_CTRL_PRESS_L1:       set_value(pad->m_press_L1,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R1:       set_value(pad->m_press_R1,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_L2:       set_value(pad->m_press_L2,       button.m_value, true); break;
+				case CELL_PAD_CTRL_PRESS_R2:       set_value(pad->m_press_R2,       button.m_value, true); break;
 				default: break;
 				}
 				break;
@@ -519,46 +486,14 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		}
 
-		for (const AnalogStick& stick : pad->m_sticks)
+		for (const AnalogStick& stick : pad->m_sticks_external)
 		{
-			u16 value = stick.m_value;
-
-			// Merge copilots
-			if (!pad->copilots.empty())
-			{
-				const auto normalize = [](s32 value)
-				{
-					return (value - 128) / 127.0f;
-				};
-
-				f32 accumulated_value = normalize(value);
-
-				for (const auto& copilot : pad->copilots)
-				{
-					if (!copilot || !copilot->is_connected())
-					{
-						continue;
-					}
-
-					for (const AnalogStick& other : copilot->m_sticks)
-					{
-						if (stick.m_offset == other.m_offset)
-						{
-							accumulated_value += normalize(other.m_value);
-							break;
-						}
-					}
-				}
-
-				value = static_cast<u16>(std::round(std::clamp(accumulated_value * 127.0f + 128.0f, 0.0f, 255.0f)));
-			}
-
 			switch (stick.m_offset)
 			{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: set_value(pad->m_analog_left_x, value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: set_value(pad->m_analog_left_y, value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, value); break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:  set_value(pad->m_analog_left_x,  stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:  set_value(pad->m_analog_left_y,  stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, stick.m_value); break;
 			default: break;
 			}
 		}
@@ -1305,7 +1240,7 @@ error_code cellPadLddGetPortNo(s32 handle)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_pad_thread();
-	auto& pads = handler->GetPads();
+	const auto& pads = handler->GetPads();
 
 	if (handle < 0 || static_cast<u32>(handle) >= pads.size())
 		return CELL_PAD_ERROR_INVALID_PARAMETER;

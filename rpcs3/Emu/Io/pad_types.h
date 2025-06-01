@@ -543,6 +543,9 @@ struct Pad
 	std::array<AnalogSensor, 4> m_sensors{};
 	std::array<VibrateMotor, 2> m_vibrateMotors{};
 
+	std::vector<Button> m_buttons_external;
+	std::array<AnalogStick, 4> m_sticks_external{};
+
 	std::vector<std::shared_ptr<Pad>> copilots;
 
 	// These hold bits for their respective buttons
@@ -610,6 +613,12 @@ struct Pad
 		}
 
 		return umax;
+	}
+
+	bool is_copilot() const
+	{
+		const u32 copilot_player_id = copilot_player();
+		return copilot_player_id != umax && copilot_player_id != m_player_id;
 	}
 
 	bool is_connected() const

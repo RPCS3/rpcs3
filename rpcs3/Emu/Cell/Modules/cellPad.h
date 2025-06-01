@@ -3,7 +3,6 @@
 #include "Emu/Io/pad_types.h"
 
 #include <array>
-#include "util/types.hpp"
 
 enum CellPadError : u32
 {
