@@ -94,7 +94,6 @@ namespace vk
 			bool debug_utils = false;
 			bool external_memory_host = false;
 			bool framebuffer_loops = false;
-			bool sampler_mirror_clamped = false;
 			bool shader_stencil_export = false;
 			bool surface_capabilities_2 = false;
 			bool synchronization_2 = false;
@@ -184,7 +183,6 @@ namespace vk
 		bool get_external_memory_host_support() const { return pgpu->optional_features_support.external_memory_host; }
 		bool get_surface_capabilities_2_support() const { return pgpu->optional_features_support.surface_capabilities_2; }
 		bool get_debug_utils_support() const { return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils; }
-		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
