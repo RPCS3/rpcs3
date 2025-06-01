@@ -90,10 +90,10 @@ public:
 
 	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, pad_button, u16, bool, bool&)>& func) const
 	{
-		if (!pad)
+		if (!pad || pad->is_copilot())
 			return;
 
-		for (const Button& button : pad->m_buttons)
+		for (const Button& button : pad->m_buttons_external)
 		{
 			if (button.m_pressed || !press_only)
 			{
@@ -104,7 +104,7 @@ public:
 			}
 		}
 
-		for (const AnalogStick& stick : pad->m_sticks)
+		for (const AnalogStick& stick : pad->m_sticks_external)
 		{
 			if (handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true))
 			{
