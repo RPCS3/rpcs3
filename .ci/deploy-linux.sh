@@ -26,9 +26,6 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     rm -f ./AppDir/usr/lib/libvulkan.so*
 
     # Remove unused Qt6 libraries
-    rm -f ./AppDir/usr/lib/libQt6OpenGL.so*
-    rm -f ./AppDir/usr/lib/libQt6Qml*.so*
-    rm -f ./AppDir/usr/lib/libQt6Quick.so*
     rm -f ./AppDir/usr/lib/libQt6VirtualKeyboard.so*
     rm -f ./AppDir/usr/plugins/platforminputcontexts/libqtvirtualkeyboardplugin.so*
 
