@@ -8,7 +8,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 #endif
-#define VMA_VULKAN_VERSION 1000000
+#define VMA_VULKAN_VERSION 1002000
 #include "3rdparty/GPUOpen/VulkanMemoryAllocator/include/vk_mem_alloc.h"
 #ifdef __clang__
 #pragma clang diagnostic pop
