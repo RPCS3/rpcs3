@@ -96,7 +96,7 @@ class thread_future
 	thread_future* prev{};
 
 protected:
-	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
+	atomic_t<void(*)(const thread_base*, thread_future*)> exec{};
 
 	atomic_t<u32> done{0};
 
@@ -389,7 +389,7 @@ public:
 		: m_args(std::forward<Args>(args)...)
 		, m_func(std::forward<Ctx>(func))
 	{
-		thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+		thread_future::exec.raw() = +[](const thread_base* tb, thread_future* tf)
 		{
 			const auto _this = static_cast<future*>(tf);
 

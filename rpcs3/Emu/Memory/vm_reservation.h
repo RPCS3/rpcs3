@@ -81,7 +81,8 @@ namespace vm
 
 	static inline atomic_t<reservation_waiter_t>* reservation_notifier_begin_wait(u32 raddr, u64 rtime)
 	{
-		atomic_t<reservation_waiter_t>& waiter = *reservation_notifier(raddr).first;
+		const auto notifiers = reservation_notifier(raddr);
+		atomic_t<reservation_waiter_t>& waiter = *notifiers.first;
 
 		waiter.atomic_op([](reservation_waiter_t& value)
 		{

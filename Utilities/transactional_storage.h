@@ -84,9 +84,8 @@ public:
 	transactional_storage& operator=(const transactional_storage&) = delete;
 
 	transactional_storage(transactional_storage&& other)
+		: pool(std::move(other.pool))
 	{
-		pool = std::move(other.pool);
-
 		std::unique_lock lock_other{other.current_mutex};
 		const std::shared_ptr<T> other_current = other.current;
 		other.current = nullptr;

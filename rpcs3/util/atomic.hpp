@@ -479,7 +479,7 @@ struct atomic_storage
 #endif
 
 #if defined(_M_X64) && defined(_MSC_VER)
-		return _interlockedbittestandset((long*)dst, bit) != 0;
+		return _interlockedbittestandset(reinterpret_cast<long*>(dst), bit) != 0;
 #elif defined(ARCH_X64)
 		bool result;
 		__asm__ volatile ("lock btsl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
@@ -506,7 +506,7 @@ struct atomic_storage
 #endif
 
 #if defined(_M_X64) && defined(_MSC_VER)
-		return _interlockedbittestandreset((long*)dst, bit) != 0;
+		return _interlockedbittestandreset(reinterpret_cast<long*>(dst), bit) != 0;
 #elif defined(ARCH_X64)
 		bool result;
 		__asm__ volatile ("lock btrl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
@@ -536,9 +536,9 @@ struct atomic_storage
 		while (true)
 		{
 			// Keep trying until we actually invert desired bit
-			if (!_bittest((long*)dst, bit) && !_interlockedbittestandset((long*)dst, bit))
+			if (!_bittest(reinterpret_cast<const long*>(dst), bit) && !_interlockedbittestandset(reinterpret_cast<long*>(dst), bit))
 				return false;
-			if (_interlockedbittestandreset((long*)dst, bit))
+			if (_interlockedbittestandreset(reinterpret_cast<long*>(dst), bit))
 				return true;
 		}
 #elif defined(ARCH_X64)
