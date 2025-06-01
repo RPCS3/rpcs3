@@ -135,7 +135,7 @@ namespace utils
 #endif
 	}
 
-	constexpr void prefetch_write(void* ptr)
+	constexpr void prefetch_write(const void* ptr)
 	{
 		if (std::is_constant_evaluated())
 		{

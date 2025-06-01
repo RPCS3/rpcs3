@@ -59,7 +59,7 @@ namespace np
 			u32 last_free    = 0;
 			bool found_space = false;
 
-			for (auto& a : m_allocs)
+			for (const auto& a : m_allocs)
 			{
 				if ((a.first - last_free) >= alloc_size)
 				{
