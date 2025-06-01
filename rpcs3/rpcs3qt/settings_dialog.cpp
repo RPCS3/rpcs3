@@ -359,7 +359,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->ppu__static, tooltips.settings.ppu__static);
 	SubscribeTooltip(ui->ppu_llvm,    tooltips.settings.ppu_llvm);
 
-	QButtonGroup *ppu_bg = new QButtonGroup(this);
+	QButtonGroup* ppu_bg = new QButtonGroup(this);
 	ppu_bg->addButton(ui->ppu__static, static_cast<int>(ppu_decoder_type::_static));
 	ppu_bg->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
@@ -695,7 +695,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->rb_async_with_shader_interpreter, tooltips.settings.async_with_shader_interpreter);
 	SubscribeTooltip(ui->rb_shader_interpreter_only, tooltips.settings.shader_interpreter_only);
 
-	QButtonGroup *shader_mode_bg = new QButtonGroup(this);
+	QButtonGroup* shader_mode_bg = new QButtonGroup(this);
 	shader_mode_bg->addButton(ui->rb_legacy_recompiler, static_cast<int>(shader_mode::recompiler));
 	shader_mode_bg->addButton(ui->rb_async_recompiler, static_cast<int>(shader_mode::async_recompiler));
 	shader_mode_bg->addButton(ui->rb_async_with_shader_interpreter, static_cast<int>(shader_mode::async_with_interpreter));
@@ -1447,7 +1447,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Radio Buttons
 
 	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *enter_button_assignment_bg = new QButtonGroup(this);
+	QButtonGroup* enter_button_assignment_bg = new QButtonGroup(this);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCircle, 0);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCross, 1);
 
