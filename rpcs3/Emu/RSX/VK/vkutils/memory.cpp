@@ -167,7 +167,7 @@ namespace vk
 		allocatorInfo.physicalDevice = pdev;
 		allocatorInfo.device = dev;
 		allocatorInfo.instance = inst;
-		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_0;
+		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
 
 		std::vector<VkDeviceSize> heap_limits;
 		const auto vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;

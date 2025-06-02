@@ -20,125 +20,109 @@ namespace vk
 		supported_extensions instance_extensions(supported_extensions::instance);
 		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
 
-		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+		VkPhysicalDeviceFeatures2KHR features2;
+		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+		features2.pNext = nullptr;
+
+		VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+		VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
+		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
+		VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
+		VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_info{};
+		VkPhysicalDeviceBorderColorSwizzleFeaturesEXT border_color_swizzle_info{};
+		VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
+		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
+
+		// Core features
+		shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
+		features2.pNext           = &shader_support_info;
+
+		descriptor_indexing_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		descriptor_indexing_info.pNext = features2.pNext;
+		features2.pNext                = &descriptor_indexing_info;
+		descriptor_indexing_support    = true;
+
+		// Optional features
+		if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
 		{
-			vkGetPhysicalDeviceFeatures(dev, &features);
+			fbo_loops_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
+			fbo_loops_info.pNext = features2.pNext;
+			features2.pNext      = &fbo_loops_info;
 		}
-		else
+
+		if (device_extensions.is_supported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
 		{
-			VkPhysicalDeviceFeatures2KHR features2;
-			features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-			features2.pNext = nullptr;
+			shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+			shader_barycentric_info.pNext = features2.pNext;
+			features2.pNext               = &shader_barycentric_info;
+		}
 
-			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
-			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
-			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
-			VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
-			VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_info{};
-			VkPhysicalDeviceBorderColorSwizzleFeaturesEXT border_color_swizzle_info{};
-			VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
-			VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
+		if (device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME))
+		{
+			custom_border_color_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
+			custom_border_color_info.pNext = features2.pNext;
+			features2.pNext                = &custom_border_color_info;
+		}
 
-			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
-			{
-				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
-				features2.pNext           = &shader_support_info;
-			}
+		if (device_extensions.is_supported(VK_EXT_BORDER_COLOR_SWIZZLE_EXTENSION_NAME))
+		{
+			border_color_swizzle_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
+			border_color_swizzle_info.pNext = features2.pNext;
+			features2.pNext                 = &border_color_swizzle_info;
+		}
 
-			if (device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
-			{
-				descriptor_indexing_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-				descriptor_indexing_info.pNext = features2.pNext;
-				features2.pNext                = &descriptor_indexing_info;
-				descriptor_indexing_support    = true;
-			}
+		if (device_extensions.is_supported(VK_EXT_DEVICE_FAULT_EXTENSION_NAME))
+		{
+			device_fault_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
+			device_fault_info.pNext = features2.pNext;
+			features2.pNext         = &device_fault_info;
+		}
 
-			if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
-			{
-				fbo_loops_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
-				fbo_loops_info.pNext = features2.pNext;
-				features2.pNext      = &fbo_loops_info;
-			}
+		if (device_extensions.is_supported(VK_EXT_MULTI_DRAW_EXTENSION_NAME))
+		{
+			multidraw_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
+			multidraw_info.pNext = features2.pNext;
+			features2.pNext      = &multidraw_info;
+		}
 
-			if (device_extensions.is_supported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
-			{
-				shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
-				shader_barycentric_info.pNext = features2.pNext;
-				features2.pNext               = &shader_barycentric_info;
-			}
+		vkGetPhysicalDeviceFeatures2(dev, &features2);
 
-			if (device_extensions.is_supported(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME))
-			{
-				custom_border_color_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CUSTOM_BORDER_COLOR_FEATURES_EXT;
-				custom_border_color_info.pNext = features2.pNext;
-				features2.pNext                = &custom_border_color_info;
-			}
+		shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
+		shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
+		shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
 
-			if (device_extensions.is_supported(VK_EXT_BORDER_COLOR_SWIZZLE_EXTENSION_NAME))
-			{
-				border_color_swizzle_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
-				border_color_swizzle_info.pNext = features2.pNext;
-				features2.pNext                 = &border_color_swizzle_info;
-			}
+		custom_border_color_support.supported = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
+		custom_border_color_support.swizzle_extension_supported = border_color_swizzle_info.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
+		custom_border_color_support.require_border_color_remap = !border_color_swizzle_info.borderColorSwizzleFromImage;
 
-			if (device_extensions.is_supported(VK_EXT_DEVICE_FAULT_EXTENSION_NAME))
-			{
-				device_fault_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
-				device_fault_info.pNext = features2.pNext;
-				features2.pNext         = &device_fault_info;
-			}
+		multidraw_support.supported = !!multidraw_info.multiDraw;
+		multidraw_support.max_batch_size = 65536;
 
-			if (device_extensions.is_supported(VK_EXT_MULTI_DRAW_EXTENSION_NAME))
-			{
-				multidraw_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTI_DRAW_FEATURES_EXT;
-				multidraw_info.pNext = features2.pNext;
-				features2.pNext      = &multidraw_info;
-			}
+		optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
+		optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+		optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
 
-			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
-			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
-			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
+		features = features2.features;
 
-			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
-			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
-			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
-
-			custom_border_color_support.supported = !!custom_border_color_info.customBorderColors && !!custom_border_color_info.customBorderColorWithoutFormat;
-			custom_border_color_support.swizzle_extension_supported = border_color_swizzle_info.sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BORDER_COLOR_SWIZZLE_FEATURES_EXT;
-			custom_border_color_support.require_border_color_remap = !border_color_swizzle_info.borderColorSwizzleFromImage;
-
-			multidraw_support.supported = !!multidraw_info.multiDraw;
-			multidraw_support.max_batch_size = 65536;
-
-			optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
-			optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
-			optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
-
-			features = features2.features;
-
-			if (descriptor_indexing_support)
-			{
+		descriptor_indexing_support.supported = true; // VK_API_VERSION_1_2
 #define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_indexing_support.update_after_bind_mask |= (1ull << bit)
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
-				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+		SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
 #undef SET_DESCRIPTOR_BITFLAG
-			}
-		}
 
 		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
-		optional_features_support.sampler_mirror_clamped   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+		optional_features_support.surface_capabilities_2   = instance_extensions.is_supported(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 
 		// Post-initialization checks
 		if (!custom_border_color_support.swizzle_extension_supported)
@@ -172,16 +156,6 @@ namespace vk
 			return;
 		}
 
-		// Try to query driver properties if possible
-		supported_extensions instance_extensions(supported_extensions::instance);
-		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
-
-		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) ||
-			!device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
-		{
-			return;
-		}
-
 		VkPhysicalDeviceProperties2KHR properties2;
 		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 		properties2.pNext = nullptr;
@@ -189,11 +163,7 @@ namespace vk
 		driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
 		driver_properties.pNext = properties2.pNext;
 		properties2.pNext = &driver_properties;
-
-		auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
-		ensure(_vkGetPhysicalDeviceProperties2KHR);
-
-		_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+		vkGetPhysicalDeviceProperties2(dev, &properties2);
 	}
 
 	void physical_device::get_physical_device_properties_1(bool allow_extensions)
@@ -204,13 +174,7 @@ namespace vk
 			return;
 		}
 
-		supported_extensions instance_extensions(supported_extensions::instance);
 		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
-
-		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
-		{
-			return;
-		}
 
 		VkPhysicalDeviceProperties2KHR properties2;
 		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
@@ -219,12 +183,9 @@ namespace vk
 		VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
 		VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
 
-		if (descriptor_indexing_support)
-		{
-			descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
-			descriptor_indexing_props.pNext = properties2.pNext;
-			properties2.pNext = &descriptor_indexing_props;
-		}
+		descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+		descriptor_indexing_props.pNext = properties2.pNext;
+		properties2.pNext = &descriptor_indexing_props;
 
 		if (multidraw_support.supported)
 		{
@@ -233,10 +194,7 @@ namespace vk
 			properties2.pNext = &multidraw_props;
 		}
 
-		auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
-		ensure(_vkGetPhysicalDeviceProperties2KHR);
-
-		_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+		vkGetPhysicalDeviceProperties2(dev, &properties2);
 		props = properties2.properties;
 
 		if (descriptor_indexing_support)
@@ -548,11 +506,6 @@ namespace vk
 		// 1. Anisotropic sampling
 		// 2. Indexable storage buffers
 		VkPhysicalDeviceFeatures enabled_features{};
-		if (pgpu->shader_types_support.allow_float16)
-		{
-			requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
-		}
-
 		if (pgpu->custom_border_color_support)
 		{
 			requested_extensions.push_back(VK_EXT_CUSTOM_BORDER_COLOR_EXTENSION_NAME);
@@ -575,24 +528,12 @@ namespace vk
 
 		if (pgpu->optional_features_support.external_memory_host)
 		{
-			requested_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		}
 
 		if (pgpu->optional_features_support.shader_stencil_export)
 		{
 			requested_extensions.push_back(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
-		}
-
-		if (pgpu->optional_features_support.sampler_mirror_clamped)
-		{
-			requested_extensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
-		}
-
-		if (pgpu->descriptor_indexing_support)
-		{
-			requested_extensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
 		if (pgpu->optional_features_support.framebuffer_loops)
@@ -607,7 +548,7 @@ namespace vk
 
 		if (pgpu->optional_features_support.synchronization_2)
 		{
-			requested_extensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+			requested_extensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME); // VK_API_VERSION_1_3
 		}
 
 		if (pgpu->optional_features_support.extended_device_fault)
