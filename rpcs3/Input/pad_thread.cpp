@@ -230,16 +230,22 @@ void pad_thread::Init()
 	// Set copilots
 	for (usz i = 0; i < m_pads.size(); i++)
 	{
-		if (!m_pads[i]) continue;
+		auto& pad = m_pads[i];
+		if (!pad)
+			continue;
 
-		m_pads[i]->copilots.clear();
+		pad->copilots.clear();
+
+		if (pad->is_copilot())
+			continue;
 
 		for (usz j = 0; j < m_pads.size(); j++)
 		{
-			if (i == j || !m_pads[j] || m_pads[j]->copilot_player() != i)
+			auto& other = m_pads[j];
+			if (i == j || !other || other->copilot_player() != i)
 				continue;
 
-			m_pads[i]->copilots.push_back(m_pads[j]);
+			pad->copilots.push_back(other);
 		}
 	}
 
@@ -280,6 +286,87 @@ void pad_thread::SetIntercepted(bool intercepted)
 	else
 	{
 		m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+	}
+}
+
+void pad_thread::apply_copilots()
+{
+	const auto normalize = [](s32 value)
+	{
+		return (value - 128) / 127.0f;
+	};
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	for (auto& pad : m_pads)
+	{
+		if (!pad || !pad->is_connected())
+		{
+			continue;
+		}
+
+		pad->m_buttons_external = pad->m_buttons;
+		pad->m_sticks_external = pad->m_sticks;
+
+		if (pad->copilots.empty() || pad->is_copilot())
+		{
+			continue;
+		}
+
+		// Merge buttons
+		for (const auto& copilot : pad->copilots)
+		{
+			if (!copilot || !copilot->is_connected())
+			{
+				continue;
+			}
+
+			for (Button& button : pad->m_buttons_external)
+			{
+				for (const Button& other : copilot->m_buttons)
+				{
+					if (button.m_offset == other.m_offset && button.m_outKeyCode == other.m_outKeyCode)
+					{
+						if (other.m_pressed)
+						{
+							button.m_pressed = true;
+
+							if (button.m_value < other.m_value)
+							{
+								button.m_value = other.m_value;
+							}
+						}
+
+						break;
+					}
+				}
+			}
+		}
+
+		// Merge sticks
+		for (AnalogStick& stick : pad->m_sticks_external)
+		{
+			f32 accumulated_value = normalize(stick.m_value);
+
+			for (const auto& copilot : pad->copilots)
+			{
+				if (!copilot || !copilot->is_connected())
+				{
+					continue;
+				}
+
+				for (const AnalogStick& other : copilot->m_sticks)
+				{
+					if (stick.m_offset == other.m_offset)
+					{
+						accumulated_value += normalize(other.m_value);
+						break;
+					}
+				}
+			}
+
+			stick.m_value = static_cast<u16>(std::round(std::clamp(accumulated_value * 127.0f + 128.0f, 0.0f, 255.0f)));
+		}
 	}
 }
 
@@ -441,6 +528,8 @@ void pad_thread::operator()()
 				connected_devices += handler.second->connected_devices;
 			}
 		}
+
+		apply_copilots();
 
 		if (Emu.IsRunning())
 		{
@@ -633,8 +722,9 @@ void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 
 	static const input::product_info product = input::get_product_info(input::product_type::playstation_3_controller);
 
-	m_pads[handle]->ldd = true;
-	m_pads[handle]->Init
+	auto& pad = m_pads[handle];
+	pad->ldd = true;
+	pad->Init
 	(
 		port_status ? *port_status : CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
@@ -647,7 +737,7 @@ void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 	);
 
 	input_log.notice("Pad %d: LDD, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
-		handle, m_pads[handle]->m_vendor_id, m_pads[handle]->m_product_id, m_pads[handle]->m_class_type, m_pads[handle]->m_class_profile);
+		handle, pad->m_vendor_id, pad->m_product_id, pad->m_class_type, pad->m_class_profile);
 
 	num_ldd_pad++;
 }
