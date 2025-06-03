@@ -43,8 +43,8 @@
         LLVMBitstreamReader.lib;
         LLVMBitWriter.lib;
         LLVMCFGuard.lib;
+        LLVMCGData.lib;
         LLVMCodeGen.lib;
-        LLVMCodeGenData.lib;
         LLVMCodeGenTypes.lib;
         LLVMCore.lib;
         LLVMCoroutines.lib;
@@ -66,6 +66,7 @@
         LLVMExecutionEngine.lib;
         LLVMExtensions.lib;
         LLVMFileCheck.lib;
+        LLVMFrontendAtomic.lib;
         LLVMFrontendDriver.lib;
         LLVMFrontendHLSL.lib;
         LLVMFrontendOffloading.lib;
@@ -118,6 +119,7 @@
         LLVMTableGenCommon.lib;
         LLVMTarget.lib;
         LLVMTargetParser.lib;
+        LLVMTelemetry.lib;
         LLVMTextAPI.lib;
         LLVMTextAPIBinaryReader.lib;
         LLVMTransformUtils.lib;
