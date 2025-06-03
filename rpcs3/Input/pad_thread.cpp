@@ -443,14 +443,67 @@ void pad_thread::operator()()
 
 		input_log.notice("Starting pad threads...");
 
-		for (const auto& handler : m_handlers)
-		{
-			if (handler.first == pad_handler::null)
-			{
-				continue;
-			}
+#if defined(__APPLE__)
+		// Let's keep hid handlers on the same thread
+		std::vector<std::shared_ptr<PadHandlerBase>> hid_handlers;
+		std::vector<std::shared_ptr<PadHandlerBase>> handlers;
 
-			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
+		for (const auto& [type, handler] : m_handlers)
+		{
+			switch (type)
+			{
+			case pad_handler::null:
+				break;
+			case pad_handler::ds3:
+			case pad_handler::ds4:
+			case pad_handler::dualsense:
+			case pad_handler::skateboard:
+			case pad_handler::move:
+				hid_handlers.push_back(handler);
+				break;
+			default:
+				handlers.push_back(handler);
+				break;
+			}
+		}
+
+		if (!hid_handlers.empty())
+		{
+			threads.push_back(std::make_unique<named_thread<std::function<void()>>>("HID Thread", [handlers = std::move(hid_handlers)]()
+			{
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					if (!pad::g_enabled || !is_input_allowed())
+					{
+						thread_ctrl::wait_for(30'000);
+						continue;
+					}
+
+					for (auto& handler : handlers)
+					{
+						handler->process();
+					}
+
+					u64 pad_sleep = g_cfg.io.pad_sleep;
+
+					if (Emu.IsPaused())
+					{
+						pad_sleep = std::max<u64>(pad_sleep, 30'000);
+					}
+
+					thread_ctrl::wait_for(pad_sleep);
+				}
+			}));
+		}
+
+		for (const auto& handler : handlers)
+		{
+#else
+		for (const auto& [type, handler] : m_handlers)
+		{
+			if (type == pad_handler::null) continue;
+#endif
+			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler->m_type), [handler]()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
