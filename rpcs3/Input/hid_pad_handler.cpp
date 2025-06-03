@@ -199,7 +199,11 @@ void hid_pad_handler<Device>::enumerate_devices()
 			}
 		}
 	}
-#else
+#endif
+
+	std::lock_guard lock(m_enumeration_mutex);
+
+#ifndef ANDROID
 	for (const auto& [vid, pid] : m_ids)
 	{
 		hid_device_info* dev_info = hid_enumerate(vid, pid);
@@ -230,7 +234,6 @@ void hid_pad_handler<Device>::enumerate_devices()
 #endif
 	hid_log.notice("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
 
-	std::lock_guard lock(m_enumeration_mutex);
 	m_new_enumerated_devices = device_paths;
 	m_enumerated_serials = std::move(serials);
 
