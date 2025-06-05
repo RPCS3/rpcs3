@@ -173,7 +173,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	{
 		const auto& pad = pads[i];
 
-		if (!pad->is_connected())
+		if (!pad->is_connected() || pad->is_copilot())
 		{
 			continue;
 		}

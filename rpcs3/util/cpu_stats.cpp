@@ -444,7 +444,7 @@ namespace utils
 		if (proc_dir)
 		{
 			// proc available, iterate through tasks and count them
-			struct dirent* entry;
+			const struct dirent* entry;
 			while ((entry = readdir(proc_dir)) != NULL)
 			{
 				if (entry->d_name[0] == '.')

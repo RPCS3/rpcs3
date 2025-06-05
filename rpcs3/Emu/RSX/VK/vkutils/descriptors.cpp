@@ -77,31 +77,28 @@ namespace vk
 			VkDescriptorSetLayoutBindingFlagsCreateInfo binding_infos = {};
 			rsx::simple_array<VkDescriptorBindingFlags> binding_flags;
 
-			if (g_render_device->get_descriptor_indexing_support())
+			const auto deferred_mask = g_render_device->get_descriptor_update_after_bind_support();
+			binding_flags.resize(::size32(bindings));
+
+			for (u32 i = 0; i < binding_flags.size(); ++i)
 			{
-				const auto deferred_mask = g_render_device->get_descriptor_update_after_bind_support();
-				binding_flags.resize(::size32(bindings));
-
-				for (u32 i = 0; i < binding_flags.size(); ++i)
+				if ((1ull << bindings[i].descriptorType) & ~deferred_mask)
 				{
-					if ((1ull << bindings[i].descriptorType) & ~deferred_mask)
-					{
-						binding_flags[i] = 0u;
-					}
-					else
-					{
-						binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
-					}
+					binding_flags[i] = 0u;
 				}
-
-				binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
-				binding_infos.pNext = nullptr;
-				binding_infos.bindingCount = ::size32(binding_flags);
-				binding_infos.pBindingFlags = binding_flags.data();
-
-				infos.pNext = &binding_infos;
-				infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+				else
+				{
+					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+				}
 			}
+
+			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+			binding_infos.pNext = nullptr;
+			binding_infos.bindingCount = ::size32(binding_flags);
+			binding_infos.pBindingFlags = binding_flags.data();
+
+			infos.pNext = &binding_infos;
+			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
 
 			VkDescriptorSetLayout result;
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
