@@ -110,7 +110,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
         xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
@@ -169,7 +169,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
         xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv410\build\x64\bin\opencv_world4100.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
