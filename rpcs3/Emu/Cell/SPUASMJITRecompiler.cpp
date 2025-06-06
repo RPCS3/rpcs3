@@ -3212,7 +3212,7 @@ void spu_recompiler::ROTQBYI(spu_opcode_t op)
 	}
 	else if (s == 4 || s == 8 || s == 12)
 	{
-		c->pshufd(va, va, utils::rol8(0xE4, s / 2));
+		c->pshufd(va, va, std::rotl<u8>(0xE4, s / 2));
 	}
 	else if (utils::has_ssse3())
 	{
