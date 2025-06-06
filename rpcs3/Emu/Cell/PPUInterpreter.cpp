@@ -3483,7 +3483,7 @@ auto RLWIMI()
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 mask = ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
-	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & mask);
+	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (dup32(std::rotl<u32>(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & mask);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3497,7 +3497,7 @@ auto RLWINM()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
+	ppu.gpr[op.ra] = dup32(std::rotl<u32>(static_cast<u32>(ppu.gpr[op.rs]), op.sh32)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3511,7 +3511,7 @@ auto RLWNM()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = dup32(utils::rol32(static_cast<u32>(ppu.gpr[op.rs]), ppu.gpr[op.rb] & 0x1f)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
+	ppu.gpr[op.ra] = dup32(std::rotl<u32>(static_cast<u32>(ppu.gpr[op.rs]), ppu.gpr[op.rb] & 0x1f)) & ppu_rotate_mask(32 + op.mb32, 32 + op.me32);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3599,7 +3599,7 @@ auto RLDICL()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & (~0ull >> op.mbe64);
+	ppu.gpr[op.ra] = std::rotl<u64>(ppu.gpr[op.rs], op.sh64) & (~0ull >> op.mbe64);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3613,7 +3613,7 @@ auto RLDICR()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & (~0ull << (op.mbe64 ^ 63));
+	ppu.gpr[op.ra] = std::rotl<u64>(ppu.gpr[op.rs], op.sh64) & (~0ull << (op.mbe64 ^ 63));
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3627,7 +3627,7 @@ auto RLDIC()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
+	ppu.gpr[op.ra] = std::rotl<u64>(ppu.gpr[op.rs], op.sh64) & ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3642,7 +3642,7 @@ auto RLDIMI()
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const u64 mask = ppu_rotate_mask(op.mbe64, op.sh64 ^ 63);
-	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (utils::rol64(ppu.gpr[op.rs], op.sh64) & mask);
+	ppu.gpr[op.ra] = (ppu.gpr[op.ra] & ~mask) | (std::rotl<u64>(ppu.gpr[op.rs], op.sh64) & mask);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3656,7 +3656,7 @@ auto RLDCL()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull >> op.mbe64);
+	ppu.gpr[op.ra] = std::rotl<u64>(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull >> op.mbe64);
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};
@@ -3670,7 +3670,7 @@ auto RLDCR()
 		return ppu_exec_select<Flags...>::template select<>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.gpr[op.ra] = utils::rol64(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull << (op.mbe64 ^ 63));
+	ppu.gpr[op.ra] = std::rotl<u64>(ppu.gpr[op.rs], ppu.gpr[op.rb] & 0x3f) & (~0ull << (op.mbe64 ^ 63));
 	if constexpr (((Flags == has_rc) || ...))
 		ppu_cr_set<s64>(ppu, 0, ppu.gpr[op.ra], 0);
 	};

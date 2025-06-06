@@ -3220,7 +3220,7 @@ plain_access:
 
 bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 {
-	const u32 mask = utils::rol32(1, args.tag);
+	const u32 mask = std::rotl<u32>(1, args.tag);
 
 	if (mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)) [[unlikely]]
 	{
@@ -3236,13 +3236,13 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 				if ((mfc_queue[i].cmd & ~0xc) == MFC_BARRIER_CMD)
 				{
 					mfc_barrier |= -1;
-					mfc_fence |= utils::rol32(1, mfc_queue[i].tag);
+					mfc_fence |= std::rotl<u32>(1, mfc_queue[i].tag);
 					continue;
 				}
 
 				if (true)
 				{
-					const u32 _mask = utils::rol32(1u, mfc_queue[i].tag);
+					const u32 _mask = std::rotl<u32>(1u, mfc_queue[i].tag);
 
 					// A command with barrier hard blocks that tag until it's been dealt with
 					if (mfc_queue[i].cmd & MFC_BARRIER_MASK)
@@ -3805,14 +3805,14 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		{
 			range_lock->release(0);
 
-			ch_stall_mask |= utils::rol32(1, args.tag);
+			ch_stall_mask |= std::rotl<u32>(1, args.tag);
 
 			if (!ch_stall_stat.get_count())
 			{
 				set_events(SPU_EVENT_SN);
 			}
 
-			ch_stall_stat.set_value(utils::rol32(1, args.tag) | ch_stall_stat.get_value());
+			ch_stall_stat.set_value(std::rotl<u32>(1, args.tag) | ch_stall_stat.get_value());
 
 			args.tag |= 0x80; // Set stalled status
 			args.eal = ::narrow<u32>(reinterpret_cast<const u8*>(item_ptr) - this->ls);
@@ -4271,7 +4271,7 @@ bool spu_thread::do_mfc(bool can_escape, bool must_finish)
 	auto process_command = [&](spu_mfc_cmd& args)
 	{
 		// Select tag bit in the tag mask or the stall mask
-		const u32 mask = utils::rol32(1, args.tag);
+		const u32 mask = std::rotl<u32>(1, args.tag);
 
 		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
 		{
@@ -5373,7 +5373,7 @@ bool spu_thread::process_mfc_cmd()
 			std::memcpy(dump.data, _ptr<u8>(ch_mfc_cmd.lsa & 0x3ff80), 128);
 		}
 
-		const u32 mask = utils::rol32(1, ch_mfc_cmd.tag);
+		const u32 mask = std::rotl<u32>(1, ch_mfc_cmd.tag);
 
 		if ((mfc_barrier | mfc_fence) & mask) [[unlikely]]
 		{
@@ -5428,11 +5428,11 @@ bool spu_thread::process_mfc_cmd()
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
-			mfc_fence |= utils::rol32(1, ch_mfc_cmd.tag);
+			mfc_fence |= std::rotl<u32>(1, ch_mfc_cmd.tag);
 
 			if (ch_mfc_cmd.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= utils::rol32(1, ch_mfc_cmd.tag);
+				mfc_barrier |= std::rotl<u32>(1, ch_mfc_cmd.tag);
 			}
 
 			return true;
@@ -5481,11 +5481,11 @@ bool spu_thread::process_mfc_cmd()
 			}
 
 			mfc_size++;
-			mfc_fence |= utils::rol32(1, cmd.tag);
+			mfc_fence |= std::rotl<u32>(1, cmd.tag);
 
 			if (cmd.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= utils::rol32(1, cmd.tag);
+				mfc_barrier |= std::rotl<u32>(1, cmd.tag);
 			}
 
 			if (check_mfc_interrupts(pc + 4))
@@ -5511,7 +5511,7 @@ bool spu_thread::process_mfc_cmd()
 		{
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_barrier |= -1;
-			mfc_fence |= utils::rol32(1, ch_mfc_cmd.tag);
+			mfc_fence |= std::rotl<u32>(1, ch_mfc_cmd.tag);
 		}
 
 		return true;
@@ -6209,7 +6209,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			eventstat_busy_waiting_switch = value ? 1 : 0;
 		}
-		
+
 		for (bool is_first = true; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true), is_first = false)
 		{
 			const auto old = +state;
@@ -6872,7 +6872,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		value &= 0x1f;
 
 		// Reset stall status for specified tag
-		const u32 tag_mask = utils::rol32(1, value);
+		const u32 tag_mask = std::rotl<u32>(1, value);
 
 		if (ch_stall_mask & tag_mask)
 		{
