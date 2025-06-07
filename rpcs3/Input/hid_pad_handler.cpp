@@ -61,9 +61,19 @@ public:
 
 		hid_log.notice("Initializing HIDAPI ...");
 
-		if (int errorCode = hid_init(); errorCode != 0)
+#if defined(__APPLE__)
+		int error_code = 0;
+		Emu.BlockingCallFromMainThread([&error_code]()
 		{
-			hid_log.fatal("hid_init error %d: %s", errorCode, hid_error(nullptr));
+			error_code = hid_init();
+			hid_darwin_set_open_exclusive(0);
+		});
+#else
+		const int error_code = hid_init();
+#endif
+		if (error_code != 0)
+		{
+			hid_log.fatal("hid_init error %d: %s", error_code, hid_error(nullptr));
 			return false;
 		}
 
@@ -92,6 +102,11 @@ void HidDevice::close()
 #endif
 }
 
+#if defined(__APPLE__)
+template <class Device>
+std::mutex hid_pad_handler<Device>::s_hid_mutex;
+#endif
+
 template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
     : PadHandlerBase(type), m_ids(std::move(ids))
@@ -103,6 +118,10 @@ hid_pad_handler<Device>::~hid_pad_handler()
 {
 	// Join thread
 	m_enumeration_thread.reset();
+
+#if defined(__APPLE__)
+	std::lock_guard static_lock(s_hid_mutex);
+#endif
 
 	for (auto& controller : m_controllers)
 	{
@@ -121,10 +140,6 @@ bool hid_pad_handler<Device>::Init()
 
 	if (!hid_instance::get_instance().initialize())
 		return false;
-
-#if defined(__APPLE__)
-	hid_darwin_set_open_exclusive(0);
-#endif
 
 	for (usz i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
@@ -186,9 +201,9 @@ void hid_pad_handler<Device>::enumerate_devices()
 #ifdef ANDROID
 	{
 		std::lock_guard lock(g_android_usb_devices_mutex);
-		for (auto device : g_android_usb_devices)
+		for (const android_usb_device& device : g_android_usb_devices)
 		{
-			auto filter = [&](id_pair id)
+			const auto filter = [&](id_pair id)
 			{
 				return id.m_vid == device.vendorId && id.m_pid == device.productId;
 			};
@@ -202,9 +217,14 @@ void hid_pad_handler<Device>::enumerate_devices()
 #else
 	for (const auto& [vid, pid] : m_ids)
 	{
-		hid_device_info* dev_info = hid_enumerate(vid, pid);
-		hid_device_info* head     = dev_info;
-		while (dev_info)
+#if defined(__APPLE__)
+		// Let's make sure hid_enumerate is only done one thread at a time
+		std::lock_guard static_lock(s_hid_mutex);
+		Emu.BlockingCallFromMainThread([&]()
+		{
+#endif
+		hid_device_info* head = hid_enumerate(vid, pid);
+		for (hid_device_info* dev_info = head; dev_info != nullptr; dev_info = dev_info->next)
 		{
 			if (!dev_info->path)
 			{
@@ -212,7 +232,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 				continue;
 			}
 
-			const std::string path = dev_info->path;
+			std::string path = dev_info->path;
 			device_paths.insert(path);
 
 #ifdef _WIN32
@@ -220,19 +240,16 @@ void hid_pad_handler<Device>::enumerate_devices()
 			if (m_type == pad_handler::move && path.find("&Col01#") != umax)
 #endif
 			{
-				serials[path] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
+				serials[std::move(path)] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
 			}
-
-			dev_info = dev_info->next;
 		}
 		hid_free_enumeration(head);
+#if defined(__APPLE__)
+		});
+#endif
 	}
 #endif
 	hid_log.notice("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
-
-	std::lock_guard lock(m_enumeration_mutex);
-	m_new_enumerated_devices = device_paths;
-	m_enumerated_serials = std::move(serials);
 
 #ifdef _WIN32
 	if (m_type == pad_handler::move)
@@ -243,7 +260,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		// Filter paths. We only want the Col01 paths.
 		std::set<std::string> col01_paths;
 
-		for (const std::string& path : m_new_enumerated_devices)
+		for (const std::string& path : device_paths)
 		{
 			hid_log.trace("Found ps move device: %s", path);
 
@@ -253,27 +270,38 @@ void hid_pad_handler<Device>::enumerate_devices()
 			}
 		}
 
-		m_new_enumerated_devices = std::move(col01_paths);
+		device_paths = std::move(col01_paths);
 	}
 #endif
+
+	std::lock_guard lock(m_enumeration_mutex);
+	m_new_enumerated_devices = std::move(device_paths);
+	m_new_enumerated_serials = std::move(serials);
 }
 
 template <class Device>
 void hid_pad_handler<Device>::update_devices()
 {
-	std::lock_guard lock(m_enumeration_mutex);
-
-	if (m_last_enumerated_devices == m_new_enumerated_devices)
 	{
-		return;
+		std::lock_guard lock(m_enumeration_mutex);
+
+		if (m_enumerated_devices == m_new_enumerated_devices)
+		{
+			return;
+		}
+
+		m_enumerated_devices = std::move(m_new_enumerated_devices);
+		m_enumerated_serials = std::move(m_new_enumerated_serials);
 	}
 
-	m_last_enumerated_devices = m_new_enumerated_devices;
+#if defined(__APPLE__)
+	std::lock_guard static_lock(s_hid_mutex);
+#endif
 
 	// Scrap devices that are not in the new list
 	for (auto& controller : m_controllers)
 	{
-		if (controller.second && controller.second->path != hid_enumerated_device_default && !m_new_enumerated_devices.contains(controller.second->path))
+		if (controller.second && controller.second->path != hid_enumerated_device_default && !m_enumerated_devices.contains(controller.second->path))
 		{
 			controller.second->close();
 			cfg_pad* config = controller.second->config;
@@ -285,7 +313,7 @@ void hid_pad_handler<Device>::update_devices()
 	bool warn_about_drivers = false;
 
 	// Find and add new devices
-	for (const auto& path : m_new_enumerated_devices)
+	for (const auto& path : m_enumerated_devices)
 	{
 		// Check if we have at least one virtual controller left
 		if (std::none_of(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; }))
