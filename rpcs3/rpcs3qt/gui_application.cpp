@@ -20,6 +20,10 @@
 #include "_discord_utils.h"
 #endif
 
+#ifdef HAVE_SDL3
+#include "Input/sdl_camera_handler.h"
+#endif
+
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
@@ -645,6 +649,12 @@ void gui_application::InitializeCallbacks()
 		{
 			return std::make_shared<qt_camera_handler>();
 		}
+#ifdef HAVE_SDL3
+		case camera_handler::sdl:
+		{
+			return std::make_shared<sdl_camera_handler>();
+		}
+#endif
 		}
 		return nullptr;
 	};
