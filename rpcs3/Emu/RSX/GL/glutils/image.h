@@ -353,7 +353,7 @@ namespace gl
 		GLenum m_aspect_flags = 0;
 		texture* m_image_data = nullptr;
 
-		GLenum component_swizzle[4];
+		GLenum component_swizzle[4] {};
 
 		texture_view() = default;
 

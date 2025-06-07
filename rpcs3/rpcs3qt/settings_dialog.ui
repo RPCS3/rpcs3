@@ -3023,6 +3023,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="recordWithOverlays">
+                 <property name="text">
+                  <string>Record with overlays</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <spacer name="emulatorTabSpacerLeft">
                  <property name="orientation">
                   <enum>Qt::Orientation::Vertical</enum>
