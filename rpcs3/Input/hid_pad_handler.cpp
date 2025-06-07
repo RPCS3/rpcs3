@@ -21,6 +21,8 @@ LOG_CHANNEL(hid_log, "HID");
 #ifdef ANDROID
 std::vector<android_usb_device> g_android_usb_devices;
 std::mutex g_android_usb_devices_mutex;
+#elif defined(__APPLE__)
+std::mutex g_hid_mutex;
 #endif
 
 struct hid_instance
@@ -91,7 +93,7 @@ hid_device* HidDevice::open()
 #ifdef ANDROID
 	hidDevice = hid_libusb_wrap_sys_device(path, -1);
 #elif defined(__APPLE__)
-	std::unique_lock static_lock(s_hid_mutex, std::defer_lock);
+	std::unique_lock static_lock(g_hid_mutex, std::defer_lock);
 	if (!static_lock.try_lock())
 	{
 		// The enumeration thread is busy. If we lock and open the device, we might get input stutter on other devices.
@@ -108,13 +110,45 @@ hid_device* HidDevice::open()
 	return hidDevice;
 }
 
+void HidDevice::close(hid_device* dev)
+{
+	if (!dev) return;
+
+#if defined(__APPLE__)
+	Emu.BlockingCallFromMainThread([dev]()
+	{
+		if (dev)
+		{
+			hid_close(dev);
+		}
+	}, false);
+#else
+	hid_close(dev);
+#endif
+}
+
 void HidDevice::close()
 {
+#if defined(__APPLE__)
+	if (hidDevice)
+	{
+		Emu.BlockingCallFromMainThread([this]()
+		{
+			if (hidDevice)
+			{
+				hid_close(hidDevice);
+				hidDevice = nullptr;
+			}
+		}, false);
+	}
+#else
 	if (hidDevice)
 	{
 		hid_close(hidDevice);
 		hidDevice = nullptr;
 	}
+#endif
+
 #ifdef _WIN32
 	if (bt_device)
 	{
@@ -123,11 +157,6 @@ void HidDevice::close()
 	}
 #endif
 }
-
-#if defined(__APPLE__)
-template <class Device>
-std::mutex hid_pad_handler<Device>::s_hid_mutex;
-#endif
 
 template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
@@ -142,7 +171,7 @@ hid_pad_handler<Device>::~hid_pad_handler()
 	m_enumeration_thread.reset();
 
 #if defined(__APPLE__)
-	std::lock_guard static_lock(s_hid_mutex);
+	std::lock_guard static_lock(g_hid_mutex);
 #endif
 
 	for (auto& controller : m_controllers)
@@ -241,7 +270,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 	{
 #if defined(__APPLE__)
 		// Let's make sure hid_enumerate is only done one thread at a time
-		std::lock_guard static_lock(s_hid_mutex);
+		std::lock_guard static_lock(g_hid_mutex);
 		Emu.BlockingCallFromMainThread([&]()
 		{
 #endif
@@ -317,7 +346,7 @@ void hid_pad_handler<Device>::update_devices()
 	}
 
 #if defined(__APPLE__)
-	std::lock_guard static_lock(s_hid_mutex);
+	std::lock_guard static_lock(g_hid_mutex);
 #endif
 
 	// Scrap devices that are not in the new list

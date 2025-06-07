@@ -589,7 +589,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (!devinfo)
 	{
 		ds4_log.error("check_add_device: hid_get_device_info failed! error=%s", hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 

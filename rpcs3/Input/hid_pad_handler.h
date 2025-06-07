@@ -57,6 +57,7 @@ class HidDevice : public PadDevice
 {
 public:
 	hid_device* open();
+	static void close(hid_device* dev);
 	void close();
 
 	hid_device* hidDevice{nullptr};
@@ -109,10 +110,6 @@ protected:
 	std::map<hid_enumerated_device_type, std::wstring> m_new_enumerated_serials;
 	std::mutex m_enumeration_mutex;
 	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
-
-#if defined(__APPLE__)
-	static std::mutex s_hid_mutex;
-#endif
 
 	void enumerate_devices();
 	void update_devices();

@@ -303,7 +303,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		move_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 #endif
