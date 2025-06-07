@@ -67,7 +67,7 @@ public:
 		{
 			error_code = hid_init();
 			hid_darwin_set_open_exclusive(0);
-		});
+		}, false);
 #else
 		const int error_code = hid_init();
 #endif
@@ -85,6 +85,28 @@ private:
 	bool m_initialized = false;
 	std::mutex m_hid_mutex;
 };
+
+hid_device* HidDevice::open()
+{
+#ifdef ANDROID
+	hidDevice = hid_libusb_wrap_sys_device(path, -1);
+#elif defined(__APPLE__)
+	std::unique_lock static_lock(s_hid_mutex, std::defer_lock);
+	if (!static_lock.try_lock())
+	{
+		// The enumeration thread is busy. If we lock and open the device, we might get input stutter on other devices.
+		return nullptr;
+	}
+	Emu.BlockingCallFromMainThread([this]()
+	{
+		hidDevice = hid_open_path(path.c_str());
+	}, false);
+#else
+	hidDevice = hid_open_path(path.data());
+#endif
+
+	return hidDevice;
+}
 
 void HidDevice::close()
 {
@@ -245,7 +267,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		hid_free_enumeration(head);
 #if defined(__APPLE__)
-		});
+		}, false);
 #endif
 	}
 #endif
@@ -333,6 +355,13 @@ void hid_pad_handler<Device>::update_devices()
 
 #ifdef ANDROID
 		if (hid_device* dev = hid_libusb_wrap_sys_device(path, -1))
+#elif defined(__APPLE__)
+		hid_device* dev = nullptr;
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			dev = hid_open_path(path.c_str());
+		}, false);
+		if (dev)
 #else
 		if (hid_device* dev = hid_open_path(path.c_str()))
 #endif
