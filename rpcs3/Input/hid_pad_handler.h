@@ -102,11 +102,16 @@ protected:
 	// pseudo 'controller id' to keep track of unique controllers
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
-	std::set<hid_enumerated_device_type> m_last_enumerated_devices;
+	std::set<hid_enumerated_device_type> m_enumerated_devices;
 	std::set<hid_enumerated_device_type> m_new_enumerated_devices;
 	std::map<hid_enumerated_device_type, std::wstring> m_enumerated_serials;
+	std::map<hid_enumerated_device_type, std::wstring> m_new_enumerated_serials;
 	std::mutex m_enumeration_mutex;
 	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
+
+#if defined(__APPLE__)
+	static std::mutex s_hid_mutex;
+#endif
 
 	void enumerate_devices();
 	void update_devices();
