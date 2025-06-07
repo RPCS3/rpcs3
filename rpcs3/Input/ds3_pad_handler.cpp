@@ -259,7 +259,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		if (res <= 0 || buf[0] != 0x0)
 		{
 			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
-			hid_close(hidDevice);
+			HidDevice::close(hidDevice);
 			return;
 		}
 	}
@@ -270,7 +270,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (res < 0)
 	{
 		ds3_log.error("check_add_device: hid_init_sixaxis_usb failed! (result=%d, error=%s)", res, hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 #endif
@@ -281,7 +281,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		ds3_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 
