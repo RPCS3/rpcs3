@@ -434,17 +434,12 @@ PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_
 			move_device->hidDevice = dev;
 		}
 #else
-#ifdef ANDROID
-		if (hid_device* dev = hid_libusb_wrap_sys_device(move_device->path, -1))
-#else
-		if (hid_device* dev = hid_open_path(move_device->path.c_str()))
-#endif
+		if (hid_device* dev = move_device->open())
 		{
 			if (hid_set_nonblocking(dev, 1) == -1)
 			{
 				move_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", move_device->path, hid_error(dev));
 			}
-			move_device->hidDevice = dev;
 		}
 #endif
 		else

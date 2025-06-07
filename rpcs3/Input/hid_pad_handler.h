@@ -56,6 +56,7 @@ enum CalibIndex
 class HidDevice : public PadDevice
 {
 public:
+	hid_device* open();
 	void close();
 
 	hid_device* hidDevice{nullptr};

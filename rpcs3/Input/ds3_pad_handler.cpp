@@ -513,17 +513,12 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 
 	if (dev->hidDevice == nullptr)
 	{
-#ifdef ANDROID
-		if (hid_device* hid_dev = hid_libusb_wrap_sys_device(dev->path, -1))
-#else
-		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
-#endif
+		if (hid_device* hid_dev = dev->open())
 		{
 			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
 				ds3_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(hid_dev));
 			}
-			dev->hidDevice = hid_dev;
 		}
 		else
 		{
