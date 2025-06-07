@@ -106,9 +106,9 @@ class ppu_module_manager final
 
 	static void register_module(ppu_static_module*);
 
-	static ppu_static_function& access_static_function(const char* _module, u32 fnid);
+	static ppu_static_function& access_static_function(const char* _module, u32 fnid, bool for_creation);
 
-	static ppu_static_variable& access_static_variable(const char* _module, u32 vnid);
+	static ppu_static_variable& access_static_variable(const char* _module, u32 vnid, bool for_creation);
 
 	// Global variable for each registered function
 	template <auto* Func>
@@ -125,7 +125,7 @@ public:
 	template <auto* Func>
 	static auto& register_static_function(const char* _module, const char* name, ppu_intrp_func_t func, u32 fnid)
 	{
-		auto& info = access_static_function(_module, fnid);
+		auto& info = access_static_function(_module, fnid, true);
 
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<decltype(Func), Func>(func);
@@ -142,6 +142,11 @@ public:
 		return *registered<Func>::info;
 	}
 
+	static auto& find_static_function(const char* _module, u32 fnid)
+	{
+		return access_static_function(_module, fnid, false);
+	}
+
 	template <auto* Var>
 	static auto& register_static_variable(const char* _module, const char* name, u32 vnid)
 	{
@@ -149,7 +154,7 @@ public:
 
 		static_assert(std::is_same_v<u32, typename gvar::addr_type>, "Static variable registration: vm::gvar<T> expected");
 
-		auto& info = access_static_variable(_module, vnid);
+		auto& info = access_static_variable(_module, vnid, true);
 
 		info.name  = name;
 		info.var   = &Var->raw();
@@ -312,6 +317,8 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<Func>().export_addr);
 	return func(ppu, args...);
 }
+
+u32 ppu_symbol_addr(std::string_view _module, std::string_view name) noexcept;
 
 #define BIND_FUNC_WITH_BLR(func, _module) BIND_FUNC(func, if (cpu_flag::again - ppu.state) ppu.cia = static_cast<u32>(ppu.lr) & ~3; else ppu.current_module = _module)
 
