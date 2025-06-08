@@ -319,3 +319,34 @@ jobs:
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
+          
+  FreeBSD_Build:
+      # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    name: RPCS3 FreeBSD 
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_DIR: /tmp/ccache_dir
+      CI_HAS_ARTIFACTS: true
+      ARTDIR: "/root/artifacts"
+      RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
+      QT_VER: '6.9.1'
+      QT_VER_MAIN: '6'
+      LLVM_COMPILER_VER: '19'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+      - name: FreeBSD build
+        id: root
+        uses: vmactions/freebsd-vm@v1
+        with:
+          envs: 'QT_VER_MAIN LLVM_COMPILER_VER'
+          usesh: true
+          prepare: |
+            pkg install -y "llvm$LLVM_COMPILER_VER"
+            pkg install -y git ccache cmake ninja "qt$QT_VER_MAIN-multimedia" "qt$QT_VER_MAIN-svg" glew openal-soft ffmpeg
+            pkg install -y pkgconf alsa-lib pulseaudio sdl3 evdev-proto vulkan-headers vulkan-loader
+      
+          run: .ci/build-freebsd.sh
