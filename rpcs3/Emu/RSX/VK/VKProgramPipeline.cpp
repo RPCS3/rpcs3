@@ -8,7 +8,7 @@
 
 namespace vk
 {
-	extern vk::render_device* get_current_renderer();
+	extern const vk::render_device* get_current_renderer();
 
 	namespace glsl
 	{
@@ -331,8 +331,41 @@ namespace vk
 
 		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type)
 		{
+			if (m_descriptor_slots[binding_point].matches(buffer_descriptor))
+			{
+				return;
+			}
+
+			next_descriptor_set();
 			m_descriptor_set.push(buffer_descriptor, type, binding_point);
 			m_descriptors_dirty[binding_point] = false;
+		}
+
+		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 binding_point)
+		{
+			// FIXME: Unoptimized...
+			bool match = true;
+			for (int i = 0; i < count; ++i)
+			{
+				if (!m_descriptor_slots[binding_point + i].matches(image_descriptors[i]))
+				{
+					match = false;
+					break;
+				}
+			}
+
+			if (match)
+			{
+				return;
+			}
+
+			next_descriptor_set();
+			m_descriptor_set.push(image_descriptors, static_cast<u32>(count), type, binding_point);
+
+			for (int i = 0; i < count; ++i)
+			{
+				m_descriptors_dirty[binding_point] = false;
+			}
 		}
 
 		VkDescriptorSet program::allocate_descriptor_set()
