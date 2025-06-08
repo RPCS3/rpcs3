@@ -35,6 +35,7 @@ namespace vm
 
 	// Update reservation status
 	void reservation_update(u32 addr);
+	std::pair<bool, u64> try_reservation_update(u32 addr);
 
 	struct reservation_waiter_t
 	{
