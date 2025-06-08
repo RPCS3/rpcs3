@@ -344,5 +344,4 @@ jobs:
         with:
           envs: 'QT_VER_MAIN LLVM_COMPILER_VER'
           usesh: true
-          prepare: .ci/install-freebsd.sh     
-          run: .ci/build-freebsd.sh
+          run: .ci/install-freebsd.sh && .ci/build-freebsd.sh    
