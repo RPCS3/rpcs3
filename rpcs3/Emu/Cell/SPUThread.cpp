@@ -4047,6 +4047,22 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 		auto& res = *utils::bless<atomic_t<u128>>(vm::g_reservations + (addr & 0xff80) / 2);
 
+		if (std::memcmp(static_cast<const u8*>(to_write), &sdata, 16) == 0 && std::memcmp(static_cast<const u8*>(to_write) + 64, &sdata[64], 16) == 0)
+		{
+			const auto& write_data = *static_cast<const spu_rdata_t*>(to_write);
+			const u64 at_read_time = vm::reservation_acquire(addr);
+
+			if (!(at_read_time & 127))
+			{
+				if (cmp_rdata(sdata, write_data) && at_read_time ==  vm::reservation_acquire(addr) && cmp_rdata(sdata, write_data))
+				{
+					// Write of the same data (verified atomically)
+					vm::try_reservation_update(addr);
+					return;
+				}
+			}
+		}
+
 		for (u64 j = 0;; j++)
 		{
 			auto [_oldd, _ok] = res.fetch_op([&](u128& r)
