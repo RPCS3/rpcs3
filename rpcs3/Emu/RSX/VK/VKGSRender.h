@@ -105,11 +105,6 @@ private:
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 
 	std::unique_ptr<vk::buffer> m_host_object_data;
-
-	vk::descriptor_pool m_descriptor_pool;
-	VkDescriptorSetLayout m_descriptor_layouts = VK_NULL_HANDLE;
-	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
-
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
 	sizeu m_swapchain_dims{};
@@ -219,8 +214,6 @@ private:
 
 	void update_draw_state();
 	void check_present_status();
-
-	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
 	rsx::simple_array<u8> m_scratch_mem;

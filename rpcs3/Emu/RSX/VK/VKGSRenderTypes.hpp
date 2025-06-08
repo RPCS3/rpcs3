@@ -178,8 +178,6 @@ namespace vk
 		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
 		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
 
-		vk::descriptor_set descriptor_set;
-
 		rsx::flags32_t flags = 0;
 
 		u32 present_image = -1;
@@ -193,7 +191,6 @@ namespace vk
 		{
 			present_wait_semaphore = other.present_wait_semaphore;
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
-			descriptor_set.swap(other.descriptor_set);
 			flags = other.flags;
 			heap_snapshot = other.heap_snapshot;
 		}
