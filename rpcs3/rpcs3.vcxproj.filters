@@ -1815,6 +1815,9 @@
     <None Include="..\.ci\build-mac.sh">
       <Filter>CI</Filter>
     </None>
+    <None Include="..\.ci\build-windows-clang.sh">
+      <Filter>CI</Filter>
+    </None>
     <None Include="..\.ci\deploy-linux.sh">
       <Filter>CI</Filter>
     </None>
@@ -1831,6 +1834,9 @@
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\setup-windows.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\setup-windows-ci-vars.sh">
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\install-freebsd.sh">

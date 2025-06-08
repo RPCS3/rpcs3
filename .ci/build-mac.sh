@@ -118,9 +118,7 @@ export MACOSX_DEPLOYMENT_TARGET=14.0
 
 cd ..
 
-{   [ "$CI_HAS_ARTIFACTS" = "true" ];
-} && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
-
-if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
+# If it compiled succesfully let's deploy.
+if [ "$build_status" -eq 0 ]; then
     .ci/deploy-mac.sh
 fi

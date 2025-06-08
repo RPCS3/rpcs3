@@ -1,8 +1,6 @@
 #!/bin/sh -ex
 
-if [ -z "$CIRRUS_CI" ]; then
-   cd rpcs3 || exit 1
-fi
+cd rpcs3 || exit 1
 
 shellcheck .ci/*.sh
 
@@ -52,10 +50,6 @@ ninja; build_status=$?;
 cd ..
 
 # If it compiled succesfully let's deploy.
-# Azure and Cirrus publish PRs as artifacts only.
-{   [ "$CI_HAS_ARTIFACTS" = "true" ];
-} && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
-
-if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then
+if [ "$build_status" -eq 0 ]; then
     .ci/deploy-linux.sh "aarch64"
 fi
