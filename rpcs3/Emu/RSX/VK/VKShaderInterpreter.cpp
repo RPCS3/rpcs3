@@ -254,7 +254,7 @@ namespace vk
 		m_shader_cache[compiler_options].m_fs = std::move(fs);
 		return ret;
 	}
-
+/*
 	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
 	{
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
@@ -356,24 +356,16 @@ namespace vk
 		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
 		return { set_layout, result };
 	}
-
-	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
-	{
-		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
-		m_descriptor_pool.create(dev, m_descriptor_pool_sizes, max_draw_calls);
-	}
+*/
 
 	void shader_interpreter::init(const vk::render_device& dev)
 	{
 		m_device = dev;
-		std::tie(m_shared_descriptor_layout, m_shared_pipeline_layout) = create_layout(dev);
-		create_descriptor_pools(dev);
 	}
 
 	void shader_interpreter::destroy()
 	{
 		m_program_cache.clear();
-		m_descriptor_pool.destroy();
 
 		for (auto &fs : m_shader_cache)
 		{
@@ -382,18 +374,6 @@ namespace vk
 		}
 
 		m_shader_cache.clear();
-
-		if (m_shared_pipeline_layout)
-		{
-			vkDestroyPipelineLayout(m_device, m_shared_pipeline_layout, nullptr);
-			m_shared_pipeline_layout = VK_NULL_HANDLE;
-		}
-
-		if (m_shared_descriptor_layout)
-		{
-			vkDestroyDescriptorSetLayout(m_device, m_shared_descriptor_layout, nullptr);
-			m_shared_descriptor_layout = VK_NULL_HANDLE;
-		}
 	}
 
 	glsl::program* shader_interpreter::link(const vk::pipeline_props& properties, u64 compiler_opt)
@@ -478,28 +458,30 @@ namespace vk
 		info.stageCount = 2;
 		info.pStages = shader_stages;
 		info.pDynamicState = &dynamic_state_info;
-		info.layout = m_shared_pipeline_layout;
+		info.layout = VK_NULL_HANDLE;
 		info.basePipelineIndex = -1;
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = vk::get_renderpass(m_device, properties.renderpass_key);
 
 		auto compiler = vk::get_pipe_compiler();
-		auto program = compiler->compile(info, m_shared_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, m_vs_inputs, m_fs_inputs);
+		auto program = compiler->compile(info, vk::pipe_compiler::COMPILE_INLINE, {}, m_vs_inputs, m_fs_inputs);
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images)
 	{
-		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
-		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
+		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
+		u32 binding = m_current_interpreter->get_uniform_location(glsl::input_type_texture, "texture1D_array");
+		if (binding == umax)
 		{
-			set.push(texture_ptr, 16, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
+			return;
 		}
-	}
 
-	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
-	{
-		return m_descriptor_pool.allocate(m_shared_descriptor_layout);
+		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
+		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
+		{
+			m_current_interpreter->bind_uniform_array(texture_ptr, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16, binding);
+		}
 	}
 
 	glsl::program* shader_interpreter::get(

@@ -423,8 +423,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	std::vector<vk::physical_device>& gpus = m_instance.enumerate_devices();
 
-	//Actually confirm  that the loader found at least one compatible device
-	//This should not happen unless something is wrong with the driver setup on the target system
+	// Actually confirm  that the loader found at least one compatible device
+	// This should not happen unless something is wrong with the driver setup on the target system
 	if (gpus.empty())
 	{
 		//We can't throw in Emulator::Load, so we show error and return
@@ -482,19 +482,15 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		swapchain_unavailable = true;
 	}
 
-	//create command buffer...
+	// create command buffer...
 	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 	m_primary_cb_list.create(m_command_buffer_pool, vk::command_buffer::access_type_hint::flush_only);
 	m_current_command_buffer = m_primary_cb_list.get();
 	m_current_command_buffer->begin();
 
-	//Create secondary command_buffer for parallel operations
+	// Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
-
-	//Precalculated stuff
-	rsx::simple_array<VkDescriptorSetLayoutBinding> binding_layout;
-	std::tie(m_pipeline_layout, m_descriptor_layouts, binding_layout) = vk::get_common_pipeline_layout(*m_device);
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
@@ -507,11 +503,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	{
 		m_occlusion_query_manager->set_control_flags(VK_QUERY_CONTROL_PRECISE_BIT, 0);
 	}
-
-	// Generate frame contexts
-	const u32 max_draw_calls = m_device->get_descriptor_max_draw_calls();
-	const auto descriptor_type_sizes = vk::get_descriptor_pool_sizes(binding_layout);
-	m_descriptor_pool.create(*m_device, descriptor_type_sizes, max_draw_calls);
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -852,12 +843,6 @@ VKGSRender::~VKGSRender()
 
 	m_stencil_mirror_sampler.reset();
 
-	// Pipeline descriptors
-	m_descriptor_pool.destroy();
-
-	vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
-	vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layouts, nullptr);
-
 	// Queries
 	m_occlusion_query_manager.reset();
 	m_cond_render_buffer.reset();
@@ -1157,18 +1142,6 @@ void VKGSRender::check_present_status()
 	}
 }
 
-VkDescriptorSet VKGSRender::allocate_descriptor_set()
-{
-	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
-	{
-		return m_descriptor_pool.allocate(m_descriptor_layouts, VK_TRUE);
-	}
-	else
-	{
-		return m_shader_interpreter.allocate_descriptor_set();
-	}
-}
-
 void VKGSRender::set_viewport()
 {
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
@@ -1242,7 +1215,7 @@ void VKGSRender::on_init_thread()
 	if (!m_overlay_manager)
 	{
 		m_frame->hide();
-		m_shaders_cache->load(nullptr, m_pipeline_layout);
+		m_shaders_cache->load(nullptr);
 		m_frame->show();
 	}
 	else
@@ -1250,7 +1223,7 @@ void VKGSRender::on_init_thread()
 		rsx::shader_loading_dialog_native dlg(this);
 
 		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&dlg, m_pipeline_layout);
+		m_shaders_cache->load(&dlg);
 	}
 }
 
@@ -1870,7 +1843,7 @@ bool VKGSRender::load_program()
 			vertex_program,
 			fragment_program,
 			m_pipeline_properties,
-			shadermode != shader_mode::recompiler, true, m_pipeline_layout);
+			shadermode != shader_mode::recompiler, true);
 
 		vk::leave_uninterruptible();
 
@@ -2103,32 +2076,32 @@ void VKGSRender::load_program_env()
 
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 
-	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot, m_current_frame->descriptor_set);
-	m_program->bind_buffer(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot, m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot, m_current_frame->descriptor_set);
-	m_program->bind_uniform(m_raster_env_buffer_info, binding_table.rasterizer_env_bind_slot, m_current_frame->descriptor_set);
+	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot);
+	m_program->bind_buffer(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot);
+	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot);
+	m_program->bind_uniform(m_raster_env_buffer_info, binding_table.rasterizer_env_bind_slot);
 
 	if (!m_shader_interpreter.is_interpreter(m_program))
 	{
-		m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot);
 	}
 	else
 	{
-		m_program->bind_buffer(m_vertex_instructions_buffer_info, m_shader_interpreter.get_vertex_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
-		m_program->bind_buffer(m_fragment_instructions_buffer_info, m_shader_interpreter.get_fragment_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+		m_program->bind_buffer(m_vertex_instructions_buffer_info, m_shader_interpreter.get_vertex_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		m_program->bind_buffer(m_fragment_instructions_buffer_info, m_shader_interpreter.get_fragment_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 	}
 
 	if (vk::emulate_conditional_rendering())
 	{
 		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
-		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 	}
 
 	if (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
 	{
-		m_program->bind_buffer(m_instancing_indirection_buffer_info, binding_table.instancing_lookup_table_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
-		m_program->bind_buffer(m_instancing_constants_array_buffer_info, binding_table.instancing_constants_buffer_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+		m_program->bind_buffer(m_instancing_indirection_buffer_info, binding_table.instancing_lookup_table_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		m_program->bind_buffer(m_instancing_constants_array_buffer_info, binding_table.instancing_constants_buffer_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 	}
 
 	// Clear flags
@@ -2215,7 +2188,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,
-		m_pipeline_layout,
+		m_program->layout(),
 		VK_SHADER_STAGE_VERTEX_BIT,
 		0,
 		data_length,

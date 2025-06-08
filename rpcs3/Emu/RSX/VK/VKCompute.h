@@ -19,12 +19,6 @@ namespace vk
 		std::unique_ptr<vk::glsl::program> m_program;
 		std::unique_ptr<vk::buffer> m_param_buffer;
 
-		vk::descriptor_pool m_descriptor_pool;
-		descriptor_set m_descriptor_set;
-		VkDescriptorSetLayout m_descriptor_layout = nullptr;
-		VkPipelineLayout m_pipeline_layout = nullptr;
-		u32 m_used_descriptors = 0;
-
 		bool initialized = false;
 		bool unroll_loops = true;
 		bool use_push_constants = false;
@@ -37,15 +31,11 @@ namespace vk
 		compute_task() = default;
 		virtual ~compute_task() { destroy(); }
 
-		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout();
-
-		void init_descriptors();
-
 		void create();
 		void destroy();
 
+		virtual std::vector<glsl::program_input> get_inputs();
 		virtual void bind_resources() {}
-		virtual void declare_inputs() {}
 
 		void load_program(const vk::command_buffer& cmd);
 
@@ -354,7 +344,7 @@ namespace vk
 
 		void bind_resources() override
 		{
-			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
@@ -455,13 +445,13 @@ namespace vk
 
 		void bind_resources() override
 		{
-			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
@@ -584,13 +574,13 @@ namespace vk
 		void bind_resources() override
 		{
 			const auto op = static_cast<int>(Op);
-			m_program->bind_buffer({ src_buffer->value, in_offset, in_block_length }, 0 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, out_block_length }, 1 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ src_buffer->value, in_offset, in_block_length }, 0 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+			m_program->bind_buffer({ dst_buffer->value, out_offset, out_block_length }, 1 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
 		}
 
 		void run(const vk::command_buffer& cmd, const RSX_detiler_config& config)
