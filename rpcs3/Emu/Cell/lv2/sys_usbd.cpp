@@ -285,8 +285,10 @@ private:
 
 	libusb_context* ctx = nullptr;
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 	libusb_hotplug_callback_handle callback_handle {};
+#endif
 #endif
 
 	bool hotplug_supported = false;
@@ -302,12 +304,14 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device * /*dev*/, libusb_hotplug_event event, void * /*user_data*/)
 {
 	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED);
 	return 0;
 }
+#endif
 #endif
 
 #if LIBUSB_API_VERSION >= 0x0100010A
@@ -597,9 +601,11 @@ usb_handler_thread::~usb_handler_thread()
 			libusb_free_transfer(transfers[index].transfer);
 	}
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 	if (ctx && hotplug_supported)
 		libusb_hotplug_deregister_callback(ctx, callback_handle);
+#endif
 #endif
 
 	if (ctx)
