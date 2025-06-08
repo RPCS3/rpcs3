@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release|x64">
@@ -2118,7 +2118,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\.cirrus.yml" />
     <None Include="..\.ci\build-freebsd.sh" />
     <None Include="..\.ci\build-linux-aarch64.sh" />
     <None Include="..\.ci\build-linux.sh" />
@@ -2130,7 +2129,6 @@
     <None Include="..\.ci\deploy-mac.sh" />
     <None Include="..\.ci\deploy-windows.sh" />
     <None Include="..\.ci\docker.env" />
-    <None Include="..\.ci\export-cirrus-vars.sh" />
     <None Include="..\.ci\get_keys-windows.sh" />
     <None Include="..\.ci\github-upload.sh" />
     <None Include="..\.ci\install-freebsd.sh" />
