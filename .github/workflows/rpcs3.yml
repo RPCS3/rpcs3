@@ -49,7 +49,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
-      CI_HAS_ARTIFACTS: true
       DEPLOY_APPIMAGE: true
       APPDIR: "/rpcs3/build/appdir"
       ARTDIR: "/root/artifacts"
@@ -104,7 +103,7 @@ jobs:
           COMM_HASH=$(git rev-parse --short=8 HEAD)
           export AVVER="${COMM_TAG}-${COMM_COUNT}"
           .ci/github-upload.sh
-      
+
       - name: Save build Ccache
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
@@ -131,7 +130,6 @@ jobs:
     runs-on: macos-14
     env:
       CCACHE_DIR: /tmp/ccache_dir
-      CI_HAS_ARTIFACTS: true
       QT_VER: '6.7.3'
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '19'
@@ -263,7 +261,9 @@ jobs:
           restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-
 
       - name: Download and unpack dependencies
-        run: .ci/setup-windows.sh
+        run: |
+          .ci/setup-windows.sh
+          .ci/setup-windows-ci-vars.sh win64 msvc
 
       - name: Export Variables
         run: |
@@ -306,7 +306,7 @@ jobs:
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: .ci/github-upload.sh
-      
+
       - name: Save Build Ccache
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
@@ -320,7 +320,84 @@ jobs:
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
-          
+
+  Windows_Build_Clang:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    name: RPCS3 Windows Clang
+    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - msys2: clang64
+            compiler: clang
+            arch: win64
+    env:
+      CCACHE_DIR: 'C:\ccache'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Setup msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msys2 }}
+          update: true
+          cache: true
+          install: |
+            mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-ccache
+            mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-lld
+            mingw-w64-clang-x86_64-ninja
+            mingw-w64-clang-x86_64-llvm
+            mingw-w64-clang-x86_64-ffmpeg
+            mingw-w64-clang-x86_64-opencv
+            mingw-w64-clang-x86_64-glew
+            mingw-w64-clang-x86_64-vulkan
+            mingw-w64-clang-x86_64-gtest
+            mingw-w64-clang-x86_64-qt6-base
+            mingw-w64-clang-x86_64-qt6-declarative
+            mingw-w64-clang-x86_64-qt6-multimedia
+            mingw-w64-clang-x86_64-qt6-svg
+            base-devel
+            curl
+            git
+            p7zip
+
+      - name: Restore build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: Build RPCS3
+        shell: msys2 {0}
+        run: |
+          export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
+          echo "CCACHE_DIR=$CCACHE_DIR"
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/build-windows-clang.sh
+
+      - name: Save build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+          if-no-files-found: error
+
   FreeBSD_Build:
       # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
@@ -335,7 +412,7 @@ jobs:
         uses: actions/checkout@main
         with:
           fetch-depth: 0
-          
+
       - name: Restore Build Ccache
         uses: actions/cache/restore@main
         id: restore-build-ccache
@@ -343,7 +420,7 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: FreeBSD-ccache-${{github.run_id}}
           restore-keys: FreeBSD-ccache-
-        
+
       - name: FreeBSD build
         id: root
         uses: vmactions/freebsd-vm@v1
@@ -357,4 +434,4 @@ jobs:
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }} 
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}

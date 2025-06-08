@@ -110,6 +110,7 @@ namespace utils
 		return { true, sz };
 	};
 
+#if !defined(ARCH_X64)
 	// Alternative way to read OS version using the registry.
 	static std::string get_fallback_windows_version()
 	{
@@ -151,6 +152,7 @@ namespace utils
 
 		return fmt::format("Operating system: %s, Version %s", product_name, version_id);
 	}
+#endif
 #endif
 }
 

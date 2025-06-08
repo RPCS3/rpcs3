@@ -1,36 +1,26 @@
 #!/bin/sh -ex
 
-cd rpcs3 || exit 1
-
-shellcheck .ci/*.sh
-
 git config --global --add safe.directory '*'
 
-# Pull all the submodules except llvm, opencv, sdl and curl
+# Pull all the submodules except some
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/libsdl-org/ && !/curl/ { print $3 }' .gitmodules)
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/ffmpeg/ && !/curl/ && !/FAudio/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
-if [ "$COMPILER" = "gcc" ]; then
-    # These are set in the dockerfile
-    export CC="${GCC_BINARY}"
-    export CXX="${GXX_BINARY}"
-    export LINKER=gold
-    # We need to set the following variables for LTO to link properly
-    export AR=/usr/bin/gcc-ar-"$GCCVER"
-    export RANLIB=/usr/bin/gcc-ranlib-"$GCCVER"
-    export CFLAGS="-fuse-linker-plugin"
-else
-    export CC="${CLANG_BINARY}"
-    export CXX="${CLANGXX_BINARY}"
-    export LINKER=lld
-    export AR=/usr/bin/llvm-ar-"$LLVMVER"
-    export RANLIB=/usr/bin/llvm-ranlib-"$LLVMVER"
-fi
-
+export CC="clang"
+export CXX="clang++"
+export LINKER=lld
 export LINKER_FLAG="-fuse-ld=${LINKER}"
+
+if [ -n "$LLVMVER" ]; then
+  export AR="llvm-ar-$LLVMVER"
+  export RANLIB="llvm-ranlib-$LLVMVER"
+else
+  export AR="llvm-ar"
+  export RANLIB="llvm-ranlib"
+fi
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
@@ -44,16 +34,19 @@ cmake ..                                               \
     -DCMAKE_AR="$AR"                                   \
     -DCMAKE_RANLIB="$RANLIB"                           \
     -DUSE_SYSTEM_CURL=ON                               \
+    -DUSE_FAUDIO=OFF                                   \
     -DUSE_SDL=ON                                       \
-    -DUSE_SYSTEM_SDL=ON                                \
-    -DUSE_SYSTEM_FFMPEG=OFF                            \
+    -DUSE_SYSTEM_SDL=OFF                               \
+    -DUSE_SYSTEM_FFMPEG=ON                             \
     -DUSE_SYSTEM_OPENCV=ON                             \
+    -DUSE_SYSTEM_OPENAL=OFF                            \
     -DUSE_DISCORD_RPC=ON                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
-    -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
+    -DWITH_LLVM=ON                                     \
+    -DLLVM_DIR=/clang64/lib/cmake/llvm                 \
     -DSTATIC_LINK_LLVM=ON                              \
-    -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}"            \
-    -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}"              \
+    -DBUILD_RPCS3_TESTS=OFF                            \
+    -DRUN_RPCS3_TESTS=OFF                              \
     -G Ninja
 
 ninja; build_status=$?;
@@ -62,5 +55,5 @@ cd ..
 
 # If it compiled succesfully let's deploy.
 if [ "$build_status" -eq 0 ]; then
-    .ci/deploy-linux.sh "x86_64"
+    .ci/deploy-windows-clang.sh "x86_64"
 fi

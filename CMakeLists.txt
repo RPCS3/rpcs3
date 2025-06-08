@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.28)
 
+find_program(CCACHE_PATH ccache HINTS ENV PATH)
+if(CCACHE_PATH)
+  message(STATUS "Using ccache: ${CCACHE_PATH}")
+  set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PATH}")
+  set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PATH}")
+endif()
+
 project(rpcs3 LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -107,11 +114,6 @@ endif()
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
-endif()
-
-find_program(CCACHE_FOUND ccache)
-if(CCACHE_FOUND)
-    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
 endif()
 
 if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
