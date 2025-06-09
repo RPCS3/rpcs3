@@ -305,8 +305,27 @@ void pad_thread::apply_copilots()
 			continue;
 		}
 
-		pad->m_buttons_external = pad->m_buttons;
-		pad->m_sticks_external = pad->m_sticks;
+		pad->m_buttons_external.resize(pad->m_buttons.size());
+
+		for (usz i = 0; i < pad->m_buttons.size(); i++)
+		{
+			const Button& src = pad->m_buttons[i];
+			Button& dst = pad->m_buttons_external[i];
+
+			dst.m_offset = src.m_offset;
+			dst.m_outKeyCode = src.m_outKeyCode;
+			dst.m_value = src.m_value;
+			dst.m_pressed = src.m_pressed;
+		}
+
+		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		{
+			const AnalogStick& src = pad->m_sticks[i];
+			AnalogStick& dst = pad->m_sticks_external[i];
+
+			dst.m_offset = src.m_offset;
+			dst.m_value = src.m_value;
+		}
 
 		if (pad->copilots.empty() || pad->is_copilot())
 		{
