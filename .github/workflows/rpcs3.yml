@@ -326,7 +326,7 @@ jobs:
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
     env:
-      CCACHE_DIR: /tmp/ccache_dir
+      CCACHE_DIR: ${{ github.workspace }}/ccache
       CI_HAS_ARTIFACTS: true
       ARTDIR: "/root/artifacts"
       RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
@@ -338,10 +338,26 @@ jobs:
         uses: actions/checkout@main
         with:
           fetch-depth: 0
+          
+      - name: Restore Build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: FreeBSD-ccache-${{github.run_id}}
+          restore-keys: FreeBSD-ccache-
+        
       - name: FreeBSD build
         id: root
         uses: vmactions/freebsd-vm@v1
         with:
-          envs: 'QT_VER_MAIN LLVM_COMPILER_VER'
+          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR'
           usesh: true
-          run: .ci/install-freebsd.sh && .ci/build-freebsd.sh    
+          run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
+
+      - name: Save Build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }} 
