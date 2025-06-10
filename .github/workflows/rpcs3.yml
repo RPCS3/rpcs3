@@ -327,10 +327,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
-      CI_HAS_ARTIFACTS: true
-      ARTDIR: "/root/artifacts"
-      RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
-      QT_VER: '6.9.1'
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '19'
     steps:
