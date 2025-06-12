@@ -1,0 +1,72 @@
+name: Build LLVM
+
+defaults:
+  run:
+    shell: bash
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}/artifacts/
+
+jobs:
+  Windows_Build:
+    if: github.event_name == 'workflow_dispatch'
+    name: LLVM Windows (MSVC)
+    runs-on: windows-2025
+    env:
+      COMPILER: msvc
+      CCACHE_SHA: '1f39f3ad5aae3fe915e99ad1302633bc8f6718e58fa7c0de2b0ba7e080f0f08c'
+      CCACHE_BIN_DIR: 'C:\ccache_bin'
+      CCACHE_DIR: 'C:\ccache'
+      CCACHE_INODECACHE: 'true'
+      CCACHE_SLOPPINESS: 'time_macros'
+      DEPS_CACHE_DIR: ./dependency_cache
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Restore Dependencies Cache
+        uses: actions/cache/restore@main
+        id: restore-dependencies-cache
+        with:
+          path: ${{ env.DEPS_CACHE_DIR }}
+          key: "${{ runner.os }}-${{ env.COMPILER }}-llvm-${{ env.CCACHE_SHA }}"
+          restore-keys: ${{ runner.os }}-${{ env.COMPILER }}-llvm
+
+      - name: Download and unpack dependencies
+        run: .ci/setup-llvm.sh
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@main
+
+      - name: Compile LLVM
+        shell: pwsh
+        run: msbuild 3rdparty\llvm\llvm_build.vcxproj /p:SolutionDir="$(pwd)/" /p:Configuration=Release /v:minimal /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_only.targets"
+
+      - name: Pack up build artifacts
+        run: |
+          mkdir -p "${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}"
+          .ci/deploy-llvm.sh
+
+      - name: Upload artifacts (7z)
+        uses: actions/upload-artifact@main
+        with:
+          name: LLVM for Windows (MSVC)
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Save Dependencies Cache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.DEPS_CACHE_DIR }}
+          key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
