@@ -61,6 +61,9 @@ namespace vk
 			// Fill with 0 to avoid sending incomplete/unused variables to the GPU
 			memset(m_constants_buf, 0, sizeof(m_constants_buf));
 
+			// No ssbo usage
+			ssbo_count = 0;
+
 			// Enable push constants
 			use_push_constants = true;
 			push_constants_size = push_constants_size_;
@@ -115,6 +118,11 @@ namespace vk
 			m_output_image = dst->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
 			m_input_size = input_size;
 			m_output_size = output_size;
+
+			if (!m_program)
+			{
+				load_program(cmd);
+			}
 
 			configure(cmd);
 
