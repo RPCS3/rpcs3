@@ -117,11 +117,14 @@ namespace vk
 			VkShaderModule graphics_modules[2];
 			std::vector<glsl::program_input> inputs;
 
+			op_flags flags;
+
 			pipe_compiler_job(
 				const vk::pipeline_props& props,
 				VkShaderModule modules[2],
 				const std::vector<glsl::program_input>& vs_in,
 				const std::vector<glsl::program_input>& fs_in,
+				op_flags flags_,
 				callback_t func)
 			{
 				callback_func = func;
@@ -129,6 +132,7 @@ namespace vk
 				graphics_modules[0] = modules[0];
 				graphics_modules[1] = modules[1];
 				is_graphics_job = true;
+				flags = flags_;
 
 				inputs.reserve(vs_in.size() + fs_in.size());
 				inputs.insert(inputs.end(), vs_in.begin(), vs_in.end());
@@ -138,11 +142,16 @@ namespace vk
 			pipe_compiler_job(
 				const VkComputePipelineCreateInfo& props,
 				const std::vector<glsl::program_input>& cs_in,
+				op_flags flags_,
 				callback_t func)
 			{
 				callback_func = func;
 				compute_data = props;
 				is_graphics_job = false;
+				flags = flags_;
+
+				graphics_modules[0] = VK_NULL_HANDLE;
+				graphics_modules[1] = VK_NULL_HANDLE;
 
 				inputs = cs_in;
 			}
@@ -153,18 +162,21 @@ namespace vk
 
 		std::unique_ptr<glsl::program> int_compile_compute_pipe(
 			const VkComputePipelineCreateInfo& create_info,
-			const std::vector<glsl::program_input>& cs_inputs);
+			const std::vector<glsl::program_input>& cs_inputs,
+			op_flags flags);
 
 		std::unique_ptr<glsl::program> int_compile_graphics_pipe(
 			const VkGraphicsPipelineCreateInfo& create_info,
 			const std::vector<glsl::program_input>& vs_inputs,
-			const std::vector<glsl::program_input>& fs_inputs);
+			const std::vector<glsl::program_input>& fs_inputs,
+			op_flags flags);
 
 		std::unique_ptr<glsl::program> int_compile_graphics_pipe(
 			const vk::pipeline_props &create_info,
 			VkShaderModule modules[2],
 			const std::vector<glsl::program_input>& vs_inputs,
-			const std::vector<glsl::program_input>& fs_inputs);
+			const std::vector<glsl::program_input>& fs_inputs,
+			op_flags flags);
 	};
 
 	void initialize_pipe_compiler(int num_worker_threads = -1);
