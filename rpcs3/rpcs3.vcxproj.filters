@@ -1893,6 +1893,21 @@
     <None Include="..\.github\workflows\rpcs3.yml">
       <Filter>CI</Filter>
     </None>
+    <None Include="..\.ci\deploy-llvm.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\generate-qt-ts.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\setup-llvm.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.github\workflows\llvm.yml">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.github\workflows\qt-ts.yml">
+      <Filter>CI</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="rpcs3qt\CMakeLists.txt">
