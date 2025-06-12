@@ -435,7 +435,8 @@ namespace vk
 
 	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
-		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
+		if ((m_push_type_mask & ~m_update_after_bind_mask) ||
+			(m_pending_writes.size() >= max_cache_size))
 		{
 			flush();
 		}

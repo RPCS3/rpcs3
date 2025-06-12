@@ -76,7 +76,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 	OS <<
-		"layout(std140, set = 0, binding = " << vk_prog->binding_table.context_buffer_location << " ) uniform VertexContextBuffer\n"
+		"layout(std140, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform VertexContextBuffer\n"
 		"{\n"
 		"	mat4 scale_offset_mat;\n"
 		"	ivec4 user_clip_enabled[2];\n"
@@ -99,7 +99,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	if (m_device_props.emulate_conditional_rendering)
 	{
 		OS <<
-			"layout(std430, set = 0, binding = " << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
+			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
 			"{\n"
 			"	uint conditional_rendering_predicate;\n"
 			"};\n\n";
@@ -219,10 +219,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 				}
 			}
 
-			if (PT.type == "sampler2D" ||
-				PT.type == "samplerCube" ||
-				PT.type == "sampler1D" ||
-				PT.type == "sampler3D")
+			if (PT.type.starts_with("sampler"))
 			{
 				const int id = vk::get_texture_index(PI.name);
 				in.location = vk_prog->binding_table.vtex_location[id];
@@ -249,7 +246,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 					}
 				}
 
-				OS << "layout(set = 0, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
+				OS << "layout(set=0, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
 			}
 		}
 	}

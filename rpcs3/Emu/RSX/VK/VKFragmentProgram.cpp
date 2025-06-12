@@ -176,7 +176,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type.starts_with("sampler1D"))
+		if (!PT.type.starts_with("sampler"))
 		{
 			continue;
 		}
@@ -219,7 +219,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			);
 			inputs.push_back(in);
 
-			OS << "layout(set=0, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
+			OS << "layout(set=1, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
 
 			if (properties.redirected_sampler_mask & mask)
 			{
@@ -228,7 +228,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 				in.location = vk_prog->binding_table.ftex_stencil_location[id];
 				inputs.push_back(in);
 
-				OS << "layout(set=0, binding=" << in.location << ") uniform u" << samplerType << " " << in.name << ";\n";
+				OS << "layout(set=1, binding=" << in.location << ") uniform u" << samplerType << " " << in.name << ";\n";
 			}
 		}
 	}
@@ -236,7 +236,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type.starts_with("sampler1D"))
+		if (PT.type.starts_with("sampler"))
 		{
 			continue;
 		}
@@ -249,13 +249,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!constants_block.empty())
 	{
-		OS << "layout(std140, set = 1, binding = " << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << constants_block;
 		OS << "};\n\n";
 	}
 
-	OS << "layout(std140, set = 1, binding = " << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
 	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
@@ -267,12 +267,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float wpos_bias;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 1, binding = " << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 1, binding = " << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
 	OS << "{\n";
 	OS << "	uvec4 stipple_pattern[8];\n";
 	OS << "};\n\n";
@@ -484,10 +484,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
-			if (PT.type == "sampler1D" ||
-				PT.type == "sampler2D" ||
-				PT.type == "sampler3D" ||
-				PT.type == "samplerCube")
+			if (PT.type.starts_with("sampler"))
 				continue;
 
 			usz offset = atoi(PI.name.c_str() + 2);
