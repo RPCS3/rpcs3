@@ -31,6 +31,7 @@ namespace vk
 					::glsl::program_domain::glsl_compute_program,
 					"multisampled",
 					glsl::input_type_storage_texture,
+					0,
 					0
 				),
 
@@ -38,6 +39,7 @@ namespace vk
 					::glsl::program_domain::glsl_compute_program,
 					"resolve",
 					glsl::input_type_storage_texture,
+					0,
 					1
 				),
 			};
@@ -51,8 +53,8 @@ namespace vk
 		{
 			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
-			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, "multisampled", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, 0, 0);
+			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, 0, 1);
 		}
 
 		void run(const vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
@@ -116,6 +118,7 @@ namespace vk
 				::glsl::glsl_fragment_program,
 				"push_constants",
 				glsl::input_type_push_constant,
+				0,
 				umax,
 				glsl::push_constant_ref{ .size = 16 }
 			));

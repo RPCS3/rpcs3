@@ -63,21 +63,21 @@ namespace vk
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
 		{
 			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_uniform_buffer, 0);
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_uniform_buffer, 0, 0);
 			fs_inputs.push_back(input);
 		}
 
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
 			const std::string name = "fs" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, binding);
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
 			fs_inputs.push_back(input);
 		}
 
 		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
 		{
 			const std::string name = "sp" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, binding);
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
 			fs_inputs.push_back(input);
 		}
 
@@ -179,13 +179,14 @@ namespace vk
 
 		if (m_num_uniform_buffers > 0)
 		{
-			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0);
+			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, 0);
 		}
 
 		for (uint n = 0; n < src.size(); ++n)
 		{
 			VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
-			program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			const auto [set, location] = program->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "fs" + std::to_string(n));
+			program->bind_uniform(info, set, location);
 		}
 
 		program->bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -488,6 +489,7 @@ namespace vk
 				"push_constants",
 				glsl::input_type_push_constant,
 				0,
+				0,
 				glsl::push_constant_ref { .size = 68 }
 			)
 		);
@@ -502,6 +504,7 @@ namespace vk
 				::glsl::glsl_fragment_program,
 				"push_constants",
 				glsl::input_type_push_constant,
+				0,
 				0,
 				glsl::push_constant_ref {.offset = 68, .size = 12 }
 			)
@@ -715,6 +718,7 @@ namespace vk
 				"push_constants",
 				vk::glsl::input_type_push_constant,
 				0,
+				0,
 				glsl::push_constant_ref{ .size = 32 })
 		};
 	}
@@ -863,6 +867,7 @@ namespace vk
 				::glsl::glsl_fragment_program,
 				"push_constants",
 				vk::glsl::input_type_push_constant,
+				0,
 				0,
 				glsl::push_constant_ref{ .size = 16 }
 			)

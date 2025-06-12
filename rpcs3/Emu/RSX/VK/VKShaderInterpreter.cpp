@@ -471,7 +471,7 @@ namespace vk
 	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images)
 	{
 		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
-		u32 binding = m_current_interpreter->get_uniform_location(glsl::input_type_texture, "texture1D_array");
+		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "texture1D_array");
 		if (binding == umax)
 		{
 			return;
@@ -480,7 +480,7 @@ namespace vk
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			m_current_interpreter->bind_uniform_array(texture_ptr, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16, binding);
+			m_current_interpreter->bind_uniform_array(texture_ptr, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16, set, binding);
 		}
 	}
 

@@ -53,12 +53,15 @@ namespace vk
 	class pipe_compiler
 	{
 	public:
-		enum op_flags
+		enum op_flag_bits
 		{
 			COMPILE_DEFAULT = 0,
 			COMPILE_INLINE = 1,
-			COMPILE_DEFERRED = 2
+			COMPILE_DEFERRED = 2,
+			SEPARATE_SHADER_OBJECTS = 4
 		};
+
+		using op_flags = rsx::flags32_t;
 
 		using callback_t = std::function<void(std::unique_ptr<glsl::program>&)>;
 

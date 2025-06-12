@@ -94,8 +94,10 @@ namespace vk
 		void swap(descriptor_set& other);
 		descriptor_set& operator = (VkDescriptorSet set);
 
+		VkDescriptorSet value() const { return m_handle; }
+		operator bool() const { return m_handle != VK_NULL_HANDLE; }
+
 		VkDescriptorSet* ptr();
-		VkDescriptorSet value() const;
 		void push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
