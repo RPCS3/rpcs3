@@ -211,6 +211,11 @@ namespace vk
 				auto& sink = m_sets[0];
 				for (auto& set : m_sets)
 				{
+					if (&set == &sink)
+					{
+						continue;
+					}
+
 					for (auto& type_arr : set.m_inputs)
 					{
 						if (type_arr.empty())
@@ -279,6 +284,8 @@ namespace vk
 					return u.name == uniform_name;
 				});
 			}
+
+			return false;
 		}
 
 		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name)
@@ -441,8 +448,8 @@ namespace vk
 		{
 			if (!m_descriptor_pool)
 			{
-				create_descriptor_pool();
 				create_descriptor_set_layout();
+				create_descriptor_pool();
 			}
 
 			return m_descriptor_pool->allocate(m_descriptor_set_layout);
@@ -462,9 +469,6 @@ namespace vk
 			{
 				return;
 			}
-
-			auto old_set = m_descriptor_set.value();
-			auto new_set = allocate_descriptor_set();
 
 			auto push_descriptor_slot = [this](unsigned idx)
 			{
@@ -504,16 +508,18 @@ namespace vk
 
 				m_copy_cmds.push_back({
 					.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-					.srcSet = old_set,
+					.srcSet = m_previous_set,
 					.srcBinding = i,
-					.dstSet = new_set,
+					.dstSet = m_descriptor_set.value(),
 					.dstBinding = i,
 					.descriptorCount = 1
 				});
 			}
 
 			m_descriptor_set.push(m_copy_cmds); // Write previous state
-			m_descriptor_set = new_set;
+
+			m_previous_set = m_descriptor_set.value();
+			m_descriptor_set = allocate_descriptor_set();
 		}
 
 		void descriptor_table_t::create_descriptor_set_layout()

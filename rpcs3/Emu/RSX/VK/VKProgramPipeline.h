@@ -121,6 +121,7 @@ namespace vk
 			vk::descriptor_set m_descriptor_set{};
 			rsx::simple_array<VkDescriptorPoolSize> m_descriptor_pool_sizes;
 			rsx::simple_array<VkDescriptorType> m_descriptor_types;
+			VkDescriptorSet m_previous_set = VK_NULL_HANDLE;
 
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;

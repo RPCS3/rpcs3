@@ -2078,10 +2078,14 @@ void VKGSRender::load_program_env()
 	const auto& fs_binding_table = m_fragment_prog->binding_table;
 
 	m_program->bind_uniform(m_vertex_env_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.context_buffer_location);
-	m_program->bind_uniform(m_vertex_constants_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.cbuf_location);
 	m_program->bind_uniform(m_fragment_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.context_buffer_location);
 	m_program->bind_uniform(m_fragment_texture_params_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.tex_param_location);
 	m_program->bind_uniform(m_raster_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.polygon_stipple_params_location);
+
+	if (vs_binding_table.cbuf_location != umax)
+	{
+		m_program->bind_uniform(m_vertex_constants_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.cbuf_location);
+	}
 
 	if (m_shader_interpreter.is_interpreter(m_program))
 	{
