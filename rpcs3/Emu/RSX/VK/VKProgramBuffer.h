@@ -48,7 +48,9 @@ namespace vk
 				bool compile_async,
 				std::function<pipeline_type*(pipeline_storage_type&)> callback)
 		{
-			const auto compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
+			vk::pipe_compiler::op_flags compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
+			compiler_flags |= vk::pipe_compiler::SEPARATE_SHADER_OBJECTS;
+
 			auto compiler = vk::get_pipe_compiler();
 			auto result = compiler->compile(
 				pipelineProperties,

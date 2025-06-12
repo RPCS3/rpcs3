@@ -509,20 +509,20 @@ namespace vk
 				}
 
 				m_copy_cmds.push_back({
-					.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-					.srcSet = m_previous_set,
-					.srcBinding = i,
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.dstSet = m_descriptor_set.value(),
 					.dstBinding = i,
-					.descriptorCount = 1
+					.descriptorCount = 1,
+					.descriptorType = m_descriptor_types[i],
+					.pImageInfo = std::get_if<VkDescriptorImageInfo>(&m_descriptor_slots[i]),
+					.pBufferInfo = std::get_if<VkDescriptorBufferInfo>(&m_descriptor_slots[i]),
+					.pTexelBufferView = std::get_if<VkBufferView>(&m_descriptor_slots[i])
 				});
 
 				type_mask |= (1u << m_descriptor_types[i]);
 			}
 
 			m_descriptor_set.push(m_copy_cmds, type_mask); // Write previous state
-
-			m_previous_set = m_descriptor_set.value();
 			m_descriptor_set = allocate_descriptor_set();
 		}
 
