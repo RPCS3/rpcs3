@@ -2074,34 +2074,35 @@ void VKGSRender::load_program_env()
 		}
 	}
 
-	const auto& binding_table = m_device->get_pipeline_binding_table();
+	const auto& vs_binding_table = m_vertex_prog->binding_table;
+	const auto& fs_binding_table = m_fragment_prog->binding_table;
 
-	m_program->bind_uniform(m_vertex_env_buffer_info, binding_table.vertex_params_bind_slot);
-	m_program->bind_buffer(m_vertex_constants_buffer_info, binding_table.vertex_constant_buffers_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-	m_program->bind_uniform(m_fragment_env_buffer_info, binding_table.fragment_state_bind_slot);
-	m_program->bind_uniform(m_fragment_texture_params_buffer_info, binding_table.fragment_texture_params_bind_slot);
-	m_program->bind_uniform(m_raster_env_buffer_info, binding_table.rasterizer_env_bind_slot);
+	m_program->bind_uniform(m_vertex_env_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.context_buffer_location);
+	m_program->bind_uniform(m_vertex_constants_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.cbuf_location);
+	m_program->bind_uniform(m_fragment_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.context_buffer_location);
+	m_program->bind_uniform(m_fragment_texture_params_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.tex_param_location);
+	m_program->bind_uniform(m_raster_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.polygon_stipple_params_location);
 
-	if (!m_shader_interpreter.is_interpreter(m_program))
+	if (m_shader_interpreter.is_interpreter(m_program))
 	{
-		m_program->bind_uniform(m_fragment_constants_buffer_info, binding_table.fragment_constant_buffers_bind_slot);
+		m_program->bind_uniform(m_vertex_instructions_buffer_info, vk::glsl::binding_set_index_vertex, m_shader_interpreter.get_vertex_instruction_location());
+		m_program->bind_uniform(m_fragment_instructions_buffer_info, vk::glsl::binding_set_index_fragment, m_shader_interpreter.get_fragment_instruction_location());
 	}
-	else
+	else if (fs_binding_table.cbuf_location != umax)
 	{
-		m_program->bind_buffer(m_vertex_instructions_buffer_info, m_shader_interpreter.get_vertex_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-		m_program->bind_buffer(m_fragment_instructions_buffer_info, m_shader_interpreter.get_fragment_instruction_location(), VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		m_program->bind_uniform(m_fragment_constants_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.cbuf_location);
 	}
 
 	if (vk::emulate_conditional_rendering())
 	{
 		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
-		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		m_program->bind_uniform({ predicate, 0, 4 }, vk::glsl::binding_set_index_vertex, vs_binding_table.cr_pred_buffer_location);
 	}
 
 	if (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
 	{
-		m_program->bind_buffer(m_instancing_indirection_buffer_info, binding_table.instancing_lookup_table_bind_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-		m_program->bind_buffer(m_instancing_constants_array_buffer_info, binding_table.instancing_constants_buffer_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+		m_program->bind_uniform(m_instancing_indirection_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.instanced_lut_buffer_location);
+		m_program->bind_uniform(m_instancing_constants_array_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.instanced_cbuf_location);
 	}
 
 	// Clear flags

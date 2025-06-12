@@ -6,7 +6,6 @@
 #include "vkutils/device.h"
 #include "../Program/GLSLCommon.h"
 
-
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
@@ -27,14 +26,57 @@ std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
 
+void VKVertexDecompilerThread::prepareBindingTable()
+{
+	u32 location = 0;
+	vk_prog->binding_table.vertex_buffers_location = location;
+	location += 3; // Persistent verts, volatile and layout data
+
+	vk_prog->binding_table.context_buffer_location = location++;
+	if (m_device_props.emulate_conditional_rendering)
+	{
+		vk_prog->binding_table.cr_pred_buffer_location = location++;
+	}
+
+	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		const bool is_texture_type = PT.type.starts_with("sampler");
+
+		for (const ParamItem& PI : PT.items)
+		{
+			if (is_texture_type)
+			{
+				const int id = vk::get_texture_index(PI.name);
+				vk_prog->binding_table.vtex_location[id] = location++;
+				continue;
+			}
+
+			if (PI.name.starts_with("vc["))
+			{
+				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
+				{
+					vk_prog->binding_table.cbuf_location = location++;
+					continue;
+				}
+
+				vk_prog->binding_table.instanced_lut_buffer_location = location++;
+				vk_prog->binding_table.instanced_cbuf_location = location++;
+				continue;
+			}
+		}
+	}
+}
+
 void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
+	prepareBindingTable();
+
 	OS <<
 		"#version 450\n\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 	OS <<
-		"layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n"
+		"layout(std140, set = 0, binding = " << vk_prog->binding_table.context_buffer_location << " ) uniform VertexContextBuffer\n"
 		"{\n"
 		"	mat4 scale_offset_mat;\n"
 		"	ivec4 user_clip_enabled[2];\n"
@@ -45,13 +87,31 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	float z_far;\n"
 		"};\n\n";
 
+	vk::glsl::program_input context_input =
+	{
+		.domain = glsl::glsl_vertex_program,
+		.type = vk::glsl::input_type_uniform_buffer,
+		.location = vk_prog->binding_table.context_buffer_location,
+		.name = "VertexContextBuffer"
+	};
+	inputs.push_back(context_input);
+
 	if (m_device_props.emulate_conditional_rendering)
 	{
 		OS <<
-			"layout(std430, set = 0, binding = 8) readonly buffer EXT_Conditional_Rendering\n"
+			"layout(std430, set = 0, binding = " << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
 			"{\n"
 			"	uint conditional_rendering_predicate;\n"
 			"};\n\n";
+
+		vk::glsl::program_input predicate_input =
+		{
+			.domain = glsl::glsl_vertex_program,
+			.type = vk::glsl::input_type_storage_buffer,
+			.location = vk_prog->binding_table.cr_pred_buffer_location,
+			.name = "EXT_Conditional_Rendering"
+		};
+		inputs.push_back(predicate_input);
 	}
 
 	OS <<
@@ -63,52 +123,50 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint layout_ptr_offset;\n"
 		"	uint xform_constants_offset;\n";
 
+	u32 push_constants_size = 5 * sizeof(u32);
 	if (m_device_props.emulate_conditional_rendering)
 	{
+		push_constants_size += sizeof(u32);
 		OS << "	uint conditional_rendering_enabled;\n";
 	}
 
 	OS << "};\n\n";
 
-	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_params_bind_slot;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "VertexContextBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-	inputs.push_back(in);
+	vk::glsl::program_input push_constants =
+	{
+		.domain = glsl::glsl_vertex_program,
+		.type = vk::glsl::input_type_push_constant,
+		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = push_constants_size }
+	};
+	inputs.push_back(push_constants);
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
 {
-	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n";    // Data stream with persistent vertex data (cacheable)
-	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";      // Data stream with per-draw data (registers and immediate draw data)
-	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";       // Data stream defining vertex data layout
+	static const char* input_streams[] =
+	{
+		"persistent_input_stream",    // Data stream with persistent vertex data (cacheable)
+		"volatile_input_stream",      // Data stream with per-draw data (registers and immediate draw data)
+		"vertex_layout_stream"        // Data stream defining vertex data layout"
+	};
 
-	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_buffers_first_bind_slot;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "persistent_input_stream";
-	in.type = vk::glsl::input_type_texel_buffer;
-	this->inputs.push_back(in);
+	int location = vk_prog->binding_table.vertex_buffers_location;
+	for (const auto& stream : input_streams)
+	{
+		OS << "layout(set=0, binding=" << location << ") uniform usamplerBuffer " << stream << ";\n";
 
-	in.location = m_binding_table.vertex_buffers_first_bind_slot + 1;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "volatile_input_stream";
-	in.type = vk::glsl::input_type_texel_buffer;
-	this->inputs.push_back(in);
-
-	in.location = m_binding_table.vertex_buffers_first_bind_slot + 2;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "vertex_layout_stream";
-	in.type = vk::glsl::input_type_texel_buffer;
-	this->inputs.push_back(in);
+		vk::glsl::program_input in;
+		in.location = location++;
+		in.domain = glsl::glsl_vertex_program;
+		in.name = stream;
+		in.type = vk::glsl::input_type_texel_buffer;
+		this->inputs.push_back(in);
+	}
 }
 
 void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
 	vk::glsl::program_input in;
-	u32 location = m_binding_table.vertex_textures_first_bind_slot;
-
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -117,12 +175,12 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std430, set=0, binding=" << static_cast<int>(m_binding_table.vertex_constant_buffers_bind_slot) << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
 
-					in.location = m_binding_table.vertex_constant_buffers_bind_slot;
+					in.location = vk_prog->binding_table.cbuf_location;
 					in.domain = glsl::glsl_vertex_program;
 					in.name = "VertexConstantsBuffer";
 					in.type = vk::glsl::input_type_storage_buffer;
@@ -133,26 +191,26 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 				else
 				{
 					// 1. Bind indirection lookup buffer
-					OS << "layout(std430, set=0, binding=" << static_cast<int>(m_binding_table.instancing_lookup_table_bind_slot) << ") readonly buffer InstancingData\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_lut_buffer_location << ") readonly buffer InstancingData\n";
 					OS << "{\n";
 					OS << "	int constants_addressing_lookup[];\n";
 					OS << "};\n\n";
 
-					in.location = m_binding_table.instancing_lookup_table_bind_slot;
+					in.location = vk_prog->binding_table.instanced_lut_buffer_location;
 					in.domain = glsl::glsl_vertex_program;
 					in.name = "InstancingData";
 					in.type = vk::glsl::input_type_storage_buffer;
 					inputs.push_back(in);
 
 					// 2. Bind actual constants buffer
-					OS << "layout(std430, set=0, binding=" << static_cast<int>(m_binding_table.instancing_constants_buffer_slot) << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 instanced_constants_array[];\n";
 					OS << "};\n\n";
 
 					OS << "#define CONSTANTS_ARRAY_LENGTH " << (properties.has_indexed_constants ? 468 : ::size32(m_constant_ids)) << "\n\n";
 
-					in.location = m_binding_table.instancing_constants_buffer_slot;
+					in.location = vk_prog->binding_table.instanced_cbuf_location;
 					in.domain = glsl::glsl_vertex_program;
 					in.name = "VertexConstantsBuffer";
 					in.type = vk::glsl::input_type_storage_buffer;
@@ -166,7 +224,8 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 				PT.type == "sampler1D" ||
 				PT.type == "sampler3D")
 			{
-				in.location = location;
+				const int id = vk::get_texture_index(PI.name);
+				in.location = vk_prog->binding_table.vtex_location[id];
 				in.name = PI.name;
 				in.type = vk::glsl::input_type_texture;
 
@@ -190,7 +249,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 					}
 				}
 
-				OS << "layout(set = 0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
+				OS << "layout(set = 0, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
 			}
 		}
 	}
@@ -371,8 +430,6 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 void VKVertexDecompilerThread::Task()
 {
 	m_device_props.emulate_conditional_rendering = vk::emulate_conditional_rendering();
-	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
-
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }

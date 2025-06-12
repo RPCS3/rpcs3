@@ -14,6 +14,30 @@ namespace vk
 	{
 		using namespace ::glsl;
 
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfo& b)
+		{
+			const auto ptr = std::get_if<VkDescriptorImageInfo>(&a);
+			return !!ptr &&
+				ptr->imageView == b.imageView &&
+				ptr->sampler == b.sampler &&
+				ptr->imageLayout == b.imageLayout;
+		}
+
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfo& b)
+		{
+			const auto ptr = std::get_if<VkDescriptorBufferInfo>(&a);
+			return !!ptr &&
+				ptr->buffer == b.buffer &&
+				ptr->offset == b.offset &&
+				ptr->range == b.range;
+		}
+
+		bool operator == (const descriptor_slot_t& a, const VkBufferView& b)
+		{
+			const auto ptr = std::get_if<VkBufferView>(&a);
+			return !!ptr && *ptr == b;
+		}
+
 		VkDescriptorType to_descriptor_type(program_input_type type)
 		{
 			switch (type)
@@ -120,42 +144,24 @@ namespace vk
 
 		void program::init()
 		{
-			linked = false;
-
-			fs_texture_bindings.fill(~0u);
-			fs_texture_mirror_bindings.fill(~0u);
-			vs_texture_bindings.fill(~0u);
+			m_linked = false;
 		}
 
 		program::program(VkDevice dev, const VkGraphicsPipelineCreateInfo& create_info, const std::vector<program_input> &vertex_inputs, const std::vector<program_input>& fragment_inputs)
-			: m_device(dev)
+			: m_device(dev), m_info(create_info)
 		{
 			init();
 
 			load_uniforms(vertex_inputs);
 			load_uniforms(fragment_inputs);
-
-			create_pipeline_layout();
-			ensure(m_pipeline_layout);
-
-			auto _create_info = create_info;
-			_create_info.layout = m_pipeline_layout;
-			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &create_info, nullptr, &m_pipeline));
 		}
 
 		program::program(VkDevice dev, const VkComputePipelineCreateInfo& create_info, const std::vector<program_input>& compute_inputs)
-			: m_device(dev)
+			: m_device(dev), m_info(create_info)
 		{
 			init();
 
 			load_uniforms(compute_inputs);
-
-			create_pipeline_layout();
-			ensure(m_pipeline_layout);
-
-			auto _create_info = create_info;
-			_create_info.layout = m_pipeline_layout;
-			CHECK_RESULT(vkCreateComputePipelines(dev, nullptr, 1, &create_info, nullptr, &m_pipeline));
 		}
 
 		program::~program()
@@ -165,257 +171,352 @@ namespace vk
 			if (m_pipeline_layout)
 			{
 				vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
-				vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
-				vk::get_resource_manager()->dispose(m_descriptor_pool);
+
+				for (auto& set : m_sets)
+				{
+					set.destroy();
+				}
 			}
 		}
 
 		program& program::load_uniforms(const std::vector<program_input>& inputs)
 		{
-			ensure(!linked); // "Cannot change uniforms in already linked program!"
+			ensure(!m_linked); // "Cannot change uniforms in already linked program!"
 
 			for (auto &item : inputs)
 			{
-				uniforms[item.type].push_back(item);
+				ensure(item.set < binding_set_index_max_enum);                         // Ensure we have a valid set id
+				ensure(item.location < 128u || item.type == input_type_push_constant); // Arbitrary limit but useful to catch possibly uninitialized values
+				m_sets[item.set].m_inputs[item.type].push_back(item);
 			}
 
 			return *this;
 		}
 
-		program& program::link()
+		program& program::link(bool separate_objects)
 		{
-			// Preprocess texture bindings
-			// Link step is only useful for rasterizer programs, compute programs do not need this
-			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
-			{
-				if (const auto name_start = uniform.name.find("tex"); name_start != umax)
-				{
-					const auto name_end = uniform.name.find("_stencil");
-					const auto index_start = name_start + 3;  // Skip 'tex' part
-					const auto index_length = (name_end != umax) ? name_end - index_start : name_end;
-					const auto index_part = uniform.name.substr(index_start, index_length);
-					const auto index = std::stoi(index_part);
+			auto p_graphics_info = std::get_if<VkGraphicsPipelineCreateInfo>(&m_info);
+			auto p_compute_info = !p_graphics_info ? std::get_if<VkComputePipelineCreateInfo>(&m_info) : nullptr;
+			const bool is_graphics_pipe = p_graphics_info != nullptr;
 
-					if (name_start == 0)
+			if (!is_graphics_pipe) [[ likely ]]
+			{
+				// We only support compute and graphics, so disable this for compute
+				separate_objects = false;
+			}
+
+			if (!separate_objects)
+			{
+				// Collapse all sets into set 0 if validation passed
+				auto& sink = m_sets[0];
+				for (auto& set : m_sets)
+				{
+					for (auto& type_arr : set.m_inputs)
 					{
-						// Fragment texture (tex...)
-						if (name_end == umax)
+						if (type_arr.empty())
 						{
-							// Normal texture
-							fs_texture_bindings[index] = uniform.location;
+							continue;
 						}
-						else
-						{
-							// Stencil mirror
-							fs_texture_mirror_bindings[index] = uniform.location;
-						}
+
+						auto type = type_arr.front().type;
+						auto& dst = sink.m_inputs[type];
+						dst.insert(dst.end(), type_arr.begin(), type_arr.end());
+
+						// Clear
+						type_arr.clear();
 					}
-					else
+				}
+
+				sink.validate();
+				sink.init(m_device);
+			}
+			else
+			{
+				for (auto& set : m_sets)
+				{
+					for (auto& type_arr : set.m_inputs)
 					{
-						// Vertex texture (vtex...)
-						vs_texture_bindings[index] = uniform.location;
+						if (type_arr.empty())
+						{
+							continue;
+						}
+
+						// Real set
+						set.validate();
+						set.init(m_device);
+						break;
 					}
 				}
 			}
 
-			linked = true;
+			create_pipeline_layout();
+			ensure(m_pipeline_layout);
+
+			if (is_graphics_pipe)
+			{
+				VkGraphicsPipelineCreateInfo create_info = *p_graphics_info;
+				create_info.layout = m_pipeline_layout;
+				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+			}
+			else
+			{
+				VkComputePipelineCreateInfo create_info = *p_compute_info;
+				create_info.layout = m_pipeline_layout;
+				CHECK_RESULT(vkCreateComputePipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+			}
+
+			m_linked = true;
 			return *this;
 		}
 
 		bool program::has_uniform(program_input_type type, const std::string& uniform_name)
 		{
-			const auto& uniform = uniforms[type];
-			return std::any_of(uniform.cbegin(), uniform.cend(), [&uniform_name](const auto& u)
+			for (auto& set : m_sets)
 			{
-				return u.name == uniform_name;
-			});
-		}
-
-		u32 program::get_uniform_location(program_input_type type, const std::string& uniform_name)
-		{
-			const auto& uniform = uniforms[type];
-			const auto result = std::find_if(uniform.cbegin(), uniform.cend(), [&uniform_name](const auto& u)
-			{
-				return u.name == uniform_name;
-			});
-
-			if (result == uniform.end())
-			{
-				return { umax };
-			}
-
-			return result->location;
-		}
-
-		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorType type)
-		{
-			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
-			{
-				if (uniform.name == uniform_name)
+				const auto& uniform = set.m_inputs[type];
+				return std::any_of(uniform.cbegin(), uniform.cend(), [&uniform_name](const auto& u)
 				{
-					if (m_descriptor_slots[uniform.location].matches(image_descriptor))
-					{
-						return;
-					}
+					return u.name == uniform_name;
+				});
+			}
+		}
 
-					next_descriptor_set();
-					m_descriptor_set.push(image_descriptor, type, uniform.location);
-					m_descriptors_dirty[uniform.location] = false;
-					return;
+		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name)
+		{
+			for (unsigned i = 0; i < ::size32(m_sets); ++i)
+			{
+				const auto& type_arr = m_sets[i].m_inputs[type];
+				const auto result = std::find_if(type_arr.cbegin(), type_arr.cend(), [&](const auto& u)
+				{
+					return u.domain == domain && u.name == uniform_name;
+				});
+
+				if (result != type_arr.end())
+				{
+					return { i, result->location };
 				}
 			}
 
-			rsx_log.notice("texture not found in program: %s", uniform_name.c_str());
+			return { umax, umax };
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo & image_descriptor, int texture_unit, ::glsl::program_domain domain, bool is_stencil_mirror)
+		void program::bind_uniform(const VkDescriptorImageInfo& image_descriptor, u32 set_id, u32 binding_point)
 		{
-			ensure(domain != ::glsl::program_domain::glsl_compute_program);
-
-			u32 binding;
-			if (domain == ::glsl::program_domain::glsl_fragment_program)
-			{
-				binding = (is_stencil_mirror) ? fs_texture_mirror_bindings[texture_unit] : fs_texture_bindings[texture_unit];
-			}
-			else
-			{
-				binding = vs_texture_bindings[texture_unit];
-			}
-
-			if (binding == ~0u) [[ unlikely ]]
-			{
-				rsx_log.notice("texture not found in program: %stex%u", (domain == ::glsl::program_domain::glsl_vertex_program) ? "v" : "", texture_unit);
-				return;
-			}
-
-			if (m_descriptor_slots[binding].matches(image_descriptor))
+			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptor)
 			{
 				return;
 			}
 
-			next_descriptor_set();
-			m_descriptor_set.push(image_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
-			m_descriptors_dirty[binding] = false;
+			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptor);
 		}
 
-		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 set_id, u32 binding_point)
 		{
-			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-		}
-
-		void program::bind_uniform(const VkBufferView &buffer_view, u32 binding_point)
-		{
-			if (m_descriptor_slots[binding_point].matches(buffer_view))
+			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_descriptor)
 			{
 				return;
 			}
 
-			next_descriptor_set();
-			m_descriptor_set.push(buffer_view, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, binding_point);
-			m_descriptors_dirty[binding_point] = false;
+			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_descriptor);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name)
+		void program::bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point)
 		{
-			for (const auto &uniform : uniforms[type])
-			{
-				if (uniform.name == binding_name)
-				{
-					bind_uniform(buffer_view, uniform.location);
-					return;
-				}
-			}
-
-			rsx_log.notice("vertex buffer not found in program: %s", binding_name.c_str());
-		}
-
-		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type)
-		{
-			if (m_descriptor_slots[binding_point].matches(buffer_descriptor))
+			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_view)
 			{
 				return;
 			}
 
-			next_descriptor_set();
-			m_descriptor_set.push(buffer_descriptor, type, binding_point);
-			m_descriptors_dirty[binding_point] = false;
+			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_view);
 		}
 
-		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 binding_point)
+		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 set_id, u32 binding_point)
 		{
-			// FIXME: Unoptimized...
-			bool match = true;
+			auto& set = m_sets[set_id];
 			for (int i = 0; i < count; ++i)
 			{
-				if (!m_descriptor_slots[binding_point + i].matches(image_descriptors[i]))
+				if (set.m_descriptor_slots[binding_point + i] != image_descriptors[i])
 				{
-					match = false;
+					set.notify_descriptor_slot_updated(binding_point + i, image_descriptors[i]);
+				}
+			}
+		}
+
+		void program::create_pipeline_layout()
+		{
+			ensure(!m_linked);
+			ensure(m_pipeline_layout == VK_NULL_HANDLE);
+
+			rsx::simple_array<VkPushConstantRange> push_constants{};
+			rsx::simple_array<VkDescriptorSetLayout> set_layouts{};
+
+			for (auto& set : m_sets)
+			{
+				if (!set.m_device)
+				{
 					break;
 				}
+
+				set.next_descriptor_set(); // Initializes the set layout and allocates first set
+				set_layouts.push_back(set.m_descriptor_set_layout);
+
+				for (const auto& input : set.m_inputs[input_type_push_constant])
+				{
+					const auto& range = input.as_push_constant();
+					push_constants.push_back({
+						.stageFlags = to_shader_stage_flags(input.domain),
+						.offset = range.offset,
+						.size = range.size
+						});
+				}
 			}
 
-			if (match)
+			VkPipelineLayoutCreateInfo create_info
+			{
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+				.flags = 0,
+				.setLayoutCount = set_layouts.size(),
+				.pSetLayouts = set_layouts.data(),
+				.pushConstantRangeCount = push_constants.size(),
+				.pPushConstantRanges = push_constants.data()
+			};
+			CHECK_RESULT(vkCreatePipelineLayout(m_device, &create_info, nullptr, &m_pipeline_layout));
+		}
+
+		program& program::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point)
+		{
+			VkDescriptorSet bind_sets[binding_set_index_max_enum];
+			unsigned count = 0;
+
+			for (auto& set : m_sets)
+			{
+				if (!set.m_device)
+				{
+					break;
+				}
+
+				bind_sets[count++] = set.m_descriptor_set.value(); // Current set pointer for binding
+				set.next_descriptor_set();                           // Flush queue and update pointers
+			}
+
+			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
+			vkCmdBindDescriptorSets(cmd, bind_point, m_pipeline_layout, 0, count, bind_sets, 0, nullptr);
+			return *this;
+		}
+
+		void descriptor_table_t::destroy()
+		{
+			if (!m_device)
 			{
 				return;
 			}
 
-			next_descriptor_set();
-			m_descriptor_set.push(image_descriptors, static_cast<u32>(count), type, binding_point);
-
-			for (int i = 0; i < count; ++i)
-			{
-				m_descriptors_dirty[binding_point] = false;
-			}
+			vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
+			vk::get_resource_manager()->dispose(m_descriptor_pool);
 		}
 
-		VkDescriptorSet program::allocate_descriptor_set()
+		void descriptor_table_t::init(VkDevice dev)
+		{
+			m_device = dev;
+
+			size_t bind_slots_count = 0;
+			for (auto& type_arr : m_inputs)
+			{
+				if (type_arr.empty() || type_arr.front().type == input_type_push_constant)
+				{
+					continue;
+				}
+
+				bind_slots_count += type_arr.size();
+			}
+
+			m_descriptor_slots.resize(bind_slots_count);
+			std::memset(m_descriptor_slots.data(), 0, sizeof(descriptor_slot_t) * bind_slots_count);
+
+			m_descriptors_dirty.resize(bind_slots_count);
+			std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
+		}
+
+		VkDescriptorSet descriptor_table_t::allocate_descriptor_set()
 		{
 			if (!m_descriptor_pool)
 			{
 				create_descriptor_pool();
+				create_descriptor_set_layout();
 			}
 
 			return m_descriptor_pool->allocate(m_descriptor_set_layout);
 		}
 
-		void program::next_descriptor_set()
+		void descriptor_table_t::next_descriptor_set()
 		{
-			const auto new_set = allocate_descriptor_set();
-			const auto old_set = m_descriptor_set.value();
-
-			if (old_set)
+			if (!m_descriptor_set)
 			{
-				m_copy_cmds.clear();
-				for (unsigned i = 0; i < m_copy_cmds.size(); ++i)
-				{
-					if (!m_descriptors_dirty[i])
-					{
-						continue;
-					}
-
-					// Reuse already initialized memory. Each command is the same anyway.
-					m_copy_cmds.resize(m_copy_cmds.size() + 1);
-					auto& cmd = m_copy_cmds.back();
-					cmd.srcBinding = cmd.dstBinding = i;
-					cmd.srcSet = old_set;
-					cmd.dstSet = new_set;
-				}
-
-				m_descriptor_set.push(m_copy_cmds);
+				m_descriptor_set = allocate_descriptor_set();
+				std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
+				return;
 			}
 
-			m_descriptor_set = allocate_descriptor_set();
+			// Check if we need to actually open a new set
+			if (!m_any_descriptors_dirty)
+			{
+				return;
+			}
+
+			auto old_set = m_descriptor_set.value();
+			auto new_set = allocate_descriptor_set();
+
+			auto push_descriptor_slot = [this](unsigned idx)
+			{
+				const auto& slot = m_descriptor_slots[idx];
+				const VkDescriptorType type = m_descriptor_types[idx];
+				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
+				{
+					m_descriptor_set.push(*ptr, type, idx);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				{
+					m_descriptor_set.push(*ptr, type, idx);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				{
+					m_descriptor_set.push(*ptr, type, idx);
+					return;
+				}
+
+				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
+			};
+
+			m_copy_cmds.clear();
+			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			{
+				if (m_descriptors_dirty[i])
+				{
+					// Push
+					push_descriptor_slot(i);
+					m_descriptors_dirty[i] = false;
+					continue;
+				}
+
+				m_copy_cmds.push_back({
+					.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
+					.srcSet = old_set,
+					.srcBinding = i,
+					.dstSet = new_set,
+					.dstBinding = i,
+					.descriptorCount = 1
+				});
+			}
+
+			m_descriptor_set.push(m_copy_cmds); // Write previous state
+			m_descriptor_set = new_set;
 		}
 
-		program& program::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point)
-		{
-			VkDescriptorSet set = m_descriptor_set.value();
-			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
-			vkCmdBindDescriptorSets(cmd, bind_point, m_pipeline_layout, 0, 1, &set, 0, nullptr);
-			return *this;
-		}
-
-		void program::create_descriptor_set_layout()
+		void descriptor_table_t::create_descriptor_set_layout()
 		{
 			ensure(m_descriptor_set_layout == VK_NULL_HANDLE);
 
@@ -425,7 +526,7 @@ namespace vk
 			m_descriptor_pool_sizes.clear();
 			m_descriptor_pool_sizes.reserve(input_type_max_enum);
 
-			for (const auto& type_arr : uniforms)
+			for (const auto& type_arr : m_inputs)
 			{
 				if (type_arr.empty() || type_arr.front().type == input_type_push_constant)
 				{
@@ -445,6 +546,13 @@ namespace vk
 						.stageFlags = to_shader_stage_flags(input.domain)
 					};
 					bindings.push_back(binding);
+
+					if (m_descriptor_types.size() < (input.location + 1))
+					{
+						m_descriptor_types.resize((input.location + 1));
+					}
+
+					m_descriptor_types[input.location] = type;
 					m_descriptor_pool_sizes.back().descriptorCount++;
 				}
 			}
@@ -459,38 +567,31 @@ namespace vk
 			CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &set_layout_create_info, nullptr, &m_descriptor_set_layout));
 		}
 
-		void program::create_pipeline_layout()
+		void descriptor_table_t::create_descriptor_pool()
 		{
-			ensure(!linked);
-			ensure(m_pipeline_layout == VK_NULL_HANDLE);
-
-			create_descriptor_set_layout();
-
-			rsx::simple_array<VkPushConstantRange> push_constants{};
-			for (const auto& input : uniforms[input_type_push_constant])
-			{
-				const auto& range = input.as_push_constant();
-				push_constants.push_back({ .offset = range.offset, .size = range.size });
-			}
-
-			VkPipelineLayoutCreateInfo create_info
-			{
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-				.flags = 0,
-				.setLayoutCount = 1,
-				.pSetLayouts = &m_descriptor_set_layout,
-				.pushConstantRangeCount = ::size32(push_constants),
-				.pPushConstantRanges = push_constants.data()
-			};
-			CHECK_RESULT(vkCreatePipelineLayout(m_device, &create_info, nullptr, &m_pipeline_layout));
-		}
-
-		void program::create_descriptor_pool()
-		{
-			ensure(linked);
-
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
 			m_descriptor_pool->create(*vk::get_current_renderer(), m_descriptor_pool_sizes);
+		}
+
+		void descriptor_table_t::validate() const
+		{
+			// Check for overlapping locations
+			std::set<u32> taken_locations;
+
+			for (auto& type_arr : m_inputs)
+			{
+				if (type_arr.empty() ||
+					type_arr.front().type == input_type_push_constant)
+				{
+					continue;
+				}
+
+				for (const auto& input : type_arr)
+				{
+					ensure(taken_locations.find(input.location) == taken_locations.end(), "Overlapping input locations found.");
+					taken_locations.insert(input.location);
+				}
+			}
 		}
 	}
 }

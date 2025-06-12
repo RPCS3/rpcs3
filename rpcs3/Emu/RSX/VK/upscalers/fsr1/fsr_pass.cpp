@@ -76,6 +76,7 @@ namespace vk
 					::glsl::program_domain::glsl_compute_program,
 					"InputTexture",
 					vk::glsl::input_type_texture,
+					0,
 					0
 				),
 
@@ -83,6 +84,7 @@ namespace vk
 					::glsl::program_domain::glsl_compute_program,
 					"OutputTexture",
 					vk::glsl::input_type_storage_texture,
+					0,
 					1
 				),
 			};
@@ -103,8 +105,8 @@ namespace vk
 					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 			}
 
-			m_program->bind_uniform({ m_sampler->value, m_input_image->value, m_input_image->image()->current_layout }, "InputTexture", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-			m_program->bind_uniform({ VK_NULL_HANDLE, m_output_image->value, m_output_image->image()->current_layout }, "OutputTexture", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+			m_program->bind_uniform({ m_sampler->value, m_input_image->value, m_input_image->image()->current_layout }, 0, 0);
+			m_program->bind_uniform({ VK_NULL_HANDLE, m_output_image->value, m_output_image->image()->current_layout }, 0, 1);
 		}
 
 		void fsr_pass::run(const vk::command_buffer& cmd, vk::viewable_image* src, vk::viewable_image* dst, const size2u& input_size, const size2u& output_size)

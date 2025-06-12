@@ -54,7 +54,9 @@ namespace vk
 		const VkComputePipelineCreateInfo& create_info,
 		const std::vector<glsl::program_input>& cs_inputs)
 	{
-		return std::make_unique<glsl::program>(*m_device, create_info, cs_inputs);
+		auto program = std::make_unique<glsl::program>(*m_device, create_info, cs_inputs);
+		program->link(false);
+		return program;
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(
@@ -62,7 +64,9 @@ namespace vk
 		const std::vector<glsl::program_input>& vs_inputs,
 		const std::vector<glsl::program_input>& fs_inputs)
 	{
-		return std::make_unique<glsl::program>(*m_device, create_info, vs_inputs, fs_inputs);
+		auto program = std::make_unique<glsl::program>(*m_device, create_info, vs_inputs, fs_inputs);
+		program->link(true);
+		return program;
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(
@@ -171,7 +175,7 @@ namespace vk
 		op_flags flags, callback_t callback,
 		const std::vector<glsl::program_input>& cs_inputs)
 	{
-		if (flags == COMPILE_INLINE)
+		if (flags & COMPILE_INLINE)
 		{
 			return int_compile_compute_pipe(create_info, cs_inputs);
 		}
@@ -187,7 +191,7 @@ namespace vk
 		const std::vector<glsl::program_input>& fs_inputs)
 	{
 		// It is very inefficient to defer this as all pointers need to be saved
-		ensure(flags == COMPILE_INLINE);
+		ensure(flags & COMPILE_INLINE);
 		return int_compile_graphics_pipe(create_info, vs_inputs, fs_inputs);
 	}
 
@@ -200,7 +204,7 @@ namespace vk
 		const std::vector<glsl::program_input>& fs_inputs)
 	{
 		VkShaderModule modules[] = { vs, fs };
-		if (flags == COMPILE_INLINE)
+		if (flags & COMPILE_INLINE)
 		{
 			return int_compile_graphics_pipe(create_info, modules, vs_inputs, fs_inputs);
 		}

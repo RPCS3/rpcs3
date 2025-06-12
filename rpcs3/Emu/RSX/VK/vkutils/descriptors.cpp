@@ -333,11 +333,6 @@ namespace vk
 		return &m_handle;
 	}
 
-	VkDescriptorSet descriptor_set::value() const
-	{
-		return m_handle;
-	}
-
 	void descriptor_set::push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding)
 	{
 		m_push_type_mask |= (1ull << type);

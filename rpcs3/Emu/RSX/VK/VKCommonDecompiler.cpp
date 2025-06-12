@@ -35,4 +35,34 @@ namespace vk
 
 		fmt::throw_exception("Unknown register name: %s", varying_register_name);
 	}
+
+	int get_texture_index(std::string_view name)
+	{
+		if (name.length() < 2)
+		{
+			fmt::throw_exception("Invalid texture name: '%s'", name);
+		}
+
+#define IS_DIGIT(x) (x >= '0' && x <= '9')
+
+		constexpr int max_index_length = 2;
+		std::string index;
+
+		for (int char_idx = name.length() - max_index_length; char_idx < name.length(); ++char_idx)
+		{
+			if (IS_DIGIT(name[char_idx]))
+			{
+				index += name[char_idx];
+			}
+		}
+
+#undef IS_DIGIT
+
+		if (index.empty())
+		{
+			fmt::throw_exception("Invalid texture name: '%s'", name);
+		}
+
+		return std::atoi(index.c_str());
+	}
 }
