@@ -496,6 +496,8 @@ namespace vk
 			};
 
 			m_copy_cmds.clear();
+			rsx::flags32_t type_mask = 0u;
+
 			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
 			{
 				if (m_descriptors_dirty[i])
@@ -514,9 +516,11 @@ namespace vk
 					.dstBinding = i,
 					.descriptorCount = 1
 				});
+
+				type_mask |= (1u << m_descriptor_types[i]);
 			}
 
-			m_descriptor_set.push(m_copy_cmds); // Write previous state
+			m_descriptor_set.push(m_copy_cmds, type_mask); // Write previous state
 
 			m_previous_set = m_descriptor_set.value();
 			m_descriptor_set = allocate_descriptor_set();
