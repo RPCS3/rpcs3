@@ -2123,6 +2123,7 @@
     <None Include="..\.ci\build-linux.sh" />
     <None Include="..\.ci\build-mac-arm64.sh" />
     <None Include="..\.ci\build-mac.sh" />
+    <None Include="..\.ci\build-windows-clang.sh" />
     <None Include="..\.ci\deploy-linux-legacy.sh" />
     <None Include="..\.ci\deploy-linux.sh" />
     <None Include="..\.ci\deploy-mac-arm64.sh" />
@@ -2134,6 +2135,7 @@
     <None Include="..\.ci\install-freebsd.sh" />
     <None Include="..\.ci\optimize-mac.sh" />
     <None Include="..\.ci\setup-windows.sh" />
+    <None Include="..\.ci\setup-windows-ci-vars.sh" />
     <None Include="..\.github\workflows\rpcs3.yml" />
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss" />
     <None Include="..\bin\GuiConfigs\Darker Style by TheMitoSan.qss" />

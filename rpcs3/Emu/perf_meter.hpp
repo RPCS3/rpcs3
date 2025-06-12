@@ -74,9 +74,11 @@ class perf_stat final : public perf_stat_base
 	} g_tls_perf_stat;
 
 public:
-	static FORCE_INLINE SAFE_BUFFERS(void) push(u64 start_time) noexcept
+	static FORCE_INLINE SAFE_BUFFERS(void) push([[maybe_unused]] u64 start_time) noexcept
 	{
+#if !defined(_WIN32) || defined(_MSC_VER) // Windows clang LTO doesn't seem to like this template
 		perf_stat_base::push(g_tls_perf_stat.m_log, start_time, perf_name<ShortName>.data());
+#endif
 	}
 };
 
