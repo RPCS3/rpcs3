@@ -319,3 +319,41 @@ jobs:
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
+          
+  FreeBSD_Build:
+      # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    name: RPCS3 FreeBSD 
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/ccache
+      QT_VER_MAIN: '6'
+      LLVM_COMPILER_VER: '19'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+          
+      - name: Restore Build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: FreeBSD-ccache-${{github.run_id}}
+          restore-keys: FreeBSD-ccache-
+        
+      - name: FreeBSD build
+        id: root
+        uses: vmactions/freebsd-vm@v1
+        with:
+          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR'
+          usesh: true
+          run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
+
+      - name: Save Build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }} 

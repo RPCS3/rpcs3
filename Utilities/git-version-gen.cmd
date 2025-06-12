@@ -112,7 +112,6 @@ if defined BUILD_SOURCEBRANCHNAME (
 	rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
 	rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
 	rem // BUILD_SOURCEBRANCHNAME will look like "master"
-	rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
 	set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
 	echo GIT_FULL_BRANCH: !GIT_FULL_BRANCH!
 
