@@ -36,12 +36,12 @@ namespace vk
 			{
 				if (job.is_graphics_job)
 				{
-					auto compiled = int_compile_graphics_pipe(job.graphics_data, job.graphics_modules, job.inputs, {});
+					auto compiled = int_compile_graphics_pipe(job.graphics_data, job.graphics_modules, job.inputs, {}, job.flags);
 					job.callback_func(compiled);
 				}
 				else
 				{
-					auto compiled = int_compile_compute_pipe(job.compute_data, job.inputs);
+					auto compiled = int_compile_compute_pipe(job.compute_data, job.inputs, job.flags);
 					job.callback_func(compiled);
 				}
 			}
@@ -52,20 +52,22 @@ namespace vk
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_compute_pipe(
 		const VkComputePipelineCreateInfo& create_info,
-		const std::vector<glsl::program_input>& cs_inputs)
+		const std::vector<glsl::program_input>& cs_inputs,
+		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, cs_inputs);
-		program->link(false);
+		program->link(flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(
 		const VkGraphicsPipelineCreateInfo& create_info,
 		const std::vector<glsl::program_input>& vs_inputs,
-		const std::vector<glsl::program_input>& fs_inputs)
+		const std::vector<glsl::program_input>& fs_inputs,
+		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, vs_inputs, fs_inputs);
-		program->link(true);
+		program->link(flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
@@ -73,7 +75,8 @@ namespace vk
 		const vk::pipeline_props &create_info,
 		VkShaderModule modules[2],
 		const std::vector<glsl::program_input>& vs_inputs,
-		const std::vector<glsl::program_input>& fs_inputs)
+		const std::vector<glsl::program_input>& fs_inputs,
+		op_flags flags)
 	{
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 		shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -167,7 +170,7 @@ namespace vk
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = vk::get_renderpass(*m_device, create_info.renderpass_key);
 
-		return int_compile_graphics_pipe(info, vs_inputs, fs_inputs);
+		return int_compile_graphics_pipe(info, vs_inputs, fs_inputs, flags);
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::compile(
@@ -177,10 +180,10 @@ namespace vk
 	{
 		if (flags & COMPILE_INLINE)
 		{
-			return int_compile_compute_pipe(create_info, cs_inputs);
+			return int_compile_compute_pipe(create_info, cs_inputs, flags);
 		}
 
-		m_work_queue.push(create_info, cs_inputs, callback);
+		m_work_queue.push(create_info, cs_inputs, flags, callback);
 		return {};
 	}
 
@@ -192,7 +195,7 @@ namespace vk
 	{
 		// It is very inefficient to defer this as all pointers need to be saved
 		ensure(flags & COMPILE_INLINE);
-		return int_compile_graphics_pipe(create_info, vs_inputs, fs_inputs);
+		return int_compile_graphics_pipe(create_info, vs_inputs, fs_inputs, flags);
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::compile(
@@ -206,10 +209,10 @@ namespace vk
 		VkShaderModule modules[] = { vs, fs };
 		if (flags & COMPILE_INLINE)
 		{
-			return int_compile_graphics_pipe(create_info, modules, vs_inputs, fs_inputs);
+			return int_compile_graphics_pipe(create_info, modules, vs_inputs, fs_inputs, flags);
 		}
 
-		m_work_queue.push(create_info, modules, vs_inputs, fs_inputs, callback);
+		m_work_queue.push(create_info, modules, vs_inputs, fs_inputs, flags, callback);
 		return {};
 	}
 
