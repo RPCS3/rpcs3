@@ -14,7 +14,7 @@ namespace vk
 		public:
 			inline void flush_all()
 			{
-				reader_lock lock(m_notifications_lock);
+				std::shared_lock lock(m_notifications_lock);
 
 				for (auto& set : m_notification_list)
 				{
@@ -44,7 +44,7 @@ namespace vk
 
 		private:
 			rsx::simple_array<descriptor_set*> m_notification_list;
-			shared_mutex m_notifications_lock;
+			std::shared_mutex m_notifications_lock;
 
 			dispatch_manager(const dispatch_manager&) = delete;
 			dispatch_manager& operator = (const dispatch_manager&) = delete;
