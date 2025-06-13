@@ -138,7 +138,29 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_MBox_Status_offs:
 	{
-		value = (ch_out_mbox.get_count() & 0xff) | ((4 - ch_in_mbox.get_count()) << 8 & 0xff00) | (ch_out_intr_mbox.get_count() << 16 & 0xff0000);
+		// Load channel counts atomically
+		auto counts = std::make_tuple(ch_out_mbox.get_count(), ch_in_mbox.get_count(), ch_out_intr_mbox.get_count());
+
+		while (true)
+		{
+			atomic_fence_acquire();
+
+			const auto counts_check = std::make_tuple(ch_out_mbox.get_count(), ch_in_mbox.get_count(), ch_out_intr_mbox.get_count());
+
+			if (counts_check == counts)
+			{
+				break;
+			}
+
+			// Update and reload
+			counts = counts_check;
+		}
+
+		const u32 out_mbox = std::get<0>(counts);
+		const u32 in_mbox = 4 - std::get<1>(counts);
+		const u32 intr_mbox = std::get<2>(counts);
+
+		value = (out_mbox & 0xff) | ((in_mbox << 8) & 0xff00) | ((intr_mbox << 16) & 0xff0000);
 		return true;
 	}
 
