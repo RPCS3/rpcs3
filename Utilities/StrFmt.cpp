@@ -525,7 +525,7 @@ void fmt_class_string<u128>::format(std::string& out, u64 arg)
 		return;
 	}
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 	fmt::append(out, "0x%016llx%016llx", num.hi, num.lo);
 #else
 	fmt::append(out, "0x%016llx%016llx", static_cast<u64>(num >> 64), static_cast<u64>(num));

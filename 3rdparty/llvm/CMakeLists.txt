@@ -58,9 +58,14 @@ if(WITH_LLVM)
 	else()
 		message(STATUS "Using prebuilt or system LLVM")
 
-		if (LLVM_DIR AND NOT IS_ABSOLUTE "${LLVM_DIR}")
-			# change relative LLVM_DIR to be relative to the source dir
-			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
+		if (LLVM_DIR)
+			message(STATUS "LLVM_DIR: ${LLVM_DIR}")
+
+			if (NOT IS_ABSOLUTE "${LLVM_DIR}")
+				# change relative LLVM_DIR to be relative to the source dir
+				set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
+				message(STATUS "Changed LLVM_DIR to relative path: ${LLVM_DIR}")
+			endif()
 		endif()
 
 		find_package(LLVM CONFIG)

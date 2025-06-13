@@ -4,7 +4,11 @@ set(OPENCV_TARGET 3rdparty_dummy_lib PARENT_SCOPE)
 
 if (USE_SYSTEM_OPENCV)
 	message(STATUS "RPCS3: using system OpenCV")
-	find_package(OpenCV COMPONENTS core photo)
+	find_package(OpenCV CONFIG COMPONENTS core photo)
+
+	if(NOT OPENCV_FOUND)
+		find_package(OpenCV COMPONENTS core photo)
+	endif()
 	
 	if(OPENCV_FOUND)
 		message(STATUS "RPCS3: found system OpenCV")

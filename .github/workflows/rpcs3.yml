@@ -5,8 +5,6 @@ defaults:
     shell: bash
 on:
   push:
-    branches:
-      - master # Only trigger push event on 'master' branch
   pull_request:
   workflow_dispatch:
 
@@ -400,6 +398,106 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: RPCS3 for Windows (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+          if-no-files-found: error
+
+  Windows_Build_ClangCL:
+    if: always()
+    name: RPCS3 Windows Clang-CL
+    runs-on: windows-2025
+    strategy:
+      matrix:
+        include:
+          - compiler: clangcl
+            arch: win64
+    env:
+      CCACHE_DIR: 'C:\ccache'
+      VCPKG_TRIPLET: x64-windows-release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Clone vcpkg
+        run: git clone https://github.com/microsoft/vcpkg.git
+
+      - name: Bootstrap vcpkg
+        shell: pwsh
+        run: .\vcpkg\bootstrap-vcpkg.bat
+
+      - name: Restore vcpkg cache
+        uses: actions/cache/restore@main
+        id: restore-vcpkg-cache
+        with:
+          path: |
+            vcpkg/installed
+            vcpkg/buildtrees
+          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: Install dependencies with vcpkg
+        shell: pwsh
+        run: |
+          .\vcpkg\vcpkg.exe install `
+            ffmpeg[avcodec,avformat,swscale,swresample] `
+            llvm `
+            opencv `
+            qtbase `
+            qtsvg `
+            qtmultimedia `
+            zlib `
+            vulkan `
+            libpng `
+            --triplet $env:VCPKG_TRIPLET `
+            --clean-after-build
+
+      - name: Save vcpkg cache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: |
+            vcpkg/installed
+            vcpkg/buildtrees
+          key: ${{ steps.restore-vcpkg-cache.outputs.cache-primary-key }}
+
+      - name: Add LLVM and Ninja to PATH
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\LLVM\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja"
+
+      - name: Restore build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: Setup CI Variables
+        run: .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+
+      - name: Build RPCS3
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+          powershell -ExecutionPolicy Bypass -File .ci/build-windows-clang-cl.ps1
+
+      - name: Save build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (clang-cl)
           path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
           compression-level: 0
           if-no-files-found: error
