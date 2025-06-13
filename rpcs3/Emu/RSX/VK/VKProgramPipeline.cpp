@@ -402,7 +402,8 @@ namespace vk
 					break;
 				}
 
-				bind_sets[count++] = set.m_descriptor_set.value(); // Current set pointer for binding
+				bind_sets[count++] = set.m_descriptor_set.value();   // Current set pointer for binding
+				set.m_descriptor_set.on_bind();                      // Notify async queue
 				set.next_descriptor_set();                           // Flush queue and update pointers
 			}
 

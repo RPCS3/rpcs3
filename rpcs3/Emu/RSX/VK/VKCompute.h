@@ -451,6 +451,11 @@ namespace vk
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
+			if (!m_program)
+			{
+				load_program(cmd);
+			}
+
 			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 

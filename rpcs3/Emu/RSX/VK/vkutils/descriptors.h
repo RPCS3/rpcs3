@@ -106,6 +106,7 @@ namespace vk
 		void push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask = umax);
 		void push(const descriptor_set_dynamic_offset_t& offset);
 
+		void on_bind();
 		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 
 		void flush();
