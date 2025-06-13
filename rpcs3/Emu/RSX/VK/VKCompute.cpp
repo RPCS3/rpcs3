@@ -250,6 +250,11 @@ namespace vk
 
 	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
 	{
+		if (!m_program)
+		{
+			load_program(cmd);
+		}
+
 		ensure(use_push_constants);
 		vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}

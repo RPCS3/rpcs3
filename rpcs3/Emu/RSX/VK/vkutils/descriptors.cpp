@@ -14,44 +14,37 @@ namespace vk
 		public:
 			inline void flush_all()
 			{
+				reader_lock lock(m_notifications_lock);
+
 				for (auto& set : m_notification_list)
 				{
 					set->flush();
 				}
+
+				m_notification_list.clear();
 			}
 
 			void register_(descriptor_set* set)
 			{
-				// Rare event, upon creation of a new set tracker.
-				// Check for spurious 'new' events when the aux context is taking over
-				for (const auto& set_ : m_notification_list)
-				{
-					if (set_ == set) return;
-				}
+				std::lock_guard lock(m_notifications_lock);
 
 				m_notification_list.push_back(set);
-				rsx_log.warning("[descriptor_manager::register] Now monitoring %u descriptor sets", m_notification_list.size());
+				// rsx_log.notice("[descriptor_manager::register] Now monitoring %u descriptor sets", m_notification_list.size());
 			}
 
 			void deregister(descriptor_set* set)
 			{
-				for (auto it = m_notification_list.begin(); it != m_notification_list.end(); ++it)
-				{
-					if (*it == set)
-					{
-						*it = m_notification_list.back();
-						m_notification_list.pop_back();
-						break;
-					}
-				}
+				std::lock_guard lock(m_notifications_lock);
 
-				rsx_log.warning("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
+				m_notification_list.erase_if(FN(x == set));
+				// rsx_log.notice("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
 			}
 
 			dispatch_manager() = default;
 
 		private:
 			rsx::simple_array<descriptor_set*> m_notification_list;
+			shared_mutex m_notifications_lock;
 
 			dispatch_manager(const dispatch_manager&) = delete;
 			dispatch_manager& operator = (const dispatch_manager&) = delete;
@@ -295,11 +288,6 @@ namespace vk
 
 			m_in_use = true;
 			m_update_after_bind_mask = g_render_device->get_descriptor_update_after_bind_support();
-
-			if (m_update_after_bind_mask)
-			{
-				g_fxo->get<descriptors::dispatch_manager>().register_(this);
-			}
 		}
 		else if (m_push_type_mask & ~m_update_after_bind_mask)
 		{
@@ -450,13 +438,29 @@ namespace vk
 		m_dynamic_offsets[offset.location] = offset.value;
 	}
 
-	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	void descriptor_set::on_bind()
 	{
+		if (!m_push_type_mask)
+		{
+			return;
+		}
+
+		// We have queued writes
 		if ((m_push_type_mask & ~m_update_after_bind_mask) ||
 			(m_pending_writes.size() >= max_cache_size))
 		{
 			flush();
 		}
+		else if (m_update_after_bind_mask)
+		{
+			// Register for async flush
+			g_fxo->get<descriptors::dispatch_manager>().register_(this);
+		}
+	}
+
+	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	{
+		on_bind();
 
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
 	}
