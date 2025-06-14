@@ -2,8 +2,8 @@
 
 # These are Azure specific, so we wrap them for portability
 REPO_NAME="$BUILD_REPOSITORY_NAME"
-REPO_BRANCH="$SYSTEM_PULLREQUEST_SOURCEBRANCH"
-PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
+REPO_BRANCH="$BUILD_SOURCEBRANCHNAME"
+PR_NUMBER="$BUILD_PR_NUMBER"
 
 # Resource/dependency URLs
 # Qt mirrors can be volatile and slow, so we list 2

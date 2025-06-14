@@ -17,6 +17,7 @@ concurrency:
 env:
   BUILD_REPOSITORY_NAME: ${{ github.repository }}
   BUILD_SOURCEBRANCHNAME: ${{ github.ref_name }}
+  BUILD_PR_NUMBER: ${{ github.event.pull_request.number }}
   BUILD_SOURCEVERSION: ${{ github.sha }}
   BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}/artifacts/
 
