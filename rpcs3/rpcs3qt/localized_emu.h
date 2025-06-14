@@ -265,6 +265,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_PRESSURE_INTENSITY_TOGGLE_HINT: return tr("Show Pressure Intensity Toggle Hint", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_ANALOG_LIMITER_TOGGLE_HINT: return tr( "Show Analog Limiter Toggle Hint", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_MOUSE_AND_KB_TOGGLE_HINT: return tr("Show Mouse And Keyboard Toggle Hint", "Overlays");
+		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_RECORD_WITH_OVERLAYS: return tr("Record With Overlays", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY: return tr("Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_ENABLE: return tr("Enable Performance Overlay", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_ENABLE_FRAMERATE_GRAPH: return tr("Enable Framerate Graph", "Performance Overlay");
