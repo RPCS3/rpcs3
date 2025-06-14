@@ -1209,6 +1209,15 @@
     <ClCompile Include="rpcs3.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="Input\sdl_camera_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\camera_video_sink.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\sdl_camera_video_sink.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1432,6 +1441,15 @@
     </ClInclude>
     <ClInclude Include="rpcs3.h">
       <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_handler.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\camera_video_sink.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_video_sink.h">
+      <Filter>Io\camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
