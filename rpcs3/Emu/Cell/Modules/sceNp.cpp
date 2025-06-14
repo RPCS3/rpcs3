@@ -4265,7 +4265,7 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return SCE_NP_ERROR_ID_NOT_FOUND;
 }
 
 error_code sceNpManagerGetSigninId(vm::ptr<void> signInId)
