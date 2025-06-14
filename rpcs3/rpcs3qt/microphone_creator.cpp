@@ -3,8 +3,8 @@
 
 #include "Utilities/StrUtil.h"
 
-#include "3rdparty/OpenAL/openal-soft/include/AL/al.h"
-#include "3rdparty/OpenAL/openal-soft/include/AL/alc.h"
+#include "al.h"
+#include "alc.h"
 
 LOG_CHANNEL(cfg_log, "CFG");
 

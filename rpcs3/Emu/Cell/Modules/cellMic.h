@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Utilities/Thread.h"
-#include "3rdparty/OpenAL/openal-soft/include/AL/alc.h"
 #include "Utilities/mutex.h"
+
+#include "alc.h"
 
 // Error Codes
 enum CellMicInError : u32
