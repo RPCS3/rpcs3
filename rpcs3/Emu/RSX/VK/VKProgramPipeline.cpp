@@ -547,6 +547,8 @@ namespace vk
 			m_descriptor_pool_sizes.clear();
 			m_descriptor_pool_sizes.reserve(input_type_max_enum);
 
+			std::unordered_map<u32, VkDescriptorType> descriptor_type_map;
+
 			for (const auto& type_arr : m_inputs)
 			{
 				if (type_arr.empty() || type_arr.front().type == input_type_push_constant)
@@ -568,14 +570,20 @@ namespace vk
 					};
 					bindings.push_back(binding);
 
-					if (m_descriptor_types.size() < (input.location + 1))
-					{
-						m_descriptor_types.resize((input.location + 1));
-					}
-
-					m_descriptor_types[input.location] = type;
+					descriptor_type_map[input.location] = type;
 					m_descriptor_pool_sizes.back().descriptorCount++;
 				}
+			}
+
+			m_descriptor_types.resize(::size32(m_descriptors_dirty));
+
+			for (u32 i = 0; i < ::size32(m_descriptors_dirty); ++i)
+			{
+				if (descriptor_type_map.find(i) == descriptor_type_map.end())
+				{
+					fmt::throw_exception("Invalid input structure. Some input bindings were not declared!");
+				}
+				m_descriptor_types[i] = descriptor_type_map[i];
 			}
 
 			m_descriptor_set_layout = vk::descriptors::create_layout(bindings);

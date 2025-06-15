@@ -38,6 +38,8 @@ void VKVertexDecompilerThread::prepareBindingTable()
 		vk_prog->binding_table.cr_pred_buffer_location = location++;
 	}
 
+	std::memset(vk_prog->binding_table.vtex_location, 0xff, sizeof(vk_prog->binding_table.vtex_location));
+
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		const bool is_texture_type = PT.type.starts_with("sampler");
