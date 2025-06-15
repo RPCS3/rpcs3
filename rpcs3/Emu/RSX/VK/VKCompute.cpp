@@ -132,7 +132,7 @@ namespace vk
 			m_program = compiler->compile(create_info, vk::pipe_compiler::COMPILE_INLINE, {}, get_inputs());
 		}
 
-		bind_resources();
+		bind_resources(cmd);
 		m_program->bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE);
 	}
 
@@ -243,20 +243,19 @@ namespace vk
 		m_src += suffix;
 	}
 
-	void cs_shuffle_base::bind_resources()
+	void cs_shuffle_base::bind_resources(const vk::command_buffer& cmd)
 	{
+		set_parameters(cmd);
 		m_program->bind_uniform({ m_data->value, m_data_offset, m_data_length }, 0, 0);
 	}
 
-	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
+	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd)
 	{
-		if (!m_program)
+		if (!m_params.empty())
 		{
-			load_program(cmd);
+			ensure(use_push_constants);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_params.size_bytes32(), m_params.data());
 		}
-
-		ensure(use_push_constants);
-		vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 	}
 
 	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
@@ -294,15 +293,15 @@ namespace vk
 			"	uint stencil_offset;\n";
 	}
 
-	void cs_interleave_task::bind_resources()
+	void cs_interleave_task::bind_resources(const vk::command_buffer& cmd)
 	{
+		set_parameters(cmd);
 		m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
 	}
 
 	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
-		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
-		set_parameters(cmd, parameters, 4);
+		m_params = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 
 		ensure(stencil_offset > data_offset);
 		m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
@@ -354,7 +353,7 @@ namespace vk
 		m_src = fmt::replace_all(m_src, syntax_replace);
 	}
 
-	void cs_aggregator::bind_resources()
+	void cs_aggregator::bind_resources(const vk::command_buffer& cmd)
 	{
 		m_program->bind_uniform({ src->value, 0, block_length }, 0, 0);
 		m_program->bind_uniform({ dst->value, 0, 4 }, 0, 1);

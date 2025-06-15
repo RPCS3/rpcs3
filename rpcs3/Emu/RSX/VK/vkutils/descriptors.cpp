@@ -14,7 +14,7 @@ namespace vk
 		public:
 			inline void flush_all()
 			{
-				std::shared_lock lock(m_notifications_lock);
+				std::lock_guard lock(m_notifications_lock);
 
 				for (auto& set : m_notification_list)
 				{
@@ -44,7 +44,7 @@ namespace vk
 
 		private:
 			rsx::simple_array<descriptor_set*> m_notification_list;
-			std::shared_mutex m_notifications_lock;
+			std::mutex m_notifications_lock;
 
 			dispatch_manager(const dispatch_manager&) = delete;
 			dispatch_manager& operator = (const dispatch_manager&) = delete;
@@ -81,17 +81,17 @@ namespace vk
 				}
 				else
 				{
-					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 				}
 			}
 
-			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 			binding_infos.pNext = nullptr;
 			binding_infos.bindingCount = ::size32(binding_flags);
 			binding_infos.pBindingFlags = binding_flags.data();
 
 			infos.pNext = &binding_infos;
-			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 
 			VkDescriptorSetLayout result;
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
@@ -442,6 +442,7 @@ namespace vk
 	{
 		if (!m_push_type_mask)
 		{
+			ensure(m_pending_writes.empty());
 			return;
 		}
 
@@ -450,16 +451,17 @@ namespace vk
 			(m_pending_writes.size() >= max_cache_size))
 		{
 			flush();
+			return;
 		}
-		else if (m_update_after_bind_mask)
-		{
-			// Register for async flush
-			g_fxo->get<descriptors::dispatch_manager>().register_(this);
-		}
+
+		// Register for async flush
+		ensure(m_update_after_bind_mask);
+		g_fxo->get<descriptors::dispatch_manager>().register_(this);
 	}
 
 	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
+		// Notify
 		on_bind();
 
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
