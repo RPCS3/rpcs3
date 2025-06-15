@@ -122,7 +122,7 @@ namespace vk
 		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
 		rsx::simple_array<u32> m_dynamic_offsets;
 
-#ifdef __clang__
+#if defined(__clang__) && (__clang_major__ < 16)
 		// Clang (pre 16.x) does not support LWG 2089, std::construct_at for POD types
 		struct WriteDescriptorSetT : public VkWriteDescriptorSet
 		{
@@ -162,6 +162,7 @@ namespace vk
 	{
 		void init();
 		void flush();
+		void destroy();
 
 		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings);
 	}

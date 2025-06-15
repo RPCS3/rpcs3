@@ -420,7 +420,10 @@ namespace vk
 			}
 
 			vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
-			vk::get_resource_manager()->dispose(m_descriptor_pool);
+			m_descriptor_pool->destroy();
+
+			m_descriptor_pool.reset();
+			m_device = VK_NULL_HANDLE;
 		}
 
 		void descriptor_table_t::init(VkDevice dev)
