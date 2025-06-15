@@ -411,14 +411,10 @@ namespace vk
 		if (m_pending_copies.empty()) [[likely]]
 		{
 			m_pending_copies = std::move(copy_cmd);
+			return;
 		}
-		else
-		{
-			const auto old_size = m_pending_copies.size();
-			const auto new_size = copy_cmd.size() + old_size;
-			m_pending_copies.resize(new_size);
-			std::copy(copy_cmd.begin(), copy_cmd.end(), m_pending_copies.begin() + old_size);
-		}
+
+		m_pending_copies += copy_cmd;
 	}
 
 	void descriptor_set::push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
@@ -429,15 +425,10 @@ namespace vk
 		if (m_pending_writes.empty()) [[unlikely]]
 		{
 			m_pending_writes = std::move(write_cmds);
+			return;
 		}
-		else
 #endif
-		{
-			const auto old_size = m_pending_writes.size();
-			const auto new_size = write_cmds.size() + old_size;
-			m_pending_writes.resize(new_size);
-			std::copy(write_cmds.begin(), write_cmds.end(), m_pending_writes.begin() + old_size);
-		}
+		m_pending_writes += write_cmds;
 	}
 
 	void descriptor_set::push(const descriptor_set_dynamic_offset_t& offset)
