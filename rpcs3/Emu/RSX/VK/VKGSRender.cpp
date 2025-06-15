@@ -1,3 +1,4 @@
+#include "Emu/RSX/VK/vkutils/descriptors.h"
 #include "stdafx.h"
 #include "../Overlays/overlay_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
@@ -853,6 +854,9 @@ VKGSRender::~VKGSRender()
 
 	m_command_buffer_pool.destroy();
 	m_secondary_command_buffer_pool.destroy();
+
+	// Descriptors
+	vk::descriptors::flush();
 
 	// Global resources
 	vk::destroy_global_resources();

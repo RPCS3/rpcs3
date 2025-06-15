@@ -40,6 +40,12 @@ namespace vk
 				// rsx_log.notice("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
 			}
 
+			void destroy()
+			{
+				std::lock_guard lock(m_notifications_lock);
+				m_notification_list.clear();
+			}
+
 			dispatch_manager() = default;
 
 		private:
@@ -58,6 +64,11 @@ namespace vk
 		void flush()
 		{
 			g_fxo->get<dispatch_manager>().flush_all();
+		}
+
+		void destroy()
+		{
+			g_fxo->get<dispatch_manager>().destroy();
 		}
 
 		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings)
@@ -414,11 +425,13 @@ namespace vk
 	{
 		m_push_type_mask |= type_mask;
 
+#if !defined(__clang__) || (__clang_major__ >= 16)
 		if (m_pending_writes.empty()) [[unlikely]]
 		{
 			m_pending_writes = std::move(write_cmds);
 		}
 		else
+#endif
 		{
 			const auto old_size = m_pending_writes.size();
 			const auto new_size = write_cmds.size() + old_size;

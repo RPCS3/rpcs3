@@ -46,9 +46,10 @@ namespace vk
 #define IS_DIGIT(x) (x >= '0' && x <= '9')
 
 		constexpr int max_index_length = 2;
+		const int name_length = static_cast<int>(name.length());
 		std::string index;
 
-		for (int char_idx = name.length() - max_index_length; char_idx < name.length(); ++char_idx)
+		for (int char_idx = name_length - max_index_length; char_idx < name_length; ++char_idx)
 		{
 			if (IS_DIGIT(name[char_idx]))
 			{
