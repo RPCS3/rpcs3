@@ -305,6 +305,11 @@ namespace rsx
 			return _size * sizeof(Ty);
 		}
 
+		u32 size_bytes32() const
+		{
+			return _size * sizeof(Ty);
+		}
+
 		u32 capacity() const
 		{
 			return _capacity;

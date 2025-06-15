@@ -20,7 +20,7 @@ namespace vk
 			u32 m_constants_buf[20];
 
 			std::vector<glsl::program_input> get_inputs() override;
-			void bind_resources() override;
+			void bind_resources(const vk::command_buffer&) override;
 
 			virtual void configure(const vk::command_buffer& cmd) = 0;
 

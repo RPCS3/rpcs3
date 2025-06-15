@@ -35,7 +35,7 @@ namespace vk
 		void destroy();
 
 		virtual std::vector<glsl::program_input> get_inputs();
-		virtual void bind_resources() {}
+		virtual void bind_resources(const vk::command_buffer& cmd) {}
 
 		void load_program(const vk::command_buffer& cmd);
 
@@ -50,6 +50,8 @@ namespace vk
 		u32 m_data_length = 0;
 		u32 kernel_size = 1;
 
+		rsx::simple_array<u32> m_params;
+
 		std::string variables, work_kernel, loop_advance, suffix;
 		std::string method_declarations;
 
@@ -57,9 +59,9 @@ namespace vk
 
 		void build(const char* function_name, u32 _kernel_size = 0);
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
-		void set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count);
+		void set_parameters(const vk::command_buffer& cmd);
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset = 0);
 	};
@@ -125,7 +127,7 @@ namespace vk
 
 		cs_interleave_task();
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset);
 	};
@@ -342,8 +344,9 @@ namespace vk
 			cs_shuffle_base::build("");
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
+			set_parameters(cmd);
 			m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
 		}
 
@@ -361,8 +364,7 @@ namespace vk
 				data_offset = src_offset;
 			}
 
-			u32 parameters[4] = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
-			set_parameters(cmd, parameters, 4);
+			m_params = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
 			cs_shuffle_base::run(cmd, data, src_length, data_offset);
 		}
 	};
@@ -443,19 +445,16 @@ namespace vk
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
+			set_parameters(cmd);
+
 			m_program->bind_uniform({ src_buffer->value, in_offset, block_length }, 0, 0);
 			m_program->bind_uniform({ dst_buffer->value, out_offset, block_length }, 0, 1);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			if (!m_program)
-			{
-				load_program(cmd);
-			}
-
 			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
@@ -475,7 +474,6 @@ namespace vk
 			params.logw = rsx::ceil_log2(width);
 			params.logh = rsx::ceil_log2(height);
 			params.logd = rsx::ceil_log2(depth);
-			set_parameters(cmd);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
 			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
@@ -492,7 +490,7 @@ namespace vk
 
 		cs_aggregator();
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words);
 	};
@@ -576,8 +574,10 @@ namespace vk
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
+			set_parameters(cmd);
+
 			const auto op = static_cast<u32>(Op);
 			m_program->bind_uniform({ src_buffer->value, in_offset, in_block_length }, 0u, 0u ^ op);
 			m_program->bind_uniform({ dst_buffer->value, out_offset, out_block_length }, 0u, 1u ^ op);
@@ -648,7 +648,6 @@ namespace vk
 			params.image_height = (Op == RSX_detiler_op::decode) ? tile_aligned_height : config.image_height;
 			params.image_pitch = config.image_pitch;
 			params.image_bpp = config.image_bpp;
-			set_parameters(cmd);
 
 			const u32 subtexels_per_invocation = (config.image_bpp < 4) ? (4 / config.image_bpp) : 1;
 			const u32 virtual_width = config.image_width / subtexels_per_invocation;

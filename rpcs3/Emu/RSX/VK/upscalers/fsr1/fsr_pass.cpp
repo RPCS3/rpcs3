@@ -97,7 +97,7 @@ namespace vk
 			return result;
 		}
 
-		void fsr_pass::bind_resources()
+		void fsr_pass::bind_resources(const vk::command_buffer& cmd)
 		{
 			// Bind relevant stuff
 			if (!m_sampler)
