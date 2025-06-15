@@ -6,13 +6,26 @@ fi
 
 shellcheck .ci/*.sh
 
+RPCS3_DIR=$(pwd)
+
+# If we're building using a CI, let's use the runner's directory
+if [ -n "$BUILDDIR" ]; then
+BUILD_DIR="$BUILDDIR"
+else
+BUILD_DIR="$RPCS3_DIR/build"
+fi
+
 git config --global --add safe.directory '*'
 
 # Pull all the submodules except llvm, opencv, sdl and curl
 # shellcheck disable=SC2046
 git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/libsdl-org/ && !/curl/ { print $3 }' .gitmodules)
 
-mkdir build && cd build || exit 1
+if [ ! -d "$BUILD_DIR" ]; then
+    mkdir "$BUILD_DIR" || exit 1
+fi
+
+cd "$BUILD_DIR" || exit 1
 
 if [ "$COMPILER" = "gcc" ]; then
     # These are set in the dockerfile
@@ -27,7 +40,7 @@ fi
 
 export LINKER_FLAG="-fuse-ld=${LINKER}"
 
-cmake ..                                               \
+cmake "$RPCS3_DIR"                                     \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
@@ -43,13 +56,13 @@ cmake ..                                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \
-    -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}"            \
+    -DBUILD_RPCS3_TESTS="${BUILD_UNIT_TESTS}"          \
     -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}"              \
     -G Ninja
 
 ninja; build_status=$?;
 
-cd ..
+cd "$RPCS3_DIR"
 
 # If it compiled succesfully let's deploy.
 # Azure and Cirrus publish PRs as artifacts only.
