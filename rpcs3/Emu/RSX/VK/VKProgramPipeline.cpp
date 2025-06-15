@@ -364,7 +364,7 @@ namespace vk
 					break;
 				}
 
-				set.next_descriptor_set(); // Initializes the set layout and allocates first set
+				set.create_descriptor_set_layout();
 				set_layouts.push_back(set.m_descriptor_set_layout);
 
 				for (const auto& input : set.m_inputs[input_type_push_constant])
@@ -402,8 +402,7 @@ namespace vk
 					continue;
 				}
 
-				bind_sets[count++] = set.m_descriptor_set.value();   // Current set pointer for binding
-				set.on_bind();                                       // Notify bind event. Internally updates handles and triggers flushing.
+				bind_sets[count++] = set.commit();   // Commit variable changes and return handle to the new set
 			}
 
 			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
@@ -418,10 +417,17 @@ namespace vk
 				return;
 			}
 
-			vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
-			m_descriptor_pool->destroy();
+			if (m_descriptor_set_layout)
+			{
+				vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
+			}
 
-			m_descriptor_pool.reset();
+			if (m_descriptor_pool)
+			{
+				m_descriptor_pool->destroy();
+				m_descriptor_pool.reset();
+			}
+
 			m_device = VK_NULL_HANDLE;
 		}
 
@@ -451,26 +457,24 @@ namespace vk
 		{
 			if (!m_descriptor_pool)
 			{
-				create_descriptor_set_layout();
 				create_descriptor_pool();
 			}
 
 			return m_descriptor_pool->allocate(m_descriptor_set_layout);
 		}
 
-		void descriptor_table_t::next_descriptor_set()
+		VkDescriptorSet descriptor_table_t::commit()
 		{
 			if (!m_descriptor_set)
 			{
-				m_descriptor_set = allocate_descriptor_set();
+				m_any_descriptors_dirty = true;
 				std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
-				return;
 			}
 
 			// Check if we need to actually open a new set
 			if (!m_any_descriptors_dirty)
 			{
-				return;
+				return m_descriptor_set.value();
 			}
 
 			auto push_descriptor_slot = [this](unsigned idx)
@@ -500,6 +504,7 @@ namespace vk
 
 			m_copy_cmds.clear();
 			rsx::flags32_t type_mask = 0u;
+			m_descriptor_set = allocate_descriptor_set();
 
 			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
 			{
@@ -526,8 +531,10 @@ namespace vk
 			}
 
 			m_descriptor_set.push(m_copy_cmds, type_mask); // Write previous state
-			m_descriptor_set = allocate_descriptor_set();
+			m_descriptor_set.on_bind();
 			m_any_descriptors_dirty = false;
+
+			return m_descriptor_set.value();
 		}
 
 		void descriptor_table_t::create_descriptor_set_layout()

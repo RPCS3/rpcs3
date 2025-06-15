@@ -136,13 +136,7 @@ namespace vk
 			void create_descriptor_pool();
 
 			VkDescriptorSet allocate_descriptor_set();
-			void next_descriptor_set();
-
-			inline void on_bind()
-			{
-				next_descriptor_set();       // Enqueue changes and update pointers
-				m_descriptor_set.on_bind();  // Notify async queue to flush any pending changes
-			}
+			VkDescriptorSet commit();
 
 			template <typename T>
 			inline void notify_descriptor_slot_updated(u32 slot, const T& data)
