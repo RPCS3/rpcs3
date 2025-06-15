@@ -399,12 +399,11 @@ namespace vk
 			{
 				if (!set.m_device)
 				{
-					break;
+					continue;
 				}
 
 				bind_sets[count++] = set.m_descriptor_set.value();   // Current set pointer for binding
-				set.m_descriptor_set.on_bind();                      // Notify async queue
-				set.next_descriptor_set();                           // Flush queue and update pointers
+				set.on_bind();                                       // Notify bind event. Internally updates handles and triggers flushing.
 			}
 
 			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
@@ -528,6 +527,7 @@ namespace vk
 
 			m_descriptor_set.push(m_copy_cmds, type_mask); // Write previous state
 			m_descriptor_set = allocate_descriptor_set();
+			m_any_descriptors_dirty = false;
 		}
 
 		void descriptor_table_t::create_descriptor_set_layout()
