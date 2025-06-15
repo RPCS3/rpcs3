@@ -57,6 +57,9 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 	vk_prog->binding_table.tex_param_location = location++;
 	vk_prog->binding_table.polygon_stipple_params_location = location++;
 
+	std::memset(vk_prog->binding_table.ftex_location, 0xff, sizeof(vk_prog->binding_table.ftex_location));
+	std::memset(vk_prog->binding_table.ftex_stencil_location, 0xff, sizeof(vk_prog->binding_table.ftex_stencil_location));
+
 	if (has_textures) [[ likely ]]
 	{
 		unsigned num_textures = 0;
