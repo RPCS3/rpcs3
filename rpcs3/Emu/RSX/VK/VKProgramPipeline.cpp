@@ -568,14 +568,7 @@ namespace vk
 				}
 			}
 
-			VkDescriptorSetLayoutCreateInfo set_layout_create_info
-			{
-				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-				.flags = 0,
-				.bindingCount = ::size32(bindings),
-				.pBindings = bindings.data()
-			};
-			CHECK_RESULT(vkCreateDescriptorSetLayout(m_device, &set_layout_create_info, nullptr, &m_descriptor_set_layout));
+			m_descriptor_set_layout = vk::descriptors::create_layout(bindings);
 		}
 
 		void descriptor_table_t::create_descriptor_pool()
