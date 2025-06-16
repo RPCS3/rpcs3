@@ -341,7 +341,7 @@ void hid_pad_handler<Device>::update_devices()
 			return;
 		}
 
-		m_enumerated_devices = std::move(m_new_enumerated_devices);
+		m_enumerated_devices = m_new_enumerated_devices;
 		m_enumerated_serials = std::move(m_new_enumerated_serials);
 	}
 
