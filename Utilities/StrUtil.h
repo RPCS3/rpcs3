@@ -23,19 +23,19 @@ inline void strcpy_trunc(D&& dst, const T& src)
 }
 
 // Convert string to signed integer
-bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max, std::string_view name = {});
 
 // Convert string to unsigned integer
-bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max, std::string_view name = {});
 
 // Convert string to unsigned int128_t
-bool try_to_uint128(u128* out, std::string_view value);
+bool try_to_uint128(u128* out, std::string_view value, std::string_view name = {});
 
 // Convert string to float
-bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max, std::string_view name = {});
 
 // Convert float to string locale independent
-bool try_to_string(std::string* out, const f64& value);
+bool try_to_string(std::string* out, f64 value, std::string_view name = {});
 
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);

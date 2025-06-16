@@ -11,6 +11,7 @@ add_library(rpcs3_ui STATIC
     clans_settings_dialog.cpp
     config_adapter.cpp
     config_checker.cpp
+    config_database.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp

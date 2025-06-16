@@ -7,5 +7,6 @@ enum class cfg_mode
 	global,           // Use global config.
 	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
 	continuous,       // Use same config as on last boot. Fall back to global config.
+	database_config,  // Use database config. Fall back to global config.
 	default_config    // Use the default values of the config entries.
 };

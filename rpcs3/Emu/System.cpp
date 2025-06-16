@@ -159,6 +159,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::still_running: return "Game is still running";
 		case game_boot_result::already_added: return "Game was already added";
 		case game_boot_result::currently_restricted: return "Booting is restricted at the time being";
+		case game_boot_result::database_config_missing: return "Could not find config in database";
 		}
 		return unknown;
 	});
@@ -176,6 +177,7 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 		case cfg_mode::global: return "global config";
 		case cfg_mode::config_override: return "config override";
 		case cfg_mode::continuous: return "continuous config";
+		case cfg_mode::database_config: return "database config";
 		case cfg_mode::default_config: return "default config";
 		}
 		return unknown;
@@ -932,14 +934,14 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 	return game_boot_result::invalid_file_or_folder;
 }
 
-game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path, const std::string& db_config)
 {
 	if (m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
 	}
 
-	auto save_args = std::make_tuple(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
+	auto save_args = std::make_tuple(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path, m_db_config);
 
 	auto restore_on_no_boot = [&](game_boot_result result)
 	{
@@ -949,7 +951,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 			if (m_state == system_state::stopped)
 			{
-				std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+				std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path, m_db_config) = std::move(save_args);
 
 				if (result != game_boot_result::no_errors)
 				{
@@ -964,7 +966,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 				// Execute after Kill() is done
 				Emu.after_kill_callback = [this, result, save_args = std::move(save_args)]() mutable
 				{
-					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+					std::tie(m_path, m_path_original, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path, m_db_config) = std::move(save_args);
 
 					if (result != game_boot_result::no_errors)
 					{
@@ -981,6 +983,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 	m_config_mode = config_mode;
 	m_config_path = config_path;
+	m_db_config = db_config;
 
 	// Handle files and special paths inside Load unmodified
 	if (direct || !fs::is_dir(path))
@@ -1563,6 +1566,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
 		{
+			// We add the database configuration if it is set, unless we are using a mode that specifically selects a different configuration.
+			bool add_database_config = !m_db_config.empty() && (m_config_mode == cfg_mode::database_config || m_config_mode == cfg_mode::custom || m_config_mode == cfg_mode::continuous);
+
 			if (m_config_mode == cfg_mode::custom_selection || (m_config_mode == cfg_mode::continuous && !m_config_path.empty()))
 			{
 				if (fs::file cfg_file{ m_config_path })
@@ -1605,11 +1611,27 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						{
 							g_cfg.name = config_path;
 							m_config_path = config_path;
+							add_database_config = false; // A custom config exists. Do not add the database config.
 							break;
 						}
 
 						sys_log.fatal("Failed to apply custom config: %s", config_path);
 					}
+				}
+			}
+
+			if (add_database_config)
+			{
+				// Add database config
+				sys_log.notice("Applying database config");
+
+				if (g_cfg.from_string(m_db_config))
+				{
+					g_cfg.name = "database_config";
+				}
+				else
+				{
+					sys_log.error("Failed to apply database config");
 				}
 			}
 
@@ -3342,6 +3364,25 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		return;
 	}
 
+	const auto reset_emu_state = [this]()
+	{
+		m_ar.reset();
+		argv.clear();
+		envp.clear();
+		data.clear();
+		disc.clear();
+		klic.clear();
+		hdd1.clear();
+		init_mem_containers = nullptr;
+		m_db_config.clear();
+		m_config_path.clear();
+		m_config_mode = cfg_mode::custom;
+		read_used_savestate_versions();
+		m_savestate_extension_flags1 = {};
+		m_emu_state_close_pending = false;
+		m_precompilation_option = {};
+	};
+
 	if (system_state old_state = m_state.fetch_op([](system_state& state)
 	{
 		if (state == system_state::stopping || state == system_state::stopped)
@@ -3360,21 +3401,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		}
 
 		// Ensure clean state
-		m_ar.reset();
-		argv.clear();
-		envp.clear();
-		data.clear();
-		disc.clear();
-		klic.clear();
-		hdd1.clear();
-		init_mem_containers = nullptr;
+		reset_emu_state();
 		after_kill_callback = nullptr;
-		m_config_path.clear();
-		m_config_mode = cfg_mode::custom;
-		read_used_savestate_versions();
-		m_savestate_extension_flags1 = {};
-		m_emu_state_close_pending = false;
-		m_precompilation_option = {};
 
 		// Enable logging
 		rpcs3::utils::configure_logs(true);
@@ -3422,7 +3450,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, reset_emu_state, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -3921,7 +3949,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		set_progress_message("Resetting Objects");
 
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
+		CallFromMainThread([join_thread = std::move(join_thread), reset_emu_state, verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
 		{
 			cpu_thread::cleanup();
 
@@ -3967,20 +3995,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			m_stop_ctr.notify_all();
 
 			// Boot arg cleanup (preserved in the case restarting)
-			argv.clear();
-			envp.clear();
-			data.clear();
-			disc.clear();
-			klic.clear();
-			hdd1.clear();
-			init_mem_containers = nullptr;
-			m_config_path.clear();
-			m_config_mode = cfg_mode::custom;
-			m_ar.reset();
-			read_used_savestate_versions();
-			m_savestate_extension_flags1 = {};
-			m_emu_state_close_pending = false;
-			m_precompilation_option = {};
+			reset_emu_state();
 
 			if (!m_continuous_mode)
 			{
@@ -4055,14 +4070,14 @@ game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 
 	if (!IsStopped())
 	{
-		auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path);
+		auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path, m_db_config);
 
 		if (graceful)
 			GracefulShutdown(false, false);
 		else
 			Kill(false);
 
-		std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path) = std::move(save_args);
+		std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_path, m_db_config) = std::move(save_args);
 	}
 	else
 	{

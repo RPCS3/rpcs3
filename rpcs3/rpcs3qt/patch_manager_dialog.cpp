@@ -1168,7 +1168,16 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
 {
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	QJsonParseError error {};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		patch_log.error("Patch download error - Invalid JSON: '%s'", error.errorString());
+		return false;
+	}
+
+	const QJsonObject json_data = json_document.object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)

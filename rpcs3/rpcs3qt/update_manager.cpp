@@ -116,7 +116,16 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 {
 	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	QJsonParseError error {};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		update_log.error("Update error - Invalid JSON: '%s'", error.errorString());
+		return false;
+	}
+
+	const QJsonObject json_data = json_document.object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
 	m_update_info.hash_found = true;

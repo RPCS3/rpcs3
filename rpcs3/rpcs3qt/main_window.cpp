@@ -47,6 +47,7 @@
 #include "music_player_dialog.h"
 #include "sound_effect_manager_dialog.h"
 #include "recording_settings_dialog.h"
+#include "config_database.h"
 
 #include <thread>
 #include <unordered_set>
@@ -493,6 +494,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::firmware_version:
 		message = tr("The game or PS3 application needs a more recent firmware version.");
 		break;
+	case game_boot_result::database_config_missing:
+		message = tr("Could not find any configuration for this game in the database.");
+		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::already_added: // Handled elsewhere
 	case game_boot_result::currently_restricted:
@@ -530,7 +534,25 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
-	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path); error != game_boot_result::no_errors)
+	std::string db_config;
+
+	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
+	if (config_database* db = m_game_list_frame->GetConfigDatabase();
+		db->has_config(title_id) || config_mode == cfg_mode::database_config)
+	{
+		const std::optional<std::string> config = db->get_config(title_id);
+
+		if (!config)
+		{
+			gui_log.error("Boot failed: reason: no database config found for '%s'", title_id);
+			show_boot_error(game_boot_result::database_config_missing);
+			return;
+		}
+
+		db_config = *config;
+	}
+
+	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path, db_config); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
@@ -940,7 +962,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	bool precompile_caches = false;
 	bool canceled = false;
 
-	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
+	const game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
 	// Let the user choose the packages to install and select the order in which they shall be installed.
 	pkg_install_dialog dlg(file_paths, compat, this);
