@@ -156,7 +156,7 @@ endif()
 if(LINUX)
     find_program(GAMEMODE_FOUND gamemoded) ## Only works if gamemode is installed on system (might include lib32 case)
     if(GAMEMODE_FOUND)
-         set(GAMEMODE_AVAILABLE ON CACHE BOOL "GameMode is only available on Linux." FORCE)
+         add_compile_definitions(GAMEMODE_AVAILABLE)
     endif()
 endif()
 
