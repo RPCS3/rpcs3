@@ -157,8 +157,8 @@ if(LINUX)
     find_program(GAMEMODE_FOUND gamemoded) ## Only works if gamemode is installed on system (might include lib32 case)
     if(GAMEMODE_FOUND)
          add_compile_definitions(GAMEMODE_AVAILABLE)
-         message(GAMEMODE_AVAILABLE="${GAMEMODE_AVAILABLE}")
     endif()
+    message(GAMEMODE_AVAILABLE="${GAMEMODE_AVAILABLE}")
 endif()
 
 # TODO: do real installation, including copying directory structure
