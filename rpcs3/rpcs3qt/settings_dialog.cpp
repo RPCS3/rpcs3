@@ -1849,6 +1849,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->useNativeInterface, tooltips.settings.use_native_interface);
 
 #ifdef GAMEMODE_AVAILABLE
+	ui->enableGamemode->setVisible(true);
 	m_emu_settings->EnhanceCheckBox(ui->enableGamemode, emu_settings_type::EnableGamemode);
 	SubscribeTooltip(ui->enableGamemode, tooltips.settings.enable_gamemode);
 #endif
