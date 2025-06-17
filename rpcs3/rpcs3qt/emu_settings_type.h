@@ -187,9 +187,9 @@ enum class emu_settings_type
 	WindowTitleFormat,
 	PauseDuringHomeMenu,
 
-#ifdef GAMEMODE_AVAILABLE
+
 	EnableGamemode,				  // Only available if Feral Interactive GameMode is installed
-#endif
+
 
 	// Network
 	InternetStatus,
@@ -393,9 +393,9 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::WindowTitleFormat,               { "Miscellaneous", "Window Title Format" }},
 	{ emu_settings_type::PauseDuringHomeMenu,             { "Miscellaneous", "Pause Emulation During Home Menu" }},
 
-#ifdef GAMEMODE_AVAILABLE
+
 	{ emu_settings_type::EnableGamemode,             	  { "Miscellaneous", "Enable GameMode" }},
-#endif
+
 
 	// Networking
 	{ emu_settings_type::InternetStatus, { "Net", "Internet enabled"}},
