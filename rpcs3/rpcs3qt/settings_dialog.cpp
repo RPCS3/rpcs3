@@ -1848,6 +1848,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings_type::UseNativeInterface);
 	SubscribeTooltip(ui->useNativeInterface, tooltips.settings.use_native_interface);
 
+#ifdef GAMEMODE_AVAILABLE
+	m_emu_settings->EnhanceCheckBox(ui->enableGamemode, emu_settings_type::EnableGamemode);
+	SubscribeTooltip(ui->enableGamemode, tooltips.settings.enable_gamemode);
+#endif
+
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, tooltips.settings.show_shader_compilation_hint);
 

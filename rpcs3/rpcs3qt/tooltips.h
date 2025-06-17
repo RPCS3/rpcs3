@@ -129,6 +129,10 @@ public:
 
 		// emulator
 
+		// GAMEMODE CHANGES
+		const QString enable_gamemode              = tr("Activate Feral Interactive's GameMode.\nThis is a series of CPU and GPU optimizations and can potentially benefit game performance on some systems.\nIf unsure, leave off. \n");
+		//
+
 		const QString exit_on_stop                 = tr("Automatically close RPCS3 when closing a game, or when a game closes itself.");
 		const QString pause_on_focus_loss          = tr("Automatically pause emulation when RPCS3 loses its focus or the application is inactive in order to save power and reduce CPU usage.\nDo note that emulation pausing in general is not perfect and may not be compatible with all games.\nAlthough it currently also pauses gameplay, it is not recommended to rely on it as this behavior may be changed in the future and it is not the purpose of this setting.");
 		const QString start_game_fullscreen        = tr("Automatically puts the game window in fullscreen.\nDouble click on the game window or press Alt+Enter to toggle fullscreen and windowed mode.");
