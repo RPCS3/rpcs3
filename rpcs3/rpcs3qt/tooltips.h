@@ -130,7 +130,8 @@ public:
 		// emulator
 
 		// GAMEMODE CHANGES
-		const QString enable_gamemode              = tr("Activate Feral Interactive's GameMode.\nThis is a series of CPU and GPU optimizations and can potentially benefit game performance on some systems.\nIf unsure, leave off. \n");
+		const QString enable_gamemode              = tr("Activate Feral Interactive's GameMode.\nThis is a series of CPU and GPU optimizations and can potentially benefit game performance on some systems.");
+		const QString no_gamemode                  = tr("This requires Feral Interactive's GameMode to be installed.\nGameMode is a series of CPU and GPU optimizations and can potentially benefit game performance on some systems.\nTo install GameMode for your specific Linux distribution, go to the GitHub page:https://github.com/FeralInteractive/gamemode");
 		//
 
 		const QString exit_on_stop                 = tr("Automatically close RPCS3 when closing a game, or when a game closes itself.");

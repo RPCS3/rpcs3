@@ -43,8 +43,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>821</width>
-        <height>716</height>
+        <width>843</width>
+        <height>865</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>7</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -3024,6 +3024,12 @@
                </item>
                <item>
                 <widget class="QCheckBox" name="enableGamemode">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="visible">
+                   <bool>false</bool>
+                 </property>
                  <property name="text">
                   <string>Enable GameMode</string>
                  </property>
