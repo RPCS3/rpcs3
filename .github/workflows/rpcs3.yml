@@ -361,6 +361,8 @@ jobs:
             mingw-w64-clang-x86_64-opencv
             mingw-w64-clang-x86_64-glew
             mingw-w64-clang-x86_64-vulkan
+            mingw-w64-clang-x86_64-vulkan-headers
+            mingw-w64-clang-x86_64-vulkan-loader
             mingw-w64-clang-x86_64-gtest
             mingw-w64-clang-x86_64-qt6-base
             mingw-w64-clang-x86_64-qt6-declarative

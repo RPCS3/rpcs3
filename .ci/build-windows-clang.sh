@@ -23,6 +23,7 @@ else
 fi
 
 cmake ..                                               \
+    -DCMAKE_PREFIX_PATH=/clang64                       \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
@@ -44,6 +45,7 @@ cmake ..                                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DWITH_LLVM=ON                                     \
     -DLLVM_DIR=/clang64/lib/cmake/llvm                 \
+    -DVulkan_LIBRARY=/clang64/lib/libvulkan.dll.a      \
     -DSTATIC_LINK_LLVM=ON                              \
     -DBUILD_RPCS3_TESTS=OFF                            \
     -DRUN_RPCS3_TESTS=OFF                              \
