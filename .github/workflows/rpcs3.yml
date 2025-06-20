@@ -361,6 +361,8 @@ jobs:
             mingw-w64-clang-x86_64-opencv
             mingw-w64-clang-x86_64-glew
             mingw-w64-clang-x86_64-vulkan
+            mingw-w64-clang-x86_64-vulkan-headers
+            mingw-w64-clang-x86_64-vulkan-loader
             mingw-w64-clang-x86_64-gtest
             mingw-w64-clang-x86_64-qt6-base
             mingw-w64-clang-x86_64-qt6-declarative
@@ -407,6 +409,7 @@ jobs:
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
       QT_VER_MAIN: '6'
