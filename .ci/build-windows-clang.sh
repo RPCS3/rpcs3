@@ -45,7 +45,7 @@ cmake ..                                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DWITH_LLVM=ON                                     \
     -DLLVM_DIR=/clang64/lib/cmake/llvm                 \
-    -DVulkan_LIBRARY=/clang64/lib/libvulkan.dll.a      \
+    -DVulkan_LIBRARY=/clang64/lib/libvulkan-1.dll.a    \
     -DSTATIC_LINK_LLVM=ON                              \
     -DBUILD_RPCS3_TESTS=OFF                            \
     -DRUN_RPCS3_TESTS=OFF                              \
