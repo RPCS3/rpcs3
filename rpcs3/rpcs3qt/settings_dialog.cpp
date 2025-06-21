@@ -1855,6 +1855,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->enableGamemode->setEnabled(true);
 	m_emu_settings->EnhanceCheckBox(ui->enableGamemode, emu_settings_type::EnableGamemode);
 	SubscribeTooltip(ui->enableGamemode, tooltips.settings.enable_gamemode);
+	connect(ui->enableGamemode, &QCheckBox::toggled, [this](bool checked)
+		{
+			if (checked) {
+				b8 g_FERAL_GAMEMODE_ON = true;
+			} else if (!checked) { // Wanted to make toggle functionality clear
+				b8 g_FERAL_GAMEMODE_ON = false;
+			}
+		});
 #else
 	SubscribeTooltip(ui->enableGamemode, tooltips.settings.no_gamemode);
 #endif
