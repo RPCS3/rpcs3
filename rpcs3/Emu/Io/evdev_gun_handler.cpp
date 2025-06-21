@@ -56,7 +56,7 @@ bool event_is_number(const char* s)
 }
 
 // compare /dev/input/eventX and /dev/input/eventY where X and Y are numbers
-int event_strcmp_events(const char* x, const char* y)
+bool event_strcmp_events(const char* x, const char* y)
 {
 	// find a common string
 	int n = 0;
@@ -71,14 +71,10 @@ int event_strcmp_events(const char* x, const char* y)
 		const int a = atoi(x + n);
 		const int b = atoi(y + n);
 
-		if (a == b)
-			return 0;
-		if (a < b)
-			return -1;
-		return 1;
+		return a < b;
 	}
 
-	return strcmp(x, y);
+	return strcmp(x, y) < 0;
 }
 
 evdev_gun_handler::evdev_gun_handler()
