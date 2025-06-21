@@ -63,6 +63,12 @@
 #include "llvm/Config/llvm-config.h"
 #endif
 
+// TODO: Decide what to do with including the header file for GAMEMODE to work
+
+//#ifdef GAMEMODE_AVAILABLE
+//#include "3rdparty/feralinteractive/gamemode_client.h"
+//#endif
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB
