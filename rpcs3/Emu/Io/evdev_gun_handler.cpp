@@ -56,7 +56,7 @@ bool event_is_number(const char* s)
 }
 
 // compare /dev/input/eventX and /dev/input/eventY where X and Y are numbers
-int event_strcmp_events(const char* x, const char* y)
+bool event_cmp_less_than(const char* x, const char* y)
 {
 	// find a common string
 	int n = 0;
@@ -71,14 +71,10 @@ int event_strcmp_events(const char* x, const char* y)
 		const int a = atoi(x + n);
 		const int b = atoi(y + n);
 
-		if (a == b)
-			return 0;
-		if (a < b)
-			return -1;
-		return 1;
+		return a < b;
 	}
 
-	return strcmp(x, y);
+	return strcmp(x, y) < 0;
 }
 
 evdev_gun_handler::evdev_gun_handler()
@@ -243,7 +239,7 @@ bool evdev_gun_handler::init()
 		// Sort the udev entries by devnode name so that they are created in the proper order
 		std::sort(sorted_devices.begin(), sorted_devices.end(), [](const event_udev_entry& a, const event_udev_entry& b)
 		{
-			return event_strcmp_events(a.devnode, b.devnode);
+			return event_cmp_less_than(a.devnode, b.devnode);
 		});
 
 		for (const event_udev_entry& entry : sorted_devices)
