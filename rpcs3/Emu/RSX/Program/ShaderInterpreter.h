@@ -20,8 +20,9 @@ namespace program_common
 			COMPILER_OPT_ENABLE_KIL            = (1 << 11),
 			COMPILER_OPT_ENABLE_STIPPLING      = (1 << 12),
 			COMPILER_OPT_ENABLE_INSTANCING     = (1 << 13),
+			COMPILER_OPT_ENABLE_VTX_TEXTURES   = (1 << 14),
 
-			COMPILER_OPT_MAX                   = COMPILER_OPT_ENABLE_INSTANCING
+			COMPILER_OPT_MAX                   = COMPILER_OPT_ENABLE_VTX_TEXTURES
 		};
 
 		static std::string get_vertex_interpreter()
