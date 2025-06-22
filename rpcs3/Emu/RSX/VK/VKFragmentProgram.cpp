@@ -92,7 +92,7 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 			{
 				for (auto& stencil_location : vk_prog->binding_table.ftex_stencil_location)
 				{
-					if (stencil_location == umax)
+					if (stencil_location != 0)
 					{
 						continue;
 					}
