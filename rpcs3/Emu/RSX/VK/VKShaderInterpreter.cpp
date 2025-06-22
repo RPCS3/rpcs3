@@ -404,7 +404,7 @@ namespace vk
 	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images)
 	{
 		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
-		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "texture1D_array");
+		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "sampler1D_array[16]");
 		if (binding == umax)
 		{
 			return;
