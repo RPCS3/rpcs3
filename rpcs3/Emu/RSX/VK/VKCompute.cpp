@@ -353,7 +353,7 @@ namespace vk
 		m_src = fmt::replace_all(m_src, syntax_replace);
 	}
 
-	void cs_aggregator::bind_resources(const vk::command_buffer& cmd)
+	void cs_aggregator::bind_resources(const vk::command_buffer& /*cmd*/)
 	{
 		m_program->bind_uniform({ src->value, 0, block_length }, 0, 0);
 		m_program->bind_uniform({ dst->value, 0, 4 }, 0, 1);

@@ -51,7 +51,7 @@ namespace vk
 			return result;
 		}
 
-		void bind_resources(const vk::command_buffer& cmd) override
+		void bind_resources(const vk::command_buffer& /*cmd*/) override
 		{
 			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));

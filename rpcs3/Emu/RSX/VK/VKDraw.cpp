@@ -761,9 +761,6 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		return;
 	}
 
-	const auto old_persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
-	const auto old_volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
-
 	// Programs data is dependent on vertex state
 	auto upload_info = upload_vertex_data();
 	if (!upload_info.vertex_draw_count)

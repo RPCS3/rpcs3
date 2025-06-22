@@ -46,7 +46,7 @@ namespace vk
 		return location;
 	}
 
-	u32 shader_interpreter::init(VKFragmentProgram* vk_prog, u64 compiler_opt) const
+	u32 shader_interpreter::init(VKFragmentProgram* vk_prog, u64 /*compiler_opt*/) const
 	{
 		std::memset(&vk_prog->binding_table, 0xff, sizeof(vk_prog->binding_table));
 
@@ -413,7 +413,7 @@ namespace vk
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			m_current_interpreter->bind_uniform_array(texture_ptr, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 16, set, binding);
+			m_current_interpreter->bind_uniform_array(texture_ptr, 16, set, binding);
 		}
 	}
 

@@ -62,7 +62,6 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 
 	if (has_textures) [[ likely ]]
 	{
-		unsigned num_textures = 0;
 		for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 		{
 			if (!PT.type.starts_with("sampler"))
@@ -72,8 +71,6 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 
 			for (const ParamItem& PI : PT.items)
 			{
-				num_textures++;
-
 				const auto texture_id = vk::get_texture_index(PI.name);
 				const auto mask = 1u << texture_id;
 
