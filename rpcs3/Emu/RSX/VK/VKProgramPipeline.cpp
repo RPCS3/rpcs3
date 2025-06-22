@@ -502,8 +502,6 @@ namespace vk
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
-			m_copy_cmds.clear();
-			rsx::flags32_t type_mask = 0u;
 			m_descriptor_set = allocate_descriptor_set();
 
 			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
@@ -516,21 +514,11 @@ namespace vk
 					continue;
 				}
 
-				m_copy_cmds.push_back({
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.dstSet = m_descriptor_set.value(),
-					.dstBinding = i,
-					.descriptorCount = 1,
-					.descriptorType = m_descriptor_types[i],
-					.pImageInfo = std::get_if<VkDescriptorImageInfo>(&m_descriptor_slots[i]),
-					.pBufferInfo = std::get_if<VkDescriptorBufferInfo>(&m_descriptor_slots[i]),
-					.pTexelBufferView = std::get_if<VkBufferView>(&m_descriptor_slots[i])
-				});
-
-				type_mask |= (1u << m_descriptor_types[i]);
+				// We should copy here if possible.
+				// Without descriptor_buffer, the most efficient option is to just use the normal bind logic due to the pointer-based nature of the descriptor inputs and no stride.
+				push_descriptor_slot(i);
 			}
 
-			m_descriptor_set.push(m_copy_cmds, type_mask); // Write previous state
 			m_descriptor_set.on_bind();
 			m_any_descriptors_dirty = false;
 
