@@ -124,7 +124,6 @@ namespace vk
 
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;
-			rsx::simple_array<VkWriteDescriptorSet> m_copy_cmds;
 			bool m_any_descriptors_dirty = false;
 
 			void init(VkDevice dev);
