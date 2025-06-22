@@ -555,7 +555,7 @@ bool VKGSRender::bind_texture_env()
 		{
 			m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
 				vk::glsl::binding_set_index_fragment,
-				m_fragment_prog->binding_table.ftex_location[i]);
+				m_fs_binding_table->ftex_location[i]);
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
@@ -576,7 +576,7 @@ bool VKGSRender::bind_texture_env()
 
 				m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
 					vk::glsl::binding_set_index_fragment,
-					m_fragment_prog->binding_table.ftex_stencil_location[i]);
+					m_fs_binding_table->ftex_stencil_location[i]);
 			}
 		}
 		else
@@ -584,13 +584,13 @@ bool VKGSRender::bind_texture_env()
 			const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
 			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				vk::glsl::binding_set_index_fragment,
-				m_fragment_prog->binding_table.ftex_location[i]);
+				m_fs_binding_table->ftex_location[i]);
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					vk::glsl::binding_set_index_fragment,
-					m_fragment_prog->binding_table.ftex_stencil_location[i]);
+					m_fs_binding_table->ftex_stencil_location[i]);
 			}
 		}
 	}
@@ -605,7 +605,7 @@ bool VKGSRender::bind_texture_env()
 			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
 			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				vk::glsl::binding_set_index_vertex,
-				m_vertex_prog->binding_table.vtex_location[i]);
+				m_vs_binding_table->vtex_location[i]);
 
 			continue;
 		}
@@ -628,7 +628,7 @@ bool VKGSRender::bind_texture_env()
 
 			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				vk::glsl::binding_set_index_vertex,
-				m_vertex_prog->binding_table.vtex_location[i]);
+				m_vs_binding_table->vtex_location[i]);
 
 			continue;
 		}
@@ -637,7 +637,7 @@ bool VKGSRender::bind_texture_env()
 
 		m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
 			vk::glsl::binding_set_index_vertex,
-			m_vertex_prog->binding_table.vtex_location[i]);
+			m_vs_binding_table->vtex_location[i]);
 	}
 
 	return out_of_memory;
@@ -874,10 +874,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	ensure(m_vertex_layout_storage);
 	if (update_descriptors)
 	{
-		const auto& binding_table = m_vertex_prog->binding_table;
-		m_program->bind_uniform(persistent_buffer, vk::glsl::binding_set_index_vertex, binding_table.vertex_buffers_location);
-		m_program->bind_uniform(volatile_buffer, vk::glsl::binding_set_index_vertex, binding_table.vertex_buffers_location + 1);
-		m_program->bind_uniform(m_vertex_layout_storage->value, vk::glsl::binding_set_index_vertex, binding_table.vertex_buffers_location + 2);
+		m_program->bind_uniform(persistent_buffer, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location);
+		m_program->bind_uniform(volatile_buffer, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location + 1);
+		m_program->bind_uniform(m_vertex_layout_storage->value, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location + 2);
 	}
 
 	bool reload_state = (!m_current_draw.subdraw_id++);

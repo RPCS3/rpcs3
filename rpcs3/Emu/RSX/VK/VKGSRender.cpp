@@ -1780,8 +1780,11 @@ bool VKGSRender::load_program()
 			m_program = m_shader_interpreter.get(
 				m_pipeline_properties,
 				current_fp_metadata,
+				current_vp_metadata,
 				current_vertex_program.ctrl,
 				current_fragment_program.ctrl);
+
+			std::tie(m_vs_binding_table, m_fs_binding_table) = get_binding_table();
 			return true;
 		}
 	}
@@ -1879,6 +1882,7 @@ bool VKGSRender::load_program()
 			m_program = m_shader_interpreter.get(
 				m_pipeline_properties,
 				current_fp_metadata,
+				current_vp_metadata,
 				current_vertex_program.ctrl,
 				current_fragment_program.ctrl);
 
@@ -1900,6 +1904,16 @@ bool VKGSRender::load_program()
 		}
 	}
 
+	if (m_program)
+	{
+		std::tie(m_vs_binding_table, m_fs_binding_table) = get_binding_table();
+	}
+	else
+	{
+		m_vs_binding_table = nullptr;
+		m_fs_binding_table = nullptr;
+	}
+
 	return m_program != nullptr;
 }
 
@@ -1911,13 +1925,14 @@ void VKGSRender::load_program_env()
 	}
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
 	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
 	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty);
 	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
-	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
+	const bool update_instruction_buffers = (!!m_interpreter_state && is_interpreter);
 	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 	const bool update_instancing_data = rsx::method_registers.current_draw_clause.is_trivial_instanced_draw;
 
@@ -2078,17 +2093,14 @@ void VKGSRender::load_program_env()
 		}
 	}
 
-	const auto& vs_binding_table = m_vertex_prog->binding_table;
-	const auto& fs_binding_table = m_fragment_prog->binding_table;
+	m_program->bind_uniform(m_vertex_env_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->context_buffer_location);
+	m_program->bind_uniform(m_fragment_env_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->context_buffer_location);
+	m_program->bind_uniform(m_fragment_texture_params_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->tex_param_location);
+	m_program->bind_uniform(m_raster_env_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->polygon_stipple_params_location);
 
-	m_program->bind_uniform(m_vertex_env_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.context_buffer_location);
-	m_program->bind_uniform(m_fragment_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.context_buffer_location);
-	m_program->bind_uniform(m_fragment_texture_params_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.tex_param_location);
-	m_program->bind_uniform(m_raster_env_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.polygon_stipple_params_location);
-
-	if (vs_binding_table.cbuf_location != umax)
+	if (m_vs_binding_table->cbuf_location != umax)
 	{
-		m_program->bind_uniform(m_vertex_constants_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.cbuf_location);
+		m_program->bind_uniform(m_vertex_constants_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cbuf_location);
 	}
 
 	if (m_shader_interpreter.is_interpreter(m_program))
@@ -2096,21 +2108,21 @@ void VKGSRender::load_program_env()
 		m_program->bind_uniform(m_vertex_instructions_buffer_info, vk::glsl::binding_set_index_vertex, m_shader_interpreter.get_vertex_instruction_location());
 		m_program->bind_uniform(m_fragment_instructions_buffer_info, vk::glsl::binding_set_index_fragment, m_shader_interpreter.get_fragment_instruction_location());
 	}
-	else if (fs_binding_table.cbuf_location != umax)
+	else if (m_fs_binding_table->cbuf_location != umax)
 	{
-		m_program->bind_uniform(m_fragment_constants_buffer_info, vk::glsl::binding_set_index_fragment, fs_binding_table.cbuf_location);
+		m_program->bind_uniform(m_fragment_constants_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->cbuf_location);
 	}
 
 	if (vk::emulate_conditional_rendering())
 	{
 		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
-		m_program->bind_uniform({ predicate, 0, 4 }, vk::glsl::binding_set_index_vertex, vs_binding_table.cr_pred_buffer_location);
+		m_program->bind_uniform({ predicate, 0, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
 
 	if (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
 	{
-		m_program->bind_uniform(m_instancing_indirection_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.instanced_lut_buffer_location);
-		m_program->bind_uniform(m_instancing_constants_array_buffer_info, vk::glsl::binding_set_index_vertex, vs_binding_table.instanced_cbuf_location);
+		m_program->bind_uniform(m_instancing_indirection_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->instanced_lut_buffer_location);
+		m_program->bind_uniform(m_instancing_constants_array_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->instanced_cbuf_location);
 	}
 
 	// Clear flags
@@ -2135,6 +2147,19 @@ void VKGSRender::load_program_env()
 	}
 
 	m_graphics_state.clear(handled_flags);
+}
+
+std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_binding_table() const
+{
+	ensure(m_program);
+
+	if (!m_shader_interpreter.is_interpreter(m_program))
+	{
+		return { &m_vertex_prog->binding_table, &m_fragment_prog->binding_table };
+	}
+
+	const auto& [vs, fs] = m_shader_interpreter.get_shaders();
+	return { &vs->binding_table, &fs->binding_table };
 }
 
 bool VKGSRender::is_current_program_interpreted() const

@@ -10,7 +10,7 @@ namespace vk
 	class shader_interpreter;
 }
 
-struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
+class VKFragmentDecompilerThread : public FragmentProgramDecompiler
 {
 	friend class vk::shader_interpreter;
 
