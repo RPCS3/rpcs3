@@ -837,36 +837,6 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			vk::clear_status_interrupt(vk::heap_changed);
 		}
 	}
-	else if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
-	{
-		/*
-		// Need to update descriptors; make a copy for the next draw
-		VkDescriptorSet previous_set = m_current_frame->descriptor_set.value();
-		m_current_frame->descriptor_set.flush();
-		m_current_frame->descriptor_set = allocate_descriptor_set();
-		rsx::simple_array<VkCopyDescriptorSet> copy_cmds(binding_table.total_descriptor_bindings);
-
-		for (u32 n = 0; n < binding_table.total_descriptor_bindings; ++n)
-		{
-			copy_cmds[n] =
-			{
-				VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
-				nullptr,                                 // pNext
-				previous_set,                            // srcSet
-				n,                                       // srcBinding
-				0u,                                      // srcArrayElement
-				m_current_frame->descriptor_set.value(), // dstSet
-				n,                                       // dstBinding
-				0u,                                      // dstArrayElement
-				1u                                       // descriptorCount
-			};
-		}
-
-		m_current_frame->descriptor_set.push(copy_cmds);
-		update_descriptors = true;
-		*/
-		fmt::throw_exception("Not implemented");
-	}
 
 	// Update vertex fetch parameters
 	update_vertex_env(sub_index, upload_info);
