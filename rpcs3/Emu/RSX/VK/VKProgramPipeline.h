@@ -109,7 +109,13 @@ namespace vk
 			VkShaderModule get_handle() const;
 		};
 
-		using descriptor_slot_t = std::variant<VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView>;
+		struct descriptor_array_ref_t
+		{
+			u32 first = 0;
+			u32 count = 0;
+		};
+
+		using descriptor_slot_t = std::variant<VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView, descriptor_array_ref_t>;
 
 		struct descriptor_table_t
 		{
@@ -125,6 +131,8 @@ namespace vk
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;
 			bool m_any_descriptors_dirty = false;
+
+			rsx::simple_array< VkDescriptorImageInfo> m_scratch_images_array;
 
 			void init(VkDevice dev);
 			void destroy();

@@ -339,14 +339,23 @@ namespace vk
 
 		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 set_id, u32 binding_point)
 		{
+			// Non-caching write
 			auto& set = m_sets[set_id];
+			auto& arr = set.m_scratch_images_array;
+
+			descriptor_array_ref_t data
+			{
+				.first = arr.size(),
+				.count = static_cast<u32>(count)
+			};
+
+			arr.reserve(arr.size() + static_cast<u32>(count));
 			for (int i = 0; i < count; ++i)
 			{
-				if (set.m_descriptor_slots[binding_point + i] != image_descriptors[i])
-				{
-					set.notify_descriptor_slot_updated(binding_point + i, image_descriptors[i]);
-				}
+				arr.push_back(image_descriptors[i]);
 			}
+
+			set.notify_descriptor_slot_updated(binding_point, data);
 		}
 
 		void program::create_pipeline_layout()
@@ -499,6 +508,14 @@ namespace vk
 					return;
 				}
 
+				if (auto ptr = std::get_if<descriptor_array_ref_t>(&slot))
+				{
+					ensure(type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); // Only type supported at the moment
+					ensure((ptr->first + ptr->count) <= m_scratch_images_array.size());
+					m_descriptor_set.push(m_scratch_images_array.data() + ptr->first, ptr->count, type, idx);
+					return;
+				}
+
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
@@ -521,6 +538,7 @@ namespace vk
 
 			m_descriptor_set.on_bind();
 			m_any_descriptors_dirty = false;
+			m_scratch_images_array.clear();
 
 			return m_descriptor_set.value();
 		}
@@ -536,6 +554,27 @@ namespace vk
 			m_descriptor_pool_sizes.reserve(input_type_max_enum);
 
 			std::unordered_map<u32, VkDescriptorType> descriptor_type_map;
+
+			auto descriptor_count = [](const std::string& name) -> u32
+			{
+				const auto start = name.find_last_of("[");
+				if (start == std::string::npos)
+				{
+					return 1;
+				}
+
+				const auto end = name.find_last_of("]");
+				ensure(end != std::string::npos && start < end, "Invalid variable name");
+
+				const std::string array_size = name.substr(start + 1, end - start - 1);
+				if (const auto count = std::atoi(array_size.c_str());
+					count > 0)
+				{
+					return count;
+				}
+
+				return 1;
+			};
 
 			for (const auto& type_arr : m_inputs)
 			{
@@ -553,13 +592,13 @@ namespace vk
 					{
 						.binding = input.location,
 						.descriptorType = type,
-						.descriptorCount = 1,
+						.descriptorCount = descriptor_count(input.name),
 						.stageFlags = to_shader_stage_flags(input.domain)
 					};
 					bindings.push_back(binding);
 
 					descriptor_type_map[input.location] = type;
-					m_descriptor_pool_sizes.back().descriptorCount++;
+					m_descriptor_pool_sizes.back().descriptorCount += binding.descriptorCount;
 				}
 			}
 
