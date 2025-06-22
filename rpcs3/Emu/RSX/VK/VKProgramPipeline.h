@@ -170,7 +170,7 @@ namespace vk
 
 		class program
 		{
-			VkDevice m_device = VK_NULL_HANDLE;			
+			VkDevice m_device = VK_NULL_HANDLE;
 			VkPipeline m_pipeline = VK_NULL_HANDLE;
 			VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
 
@@ -202,7 +202,7 @@ namespace vk
 			void bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkBufferView &buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
 
-			void bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 set_id, u32 binding_point);
+			void bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, int count, u32 set_id, u32 binding_point);
 
 			inline VkPipelineLayout layout() const { return m_pipeline_layout; }
 			inline VkPipeline value() const { return m_pipeline; }

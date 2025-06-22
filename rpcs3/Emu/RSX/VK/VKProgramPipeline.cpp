@@ -337,7 +337,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_view);
 		}
 
-		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, VkDescriptorType type, int count, u32 set_id, u32 binding_point)
+		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, int count, u32 set_id, u32 binding_point)
 		{
 			// Non-caching write
 			auto& set = m_sets[set_id];
