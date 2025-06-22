@@ -43,6 +43,10 @@ namespace vk
 		if (!m_vao.heap)
 		{
 			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, "overlays VAO", 128);
+		}
+
+		if (!m_ubo.heap && m_num_uniform_buffers > 0)
+		{
 			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, "overlays UBO", 128);
 		}
 	}
@@ -704,6 +708,9 @@ namespace vk
 		// Disable samplers
 		m_num_usable_samplers = 0;
 
+		// Disable UBOs
+		m_num_uniform_buffers = 0;
+
 		renderpass_config.set_depth_mask(false);
 		renderpass_config.set_color_mask(0, true, true, true, true);
 		renderpass_config.set_attachment_count(1);
@@ -711,6 +718,7 @@ namespace vk
 
 	std::vector<vk::glsl::program_input> attachment_clear_pass::get_vertex_inputs()
 	{
+		check_heap();
 		return
 		{
 			vk::glsl::program_input::make(
