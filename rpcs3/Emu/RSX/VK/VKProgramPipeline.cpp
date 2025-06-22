@@ -361,7 +361,7 @@ namespace vk
 			{
 				if (!set.m_device)
 				{
-					break;
+					continue;
 				}
 
 				set.create_descriptor_set_layout();
