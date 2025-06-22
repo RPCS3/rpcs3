@@ -16,7 +16,9 @@ namespace vk
 		u32 cs_wave_y = 1;
 
 		cs_resolve_base()
-		{}
+		{
+			ssbo_count = 0;
+		}
 
 		virtual ~cs_resolve_base()
 		{}
