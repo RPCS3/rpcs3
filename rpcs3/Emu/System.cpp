@@ -994,6 +994,13 @@ void Emulator::SetContinuousMode(bool continuous_mode)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
+	if (g_cfg.misc.enable_gamemode) {
+		u8 s_gamemode_start = gamemode_request_start();
+		if(s_gamemode_start < 0 ) {
+			fprintf(stderr, "gamemode start request failed: %s\n", gamemode_error_string());
+		}
+	}
+
 	if (recursion_count == 0 && m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
@@ -3059,6 +3066,14 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
+
+	if (g_cfg.misc.enable_gamemode) {
+		u8 s_gamemode_end = gamemode_request_end();
+		if(s_gamemode_end < 0 ) {
+			fprintf(stderr, "gamemode exit request failed: %s\n", gamemode_error_string());
+		}
+	}
+
 	static const auto make_ptr = [](auto ptr)
 	{
 		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
