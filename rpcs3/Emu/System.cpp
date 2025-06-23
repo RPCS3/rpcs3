@@ -63,11 +63,13 @@
 #include "llvm/Config/llvm-config.h"
 #endif
 
-// TODO: Decide what to do with including the header file for GAMEMODE to work
-
-//#ifdef GAMEMODE_AVAILABLE
-//#include "3rdparty/feralinteractive/gamemode_client.h"
-//#endif
+// GameMode Inclusion
+#ifdef GAMEMODE_AVAILABLE
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+extern "C" {
+	#include "3rdparty/feralinteractive/feralinteractive/lib/gamemode_client.h"
+}
 
 LOG_CHANNEL(sys_log, "SYS");
 
