@@ -1,4 +1,4 @@
-#include "enable_gamemode.h"
+#include "gamemode_control.h"
 
 #ifdef GAMEMODE_AVAILABLE
 #pragma GCC diagnostic ignored "-Wold-style-cast"
