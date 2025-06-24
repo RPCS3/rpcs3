@@ -310,6 +310,7 @@ namespace vk
 
 		// 2 input textures
 		m_num_usable_samplers = 2;
+		m_num_uniform_buffers = 0;
 
 		renderpass_config.set_attachment_count(1);
 		renderpass_config.set_color_mask(0, true, true, true, true);
@@ -807,6 +808,9 @@ namespace vk
 			"{\n"
 			"	out_color = vec4(0.);\n"
 			"}\n";
+
+		m_num_uniform_buffers = 0;
+		m_num_usable_samplers = 0;
 	}
 
 	void stencil_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -865,6 +869,7 @@ namespace vk
 		renderpass_config.set_attachment_count(1);
 
 		m_num_usable_samplers = 2;
+		m_num_uniform_buffers = 0;
 	}
 
 	std::vector<vk::glsl::program_input> video_out_calibration_pass::get_fragment_inputs()

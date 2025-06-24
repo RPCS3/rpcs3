@@ -14,8 +14,8 @@ R"(
 #define SAMPLER_MODE_TEXTURE2D 3
 
 #ifdef VULKAN
-	layout(set=0, binding=1) uniform sampler2D fs0;
-	layout(set=0, binding=2) uniform sampler2DArray fs1;
+	layout(set=0, binding=0) uniform sampler2D fs0;
+	layout(set=0, binding=1) uniform sampler2DArray fs1;
 #else
 	layout(binding=31) uniform sampler2D fs0;
 	layout(binding=30) uniform sampler2DArray fs1;
