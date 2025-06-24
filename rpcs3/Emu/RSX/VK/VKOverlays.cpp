@@ -859,7 +859,7 @@ namespace vk
 
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
-			{ "%sampler_binding", fmt::format("(%d + x)", sampler_location(0)) },
+			{ "%sampler_binding", "x" },
 			{ "%set_decorator", "set=0" },
 		};
 		fs_src = fmt::replace_all(fs_src, repl_list);
