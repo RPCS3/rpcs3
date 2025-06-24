@@ -275,12 +275,15 @@ namespace vk
 		in.name = "FragmentInstructionBlock";
 		inputs.push_back(in);
 
-		for (int i = 0, location = m_fragment_textures_start; i < 4; ++i, ++location)
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
 		{
-			in.location = location;
-			in.name = std::string(type_names[i]) + "_array[16]";
-			in.type = glsl::input_type_texture;
-			inputs.push_back(in);
+			for (int i = 0, location = m_fragment_textures_start; i < 4; ++i, ++location)
+			{
+				in.location = location;
+				in.name = std::string(type_names[i]) + "_array[16]";
+				in.type = glsl::input_type_texture;
+				inputs.push_back(in);
+			}
 		}
 
 		vk_prog->SetInputs(inputs);
