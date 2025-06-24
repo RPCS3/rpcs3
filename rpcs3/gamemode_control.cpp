@@ -17,18 +17,23 @@ bool gamemode_supported()
 #endif
 }
 
-// Enables GameMode
-//		Returns -2 if Gamemode isn't supported.
-//		Returns the value of gamemode_request_start() otherwise.
-//		This is either 0 or -1 depending on whether gamemode was successfully enabled or not respectively.
-int enable_gamemode(bool enabled) {
+// TODO: Might add later
+/*
+static int gamemode_status() {
+	return gamemode_query_status();
+}
+*/
+
+// Enables and Disables GameMode based on user settings and system
+void enable_gamemode(bool enabled) {
 	if (!gamemode_supported()) {
-		return -2;
+		return;
 	}
 
-	// Enable Gamemode
+	// Enable and Disable Gamemode
 	if (enabled) {
-		u8 s_gamemode_start = gamemode_request_start();
-		return s_gamemode_start;
+		gamemode_request_start();
+	} else {
+		gamemode_request_end();
 	}
 }

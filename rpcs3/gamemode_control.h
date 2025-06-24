@@ -1,4 +1,5 @@
 #pragma once
 
 bool gamemode_supported();
-int enable_gamemode(bool enabled);
+void enable_gamemode(bool enabled);
+//static int gamemode_status(); // Might add later TODO

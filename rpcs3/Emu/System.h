@@ -112,6 +112,8 @@ struct EmuCallbacks
 	std::function<void(bool)> enable_display_sleep;
 	std::function<void()> check_microphone_permissions;
 	std::function<std::unique_ptr<class video_source>()> make_video_source;
+	std::function<bool()> gamemode_supported;
+	std::function<void(bool)> enable_gamemode;
 };
 
 namespace utils

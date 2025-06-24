@@ -15,6 +15,7 @@
 #include "qt_music_handler.h"
 #include "rpcs3_version.h"
 #include "display_sleep_control.h"
+#include "gamemode_control.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
