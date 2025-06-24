@@ -1315,7 +1315,6 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
-
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
 }

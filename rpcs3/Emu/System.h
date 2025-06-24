@@ -480,4 +480,3 @@ extern Emulator Emu;
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 extern u64 g_rtm_tx_limit2;
-extern b8 g_FERAL_GAMEMODE_ON;
