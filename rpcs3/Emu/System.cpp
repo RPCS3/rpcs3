@@ -63,7 +63,6 @@
 #include "llvm/Config/llvm-config.h"
 #endif
 
-
 LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB

@@ -951,8 +951,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
 	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
 
-    //callbacks.gamemode_supported = [](){ return gamemode_supported(); };
-	//callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
+    callbacks.gamemode_supported = [](){ return gamemode_supported(); };
+	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
 
 	callbacks.check_microphone_permissions = []()
 	{
