@@ -29,7 +29,7 @@ extern std::mutex g_android_usb_devices_mutex;
 #else
 using hid_enumerated_device_type = std::string;
 using hid_enumerated_device_view = std::string_view;
-inline constexpr auto hid_enumerated_device_default = std::string();
+inline const auto hid_enumerated_device_default = std::string();
 #endif
 
 struct CalibData
