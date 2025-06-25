@@ -11,7 +11,7 @@ extern "C" {
 bool gamemode_supported()
 {
 #if defined(GAMEMODE_AVAILABLE)
-	return true
+	return true;
 #else
 	return false;
 #endif
