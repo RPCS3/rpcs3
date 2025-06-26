@@ -862,11 +862,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
 				{
-					return entry1.mtime > entry2.mtime;
+					return entry1.mtime >= entry2.mtime;
 				}
 				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
 				{
-					return entry1.subtitle > entry2.subtitle;
+					return entry1.subtitle >= entry2.subtitle;
 				}
 				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
 				{
