@@ -13,8 +13,6 @@
 
 LOG_CHANNEL(compat_log, "Compat");
 
-constexpr auto qstr = QString::fromStdString;
-
 game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QObject(parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -91,7 +89,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 				break;
 			}
 			compat_log.error("%s: return code %d", error_message, return_code);
-			Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
+			Q_EMIT DownloadError(QString::fromStdString(error_message) + " " + QString::number(return_code));
 		}
 		else
 		{
@@ -269,10 +267,10 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 	const std::string changelog_key = "paramhip";
 
 	info.path     = pkg_path;
-	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
-	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID")));
-	info.category = qstr(std::string(psf::get_string(psf, "CATEGORY")));
-	info.version  = qstr(std::string(psf::get_string(psf, "APP_VER")));
+	info.title    = QString::fromStdString(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+	info.title_id = QString::fromStdString(std::string(psf::get_string(psf, "TITLE_ID")));
+	info.category = QString::fromStdString(std::string(psf::get_string(psf, "CATEGORY")));
+	info.version  = QString::fromStdString(std::string(psf::get_string(psf, "APP_VER")));
 
 	if (!info.category.isEmpty())
 	{
@@ -306,7 +304,7 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 	if (info.version.isEmpty())
 	{
 		// Fallback to VERSION
-		info.version = qstr(std::string(psf::get_string(psf, "VERSION")));
+		info.version = QString::fromStdString(std::string(psf::get_string(psf, "VERSION")));
 	}
 
 	if (compat)
@@ -321,12 +319,12 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 				{
 					if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
 					{
-						info.title = qstr(localized_title);
+						info.title = QString::fromStdString(localized_title);
 					}
 
 					if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())
 					{
-						info.changelog = qstr(localized_changelog);
+						info.changelog = QString::fromStdString(localized_changelog);
 					}
 
 					// This should be an update since it was found in a patch set
