@@ -2478,6 +2478,11 @@ void Emulator::Run(bool start_playtime)
 	{
 		Emu.GetCallbacks().enable_display_sleep(false);
 	}
+
+	if (g_cfg.misc.enable_gamemode)
+	{
+		Emu.GetCallbacks().enable_gamemode(true);
+	}
 }
 
 void Emulator::RunPPU()
