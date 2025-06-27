@@ -43,106 +43,46 @@ namespace vk
 		if (!m_vao.heap)
 		{
 			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, "overlays VAO", 128);
+		}
+
+		if (!m_ubo.heap && m_num_uniform_buffers > 0)
+		{
 			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, "overlays UBO", 128);
 		}
-	}
-
-	void overlay_pass::init_descriptors()
-	{
-		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes = {};
-
-		if (m_num_uniform_buffers)
-		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_num_uniform_buffers });
-		};
-
-		if (m_num_usable_samplers)
-		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_num_usable_samplers });
-		}
-
-		if (m_num_input_attachments)
-		{
-			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_num_input_attachments });
-		}
-
-		// Reserve descriptor pools
-		m_descriptor_pool.create(*m_device, descriptor_pool_sizes);
-
-		const auto num_bindings = m_num_uniform_buffers + m_num_usable_samplers + m_num_input_attachments;
-		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings(num_bindings);
-		u32 binding_slot = 0;
-
-		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding_slot)
-		{
-			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindings[binding_slot].descriptorCount = 1;
-			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[binding_slot].binding = binding_slot;
-			bindings[binding_slot].pImmutableSamplers = nullptr;
-		}
-
-		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding_slot)
-		{
-			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[binding_slot].descriptorCount = 1;
-			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[binding_slot].binding = binding_slot;
-			bindings[binding_slot].pImmutableSamplers = nullptr;
-		}
-
-		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding_slot)
-		{
-			bindings[binding_slot].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-			bindings[binding_slot].descriptorCount = 1;
-			bindings[binding_slot].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[binding_slot].binding = binding_slot;
-			bindings[binding_slot].pImmutableSamplers = nullptr;
-		}
-
-		ensure(binding_slot == num_bindings);
-		m_descriptor_layout = vk::descriptors::create_layout(bindings);
-
-		VkPipelineLayoutCreateInfo layout_info = {};
-		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layout_info.setLayoutCount = 1;
-		layout_info.pSetLayouts = &m_descriptor_layout;
-
-		std::vector<VkPushConstantRange> push_constants = get_push_constants();
-		if (!push_constants.empty())
-		{
-			layout_info.pushConstantRangeCount = u32(push_constants.size());
-			layout_info.pPushConstantRanges = push_constants.data();
-		}
-
-		CHECK_RESULT(vkCreatePipelineLayout(*m_device, &layout_info, nullptr, &m_pipeline_layout));
 	}
 
 	std::vector<vk::glsl::program_input> overlay_pass::get_vertex_inputs()
 	{
 		check_heap();
-		return{};
+		return {};
 	}
 
 	std::vector<vk::glsl::program_input> overlay_pass::get_fragment_inputs()
 	{
-		std::vector<vk::glsl::program_input> fs_inputs;
+		using namespace vk::glsl;
+
+		std::vector<program_input> fs_inputs;
 		u32 binding = 0;
 
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
 		{
 			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, name });
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_uniform_buffer, 0, 0);
+			fs_inputs.push_back(input);
 		}
 
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "fs" + std::to_string(n) });
+			const std::string name = "fs" + std::to_string(n);
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
+			fs_inputs.push_back(input);
 		}
 
 		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
 		{
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "sp" + std::to_string(n) });
+			const std::string name = "sp" + std::to_string(n);
+			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
+			fs_inputs.push_back(input);
 		}
 
 		return fs_inputs;
@@ -208,20 +148,20 @@ namespace vk
 		info.stageCount = 2;
 		info.pStages = shader_stages;
 		info.pDynamicState = &dynamic_state_info;
-		info.layout = m_pipeline_layout;
+		info.layout = VK_NULL_HANDLE;
 		info.basePipelineIndex = -1;
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = render_pass;
 
 		auto compiler = vk::get_pipe_compiler();
-		auto program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, get_vertex_inputs(), get_fragment_inputs());
+		auto program = compiler->compile(info, vk::pipe_compiler::COMPILE_INLINE, {}, get_vertex_inputs(), get_fragment_inputs());
 		auto result = program.get();
 		m_program_cache[storage_key] = std::move(program);
 
 		return result;
 	}
 
-	void overlay_pass::load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
+	vk::glsl::program* overlay_pass::load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 	{
 		vk::glsl::program *program = nullptr;
 		const auto key = get_pipeline_key(pass);
@@ -231,8 +171,6 @@ namespace vk
 			program = found->second.get();
 		else
 			program = build_pipeline(key, pass);
-
-		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout);
 
 		if (!m_sampler && !src.empty())
 		{
@@ -245,21 +183,23 @@ namespace vk
 
 		if (m_num_uniform_buffers > 0)
 		{
-			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, m_descriptor_set);
+			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, 0);
 		}
 
 		for (uint n = 0; n < src.size(); ++n)
 		{
 			VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
-			program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_descriptor_set);
+			const auto [set, location] = program->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "fs" + std::to_string(n));
+			program->bind_uniform(info, set, location);
 		}
 
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
-		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout);
+		program->bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS);
 
 		VkBuffer buffers = m_vao.heap->value;
 		VkDeviceSize offsets = m_vao_offset;
 		vkCmdBindVertexBuffers(cmd, 0, 1, &buffers, &offsets);
+
+		return program;
 	}
 
 	void overlay_pass::create(const vk::render_device& dev)
@@ -267,8 +207,6 @@ namespace vk
 		if (!initialized)
 		{
 			m_device = &dev;
-			init_descriptors();
-
 			initialized = true;
 		}
 	}
@@ -281,10 +219,6 @@ namespace vk
 			m_fragment_shader.destroy();
 			m_program_cache.clear();
 			m_sampler.reset();
-
-			vkDestroyDescriptorSetLayout(*m_device, m_descriptor_layout, nullptr);
-			vkDestroyPipelineLayout(*m_device, m_pipeline_layout, nullptr);
-			m_descriptor_pool.destroy();
 
 			initialized = false;
 		}
@@ -303,7 +237,7 @@ namespace vk
 		return vk::get_framebuffer(dev, target->width(), target->height(), m_num_input_attachments > 0, render_pass, { target });
 	}
 
-	void overlay_pass::emit_geometry(vk::command_buffer& cmd)
+	void overlay_pass::emit_geometry(vk::command_buffer& cmd, glsl::program* /*program*/)
 	{
 		vkCmdDraw(cmd, num_drawable_elements, 1, first_vertex, 0);
 	}
@@ -328,11 +262,11 @@ namespace vk
 		// This call clobbers dynamic state
 		cmd.flags |= vk::command_buffer::cb_reload_dynamic_state;
 
-		load_program(cmd, render_pass, src);
+		auto program = load_program(cmd, render_pass, src);
 		set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
 		vk::begin_renderpass(cmd, render_pass, fbo->value, { positionu{0u, 0u}, sizeu{fbo->width(), fbo->height()} });
-		emit_geometry(cmd);
+		emit_geometry(cmd, program);
 	}
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
@@ -376,6 +310,7 @@ namespace vk
 
 		// 2 input textures
 		m_num_usable_samplers = 2;
+		m_num_uniform_buffers = 0;
 
 		renderpass_config.set_attachment_count(1);
 		renderpass_config.set_color_mask(0, true, true, true, true);
@@ -550,24 +485,39 @@ namespace vk
 				false, true, desc->get_data(), owner_uid);
 	}
 
-	std::vector<VkPushConstantRange> ui_overlay_renderer::get_push_constants()
+	std::vector<vk::glsl::program_input> ui_overlay_renderer::get_vertex_inputs()
 	{
-		return
-		{
-			{
-				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-				.offset = 0,
-				.size = 68
-			},
-			{
-				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-				.offset = 68,
-				.size = 12
-			}
-		};
+		auto result = overlay_pass::get_vertex_inputs();
+		result.push_back(
+			glsl::program_input::make(
+				::glsl::glsl_vertex_program,
+				"push_constants",
+				glsl::input_type_push_constant,
+				0,
+				0,
+				glsl::push_constant_ref { .size = 68 }
+			)
+		);
+		return result;
 	}
 
-	void ui_overlay_renderer::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
+	std::vector<vk::glsl::program_input> ui_overlay_renderer::get_fragment_inputs()
+	{
+		auto result = overlay_pass::get_fragment_inputs();
+		result.push_back(
+			glsl::program_input::make(
+				::glsl::glsl_fragment_program,
+				"push_constants",
+				glsl::input_type_push_constant,
+				0,
+				0,
+				glsl::push_constant_ref {.offset = 68, .size = 12 }
+			)
+		);
+		return result;
+	}
+
+	void ui_overlay_renderer::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
 		// Byte Layout
 		// 00: vec4 ui_scale;
@@ -600,7 +550,7 @@ namespace vk
 			.get();
 		push_buf[16] = std::bit_cast<f32>(vert_config);
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
 
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts;
@@ -614,7 +564,7 @@ namespace vk
 		push_buf[1] = m_time;
 		push_buf[2] = m_blur_strength;
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -641,7 +591,7 @@ namespace vk
 		}
 	}
 
-	void ui_overlay_renderer::emit_geometry(vk::command_buffer& cmd)
+	void ui_overlay_renderer::emit_geometry(vk::command_buffer& cmd, glsl::program* program)
 	{
 		if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 		{
@@ -657,7 +607,7 @@ namespace vk
 		}
 		else
 		{
-			overlay_pass::emit_geometry(cmd);
+			overlay_pass::emit_geometry(cmd, program);
 		}
 	}
 
@@ -759,22 +709,30 @@ namespace vk
 		// Disable samplers
 		m_num_usable_samplers = 0;
 
+		// Disable UBOs
+		m_num_uniform_buffers = 0;
+
 		renderpass_config.set_depth_mask(false);
 		renderpass_config.set_color_mask(0, true, true, true, true);
 		renderpass_config.set_attachment_count(1);
 	}
 
-	std::vector<VkPushConstantRange> attachment_clear_pass::get_push_constants()
+	std::vector<vk::glsl::program_input> attachment_clear_pass::get_vertex_inputs()
 	{
-		VkPushConstantRange constant;
-		constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		constant.offset = 0;
-		constant.size = 32;
-
-		return { constant };
+		check_heap();
+		return
+		{
+			vk::glsl::program_input::make(
+				::glsl::glsl_vertex_program,
+				"push_constants",
+				vk::glsl::input_type_push_constant,
+				0,
+				0,
+				glsl::push_constant_ref{ .size = 32 })
+		};
 	}
 
-	void attachment_clear_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
+	void attachment_clear_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
 		f32 data[8];
 		data[0] = clear_color.r;
@@ -786,7 +744,7 @@ namespace vk
 		data[6] = colormask.b;
 		data[7] = colormask.a;
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
 	}
 
 	void attachment_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -850,6 +808,9 @@ namespace vk
 			"{\n"
 			"	out_color = vec4(0.);\n"
 			"}\n";
+
+		m_num_uniform_buffers = 0;
+		m_num_usable_samplers = 0;
 	}
 
 	void stencil_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -898,7 +859,7 @@ namespace vk
 
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
-			{ "%sampler_binding", fmt::format("(%d + x)", sampler_location(0)) },
+			{ "%sampler_binding", "x" },
 			{ "%set_decorator", "set=0" },
 		};
 		fs_src = fmt::replace_all(fs_src, repl_list);
@@ -908,21 +869,28 @@ namespace vk
 		renderpass_config.set_attachment_count(1);
 
 		m_num_usable_samplers = 2;
+		m_num_uniform_buffers = 0;
 	}
 
-	std::vector<VkPushConstantRange> video_out_calibration_pass::get_push_constants()
+	std::vector<vk::glsl::program_input> video_out_calibration_pass::get_fragment_inputs()
 	{
-		VkPushConstantRange constant;
-		constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		constant.offset = 0;
-		constant.size = 16;
-
-		return { constant };
+		auto result = overlay_pass::get_fragment_inputs();
+		result.push_back(
+			vk::glsl::program_input::make(
+				::glsl::glsl_fragment_program,
+				"push_constants",
+				vk::glsl::input_type_push_constant,
+				0,
+				0,
+				glsl::push_constant_ref{ .size = 16 }
+			)
+		);
+		return result;
 	}
 
-	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
+	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,

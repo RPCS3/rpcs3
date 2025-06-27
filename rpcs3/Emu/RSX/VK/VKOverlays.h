@@ -44,11 +44,6 @@ namespace vk
 		vk::glsl::shader m_vertex_shader;
 		vk::glsl::shader m_fragment_shader;
 
-		vk::descriptor_pool m_descriptor_pool;
-		descriptor_set m_descriptor_set;
-		VkDescriptorSetLayout m_descriptor_layout = nullptr;
-		VkPipelineLayout m_pipeline_layout = nullptr;
-
 		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
 		u32 m_num_usable_samplers = 1;
 		u32 m_num_input_attachments = 0;
@@ -83,19 +78,12 @@ namespace vk
 
 		void check_heap();
 
-		void init_descriptors();
-
 		virtual void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) {}
 
 		virtual std::vector<vk::glsl::program_input> get_vertex_inputs();
 		virtual std::vector<vk::glsl::program_input> get_fragment_inputs();
 
 		virtual void get_dynamic_state_entries(std::vector<VkDynamicState>& /*state_descriptors*/) {}
-
-		virtual std::vector<VkPushConstantRange> get_push_constants()
-		{
-			return {};
-		}
 
 		int sampler_location(int index) const { return 1 + index; }
 		int input_attachment_location(int index) const { return 1 + m_num_usable_samplers + index; }
@@ -113,8 +101,7 @@ namespace vk
 		}
 
 		vk::glsl::program* build_pipeline(u64 storage_key, VkRenderPass render_pass);
-
-		void load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src);
+		vk::glsl::program* load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src);
 
 		virtual void create(const vk::render_device& dev);
 		virtual void destroy();
@@ -123,7 +110,7 @@ namespace vk
 
 		vk::framebuffer* get_framebuffer(vk::image* target, VkRenderPass render_pass);
 
-		virtual void emit_geometry(vk::command_buffer& cmd);
+		virtual void emit_geometry(vk::command_buffer& cmd, glsl::program* program);
 
 		virtual void set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h);
 
@@ -169,13 +156,14 @@ namespace vk
 		vk::image_view* find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap);
 		vk::image_view* find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
 
-		std::vector<VkPushConstantRange> get_push_constants() override;
+		std::vector<vk::glsl::program_input> get_vertex_inputs() override;
+		std::vector<vk::glsl::program_input> get_fragment_inputs() override;
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override;
 
 		void set_primitive_type(rsx::overlays::primitive_type type);
 
-		void emit_geometry(vk::command_buffer& cmd) override;
+		void emit_geometry(vk::command_buffer& cmd, glsl::program* program) override;
 
 		void run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 				vk::data_heap& upload_heap, rsx::overlays::overlay& ui);
@@ -189,7 +177,7 @@ namespace vk
 
 		attachment_clear_pass();
 
-		std::vector<VkPushConstantRange> get_push_constants() override;
+		std::vector<vk::glsl::program_input> get_vertex_inputs() override;
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override;
 
@@ -227,7 +215,7 @@ namespace vk
 
 		video_out_calibration_pass();
 
-		std::vector<VkPushConstantRange> get_push_constants() override;
+		std::vector<vk::glsl::program_input> get_fragment_inputs() override;
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override;
 

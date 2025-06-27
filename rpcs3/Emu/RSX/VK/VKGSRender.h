@@ -26,6 +26,9 @@
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
 
+using vs_binding_table_t = decltype(VKVertexProgram::binding_table);
+using fs_binding_table_t = decltype(VKFragmentProgram::binding_table);
+
 namespace vk
 {
 	using host_data_t = rsx::host_gpu_context_t;
@@ -53,6 +56,9 @@ private:
 	vk::glsl::program *m_prev_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
+	const vs_binding_table_t* m_vs_binding_table = nullptr;
+	const fs_binding_table_t* m_fs_binding_table = nullptr;
+
 	vk::texture_cache m_texture_cache;
 	vk::surface_cache m_rtts;
 
@@ -77,6 +83,8 @@ private:
 
 	VkDependencyInfoKHR m_async_compute_dependency_info {};
 	VkMemoryBarrier2KHR m_async_compute_memory_barrier {};
+
+	std::pair<const vs_binding_table_t*, const fs_binding_table_t*> get_binding_table() const;
 
 public:
 	//vk::fbo draw_fbo;
@@ -105,11 +113,6 @@ private:
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 
 	std::unique_ptr<vk::buffer> m_host_object_data;
-
-	vk::descriptor_pool m_descriptor_pool;
-	VkDescriptorSetLayout m_descriptor_layouts = VK_NULL_HANDLE;
-	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
-
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
 	sizeu m_swapchain_dims{};
@@ -219,8 +222,6 @@ private:
 
 	void update_draw_state();
 	void check_present_status();
-
-	VkDescriptorSet allocate_descriptor_set();
 
 	vk::vertex_upload_info upload_vertex_data();
 	rsx::simple_array<u8> m_scratch_mem;

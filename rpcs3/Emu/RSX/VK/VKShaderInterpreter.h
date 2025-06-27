@@ -5,6 +5,9 @@
 #include "vkutils/descriptors.h"
 #include <unordered_map>
 
+class VKVertexProgram;
+class VKFragmentProgram;
+
 namespace vk
 {
 	using ::program_hash_util::fragment_program_utils;
@@ -12,12 +15,7 @@ namespace vk
 
 	class shader_interpreter
 	{
-		std::vector<glsl::program_input> m_vs_inputs;
-		std::vector<glsl::program_input> m_fs_inputs;
-
 		VkDevice m_device = VK_NULL_HANDLE;
-		VkDescriptorSetLayout m_shared_descriptor_layout = VK_NULL_HANDLE;
-		VkPipelineLayout m_shared_pipeline_layout = VK_NULL_HANDLE;
 		glsl::program* m_current_interpreter = nullptr;
 
 		struct pipeline_key
@@ -41,14 +39,12 @@ namespace vk
 
 		struct shader_cache_entry_t
 		{
-			std::unique_ptr<glsl::shader> m_fs;
-			std::unique_ptr<glsl::shader> m_vs;
+			std::unique_ptr<VKFragmentProgram> m_fs;
+			std::unique_ptr<VKVertexProgram> m_vs;
 		};
 
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, shader_cache_entry_t> m_shader_cache;
-		rsx::simple_array<VkDescriptorPoolSize> m_descriptor_pool_sizes;
-		vk::descriptor_pool m_descriptor_pool;
 
 		u32 m_vertex_instruction_start = 0;
 		u32 m_fragment_instruction_start = 0;
@@ -56,12 +52,12 @@ namespace vk
 
 		pipeline_key m_current_key{};
 
-		std::pair<VkDescriptorSetLayout, VkPipelineLayout> create_layout(VkDevice dev);
-		void create_descriptor_pools(const vk::render_device& dev);
-
-		glsl::shader* build_vs(u64 compiler_opt);
-		glsl::shader* build_fs(u64 compiler_opt);
+		VKVertexProgram* build_vs(u64 compiler_opt);
+		VKFragmentProgram* build_fs(u64 compiler_opt);
 		glsl::program* link(const vk::pipeline_props& properties, u64 compiler_opt);
+
+		u32 init(VKVertexProgram* vk_prog, u64 compiler_opt) const;
+		u32 init(VKFragmentProgram* vk_prog, u64 compiler_opt) const;
 
 	public:
 		void init(const vk::render_device& dev);
@@ -69,16 +65,19 @@ namespace vk
 
 		glsl::program* get(
 			const vk::pipeline_props& properties,
-			const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata,
+			const program_hash_util::fragment_program_utils::fragment_program_metadata& fp_metadata,
+			const program_hash_util::vertex_program_utils::vertex_program_metadata& vp_metadata,
 			u32 vp_ctrl,
 			u32 fp_ctrl);
+
+		// Retrieve the shader components that make up the current interpreter
+		std::pair<VKVertexProgram*, VKFragmentProgram*> get_shaders() const;
 
 		bool is_interpreter(const glsl::program* prog) const;
 
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set);
-		VkDescriptorSet allocate_descriptor_set();
+		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images);
 	};
 }

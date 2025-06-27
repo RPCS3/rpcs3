@@ -189,4 +189,29 @@ namespace rsx
 			EXPECT_EQ(arr[i], i + 1);
 		}
 	}
+
+	TEST(SimpleArray, Merge)
+	{
+		rsx::simple_array<int> arr{ 1 };
+		rsx::simple_array<int> arr2{ 2, 3, 4, 5, 6, 7, 8, 9 };
+		rsx::simple_array<int> arr3{ 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
+
+		// Check small vector optimization
+		EXPECT_TRUE(arr.is_local_storage());
+
+		// Small vector optimization holds after append
+		arr += arr2;
+		EXPECT_TRUE(arr.is_local_storage());
+
+		// Exceed the boundary and we move into dynamic alloc
+		arr += arr3;
+		EXPECT_FALSE(arr.is_local_storage());
+
+		// Verify contents
+		EXPECT_EQ(arr.size(), 30);
+		for (int i = 0; i < 30; ++i)
+		{
+			EXPECT_EQ(arr[i], i + 1);
+		}
+	}
 }

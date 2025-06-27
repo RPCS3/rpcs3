@@ -94,15 +94,19 @@ namespace vk
 		void swap(descriptor_set& other);
 		descriptor_set& operator = (VkDescriptorSet set);
 
+		VkDescriptorSet value() const { return m_handle; }
+		operator bool() const { return m_handle != VK_NULL_HANDLE; }
+
 		VkDescriptorSet* ptr();
-		VkDescriptorSet value() const;
 		void push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
 		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
 		void push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask = umax);
+		void push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask = umax);
 		void push(const descriptor_set_dynamic_offset_t& offset);
 
+		void on_bind();
 		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 
 		void flush();
@@ -118,7 +122,7 @@ namespace vk
 		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
 		rsx::simple_array<u32> m_dynamic_offsets;
 
-#ifdef __clang__
+#if defined(__clang__) && (__clang_major__ < 16)
 		// Clang (pre 16.x) does not support LWG 2089, std::construct_at for POD types
 		struct WriteDescriptorSetT : public VkWriteDescriptorSet
 		{
@@ -158,6 +162,7 @@ namespace vk
 	{
 		void init();
 		void flush();
+		void destroy();
 
 		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings);
 	}

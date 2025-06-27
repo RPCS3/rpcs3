@@ -701,6 +701,11 @@ void logs::file_writer::sync()
 		std::this_thread::yield();
 	}
 
+	if (thread_ctrl::get_current())
+	{
+		return;
+	}
+
 	// Ensure written to disk
 	if (m_fout)
 	{

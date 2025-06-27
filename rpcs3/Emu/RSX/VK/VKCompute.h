@@ -19,12 +19,6 @@ namespace vk
 		std::unique_ptr<vk::glsl::program> m_program;
 		std::unique_ptr<vk::buffer> m_param_buffer;
 
-		vk::descriptor_pool m_descriptor_pool;
-		descriptor_set m_descriptor_set;
-		VkDescriptorSetLayout m_descriptor_layout = nullptr;
-		VkPipelineLayout m_pipeline_layout = nullptr;
-		u32 m_used_descriptors = 0;
-
 		bool initialized = false;
 		bool unroll_loops = true;
 		bool use_push_constants = false;
@@ -37,15 +31,11 @@ namespace vk
 		compute_task() = default;
 		virtual ~compute_task() { destroy(); }
 
-		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout();
-
-		void init_descriptors();
-
 		void create();
 		void destroy();
 
-		virtual void bind_resources() {}
-		virtual void declare_inputs() {}
+		virtual std::vector<glsl::program_input> get_inputs();
+		virtual void bind_resources(const vk::command_buffer& /*cmd*/) {}
 
 		void load_program(const vk::command_buffer& cmd);
 
@@ -60,6 +50,8 @@ namespace vk
 		u32 m_data_length = 0;
 		u32 kernel_size = 1;
 
+		rsx::simple_array<u32> m_params;
+
 		std::string variables, work_kernel, loop_advance, suffix;
 		std::string method_declarations;
 
@@ -67,9 +59,9 @@ namespace vk
 
 		void build(const char* function_name, u32 _kernel_size = 0);
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
-		void set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count);
+		void set_parameters(const vk::command_buffer& cmd);
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset = 0);
 	};
@@ -135,7 +127,7 @@ namespace vk
 
 		cs_interleave_task();
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset);
 	};
@@ -352,9 +344,10 @@ namespace vk
 			cs_shuffle_base::build("");
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
-			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			set_parameters(cmd);
+			m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
@@ -371,8 +364,7 @@ namespace vk
 				data_offset = src_offset;
 			}
 
-			u32 parameters[4] = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
-			set_parameters(cmd, parameters, 4);
+			m_params = { src_length, src_offset - data_offset, dst_offset - data_offset, 0 };
 			cs_shuffle_base::run(cmd, data, src_length, data_offset);
 		}
 	};
@@ -453,15 +445,17 @@ namespace vk
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
-			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			set_parameters(cmd);
+
+			m_program->bind_uniform({ src_buffer->value, in_offset, block_length }, 0, 0);
+			m_program->bind_uniform({ dst_buffer->value, out_offset, block_length }, 0, 1);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
@@ -480,7 +474,6 @@ namespace vk
 			params.logw = rsx::ceil_log2(width);
 			params.logh = rsx::ceil_log2(height);
 			params.logd = rsx::ceil_log2(depth);
-			set_parameters(cmd);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
 			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
@@ -497,7 +490,7 @@ namespace vk
 
 		cs_aggregator();
 
-		void bind_resources() override;
+		void bind_resources(const vk::command_buffer& cmd) override;
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words);
 	};
@@ -581,16 +574,18 @@ namespace vk
 			m_src = fmt::replace_all(m_src, syntax_replace);
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& cmd) override
 		{
-			const auto op = static_cast<int>(Op);
-			m_program->bind_buffer({ src_buffer->value, in_offset, in_block_length }, 0 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ dst_buffer->value, out_offset, out_block_length }, 1 ^ op, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			set_parameters(cmd);
+
+			const auto op = static_cast<u32>(Op);
+			m_program->bind_uniform({ src_buffer->value, in_offset, in_block_length }, 0u, 0u ^ op);
+			m_program->bind_uniform({ dst_buffer->value, out_offset, out_block_length }, 0u, 1u ^ op);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
 		}
 
 		void run(const vk::command_buffer& cmd, const RSX_detiler_config& config)
@@ -653,7 +648,6 @@ namespace vk
 			params.image_height = (Op == RSX_detiler_op::decode) ? tile_aligned_height : config.image_height;
 			params.image_pitch = config.image_pitch;
 			params.image_bpp = config.image_bpp;
-			set_parameters(cmd);
 
 			const u32 subtexels_per_invocation = (config.image_bpp < 4) ? (4 / config.image_bpp) : 1;
 			const u32 virtual_width = config.image_width / subtexels_per_invocation;

@@ -26,8 +26,85 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
 
+void VKFragmentDecompilerThread::prepareBindingTable()
+{
+	// First check if we have constants and textures as those need extra work
+	bool has_constants = false, has_textures = false;
+	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	{
+		if (has_constants && has_textures)
+		{
+			break;
+		}
+
+		if (PT.type.starts_with("sampler"))
+		{
+			has_textures = true;
+			continue;
+		}
+
+		ensure(PT.type.starts_with("vec"));
+		has_constants = true;
+	}
+
+	unsigned location = 0; // All bindings must be set from this var
+	vk_prog->binding_table.context_buffer_location = location++;
+	if (has_constants)
+	{
+		vk_prog->binding_table.cbuf_location = location++;
+	}
+
+	vk_prog->binding_table.tex_param_location = location++;
+	vk_prog->binding_table.polygon_stipple_params_location = location++;
+
+	std::memset(vk_prog->binding_table.ftex_location, 0xff, sizeof(vk_prog->binding_table.ftex_location));
+	std::memset(vk_prog->binding_table.ftex_stencil_location, 0xff, sizeof(vk_prog->binding_table.ftex_stencil_location));
+
+	if (has_textures) [[ likely ]]
+	{
+		for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+		{
+			if (!PT.type.starts_with("sampler"))
+			{
+				continue;
+			}
+
+			for (const ParamItem& PI : PT.items)
+			{
+				const auto texture_id = vk::get_texture_index(PI.name);
+				const auto mask = 1u << texture_id;
+
+				// Allocate real binding
+				vk_prog->binding_table.ftex_location[texture_id] = location++;
+
+				// Tag the stencil mirror if required
+				if (properties.redirected_sampler_mask & mask) [[ unlikely ]]
+				{
+					vk_prog->binding_table.ftex_stencil_location[texture_id] = 0;
+				}
+			}
+
+			// Normalize stencil offsets
+			if (properties.redirected_sampler_mask != 0) [[ unlikely ]]
+			{
+				for (auto& stencil_location : vk_prog->binding_table.ftex_stencil_location)
+				{
+					if (stencil_location != 0)
+					{
+						continue;
+					}
+
+					stencil_location = location++;
+				}
+			}
+		}
+	}
+}
+
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
+	prepareBindingTable();
+
 	std::vector<const char*> required_extensions;
 
 	if (device_props.has_native_half_support)
@@ -97,21 +174,18 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	u32 location = m_binding_table.textures_first_bind_slot;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type != "sampler1D" &&
-			PT.type != "sampler2D" &&
-			PT.type != "sampler3D" &&
-			PT.type != "samplerCube")
+		if (!PT.type.starts_with("sampler"))
+		{
 			continue;
+		}
 
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
 
-			ensure(PI.name.length() > 3);
-			int index = atoi(&PI.name[3]);
+			const int index = vk::get_texture_index(PI.name);
 			const auto mask = (1 << index);
 
 			if (properties.multisampled_sampler_mask & mask)
@@ -135,39 +209,37 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 				}
 			}
 
-			vk::glsl::program_input in;
-			in.location = location;
-			in.domain = glsl::glsl_fragment_program;
-			in.name = PI.name;
-			in.type = vk::glsl::input_type_texture;
-
+			const int id = vk::get_texture_index(PI.name);
+			auto in = vk::glsl::program_input::make(
+				glsl::glsl_fragment_program,
+				PI.name,
+				vk::glsl::input_type_texture,
+				vk::glsl::binding_set_index_fragment,
+				vk_prog->binding_table.ftex_location[id]
+			);
 			inputs.push_back(in);
 
-			OS << "layout(set=0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
+			OS << "layout(set=1, binding=" << in.location << ") uniform " << samplerType << " " << PI.name << ";\n";
 
 			if (properties.redirected_sampler_mask & mask)
 			{
 				// Insert stencil mirror declaration
 				in.name += "_stencil";
-				in.location = location;
-
+				in.location = vk_prog->binding_table.ftex_stencil_location[id];
 				inputs.push_back(in);
 
-				OS << "layout(set=0, binding=" << location++ << ") uniform u" << samplerType << " " << in.name << ";\n";
+				OS << "layout(set=1, binding=" << in.location << ") uniform u" << samplerType << " " << in.name << ";\n";
 			}
 		}
 	}
 
-	ensure(location <= m_binding_table.vertex_textures_first_bind_slot); // "Too many sampler descriptors!"
-
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (PT.type == "sampler1D" ||
-			PT.type == "sampler2D" ||
-			PT.type == "sampler3D" ||
-			PT.type == "samplerCube")
+		if (PT.type.starts_with("sampler"))
+		{
 			continue;
+		}
 
 		for (const ParamItem& PI : PT.items)
 		{
@@ -177,13 +249,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!constants_block.empty())
 	{
-		OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << constants_block;
 		OS << "};\n\n";
 	}
 
-	OS << "layout(std140, set = 0, binding = 3) uniform FragmentStateBuffer\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
 	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
@@ -195,32 +267,39 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float wpos_bias;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 0, binding = 4) uniform TextureParametersBuffer\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 0, binding = " << std::to_string(m_binding_table.rasterizer_env_bind_slot) << ") uniform RasterizerHeap\n";
+	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
 	OS << "{\n";
 	OS << "	uvec4 stipple_pattern[8];\n";
 	OS << "};\n\n";
 
-	vk::glsl::program_input in;
-	in.location = m_binding_table.fragment_constant_buffers_bind_slot;
-	in.domain = glsl::glsl_fragment_program;
-	in.name = "FragmentConstantsBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-	inputs.push_back(in);
+	vk::glsl::program_input in
+	{
+		.domain = glsl::glsl_fragment_program,
+		.type = vk::glsl::input_type_uniform_buffer,
+		.set = vk::glsl::binding_set_index_fragment
+	};
 
-	in.location = m_binding_table.fragment_state_bind_slot;
+	if (!constants_block.empty())
+	{
+		in.location = vk_prog->binding_table.cbuf_location;
+		in.name = "FragmentConstantsBuffer";
+		inputs.push_back(in);
+	}
+
+	in.location = vk_prog->binding_table.context_buffer_location;
 	in.name = "FragmentStateBuffer";
 	inputs.push_back(in);
 
-	in.location = m_binding_table.fragment_texture_params_bind_slot;
+	in.location = vk_prog->binding_table.tex_param_location;
 	in.name = "TextureParametersBuffer";
 	inputs.push_back(in);
 
-	in.location = m_binding_table.rasterizer_env_bind_slot;
+	in.location = vk_prog->binding_table.polygon_stipple_params_location;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
 }
@@ -372,7 +451,6 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::Task()
 {
-	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }
@@ -406,10 +484,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	{
 		for (const ParamItem& PI : PT.items)
 		{
-			if (PT.type == "sampler1D" ||
-				PT.type == "sampler2D" ||
-				PT.type == "sampler3D" ||
-				PT.type == "samplerCube")
+			if (PT.type.starts_with("sampler"))
 				continue;
 
 			usz offset = atoi(PI.name.c_str() + 2);

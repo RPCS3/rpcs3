@@ -10,7 +10,7 @@ namespace vk
 	class shader_interpreter;
 }
 
-struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
+class VKFragmentDecompilerThread : public FragmentProgramDecompiler
 {
 	friend class vk::shader_interpreter;
 
@@ -19,7 +19,8 @@ struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 	std::vector<vk::glsl::program_input> inputs;
 	class VKFragmentProgram *vk_prog;
 	glsl::shader_properties m_shader_props{};
-	vk::pipeline_binding_table m_binding_table{};
+
+	void prepareBindingTable();
 
 public:
 	VKFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size, class VKFragmentProgram& dst)
@@ -32,6 +33,7 @@ public:
 
 	void Task();
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
+
 protected:
 	std::string getFloatTypeName(usz elementCount) override;
 	std::string getHalfTypeName(usz elementCount) override;
@@ -63,8 +65,19 @@ public:
 	std::vector<usz> FragmentConstantOffsetCache;
 
 	std::array<u32, 4> output_color_masks{ {} };
-
 	std::vector<vk::glsl::program_input> uniforms;
+
+	struct
+	{
+		u32 context_buffer_location = umax;           // Rasterizer context
+		u32 cbuf_location = umax;                     // Constants register file
+		u32 tex_param_location = umax;                // Texture configuration data
+		u32 polygon_stipple_params_location = umax;   // Polygon stipple settings
+		u32 ftex_location[16];                        // Texture locations array
+		u32 ftex_stencil_location[16];                // Texture stencil mirror array
+
+	} binding_table;
+
 	void SetInputs(std::vector<vk::glsl::program_input>& inputs);
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
