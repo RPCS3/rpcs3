@@ -19,8 +19,6 @@
 
 #include <memory>
 
-constexpr auto qstr = QString::fromStdString;
-
 debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_settings, breakpoint_handler* handler)
 	: QListWidget(parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -208,7 +206,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		for (uint i = 0; i < m_item_count; ++i)
 		{
 			QListWidgetItem* list_item = item(i);
-			list_item->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", 0)));
+			list_item->setText(QString::fromStdString(fmt::format("   [%08x]  ?? ?? ?? ??:", 0)));
 			list_item->setForeground(default_foreground);
 			list_item->setBackground(default_background);
 		}
@@ -253,7 +251,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 
 			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, 0))
 			{
-				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
@@ -261,7 +259,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
-				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
 				static_cast<u8>(data >> 24),
 				static_cast<u8>(data >> 16),
 				static_cast<u8>(data >> 8),
@@ -274,12 +272,12 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 
 			if (!count)
 			{
-				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] ???     ?? ??", pc)));
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x] ???     ?? ??", pc)));
 				count = 4;
 				continue;
 			}
 
-			list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
+			list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(m_disasm->last_opcode));
 		}
 	}
 

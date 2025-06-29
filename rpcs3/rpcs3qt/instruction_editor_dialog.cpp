@@ -12,8 +12,6 @@
 #include <QPushButton>
 #include <QCheckBox>
 
-constexpr auto qstr = QString::fromStdString;
-
 extern bool ppu_patch(u32 addr, u32 value);
 
 extern std::string format_spu_func_info(u32 addr, cpu_thread* spu);
@@ -50,14 +48,14 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 	m_disasm->change_mode(cpu_disasm_mode::normal);
 	m_disasm->disasm(m_pc);
-	m_preview = new QLabel(qstr(m_disasm->last_opcode), this);
+	m_preview = new QLabel(QString::fromStdString(m_disasm->last_opcode), this);
 
 	// Layouts
 	vbox_left_panel->addWidget(new QLabel(tr("Address:     ")));
 	vbox_left_panel->addWidget(new QLabel(tr("Instruction: ")));
 	vbox_left_panel->addWidget(new QLabel(tr("Preview:     ")));
 
-	vbox_right_panel->addWidget(new QLabel(qstr(fmt::format("%08x", m_pc))));
+	vbox_right_panel->addWidget(new QLabel(QString::fromStdString(fmt::format("%08x", m_pc))));
 	vbox_right_panel->addWidget(m_instr);
 	vbox_right_panel->addWidget(m_preview);
 
@@ -68,7 +66,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 		m_func_info = new QLabel("", this);
 		vbox_right_panel->addWidget(m_func_info);
 
-		m_func_info->setText(qstr(format_spu_func_info(m_pc, cpu)));
+		m_func_info->setText(QString::fromStdString(format_spu_func_info(m_pc, cpu)));
 	}
 
 	if (cpu && cpu->get_class() == thread_class::spu)
@@ -158,7 +156,7 @@ void instruction_editor_dialog::updatePreview() const
 
 	if (ok && m_disasm->disasm(m_pc))
 	{
-		m_preview->setText(qstr(m_disasm->last_opcode));
+		m_preview->setText(QString::fromStdString(m_disasm->last_opcode));
 	}
 	else
 	{

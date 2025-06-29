@@ -30,8 +30,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-constexpr auto qstr = QString::fromStdString;
-
 memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_addr(addr)
@@ -67,7 +65,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 	const auto cpu = m_get_cpu();
 
 	setWindowTitle(
-		cpu && m_type == thread_class::spu ? tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())) :
+		cpu && m_type == thread_class::spu ? tr("Memory Viewer Of %0").arg(QString::fromStdString(cpu->get_name())) :
 		cpu && m_type == thread_class::rsx ? tr("Memory Viewer Of RSX[0x55555555]") :
 		tr("Memory Viewer"));
 
@@ -362,11 +360,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 		{
 			if (i & m_modes && count > 1)
 			{
-				m_cbox_input_mode->setItemText(std::countr_zero<u32>(i), qstr(fmt::format("* %s", search_mode{i})));
+				m_cbox_input_mode->setItemText(std::countr_zero<u32>(i), QString::fromStdString(fmt::format("* %s", search_mode{i})));
 			}
 			else
 			{
-				m_cbox_input_mode->setItemText(std::countr_zero<u32>(i), qstr(fmt::format("%s", search_mode{i})));
+				m_cbox_input_mode->setItemText(std::countr_zero<u32>(i), QString::fromStdString(fmt::format("%s", search_mode{i})));
 			}
 		}
 
@@ -633,7 +631,7 @@ void memory_viewer_panel::scroll(s32 steps)
 	m_addr &= m_addr_mask; // Mask it
 	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 
-	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
+	m_addr_line->setText(QString::fromStdString(fmt::format("%08x", m_addr)));
 
 	ShowMemory();
 }
@@ -818,7 +816,7 @@ void memory_viewer_panel::ShowMemory()
 
 				for (u32 i = 0; i < 3; i++)
 				{
-					t_mem_addr_str += qstr(fmt::format("%08x", addr));
+					t_mem_addr_str += QString::fromStdString(fmt::format("%08x", addr));
 
 					std::string str(i == 1 ? header : "");
 
@@ -828,7 +826,7 @@ void memory_viewer_panel::ShowMemory()
 					str.resize(expected_str_size);
 					std::replace(str.begin(), str.end(), '\0', i == 1 ? ' ' : '=');
 
-					t_mem_hex_str += qstr(str);
+					t_mem_hex_str += QString::fromStdString(str);
 
 					spu_passed++;
 					row++;
@@ -850,7 +848,7 @@ void memory_viewer_panel::ShowMemory()
 				}
 			}
 
-			t_mem_addr_str += qstr(fmt::format("%08x", (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask));
+			t_mem_addr_str += QString::fromStdString(fmt::format("%08x", (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask));
 		}
 
 		for (u32 col = 0; col < m_colcount; col++)
@@ -865,7 +863,7 @@ void memory_viewer_panel::ShowMemory()
 			if (const auto ptr = this->to_ptr(addr))
 			{
 				const be_t<u32> rmem = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ptr));
-				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
+				t_mem_hex_str += QString::fromStdString(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),
 					static_cast<u8>(rmem >> 8),
@@ -878,7 +876,7 @@ void memory_viewer_panel::ShowMemory()
 					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
 				}
 
-				t_mem_ascii_str += qstr(std::move(str));
+				t_mem_ascii_str += QString::fromStdString(std::move(str));
 			}
 			else
 			{
@@ -1190,7 +1188,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 				QLineEdit* addr_line = static_cast<memory_viewer_panel*>(parent())->m_addr_line;
 
 				const QPointF xy = static_cast<QMouseEvent*>(event)->position() / m_canvas_scale;
-				addr_line->setText(qstr(fmt::format("%08x", get_pointed_addr(xy.x(), xy.y()))));
+				addr_line->setText(QString::fromStdString(fmt::format("%08x", get_pointed_addr(xy.x(), xy.y()))));
 				Q_EMIT addr_line->returnPressed();
 				close();
 				return false;
@@ -1208,11 +1206,11 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		{
 			if (x < 0 || y < 0)
 			{
-				m_image_title->setText(qstr(fmt::format("[-, -]: NA")));
+				m_image_title->setText(QString::fromStdString(fmt::format("[-, -]: NA")));
 				return;
 			}
 
-			m_image_title->setText(qstr(fmt::format("[x:%d, y:%d]: 0x%x", x, y, get_pointed_addr(x, y))));
+			m_image_title->setText(QString::fromStdString(fmt::format("[x:%d, y:%d]: 0x%x", x, y, get_pointed_addr(x, y))));
 		}
 
 		void keyPressEvent(QKeyEvent* event) override
@@ -1257,7 +1255,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 
 	image_viewer* f_image_viewer = new image_viewer(parent, canvas, image_title, std::move(image), addr, texel_bytes, width, width, height);
 	canvas->installEventFilter(f_image_viewer);
-	f_image_viewer->setWindowTitle(qstr(fmt::format("Raw Image @ 0x%x", addr)));
+	f_image_viewer->setWindowTitle(QString::fromStdString(fmt::format("Raw Image @ 0x%x", addr)));
 	f_image_viewer->setLayout(layout);
 	f_image_viewer->setAttribute(Qt::WA_DeleteOnClose);
 	f_image_viewer->show();

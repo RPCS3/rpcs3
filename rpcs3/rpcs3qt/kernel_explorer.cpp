@@ -38,8 +38,6 @@
 #include "kernel_explorer.h"
 #include "qt_utils.h"
 
-constexpr auto qstr = QString::fromStdString;
-
 LOG_CHANNEL(sys_log, "SYS");
 
 enum kernel_item_role
@@ -173,7 +171,7 @@ static QTreeWidgetItem* add_solid_node(QTreeWidgetItem* parent, const QString& b
 kernel_explorer::kernel_explorer(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("Kernel Explorer | %1").arg(qstr(Emu.GetTitleAndTitleID())));
+	setWindowTitle(tr("Kernel Explorer | %1").arg(QString::fromStdString(Emu.GetTitleAndTitleID())));
 	setObjectName("kernel_explorer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(QSize(800, 600));
@@ -313,10 +311,10 @@ void kernel_explorer::update()
 
 	const u32 total_memory_usage = dct->used;
 
-	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
+	root->setText(0, QString::fromStdString(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
+	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
 	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{
@@ -325,7 +323,7 @@ void kernel_explorer::update()
 			const u32 addr = m.segs[i].addr;
 			const u32 size = m.segs[i].size;
 
-			add_leaf(tree, qstr(fmt::format("Segment %u: (0x%08x...0x%08x), Flags: 0x%x"
+			add_leaf(tree, QString::fromStdString(fmt::format("Segment %u: (0x%08x...0x%08x), Flags: 0x%x"
 				, i, addr, addr + std::max<u32>(size, 1) - 1, m.segs[i].flags)));
 		}
 	};
@@ -342,7 +340,7 @@ void kernel_explorer::update()
 		{
 			for (; cpu; cpu = cpu->get_next_cpu())
 			{
-				add_leaf(tree, qstr(fmt::format("Waiter: ID: 0x%x", cpu->get_class() == thread_class::spu ? static_cast<spu_thread*>(cpu)->lv2_id : cpu->id)));
+				add_leaf(tree, QString::fromStdString(fmt::format("Waiter: ID: 0x%x", cpu->get_class() == thread_class::spu ? static_cast<spu_thread*>(cpu)->lv2_id : cpu->id)));
 			}
 		};
 
@@ -355,32 +353,32 @@ void kernel_explorer::update()
 
 			if (mem.pshared)
 			{
-				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
+				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
+			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
 			const auto control = mutex.control.load();
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”", id, lv2_obj::name64(mutex.name))), qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"Mutex 0x%08x: “%s”", id, lv2_obj::name64(mutex.name))), QString::fromStdString(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
 				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", control.owner, +mutex.lock_count, mutex.key, mutex.cond_count))), control.sq);
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”", id, lv2_obj::name64(cond.name))), qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key))), cond.sq);
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"Cond 0x%08x: “%s”", id, lv2_obj::name64(cond.name))), QString::fromStdString(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key))), cond.sq);
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
 			const s64 val = rw.owner;
-			auto tree = add_solid_node(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”", id, lv2_obj::name64(rw.name))), qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx", id, lv2_obj::name64(rw.name), rw.protocol,
+			auto tree = add_solid_node(node, QString::fromStdString(fmt::format(u8"RW Lock 0x%08x: “%s”", id, lv2_obj::name64(rw.name))), QString::fromStdString(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx", id, lv2_obj::name64(rw.name), rw.protocol,
 				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.key)));
 
 			if (auto rq = +rw.rq)
@@ -402,23 +400,23 @@ void kernel_explorer::update()
 
 			if (lv2_obj::check(handler))
 			{
-				add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: 0x%08x", id, handler->id)));
+				add_leaf(node, QString::fromStdString(fmt::format("Intr Tag 0x%08x, Handler: 0x%08x", id, handler->id)));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: Unbound", id)));
+			add_leaf(node, QString::fromStdString(fmt::format("Intr Tag 0x%08x, Handler: Unbound", id)));
 			break;
 		}
 		case SYS_INTR_SERVICE_HANDLE_OBJECT:
 		{
 			auto& serv = static_cast<lv2_int_serv&>(obj);
-			add_leaf(node, qstr(fmt::format("Intr Svc 0x%08x, PPU: 0x%07x, arg1: 0x%x, arg2: 0x%x", id, serv.thread->id, serv.arg1, serv.arg2)));
+			add_leaf(node, QString::fromStdString(fmt::format("Intr Svc 0x%08x, PPU: 0x%07x, arg1: 0x%x, arg2: 0x%x", id, serv.thread->id, serv.arg1, serv.arg2)));
 			break;
 		}
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”", id, lv2_obj::name64(eq.name))), qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d", id, lv2_obj::name64(eq.name), eq.protocol,
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"Event Queue 0x%08x: “%s”", id, lv2_obj::name64(eq.name))), QString::fromStdString(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d", id, lv2_obj::name64(eq.name), eq.protocol,
 				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size))), eq.type == SYS_SPU_QUEUE ? static_cast<cpu_thread*>(+eq.sq) : +eq.pq);
 			break;
 		}
@@ -431,30 +429,30 @@ void kernel_explorer::update()
 			{
 				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(queue->id))
 				{
-					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, queue->id)));
+					add_leaf(node, QString::fromStdString(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, queue->id)));
 					break;
 				}
 
 				// This code is unused until multi-process is implemented
 				if (queue == lv2_event_queue::find(queue->key).get())
 				{
-					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (IPC): %s", id, type, ep.name, queue->key)));
+					add_leaf(node, QString::fromStdString(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (IPC): %s", id, type, ep.name, queue->key)));
 					break;
 				}
 			}
 
-			add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Unbound", id, type, ep.name)));
+			add_leaf(node, QString::fromStdString(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Unbound", id, type, ep.name)));
 			break;
 		}
 		case SYS_TRACE_OBJECT:
 		{
-			add_leaf(node, qstr(fmt::format("Trace 0x%08x", id)));
+			add_leaf(node, QString::fromStdString(fmt::format("Trace 0x%08x", id)));
 			break;
 		}
 		case SYS_SPUIMAGE_OBJECT:
 		{
 			auto& spi = static_cast<lv2_spu_image&>(obj);
-			add_leaf(node, qstr(fmt::format("SPU Image 0x%08x, Entry: 0x%x, Segs: *0x%x, Num Segs: %d", id, spi.e_entry, spi.segs, spi.nsegs)));
+			add_leaf(node, QString::fromStdString(fmt::format("SPU Image 0x%08x, Entry: 0x%x, Segs: *0x%x, Num Segs: %d", id, spi.e_entry, spi.segs, spi.nsegs)));
 			break;
 		}
 		case SYS_PRX_OBJECT:
@@ -463,24 +461,24 @@ void kernel_explorer::update()
 
 			if (prx.segs.empty())
 			{
-				add_leaf(node, qstr(fmt::format("PRX 0x%08x: '%s' (HLE)", id, prx.name)));
+				add_leaf(node, QString::fromStdString(fmt::format("PRX 0x%08x: '%s' (HLE)", id, prx.name)));
 				break;
 			}
 
-			const QString text = qstr(fmt::format("PRX 0x%08x: '%s', attr=0x%x, lib=%s", id, prx.name, prx.module_info_attributes, prx.module_info_name));
+			const QString text = QString::fromStdString(fmt::format("PRX 0x%08x: '%s', attr=0x%x, lib=%s", id, prx.name, prx.module_info_attributes, prx.module_info_name));
 			QTreeWidgetItem* prx_tree = add_solid_node(node, text, text);
 			display_program_segments(prx_tree, prx);
 			break;
 		}
 		case SYS_SPUPORT_OBJECT:
 		{
-			add_leaf(node, qstr(fmt::format("SPU Port 0x%08x", id)));
+			add_leaf(node, QString::fromStdString(fmt::format("SPU Port 0x%08x", id)));
 			break;
 		}
 		case SYS_OVERLAY_OBJECT:
 		{
 			auto& ovl = static_cast<lv2_overlay&>(obj);
-			const QString text = qstr(fmt::format("OVL 0x%08x: '%s'", id, ovl.name));
+			const QString text = QString::fromStdString(fmt::format("OVL 0x%08x: '%s'", id, ovl.name));
 			QTreeWidgetItem* ovl_tree = add_solid_node(node, text, text);
 			display_program_segments(ovl_tree, ovl);
 			break;
@@ -516,11 +514,11 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lv2_control.signaled, lwm.control))), lv2_control.sq);
+				show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), QString::fromStdString(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 				break;
 			}
 
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"LWMutex 0x%08x: “%s”", id, lv2_obj::name64(lwm.name))), QString::fromStdString(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
 					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 			break;
 		}
@@ -550,7 +548,7 @@ void kernel_explorer::update()
 				period = timer.period; // Period (oneshot if 0)
 			}
 
-			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx, Queue ID: 0x%08x, Source: 0x%08x, Data1: 0x%08x, Data2: 0x%08x", id, timer_state ? "Running" : "Stopped"
+			add_leaf(node, QString::fromStdString(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx, Queue ID: 0x%08x, Source: 0x%08x, Data1: 0x%08x, Data2: 0x%08x", id, timer_state ? "Running" : "Stopped"
 				, period, expire, port ? port->id : 0, source, data1, data2)));
 			break;
 		}
@@ -558,20 +556,20 @@ void kernel_explorer::update()
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
 			const auto val = +sema.val;
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”", id, lv2_obj::name64(sema.name))), qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx", id, lv2_obj::name64(sema.name), sema.protocol,
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"Sema 0x%08x: “%s”", id, lv2_obj::name64(sema.name))), QString::fromStdString(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx", id, lv2_obj::name64(sema.name), sema.protocol,
 				std::max<s32>(val, 0), sema.max, sema.key, -std::min<s32>(val, 0)))), sema.sq);
 			break;
 		}
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”", id, lv2_obj::name64(lwc.name))), qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control))), lwc.sq);
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"LWCond 0x%08x: “%s”", id, lv2_obj::name64(lwc.name))), QString::fromStdString(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control))), lwc.sq);
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”", id, lv2_obj::name64(ef.name))), qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx", id, lv2_obj::name64(ef.name), ef.protocol,
+			show_waiters(add_solid_node(node, QString::fromStdString(fmt::format(u8"Event Flag 0x%08x: “%s”", id, lv2_obj::name64(ef.name))), QString::fromStdString(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx", id, lv2_obj::name64(ef.name), ef.protocol,
 				ef.type, ef.key, ef.pattern.load()))), ef.sq);
 			break;
 		}
@@ -584,12 +582,12 @@ void kernel_explorer::update()
 				break;
 			}
 
-			QTreeWidgetItem* rao_obj = add_solid_node(node, qstr(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
+			QTreeWidgetItem* rao_obj = add_solid_node(node, QString::fromStdString(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
 			for (u64 q_idx = 0; q_idx < rao.event_queue.size(); q_idx++)
 			{
 				if (const auto& eq = rao.event_queue[q_idx])
 				{
-					add_leaf(rao_obj, qstr(fmt::format(u8"Event Queue %u: ID: 0x%08x", q_idx, eq->id)));
+					add_leaf(rao_obj, QString::fromStdString(fmt::format(u8"Event Queue %u: ID: 0x%08x", q_idx, eq->id)));
 				}
 			}
 
@@ -597,7 +595,7 @@ void kernel_explorer::update()
 		}
 		default:
 		{
-			add_leaf(node, qstr(fmt::format("Unknown object 0x%08x", id)));
+			add_leaf(node, QString::fromStdString(fmt::format("Unknown object 0x%08x", id)));
 		}
 		}
 	});
@@ -605,19 +603,19 @@ void kernel_explorer::update()
 	idm::select<sys_vm_t>([&](u32 /*id*/, sys_vm_t& vmo)
 	{
 		const u32 psize = vmo.psize;
-		add_leaf(find_node(root, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB), Mem Container: %s", vmo.addr
+		add_leaf(find_node(root, additional_nodes::virtual_memory), QString::fromStdString(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB), Mem Container: %s", vmo.addr
 			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024), vmo.ct->id)));
 	});
 
 	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
 	{
-		add_leaf(find_node(root, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.get_type(), sock.get_family(), sock.get_queue_size())));
+		add_leaf(find_node(root, additional_nodes::sockets), QString::fromStdString(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.get_type(), sock.get_family(), sock.get_queue_size())));
 	});
 
 	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
 	{
 		const u32 used = container.used;
-		add_leaf(find_node(root, additional_nodes::memory_containers), qstr(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
+		add_leaf(find_node(root, additional_nodes::memory_containers), QString::fromStdString(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
 	});
 
 	std::optional<std::scoped_lock<shared_mutex, shared_mutex>> lock_idm_lv2(std::in_place, id_manager::g_mutex, lv2_obj::g_mutex);
@@ -658,7 +656,7 @@ void kernel_explorer::update()
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false).first;
 
-		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), ppu.prio.load().prio, ppu.joiner.load(), status, ppu.state.load()
+		add_leaf(find_node(root, additional_nodes::ppu_threads), QString::fromStdString(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), ppu.prio.load().prio, ppu.joiner.load(), status, ppu.state.load()
 			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time))));
 	}, idm::unlocked);
 
@@ -669,7 +667,7 @@ void kernel_explorer::update()
 		const auto func = spu.current_func;
 		const u64 start_time = spu.start_time;
 
-		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”", spu.lv2_id, *spu.spu_tname.load())), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s, Func: \"%s\"%s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type(), start_time && func ? func : "", start_time ? get_wait_time_str(get_guest_system_time(start_time)) : "")));
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), QString::fromStdString(fmt::format(u8"SPU 0x%07x: “%s”", spu.lv2_id, *spu.spu_tname.load())), QString::fromStdString(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s, Func: \"%s\"%s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type(), start_time && func ? func : "", start_time ? get_wait_time_str(get_guest_system_time(start_time)) : "")));
 
 		if (spu.get_type() == spu_type::threaded)
 		{
@@ -693,21 +691,21 @@ void kernel_explorer::update()
 				{
 					if (lv2_obj::check(port))
 					{
-						add_leaf(spu_thread_tree, qstr(fmt::format("SPU Port %u: Queue ID: 0x%08x", &port - spu.spup, port->id)));
+						add_leaf(spu_thread_tree, QString::fromStdString(fmt::format("SPU Port %u: Queue ID: 0x%08x", &port - spu.spup, port->id)));
 					}
 				}
 			}
 			else if (has_connected_ports)
 			{
 				// Avoid duplication of information between threads which is common
-				add_leaf(spu_thread_tree, qstr(fmt::format("SPU Ports: As SPU 0x%07x", first_spu->lv2_id)));
+				add_leaf(spu_thread_tree, QString::fromStdString(fmt::format("SPU Ports: As SPU 0x%07x", first_spu->lv2_id)));
 			}
 
 			for (const auto& [key, queue] : spu.spuq)
 			{
 				if (lv2_obj::check(queue))
 				{
-					add_leaf(spu_thread_tree, qstr(fmt::format("SPU Queue: Queue ID: 0x%08x, Key: 0x%x", queue->id, key)));
+					add_leaf(spu_thread_tree, QString::fromStdString(fmt::format("SPU Queue: Queue ID: 0x%08x, Key: 0x%x", queue->id, key)));
 				}
 			}
 		}
@@ -717,7 +715,7 @@ void kernel_explorer::update()
 			{
 				if (lv2_obj::check(ctrl.tag))
 				{
-					add_leaf(spu_thread_tree, qstr(fmt::format("Interrupt Tag %u: ID: 0x%x, Mask: 0x%x, Status: 0x%x", &ctrl - spu.int_ctrl.data(), ctrl.tag->id, +ctrl.mask, +ctrl.stat)));
+					add_leaf(spu_thread_tree, QString::fromStdString(fmt::format("Interrupt Tag %u: ID: 0x%x, Mask: 0x%x, Status: 0x%x", &ctrl - spu.int_ctrl.data(), ctrl.tag->id, +ctrl.mask, +ctrl.stat)));
 				}
 			}
 		}
@@ -725,7 +723,7 @@ void kernel_explorer::update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), tg.prio.load().prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), QString::fromStdString(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), QString::fromStdString(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), tg.prio.load().prio, tg.type)));
 
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{
@@ -763,7 +761,7 @@ void kernel_explorer::update()
 			{
 				const QString branch_name = tr("SPURS %1").arg(pspurs.addr());
 				const u32 wklEnabled = spurs.wklEnabled;
-				QTreeWidgetItem* spurs_tree = add_solid_node(spu_tree, branch_name, qstr(fmt::format("SPURS, Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
+				QTreeWidgetItem* spurs_tree = add_solid_node(spu_tree, branch_name, QString::fromStdString(fmt::format("SPURS, Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
 					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue, wklEnabled)));
 
 				const u32 signal_mask = u32{spurs.wklSignal1} << 16 | spurs.wklSignal2;
@@ -788,7 +786,7 @@ void kernel_explorer::update()
 					const u8 status = spurs.wklStatus(wid);
 					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
 
-					QTreeWidgetItem* wkl_tree = add_solid_node(spurs_tree, branch_name + qstr(fmt::format(" Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+					QTreeWidgetItem* wkl_tree = add_solid_node(spurs_tree, branch_name + QString::fromStdString(fmt::format(" Work.%u", wid)), QString::fromStdString(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
 
 					auto contention = [&](u8 v)
 					{
@@ -799,11 +797,11 @@ void kernel_explorer::update()
 					};
 
 					const auto& winfo = spurs.wklInfo(wid);
-					add_leaf(wkl_tree, qstr(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x, arg: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
+					add_leaf(wkl_tree, QString::fromStdString(fmt::format("Contention: %u/%u (pending: %u), Image: *0x%x (size: 0x%x, arg: 0x%x), Priority (BE64): %016x", contention(spurs.wklCurrentContention[wid % 16])
 						, contention(spurs.wklMaxContention[wid % 16]), contention(spurs.wklPendingContention[wid % 16]), +winfo.addr, winfo.size, winfo.arg, std::bit_cast<be_t<u64>>(winfo.priority))));
 				}
 
-				add_leaf(spurs_tree, qstr(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
+				add_leaf(spurs_tree, QString::fromStdString(fmt::format("Handler Info: PPU0: 0x%x, PPU1: 0x%x, DirtyState: %u, Waiting: %u, Exiting: %u", spurs.ppu0, spurs.ppu1
 					, +spurs.handlerDirty, +spurs.handlerWaiting, +spurs.handlerExiting)));
 			}
 			else
@@ -834,7 +832,7 @@ void kernel_explorer::update()
 
 		const QString branch_name = "RSX Context 0x55555555";
 		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
-			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(rsx->driver_info).handlers)));
+			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(rsx->driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
@@ -859,7 +857,7 @@ void kernel_explorer::update()
 				if (size_block)
 				{
 					// Print block
-					add_leaf(io_tree, qstr(fmt::format("IO: %08x, EA: %08x, Size: %uMB", first_io, first_ea, size_block)));
+					add_leaf(io_tree, QString::fromStdString(fmt::format("IO: %08x, EA: %08x, Size: %uMB", first_io, first_ea, size_block)));
 				}
 
 				if (i >= 512u)
@@ -885,7 +883,7 @@ void kernel_explorer::update()
 				else
 				{
 					// Print last block before we continue to a new one
-					add_leaf(io_tree, qstr(fmt::format("IO: %08x, EA: %08x, Size: %uMB", first_io, first_ea, old_block_size)));
+					add_leaf(io_tree, QString::fromStdString(fmt::format("IO: %08x, EA: %08x, Size: %uMB", first_io, first_ea, old_block_size)));
 					size_block = 1;
 					first_ea = addr;
 					first_io = (i - 1) << 20;
@@ -903,7 +901,7 @@ void kernel_explorer::update()
 		{
 			if (zc.bound)
 			{
-				add_leaf(zc_tree, qstr(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
+				add_leaf(zc_tree, QString::fromStdString(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
 					, zc.offset, zc.height, zc.width, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
 			}
 		}
@@ -912,7 +910,7 @@ void kernel_explorer::update()
 		{
 			if (db.valid())
 			{
-				add_leaf(db_tree, qstr(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
+				add_leaf(db_tree, QString::fromStdString(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
 					, db.offset, db.height, db.width, db.pitch)));
 			}
 		}
@@ -936,7 +934,7 @@ void kernel_explorer::update()
 			return "Unknown object!";
 		}());
 
-		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(str));
+		add_leaf(find_node(root, additional_nodes::file_descriptors), QString::fromStdString(str));
 	});
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
@@ -969,7 +967,7 @@ void kernel_explorer::update()
 				if (count > 0)
 				{
 					// Append count
-					node->setText(0, node->text(0) + qstr(fmt::format(" (%zu)", count)));
+					node->setText(0, node->text(0) + QString::fromStdString(fmt::format(" (%zu)", count)));
 
 					// Expand if necessary
 					node->setExpanded(node->data(0, kernel_item_role::expanded_role).toBool());
@@ -1009,7 +1007,7 @@ void kernel_explorer::log(u32 level, QTreeWidgetItem* item)
 			return;
 		}
 
-		m_log_buf = qstr(fmt::format("Kernel Explorer: %s\n", Emu.GetTitleAndTitleID()));
+		m_log_buf = QString::fromStdString(fmt::format("Kernel Explorer: %s\n", Emu.GetTitleAndTitleID()));
 		log(level + 1, item);
 
 		sys_log.success("%s", m_log_buf);

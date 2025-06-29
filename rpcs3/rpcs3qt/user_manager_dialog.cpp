@@ -25,8 +25,6 @@
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
-constexpr auto qstr = QString::fromStdString;
-
 LOG_CHANNEL(gui_log, "GUI");
 
 user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
@@ -144,7 +142,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 
 	if (mark_only)
 	{
-		const QString active_user = qstr(m_active_user);
+		const QString active_user = QString::fromStdString(m_active_user);
 
 		for (int i = 0; i < m_table->rowCount(); i++)
 		{
@@ -176,12 +174,12 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 	int row = 0;
 	for (auto& [id, account] : m_user_list)
 	{
-		QTableWidgetItem* user_id_item = new QTableWidgetItem(qstr(account.GetUserId()));
+		QTableWidgetItem* user_id_item = new QTableWidgetItem(QString::fromStdString(account.GetUserId()));
 		user_id_item->setData(Qt::UserRole, id); // For sorting to work properly
 		user_id_item->setFlags(user_id_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 0, user_id_item);
 
-		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(account.GetUsername()));
+		QTableWidgetItem* username_item = new QTableWidgetItem(QString::fromStdString(account.GetUsername()));
 		username_item->setData(Qt::UserRole, id); // For sorting to work properly
 		username_item->setFlags(username_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 1, username_item);
@@ -218,12 +216,12 @@ void user_manager_dialog::OnUserRemove()
 		return;
 	}
 
-	const QString username = qstr(m_user_list[key].GetUsername());
-	const QString user_id = qstr(m_user_list[key].GetUserId());
+	const QString username = QString::fromStdString(m_user_list[key].GetUsername());
+	const QString user_id = QString::fromStdString(m_user_list[key].GetUserId());
 	const std::string user_dir = m_user_list[key].GetUserDir();
 
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the following user?\n\nUser ID: %0\nUsername: %1\n\n"
-		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(qstr(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(QString::fromStdString(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		gui_log.warning("Deleting user: %s", user_dir);
 		fs::remove_all(user_dir);
@@ -267,11 +265,11 @@ void user_manager_dialog::OnUserRename()
 
 	const std::string user_id = m_user_list[key].GetUserId();
 	const std::string username = m_user_list[key].GetUsername();
-	const QString q_username = qstr(username);
+	const QString q_username = QString::fromStdString(username);
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("Rename User"));
-	dialog->setLabelText(tr("User Id: %0\nOld Username: %1\n\nNew Username: ").arg(qstr(user_id)).arg(q_username));
+	dialog->setLabelText(tr("User Id: %0\nOld Username: %1\n\nNew Username: ").arg(QString::fromStdString(user_id)).arg(q_username));
 	dialog->setTextValue(q_username);
 	dialog->resize(200, 100);
 
@@ -329,7 +327,7 @@ void user_manager_dialog::OnUserCreate()
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("New User"));
-	dialog->setLabelText(tr("New User ID: %0\n\nNew Username: ").arg(qstr(next_user_id)));
+	dialog->setLabelText(tr("New User ID: %0\n\nNew Username: ").arg(QString::fromStdString(next_user_id)));
 	dialog->resize(200, 100);
 
 	while (dialog->exec() != QDialog::Rejected)
@@ -370,7 +368,7 @@ void user_manager_dialog::OnUserLogin()
 	main_application::InitializeEmulator(new_user, Emu.HasGui());
 
 	m_active_user = new_user;
-	m_persistent_settings->SetValue(gui::persistent::active_user, qstr(m_active_user));
+	m_persistent_settings->SetValue(gui::persistent::active_user, QString::fromStdString(m_active_user));
 	UpdateTable(true);
 	Q_EMIT OnUserLoginSuccess();
 }
@@ -425,7 +423,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
 	connect(show_dir_act, &QAction::triggered, this, [this, key]()
 	{
-		const QString path = qstr(m_user_list[key].GetUserDir());
+		const QString path = QString::fromStdString(m_user_list[key].GetUserDir());
 		gui::utils::open_dir(path);
 	});
 

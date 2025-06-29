@@ -6,7 +6,7 @@ namespace vk
 {
 	struct fence;
 
-	enum // callback commands
+	enum rctrl_command : u32 // callback commands
 	{
 		rctrl_queue_submit = 0x80000000,
 		rctrl_run_gc       = 0x80000001,
