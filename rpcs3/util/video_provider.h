@@ -21,7 +21,7 @@ namespace utils
 		void set_pause_time_us(usz pause_time_us);
 
 		bool can_consume_frame();
-		void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra);
+		void present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra);
 
 		void present_samples(const u8* buf, u32 sample_count, u16 channels);
 
