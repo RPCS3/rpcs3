@@ -152,6 +152,15 @@ if(NOT WIN32)
     add_compile_options(-pthread)
 endif()
 
+## Look for Gamemode if its installed on Linux
+if(LINUX)
+    find_program(GAMEMODE_FOUND gamemoded) ## Only works if gamemode is installed on system (might include lib32 case)
+    if(GAMEMODE_FOUND)
+         add_compile_definitions(GAMEMODE_AVAILABLE)
+    endif()
+    message(GAMEMODE_AVAILABLE="${GAMEMODE_AVAILABLE}")
+endif()
+
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")

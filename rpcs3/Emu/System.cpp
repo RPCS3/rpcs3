@@ -986,6 +986,7 @@ void Emulator::SetContinuousMode(bool continuous_mode)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
+
 	if (recursion_count == 0 && m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
@@ -2477,6 +2478,11 @@ void Emulator::Run(bool start_playtime)
 	{
 		Emu.GetCallbacks().enable_display_sleep(false);
 	}
+
+	if (g_cfg.misc.enable_gamemode)
+	{
+		Emu.GetCallbacks().enable_gamemode(true);
+	}
 }
 
 void Emulator::RunPPU()
@@ -3051,6 +3057,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
+
 	static const auto make_ptr = [](auto ptr)
 	{
 		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
