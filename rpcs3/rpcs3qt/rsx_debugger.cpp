@@ -28,8 +28,6 @@ enum GCMEnumTypes
 	CELL_GCM_PRIMITIVE_ENUM,
 };
 
-constexpr auto qstr = QString::fromStdString;
-
 LOG_CHANNEL(rsx_debugger, "RSX Debugger");
 
 namespace utils
@@ -604,9 +602,9 @@ void rsx_debugger::OnClickDrawCalls()
 
 	// Programs
 	m_transform_disasm->clear();
-	m_transform_disasm->setText(qstr(frame_debug.draw_calls[draw_id].programs.first));
+	m_transform_disasm->setText(QString::fromStdString(frame_debug.draw_calls[draw_id].programs.first));
 	m_fragment_disasm->clear();
-	m_fragment_disasm->setText(qstr(frame_debug.draw_calls[draw_id].programs.second));
+	m_fragment_disasm->setText(QString::fromStdString(frame_debug.draw_calls[draw_id].programs.second));
 
 	m_list_index_buffer->clear();
 	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
@@ -615,7 +613,7 @@ void rsx_debugger::OnClickDrawCalls()
 		auto index_buffer = ref_ptr<u16[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
-			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
+			m_list_index_buffer->insertItem(i, QString::fromStdString(std::to_string(index_buffer[i])));
 		}
 	}
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u32)
@@ -623,7 +621,7 @@ void rsx_debugger::OnClickDrawCalls()
 		auto index_buffer = ref_ptr<u32[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
-			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
+			m_list_index_buffer->insertItem(i, QString::fromStdString(std::to_string(index_buffer[i])));
 		}
 	}
 }
@@ -647,7 +645,7 @@ void rsx_debugger::GetMemory() const
 	{
 		str.clear();
 		rsx::get_pretty_printing_function(command.first)(str, command.first, command.second);
-		m_list_captured_frame->setItem(cmd_i++, 0, new QTableWidgetItem(qstr(str)));
+		m_list_captured_frame->setItem(cmd_i++, 0, new QTableWidgetItem(QString::fromStdString(str)));
 
 		dump += str;
 		dump += '\n';
@@ -659,7 +657,7 @@ void rsx_debugger::GetMemory() const
 	}
 
 	for (u32 i = 0; i < frame_debug.draw_calls.size(); i++)
-		m_list_captured_draw_calls->setItem(i, 0, new QTableWidgetItem(qstr(frame_debug.draw_calls[i].name)));
+		m_list_captured_draw_calls->setItem(i, 0, new QTableWidgetItem(QString::fromStdString(frame_debug.draw_calls[i].name)));
 }
 
 void rsx_debugger::GetBuffers() const

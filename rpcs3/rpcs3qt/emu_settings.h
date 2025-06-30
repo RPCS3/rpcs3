@@ -23,8 +23,6 @@ namespace cfg
 	class _base;
 }
 
-constexpr auto qstr = QString::fromStdString;
-
 class emu_settings : public QObject
 {
 	/** A settings class for Emulator specific settings.  This class is a refactored version of the wx version.  It is much nicer

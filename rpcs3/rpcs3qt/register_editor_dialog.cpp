@@ -18,10 +18,6 @@
 #include "util/v128.hpp"
 #include "util/asm.hpp"
 
-constexpr auto qstr = QString::fromStdString;
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
-
 enum registers : int
 {
 	ppu_r0,
@@ -108,10 +104,10 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	{
 		if (cpu->get_class() == thread_class::ppu)
 		{
-			for (int i = ppu_r0; i <= ppu_r31; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 32)), i);
-			for (int i = ppu_f0; i <= ppu_f31; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i % 32)), i);
-			for (int i = ppu_ff0; i <= ppu_ff31; i++) m_register_combo->addItem(qstr(fmt::format("ff%d", i % 32)), i);
-			for (int i = ppu_v0; i <= ppu_v31; i++) m_register_combo->addItem(qstr(fmt::format("v%d", i % 32)), i);
+			for (int i = ppu_r0; i <= ppu_r31; i++) m_register_combo->addItem(QString::fromStdString(fmt::format("r%d", i % 32)), i);
+			for (int i = ppu_f0; i <= ppu_f31; i++) m_register_combo->addItem(QString::fromStdString(fmt::format("f%d", i % 32)), i);
+			for (int i = ppu_ff0; i <= ppu_ff31; i++) m_register_combo->addItem(QString::fromStdString(fmt::format("ff%d", i % 32)), i);
+			for (int i = ppu_v0; i <= ppu_v31; i++) m_register_combo->addItem(QString::fromStdString(fmt::format("v%d", i % 32)), i);
 			m_register_combo->addItem("CR", +PPU_CR);
 			m_register_combo->addItem("LR", +PPU_LR);
 			m_register_combo->addItem("CTR", PPU_CTR);
@@ -124,7 +120,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 		}
 		else if (cpu->get_class() == thread_class::spu)
 		{
-			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
+			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(QString::fromStdString(fmt::format("r%d", i % 128)), i);
 			m_register_combo->addItem("MFC Pending Events", +MFC_PEVENTS);
 			m_register_combo->addItem("MFC Events Mask", +MFC_EVENTS_MASK);
 			m_register_combo->addItem("MFC Events Count", +MFC_EVENTS_COUNT);
@@ -167,7 +163,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 
 void register_editor_dialog::updateRegister(int reg) const
 {
-	std::string str = sstr(tr("Error parsing register value!"));
+	std::string str = tr("Error parsing register value!").toStdString();
 
 	const auto cpu = m_get_cpu();
 
@@ -196,7 +192,7 @@ void register_editor_dialog::updateRegister(int reg) const
 		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
 		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
 		else if (reg == PPU_PRIO) str = fmt::format("%08x", ppu.prio.load().prio);
-		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
+		else if (reg == RESERVATION_LOST) str = ppu.raddr ? tr("Lose reservation on OK").toStdString() : tr("Reservation is inactive").toStdString();
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}
 	else if (cpu->get_class() == thread_class::spu)
@@ -218,17 +214,17 @@ void register_editor_dialog::updateRegister(int reg) const
 		else if (reg == SPU_SNR2) str = fmt::format("%s", spu.ch_snr2);
 		else if (reg == SPU_OUT_MBOX) str = fmt::format("%s", spu.ch_out_mbox);
 		else if (reg == SPU_OUT_INTR_MBOX) str = fmt::format("%s", spu.ch_out_intr_mbox);
-		else if (reg == RESERVATION_LOST) str = sstr(spu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
+		else if (reg == RESERVATION_LOST) str = spu.raddr ? tr("Lose reservation on OK").toStdString() : tr("Reservation is inactive").toStdString();
 		else if (reg == PC) str = fmt::format("%08x", spu.pc);
 	}
 
-	m_value_line->setText(qstr(str));
+	m_value_line->setText(QString::fromStdString(str));
 }
 
 void register_editor_dialog::OnOkay()
 {
 	const int reg = m_register_combo->currentData().toInt();
-	std::string value = sstr(m_value_line->text());
+	std::string value = m_value_line->text().toStdString();
 
 	auto check_res = [](std::from_chars_result res, const char* end)
 	{

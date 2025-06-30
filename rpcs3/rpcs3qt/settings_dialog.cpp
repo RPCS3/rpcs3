@@ -45,10 +45,6 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-inline std::string sstr(const QString& _in) { return _in.toStdString(); }
-inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
-inline QString qsv(std::string_view sv) { return QString(sv.data()); }
-
 std::pair<QString, int> get_data(const QComboBox* box, int index)
 {
 	if (!box) return {};
@@ -137,7 +133,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (game)
 	{
 		m_emu_settings->LoadSettings(game->serial, create_cfg_from_global_cfg);
-		setWindowTitle(tr("Settings: [%0] %1", "Settings dialog").arg(qstr(game->serial)).arg(qstr(game->name)));
+		setWindowTitle(tr("Settings: [%0] %1", "Settings dialog").arg(QString::fromStdString(game->serial)).arg(QString::fromStdString(game->name)));
 	}
 	else
 	{
@@ -171,7 +167,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			if (item->checkState() != Qt::CheckState::Unchecked)
 			{
 				// suffix indicates forced HLE mode
-				selected.emplace(sstr(item->text()) + ":hle");
+				selected.emplace(item->text().toStdString() + ":hle");
 			}
 		}
 
@@ -181,7 +177,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			if (item->checkState() != Qt::CheckState::Unchecked)
 			{
 				// suffix indicates forced LLE mode
-				selected.emplace(sstr(item->text()) + ":lle");
+				selected.emplace(item->text().toStdString() + ":lle");
 			}
 		}
 
@@ -206,7 +202,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			if (m_use_discord)
 			{
 				discord::initialize();
-				discord::update_presence(sstr(m_discord_state));
+				discord::update_presence(m_discord_state.toStdString());
 			}
 			else
 			{
@@ -215,7 +211,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		else if (m_discord_state != discord_state_old && Emu.IsStopped())
 		{
-			discord::update_presence(sstr(m_discord_state), "Idle", false);
+			discord::update_presence(m_discord_state.toStdString(), "Idle", false);
 		}
 #endif
 
@@ -802,7 +798,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (renderer->has_adapters)
 			{
-				renderer->old_adapter = qstr(m_emu_settings->GetSetting(renderer->type));
+				renderer->old_adapter = QString::fromStdString(m_emu_settings->GetSetting(renderer->type));
 			}
 			continue;
 		}
@@ -833,7 +829,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			{
 				if (renderer.name != render->name && render->has_adapters && render->supported)
 				{
-					m_emu_settings->SetSetting(render->type, sstr(render->old_adapter));
+					m_emu_settings->SetSetting(render->type, render->old_adapter.toStdString());
 				}
 			}
 
@@ -866,7 +862,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				}
 			}
 			ui->graphicsAdapterBox->setCurrentIndex(idx);
-			m_emu_settings->SetSetting(renderer.type, sstr(ui->graphicsAdapterBox->currentText()));
+			m_emu_settings->SetSetting(renderer.type, ui->graphicsAdapterBox->currentText().toStdString());
 		};
 
 		for (const auto& renderer : r_creator->renderers)
@@ -897,7 +893,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (render->name == new_renderer && render->has_adapters && render->adapters.contains(text))
 			{
-				m_emu_settings->SetSetting(render->type, sstr(text));
+				m_emu_settings->SetSetting(render->type, text.toStdString());
 				break;
 			}
 		}
@@ -1012,15 +1008,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		ui->audioDeviceBox->clear();
 		ui->audioDeviceBox->blockSignals(true);
-		ui->audioDeviceBox->addItem(tr("Default"), qsv(audio_device_enumerator::DEFAULT_DEV_ID));
+		ui->audioDeviceBox->addItem(tr("Default"), QString(audio_device_enumerator::DEFAULT_DEV_ID.data()));
 
 		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
 		int device_index = 0;
 
 		for (const audio_device_enumerator::audio_device& dev : dev_array)
 		{
-			const QString cur_item = qstr(dev.id);
-			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
+			const QString cur_item = QString::fromStdString(dev.id);
+			ui->audioDeviceBox->addItem(QString::fromStdString(dev.name), cur_item);
 			if (selected_device == dev.id)
 			{
 				device_index = ui->audioDeviceBox->findData(cur_item);
@@ -1030,7 +1026,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		if (device_index == 0 && keep_old && selected_device != audio_device_enumerator::DEFAULT_DEV_ID)
 		{
 			cfg_log.error("The selected audio device (%s) was not found", selected_device);
-			ui->audioDeviceBox->addItem(tr("Unknown device"), qsv(selected_device));
+			ui->audioDeviceBox->addItem(tr("Unknown device"), QString::fromStdString(selected_device));
 			device_index = ui->audioDeviceBox->count() - 1;
 		}
 
@@ -1046,7 +1042,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 
 		const QVariant item_data = ui->audioDeviceBox->itemData(index);
-		m_emu_settings->SetSetting(emu_settings_type::AudioDevice, sstr(item_data.toString()));
+		m_emu_settings->SetSetting(emu_settings_type::AudioDevice, item_data.toString().toStdString());
 		ui->audioDeviceBox->setCurrentIndex(index);
 	};
 
@@ -1157,7 +1153,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	for (s32 index = static_cast<int>(mic_sel_list.size()) - 1; index >= 0; index--)
 	{
-		const QString qmic = qstr(mic_sel_list[index]);
+		const QString qmic = QString::fromStdString(mic_sel_list[index]);
 
 		if (qmic.isEmpty() || m_mics_combo[index]->findText(qmic) == -1)
 		{
@@ -1228,7 +1224,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string default_camera = m_emu_settings->GetSettingDefault(emu_settings_type::CameraID);
 		const std::string selected_camera = m_emu_settings->GetSetting(emu_settings_type::CameraID);
 		ui->cameraIdBox->addItem(tr("None", "Camera Device"), "");
-		ui->cameraIdBox->addItem(tr("Default", "Camera Device"), qstr(default_camera));
+		ui->cameraIdBox->addItem(tr("Default", "Camera Device"), QString::fromStdString(default_camera));
 		for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 		{
 			if (!camera_info.isNull())
@@ -1236,14 +1232,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				ui->cameraIdBox->addItem(camera_info.description(), QString(camera_info.id()));
 			}
 		}
-		if (const int index = ui->cameraIdBox->findData(qstr(selected_camera)); index >= 0)
+		if (const int index = ui->cameraIdBox->findData(QString::fromStdString(selected_camera)); index >= 0)
 		{
 			ui->cameraIdBox->setCurrentIndex(index);
 		}
 		else
 		{
 			cfg_log.error("The selected camera was not found. Selecting default camera as fallback.");
-			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
+			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(QString::fromStdString(default_camera)));
 		}
 		connect(ui->cameraIdBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 		{
@@ -1252,7 +1248,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this, default_camera]()
 		{
 			m_emu_settings->SetSetting(emu_settings_type::CameraID, default_camera);
-			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
+			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(QString::fromStdString(default_camera)));
 		});
 		SubscribeTooltip(ui->gb_camera_id, tooltips.settings.camera_id);
 	}
@@ -1701,7 +1697,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		const auto list = (lib.second ? ui->hleList : ui->lleList);
 
-		QListWidgetItem* item = new QListWidgetItem(qsv(lib.first), list);
+		QListWidgetItem* item = new QListWidgetItem(QString(lib.first.data()), list);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 
 		// If no override selected (res=0), checkbox is unchecked
@@ -2074,7 +2070,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	const auto get_game_window_title = [this, game](const QString& format)
 	{
 		rpcs3::title_format_data title_data;
-		title_data.format = sstr(format);
+		title_data.format = format.toStdString();
 		title_data.renderer = m_emu_settings->GetSetting(emu_settings_type::Renderer);
 		title_data.vulkan_adapter = m_emu_settings->GetSetting(emu_settings_type::VulkanAdapter);
 		title_data.fps = 60.;
@@ -2086,7 +2082,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		else
 		{
-			title_data.title = sstr(tr("My Game", "Game window title"));
+			title_data.title = tr("My Game", "Game window title").toStdString();
 			title_data.title_id = "ABCD12345";
 		}
 
@@ -2097,12 +2093,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			return QStringLiteral("RPCS3");
 		}
 
-		return qstr(game_window_title);
+		return QString::fromStdString(game_window_title);
 	};
 
 	const auto set_game_window_title = [get_game_window_title, this](const std::string& format)
 	{
-		const QString game_window_title_format = qstr(format);
+		const QString game_window_title_format = QString::fromStdString(format);
 		const QString game_window_title = get_game_window_title(game_window_title_format);
 		const int width = ui->label_game_window_title_format->sizeHint().width();
 		const QFontMetrics metrics = ui->label_game_window_title_format->fontMetrics();
@@ -2144,7 +2140,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		const std::string game_title_format = m_emu_settings->GetSetting(emu_settings_type::WindowTitleFormat);
 
-		QString edited_format = qstr(game_title_format);
+		QString edited_format = QString::fromStdString(game_title_format);
 
 		input_dialog dlg(-1, edited_format, tr("Game Window Title Format", "Game window title"), get_game_window_title_label(edited_format), "", this);
 		dlg.resize(width() * .75, dlg.height());
@@ -2157,7 +2153,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		if (dlg.exec() == QDialog::Accepted)
 		{
-			m_emu_settings->SetSetting(emu_settings_type::WindowTitleFormat, sstr(edited_format));
+			m_emu_settings->SetSetting(emu_settings_type::WindowTitleFormat, edited_format.toStdString());
 			set_game_window_title(m_emu_settings->GetSetting(emu_settings_type::WindowTitleFormat));
 		}
 	});
