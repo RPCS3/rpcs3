@@ -14,44 +14,43 @@ namespace vk
 		public:
 			inline void flush_all()
 			{
+				std::lock_guard lock(m_notifications_lock);
+
 				for (auto& set : m_notification_list)
 				{
 					set->flush();
 				}
+
+				m_notification_list.clear();
 			}
 
 			void register_(descriptor_set* set)
 			{
-				// Rare event, upon creation of a new set tracker.
-				// Check for spurious 'new' events when the aux context is taking over
-				for (const auto& set_ : m_notification_list)
-				{
-					if (set_ == set) return;
-				}
+				std::lock_guard lock(m_notifications_lock);
 
 				m_notification_list.push_back(set);
-				rsx_log.warning("[descriptor_manager::register] Now monitoring %u descriptor sets", m_notification_list.size());
+				// rsx_log.notice("[descriptor_manager::register] Now monitoring %u descriptor sets", m_notification_list.size());
 			}
 
 			void deregister(descriptor_set* set)
 			{
-				for (auto it = m_notification_list.begin(); it != m_notification_list.end(); ++it)
-				{
-					if (*it == set)
-					{
-						*it = m_notification_list.back();
-						m_notification_list.pop_back();
-						break;
-					}
-				}
+				std::lock_guard lock(m_notifications_lock);
 
-				rsx_log.warning("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
+				m_notification_list.erase_if(FN(x == set));
+				// rsx_log.notice("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
+			}
+
+			void destroy()
+			{
+				std::lock_guard lock(m_notifications_lock);
+				m_notification_list.clear();
 			}
 
 			dispatch_manager() = default;
 
 		private:
 			rsx::simple_array<descriptor_set*> m_notification_list;
+			std::mutex m_notifications_lock;
 
 			dispatch_manager(const dispatch_manager&) = delete;
 			dispatch_manager& operator = (const dispatch_manager&) = delete;
@@ -65,6 +64,11 @@ namespace vk
 		void flush()
 		{
 			g_fxo->get<dispatch_manager>().flush_all();
+		}
+
+		void destroy()
+		{
+			g_fxo->get<dispatch_manager>().destroy();
 		}
 
 		VkDescriptorSetLayout create_layout(const rsx::simple_array<VkDescriptorSetLayoutBinding>& bindings)
@@ -88,17 +92,17 @@ namespace vk
 				}
 				else
 				{
-					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 				}
 			}
 
-			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
 			binding_infos.pNext = nullptr;
 			binding_infos.bindingCount = ::size32(binding_flags);
 			binding_infos.pBindingFlags = binding_flags.data();
 
 			infos.pNext = &binding_infos;
-			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 
 			VkDescriptorSetLayout result;
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
@@ -295,11 +299,6 @@ namespace vk
 
 			m_in_use = true;
 			m_update_after_bind_mask = g_render_device->get_descriptor_update_after_bind_support();
-
-			if (m_update_after_bind_mask)
-			{
-				g_fxo->get<descriptors::dispatch_manager>().register_(this);
-			}
 		}
 		else if (m_push_type_mask & ~m_update_after_bind_mask)
 		{
@@ -331,11 +330,6 @@ namespace vk
 		}
 
 		return &m_handle;
-	}
-
-	VkDescriptorSet descriptor_set::value() const
-	{
-		return m_handle;
 	}
 
 	void descriptor_set::push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding)
@@ -417,14 +411,24 @@ namespace vk
 		if (m_pending_copies.empty()) [[likely]]
 		{
 			m_pending_copies = std::move(copy_cmd);
+			return;
 		}
-		else
+
+		m_pending_copies += copy_cmd;
+	}
+
+	void descriptor_set::push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
+	{
+		m_push_type_mask |= type_mask;
+
+#if !defined(__clang__) || (__clang_major__ >= 16)
+		if (m_pending_writes.empty()) [[unlikely]]
 		{
-			const auto old_size = m_pending_copies.size();
-			const auto new_size = copy_cmd.size() + old_size;
-			m_pending_copies.resize(new_size);
-			std::copy(copy_cmd.begin(), copy_cmd.end(), m_pending_copies.begin() + old_size);
+			m_pending_writes = std::move(write_cmds);
+			return;
 		}
+#endif
+		m_pending_writes += write_cmds;
 	}
 
 	void descriptor_set::push(const descriptor_set_dynamic_offset_t& offset)
@@ -438,12 +442,31 @@ namespace vk
 		m_dynamic_offsets[offset.location] = offset.value;
 	}
 
-	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	void descriptor_set::on_bind()
 	{
-		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
+		if (!m_push_type_mask)
+		{
+			ensure(m_pending_writes.empty());
+			return;
+		}
+
+		// We have queued writes
+		if ((m_push_type_mask & ~m_update_after_bind_mask) ||
+			(m_pending_writes.size() >= max_cache_size))
 		{
 			flush();
+			return;
 		}
+
+		// Register for async flush
+		ensure(m_update_after_bind_mask);
+		g_fxo->get<descriptors::dispatch_manager>().register_(this);
+	}
+
+	void descriptor_set::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
+	{
+		// Notify
+		on_bind();
 
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
 	}

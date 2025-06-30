@@ -8,64 +8,43 @@
 
 namespace vk
 {
-	std::vector<std::pair<VkDescriptorType, u8>> compute_task::get_descriptor_layout()
+	std::vector<glsl::program_input> compute_task::get_inputs()
 	{
-		std::vector<std::pair<VkDescriptorType, u8>> result;
-		result.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ssbo_count);
+		std::vector<glsl::program_input> result;
+		for (unsigned i = 0; i < ssbo_count; ++i)
+		{
+			const auto input = glsl::program_input::make
+			(
+				::glsl::glsl_compute_program,
+				"ssbo" + std::to_string(i),
+				glsl::program_input_type::input_type_storage_buffer,
+				0,
+				i
+			);
+			result.push_back(input);
+		}
+
+		if (use_push_constants && push_constants_size > 0)
+		{
+			const auto input = glsl::program_input::make
+			(
+				::glsl::glsl_compute_program,
+				"push_constants",
+				glsl::program_input_type::input_type_push_constant,
+				0,
+				0,
+				glsl::push_constant_ref{ .offset = 0, .size = push_constants_size }
+			);
+			result.push_back(input);
+		}
+
 		return result;
-	}
-
-	void compute_task::init_descriptors()
-	{
-		rsx::simple_array<VkDescriptorPoolSize> descriptor_pool_sizes;
-		rsx::simple_array<VkDescriptorSetLayoutBinding> bindings;
-
-		const auto layout = get_descriptor_layout();
-		for (const auto &e : layout)
-		{
-			descriptor_pool_sizes.push_back({e.first, e.second});
-
-			for (unsigned n = 0; n < e.second; ++n)
-			{
-				bindings.push_back
-				({
-					u32(bindings.size()),
-					e.first,
-					1,
-					VK_SHADER_STAGE_COMPUTE_BIT,
-					nullptr
-				});
-			}
-		}
-
-		// Reserve descriptor pools
-		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes);
-		m_descriptor_layout = vk::descriptors::create_layout(bindings);
-
-		VkPipelineLayoutCreateInfo layout_info = {};
-		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layout_info.setLayoutCount = 1;
-		layout_info.pSetLayouts = &m_descriptor_layout;
-
-		VkPushConstantRange push_constants{};
-		if (use_push_constants)
-		{
-			push_constants.size = push_constants_size;
-			push_constants.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-			layout_info.pushConstantRangeCount = 1;
-			layout_info.pPushConstantRanges = &push_constants;
-		}
-
-		CHECK_RESULT(vkCreatePipelineLayout(*g_render_device, &layout_info, nullptr, &m_pipeline_layout));
 	}
 
 	void compute_task::create()
 	{
 		if (!initialized)
 		{
-			init_descriptors();
-
 			switch (vk::get_driver_vendor())
 			{
 			case vk::driver_vendor::unknown:
@@ -121,10 +100,6 @@ namespace vk
 			m_program.reset();
 			m_param_buffer.reset();
 
-			vkDestroyDescriptorSetLayout(*g_render_device, m_descriptor_layout, nullptr);
-			vkDestroyPipelineLayout(*g_render_device, m_pipeline_layout, nullptr);
-			m_descriptor_pool.destroy();
-
 			initialized = false;
 		}
 	}
@@ -142,26 +117,23 @@ namespace vk
 			shader_stage.module = handle;
 			shader_stage.pName = "main";
 
-			VkComputePipelineCreateInfo info{};
-			info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-			info.stage = shader_stage;
-			info.layout = m_pipeline_layout;
-			info.basePipelineIndex = -1;
-			info.basePipelineHandle = VK_NULL_HANDLE;
+			VkComputePipelineCreateInfo create_info
+			{
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.stage = {
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+					.module = handle,
+					.pName = "main"
+				},
+			};
 
 			auto compiler = vk::get_pipe_compiler();
-			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
-			declare_inputs();
+			m_program = compiler->compile(create_info, vk::pipe_compiler::COMPILE_INLINE, {}, get_inputs());
 		}
 
-		ensure(m_used_descriptors < VK_MAX_COMPUTE_TASKS);
-
-		m_descriptor_set = m_descriptor_pool.allocate(m_descriptor_layout, VK_TRUE);
-
-		bind_resources();
-
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_program->pipeline);
-		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
+		bind_resources(cmd);
+		m_program->bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE);
 	}
 
 	void compute_task::run(const vk::command_buffer& cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
@@ -271,15 +243,19 @@ namespace vk
 		m_src += suffix;
 	}
 
-	void cs_shuffle_base::bind_resources()
+	void cs_shuffle_base::bind_resources(const vk::command_buffer& cmd)
 	{
-		m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		set_parameters(cmd);
+		m_program->bind_uniform({ m_data->value, m_data_offset, m_data_length }, 0, 0);
 	}
 
-	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd, const u32* params, u8 count)
+	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd)
 	{
-		ensure(use_push_constants);
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
+		if (!m_params.empty())
+		{
+			ensure(use_push_constants);
+			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_params.size_bytes32(), m_params.data());
+		}
 	}
 
 	void cs_shuffle_base::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_length, u32 data_offset)
@@ -317,15 +293,15 @@ namespace vk
 			"	uint stencil_offset;\n";
 	}
 
-	void cs_interleave_task::bind_resources()
+	void cs_interleave_task::bind_resources(const vk::command_buffer& cmd)
 	{
-		m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		set_parameters(cmd);
+		m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
 	}
 
 	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 	{
-		u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
-		set_parameters(cmd, parameters, 4);
+		m_params = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 
 		ensure(stencil_offset > data_offset);
 		m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
@@ -377,10 +353,10 @@ namespace vk
 		m_src = fmt::replace_all(m_src, syntax_replace);
 	}
 
-	void cs_aggregator::bind_resources()
+	void cs_aggregator::bind_resources(const vk::command_buffer& /*cmd*/)
 	{
-		m_program->bind_buffer({ src->value, 0, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-		m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		m_program->bind_uniform({ src->value, 0, block_length }, 0, 0);
+		m_program->bind_uniform({ dst->value, 0, 4 }, 0, 1);
 	}
 
 	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)

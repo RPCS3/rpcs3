@@ -16,50 +16,47 @@ namespace vk
 		u32 cs_wave_y = 1;
 
 		cs_resolve_base()
-		{}
+		{
+			ssbo_count = 0;
+		}
 
 		virtual ~cs_resolve_base()
 		{}
 
 		void build(const std::string& format_prefix, bool unresolve, bool bgra_swap);
 
-		std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout() override
-		{
-			return
-			{
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 2 }
-			};
-		}
-
-		void declare_inputs() override
+		std::vector<glsl::program_input> get_inputs() override
 		{
 			std::vector<vk::glsl::program_input> inputs =
 			{
-				{
+				glsl::program_input::make(
 					::glsl::program_domain::glsl_compute_program,
-					vk::glsl::program_input_type::input_type_texture,
-					{}, {},
+					"multisampled",
+					glsl::input_type_storage_texture,
 					0,
-					"multisampled"
-				},
-				{
+					0
+				),
+
+				glsl::program_input::make(
 					::glsl::program_domain::glsl_compute_program,
-					vk::glsl::program_input_type::input_type_texture,
-					{}, {},
-					1,
-					"resolve"
-				}
+					"resolve",
+					glsl::input_type_storage_texture,
+					0,
+					1
+				),
 			};
 
-			m_program->load_uniforms(inputs);
+			auto result = compute_task::get_inputs();
+			result.insert(result.end(), inputs.begin(), inputs.end());
+			return result;
 		}
 
-		void bind_resources() override
+		void bind_resources(const vk::command_buffer& /*cmd*/) override
 		{
 			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
-			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, "multisampled", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
-			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, "resolve", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, m_descriptor_set);
+			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, 0, 0);
+			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, 0, 1);
 		}
 
 		void run(const vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
@@ -116,19 +113,23 @@ namespace vk
 
 		void build(bool resolve_depth, bool resolve_stencil, bool unresolve);
 
-		std::vector<VkPushConstantRange> get_push_constants() override
+		std::vector<glsl::program_input> get_fragment_inputs() override
 		{
-			VkPushConstantRange constant;
-			constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			constant.offset = 0;
-			constant.size = 16;
-
-			return { constant };
+			auto result = overlay_pass::get_fragment_inputs();
+			result.push_back(glsl::program_input::make(
+				::glsl::glsl_fragment_program,
+				"push_constants",
+				glsl::input_type_push_constant,
+				0,
+				umax,
+				glsl::push_constant_ref{ .size = 16 }
+			));
+			return result;
 		}
 
-		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_parameters_width * 4, static_parameters);
+			vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_parameters_width * 4, static_parameters);
 		}
 
 		void update_sample_configuration(vk::image* msaa_image)
@@ -226,16 +227,16 @@ namespace vk
 			state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
 		}
 
-		void emit_geometry(vk::command_buffer& cmd) override
+		void emit_geometry(vk::command_buffer& cmd, glsl::program* program) override
 		{
 			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &region);
 
 			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
 			{
 				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
-				vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+				vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
 
-				overlay_pass::emit_geometry(cmd);
+				overlay_pass::emit_geometry(cmd, program);
 			}
 		}
 
@@ -285,16 +286,16 @@ namespace vk
 			state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_WRITE_MASK);
 		}
 
-		void emit_geometry(vk::command_buffer& cmd) override
+		void emit_geometry(vk::command_buffer& cmd, glsl::program* program) override
 		{
 			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &clear_region);
 
 			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
 			{
 				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
-				vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+				vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
 
-				overlay_pass::emit_geometry(cmd);
+				overlay_pass::emit_geometry(cmd, program);
 			}
 		}
 

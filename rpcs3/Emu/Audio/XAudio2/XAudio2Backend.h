@@ -54,18 +54,18 @@ private:
 	atomic_t<bool> m_reset_req = false;
 
 	// XAudio voice callbacks
-	void OnVoiceProcessingPassStart(UINT32 BytesRequired) override;
-	void OnVoiceProcessingPassEnd() override {}
-	void OnStreamEnd() override {}
-	void OnBufferStart(void* /* pBufferContext */) override {}
-	void OnBufferEnd(void* /* pBufferContext*/) override {}
-	void OnLoopEnd(void* /* pBufferContext */) override {}
-	void OnVoiceError(void* /* pBufferContext */, HRESULT /* Error */) override {}
+	void OnVoiceProcessingPassStart(UINT32 BytesRequired) noexcept override;
+	void OnVoiceProcessingPassEnd() noexcept override {}
+	void OnStreamEnd() noexcept override {}
+	void OnBufferStart(void* /* pBufferContext */) noexcept override {}
+	void OnBufferEnd(void* /* pBufferContext*/) noexcept override {}
+	void OnLoopEnd(void* /* pBufferContext */) noexcept override {}
+	void OnVoiceError(void* /* pBufferContext */, HRESULT /* Error */) noexcept override {}
 
 	// XAudio engine callbacks
-	void OnProcessingPassStart() override {};
-	void OnProcessingPassEnd() override {};
-	void OnCriticalError(HRESULT Error) override;
+	void OnProcessingPassStart() noexcept override {};
+	void OnProcessingPassEnd() noexcept override {};
+	void OnCriticalError(HRESULT Error) noexcept override;
 
 	// IMMNotificationClient callbacks
 	IFACEMETHODIMP_(ULONG) AddRef() override { return 1; };

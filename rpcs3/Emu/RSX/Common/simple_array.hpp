@@ -285,6 +285,13 @@ namespace rsx
 			return pos;
 		}
 
+		void operator += (const rsx::simple_array<Ty>& that)
+		{
+			const auto old_size = _size;
+			resize(_size + that._size);
+			std::memcpy(data() + old_size, that.data(), that.size_bytes());
+		}
+
 		void clear()
 		{
 			_size = 0;
@@ -301,6 +308,11 @@ namespace rsx
 		}
 
 		u64 size_bytes() const
+		{
+			return _size * sizeof(Ty);
+		}
+
+		u32 size_bytes32() const
 		{
 			return _size * sizeof(Ty);
 		}
