@@ -130,6 +130,18 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 		return true;
 	}
 
+	case Prxy_QueryMask_offs:
+	{
+		value = mfc_prxy_mask;
+		return true;
+	}
+
+	case Prxy_QueryType_offs:
+	{
+		value = 0;
+		return true;
+	}
+
 	case SPU_Out_MBox_offs:
 	{
 		value = ch_out_mbox.pop();
@@ -367,6 +379,8 @@ bool spu_thread::test_is_problem_state_register_offset(u32 offset, bool for_read
 		case MFC_QStatus_offs:
 		case SPU_Out_MBox_offs:
 		case SPU_MBox_Status_offs:
+		case Prxy_QueryType_offs:
+		case Prxy_QueryMask_offs:
 		case SPU_Status_offs:
 		case Prxy_TagStatus_offs:
 		case SPU_NPC_offs:
