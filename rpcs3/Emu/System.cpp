@@ -3057,7 +3057,6 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_stage)
 {
-
 	static const auto make_ptr = [](auto ptr)
 	{
 		return std::shared_ptr<std::remove_pointer_t<decltype(ptr)>>(ptr);
@@ -3243,6 +3242,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	rpcs3::utils::configure_logs(true);
 
 	sys_log.notice("Stopping emulator...");
+
+	// Calling Gamemode Exit on Stop
+	if (g_cfg.misc.enable_gamemode)
+	{
+		Emu.GetCallbacks().enable_gamemode(false);
+	}
 
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 

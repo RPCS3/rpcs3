@@ -375,5 +375,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		return true;
 	};
 
+	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
+
 	return callbacks;
 }

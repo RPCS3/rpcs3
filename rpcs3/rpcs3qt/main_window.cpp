@@ -96,10 +96,6 @@
 #define RPCS3_UPDATE_SUPPORTED
 #endif
 
-#ifdef GAMEMODE_AVAILABLE
-#include "../gamemode_control.h"
-#endif
-
 LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
@@ -289,13 +285,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	update_gui_pad_thread();
 
-	// Enable Gamemode
-#if defined GAMEMODE_AVAILABLE && defined __linux__
-	// NOTE: Compiler complains if I pass the config value directly so I have to do this
-	if (g_cfg.misc.enable_gamemode) {
-		enable_gamemode(true);
-	}
-#endif
 	return true;
 }
 

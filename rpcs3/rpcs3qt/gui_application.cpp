@@ -15,7 +15,6 @@
 #include "qt_music_handler.h"
 #include "rpcs3_version.h"
 #include "display_sleep_control.h"
-#include "gamemode_control.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -951,8 +950,6 @@ void gui_application::InitializeCallbacks()
 	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
 	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
 
-    callbacks.gamemode_supported = [](){ return gamemode_supported(); };
-	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
 
 	callbacks.check_microphone_permissions = []()
 	{
