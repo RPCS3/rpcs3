@@ -36,7 +36,7 @@ private:
 #define VMA_RW_MUTEX VmaRWMutex
 #define VMA_MUTEX VmaRWMutex
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push

@@ -23,8 +23,8 @@
 #include <WS2tcpip.h>
 #else
 #ifdef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
 #endif
 #include <sys/time.h>
 #include <sys/types.h>
@@ -37,7 +37,7 @@
 #include <poll.h>
 #include <netdb.h>
 #ifdef __clang__
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 #endif
 #endif
 

@@ -374,13 +374,23 @@ private:
 	static const u64 process_affinity_mask;
 };
 
+#if defined(__has_cpp_attribute)
+#if __has_cpp_attribute(no_unique_address)
+#define NO_UNIQUE_ADDRESS [[no_unique_address]]
+#else
+#define NO_UNIQUE_ADDRESS
+#endif
+#else
+#define NO_UNIQUE_ADDRESS
+#endif
+
 // Used internally
 template <bool Discard, typename Ctx, typename... Args>
 class thread_future_t : public thread_future, result_storage<Ctx, std::conditional_t<Discard, int, void>, Args...>
 {
-	[[no_unique_address]] decltype(std::make_tuple(std::forward<Args>(std::declval<Args>())...)) m_args;
+	NO_UNIQUE_ADDRESS decltype(std::make_tuple(std::forward<Args>(std::declval<Args>())...)) m_args;
 
-	[[no_unique_address]] Ctx m_func;
+	NO_UNIQUE_ADDRESS Ctx m_func;
 
 	using future = thread_future_t;
 
