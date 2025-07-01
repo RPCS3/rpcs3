@@ -207,7 +207,10 @@ namespace stx
 		}
 	};
 
-#ifndef _MSC_VER
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Winvalid-offsetof"
+#elif !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #endif
@@ -316,7 +319,9 @@ namespace stx
 		return make_single<std::remove_reference_t<T>>(std::forward<T>(value));
 	}
 
-#ifndef _MSC_VER
+#ifdef __clang__
+#pragma clang diagnostic pop
+#elif !defined(_MSC_VER)
 #pragma GCC diagnostic pop
 #endif
 
