@@ -108,8 +108,3 @@
 	path = 3rdparty/GPUOpen/VulkanMemoryAllocator
 	url = ../../GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 	ignore = dirty
-[submodule "3rdparty/feralinteractive/feralinteractive"]
-	path = 3rdparty/feralinteractive/feralinteractive
-	url = ../../FeralInteractive/gamemode.git 
-	ignore = dirty
-	branch = 1.8.2
