@@ -110,5 +110,6 @@
 	ignore = dirty
 [submodule "3rdparty/feralinteractive/feralinteractive"]
 	path = 3rdparty/feralinteractive/feralinteractive
-	url = ../../FeralInteractive/gamemode.git
+	url = ../../FeralInteractive/gamemode.git 
 	ignore = dirty
+	branch = 1.8.2
