@@ -950,7 +950,6 @@ void gui_application::InitializeCallbacks()
 	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
 	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
 
-
 	callbacks.check_microphone_permissions = []()
 	{
 		Emu.BlockingCallFromMainThread([]()
