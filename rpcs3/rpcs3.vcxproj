@@ -189,6 +189,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
+    <ClCompile Include="Input\camera_video_sink.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
@@ -198,8 +199,10 @@
     <ClCompile Include="Input\raw_mouse_config.cpp" />
     <ClCompile Include="Input\raw_mouse_handler.cpp" />
     <ClCompile Include="Input\ps_move_handler.cpp" />
-    <ClCompile Include="Input\sdl_pad_handler.cpp" />
+    <ClCompile Include="Input\sdl_camera_handler.cpp" />
+    <ClCompile Include="Input\sdl_camera_video_sink.cpp" />
     <ClCompile Include="Input\sdl_instance.cpp" />
+    <ClCompile Include="Input\sdl_pad_handler.cpp" />
     <ClCompile Include="Input\skateboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main_application.cpp" />
@@ -921,6 +924,7 @@
     <ClInclude Include="Input\basic_keyboard_handler.h" />
     <ClInclude Include="Input\basic_mouse_handler.h" />
     <ClInclude Include="display_sleep_control.h" />
+    <ClInclude Include="Input\camera_video_sink.h" />
     <ClInclude Include="Input\ds3_pad_handler.h" />
     <ClInclude Include="Input\ds4_pad_handler.h" />
     <ClInclude Include="Input\dualsense_pad_handler.h" />
@@ -1044,8 +1048,10 @@
     <ClInclude Include="Input\raw_mouse_config.h" />
     <ClInclude Include="Input\raw_mouse_handler.h" />
     <ClInclude Include="Input\ps_move_handler.h" />
-    <ClInclude Include="Input\sdl_pad_handler.h" />
+    <ClInclude Include="Input\sdl_camera_handler.h" />
+    <ClInclude Include="Input\sdl_camera_video_sink.h" />
     <ClInclude Include="Input\sdl_instance.h" />
+    <ClInclude Include="Input\sdl_pad_handler.h" />
     <ClInclude Include="Input\skateboard_pad_handler.h" />
     <ClInclude Include="main_application.h" />
     <ClInclude Include="Input/mm_joystick_handler.h" />
