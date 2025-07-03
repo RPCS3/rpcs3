@@ -46,7 +46,7 @@ LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
-std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 abs_id, s64 rel_id);
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 rel_id, u64 aggregate_file_size = umax);
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
@@ -1221,13 +1221,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	extern bool is_savestate_compatible(const std::string& filepath);
 
-	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 0, 0); is_savestate_compatible(sstate))
+	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 1); is_savestate_compatible(sstate))
 	{
 		QAction* boot_state = menu.addAction(is_current_running_game
 			? tr("&Reboot with savestate")
 			: tr("&Boot with savestate"));
-		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate]
+		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate, current_game]
 		{
+			if (!get_savestate_file(current_game.serial, current_game.path, 2).empty())
+			{
+				// If there is any ambiguity, launch the savestate manager
+				Q_EMIT RequestSaveStateManager(gameinfo);
+				return;
+			}
+
 			sys_log.notice("Booting savestate from gamelist per context menu...");
 			Q_EMIT RequestBoot(gameinfo, cfg_mode::custom, "", sstate);
 		});
