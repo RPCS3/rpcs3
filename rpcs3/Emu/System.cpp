@@ -2477,6 +2477,11 @@ void Emulator::Run(bool start_playtime)
 	{
 		Emu.GetCallbacks().enable_display_sleep(false);
 	}
+
+	if (g_cfg.misc.enable_gamemode)
+	{
+		Emu.GetCallbacks().enable_gamemode(true);
+	}
 }
 
 void Emulator::RunPPU()
@@ -3236,6 +3241,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	rpcs3::utils::configure_logs(true);
 
 	sys_log.notice("Stopping emulator...");
+
+	// Calling Gamemode Exit on Stop
+	if (g_cfg.misc.enable_gamemode)
+	{
+		Emu.GetCallbacks().enable_gamemode(false);
+	}
 
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 

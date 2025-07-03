@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "main_application.h"
 #include "display_sleep_control.h"
+#include "gamemode_control.h"
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
@@ -373,6 +374,8 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 		return true;
 	};
+
+	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
 
 	return callbacks;
 }

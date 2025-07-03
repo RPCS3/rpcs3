@@ -357,6 +357,9 @@ add_subdirectory(opencv EXCLUDE_FROM_ALL)
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
 
+# FERAL INTERACTIVE
+add_subdirectory(feralinteractive EXCLUDE_FROM_ALL)
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
@@ -389,3 +392,4 @@ add_library(3rdparty::miniupnpc ALIAS libminiupnpc-static)
 add_library(3rdparty::rtmidi ALIAS rtmidi)
 add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
+add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)
