@@ -39,13 +39,14 @@ check_tags()
 
     echo "Checking $path"
 
-    # git_call fetch --prune --all
+    git_call fetch --prune --all
 
     # Get the latest tag (by commit date, not tag name)
     local tag_list=$(git_call rev-list --tags --max-count=1)
     local latest_tag=$(git_call describe --tags "$tag_list")
+    local highest_tag=$(git_call tag -l | sort -V | tail -n1)
 
-    if [ -n "$latest_tag" ]; then
+    if [ -n "$latest_tag" ] || [ -n "$highest_tag" ]; then
 
         # Get the current tag
         local current_tag=$(git_call describe --tags --abbrev=0)
@@ -53,28 +54,29 @@ check_tags()
         if [ -n "$current_tag" ]; then
 
             if [ "$verbose" -eq 1 ]; then
-                echo "$path -> latest: $latest_tag, current: $current_tag"
+                echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag"
             fi
 
+            local ts0=$(git_call log -1 --format=%ct $highest_tag)
             local ts1=$(git_call log -1 --format=%ct $latest_tag)
             local ts2=$(git_call log -1 --format=%ct $current_tag)
 
-            if (( ts1 > ts2 )); then
+            if (( ts0 > ts2 )) || (( ts1 > ts2 )); then
                 if [ "$verbose" -eq 1 ]; then
                     echo -e "\t $path: latest is newer"
                 elif [ "$verbose" -eq 0 ]; then
-                    echo "$path -> latest: $latest_tag, current: $current_tag"
+                    echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag"
                 fi
 
                 # Critical section guarded by flock
                 (
                     flock 200
-                    echo "$path -> latest: $latest_tag, current: $current_tag" >> "$resultfile"
+                    echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag" >> "$resultfile"
                 ) 200>"$lockfile"
             fi
 
         elif [ "$verbose" -eq 1 ]; then
-            echo "$path -> latest: $latest_tag"
+            echo "$path -> latest: $latest_tag, highest: $highest_tag"
         fi
     elif [ "$verbose" -eq 1 ]; then
 
