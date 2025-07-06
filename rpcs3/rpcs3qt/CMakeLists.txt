@@ -133,6 +133,7 @@ add_library(rpcs3_ui STATIC
     welcome_dialog.ui
 
     ../display_sleep_control.cpp
+    ../gamemode_control.cpp
     ../headless_application.cpp
     ../main_application.cpp
     ../module_verifier.cpp
