@@ -1209,6 +1209,9 @@
     <ClCompile Include="rpcs3.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="gamemode_control.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1431,6 +1434,9 @@
       <Filter>Gui\utils</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="gamemode_control.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
   </ItemGroup>
