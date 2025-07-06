@@ -4,7 +4,7 @@
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
 git config --global --add safe.directory .
-git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libpng/ && !/libsdl-org/ && !/curl/ && !/zlib/ && !/libusb/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libpng/ && !/libsdl-org/ && !/curl/ && !/zlib/ && !/libusb/ && !/feralinteractive/ { print $3 }' .gitmodules)
 
 CONFIGURE_ARGS="
 	-DWITH_LLVM=ON
