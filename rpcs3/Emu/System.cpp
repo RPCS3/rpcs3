@@ -3242,12 +3242,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	sys_log.notice("Stopping emulator...");
 
-	// Calling Gamemode Exit on Stop
-	if (g_cfg.misc.enable_gamemode)
-	{
-		Emu.GetCallbacks().enable_gamemode(false);
-	}
-
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 
 	// Show visual feedback to the user in case that stopping takes a while.
@@ -3832,6 +3826,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			// Always Enable display sleep, not only if it was prevented.
 			Emu.GetCallbacks().enable_display_sleep(true);
+
+			// Calling Gamemode Exit on Stop
+			if (g_cfg.misc.enable_gamemode)
+			{
+				Emu.GetCallbacks().enable_gamemode(false);
+			}
 
 			if (allow_autoexit)
 			{
