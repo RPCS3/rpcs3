@@ -24,7 +24,7 @@ namespace vk
 
 			// Meta
 			input_type_max_enum,
-			input_type_undefined = umax
+			input_type_undefined = 0xffff'ffff
 		};
 
 		struct bound_sampler
