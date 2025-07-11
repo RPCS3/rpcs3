@@ -128,6 +128,8 @@ namespace gl
 				case ::glsl::program_domain::glsl_compute_program:
 					base_name = "shaderlog/ComputeProgram";
 					break;
+				default:
+					fmt::throw_exception("Unexpected program type %d", static_cast<int>(type));
 				}
 
 				fs::write_file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite, str, length);
