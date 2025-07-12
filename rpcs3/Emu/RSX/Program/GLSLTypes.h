@@ -6,7 +6,10 @@ namespace glsl
 	{
 		glsl_vertex_program = 0,
 		glsl_fragment_program = 1,
-		glsl_compute_program = 2
+		glsl_compute_program = 2,
+
+		// Meta
+		glsl_invalid_program = 0xff
 	};
 
 	enum glsl_rules : unsigned char

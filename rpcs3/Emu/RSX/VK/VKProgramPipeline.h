@@ -22,7 +22,9 @@ namespace vk
 			input_type_storage_texture,
 			input_type_push_constant,
 
-			input_type_max_enum
+			// Meta
+			input_type_max_enum,
+			input_type_undefined = 0xffff'ffff
 		};
 
 		struct bound_sampler
@@ -48,15 +50,15 @@ namespace vk
 
 		struct program_input
 		{
-			::glsl::program_domain domain;
-			program_input_type type;
+			::glsl::program_domain domain = ::glsl::glsl_invalid_program;
+			program_input_type type = input_type_undefined;
 
 			using bound_data_t = std::variant<bound_buffer, bound_sampler, push_constant_ref>;
 			bound_data_t bound_data;
 
 			u32 set = 0;
 			u32 location = umax;
-			std::string name;
+			std::string name = "undefined";
 
 			inline bound_buffer& as_buffer() { return *std::get_if<bound_buffer>(&bound_data); }
 			inline bound_sampler& as_sampler() { return *std::get_if<bound_sampler>(&bound_data); }
