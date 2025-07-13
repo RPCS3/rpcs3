@@ -421,7 +421,7 @@ jobs:
           fetch-depth: 0
 
       - name: Clone vcpkg
-        run: git clone https://github.com/microsoft/vcpkg.git
+        run: git clone --depth 1 --branch 2025.06.13 https://github.com/microsoft/vcpkg.git
 
       - name: Bootstrap vcpkg
         shell: pwsh
@@ -434,7 +434,7 @@ jobs:
           path: |
             vcpkg/installed
             vcpkg/buildtrees
-          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-test
+          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
           restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Install dependencies with vcpkg
