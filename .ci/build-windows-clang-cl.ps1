@@ -57,6 +57,7 @@ $VcpkgTriplet=$env:VCPKG_TRIPLET
 $VcpkgInstall="$VcpkgRoot/installed/$VcpkgTriplet"
 $VcpkgInclude="$VcpkgInstall/include"
 $VcpkgLib="$VcpkgInstall/lib"
+$VcpkgWindeployqt="$VcpkgInstall/tools/qt6/bin/windeployqt6.exe"
 
 # Configure git safe directory
 Write-Host "Configuring git safe directory"
@@ -97,9 +98,9 @@ Write-Host "Running CMake configuration"
     -DCMAKE_TOOLCHAIN_FILE="$VcpkgRoot/scripts/buildsystems/vcpkg.cmake" `
     -DCMAKE_EXE_LINKER_FLAGS="/LIBPATH:$clangBuiltinsDirShort /defaultlib:$clangBuiltinsLib" `
     -DCMAKE_MT="$mtExePath" `
+    -DWINDEPLOYQT_EXECUTABLE="$VcpkgWindeployqt" `
     -DUSE_NATIVE_INSTRUCTIONS=OFF `
     -DUSE_PRECOMPILED_HEADERS=OFF `
-    -DVCPKG_INSTALL_DIR="$VcpkgInstall" `
     -DVCPKG_TARGET_TRIPLET="$VcpkgTriplet" `
     -DFFMPEG_INCLUDE_DIR="$VcpkgInclude" `
     -DFFMPEG_LIBAVCODEC="$VcpkgLib/avcodec.lib" `

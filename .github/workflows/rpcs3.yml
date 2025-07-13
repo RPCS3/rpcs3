@@ -413,7 +413,7 @@ jobs:
             arch: win64
     env:
       CCACHE_DIR: 'C:\ccache'
-      VCPKG_TRIPLET: x64-windows-release
+      VCPKG_TRIPLET: x64-windows
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -434,7 +434,7 @@ jobs:
           path: |
             vcpkg/installed
             vcpkg/buildtrees
-          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-16248552313
+          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-test
           restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Install dependencies with vcpkg
@@ -447,6 +447,7 @@ jobs:
             qtbase `
             qtsvg `
             qtmultimedia `
+            qttools `
             zlib `
             vulkan `
             libpng `
