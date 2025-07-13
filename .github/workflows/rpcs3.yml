@@ -488,11 +488,14 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .ci/build-windows-clang-cl.ps1
 
       - name: Save build Ccache
-        if: github.ref == 'refs/heads/master'
+        if: always()
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Deploy RPCS3
+        run: .ci/deploy-windows-clang-cl.sh x86_64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@main

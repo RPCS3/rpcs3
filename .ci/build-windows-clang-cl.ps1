@@ -19,6 +19,7 @@ if (-not $clangBuiltinsLibPath) {
     Write-Error "Could not find clang_rt.builtins-x86_64.lib in LLVM installation."
     exit 1
 }
+
 function Get-ShortPath([string]$path) {
     $fso = New-Object -ComObject Scripting.FileSystemObject
     return $fso.GetFolder($path).ShortPath
@@ -53,8 +54,9 @@ Write-Host "Found mt.exe at: $mtExePath"
 
 $VcpkgRoot="$(Get-Location)/vcpkg"
 $VcpkgTriplet=$env:VCPKG_TRIPLET
-$VcpkgInclude="$VcpkgRoot/installed/$VcpkgTriplet/include"
-$VcpkgLib="$VcpkgRoot/installed/$VcpkgTriplet/lib"
+$VcpkgInstall="$VcpkgRoot/installed/$VcpkgTriplet"
+$VcpkgInclude="$VcpkgInstall/include"
+$VcpkgLib="$VcpkgInstall/lib"
 
 # Configure git safe directory
 Write-Host "Configuring git safe directory"
@@ -97,6 +99,7 @@ Write-Host "Running CMake configuration"
     -DCMAKE_MT="$mtExePath" `
     -DUSE_NATIVE_INSTRUCTIONS=OFF `
     -DUSE_PRECOMPILED_HEADERS=OFF `
+    -DVCPKG_INSTALL_DIR="$VcpkgInstall" `
     -DVCPKG_TARGET_TRIPLET="$VcpkgTriplet" `
     -DFFMPEG_INCLUDE_DIR="$VcpkgInclude" `
     -DFFMPEG_LIBAVCODEC="$VcpkgLib/avcodec.lib" `
@@ -133,7 +136,3 @@ Write-Host "Build succeeded"
 # Go back to root directory
 Set-Location ..
 Write-Host "Returned to root directory: $(Get-Location)"
-
-# Deploy if build succeeded
-Write-Host "Running deployment script"
-& .ci/deploy-windows-clang-cl.sh x86_64

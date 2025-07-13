@@ -156,11 +156,26 @@ if (NOT ANDROID)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
-            COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
-                --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
-                --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
-                --verbose 0 "$<TARGET_FILE:rpcs3>")
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test)
+
+        if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            message(STATUS "Using clang-cl: copying Qt DLLs from vcpkg manually")
+            set(QT_DLLS Qt6Core.dll Qt6Gui.dll Qt6Widgets.dll Qt6Concurrent.dll Qt6Multimedia.dll Qt6MultimediaWidgets.dll Qt6Svg.dll Qt6SvgWidgets.dll)
+
+            foreach(dll IN LISTS QT_DLLS)
+                add_custom_command(TARGET rpcs3 POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${VCPKG_INSTALL_DIR}/bin/${dll}"
+                        "$<TARGET_FILE_DIR:rpcs3>/${dll}")
+            endforeach()
+        else()
+            message(STATUS "Using windeployqt")
+            add_custom_command(TARGET rpcs3 POST_BUILD
+                COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
+                    --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
+                    --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt6/plugins"
+                    --verbose 0 "$<TARGET_FILE:rpcs3>")
+        endif()
     endif()
 
     # Unix installation
