@@ -488,7 +488,7 @@ jobs:
           powershell -ExecutionPolicy Bypass -File .ci/build-windows-clang-cl.ps1
 
       - name: Save build Ccache
-        if: always()
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
