@@ -1,5 +1,9 @@
 #!/bin/sh -ex
 
+# source ci-vars.env
+# shellcheck disable=SC1091
+. .ci/ci-vars.env
+
 cd build || exit 1
 
 CPU_ARCH="${1:-x86_64}"

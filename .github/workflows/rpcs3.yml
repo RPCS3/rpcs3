@@ -434,7 +434,7 @@ jobs:
           path: |
             vcpkg/installed
             vcpkg/buildtrees
-          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-16248552313
           restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Install dependencies with vcpkg
@@ -475,7 +475,7 @@ jobs:
         id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-16248552313
           restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Setup CI Variables
