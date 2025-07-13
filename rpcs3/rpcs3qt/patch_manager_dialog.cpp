@@ -549,7 +549,7 @@ void patch_manager_dialog::filter_patches(const QString& term)
 	m_expand_current_match = false;
 }
 
-void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_patch_info& info) const
+void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_patch_info& info, bool force_update) const
 {
 	ui->label_hash->setText(info.hash);
 	ui->label_author->setText(info.author);
@@ -577,7 +577,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 		return;
 	}
 
-	if (key == info.config_value_key)
+	if (!force_update && key == info.config_value_key)
 	{
 		// Don't update widget if the config key did not change
 		return;
@@ -641,7 +641,7 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeW
 	if (!current)
 	{
 		// Clear patch info if no item is selected
-		update_patch_info({});
+		update_patch_info({}, true);
 		return;
 	}
 
@@ -719,7 +719,7 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem* current, QTreeW
 	}
 	}
 
-	update_patch_info(info);
+	update_patch_info(info, current != previous);
 
 	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
 	current->setData(0, config_key_role, key);
