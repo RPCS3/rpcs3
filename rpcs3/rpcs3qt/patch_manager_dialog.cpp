@@ -735,41 +735,48 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem* item, int /*colu
 	// Get checkstate of the item
 	const bool enabled = item->checkState(0) == Qt::CheckState::Checked;
 
-	// Get patch identifiers stored in item data
-	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
-	const std::string hash = item->data(0, hash_role).toString().toStdString();
-	const std::string title = item->data(0, title_role).toString().toStdString();
-	const std::string serial = item->data(0, serial_role).toString().toStdString();
-	const std::string app_version = item->data(0, app_version_role).toString().toStdString();
-	const std::string description = item->data(0, description_role).toString().toStdString();
-	const std::string patch_group = item->data(0, patch_group_role).toString().toStdString();
-
 	// Uncheck other patches with the same patch_group if this patch was enabled
-	if (const auto node = item->parent(); node && enabled && !patch_group.empty() && level == node_level::patch_level)
+	if (const auto node = item->parent(); node && enabled)
 	{
-		for (int i = 0; i < node->childCount(); i++)
-		{
-			if (const auto other = node->child(i); other && other != item)
-			{
-				const std::string other_patch_group = other->data(0, patch_group_role).toString().toStdString();
+		const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
+		const std::string patch_group = item->data(0, patch_group_role).toString().toStdString();
 
-				if (other_patch_group == patch_group)
+		if (!patch_group.empty() && level == node_level::patch_level)
+		{
+			for (int i = 0; i < node->childCount(); i++)
+			{
+				if (const auto other = node->child(i); other && other != item)
 				{
-					other->setCheckState(0, Qt::CheckState::Unchecked);
+					const std::string other_patch_group = other->data(0, patch_group_role).toString().toStdString();
+
+					if (other_patch_group == patch_group)
+					{
+						other->setCheckState(0, Qt::CheckState::Unchecked);
+					}
 				}
 			}
 		}
 	}
 
 	// Enable/disable the patch for this item and show its metadata
+	const std::string hash = item->data(0, hash_role).toString().toStdString();
 	if (m_map.contains(hash))
 	{
 		auto& info = m_map[hash].patch_info_map;
+		const std::string description = item->data(0, description_role).toString().toStdString();
 
 		if (info.contains(description))
 		{
+			const std::string title = item->data(0, title_role).toString().toStdString();
+			const std::string serial = item->data(0, serial_role).toString().toStdString();
+			const std::string app_version = item->data(0, app_version_role).toString().toStdString();
+
 			info[description].titles[title][serial][app_version].enabled = enabled;
-			handle_item_selected(item, item);
+
+			if (item->isSelected())
+			{
+				handle_item_selected(item, item);
+			}
 		}
 	}
 }
