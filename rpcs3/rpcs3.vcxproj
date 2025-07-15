@@ -125,7 +125,7 @@
     echo "$(IntermediateOutputPath)%%i"
   )
 )
-"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3.lib" "@$(IntermediateOutputPath)obj_files.rsp"</Command>
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -184,7 +184,7 @@
     echo "$(IntermediateOutputPath)%%i"
   )
 )
-"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3d.lib" @$(IntermediateOutputPath)obj_files.rsp</Command>
+"$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe" /out:"$(SolutionDir)build\lib\$(Configuration)-$(Platform)\rpcs3d.lib" "@$(IntermediateOutputPath)obj_files.rsp"</Command>
     </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
