@@ -1941,8 +1941,8 @@ void VKGSRender::load_program_env()
 	if (update_vertex_env)
 	{
 		// Vertex state
-		const auto mem = m_vertex_env_ring_info.static_alloc<256>();
-		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
+		const auto mem = m_vertex_env_ring_info.static_alloc<128>();
+		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 84));
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
@@ -1952,7 +1952,7 @@ void VKGSRender::load_program_env()
 		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
 
 		m_vertex_env_ring_info.unmap();
-		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 144 };
+		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 128 };
 	}
 
 	if (update_instancing_data)
