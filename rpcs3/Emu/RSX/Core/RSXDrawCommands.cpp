@@ -587,6 +587,12 @@ namespace rsx
 
 	void draw_command_processor::fill_user_clip_data(void* buffer) const
 	{
+		if (REGS(m_ctx)->clip_planes_mask() == 0) [[ likely ]]
+		{
+			*reinterpret_cast<u32*>(buffer) = 0u;
+			return;
+		}
+
 		const rsx::user_clip_plane_op clip_plane_control[6] =
 		{
 			REGS(m_ctx)->clip_plane_0_enabled(),
@@ -597,11 +603,18 @@ namespace rsx
 			REGS(m_ctx)->clip_plane_5_enabled(),
 		};
 
-		u8 data_block[64];
-		s32* clip_enabled_flags = reinterpret_cast<s32*>(data_block);
-		f32* clip_distance_factors = reinterpret_cast<f32*>(data_block + 32);
+		/**
+		 * We encode the clip configuration
+		 * For each plane, we have 2 bits, encoding 0, 1, 2
+		 * 0 = LT
+		 * 1 = EQ (Disabled)
+		 * 2 = GT
+		 */
+		s32 clip_configuration_field = 0;
 
-		for (int index = 0; index < 6; ++index)
+#define CLIP_DISTANCE_FACTOR(x) (x + 1)
+
+		for (int index = 0, shift_offset = 0; index < 6; ++index, shift_offset += 2)
 		{
 			switch (clip_plane_control[index])
 			{
@@ -610,23 +623,22 @@ namespace rsx
 				[[fallthrough]];
 
 			case rsx::user_clip_plane_op::disable:
-				clip_enabled_flags[index] = 0;
-				clip_distance_factors[index] = 0.f;
+				clip_configuration_field |= CLIP_DISTANCE_FACTOR(0) << shift_offset;
 				break;
 
 			case rsx::user_clip_plane_op::greater_or_equal:
-				clip_enabled_flags[index] = 1;
-				clip_distance_factors[index] = 1.f;
+				clip_configuration_field |= CLIP_DISTANCE_FACTOR(1) << shift_offset;
 				break;
 
 			case rsx::user_clip_plane_op::less_than:
-				clip_enabled_flags[index] = 1;
-				clip_distance_factors[index] = -1.f;
+				clip_configuration_field |= CLIP_DISTANCE_FACTOR(2) << shift_offset;
 				break;
 			}
 		}
 
-		memcpy(buffer, data_block, 2 * 8 * sizeof(u32));
+#undef CLIP_DISTANCE_FACTOR
+
+		*reinterpret_cast<s32*>(buffer) = clip_configuration_field;
 	}
 
 	/**
