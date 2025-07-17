@@ -11,4 +11,15 @@ struct sampler_info
 	uint flags;                       // 48
 };
 
+struct vertex_context_t
+{
+	mat4 scale_offset_mat;
+	uint user_clip_configuration_bits;
+	uint transform_branch_bits;
+	float point_size;
+	float z_near;
+	float z_far;
+	// float reserved[3];
+};
+
 )"

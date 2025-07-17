@@ -1924,6 +1924,8 @@ void VKGSRender::load_program_env()
 		fmt::throw_exception("Unreachable right now");
 	}
 
+	const auto& ctx = REGS(m_ctx);
+
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
@@ -1933,8 +1935,8 @@ void VKGSRender::load_program_env()
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (!!m_interpreter_state && is_interpreter);
-	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
-	const bool update_instancing_data = rsx::method_registers.current_draw_clause.is_trivial_instanced_draw;
+	const bool update_raster_env = (ctx->polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
+	const bool update_instancing_data = ctx->current_draw_clause.is_trivial_instanced_draw;
 
 	if (update_vertex_env)
 	{
@@ -1944,10 +1946,10 @@ void VKGSRender::load_program_env()
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
-		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
+		*(reinterpret_cast<u32*>(buf + 68)) = ctx->transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * rsx::get_resolution_scale();
+		*(reinterpret_cast<f32*>(buf + 76)) = ctx->clip_min();
+		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
 
 		m_vertex_env_ring_info.unmap();
 		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 144 };
@@ -2046,7 +2048,7 @@ void VKGSRender::load_program_env()
 		auto mem = m_raster_env_ring_info.static_alloc<256>();
 		auto buf = m_raster_env_ring_info.map(mem, 128);
 
-		std::memcpy(buf, rsx::method_registers.polygon_stipple_pattern(), 128);
+		std::memcpy(buf, ctx->polygon_stipple_pattern(), 128);
 		m_raster_env_ring_info.unmap();
 		m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, mem, 128 };
 
@@ -2066,7 +2068,7 @@ void VKGSRender::load_program_env()
 			vp_config[0] = current_vertex_program.base_address;
 			vp_config[1] = current_vertex_program.entry;
 			vp_config[2] = current_vertex_program.output_mask;
-			vp_config[3] = rsx::method_registers.two_side_light_en()? 1u: 0u;
+			vp_config[3] = ctx->two_side_light_en()? 1u: 0u;
 
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();
@@ -2083,7 +2085,7 @@ void VKGSRender::load_program_env()
 
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = rsx::method_registers.shader_control();
+			control_masks[0] = ctx->shader_control();
 			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
 
 			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
