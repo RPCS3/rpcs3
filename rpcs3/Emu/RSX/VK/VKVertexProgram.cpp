@@ -80,18 +80,18 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	glsl::insert_subheader_block(OS);
 
 	OS <<
-		"layout(std140, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform VertexContextBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer VertexContextBuffer\n"
 		"{\n"
 		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n"
 		""
-		"#define get_vertex_context() vertex_contexts[vtx_context_id]\n"
+		"#define get_vertex_context() vertex_contexts[vs_context_offset]\n"
 		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
 
 	const vk::glsl::program_input context_input
 	{
 		.domain = glsl::glsl_vertex_program,
-		.type = vk::glsl::input_type_uniform_buffer,
+		.type = vk::glsl::input_type_storage_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.context_buffer_location,
 		.name = "VertexContextBuffer"
@@ -103,10 +103,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		OS <<
 			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
 			"{\n"
-			"	uint cr_predicates[];\n"
-			"};\n\n"
-			""
-			"#define get_cr_predicate() cr_predicates[cr_predicate_id]\n\n";
+			"	uint cr_predicate_value;\n"
+			"};\n\n";
 
 		const vk::glsl::program_input predicate_input
 		{
@@ -126,16 +124,15 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint vertex_index_offset;\n"
 		"	uint draw_id;\n"
 		"	uint layout_ptr_offset;\n"
-		"	uint vtx_constants_offset;\n"
-		"	uint vtx_context_id;\n"
-		"	uint cr_predicate_id;\n"
+		"	uint xform_constants_offset;\n"
+		"	uint vs_context_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 28 },
+		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 24 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "push_constants_block"
@@ -344,6 +341,14 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		OS << registers << ";\n";
 	}
 
+	// Expand indexed uniform structs here. We don't need to commit registers - these are very rarely consumed anyway.
+	OS <<
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
+
 	OS << "void vs_main()\n";
 	OS << "{\n";
 
@@ -381,7 +386,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
-		OS << "	if (conditional_rendering_enabled != 0 && conditional_rendering_predicate == 0)\n";
+		OS << "	if (cr_predicate_value == 0)\n";
 		OS << "	{\n";
 		OS << "		gl_Position = vec4(0., 0., 0., -1.);\n";
 		OS << "		return;\n";
