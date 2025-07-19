@@ -117,7 +117,7 @@ shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 	return g_fxo->get<ipc_manager<lv2_event_queue, u64>>().get(ipc_key);
 }
 
-extern void resume_spu_thread_group_from_waiting(spu_thread& spu);
+extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<shared_ptr<named_thread<spu_thread>>, 8>& notify_spus);
 
 CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_event_port* port)
 {
@@ -125,6 +125,22 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 	{
 		*notified_thread = false;
 	}
+
+	struct notify_spus_t 
+	{
+		std::array<shared_ptr<named_thread<spu_thread>>, 8> spus;
+
+		~notify_spus_t() noexcept
+		{
+			for (auto& spu : spus)
+			{
+				if (spu && spu->state & cpu_flag::wait)
+				{
+					spu->state.notify_one();
+				}
+			}
+		}
+	} notify_spus{};
 
 	std::lock_guard lock(mutex);
 
@@ -199,7 +215,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		const u32 data2 = static_cast<u32>(std::get<2>(event));
 		const u32 data3 = static_cast<u32>(std::get<3>(event));
 		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
-		resume_spu_thread_group_from_waiting(spu);
+		resume_spu_thread_group_from_waiting(spu, notify_spus.spus);
 	}
 
 	return {};
@@ -259,6 +275,22 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 	{
 		return CELL_EINVAL;
 	}
+
+	struct notify_spus_t 
+	{
+		std::array<shared_ptr<named_thread<spu_thread>>, 8> spus;
+
+		~notify_spus_t() noexcept
+		{
+			for (auto& spu : spus)
+			{
+				if (spu && spu->state & cpu_flag::wait)
+				{
+					spu->state.notify_one();
+				}
+			}
+		}
+	} notify_spus{};
 
 	std::vector<lv2_event> events;
 
@@ -357,7 +389,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			for (auto cpu = +queue->sq; cpu; cpu = cpu->next_cpu)
 			{
 				cpu->ch_in_mbox.set_values(1, CELL_ECANCELED);
-				resume_spu_thread_group_from_waiting(*cpu);
+				resume_spu_thread_group_from_waiting(*cpu, notify_spus.spus);
 			}
 
 			atomic_storage<spu_thread*>::release(queue->sq, nullptr);
