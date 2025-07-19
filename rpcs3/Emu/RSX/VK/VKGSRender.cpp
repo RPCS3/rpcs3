@@ -511,7 +511,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	// VRAM allocation
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000, VK_TRUE);
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
-	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
+	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
@@ -551,7 +551,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	// Initialize optional allocation information with placeholders
-	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 16 };
+	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 16 };
 	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 16 };
 	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
@@ -1940,9 +1940,8 @@ void VKGSRender::load_program_env()
 
 	if (update_vertex_env)
 	{
-		// Vertex state
-		const auto mem = m_vertex_env_ring_info.static_alloc<128>();
-		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 84));
+		// Vertex state. Note, we're now on std430 alignment here, not hardware alignment.
+		const auto [mem, buf] = m_vertex_env_ring_info.alloc_and_map<16, char>(96);
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
@@ -1952,7 +1951,7 @@ void VKGSRender::load_program_env()
 		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
 
 		m_vertex_env_ring_info.unmap();
-		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 128 };
+		m_vertex_env_dynamic_offset = mem;
 	}
 
 	if (update_instancing_data)
@@ -2117,8 +2116,9 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
-		m_program->bind_uniform({ predicate, 0, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
+		const VkBuffer predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
+		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
+		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
 
 	if (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
@@ -2188,6 +2188,16 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 
 void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
 {
+	struct rsx_prog_push_constants_block_t
+	{
+		u32 vertex_base_index;
+		u32 vertex_index_offset;
+		u32 draw_id;
+		u32 layout_ptr_offset;
+		u32 xform_constants_offset;
+		u32 vs_context_offset;
+	};
+
 	// Actual allocation must have been done previously
 	u32 base_offset;
 	const u32 offset32 = static_cast<u32>(m_vertex_layout_stream_info.offset);
@@ -2206,29 +2216,24 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
 	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
+	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 128u;
 
-	u32 push_constants[6];
-	u32 data_length = 20;
-
-	push_constants[0] = vertex_info.vertex_index_base;
-	push_constants[1] = vertex_info.vertex_index_offset;
-	push_constants[2] = id;
-	push_constants[3] = vertex_layout_offset;
-	push_constants[4] = constant_id_offset;
-
-	if (vk::emulate_conditional_rendering())
-	{
-		push_constants[5] = cond_render_ctrl.hw_cond_active ? 1 : 0;
-		data_length += 4;
-	}
+	// Pack
+	rsx_prog_push_constants_block_t push_constants;
+	push_constants.vertex_base_index = vertex_info.vertex_index_base;
+	push_constants.vertex_index_offset = vertex_info.vertex_index_offset;
+	push_constants.draw_id = id;
+	push_constants.layout_ptr_offset = vertex_layout_offset;
+	push_constants.xform_constants_offset = constant_id_offset;
+	push_constants.vs_context_offset = vertex_context_offset;
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,
 		m_program->layout(),
 		VK_SHADER_STAGE_VERTEX_BIT,
 		0,
-		data_length,
-		push_constants);
+		sizeof(push_constants),
+		&push_constants);
 
 	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2837,9 +2842,17 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 
 		m_cond_render_buffer = std::make_unique<vk::buffer>(
-			*m_device, 4,
+			*m_device, 8,
 			memory_props.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			usage_flags, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+
+		// Fill CR+4 with all-ones. Instead of dynamic flags, just bind the all-ones word to disable CR
+		vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 4, 4, 0xFFFFFFFFu);
+
+		// Ensure the all-ones mask is written before next VS invocation
+		vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 4, 4,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 
 	VkPipelineStageFlags dst_stage;
