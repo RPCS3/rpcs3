@@ -118,21 +118,34 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	}
 
 	OS <<
-		"layout(push_constant) uniform VertexLayoutBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly buffer VertexLayoutBuffer\n"
 		"{\n"
-		"	uint vertex_base_index;\n"
-		"	uint vertex_index_offset;\n"
-		"	uint draw_id;\n"
-		"	uint layout_ptr_offset;\n"
+		"	vertex_layout_t vertex_layouts[];\n"
+		"};\n\n";
+
+	const vk::glsl::program_input layouts_input
+	{
+		.domain = glsl::glsl_vertex_program,
+		.type = vk::glsl::input_type_storage_buffer,
+		.set = vk::glsl::binding_set_index_vertex,
+		.location = vk_prog->binding_table.vertex_buffers_location + 2,
+		.name = "VertexLayoutBuffer"
+	};
+	inputs.push_back(layouts_input);
+
+	OS <<
+		"layout(push_constant) uniform push_constants_block\n"
+		"{\n"
 		"	uint xform_constants_offset;\n"
 		"	uint vs_context_offset;\n"
+		"	uint vs_attrib_layout_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 24 },
+		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 12 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "push_constants_block"
@@ -145,8 +158,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	static const char* input_streams[] =
 	{
 		"persistent_input_stream",    // Data stream with persistent vertex data (cacheable)
-		"volatile_input_stream",      // Data stream with per-draw data (registers and immediate draw data)
-		"vertex_layout_stream"        // Data stream defining vertex data layout"
+		"volatile_input_stream"      // Data stream with per-draw data (registers and immediate draw data)
 	};
 
 	u32 location = vk_prog->binding_table.vertex_buffers_location;

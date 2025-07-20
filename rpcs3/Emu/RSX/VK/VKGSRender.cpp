@@ -513,7 +513,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
-	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
+	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
@@ -556,6 +556,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 16 };
 	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
+	m_vertex_layout_stream_info = { m_vertex_layout_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
@@ -812,7 +813,6 @@ VKGSRender::~VKGSRender()
 
 	m_persistent_attribute_storage.reset();
 	m_volatile_attribute_storage.reset();
-	m_vertex_layout_storage.reset();
 
 	// Upscaler (references some global resources)
 	m_upscaler.reset();
@@ -2095,6 +2095,7 @@ void VKGSRender::load_program_env()
 	}
 
 	m_program->bind_uniform(m_vertex_env_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->context_buffer_location);
+	m_program->bind_uniform(m_vertex_layout_stream_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location + 2);
 	m_program->bind_uniform(m_fragment_env_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->context_buffer_location);
 	m_program->bind_uniform(m_fragment_texture_params_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->tex_param_location);
 	m_program->bind_uniform(m_raster_env_buffer_info, vk::glsl::binding_set_index_fragment, m_fs_binding_table->polygon_stipple_params_location);
@@ -2190,42 +2191,30 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 {
 	struct rsx_prog_push_constants_block_t
 	{
+		u32 xform_constants_offset;
+		u32 vs_context_offset;
+		u32 vs_attrib_layout_offset;
+	};
+
+	struct rsx_prog_vertex_layout_entry_t
+	{
 		u32 vertex_base_index;
 		u32 vertex_index_offset;
 		u32 draw_id;
-		u32 layout_ptr_offset;
-		u32 xform_constants_offset;
-		u32 vs_context_offset;
+		u32 reserved;
+		s32 attrib_data[1];
 	};
 
 	// Actual allocation must have been done previously
-	u32 base_offset;
-	const u32 offset32 = static_cast<u32>(m_vertex_layout_stream_info.offset);
-	const u32 range32 = static_cast<u32>(m_vertex_layout_stream_info.range);
-
-	if (!m_vertex_layout_storage || !m_vertex_layout_storage->in_range(offset32, range32, base_offset))
-	{
-		ensure(m_texbuffer_view_size >= m_vertex_layout_stream_info.range);
-		vk::get_resource_manager()->dispose(m_vertex_layout_storage);
-
-		const usz alloc_addr = m_vertex_layout_stream_info.offset;
-		const usz view_size = (alloc_addr + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - alloc_addr : m_texbuffer_view_size;
-		m_vertex_layout_storage = std::make_unique<vk::buffer_view>(*m_device, m_vertex_layout_ring_info.heap->value, VK_FORMAT_R32G32_UINT, alloc_addr, view_size);
-		base_offset = 0;
-	}
-
-	const u32 vertex_layout_offset = (id * 16) + (base_offset / 8);
 	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
 	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 128u;
+	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 144u;
 
 	// Pack
 	rsx_prog_push_constants_block_t push_constants;
-	push_constants.vertex_base_index = vertex_info.vertex_index_base;
-	push_constants.vertex_index_offset = vertex_info.vertex_index_offset;
-	push_constants.draw_id = id;
-	push_constants.layout_ptr_offset = vertex_layout_offset;
 	push_constants.xform_constants_offset = constant_id_offset;
 	push_constants.vs_context_offset = vertex_context_offset;
+	push_constants.vs_attrib_layout_offset = vertex_layout_offset + id;
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,
@@ -2235,15 +2224,20 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		sizeof(push_constants),
 		&push_constants);
 
-	const usz data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
-	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
+	// Now actually fill in the data
+	auto buf = m_vertex_layout_ring_info.map(m_vertex_layout_dynamic_offset + (144u * id), 144);
+	auto dst = reinterpret_cast<rsx_prog_vertex_layout_entry_t*>(buf);
+	dst->vertex_base_index = vertex_info.vertex_index_base;
+	dst->vertex_index_offset = vertex_info.vertex_index_offset;
+	dst->draw_id = id;
+	dst->reserved = 0;
 
 	m_draw_processor.fill_vertex_layout_state(
 		m_vertex_layout,
 		current_vp_metadata,
 		vertex_info.first_vertex,
 		vertex_info.allocated_vertex_count,
-		static_cast<s32*>(dst),
+		dst->attrib_data,
 		vertex_info.persistent_window_offset,
 		vertex_info.volatile_window_offset);
 

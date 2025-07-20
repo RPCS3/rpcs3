@@ -79,7 +79,6 @@ private:
 
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
-	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
 	VkDependencyInfoKHR m_async_compute_dependency_info {};
 	VkMemoryBarrier2KHR m_async_compute_memory_barrier {};
@@ -153,6 +152,7 @@ private:
 	rsx::simple_array<u8> m_multidraw_parameters_buffer;
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
 	u64 m_vertex_env_dynamic_offset = 0;
+	u64 m_vertex_layout_dynamic_offset = 0;
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
