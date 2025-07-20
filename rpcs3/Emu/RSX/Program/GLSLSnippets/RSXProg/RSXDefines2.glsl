@@ -19,7 +19,16 @@ struct vertex_context_t
 	float point_size;
 	float z_near;
 	float z_far;
-	// float reserved[3];
+	float reserved[3];
+};
+
+struct vertex_layout_t
+{
+	uint vertex_base_index;
+	uint vertex_index_offset;
+	uint draw_id;
+	uint reserved;
+	uvec2 attrib_data[16];
 };
 
 )"
