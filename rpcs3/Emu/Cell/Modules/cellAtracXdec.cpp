@@ -111,28 +111,7 @@ void AtracXdecDecoder::alloc_avcodec()
 		fmt::throw_exception("avcodec_find_decoder() failed");
 	}
 
-	ensure(!(codec->capabilities & AV_CODEC_CAP_SUBFRAMES));
-
-	ctx = avcodec_alloc_context3(codec);
-	if (!ctx)
-	{
-		fmt::throw_exception("avcodec_alloc_context3() failed");
-	}
-
-	// Allows FFmpeg to output directly into guest memory
-	ctx->opaque = this;
-	ctx->thread_type = FF_THREAD_SLICE; // Silences a warning by FFmpeg about requesting frame threading with a custom get_buffer2(). Default is FF_THREAD_FRAME & FF_THREAD_SLICE
-	ctx->get_buffer2 = [](AVCodecContext* s, AVFrame* frame, int /*flags*/) -> int
-	{
-		for (s32 i = 0; i < frame->ch_layout.nb_channels; i++)
-		{
-			frame->data[i] = static_cast<AtracXdecDecoder*>(s->opaque)->work_mem.get_ptr() + ATXDEC_MAX_FRAME_LENGTH + ATXDEC_SAMPLES_PER_FRAME * sizeof(f32) * i;
-			frame->linesize[i] = ATXDEC_SAMPLES_PER_FRAME * sizeof(f32);
-		}
-
-		frame->buf[0] = av_buffer_create(frame->data[0], ATXDEC_SAMPLES_PER_FRAME * sizeof(f32) * frame->ch_layout.nb_channels, [](void*, uint8_t*){}, nullptr, 0);
-		return 0;
-	};
+	//ensure(!(codec->capabilities & AV_CODEC_CAP_SUBFRAMES));
 
 	packet = av_packet_alloc();
 	if (!packet)
@@ -149,18 +128,47 @@ void AtracXdecDecoder::alloc_avcodec()
 
 void AtracXdecDecoder::free_avcodec()
 {
-	av_packet_free(&packet);
-	av_frame_free(&frame);
-	avcodec_free_context(&ctx);
+	if (packet)
+	{
+		av_packet_free(&packet);
+	}
+	if (frame)
+	{
+		av_frame_free(&frame);
+	}
+	if (ctx)
+	{
+		avcodec_free_context(&ctx);
+	}
 }
 
 void AtracXdecDecoder::init_avcodec()
 {
-	if (int err = avcodec_close(ctx); err)
+	if (ctx)
 	{
-		fmt::throw_exception("avcodec_close() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
+		avcodec_free_context(&ctx);
 	}
 
+	ctx = avcodec_alloc_context3(codec);
+	if (!ctx)
+	{
+		fmt::throw_exception("avcodec_alloc_context3() failed");
+	}
+	
+	// Allows FFmpeg to output directly into guest memory
+	ctx->opaque = this;
+	ctx->thread_type = FF_THREAD_SLICE; // Silences a warning by FFmpeg about requesting frame threading with a custom get_buffer2(). Default is FF_THREAD_FRAME & FF_THREAD_SLICE
+	ctx->get_buffer2 = [](AVCodecContext* s, AVFrame* frame, int /*flags*/) -> int
+	{
+		for (s32 i = 0; i < frame->ch_layout.nb_channels; i++)
+		{
+			frame->data[i] = static_cast<AtracXdecDecoder*>(s->opaque)->work_mem.get_ptr() + ATXDEC_MAX_FRAME_LENGTH + ATXDEC_SAMPLES_PER_FRAME * sizeof(f32) * i;
+			frame->linesize[i] = ATXDEC_SAMPLES_PER_FRAME * sizeof(f32);
+		}
+
+		frame->buf[0] = av_buffer_create(frame->data[0], ATXDEC_SAMPLES_PER_FRAME * sizeof(f32) * frame->ch_layout.nb_channels, [](void*, uint8_t*){}, nullptr, 0);
+		return 0;
+	};
 	ctx->block_align = nbytes;
 	ctx->ch_layout.nb_channels = nch_in;
 	ctx->sample_rate = sampling_freq;

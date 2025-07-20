@@ -197,6 +197,21 @@ void aesni_gcm_mult( unsigned char c[16],
                      const unsigned char b[16] )
 {
 #if defined(POLARSSL_HAVE_MSVC_X64_INTRINSICS)
+	#ifdef __clang__
+    __m128i xa, xb, m0, m1, x10, x32, r;
+
+    xa[1] = _byteswap_uint64( *((unsigned __int64*)a + 0) );
+    xa[0] = _byteswap_uint64( *((unsigned __int64*)a + 1) );
+    xb[1] = _byteswap_uint64( *((unsigned __int64*)b + 0) );
+    xb[0] = _byteswap_uint64( *((unsigned __int64*)b + 1) );
+
+    clmul256( xa, xb, &m0, &m1 );
+    sll256( m0, m1, &x10, &x32 );
+    r = reducemod128( x10, x32 );
+
+    *((unsigned __int64*)c + 0) = _byteswap_uint64( r[1] );
+    *((unsigned __int64*)c + 1) = _byteswap_uint64( r[0] );
+#else
     __m128i xa, xb, m0, m1, x10, x32, r;
 
     xa.m128i_u64[1] = _byteswap_uint64( *((unsigned __int64*)a + 0) );
@@ -210,6 +225,7 @@ void aesni_gcm_mult( unsigned char c[16],
 
     *((unsigned __int64*)c + 0) = _byteswap_uint64( r.m128i_u64[1] );
     *((unsigned __int64*)c + 1) = _byteswap_uint64( r.m128i_u64[0] );
+#endif
 #else
     unsigned char aa[16], bb[16], cc[16];
     size_t i;

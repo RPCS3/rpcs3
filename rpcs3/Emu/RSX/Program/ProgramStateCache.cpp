@@ -23,7 +23,8 @@
 #endif
 #endif
 
-#ifdef _MSC_VER
+//#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #define AVX512_ICL_FUNC
 #else
 #define AVX512_ICL_FUNC __attribute__((__target__("avx512f,avx512bw,avx512dq,avx512cd,avx512vl,avx512bitalg,avx512ifma,avx512vbmi,avx512vbmi2,avx512vnni,avx512vpopcntdq")))
@@ -32,7 +33,8 @@
 
 using namespace program_hash_util;
 
-#ifdef ARCH_X64
+//#ifdef ARCH_X64
+#if defined(ARCH_X64) && !(defined(__clang__) && defined(_MSC_VER))
 AVX512_ICL_FUNC usz get_vertex_program_ucode_hash_512(const RSXVertexProgram &program)
 {
 	// Load all elements of the instruction_mask bitset
@@ -424,7 +426,8 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
 {
-#ifdef ARCH_X64
+//#ifdef ARCH_X64
+#if defined(ARCH_X64) && !(defined(__clang__) && defined(_MSC_VER))	
 	usz ucode_hash;
 
 		if (utils::has_avx512_icl())
@@ -449,7 +452,8 @@ usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) con
 	return rpcs3::hash64(ucode_hash, metadata_hash);
 }
 
-#ifdef ARCH_X64
+//#ifdef ARCH_X64
+#if defined(ARCH_X64) && !(defined(__clang__) && defined(_MSC_VER))
 AVX512_ICL_FUNC bool vertex_program_compare_512(const RSXVertexProgram &binary1, const RSXVertexProgram &binary2)
 	{
 		// Load all elements of the instruction_mask bitset
@@ -540,7 +544,8 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		return false;
 	}
 
-#ifdef ARCH_X64
+//#ifdef ARCH_X64
+#if defined(ARCH_X64) && !(defined(__clang__) && defined(_MSC_VER))	
 	if (utils::has_avx512_icl())
 	{
 		return vertex_program_compare_512(binary1, binary2);
