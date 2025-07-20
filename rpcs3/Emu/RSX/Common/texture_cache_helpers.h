@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../rsx_utils.h"
+#include "simple_array.hpp"
 #include "TextureUtils.h"
 
 namespace rsx
@@ -249,9 +250,9 @@ namespace rsx
 		template<typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
 		void gather_texture_slices(
 			commandbuffer_type& cmd,
-			std::vector<copy_region_type>& out,
+			rsx::simple_array<copy_region_type>& out,
 			const surface_store_list_type& fbos,
-			const std::vector<section_storage_type*>& local,
+			const rsx::simple_array<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
 			u16 count, bool /*is_depth*/)
 		{
@@ -737,7 +738,7 @@ namespace rsx
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename surface_store_list_type, typename section_storage_type>
 		sampled_image_descriptor merge_cache_resources(
 			commandbuffer_type& cmd,
-			const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
+			const surface_store_list_type& fbos, const rsx::simple_array<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
 			const size3f& scale,
 			texture_dimension_extended extended_dimension,
@@ -852,7 +853,7 @@ namespace rsx
 
 		template<typename sampled_image_descriptor, typename copy_region_descriptor_type>
 		bool append_mipmap_level(
-			std::vector<copy_region_descriptor_type>& sections,   // Destination list
+			rsx::simple_array<copy_region_descriptor_type>& sections,   // Destination list
 			const sampled_image_descriptor& level,                // Descriptor for the image level being checked
 			const image_section_attributes_t& attr,               // Attributes of image level
 			u8 mipmap_level,                                      // Level index

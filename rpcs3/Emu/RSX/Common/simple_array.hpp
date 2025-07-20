@@ -4,6 +4,8 @@
 #include <functional>
 #include <algorithm>
 
+#include "reverse_ptr.hpp"
+
 namespace rsx
 {
 	template <typename Ty>
@@ -13,6 +15,8 @@ namespace rsx
 	public:
 		using iterator = Ty*;
 		using const_iterator = const Ty*;
+		using reverse_iterator = reverse_pointer<Ty>;
+		using const_reverse_iterator = reverse_pointer<const Ty>;
 		using value_type = Ty;
 
 	private:
@@ -380,6 +384,46 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator cbegin() const
+		{
+			return _data;
+		}
+
+		const_iterator cend() const
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		reverse_iterator rbegin()
+		{
+			return reverse_iterator(end());
+		}
+
+		reverse_iterator rend()
+		{
+			return reverse_iterator(begin());
+		}
+
+		const_reverse_iterator rbegin() const
+		{
+			return const_reverse_iterator(cend());
+		}
+
+		const_reverse_iterator rend() const
+		{
+			return const_reverse_iterator(cbegin());
+		}
+
+		const_reverse_iterator crbegin() const
+		{
+			return const_reverse_iterator(cend());
+		}
+
+		const_reverse_iterator crend() const
+		{
+			return const_reverse_iterator(cbegin());
 		}
 
 		bool any(std::predicate<const Ty&> auto predicate) const
