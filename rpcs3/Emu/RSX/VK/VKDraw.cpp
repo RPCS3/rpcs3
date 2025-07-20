@@ -820,30 +820,17 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		update_descriptors = true;
 
 		// Allocate stream layout memory for this batch
-		m_vertex_layout_stream_info.range = rsx::method_registers.current_draw_clause.pass_count() * 128;
-		m_vertex_layout_stream_info.offset = m_vertex_layout_ring_info.alloc<256>(m_vertex_layout_stream_info.range);
-
-		if (vk::test_status_interrupt(vk::heap_changed))
-		{
-			if (m_vertex_layout_storage &&
-				m_vertex_layout_storage->info.buffer != m_vertex_layout_ring_info.heap->value)
-			{
-				vk::get_resource_manager()->dispose(m_vertex_layout_storage);
-			}
-
-			vk::clear_status_interrupt(vk::heap_changed);
-		}
+		const u64 alloc_size = rsx::method_registers.current_draw_clause.pass_count() * 144;
+		m_vertex_layout_dynamic_offset = m_vertex_layout_ring_info.alloc<16>(alloc_size);
 	}
 
 	// Update vertex fetch parameters
 	update_vertex_env(sub_index, upload_info);
 
-	ensure(m_vertex_layout_storage);
 	if (update_descriptors)
 	{
 		m_program->bind_uniform(persistent_buffer, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location);
 		m_program->bind_uniform(volatile_buffer, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location + 1);
-		m_program->bind_uniform(m_vertex_layout_storage->value, vk::glsl::binding_set_index_vertex, m_vs_binding_table->vertex_buffers_location + 2);
 	}
 
 	bool reload_state = (!m_current_draw.subdraw_id++);
