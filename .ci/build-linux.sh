@@ -36,6 +36,7 @@ if type -p gamemoded >/dev/null 2>&1; then
 	export GAMEMODE_AVAILABLE=ON
 else
 	export GAMEMODE_AVAILABLE=OFF
+fi
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
