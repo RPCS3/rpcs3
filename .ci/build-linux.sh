@@ -32,7 +32,7 @@ fi
 
 export LINKER_FLAG="-fuse-ld=${LINKER}"
 
-if type -p gamemoded >/dev/null 2>&1; then 
+if command -v gamemoded >/dev/null 2>&1; then 
 	export GAMEMODE_AVAILABLE=ON
 else
 	export GAMEMODE_AVAILABLE=OFF
