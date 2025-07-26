@@ -189,6 +189,9 @@ public:
 		bool has_tex2D = false;
 		bool has_tex3D = false;
 		bool has_texShadowProj = false;
+
+		// Literal offsets
+		std::vector<u32> constant_offsets;
 	}
 	properties;
 

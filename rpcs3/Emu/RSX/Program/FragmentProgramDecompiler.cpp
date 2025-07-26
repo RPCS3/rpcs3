@@ -232,23 +232,13 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	const std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	const std::string type = getFloatTypeName(4);
-
-	if (m_parr.HasParam(PF_PARAM_UNIFORM, type, name))
-	{
-		return name;
-	}
-
-	auto data = reinterpret_cast<be_t<u32>*>(reinterpret_cast<uptr>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
+	// Skip next instruction, its just a literal
 	m_offset = 2 * 4 * sizeof(u32);
-	u32 x = GetData(data[0]);
-	u32 y = GetData(data[1]);
-	u32 z = GetData(data[2]);
-	u32 w = GetData(data[3]);
 
-	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, std::bit_cast<f32>(x), std::bit_cast<f32>(y), std::bit_cast<f32>(z), std::bit_cast<f32>(w));
-	return m_parr.AddParam(PF_PARAM_UNIFORM, type, name, var);
+	// Return the next offset index
+	const u32 index = ::size32(properties.constant_offsets);
+	properties.constant_offsets.push_back(m_size + 4 * 4);
+	return "_fetch_constant(" + std::to_string(index) + ")";
 }
 
 std::string FragmentProgramDecompiler::AddTex()
@@ -845,6 +835,12 @@ std::string FragmentProgramDecompiler::BuildCode()
 		{
 			m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[i + 4]);
 		}
+	}
+
+	if (!properties.constant_offsets.empty())
+	{
+		const std::string var_name = fmt::format("fc[%llu]", properties.constant_offsets.size());
+		m_parr.AddParam(PF_PARAM_CONST, getFloatTypeName(4), var_name);
 	}
 
 	std::stringstream OS;

@@ -514,7 +514,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
-	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
+	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
@@ -552,11 +552,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// Initialize optional allocation information with placeholders
 	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 16 };
+	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 16 };
 	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 	m_vertex_layout_stream_info = { m_vertex_layout_ring_info.heap->value, 0, VK_WHOLE_SIZE };
+	m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
@@ -2007,18 +2008,13 @@ void VKGSRender::load_program_env()
 		// Fragment constants
 		if (fragment_constants_size)
 		{
-			auto mem = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
-			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
+			m_fragment_constants_dynamic_offset = m_fragment_constants_ring_info.alloc<16>(fragment_constants_size);
+			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
 				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
-			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };
-		}
-		else
-		{
-			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, 32 };
 		}
 	}
 
@@ -2194,6 +2190,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		u32 xform_constants_offset;
 		u32 vs_context_offset;
 		u32 vs_attrib_layout_offset;
+		u32 fs_constants_offset;
 	};
 
 	struct rsx_prog_vertex_layout_entry_t
@@ -2206,15 +2203,17 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	};
 
 	// Actual allocation must have been done previously
-	const u32 constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
+	const u32 vs_constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
 	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 128u;
 	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 144u;
+	const u32 fs_constant_id_offset = static_cast<u32>(m_fragment_constants_dynamic_offset) / 16u;
 
 	// Pack
 	rsx_prog_push_constants_block_t push_constants;
-	push_constants.xform_constants_offset = constant_id_offset;
+	push_constants.xform_constants_offset = vs_constant_id_offset;
 	push_constants.vs_context_offset = vertex_context_offset;
 	push_constants.vs_attrib_layout_offset = vertex_layout_offset + id;
+	push_constants.fs_constants_offset = fs_constant_id_offset;
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,
