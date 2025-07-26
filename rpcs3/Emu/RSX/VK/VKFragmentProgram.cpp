@@ -29,27 +29,19 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void VKFragmentDecompilerThread::prepareBindingTable()
 {
 	// First check if we have constants and textures as those need extra work
-	bool has_constants = false, has_textures = false;
+	bool has_textures = false;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (has_constants && has_textures)
-		{
-			break;
-		}
-
 		if (PT.type.starts_with("sampler"))
 		{
 			has_textures = true;
-			continue;
+			break;
 		}
-
-		ensure(PT.type.starts_with("vec"));
-		has_constants = true;
 	}
 
 	unsigned location = 0; // All bindings must be set from this var
 	vk_prog->binding_table.context_buffer_location = location++;
-	if (has_constants)
+	if (!properties.constant_offsets.empty())
 	{
 		vk_prog->binding_table.cbuf_location = location++;
 	}
@@ -233,26 +225,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	std::string constants_block;
-	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	if (!properties.constant_offsets.empty())
 	{
-		if (PT.type.starts_with("sampler"))
-		{
-			continue;
-		}
-
-		for (const ParamItem& PI : PT.items)
-		{
-			constants_block += "	" + PT.type + " " + PI.name + ";\n";
-		}
-	}
-
-	if (!constants_block.empty())
-	{
-		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
 		OS << "{\n";
-		OS << constants_block;
-		OS << "};\n\n";
+		OS << "	vec4 fc[];\n";
+		OS << "};\n";
+		OS << "#define _fetch_constant(x) fc[x + fs_constants_offset]\n\n";
 	}
 
 	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
@@ -280,19 +259,20 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	vk::glsl::program_input in
 	{
 		.domain = glsl::glsl_fragment_program,
-		.type = vk::glsl::input_type_uniform_buffer,
 		.set = vk::glsl::binding_set_index_fragment
 	};
 
-	if (!constants_block.empty())
+	if (!properties.constant_offsets.empty())
 	{
 		in.location = vk_prog->binding_table.cbuf_location;
 		in.name = "FragmentConstantsBuffer";
+		in.type = vk::glsl::input_type_storage_buffer,
 		inputs.push_back(in);
 	}
 
 	in.location = vk_prog->binding_table.context_buffer_location;
 	in.name = "FragmentStateBuffer";
+	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.tex_param_location;
@@ -302,6 +282,23 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
+
+	OS <<
+		"layout(push_constant) uniform push_constants_block\n"
+		"{\n"
+		"	uint fs_constants_offset;\n"
+		"};\n\n";
+
+	const vk::glsl::program_input push_constants
+	{
+		.domain = glsl::glsl_fragment_program,
+		.type = vk::glsl::input_type_push_constant,
+		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 4 },
+		.set = vk::glsl::binding_set_index_vertex,
+		.location = umax,
+		.name = "fs_push_constants_block"
+	};
+	inputs.push_back(push_constants);
 }
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
@@ -478,19 +475,8 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
 	decompiler.Task();
 
+	constant_offsets = std::move(decompiler.properties.constant_offsets);
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
-
-	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
-	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (PT.type.starts_with("sampler"))
-				continue;
-
-			usz offset = atoi(PI.name.c_str() + 2);
-			FragmentConstantOffsetCache.push_back(offset);
-		}
-	}
 }
 
 void VKFragmentProgram::Compile()
