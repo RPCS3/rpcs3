@@ -2210,7 +2210,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 
 	// Actual allocation must have been done previously
 	const u32 vs_constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
-	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 128u;
+	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 96u;
 	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 144u;
 	const u32 fs_constant_id_offset = static_cast<u32>(m_fragment_constants_dynamic_offset) / 16u;
 
