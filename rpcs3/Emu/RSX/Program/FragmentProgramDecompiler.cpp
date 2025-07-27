@@ -232,12 +232,29 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
+	const u32 constant_id = m_size + (4 * sizeof(u32));
+	int index = -1, ctr = 0;
+
+	// Have we seen this constant before?
+	for (auto it = properties.constant_offsets.rbegin(); it != properties.constant_offsets.rend(); ++it, ++ctr)
+	{
+		if (*it == constant_id)
+		{
+			index = ctr;
+			break;
+		}
+	}
+
+	if (index == -1)
+	{
+		index = static_cast<int>(properties.constant_offsets.size());
+		properties.constant_offsets.push_back(constant_id);
+	}
+
 	// Skip next instruction, its just a literal
 	m_offset = 2 * 4 * sizeof(u32);
 
 	// Return the next offset index
-	const u32 index = ::size32(properties.constant_offsets);
-	properties.constant_offsets.push_back(m_size + 4 * 4);
 	return "_fetch_constant(" + std::to_string(index) + ")";
 }
 

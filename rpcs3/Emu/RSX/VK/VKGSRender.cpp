@@ -2185,6 +2185,7 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 
 void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
 {
+#pragma pack(push, 1)
 	struct rsx_vs_prog_push_constants_block_t
 	{
 		u32 xform_constants_offset;
@@ -2205,6 +2206,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		u32 reserved;
 		s32 attrib_data[1];
 	};
+#pragma pack(pop)
 
 	// Actual allocation must have been done previously
 	const u32 vs_constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
