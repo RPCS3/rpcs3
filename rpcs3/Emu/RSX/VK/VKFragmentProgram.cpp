@@ -286,7 +286,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
 		"{\n"
-		"	uint fs_constants_offset;\n"
+		"	layout(offset=12) uint fs_constants_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants

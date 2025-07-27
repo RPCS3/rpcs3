@@ -2185,11 +2185,15 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 
 void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
 {
-	struct rsx_prog_push_constants_block_t
+	struct rsx_vs_prog_push_constants_block_t
 	{
 		u32 xform_constants_offset;
 		u32 vs_context_offset;
 		u32 vs_attrib_layout_offset;
+	};
+
+	struct rsx_fs_prog_push_constants_block_t
+	{
 		u32 fs_constants_offset;
 	};
 
@@ -2209,19 +2213,29 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	const u32 fs_constant_id_offset = static_cast<u32>(m_fragment_constants_dynamic_offset) / 16u;
 
 	// Pack
-	rsx_prog_push_constants_block_t push_constants;
-	push_constants.xform_constants_offset = vs_constant_id_offset;
-	push_constants.vs_context_offset = vertex_context_offset;
-	push_constants.vs_attrib_layout_offset = vertex_layout_offset + id;
-	push_constants.fs_constants_offset = fs_constant_id_offset;
+	rsx_vs_prog_push_constants_block_t vs_push_constants;
+	vs_push_constants.xform_constants_offset = vs_constant_id_offset;
+	vs_push_constants.vs_context_offset = vertex_context_offset;
+	vs_push_constants.vs_attrib_layout_offset = vertex_layout_offset + id;
+
+	rsx_fs_prog_push_constants_block_t fs_push_constants;
+	fs_push_constants.fs_constants_offset = fs_constant_id_offset;
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,
 		m_program->layout(),
 		VK_SHADER_STAGE_VERTEX_BIT,
 		0,
-		sizeof(push_constants),
-		&push_constants);
+		sizeof(vs_push_constants),
+		&vs_push_constants);
+
+	vkCmdPushConstants(
+		*m_current_command_buffer,
+		m_program->layout(),
+		VK_SHADER_STAGE_FRAGMENT_BIT,
+		sizeof(vs_push_constants),
+		sizeof(fs_push_constants),
+		&fs_push_constants);
 
 	// Now actually fill in the data
 	auto buf = m_vertex_layout_ring_info.map(m_vertex_layout_dynamic_offset + (144u * id), 144);
