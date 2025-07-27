@@ -229,5 +229,15 @@ namespace rsx
 		}
 
 		EXPECT_EQ(sum, 15);
+
+		rindex = 0;
+		sum = 0;
+		for (auto it = arr.crbegin(); it != arr.crend(); ++it, ++rindex)
+		{
+			EXPECT_EQ(*it, arr2[rindex]);
+			sum += *it;
+		}
+
+		EXPECT_EQ(sum, 15);
 	}
 }

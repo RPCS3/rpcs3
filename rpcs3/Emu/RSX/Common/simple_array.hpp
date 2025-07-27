@@ -398,32 +398,32 @@ namespace rsx
 
 		reverse_iterator rbegin()
 		{
-			return reverse_iterator(end());
+			return reverse_iterator(end() - 1);
 		}
 
 		reverse_iterator rend()
 		{
-			return reverse_iterator(begin());
+			return reverse_iterator(begin() - 1);
 		}
 
 		const_reverse_iterator rbegin() const
 		{
-			return const_reverse_iterator(cend());
+			return crbegin();
 		}
 
 		const_reverse_iterator rend() const
 		{
-			return const_reverse_iterator(cbegin());
+			return crend();
 		}
 
 		const_reverse_iterator crbegin() const
 		{
-			return const_reverse_iterator(cend());
+			return const_reverse_iterator(cend() - 1);
 		}
 
 		const_reverse_iterator crend() const
 		{
-			return const_reverse_iterator(cbegin());
+			return const_reverse_iterator(cbegin() - 1);
 		}
 
 		bool any(std::predicate<const Ty&> auto predicate) const
