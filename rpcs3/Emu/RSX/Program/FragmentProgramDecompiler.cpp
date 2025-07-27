@@ -1,5 +1,8 @@
 #include "stdafx.h"
+
+#pragma optimize("", off)
 #include "FragmentProgramDecompiler.h"
+#include "ProgramStateCache.h"
 
 #include <algorithm>
 
@@ -233,22 +236,18 @@ std::string FragmentProgramDecompiler::AddCond()
 std::string FragmentProgramDecompiler::AddConst()
 {
 	const u32 constant_id = m_size + (4 * sizeof(u32));
-	int index = -1, ctr = 0;
+	u32 index = umax;
 
-	// Have we seen this constant before?
-	for (auto it = properties.constant_offsets.rbegin(); it != properties.constant_offsets.rend(); ++it, ++ctr)
+	if (auto found = m_constant_offsets.find(constant_id);
+		found != m_constant_offsets.end())
 	{
-		if (*it == constant_id)
-		{
-			index = ctr;
-			break;
-		}
+		index = found->second;
 	}
-
-	if (index == -1)
+	else
 	{
-		index = static_cast<int>(properties.constant_offsets.size());
+		index =::size32(properties.constant_offsets);
 		properties.constant_offsets.push_back(constant_id);
+		m_constant_offsets[constant_id] = index;
 	}
 
 	// Skip next instruction, its just a literal
@@ -1305,6 +1304,7 @@ std::string FragmentProgramDecompiler::Decompile()
 	m_loop_count = 0;
 	m_code_level = 1;
 	m_is_valid_ucode = true;
+	m_constant_offsets.clear();
 
 	enum
 	{
