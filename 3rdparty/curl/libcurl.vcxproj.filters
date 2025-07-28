@@ -159,9 +159,6 @@
     <ClCompile Include="curl\lib\imap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\inet_ntop.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\krb5.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -339,9 +336,6 @@
     <ClCompile Include="curl\lib\vssh\wolfssh.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\vtls\bearssl.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vtls\gtls.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -358,9 +352,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vtls\schannel_verify.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vtls\sectransp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vtls\vtls.c">
@@ -547,6 +538,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\curlx\winapi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\curlx\inet_ntop.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\curlx\wait.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -758,9 +755,6 @@
     <ClInclude Include="curl\lib\imap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\inet_ntop.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\llist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -899,9 +893,6 @@
     <ClInclude Include="curl\lib\vssh\ssh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\vtls\bearssl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\vtls\gtls.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -915,9 +906,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\schannel.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vtls\sectransp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\vtls.h">
@@ -1110,6 +1098,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curlx\winapi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curlx\binmode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curlx\inet_ntop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curlx\wait.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
