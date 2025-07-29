@@ -31,4 +31,16 @@ struct vertex_layout_t
 	uvec2 attrib_data[16];
 };
 
+struct fragment_context_t
+{
+	float fog_param0;
+	float fog_param1;
+	uint rop_control;
+	float alpha_ref;
+	uint reserved;
+	uint fog_mode;
+	float wpos_scale;
+	float wpos_bias;
+};
+
 )"
