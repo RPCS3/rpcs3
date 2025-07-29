@@ -177,13 +177,6 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_LIT_EMULATION");
 		}
 
-		OS << "#define _select mix\n";
-		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
-		OS << "#define _get_bits(x, off, count) bitfieldExtract(x, off, count)\n";
-		OS << "#define _set_bits(x, y, off, count) bitfieldInsert(x, y, off, count)\n";
-		OS << "#define _test_bit(x, y) (_get_bits(x, y, 1) != 0)\n";
-		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
-
 		if (props.require_clip_functions)
 		{
 			OS <<

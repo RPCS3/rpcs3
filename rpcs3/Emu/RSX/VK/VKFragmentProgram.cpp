@@ -227,24 +227,18 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!properties.constant_offsets.empty())
 	{
-		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
+		OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << "	vec4 fc[];\n";
 		OS << "};\n";
 		OS << "#define _fetch_constant(x) fc[x + fs_constants_offset]\n\n";
 	}
 
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
-	OS << "{\n";
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint rop_control;\n";
-	OS << "	float alpha_ref;\n";
-	OS << "	uint reserved;\n";
-	OS << "	uint fog_mode;\n";
-	OS << "	float wpos_scale;\n";
-	OS << "	float wpos_bias;\n";
-	OS << "};\n\n";
+	OS <<
+		"layout(std430, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer FragmentStateBuffer\n"
+		"{\n"
+		"	fragment_context_t fs_contexts[];\n"
+		"};\n\n";
 
 	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
@@ -272,11 +266,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	in.location = vk_prog->binding_table.context_buffer_location;
 	in.name = "FragmentStateBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
+	in.type = vk::glsl::input_type_storage_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.tex_param_location;
 	in.name = "TextureParametersBuffer";
+	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;
@@ -287,13 +282,14 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		"layout(push_constant) uniform push_constants_block\n"
 		"{\n"
 		"	layout(offset=12) uint fs_constants_offset;\n"
+		"	uint fs_context_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_fragment_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 4 },
+		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 8 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "fs_push_constants_block"
@@ -325,6 +321,22 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
 	m_shader_props.require_tex3D_ops = properties.has_tex3D;
 	m_shader_props.require_shadowProj_ops = properties.shadow_sampler_mask != 0 && properties.has_texShadowProj;
+
+	// Declare global constants
+	if (m_shader_props.require_fog_read)
+	{
+		OS <<
+			"const float fog_param0 = fs_contexts[fs_context_offset].fog_param0;\n"
+			"const float fog_param1 = fs_contexts[fs_context_offset].fog_param1;\n"
+			"const uint fog_mode = fs_contexts[fs_context_offset].fog_mode;\n\n";
+	}
+
+	if (m_shader_props.require_wpos)
+	{
+		OS <<
+			"const float wpos_scale fs_contexts[fs_context_offset].wpos_scale;\n"
+			"const float wpos_bias fs_contexts[fs_context_offset].wpos_bias;\n\n";
+	}
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -418,6 +430,10 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "void main()\n";
 	OS << "{\n";
+
+	OS <<
+		"	const uint rop_control = fs_contexts[fs_context_offset].rop_control;\n"
+		"	const float alpha_ref = fs_contexts[fs_context_offset].alpha_ref;\n\n";
 
 	::glsl::insert_rop_init(OS);
 
