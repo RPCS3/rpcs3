@@ -512,7 +512,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000, VK_TRUE);
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
-	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
+	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
@@ -554,7 +554,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 16 };
+	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 	m_vertex_layout_stream_info = { m_vertex_layout_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
@@ -2029,12 +2029,11 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_texture_env)
 	{
-		auto mem = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
-		auto buf = m_fragment_texture_params_ring_info.map(mem, 768);
+		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<16, 768>();
+		auto buf = m_fragment_texture_params_ring_info.map(m_texture_parameters_dynamic_offset, 768);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
-		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 768 };
 	}
 
 	if (update_raster_env)
@@ -2196,6 +2195,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	{
 		u32 fs_constants_offset;
 		u32 fs_context_offset;
+		u32 fs_texture_base_index;
 	};
 
 	struct rsx_prog_vertex_layout_entry_t
@@ -2214,6 +2214,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 144u;
 	const u32 fs_constant_id_offset = static_cast<u32>(m_fragment_constants_dynamic_offset) / 16u;
 	const u32 fs_context_offset = static_cast<u32>(m_fragment_env_dynamic_offset) / 32u;
+	const u32 fs_texture_base_index = static_cast<u32>(m_texture_parameters_dynamic_offset) / 48u;
 
 	// Pack
 	rsx_vs_prog_push_constants_block_t vs_push_constants;
@@ -2224,6 +2225,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	rsx_fs_prog_push_constants_block_t fs_push_constants;
 	fs_push_constants.fs_constants_offset = fs_constant_id_offset;
 	fs_push_constants.fs_context_offset = fs_context_offset;
+	fs_push_constants.fs_texture_base_index = fs_texture_base_index;
 
 	vkCmdPushConstants(
 		*m_current_command_buffer,

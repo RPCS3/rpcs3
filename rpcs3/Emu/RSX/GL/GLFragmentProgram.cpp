@@ -189,7 +189,9 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	"layout(std140, binding = " << GL_RASTERIZER_STATE_BIND_SLOT << ") uniform RasterizerHeap\n"
 	"{\n"
 	"	uvec4 stipple_pattern[8];\n"
-	"};\n\n";
+	"};\n\n"
+
+	"#define texture_base_index 0\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)

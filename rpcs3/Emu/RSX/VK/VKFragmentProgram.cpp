@@ -240,9 +240,9 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		"	fragment_context_t fs_contexts[];\n"
 		"};\n\n";
 
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
+	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") readonly buffer TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	sampler_info texture_parameters[16];\n";
+	OS << "	sampler_info texture_parameters[];\n";
 	OS << "};\n\n";
 
 	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
@@ -271,10 +271,11 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	in.location = vk_prog->binding_table.tex_param_location;
 	in.name = "TextureParametersBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
+	in.type = vk::glsl::input_type_storage_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;
+	in.type = vk::glsl::input_type_uniform_buffer;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
 
@@ -283,13 +284,14 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		"{\n"
 		"	layout(offset=12) uint fs_constants_offset;\n"
 		"	uint fs_context_offset;\n"
+		"	uint fs_texture_base_index;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_fragment_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 8 },
+		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 12 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "fs_push_constants_block"
@@ -337,6 +339,8 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 			"const float wpos_scale fs_contexts[fs_context_offset].wpos_scale;\n"
 			"const float wpos_bias fs_contexts[fs_context_offset].wpos_bias;\n\n";
 	}
+
+	OS << "#define texture_base_index fs_texture_base_index\n\n";
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
