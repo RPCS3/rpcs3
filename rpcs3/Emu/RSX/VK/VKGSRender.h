@@ -155,6 +155,7 @@ private:
 	u64 m_vertex_layout_dynamic_offset = 0;
 	u64 m_fragment_constants_dynamic_offset = 0;
 	u64 m_fragment_env_dynamic_offset = 0;
+	u64 m_texture_parameters_dynamic_offset = 0;
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
