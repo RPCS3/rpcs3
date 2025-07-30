@@ -366,19 +366,19 @@ vec4 _texture(in vec4 coord, float bias)
 	switch (type)
 	{
 	case RSX_SAMPLE_TEXTURE_1D:
-		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER1D(ur0), coord.x, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_2D:
-		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER2D(ur0), coord.xy, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_CUBE:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLERCUBE(ur0), coord.xyz, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_3D:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER3D(ur0), coord.xyz, bias);
 		break;
 	}
@@ -405,19 +405,19 @@ vec4 _textureLod(in vec4 coord, float lod)
 	switch (type)
 	{
 	case RSX_SAMPLE_TEXTURE_1D:
-		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER1D(ur0), coord.x, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_2D:
-		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER2D(ur0), coord.xy, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_CUBE:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLERCUBE(ur0), coord.xyz, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_3D:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER3D(ur0), coord.xyz, lod);
 		break;
 	}
