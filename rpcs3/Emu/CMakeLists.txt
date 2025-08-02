@@ -642,6 +642,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::libevdev
         3rdparty::flatbuffers
         3rdparty::pugixml
+        3rdparty::vulkanmemoryallocator
         Threads::Threads
     PRIVATE
         3rdparty::glslang
