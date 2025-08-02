@@ -51,6 +51,14 @@ else()
 	add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 endif()
 
+if (USE_SYSTEM_VULKAN_MEMORY_ALLOCATOR)
+	find_package(VulkanMemoryAllocator REQUIRED GLOBAL)
+	add_library(3rdparty::vulkanmemoryallocator ALIAS GPUOpen::VulkanMemoryAllocator)
+else()
+	add_library(3rdparty_vulkanmemoryallocator INTERFACE)
+	target_include_directories(3rdparty_vulkanmemoryallocator INTERFACE GPUOpen/VulkanMemoryAllocator/include)
+	add_library(3rdparty::vulkanmemoryallocator ALIAS 3rdparty_vulkanmemoryallocator)
+endif()
 
 # libusb
 if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
