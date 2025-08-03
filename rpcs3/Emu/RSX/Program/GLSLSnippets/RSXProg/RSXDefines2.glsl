@@ -22,12 +22,16 @@ struct vertex_context_t
 	float reserved[3];
 };
 
-struct vertex_layout_t
+struct draw_parameters_t
 {
 	uint vertex_base_index;
 	uint vertex_index_offset;
 	uint draw_id;
-	uint reserved;
+	uint xform_constants_offset;
+	uint vs_context_offset;
+	uint fs_constants_offset;
+	uint fs_context_offset;
+	uint fs_texture_base_index;
 	uvec2 attrib_data[16];
 };
 

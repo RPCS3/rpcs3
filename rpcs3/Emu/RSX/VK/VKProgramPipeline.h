@@ -60,6 +60,8 @@ namespace vk
 			u32 location = umax;
 			std::string name = "undefined";
 
+			VkFlags ex_stages = 0;
+
 			inline bound_buffer& as_buffer() { return *std::get_if<bound_buffer>(&bound_data); }
 			inline bound_sampler& as_sampler() { return *std::get_if<bound_sampler>(&bound_data); }
 			inline push_constant_ref& as_push_constant() { return *std::get_if<push_constant_ref>(&bound_data); }
