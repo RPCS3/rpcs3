@@ -80,13 +80,19 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	glsl::insert_subheader_block(OS);
 
 	OS <<
+		// Variable redirection
+		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
+		"#define vs_context_offset get_draw_params().vs_context_offset\n"
+		"#define xform_constants_offset get_draw_params().xform_constants_offset\n\n"
+		// Helpers
+		"#define get_vertex_context() vertex_contexts[vs_context_offset]\n"
+		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
+
+	OS <<
 		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer VertexContextBuffer\n"
 		"{\n"
 		"	vertex_context_t vertex_contexts[];\n"
-		"};\n\n"
-		""
-		"#define get_vertex_context() vertex_contexts[vs_context_offset]\n"
-		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
+		"};\n\n";
 
 	const vk::glsl::program_input context_input
 	{
@@ -118,9 +124,9 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	}
 
 	OS <<
-		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly buffer VertexLayoutBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly buffer DrawParametersBuffer\n"
 		"{\n"
-		"	vertex_layout_t vertex_layouts[];\n"
+		"	draw_parameters_t draw_parameters[];\n"
 		"};\n\n";
 
 	const vk::glsl::program_input layouts_input
@@ -129,23 +135,22 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.type = vk::glsl::input_type_storage_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.vertex_buffers_location + 2,
-		.name = "VertexLayoutBuffer"
+		.name = "DrawParametersBuffer",
+		.ex_stages = VK_SHADER_STAGE_FRAGMENT_BIT // Shared with fragment shader
 	};
 	inputs.push_back(layouts_input);
 
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
 		"{\n"
-		"	uint xform_constants_offset;\n"
-		"	uint vs_context_offset;\n"
-		"	uint vs_attrib_layout_offset;\n"
+		"	uint draw_parameters_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 12 },
+		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 4 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "push_constants_block"
