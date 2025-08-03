@@ -346,8 +346,8 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	if (m_shader_props.require_wpos)
 	{
 		OS <<
-			"const float wpos_scale fs_contexts[fs_context_offset].wpos_scale;\n"
-			"const float wpos_bias fs_contexts[fs_context_offset].wpos_bias;\n\n";
+			"#define wpos_scale fs_contexts[fs_context_offset].wpos_scale\n"
+			"#define wpos_bias fs_contexts[fs_context_offset].wpos_bias\n\n";
 	}
 
 	OS << "#define texture_base_index fs_texture_base_index\n\n";
