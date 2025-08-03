@@ -414,8 +414,8 @@ namespace vk
 				bind_sets[count++] = set.commit();   // Commit variable changes and return handle to the new set
 			}
 
-			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
-			vkCmdBindDescriptorSets(cmd, bind_point, m_pipeline_layout, 0, count, bind_sets, 0, nullptr);
+			cmd.bind_pipeline(m_pipeline, bind_point);
+			cmd.bind_descriptor_sets({ bind_sets, count }, bind_point, m_pipeline_layout);
 			return *this;
 		}
 

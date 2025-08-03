@@ -453,7 +453,8 @@ namespace vk
 		// Notify
 		on_bind();
 
-		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
+		VkDescriptorSet sets[1] = { m_handle };
+		cmd.bind_descriptor_sets(sets, m_dynamic_offsets, bind_point, layout);
 	}
 
 	void descriptor_set::flush()

@@ -71,6 +71,10 @@ namespace vk
 		command_pool* pool = nullptr;
 		VkCommandBuffer commands = nullptr;
 
+		// State cache
+		mutable std::array<VkDescriptorSet, 2> m_bound_descriptor_sets {{ VK_NULL_HANDLE }};
+		mutable VkPipeline m_bound_pipeline = VK_NULL_HANDLE;
+
 	public:
 		enum access_type_hint
 		{
@@ -97,40 +101,28 @@ namespace vk
 
 		void create(command_pool& cmd_pool);
 		void destroy();
+		void reset();
 
 		void begin();
 		void end();
 		void submit(queue_submit_t& submit_info, VkBool32 flush = VK_FALSE);
 
+		// Abstractions with caching
+		void bind_pipeline(VkPipeline pipeline, VkPipelineBindPoint bind_point) const;
+		void bind_descriptor_sets(const std::span<VkDescriptorSet>& sets, VkPipelineBindPoint bind_point, VkPipelineLayout pipe_layout) const;
+		void bind_descriptor_sets(const std::span<VkDescriptorSet>& sets, const std::span<u32>& dynamic_offsets, VkPipelineBindPoint bind_point, VkPipelineLayout pipe_layout) const;
+
 		// Properties
-		command_pool& get_command_pool() const
-		{
-			return *pool;
-		}
+		command_pool& get_command_pool() const { return *pool; }
+		u32 get_queue_family() const { return pool->get_queue_family(); }
+		bool is_recording() const { return is_open; }
 
-		u32 get_queue_family() const
-		{
-			return pool->get_queue_family();
-		}
-
-		void clear_flags()
-		{
-			flags = 0;
-		}
-
-		void set_flag(command_buffer_data_flag flag)
-		{
-			flags |= flag;
-		}
+		void clear_flags() { flags = 0; }
+		void set_flag(command_buffer_data_flag flag) { flags |= flag; }
 
 		operator VkCommandBuffer() const
 		{
 			return commands;
-		}
-
-		bool is_recording() const
-		{
-			return is_open;
 		}
 	};
 }
