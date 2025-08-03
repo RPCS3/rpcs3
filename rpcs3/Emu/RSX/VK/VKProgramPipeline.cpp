@@ -519,21 +519,79 @@ namespace vk
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
-			m_descriptor_set = allocate_descriptor_set();
-
-			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			auto update_descriptor_slot = [this](unsigned idx)
 			{
-				if (m_descriptors_dirty[i])
+				const auto& slot = m_descriptor_slots[idx];
+				const VkDescriptorType type = m_descriptor_types[idx];
+				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
 				{
-					// Push
-					push_descriptor_slot(i);
-					m_descriptors_dirty[i] = false;
-					continue;
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
+					return;
 				}
 
-				// We should copy here if possible.
-				// Without descriptor_buffer, the most efficient option is to just use the normal bind logic due to the pointer-based nature of the descriptor inputs and no stride.
-				push_descriptor_slot(i);
+				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				{
+					m_descriptor_template[idx].pBufferInfo = m_descriptor_set.store(*ptr);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				{
+					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(*ptr);
+					return;
+				}
+
+				// FIXME: This sucks even if only used by interpreter. Do better.
+				if (auto ptr = std::get_if<descriptor_array_ref_t>(&slot))
+				{
+					ensure(type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+					ensure((ptr->first + ptr->count) <= m_scratch_images_array.size());
+					m_descriptor_set.push(m_scratch_images_array.data() + ptr->first, ptr->count, type, idx);
+					return;
+				}
+
+				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
+			};
+
+			m_descriptor_set = allocate_descriptor_set();
+
+			if (!m_descriptor_template.empty()) [[ likely ]]
+			{
+				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+				{
+					m_descriptor_template[i].dstSet = m_descriptor_set.value();
+					if (!m_descriptors_dirty[i])
+					{
+						continue;
+					}
+
+					// Update
+					update_descriptor_slot(i);
+					m_descriptors_dirty[i] = false;
+				}
+
+				// Push
+				m_descriptor_set.push(m_descriptor_template, m_descriptor_template_typemask);
+			}
+			else
+			{
+				m_descriptor_template_typemask = 0u;
+
+				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+				{
+					m_descriptor_template_typemask |= (1u << static_cast<u32>(m_descriptor_types[i]));
+					if (m_descriptors_dirty[i])
+					{
+						// Push
+						push_descriptor_slot(i);
+						m_descriptors_dirty[i] = false;
+						continue;
+					}
+
+					push_descriptor_slot(i);
+				}
+
+				m_descriptor_template = m_descriptor_set.peek();
 			}
 
 			m_descriptor_set.on_bind();

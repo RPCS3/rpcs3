@@ -130,6 +130,9 @@ namespace vk
 			rsx::simple_array<VkDescriptorPoolSize> m_descriptor_pool_sizes;
 			rsx::simple_array<VkDescriptorType> m_descriptor_types;
 
+			u32 m_descriptor_template_typemask = 0u;
+			rsx::simple_array<VkWriteDescriptorSet> m_descriptor_template;
+
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;
 			bool m_any_descriptors_dirty = false;
