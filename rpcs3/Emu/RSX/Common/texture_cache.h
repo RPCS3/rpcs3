@@ -1187,9 +1187,9 @@ namespace rsx
 		}
 
 		template <bool check_unlocked = false>
-		simple_array<section_storage_type*> find_texture_from_range(const address_range32 &test_range, u32 required_pitch = 0, u32 context_mask = 0xFF)
+		rsx::simple_array<section_storage_type*> find_texture_from_range(const address_range32 &test_range, u32 required_pitch = 0, u32 context_mask = 0xFF)
 		{
-			simple_array<section_storage_type*> results;
+			rsx::simple_array<section_storage_type*> results;
 
 			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
@@ -1894,8 +1894,8 @@ namespace rsx
 					}
 				}
 
-				simple_array<typename SurfaceStoreType::surface_overlap_info> overlapping_fbos;
-				simple_array<section_storage_type*> overlapping_locals;
+				rsx::simple_array<typename SurfaceStoreType::surface_overlap_info> overlapping_fbos;
+				rsx::simple_array<section_storage_type*> overlapping_locals;
 
 				auto fast_fbo_check = [&]() -> sampled_image_descriptor
 				{
