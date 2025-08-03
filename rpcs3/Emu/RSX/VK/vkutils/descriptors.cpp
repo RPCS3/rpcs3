@@ -404,30 +404,15 @@ namespace vk
 		vkUpdateDescriptorSets(*g_render_device, 1, &writer, 0, nullptr);
 	}
 
-	void descriptor_set::push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
+	void descriptor_set::push(const rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
 	{
 		m_push_type_mask |= type_mask;
-
-		if (m_pending_copies.empty()) [[likely]]
-		{
-			m_pending_copies = std::move(copy_cmd);
-			return;
-		}
-
 		m_pending_copies += copy_cmd;
 	}
 
-	void descriptor_set::push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
+	void descriptor_set::push(const rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
 	{
 		m_push_type_mask |= type_mask;
-
-#if !defined(__clang__) || (__clang_major__ >= 16)
-		if (m_pending_writes.empty()) [[unlikely]]
-		{
-			m_pending_writes = std::move(write_cmds);
-			return;
-		}
-#endif
 		m_pending_writes += write_cmds;
 	}
 
