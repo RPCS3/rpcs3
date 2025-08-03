@@ -156,7 +156,7 @@ attribute_desc fetch_desc(const in int location)
 
 #ifdef VULKAN
 	// Fetch parameters streamed separately from draw parameters
-	uvec2 attrib = vertex_layouts[vs_attrib_layout_offset].attrib_data[location];
+	uvec2 attrib = get_draw_params().attrib_data[location];
 #else
 	// Data is packed into a ubo
 	const int block = (location >> 1);
@@ -179,8 +179,8 @@ attribute_desc fetch_desc(const in int location)
 }
 
 #ifdef VULKAN
-#define vertex_index_offset vertex_layouts[vs_attrib_layout_offset].vertex_index_offset
-#define vertex_base_index vertex_layouts[vs_attrib_layout_offset].vertex_base_index
+#define vertex_index_offset get_draw_params().vertex_index_offset
+#define vertex_base_index get_draw_params().vertex_base_index
 #endif
 
 vec4 read_location(const in int location)

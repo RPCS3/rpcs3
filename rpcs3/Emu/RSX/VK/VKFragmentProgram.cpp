@@ -225,6 +225,18 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
+	// Always provided by vertex program, not part of local bindings
+	OS <<
+		"layout(std430, set=0, binding=2) readonly buffer DrawParametersBuffer\n"
+		"{\n"
+		"	draw_parameters_t draw_parameters[];\n"
+		"};\n\n"
+
+		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
+		"#define fs_constants_offset get_draw_params().fs_constants_offset\n"
+		"#define fs_context_offset get_draw_params().fs_context_offset\n"
+		"#define fs_texture_base_index get_draw_params().fs_texture_base_index\n\n";
+
 	if (!properties.constant_offsets.empty())
 	{
 		OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
@@ -282,16 +294,14 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
 		"{\n"
-		"	layout(offset=12) uint fs_constants_offset;\n"
-		"	uint fs_context_offset;\n"
-		"	uint fs_texture_base_index;\n"
+		"	uint draw_parameters_offset;\n"
 		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_fragment_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{.offset = 12, .size = 12 },
+		.bound_data = vk::glsl::push_constant_ref{.offset = 0, .size = 4 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "fs_push_constants_block"

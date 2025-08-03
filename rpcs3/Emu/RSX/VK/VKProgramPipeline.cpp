@@ -651,7 +651,7 @@ namespace vk
 						.binding = input.location,
 						.descriptorType = type,
 						.descriptorCount = descriptor_count(input.name),
-						.stageFlags = to_shader_stage_flags(input.domain)
+						.stageFlags = to_shader_stage_flags(input.domain) | input.ex_stages
 					};
 					bindings.push_back(binding);
 
