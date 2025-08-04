@@ -4,6 +4,8 @@
 #include "device.h"
 #include "sync.h"
 
+#include <span>
+
 namespace vk
 {
 	class command_pool
