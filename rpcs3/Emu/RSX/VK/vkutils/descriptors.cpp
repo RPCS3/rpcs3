@@ -468,6 +468,7 @@ namespace vk
 		const auto num_copies = ::size32(m_pending_copies);
 		vkUpdateDescriptorSets(*g_render_device, num_writes, m_pending_writes.data(), num_copies, m_pending_copies.data());
 
+		m_storage_cache_id++;
 		m_push_type_mask = 0;
 		m_pending_writes.clear();
 		m_pending_copies.clear();
