@@ -134,6 +134,7 @@ namespace vk
 
 			u32 m_descriptor_template_typemask = 0u;
 			rsx::simple_array<VkWriteDescriptorSet> m_descriptor_template;
+			u64 m_descriptor_template_cache_id = umax;
 
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;
@@ -148,6 +149,8 @@ namespace vk
 
 			void create_descriptor_set_layout();
 			void create_descriptor_pool();
+			void create_descriptor_template();
+			void update_descriptor_template();
 
 			VkDescriptorSet allocate_descriptor_set();
 			VkDescriptorSet commit();

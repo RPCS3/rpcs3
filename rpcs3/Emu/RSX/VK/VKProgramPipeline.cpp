@@ -472,20 +472,8 @@ namespace vk
 			return m_descriptor_pool->allocate(m_descriptor_set_layout);
 		}
 
-		VkDescriptorSet descriptor_table_t::commit()
+		void descriptor_table_t::create_descriptor_template()
 		{
-			if (!m_descriptor_set)
-			{
-				m_any_descriptors_dirty = true;
-				std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
-			}
-
-			// Check if we need to actually open a new set
-			if (!m_any_descriptors_dirty)
-			{
-				return m_descriptor_set.value();
-			}
-
 			auto push_descriptor_slot = [this](unsigned idx)
 			{
 				const auto& slot = m_descriptor_slots[idx];
@@ -519,6 +507,28 @@ namespace vk
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
+			m_descriptor_template_typemask = 0u;
+
+			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			{
+				m_descriptor_template_typemask |= (1u << static_cast<u32>(m_descriptor_types[i]));
+				if (m_descriptors_dirty[i])
+				{
+					// Push
+					push_descriptor_slot(i);
+					m_descriptors_dirty[i] = false;
+					continue;
+				}
+
+				push_descriptor_slot(i);
+			}
+
+			m_descriptor_template = m_descriptor_set.peek();
+			m_descriptor_template_cache_id = m_descriptor_set.cache_id();
+		}
+
+		void descriptor_table_t::update_descriptor_template()
+		{
 			auto update_descriptor_slot = [this](unsigned idx)
 			{
 				const auto& slot = m_descriptor_slots[idx];
@@ -553,45 +563,50 @@ namespace vk
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
+			const bool cache_is_valid = m_descriptor_template_cache_id == m_descriptor_set.cache_id();
+			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			{
+				m_descriptor_template[i].dstSet = m_descriptor_set.value();
+				if (!m_descriptors_dirty[i] && cache_is_valid)
+				{
+					continue;
+				}
+
+				// Update
+				update_descriptor_slot(i);
+				m_descriptors_dirty[i] = false;
+			}
+
+			// Push
+			m_descriptor_set.push(m_descriptor_template, m_descriptor_template_typemask);
+			m_descriptor_template_cache_id = m_descriptor_set.cache_id();
+		}
+
+		VkDescriptorSet descriptor_table_t::commit()
+		{
+			if (!m_descriptor_set)
+			{
+				m_any_descriptors_dirty = true;
+				std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
+			}
+
+			// Check if we need to actually open a new set
+			if (!m_any_descriptors_dirty)
+			{
+				return m_descriptor_set.value();
+			}
+
 			m_descriptor_set = allocate_descriptor_set();
 
 			if (!m_descriptor_template.empty()) [[ likely ]]
 			{
-				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
-				{
-					m_descriptor_template[i].dstSet = m_descriptor_set.value();
-					if (!m_descriptors_dirty[i])
-					{
-						continue;
-					}
-
-					// Update
-					update_descriptor_slot(i);
-					m_descriptors_dirty[i] = false;
-				}
-
-				// Push
-				m_descriptor_set.push(m_descriptor_template, m_descriptor_template_typemask);
+				// Run pointer updates. Optimized for cached back-to-back updates which are quite frequent.
+				update_descriptor_template();
 			}
 			else
 			{
-				m_descriptor_template_typemask = 0u;
-
-				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
-				{
-					m_descriptor_template_typemask |= (1u << static_cast<u32>(m_descriptor_types[i]));
-					if (m_descriptors_dirty[i])
-					{
-						// Push
-						push_descriptor_slot(i);
-						m_descriptors_dirty[i] = false;
-						continue;
-					}
-
-					push_descriptor_slot(i);
-				}
-
-				m_descriptor_template = m_descriptor_set.peek();
+				// Creating the template also seeds initial values
+				create_descriptor_template();
 			}
 
 			m_descriptor_set.on_bind();

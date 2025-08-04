@@ -164,13 +164,15 @@ namespace vk
 			return &m_image_info_pool.back();
 		}
 
-		// Temporary storage accessor
+		// Temporary storage accessors
 		const rsx::simple_array<WriteDescriptorSetT> peek() const { return m_pending_writes; }
+		u64 cache_id() const { return m_storage_cache_id; }
 
 	private:
 		VkDescriptorSet m_handle = VK_NULL_HANDLE;
 		u64 m_update_after_bind_mask = 0;
 		u64 m_push_type_mask = 0;
+		u64 m_storage_cache_id = 0;
 		bool m_in_use = false;
 
 		rsx::simple_array<VkBufferView> m_buffer_view_pool;
