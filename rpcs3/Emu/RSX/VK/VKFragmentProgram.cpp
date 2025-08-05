@@ -235,7 +235,8 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
 		"#define fs_constants_offset get_draw_params().fs_constants_offset\n"
 		"#define fs_context_offset get_draw_params().fs_context_offset\n"
-		"#define fs_texture_base_index get_draw_params().fs_texture_base_index\n\n";
+		"#define fs_texture_base_index get_draw_params().fs_texture_base_index\n"
+		"#define fs_stipple_pattern_array_offset get_draw_params().fs_stipple_pattern_offset\n\n";
 
 	if (!properties.constant_offsets.empty())
 	{
@@ -257,9 +258,9 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	sampler_info texture_parameters[];\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
+	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") readonly buffer RasterizerHeap\n";
 	OS << "{\n";
-	OS << "	uvec4 stipple_pattern[8];\n";
+	OS << "	uvec4 stipple_pattern[];\n";
 	OS << "};\n\n";
 
 	vk::glsl::program_input in
@@ -287,7 +288,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;
-	in.type = vk::glsl::input_type_uniform_buffer;
+	in.type = vk::glsl::input_type_storage_buffer;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
 

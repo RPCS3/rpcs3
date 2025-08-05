@@ -555,7 +555,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
+	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_vertex_layout_stream_info = { m_vertex_layout_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 	m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 
@@ -2038,12 +2038,11 @@ void VKGSRender::load_program_env()
 
 	if (update_raster_env)
 	{
-		auto mem = m_raster_env_ring_info.static_alloc<256>();
-		auto buf = m_raster_env_ring_info.map(mem, 128);
+		m_stipple_array_dynamic_offset = m_raster_env_ring_info.static_alloc<128>();
+		auto buf = m_raster_env_ring_info.map(m_stipple_array_dynamic_offset, 128);
 
 		std::memcpy(buf, ctx->polygon_stipple_pattern(), 128);
 		m_raster_env_ring_info.unmap();
-		m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, mem, 128 };
 
 		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
@@ -2194,6 +2193,8 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		u32 fs_constants_offset;
 		u32 fs_context_offset;
 		u32 fs_texture_base_index;
+		u32 fs_stipple_pattern_offset;
+		u32 reserved;
 		s32 attrib_data[1];
 	};
 #pragma pack(pop)
@@ -2201,12 +2202,13 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	// Actual allocation must have been done previously
 	const u32 vs_constant_id_offset = static_cast<u32>(m_xform_constants_dynamic_offset) / 16u;
 	const u32 vertex_context_offset = static_cast<u32>(m_vertex_env_dynamic_offset) / 96u;
-	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 160u;
+	const u32 vertex_layout_offset = static_cast<u32>(m_vertex_layout_dynamic_offset) / 168u;
 	const u32 fs_constant_id_offset = static_cast<u32>(m_fragment_constants_dynamic_offset) / 16u;
 	const u32 fs_context_offset = static_cast<u32>(m_fragment_env_dynamic_offset) / 32u;
 	const u32 fs_texture_base_index = static_cast<u32>(m_texture_parameters_dynamic_offset) / 48u;
+	const u32 fs_stipple_pattern_offset = static_cast<u32>(m_stipple_array_dynamic_offset) / 16u;
 
-	auto buf = m_vertex_layout_ring_info.map(m_vertex_layout_dynamic_offset + (160u * id), 160u);
+	auto buf = m_vertex_layout_ring_info.map(m_vertex_layout_dynamic_offset + (168u * id), 168u);
 	auto dst = reinterpret_cast<rsx_prog_vertex_layout_entry_t*>(buf);
 
 	// Pack
@@ -2220,6 +2222,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	dst->fs_constants_offset = fs_constant_id_offset;
 	dst->fs_context_offset = fs_context_offset;
 	dst->fs_texture_base_index = fs_texture_base_index;
+	dst->fs_stipple_pattern_offset = fs_stipple_pattern_offset;
 
 	const u32 push_val = vertex_layout_offset + id;
 	vkCmdPushConstants(

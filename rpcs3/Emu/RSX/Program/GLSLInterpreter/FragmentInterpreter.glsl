@@ -552,6 +552,9 @@ void main()
 	ur1 = ur0 & 31u;                               // address % 32 -> fetch bit offset
 	ur1 = (1u << ur1);                             // address mask
 	uvr0.x = (ur0 >> 7u);                          // address to uvec4 row (each row has 32x4 bits)
+#ifdef VULKAN
+	uvr0.x += fs_stipple_pattern_array_offset;     // Address base offset. Only applies to vulkan.
+#endif
 	ur0 = (ur0 >> 5u) & 3u;                        // address to uvec4 word (address / 32) % 4
 
 	if ((stipple_pattern[uvr0.x][ur0] & ur1) == 0u)
