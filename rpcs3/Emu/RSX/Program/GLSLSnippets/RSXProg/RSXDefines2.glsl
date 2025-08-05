@@ -32,6 +32,8 @@ struct draw_parameters_t
 	uint fs_constants_offset;
 	uint fs_context_offset;
 	uint fs_texture_base_index;
+	uint fs_stipple_pattern_offset;
+	uint reserved;
 	uvec2 attrib_data[16];
 };
 
