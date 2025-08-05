@@ -820,8 +820,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		update_descriptors = true;
 
 		// Allocate stream layout memory for this batch
-		const u64 alloc_size = rsx::method_registers.current_draw_clause.pass_count() * 160;
-		m_vertex_layout_dynamic_offset = m_vertex_layout_ring_info.alloc<16>(alloc_size);
+		const u64 alloc_size = rsx::method_registers.current_draw_clause.pass_count() * 168;
+		m_vertex_layout_dynamic_offset = m_vertex_layout_ring_info.alloc<8>(alloc_size);
 	}
 
 	// Update vertex fetch parameters
