@@ -538,6 +538,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	template <typename... Args>
+	llvm::Value* _ptr(llvm::Value* base, Args... offset_args)
+	{
+		return m_ir->CreatePtrAdd(base, m_ir->getInt64(::offset32(offset_args...)));
+	}
+
+	template <typename... Args>
 	llvm::Value* spu_ptr(Args... offset_args)
 	{
 		return _ptr(m_thread, ::offset32(offset_args...));
@@ -622,7 +628,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto idx = m_ir->CreateAnd(I > 4 ? isr : isl, m_interp_7f0);
 
 		// Pointer to the register
-		return m_ir->CreatePtrAdd(m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>()));
+		return _ptr(m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>()));
 	}
 
 	llvm::Value* double_as_uint64(llvm::Value* val)
@@ -1636,13 +1642,13 @@ public:
 		}
 		else if (func.data.size() == 1)
 		{
-			const auto pu32 = m_ir->CreatePtrAdd(m_lsptr, m_base_pc);
+			const auto pu32 = _ptr(m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else if (func.data.size() == 2)
 		{
-			const auto pu64 = m_ir->CreatePtrAdd(m_lsptr, m_base_pc);
+			const auto pu64 = _ptr(m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
@@ -1688,7 +1694,7 @@ public:
 
 			// Get actual pc corresponding to the found beginning of the data
 			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
-			llvm::Value* data_addr = m_ir->CreatePtrAdd(m_lsptr, starta_pc);
+			llvm::Value* data_addr = _ptr(m_lsptr, starta_pc);
 
 			llvm::Value* acc0 = nullptr;
 			llvm::Value* acc1 = nullptr;
@@ -2899,7 +2905,7 @@ public:
 
 		// Load pc and opcode
 		m_interp_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::pc));
-		m_interp_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreatePtrAdd(m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())));
+		m_interp_op = m_ir->CreateLoad(get_type<u32>(), _ptr(m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())));
 		m_interp_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {m_interp_op});
 
 		// Pinned constant, address of interpreter table
@@ -3063,7 +3069,7 @@ public:
 
 						// Decode next instruction.
 						const auto next_pc = itype & spu_itype::branch ? m_interp_pc : m_interp_pc_next;
-						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreatePtrAdd(m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())));
+						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), _ptr(m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())));
 						const auto next_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {be32_op});
 						const auto next_if = m_ir->CreateLoad(m_ir->getPtrTy(), m_ir->CreateGEP(m_ir->getPtrTy(), m_interp_table, m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
 						llvm::cast<LoadInst>(next_if)->setVolatile(true);
@@ -4066,8 +4072,8 @@ public:
 						csize = -1;
 					}
 
-					llvm::Value* src = m_ir->CreatePtrAdd(m_lsptr, zext<u64>(lsa).eval(m_ir));
-					llvm::Value* dst = m_ir->CreatePtrAdd(m_memptr, zext<u64>(eal).eval(m_ir));
+					llvm::Value* src = _ptr(m_lsptr, zext<u64>(lsa).eval(m_ir));
+					llvm::Value* dst = _ptr(m_memptr, zext<u64>(eal).eval(m_ir));
 
 					if (cmd & MFC_GET_CMD)
 					{
@@ -4164,8 +4170,8 @@ public:
 						// Generate fixed sequence of copy operations
 						for (u32 i = 0; i < csize; i += stride)
 						{
-							const auto _src = m_ir->CreatePtrAdd(src, m_ir->getInt32(i));
-							const auto _dst = m_ir->CreatePtrAdd(dst, m_ir->getInt32(i));
+							const auto _src = _ptr(src, i);
+							const auto _dst = _ptr(dst, i);
 							if (csize - i < stride)
 							{
 								m_ir->CreateStore(m_ir->CreateLoad(get_type<u8[16]>(), _src), _dst);
@@ -4219,10 +4225,10 @@ public:
 				// Get MFC slot, redirect to invalid memory address
 				const auto slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
-				const auto ptr0 = m_ir->CreatePtrAdd(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
-				const auto ptr1 = m_ir->CreatePtrAdd(m_memptr, m_ir->getInt64(0xffdeadf0));
+				const auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
+				const auto ptr1 = _ptr(m_memptr, 0xffdeadf0);
 				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
-				m_ir->CreateStore(ci, _ptr(pmfc, ::offset32(&spu_mfc_cmd::cmd)));
+				m_ir->CreateStore(ci, _ptr(pmfc, &spu_mfc_cmd::cmd));
 
 				switch (u64 cmd = ci->getZExtValue())
 				{
@@ -4262,10 +4268,10 @@ public:
 				case MFC_GETB_CMD:
 				case MFC_GETF_CMD:
 				{
-					m_ir->CreateStore(tag.value, _ptr(pmfc, ::offset32(&spu_mfc_cmd::tag)));
-					m_ir->CreateStore(size.value, _ptr(pmfc, ::offset32(&spu_mfc_cmd::size)));
-					m_ir->CreateStore(lsa.value, _ptr(pmfc, ::offset32(&spu_mfc_cmd::lsa)));
-					m_ir->CreateStore(eal.value, _ptr(pmfc, ::offset32(&spu_mfc_cmd::eal)));
+					m_ir->CreateStore(tag.value, _ptr(pmfc, &spu_mfc_cmd::tag));
+					m_ir->CreateStore(size.value, _ptr(pmfc, &spu_mfc_cmd::size));
+					m_ir->CreateStore(lsa.value, _ptr(pmfc, &spu_mfc_cmd::lsa));
+					m_ir->CreateStore(eal.value, _ptr(pmfc, &spu_mfc_cmd::eal));
 					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(get_type<u32>(), pf), mask), pf);
 					if (cmd & MFC_BARRIER_MASK)
 						m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(get_type<u32>(), pb), mask), pb);
@@ -7495,13 +7501,13 @@ public:
 	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
 	{
 		const auto bswapped = byteswap(data);
-		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreatePtrAdd(m_lsptr, addr.value));
+		m_ir->CreateStore(bswapped.eval(m_ir), _ptr(m_lsptr, addr.value));
 	}
 
 	auto make_load_ls(value_t<u64> addr)
 	{
 		value_t<u8[16]> data;
-		data.value = m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreatePtrAdd(m_lsptr, addr.value));
+		data.value = m_ir->CreateLoad(get_type<u8[16]>(), _ptr(m_lsptr, addr.value));
 		return byteswap(data);
 	}
 
@@ -7784,21 +7790,21 @@ public:
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(get_type<u64>(), m_ir->CreatePtrAdd(m_thread, stack0.value));
-			const auto link = m_ir->CreateLoad(get_type<u64>(), m_ir->CreatePtrAdd(m_thread, stack1.value));
+			const auto _ret = m_ir->CreateLoad(get_type<u64>(), _ptr(m_thread, stack0.value));
+			const auto link = m_ir->CreateLoad(get_type<u64>(), _ptr(m_thread, stack1.value));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(addr.value, m_ir->CreateTrunc(link, get_type<u32>())), next, fail, m_md_likely);
 			m_ir->SetInsertPoint(next);
-			const auto cmp2 = m_ir->CreateLoad(get_type<u32>(), m_ir->CreatePtrAdd(m_lsptr, addr.value));
+			const auto cmp2 = m_ir->CreateLoad(get_type<u32>(), _ptr(m_lsptr, addr.value));
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(cmp2, m_ir->CreateTrunc(_ret, get_type<u32>())), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
-			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreatePtrAdd(m_thread, stack0.value));
+			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), _ptr(m_thread, stack0.value));
 			const auto type = m_finfo->chunk->getFunctionType();
-			const auto fval = m_ir->CreatePtrAdd(get_segment_base(), m_ir->CreateLShr(_ret, 32));
+			const auto fval = _ptr(get_segment_base(), m_ir->CreateLShr(_ret, 32));
 			tail_chunk({type, fval}, m_ir->CreateTrunc(m_ir->CreateLShr(link, 32), get_type<u32>()));
 			m_ir->SetInsertPoint(fail);
 		}
@@ -8481,8 +8487,8 @@ public:
 			const auto rel_ptr = m_ir->CreateSub(m_ir->CreatePtrToInt(pfunc->chunk, get_type<u64>()), m_ir->CreatePtrToInt(get_segment_base(), get_type<u64>()));
 			const auto ptr_plus_op = m_ir->CreateOr(m_ir->CreateShl(rel_ptr, 32), m_ir->getInt64(m_next_op));
 			const auto base_plus_pc = m_ir->CreateOr(m_ir->CreateShl(m_ir->CreateZExt(m_base_pc, get_type<u64>()), 32), m_ir->getInt64(m_pos + 4));
-			m_ir->CreateStore(ptr_plus_op, m_ir->CreatePtrAdd(m_thread, stack0.value));
-			m_ir->CreateStore(base_plus_pc, m_ir->CreatePtrAdd(m_thread, stack1.value));
+			m_ir->CreateStore(ptr_plus_op, _ptr(m_thread, stack0.value));
+			m_ir->CreateStore(base_plus_pc, _ptr(m_thread, stack1.value));
 		}
 	}
 
