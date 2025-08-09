@@ -8050,8 +8050,8 @@ public:
 		if (op.d && tfound != m_targets.end() && tfound->second.size() == 1 && tfound->second[0] == spu_branch_target(m_pos, 1))
 		{
 			// Interrupts-disable pattern
-			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled));
-			return;
+			// m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled));
+			// return;
 		}
 
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)

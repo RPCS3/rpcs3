@@ -230,14 +230,14 @@ DECLARE(spu_runtime::tr_all) = []
 	raw += 4;
 
 	// Update block_hash (set zero): mov [r13 + spu_thread::m_block_hash], 0
-	*raw++ = 0x49;
-	*raw++ = 0xc7;
-	*raw++ = 0x45;
-	*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
-	*raw++ = 0x00;
-	*raw++ = 0x00;
-	*raw++ = 0x00;
-	*raw++ = 0x00;
+	// *raw++ = 0x49;
+	// *raw++ = 0xc7;
+	// *raw++ = 0x45;
+	// *raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+	// *raw++ = 0x00;
+	// *raw++ = 0x00;
+	// *raw++ = 0x00;
+	// *raw++ = 0x00;
 
 	// jmp [rdx + rax * 8]
 	*raw++ = 0xff;
@@ -3095,7 +3095,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				if (type == spu_itype::BI && target == pos + 4 && op.d)
 				{
 					// Disable interrupts idiom
-					break;
+					//break;
 				}
 
 				m_targets[pos].push_back(target);
@@ -7771,10 +7771,10 @@ struct spu_fast : public spu_recompiler_base
 		raw += 8;
 
 		// Update block_hash: mov [r13 + spu_thread::m_block_hash], rax
-		*raw++ = 0x49;
-		*raw++ = 0x89;
-		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+		// *raw++ = 0x49;
+		// *raw++ = 0x89;
+		// *raw++ = 0x45;
+		// *raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
 
 		// Load PC: mov eax, [r13 + spu_thread::pc]
 		*raw++ = 0x41;
