@@ -1601,7 +1601,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-		_module->setTargetTriple(jit_compiler::triple2());
+		_module->setTargetTriple(Triple(jit_compiler::triple2()));
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -2876,7 +2876,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-		_module->setTargetTriple(jit_compiler::triple2());
+		_module->setTargetTriple(Triple(jit_compiler::triple2()));
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
