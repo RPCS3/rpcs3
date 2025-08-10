@@ -75,7 +75,9 @@ namespace vk
 
 		// State cache
 		mutable std::array<VkDescriptorSet, 2> m_bound_descriptor_sets {{ VK_NULL_HANDLE }};
-		mutable VkPipeline m_bound_pipeline = VK_NULL_HANDLE;
+		mutable std::array<VkPipeline, 2> m_bound_pipelines{{ VK_NULL_HANDLE }};
+
+		void clear_state_cache();
 
 	public:
 		enum access_type_hint
