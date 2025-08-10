@@ -72,12 +72,15 @@ namespace vk
 
 	void command_buffer::reset()
 	{
-		// Nuke the state cache
-		m_bound_pipeline = VK_NULL_HANDLE;
-		m_bound_descriptor_sets[0] = VK_NULL_HANDLE;
-
 		// Do the driver reset
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+	}
+
+	void command_buffer::clear_state_cache()
+	{
+		m_bound_pipelines[0] = VK_NULL_HANDLE;
+		m_bound_pipelines[1] = VK_NULL_HANDLE;
+		m_bound_descriptor_sets[0] = VK_NULL_HANDLE;
 	}
 
 	void command_buffer::begin()
@@ -104,6 +107,8 @@ namespace vk
 		begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
 		is_open = true;
+
+		clear_state_cache();
 	}
 
 	void command_buffer::end()
@@ -142,12 +147,14 @@ namespace vk
 
 	void command_buffer::bind_pipeline(VkPipeline pipeline, VkPipelineBindPoint bind_point) const
 	{
-		if (m_bound_pipeline == pipeline)
+		ensure(is_open && bind_point <= VK_PIPELINE_BIND_POINT_COMPUTE);
+		auto& cached = m_bound_pipelines[static_cast<int>(bind_point)];
+		if (cached == pipeline)
 		{
 			return;
 		}
 
-		m_bound_pipeline = pipeline;
+		cached = pipeline;
 		vkCmdBindPipeline(commands, bind_point, pipeline);
 	}
 
@@ -176,7 +183,7 @@ namespace vk
 		VkPipelineLayout pipe_layout) const
 	{
 		const u32 num_sets = ::size32(sets);
-		ensure(num_sets <= 2);
+		ensure(is_open && num_sets <= 2);
 
 		if (!memcmp(sets.data(), m_bound_descriptor_sets.data(), sets.size_bytes()))
 		{
