@@ -3320,6 +3320,17 @@ void main_window::CreateConnects()
 		ResizeIcons(idx);
 	});
 
+	connect(m_game_list_frame, &game_list_frame::RequestSaveStateManager, this, [this](const game_info& gameinfo)
+	{
+		savestate_manager_dialog* manager = new savestate_manager_dialog(m_gui_settings, std::vector<game_info>{gameinfo});
+		connect(this, &main_window::RequestDialogRepaint, manager, &savestate_manager_dialog::HandleRepaintUiRequest);
+		connect(manager, &savestate_manager_dialog::RequestBoot, this, [this, gameinfo](const std::string& path)
+		{
+			Boot(path, gameinfo->info.serial, false, false, cfg_mode::custom, "");
+		});
+		manager->show();
+	});
+
 	connect(m_list_mode_act_group, &QActionGroup::triggered, this, [this](QAction* act)
 	{
 		const bool is_list_act = act == ui->setlistModeListAct;
