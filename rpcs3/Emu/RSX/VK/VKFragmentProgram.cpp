@@ -339,9 +339,9 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	if (m_shader_props.require_fog_read)
 	{
 		OS <<
-			"const float fog_param0 = fs_contexts[fs_context_offset].fog_param0;\n"
-			"const float fog_param1 = fs_contexts[fs_context_offset].fog_param1;\n"
-			"const uint fog_mode = fs_contexts[fs_context_offset].fog_mode;\n\n";
+			"#define fog_param0 fs_contexts[fs_context_offset].fog_param0\n"
+			"#define fog_param1 fs_contexts[fs_context_offset].fog_param1\n"
+			"#define fog_mode fs_contexts[fs_context_offset].fog_mode\n\n";
 	}
 
 	if (m_shader_props.require_wpos)
