@@ -166,6 +166,25 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
+	// Declare push constants first to fix preprocessor references
+	OS <<
+		"layout(push_constant) uniform push_constants_block\n"
+		"{\n"
+		"	uint draw_parameters_offset;\n"
+		"};\n\n";
+
+	const vk::glsl::program_input push_constants
+	{
+		.domain = glsl::glsl_fragment_program,
+		.type = vk::glsl::input_type_push_constant,
+		.bound_data = vk::glsl::push_constant_ref{.offset = 0, .size = 4 },
+		.set = vk::glsl::binding_set_index_vertex,
+		.location = umax,
+		.name = "fs_push_constants_block"
+	};
+	inputs.push_back(push_constants);
+
+	// Fixed inputs from shader decompilation process
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (!PT.type.starts_with("sampler"))
@@ -291,23 +310,6 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	in.type = vk::glsl::input_type_storage_buffer;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
-
-	OS <<
-		"layout(push_constant) uniform push_constants_block\n"
-		"{\n"
-		"	uint draw_parameters_offset;\n"
-		"};\n\n";
-
-	const vk::glsl::program_input push_constants
-	{
-		.domain = glsl::glsl_fragment_program,
-		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{.offset = 0, .size = 4 },
-		.set = vk::glsl::binding_set_index_vertex,
-		.location = umax,
-		.name = "fs_push_constants_block"
-	};
-	inputs.push_back(push_constants);
 }
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
