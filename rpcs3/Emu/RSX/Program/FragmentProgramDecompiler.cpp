@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#pragma optimize("", off)
 #include "FragmentProgramDecompiler.h"
 #include "ProgramStateCache.h"
 
