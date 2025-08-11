@@ -63,6 +63,7 @@ namespace vk
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
 		properties.require_lit_emulation = true;
+		properties.require_clip_functions = true;
 
 		RSXVertexProgram null_prog;
 		std::string shader_str;
@@ -87,6 +88,13 @@ namespace vk
 		comp.insertHeader(builder);
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
+
+		builder <<
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
 
 		// Insert vp stream input
 		builder << "\n"
@@ -169,6 +177,13 @@ namespace vk
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
 
+		builder <<
+		"#define fog_param0 fs_contexts[fs_context_offset].fog_param0\n"
+		"#define fog_param1 fs_contexts[fs_context_offset].fog_param1\n"
+		"#define fog_mode fs_contexts[fs_context_offset].fog_mode\n"
+		"#define wpos_scale fs_contexts[fs_context_offset].wpos_scale\n"
+		"#define wpos_bias fs_contexts[fs_context_offset].wpos_bias\n\n";
+
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
 			builder << "#define ALPHA_TEST_GEQUAL\n";
@@ -244,7 +259,8 @@ namespace vk
 				"#define SAMPLER1D(index) sampler1D_array[index]\n"
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
 				"#define SAMPLER3D(index) sampler3D_array[index]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+				"#define SAMPLERCUBE(index) samplerCube_array[index]\n"
+				"#define texture_base_index fs_texture_base_index\n\n";
 		}
 
 		builder <<
