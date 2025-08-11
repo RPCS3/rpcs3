@@ -34,7 +34,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"{\n"
 		"	mat4 scale_offset_mat;\n"
 		"	ivec4 user_clip_enabled[2];\n"
-		"	vec4 user_clip_factor[2];\n"
+		"	vec4 user_clip_factors[2];\n"
 		"	uint transform_branch_bits;\n"
 		"	float point_size;\n"
 		"	float z_near;\n"
@@ -46,7 +46,9 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint  vertex_base_index;\n"
 		"	uint  vertex_index_offset;\n"
 		"	uvec4 input_attributes_blob[16 / 2];\n"
-		"};\n\n";
+		"};\n\n"
+
+		"#define user_clip_factor(idx) user_clip_factors[idx >> 2][idx & 3]\n\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
