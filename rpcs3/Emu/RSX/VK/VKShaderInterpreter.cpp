@@ -432,7 +432,7 @@ namespace vk
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			m_current_interpreter->bind_uniform_array(texture_ptr, 16, set, binding);
+			m_current_interpreter->bind_uniform_array({ texture_ptr, 16 }, set, binding);
 		}
 	}
 
