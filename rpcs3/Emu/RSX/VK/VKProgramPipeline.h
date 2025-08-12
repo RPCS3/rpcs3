@@ -113,13 +113,8 @@ namespace vk
 			VkShaderModule get_handle() const;
 		};
 
-		struct descriptor_array_ref_t
-		{
-			u32 first = 0;
-			u32 count = 0;
-		};
-
-		using descriptor_slot_t = std::variant<VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView, descriptor_array_ref_t>;
+		using descriptor_image_array_t = rsx::simple_array<VkDescriptorImageInfo>;
+		using descriptor_slot_t = std::variant<VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView, descriptor_image_array_t>;
 
 		struct descriptor_table_t
 		{
@@ -139,8 +134,6 @@ namespace vk
 			std::vector<descriptor_slot_t> m_descriptor_slots;
 			std::vector<bool> m_descriptors_dirty;
 			bool m_any_descriptors_dirty = false;
-
-			rsx::simple_array< VkDescriptorImageInfo> m_scratch_images_array;
 
 			void init(VkDevice dev);
 			void destroy();
@@ -212,7 +205,7 @@ namespace vk
 			void bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkBufferView &buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
 
-			void bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, int count, u32 set_id, u32 binding_point);
+			void bind_uniform_array(const std::span<const VkDescriptorImageInfo>& image_descriptors,u32 set_id, u32 binding_point);
 
 			inline VkPipelineLayout layout() const { return m_pipeline_layout; }
 			inline VkPipeline value() const { return m_pipeline; }

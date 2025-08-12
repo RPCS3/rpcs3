@@ -8,6 +8,13 @@
 
 namespace rsx
 {
+	template <typename C, typename T>
+	concept span_like =
+		requires(C& c) {
+			{ c.data() } -> std::convertible_to<const T*>;
+			{ c.size() } -> std::integral;
+	};
+
 	template <typename Ty>
 		requires std::is_trivially_destructible_v<Ty>
 	struct simple_array
@@ -80,6 +87,18 @@ namespace rsx
 		simple_array(simple_array&& other) noexcept
 		{
 			swap(other);
+		}
+
+		template <typename Container>
+			requires span_like<Container, Ty>
+		simple_array(const Container& container)
+		{
+			resize(container.size());
+
+			if (_size)
+			{
+				std::memcpy(_data, container.data(), size_bytes());
+			}
 		}
 
 		simple_array& operator=(const simple_array& other)
