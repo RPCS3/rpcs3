@@ -164,6 +164,21 @@ namespace vk
 			return &m_image_info_pool.back();
 		}
 
+		FORCE_INLINE VkDescriptorImageInfo* store(const rsx::simple_array<VkDescriptorImageInfo>& image_infos)
+		{
+			const auto offset = m_image_info_pool.size();
+			m_image_info_pool += image_infos;
+			return &m_image_info_pool[offset];
+		}
+
+		FORCE_INLINE bool storage_cache_pressure() const
+		{
+			return
+				m_image_info_pool.size() >= max_cache_size ||
+				m_buffer_info_pool.size() >= max_cache_size ||
+				m_buffer_view_pool.size() >= max_cache_size;
+		}
+
 		// Temporary storage accessors
 		const rsx::simple_array<WriteDescriptorSetT> peek() const { return m_pending_writes; }
 		u64 cache_id() const { return m_storage_cache_id; }

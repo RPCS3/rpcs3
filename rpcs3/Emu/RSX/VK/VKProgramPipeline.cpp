@@ -38,6 +38,12 @@ namespace vk
 			return !!ptr && *ptr == b;
 		}
 
+		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfo>& b)
+		{
+			const auto ptr = std::get_if<descriptor_image_array_t>(&a);
+			return !!ptr && ptr->size() == b.size() && !std::memcmp(ptr->data(), b.data(), b.size_bytes());
+		}
+
 		VkDescriptorType to_descriptor_type(program_input_type type)
 		{
 			switch (type)
@@ -337,25 +343,14 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_view);
 		}
 
-		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, int count, u32 set_id, u32 binding_point)
+		void program::bind_uniform_array(const std::span<const VkDescriptorImageInfo>& image_descriptors, u32 set_id, u32 binding_point)
 		{
-			// Non-caching write
-			auto& set = m_sets[set_id];
-			auto& arr = set.m_scratch_images_array;
-
-			descriptor_array_ref_t data
+			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptors)
 			{
-				.first = arr.size(),
-				.count = static_cast<u32>(count)
-			};
-
-			arr.reserve(arr.size() + static_cast<u32>(count));
-			for (int i = 0; i < count; ++i)
-			{
-				arr.push_back(image_descriptors[i]);
+				return;
 			}
 
-			set.notify_descriptor_slot_updated(binding_point, data);
+			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptors);
 		}
 
 		void program::create_pipeline_layout()
@@ -474,10 +469,16 @@ namespace vk
 
 		void descriptor_table_t::create_descriptor_template()
 		{
-			auto push_descriptor_slot = [this](unsigned idx)
+			auto push_descriptor_slot = [this](unsigned idx, VkWriteDescriptorSet& writer)
 			{
 				const auto& slot = m_descriptor_slots[idx];
 				const VkDescriptorType type = m_descriptor_types[idx];
+
+				writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writer.dstBinding = idx;
+				writer.descriptorCount = 1;
+				writer.descriptorType = type;
+
 				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
 				{
 					m_descriptor_set.push(*ptr, type, idx);
@@ -496,11 +497,10 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<descriptor_array_ref_t>(&slot))
+				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
-					ensure(type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); // Only type supported at the moment
-					ensure((ptr->first + ptr->count) <= m_scratch_images_array.size());
-					m_descriptor_set.push(m_scratch_images_array.data() + ptr->first, ptr->count, type, idx);
+					writer.descriptorCount = ptr->size();
+					m_descriptor_set.push(ptr->data(), ptr->size(), type, idx);
 					return;
 				}
 
@@ -508,23 +508,20 @@ namespace vk
 			};
 
 			m_descriptor_template_typemask = 0u;
+			m_descriptor_template.clear();
 
 			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
 			{
 				m_descriptor_template_typemask |= (1u << static_cast<u32>(m_descriptor_types[i]));
-				if (m_descriptors_dirty[i])
-				{
-					// Push
-					push_descriptor_slot(i);
-					m_descriptors_dirty[i] = false;
-					continue;
-				}
+				VkWriteDescriptorSet _template{};
 
-				push_descriptor_slot(i);
+				push_descriptor_slot(i, _template);
+				m_descriptors_dirty[i] = false;
+				m_descriptor_template.push_back(_template);
 			}
 
-			m_descriptor_template = m_descriptor_set.peek();
-			m_descriptor_template_cache_id = m_descriptor_set.cache_id();
+			m_descriptor_template_cache_id = umax;
+			ensure(m_descriptor_template.size() == m_descriptor_slots.size());
 		}
 
 		void descriptor_table_t::update_descriptor_template()
@@ -551,12 +548,10 @@ namespace vk
 					return;
 				}
 
-				// FIXME: This sucks even if only used by interpreter. Do better.
-				if (auto ptr = std::get_if<descriptor_array_ref_t>(&slot))
+				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
-					ensure(type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-					ensure((ptr->first + ptr->count) <= m_scratch_images_array.size());
-					m_descriptor_set.push(m_scratch_images_array.data() + ptr->first, ptr->count, type, idx);
+					ensure(m_descriptor_template[idx].descriptorCount == ptr->size());
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
 					return;
 				}
 
@@ -611,7 +606,6 @@ namespace vk
 
 			m_descriptor_set.on_bind();
 			m_any_descriptors_dirty = false;
-			m_scratch_images_array.clear();
 
 			return m_descriptor_set.value();
 		}
