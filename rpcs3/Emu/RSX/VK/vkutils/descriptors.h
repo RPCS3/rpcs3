@@ -183,12 +183,18 @@ namespace vk
 		const rsx::simple_array<WriteDescriptorSetT> peek() const { return m_pending_writes; }
 		u64 cache_id() const { return m_storage_cache_id; }
 
+		// Basic lockable for storage coherence
+		void lock() { m_storage_lock.lock(); }
+		void unlock() { m_storage_lock.unlock(); }
+
 	private:
 		VkDescriptorSet m_handle = VK_NULL_HANDLE;
 		u64 m_update_after_bind_mask = 0;
 		u64 m_push_type_mask = 0;
-		u64 m_storage_cache_id = 0;
 		bool m_in_use = false;
+
+		shared_mutex m_storage_lock;
+		atomic_t<u64> m_storage_cache_id = 0;
 
 		rsx::simple_array<VkBufferView> m_buffer_view_pool;
 		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;

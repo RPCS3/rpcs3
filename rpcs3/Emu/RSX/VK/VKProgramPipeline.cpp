@@ -558,18 +558,22 @@ namespace vk
 				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
 			};
 
-			const bool cache_is_valid = m_descriptor_template_cache_id == m_descriptor_set.cache_id();
-			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
 			{
-				m_descriptor_template[i].dstSet = m_descriptor_set.value();
-				if (!m_descriptors_dirty[i] && cache_is_valid)
-				{
-					continue;
-				}
+				std::lock_guard lock(m_descriptor_set);
+				const bool cache_is_valid = m_descriptor_template_cache_id == m_descriptor_set.cache_id();
 
-				// Update
-				update_descriptor_slot(i);
-				m_descriptors_dirty[i] = false;
+				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+				{
+					m_descriptor_template[i].dstSet = m_descriptor_set.value();
+					if (!m_descriptors_dirty[i] && cache_is_valid)
+					{
+						continue;
+					}
+
+					// Update
+					update_descriptor_slot(i);
+					m_descriptors_dirty[i] = false;
+				}
 			}
 
 			// Push
