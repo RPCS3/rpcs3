@@ -25,6 +25,12 @@ fi
 
 export LINKER_FLAG="-fuse-ld=${LINKER}"
 
+if command -v gamemoded >/dev/null 2>&1; then
+	export GAMEMODE_AVAILABLE=ON
+else
+	export GAMEMODE_AVAILABLE=OFF
+fi
+
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
@@ -38,6 +44,7 @@ cmake ..                                               \
     -DUSE_SYSTEM_FFMPEG=OFF                            \
     -DUSE_SYSTEM_OPENCV=ON                             \
     -DUSE_DISCORD_RPC=ON                               \
+    -DGAMEMODE_AVAILABLE="$GAMEMODE_AVAILABLE"	       \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \
