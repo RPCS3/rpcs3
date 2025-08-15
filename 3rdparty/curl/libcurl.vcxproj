@@ -79,6 +79,7 @@
     <ClCompile Include="curl\lib\cshutdn.c" />
     <ClCompile Include="curl\lib\curlx\base64.c" />
     <ClCompile Include="curl\lib\curlx\dynbuf.c" />
+    <ClCompile Include="curl\lib\curlx\inet_ntop.c" />
     <ClCompile Include="curl\lib\curlx\inet_pton.c" />
     <ClCompile Include="curl\lib\curlx\multibyte.c" />
     <ClCompile Include="curl\lib\curlx\nonblock.c" />
@@ -86,6 +87,7 @@
     <ClCompile Include="curl\lib\curlx\timediff.c" />
     <ClCompile Include="curl\lib\curlx\timeval.c" />
     <ClCompile Include="curl\lib\curlx\version_win32.c" />
+    <ClCompile Include="curl\lib\curlx\wait.c" />
     <ClCompile Include="curl\lib\curlx\warnless.c" />
     <ClCompile Include="curl\lib\curlx\winapi.c" />
     <ClCompile Include="curl\lib\curl_addrinfo.c" />
@@ -144,7 +146,6 @@
     <ClCompile Include="curl\lib\idn.c" />
     <ClCompile Include="curl\lib\if2ip.c" />
     <ClCompile Include="curl\lib\imap.c" />
-    <ClCompile Include="curl\lib\inet_ntop.c" />
     <ClCompile Include="curl\lib\krb5.c" />
     <ClCompile Include="curl\lib\ldap.c" />
     <ClCompile Include="curl\lib\llist.c" />
@@ -225,7 +226,6 @@
     <ClCompile Include="curl\lib\vssh\libssh.c" />
     <ClCompile Include="curl\lib\vssh\libssh2.c" />
     <ClCompile Include="curl\lib\vssh\wolfssh.c" />
-    <ClCompile Include="curl\lib\vtls\bearssl.c" />
     <ClCompile Include="curl\lib\vtls\gtls.c" />
     <ClCompile Include="curl\lib\vtls\keylog.c" />
     <ClCompile Include="curl\lib\vtls\mbedtls.c" />
@@ -233,7 +233,6 @@
     <ClCompile Include="curl\lib\vtls\openssl.c" />
     <ClCompile Include="curl\lib\vtls\schannel.c" />
     <ClCompile Include="curl\lib\vtls\schannel_verify.c" />
-    <ClCompile Include="curl\lib\vtls\sectransp.c" />
     <ClCompile Include="curl\lib\vtls\vtls.c" />
     <ClCompile Include="curl\lib\vtls\wolfssl.c" />
     <ClCompile Include="curl\lib\ws.c" />
@@ -271,8 +270,10 @@
     <ClInclude Include="curl\lib\cookie.h" />
     <ClInclude Include="curl\lib\cshutdn.h" />
     <ClInclude Include="curl\lib\curlx\base64.h" />
+    <ClInclude Include="curl\lib\curlx\binmode.h" />
     <ClInclude Include="curl\lib\curlx\curlx.h" />
     <ClInclude Include="curl\lib\curlx\dynbuf.h" />
+    <ClInclude Include="curl\lib\curlx\inet_ntop.h" />
     <ClInclude Include="curl\lib\curlx\inet_pton.h" />
     <ClInclude Include="curl\lib\curlx\multibyte.h" />
     <ClInclude Include="curl\lib\curlx\nonblock.h" />
@@ -280,6 +281,7 @@
     <ClInclude Include="curl\lib\curlx\timediff.h" />
     <ClInclude Include="curl\lib\curlx\timeval.h" />
     <ClInclude Include="curl\lib\curlx\version_win32.h" />
+    <ClInclude Include="curl\lib\curlx\wait.h" />
     <ClInclude Include="curl\lib\curlx\warnless.h" />
     <ClInclude Include="curl\lib\curlx\winapi.h" />
     <ClInclude Include="curl\lib\curl_addrinfo.h" />
@@ -345,7 +347,6 @@
     <ClInclude Include="curl\lib\idn.h" />
     <ClInclude Include="curl\lib\if2ip.h" />
     <ClInclude Include="curl\lib\imap.h" />
-    <ClInclude Include="curl\lib\inet_ntop.h" />
     <ClInclude Include="curl\lib\llist.h" />
     <ClInclude Include="curl\lib\macos.h" />
     <ClInclude Include="curl\lib\memdebug.h" />
@@ -415,14 +416,12 @@
     <ClInclude Include="curl\lib\vquic\vquic.h" />
     <ClInclude Include="curl\lib\vssh\curl_path.h" />
     <ClInclude Include="curl\lib\vssh\ssh.h" />
-    <ClInclude Include="curl\lib\vtls\bearssl.h" />
     <ClInclude Include="curl\lib\vtls\gtls.h" />
     <ClInclude Include="curl\lib\vtls\keylog.h" />
     <ClInclude Include="curl\lib\vtls\mbedtls.h" />
     <ClInclude Include="curl\lib\vtls\mbedtls_threadlock.h" />
     <ClInclude Include="curl\lib\vtls\openssl.h" />
     <ClInclude Include="curl\lib\vtls\schannel.h" />
-    <ClInclude Include="curl\lib\vtls\sectransp.h" />
     <ClInclude Include="curl\lib\vtls\vtls.h" />
     <ClInclude Include="curl\lib\vtls\wolfssl.h" />
     <ClInclude Include="curl\lib\ws.h" />

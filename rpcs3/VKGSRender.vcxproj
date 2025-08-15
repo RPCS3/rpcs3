@@ -155,7 +155,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)\3rdparty\glslang\glslang\Public;..\3rdparty\glslang\glslang;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)\3rdparty\glslang\glslang\Public;..\3rdparty\glslang\glslang;%(AdditionalIncludeDirectories);$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include</AdditionalIncludeDirectories>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
