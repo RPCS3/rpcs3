@@ -145,9 +145,6 @@ namespace gl
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
-		builder <<
-			"#define is_user_clip_enabled(idx) (user_clip_enabled[idx >> 2][idx & 3] > 0)\n\n";
-
 		// Insert vp stream input
 		builder << "\n"
 			"layout(std140, binding = " << GL_INTERPRETER_VERTEX_BLOCK << ") readonly restrict buffer VertexInstructionBlock\n"
