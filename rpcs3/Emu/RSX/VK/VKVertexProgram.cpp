@@ -135,8 +135,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.type = vk::glsl::input_type_storage_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.vertex_buffers_location + 2,
-		.name = "DrawParametersBuffer",
-		.ex_stages = VK_SHADER_STAGE_FRAGMENT_BIT // Shared with fragment shader
+		.name = "DrawParametersBuffer"
 	};
 	inputs.push_back(layouts_input);
 
@@ -312,6 +311,8 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 		}
 	}
+
+	OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
 }
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -411,6 +412,13 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	OS << "	vs_main();\n\n";
+
+	// FS payload
+	OS <<
+		"draw_params_payload.x = get_draw_params().fs_constants_offset;\n"
+		"draw_params_payload.y = get_draw_params().fs_context_offset;\n"
+		"draw_params_payload.z = get_draw_params().fs_texture_base_index;\n"
+		"draw_params_payload.w = get_draw_params().fs_stipple_pattern_offset;\n\n";
 
 	for (auto &i : reg_table)
 	{
