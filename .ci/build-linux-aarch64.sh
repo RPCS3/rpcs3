@@ -38,7 +38,7 @@ cmake ..                                               \
     -DUSE_SYSTEM_FFMPEG=OFF                            \
     -DUSE_SYSTEM_OPENCV=ON                             \
     -DUSE_DISCORD_RPC=ON                               \
-    -DUSE_GAMEMODE=ON	       \
+    -DUSE_GAMEMODE=ON	                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
     -DSTATIC_LINK_LLVM=ON                              \
