@@ -178,11 +178,11 @@ namespace vk
 		comp.insertConstants(builder);
 
 		builder <<
-		"#define fog_param0 fs_contexts[fs_context_offset].fog_param0\n"
-		"#define fog_param1 fs_contexts[fs_context_offset].fog_param1\n"
-		"#define fog_mode fs_contexts[fs_context_offset].fog_mode\n"
-		"#define wpos_scale fs_contexts[fs_context_offset].wpos_scale\n"
-		"#define wpos_bias fs_contexts[fs_context_offset].wpos_bias\n\n";
+		"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+		"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+		"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n"
+		"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+		"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
@@ -260,7 +260,7 @@ namespace vk
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
 				"#define SAMPLER3D(index) sampler3D_array[index]\n"
 				"#define SAMPLERCUBE(index) samplerCube_array[index]\n"
-				"#define texture_base_index fs_texture_base_index\n\n";
+				"#define texture_base_index _fs_texture_base_index\n\n";
 		}
 
 		builder <<
@@ -272,6 +272,10 @@ namespace vk
 		"	uint reserved2;\n"
 		"	uvec4 fp_instructions[];\n"
 		"};\n\n";
+
+		builder <<
+			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();

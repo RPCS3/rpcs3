@@ -251,11 +251,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		"	draw_parameters_t draw_parameters[];\n"
 		"};\n\n"
 
-		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
-		"#define fs_constants_offset get_draw_params().fs_constants_offset\n"
-		"#define fs_context_offset get_draw_params().fs_context_offset\n"
-		"#define fs_texture_base_index get_draw_params().fs_texture_base_index\n"
-		"#define fs_stipple_pattern_array_offset get_draw_params().fs_stipple_pattern_offset\n\n";
+		"draw_parameters_t get_draw_params() { return draw_parameters[draw_parameters_offset]; }\n\n"
+
+		"#define _fs_constants_offset get_draw_params().fs_constants_offset\n"
+		"#define _fs_context_offset get_draw_params().fs_context_offset\n"
+		"#define _fs_texture_base_index get_draw_params().fs_texture_base_index\n"
+		"#define _fs_stipple_pattern_array_offset get_draw_params().fs_stipple_pattern_offset\n\n";
 
 	if (!properties.constant_offsets.empty())
 	{
@@ -263,7 +264,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		OS << "{\n";
 		OS << "	vec4 fc[];\n";
 		OS << "};\n";
-		OS << "#define _fetch_constant(x) fc[x + fs_constants_offset]\n\n";
+		OS << "#define _fetch_constant(x) fc[x + _fs_constants_offset]\n\n";
 	}
 
 	OS <<
@@ -341,19 +342,20 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	if (m_shader_props.require_fog_read)
 	{
 		OS <<
-			"#define fog_param0 fs_contexts[fs_context_offset].fog_param0\n"
-			"#define fog_param1 fs_contexts[fs_context_offset].fog_param1\n"
-			"#define fog_mode fs_contexts[fs_context_offset].fog_mode\n\n";
+			"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+			"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+			"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n\n";
 	}
 
 	if (m_shader_props.require_wpos)
 	{
 		OS <<
-			"#define wpos_scale fs_contexts[fs_context_offset].wpos_scale\n"
-			"#define wpos_bias fs_contexts[fs_context_offset].wpos_bias\n\n";
+			"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+			"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
 	}
 
-	OS << "#define texture_base_index fs_texture_base_index\n\n";
+	OS <<
+		"#define texture_base_index _fs_texture_base_index\n\n";
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -448,9 +450,10 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
+	// FIXME: Workaround
 	OS <<
-		"	const uint rop_control = fs_contexts[fs_context_offset].rop_control;\n"
-		"	const float alpha_ref = fs_contexts[fs_context_offset].alpha_ref;\n\n";
+		"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+		"	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
 	::glsl::insert_rop_init(OS);
 

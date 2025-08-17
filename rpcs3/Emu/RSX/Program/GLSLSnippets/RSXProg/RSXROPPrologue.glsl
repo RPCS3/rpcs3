@@ -9,7 +9,7 @@ R"(
 		const uint bit_offset = (address & 31u);
 	#ifdef VULKAN
 		// In vulkan we have a unified array with a dynamic offset
-		const uint word_index = _get_bits(address, 7, 3) + fs_stipple_pattern_array_offset;
+		const uint word_index = _get_bits(address, 7, 3) + _fs_stipple_pattern_array_offset;
 	#else
 		const uint word_index = _get_bits(address, 7, 3);
 	#endif
