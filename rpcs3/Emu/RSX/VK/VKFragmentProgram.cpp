@@ -166,24 +166,6 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	// Declare push constants first to fix preprocessor references
-	OS <<
-		"layout(push_constant) uniform push_constants_block\n"
-		"{\n"
-		"	uint draw_parameters_offset;\n"
-		"};\n\n";
-
-	const vk::glsl::program_input push_constants
-	{
-		.domain = glsl::glsl_fragment_program,
-		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{.offset = 0, .size = 4 },
-		.set = vk::glsl::binding_set_index_vertex,
-		.location = umax,
-		.name = "fs_push_constants_block"
-	};
-	inputs.push_back(push_constants);
-
 	// Fixed inputs from shader decompilation process
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
@@ -244,19 +226,14 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	// Always provided by vertex program, not part of local bindings
+	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.
 	OS <<
-		"layout(std430, set=0, binding=2) readonly buffer DrawParametersBuffer\n"
-		"{\n"
-		"	draw_parameters_t draw_parameters[];\n"
-		"};\n\n"
+		"layout(location=" << vk::get_varying_register_location("usr") << ") in flat uvec4 draw_params_payload;\n\n"
 
-		"draw_parameters_t get_draw_params() { return draw_parameters[draw_parameters_offset]; }\n\n"
-
-		"#define _fs_constants_offset get_draw_params().fs_constants_offset\n"
-		"#define _fs_context_offset get_draw_params().fs_context_offset\n"
-		"#define _fs_texture_base_index get_draw_params().fs_texture_base_index\n"
-		"#define _fs_stipple_pattern_array_offset get_draw_params().fs_stipple_pattern_offset\n\n";
+		"#define _fs_constants_offset draw_params_payload.x\n"
+		"#define _fs_context_offset draw_params_payload.y\n"
+		"#define _fs_texture_base_index draw_params_payload.z\n"
+		"#define _fs_stipple_pattern_array_offset draw_params_payload.w\n\n";
 
 	if (!properties.constant_offsets.empty())
 	{

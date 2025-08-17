@@ -2228,7 +2228,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	vkCmdPushConstants(
 		*m_current_command_buffer,
 		m_program->layout(),
-		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		VK_SHADER_STAGE_VERTEX_BIT,
 		0,
 		4,
 		&push_val);
