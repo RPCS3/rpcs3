@@ -545,6 +545,11 @@ void main()
 		}
 	}
 
+#ifdef VULKAN
+	// Inject FS custom payload
+	write_fs_payload();
+#endif
+
 	// Unconditionally update COLOR0 and SPECULAR0
 	write_output(1, 0);
 	write_output(2, 1);

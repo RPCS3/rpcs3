@@ -227,9 +227,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	}
 
 	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.
-	OS <<
-		"layout(location=" << vk::get_varying_register_location("usr") << ") in flat uvec4 draw_params_payload;\n\n"
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
+	{
+		OS <<
+			"layout(location=" << vk::get_varying_register_location("usr") << ") in flat uvec4 draw_params_payload;\n\n";
+	}
 
+	OS <<
 		"#define _fs_constants_offset draw_params_payload.x\n"
 		"#define _fs_context_offset draw_params_payload.y\n"
 		"#define _fs_texture_base_index draw_params_payload.z\n"
