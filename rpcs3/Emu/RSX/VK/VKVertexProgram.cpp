@@ -312,7 +312,22 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 		}
 	}
 
-	OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
+	{
+		OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
+	}
+}
+
+void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
+{
+	OS <<
+		"void write_fs_payload()\n"
+		"{\n"
+		"	draw_params_payload.x = get_draw_params().fs_constants_offset;\n"
+		"	draw_params_payload.y = get_draw_params().fs_context_offset;\n"
+		"	draw_params_payload.z = get_draw_params().fs_texture_base_index;\n"
+		"	draw_params_payload.w = get_draw_params().fs_stipple_pattern_offset;\n"
+		"}\n\n";
 }
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -329,6 +344,8 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
+
+	insertFSExport(OS);
 
 	// Declare global registers with optional initialization
 	std::string registers;
@@ -414,11 +431,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "	vs_main();\n\n";
 
 	// FS payload
-	OS <<
-		"draw_params_payload.x = get_draw_params().fs_constants_offset;\n"
-		"draw_params_payload.y = get_draw_params().fs_context_offset;\n"
-		"draw_params_payload.z = get_draw_params().fs_texture_base_index;\n"
-		"draw_params_payload.w = get_draw_params().fs_stipple_pattern_offset;\n\n";
+	OS << "write_fs_payload();\n\n";
 
 	for (auto &i : reg_table)
 	{

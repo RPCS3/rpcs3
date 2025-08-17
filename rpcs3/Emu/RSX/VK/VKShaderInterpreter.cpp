@@ -89,6 +89,9 @@ namespace vk
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
+		// Outputs
+		builder << "layout(location=16) out flat uvec4 draw_params_payload;\n\n";
+
 		builder <<
 		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
 		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
@@ -125,6 +128,7 @@ namespace vk
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
 		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_vulkan);
+		comp.insertFSExport(builder);
 
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
@@ -163,6 +167,8 @@ namespace vk
 		std::string shader_str;
 		RSXFragmentProgram frag;
 
+		frag.ctrl |= RSX_SHADER_CONTROL_INTERPRETER_MODEL;
+
 		auto vk_prog = std::make_unique<VKFragmentProgram>();
 		m_fragment_instruction_start = init(vk_prog.get(), compiler_options);
 		m_fragment_textures_start = m_fragment_instruction_start + 1;
@@ -176,6 +182,8 @@ namespace vk
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
+
+		builder << "layout(location=16) in flat uvec4 draw_params_payload;\n\n";
 
 		builder <<
 		"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
