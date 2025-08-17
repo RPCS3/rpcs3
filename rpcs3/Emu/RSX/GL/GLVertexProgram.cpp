@@ -48,7 +48,8 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uvec4 input_attributes_blob[16 / 2];\n"
 		"};\n\n"
 
-		"#define user_clip_factor(idx) user_clip_factors[idx >> 2][idx & 3]\n\n";
+		"#define user_clip_factor(idx) user_clip_factors[idx >> 2][idx & 3]\n"
+		"#define is_user_clip_enabled(idx) (user_clip_enabled[idx >> 2][idx & 3] > 0)\n\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
@@ -132,13 +133,13 @@ static const vertex_reg_info reg_table[] =
 	// Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	// Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor(0)", false, "is_user_clip_enabled(0)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor(1)", false, "is_user_clip_enabled(1)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor(2)", false, "is_user_clip_enabled(2)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor(3)", false, "is_user_clip_enabled(3)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor(4)", false, "is_user_clip_enabled(4)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor(5)", false, "is_user_clip_enabled(5)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
 	{ "tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
 	{ "tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
@@ -289,11 +290,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	// RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
 	// This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
 	// However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
-	   
+
 	// NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
 	// It is therefore critical that this step is done post-transform and the result re-scaled by w
 	// SEE Naruto: UNS
-	   
+
 	// NOTE: On GPUs, poor fp32 precision means dividing z by w, then multiplying by w again gives slightly incorrect results
 	// This equation is simplified algebraically to an addition and subtraction which gives more accurate results (Fixes flickering skybox in Dark Souls 2)
 	// OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
