@@ -62,7 +62,7 @@ option(HAS_MEMORY_BREAKPOINTS "Add support for memory breakpoints to the interpr
 option(USE_LTO "Use LTO for building" ON)
 option(BUILD_RPCS3_TESTS "Build RPCS3 unit tests." OFF)
 option(RUN_RPCS3_TESTS "Run RPCS3 unit tests. Requires BUILD_RPCS3_TESTS" OFF)
-option(GAMEMODE_CHOICE "Choose whether to enable GameMode features or not." ON)
+option(USE_GAMEMODE "Choose whether to enable GameMode features or not." ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
 
@@ -168,7 +168,7 @@ endif()
 ## Look for Gamemode if its installed on Linux
 if(LINUX)
     ## User chooses whether to Enable GameMode features or not
-    if(GAMEMODE_CHOICE STREQUAL "ON")
+    if(USE_GAMEMODE)
          add_compile_definitions(GAMEMODE_AVAILABLE)
     endif()
 endif()
