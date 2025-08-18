@@ -82,8 +82,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS <<
 		// Variable redirection
 		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
-		"#define vs_context_offset get_draw_params().vs_context_offset\n"
-		"#define xform_constants_offset get_draw_params().xform_constants_offset\n\n"
+		"#define vs_context_offset get_draw_params().vs_context_offset\n\n"
 		// Helpers
 		"#define get_vertex_context() vertex_contexts[vs_context_offset]\n"
 		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
@@ -410,6 +409,8 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
 	}
+
+	OS << "\nuint xform_constants_offset = get_draw_params().xform_constants_offset;\n\n";
 }
 
 void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
