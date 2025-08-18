@@ -465,7 +465,7 @@ namespace vk
 			return;
 		}
 
-		std::lock_guard lock(m_storage_lock);
+		//std::lock_guard lock(m_storage_lock);
 
 		const auto num_writes = ::size32(m_pending_writes);
 		const auto num_copies = ::size32(m_pending_copies);

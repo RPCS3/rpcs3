@@ -559,7 +559,7 @@ namespace vk
 			};
 
 			{
-				std::lock_guard lock(m_descriptor_set);
+				//std::lock_guard lock(m_descriptor_set);
 				const bool cache_is_valid = m_descriptor_template_cache_id == m_descriptor_set.cache_id();
 
 				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
