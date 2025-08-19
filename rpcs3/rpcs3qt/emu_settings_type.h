@@ -184,6 +184,7 @@ enum class emu_settings_type
 	ShowPressureIntensityToggleHint,
 	ShowAnalogLimiterToggleHint,
 	ShowMouseAndKeyboardToggleHint,
+	ShowCaptureHints,
 	WindowTitleFormat,
 	PauseDuringHomeMenu,
 	EnableGamemode,
@@ -386,10 +387,11 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::ShowPressureIntensityToggleHint, { "Miscellaneous", "Show pressure intensity toggle hint"}},
 	{ emu_settings_type::ShowAnalogLimiterToggleHint,     { "Miscellaneous", "Show analog limiter toggle hint"}},
 	{ emu_settings_type::ShowMouseAndKeyboardToggleHint,  { "Miscellaneous", "Show mouse and keyboard toggle hint"}},
+	{ emu_settings_type::ShowCaptureHints,                { "Miscellaneous", "Show capture hints" }},
 	{ emu_settings_type::SilenceAllLogs,                  { "Miscellaneous", "Silence All Logs" }},
 	{ emu_settings_type::WindowTitleFormat,               { "Miscellaneous", "Window Title Format" }},
 	{ emu_settings_type::PauseDuringHomeMenu,             { "Miscellaneous", "Pause Emulation During Home Menu" }},
-	{ emu_settings_type::EnableGamemode,             	  { "Miscellaneous", "Enable GameMode" }},
+	{ emu_settings_type::EnableGamemode,                  { "Miscellaneous", "Enable GameMode" }},
 
 	// Networking
 	{ emu_settings_type::InternetStatus, { "Net", "Internet enabled"}},

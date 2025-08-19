@@ -434,9 +434,12 @@ void gs_frame::toggle_recording()
 			QApplication::beep();
 		}
 
-		ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
-		const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
-		rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+		if (g_cfg.misc.show_capture_hints)
+		{
+			ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
+			const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
+			rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+		}
 	}
 	else
 	{
@@ -508,7 +511,11 @@ void gs_frame::toggle_recording()
 
 		if (m_video_encoder->has_error)
 		{
-			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			if (g_cfg.misc.show_capture_hints)
+			{
+				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			}
+
 			m_video_encoder->stop();
 			return;
 		}
@@ -516,7 +523,12 @@ void gs_frame::toggle_recording()
 		if (!video_provider.set_video_sink(m_video_encoder, recording_mode::rpcs3))
 		{
 			gui_log.warning("The video provider could not set the video sink. A sink with higher priority must have been set.");
-			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+
+			if (g_cfg.misc.show_capture_hints)
+			{
+				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			}
+
 			m_video_encoder->stop();
 			return;
 		}
@@ -525,7 +537,10 @@ void gs_frame::toggle_recording()
 
 		g_recording_mode = recording_mode::rpcs3;
 
-		rsx::overlays::queue_message(tr("Recording started").toStdString());
+		if (g_cfg.misc.show_capture_hints)
+		{
+			rsx::overlays::queue_message(tr("Recording started").toStdString());
+		}
 	}
 }
 
@@ -1043,9 +1058,12 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 				}
 			});
 
-			ensure(filename.starts_with(fs::get_config_dir()));
-			const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /
-			rsx::overlays::queue_message(tr("Screenshot saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+			if (g_cfg.misc.show_capture_hints)
+			{
+				ensure(filename.starts_with(fs::get_config_dir()));
+				const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /
+				rsx::overlays::queue_message(tr("Screenshot saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+			}
 
 			return;
 		},
