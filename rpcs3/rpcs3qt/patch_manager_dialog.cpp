@@ -95,6 +95,12 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	ui->configurable_double_spin_box->setEnabled(false);
 	ui->configurable_double_spin_box->setVisible(false);
 
+	// Allow to double click the patches in order to de/select them
+	ui->patch_tree->set_checkable_by_double_click_callback([](QTreeWidgetItem* item, int column)
+	{
+		return item && !item->isDisabled() && (item->flags() & Qt::ItemIsUserCheckable) && static_cast<node_level>(item->data(column, node_level_role).toInt()) == node_level::patch_level;
+	});
+
 	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
