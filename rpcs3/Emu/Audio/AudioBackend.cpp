@@ -65,7 +65,7 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 	{
 		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
 		{
-			crnt_vol = std::min(param.current_volume + (sample_idx + 1) / param.ch_cnt * vol_incr, param.target_volume);
+			crnt_vol = std::min(crnt_vol + vol_incr, param.target_volume);
 
 			for (u32 i = 0; i < param.ch_cnt; i++)
 			{
@@ -77,7 +77,7 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 	{
 		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
 		{
-			crnt_vol = std::max(param.current_volume + (sample_idx + 1) / param.ch_cnt * vol_incr, param.target_volume);
+			crnt_vol = std::max(crnt_vol + vol_incr, param.target_volume);
 
 			for (u32 i = 0; i < param.ch_cnt; i++)
 			{
