@@ -28,13 +28,15 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
 		cfg::_bool ppu_llvm_greedy_mode{ this, "PPU LLVM Greedy Mode", false, false };
 		cfg::_bool llvm_precompilation{ this, "LLVM Precompilation", true };
-		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
+		cfg::_enum<thread_scheduler_mode> thread_scheduler{ this, "Thread Scheduler Mode", thread_scheduler_mode::os };
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
-		cfg::uint<0, 100> spu_reservation_busy_waiting_percentage{ this, "SPU Reservation Busy Waiting Percentage 1", 100, true };
-		cfg::_bool spu_reservation_busy_waiting_enabled{ this, "SPU Reservation Busy Waiting Enabled", false, true };
 		cfg::uint<0, 100> spu_getllar_busy_waiting_percentage{ this, "SPU GETLLAR Busy Waiting Percentage", 100, true };
 		cfg::_bool spu_getllar_spin_optimization_disabled{ this, "Disable SPU GETLLAR Spin Optimization", false, true };
+		cfg::uint<0, 100> spu_reservation_busy_waiting_percentage{ this, "SPU Reservation Busy Waiting Percentage 1", 100, true };
+		cfg::_bool spu_reservation_busy_waiting_enabled{ this, "SPU Reservation Busy Waiting Enabled", false, true };
+		cfg::_bool spu_reservation_busy_waiting_boost_enabled{this, "Enable SPU Reservation Busy Waiting Boost", false, true};
+		cfg::_bool ppu_postponed_notification_disabled{ this, "Disable PPU Postponed Notification", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_bool mfc_debug{ this, "MFC Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks

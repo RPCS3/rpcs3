@@ -1601,6 +1601,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enableSpuEventsBusyLoop, emu_settings_type::EnabledSPUEventsBusyLoop);
 	SubscribeTooltip(ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 
+	m_emu_settings->EnhanceCheckBox(ui->enableSPUReservationBusyWaitingBoost, emu_settings_type::EnableSPUReservationBusyWaitingBoost);
+	SubscribeTooltip(ui->enableSPUReservationBusyWaitingBoost, tooltips.settings.enable_spu_reservation_busy_waiting_boost);
+
+	m_emu_settings->EnhanceCheckBox(ui->disablePPUPostponedNotification, emu_settings_type::DisablePPUPostponedNotification);
+	SubscribeTooltip(ui->disablePPUPostponedNotification, tooltips.settings.disable_ppu_postponed_notification);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);

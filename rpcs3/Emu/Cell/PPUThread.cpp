@@ -3644,7 +3644,17 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 				case 0:
 				{
-					// Nothing to do
+					// Force a notification sending (skipping the notification postponing)
+					//
+					// NOTE: It can improve performance (e.g. in Resistance FOM) and/or fix graphical issues
+					//       (e.g. red flashing missing textures in Call of Duty 3)
+					//
+					if (g_cfg.core.ppu_postponed_notification_disabled)
+					{
+						//ppu.state += cpu_flag::wait; // if this line is enabled, sporadic flashing missing textures are displayed in games affected by that issue
+						vm::reservation_notifier_notify(addr);
+					}
+
 					break;
 				}
 				case 1:

@@ -2437,6 +2437,20 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="enableSPUReservationBusyWaitingBoost">
+                 <property name="text">
+                  <string>Enable SPU Reservation Busy Waiting Boost</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="disablePPUPostponedNotification">
+                 <property name="text">
+                  <string>Disable PPU Postponed Notification</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>

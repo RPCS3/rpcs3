@@ -53,6 +53,8 @@ enum class emu_settings_type
 	SPUProfiler,
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
+	EnableSPUReservationBusyWaitingBoost,
+	DisablePPUPostponedNotification,
 
 	// Graphics
 	Renderer,
@@ -254,6 +256,8 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::SPUProfiler,              { "Core", "SPU Profiler"}},
 	{ emu_settings_type::DisableSpinOptimization,  { "Core", "Disable SPU GETLLAR Spin Optimization"}},
 	{ emu_settings_type::EnabledSPUEventsBusyLoop, { "Core", "SPU Reservation Busy Waiting Enabled"}},
+	{ emu_settings_type::EnableSPUReservationBusyWaitingBoost, { "Core", "Enable SPU Reservation Busy Waiting Boost"}},
+	{ emu_settings_type::DisablePPUPostponedNotification,      { "Core", "Disable PPU Postponed Notification"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},

@@ -4652,6 +4652,7 @@ u32 evaluate_spin_optimization(std::span<u8> stats, u64 evaluate_time, const cfg
 		add_count = 0;
 	}
 
+//	if (inclined_for_responsiveness && std::count(old_stats.data(), old_stats.data() + 3, 0) >= 2)
 	if (stats.size() == 16 && inclined_for_responsiveness && std::count(old_stats.data(), old_stats.data() + 3, 0) >= 2)
 	{
 		add_count = 0;
@@ -6056,6 +6057,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		const usz seed = (utils::get_tsc() >> 8) % 100;
 
+//#ifdef __linux__
+//		const bool reservation_busy_waiting = false;
+//#else
+		const bool reservation_busy_waiting = g_cfg.core.spu_reservation_busy_waiting_boost_enabled ?
+			(seed + ((raddr == spurs_addr) ? 50u : 0u)) < g_cfg.core.spu_reservation_busy_waiting_percentage :
+			0;
+//#endif
+
 		usz cache_line_waiter_index = umax;
 
 		auto check_cache_line_waiter = [&]()
@@ -6241,7 +6250,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 					}
 				}
 
-				if (true)
+				// Don't busy-wait with TSX - memory is sensitive
+				if (g_use_rtm || !reservation_busy_waiting)
 				{
 					if (u32 work_count = g_spu_work_count)
 					{
@@ -6367,6 +6377,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 						vm::reservation_notifier_notify(_raddr);
 					}
 #endif
+				}
+				else
+				{
+					busy_wait();
 				}
 
 				continue;
