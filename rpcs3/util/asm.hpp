@@ -413,11 +413,6 @@ namespace utils
 			return static_cast<T>(value * u64{numerator} / u64{denominator});
 		}
 
-		if constexpr (sizeof(T) <= sizeof(u128) / 2)
-		{
-			return static_cast<T>(u128_from_mul(value, numerator) / u64{denominator});
-		}
-
 		return static_cast<T>(value / denominator * numerator + (value % denominator) * numerator / denominator);
 	}
 
