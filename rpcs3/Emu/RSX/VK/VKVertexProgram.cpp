@@ -88,7 +88,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
 
 	OS <<
-		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer VertexContextBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly restrict buffer VertexContextBuffer\n"
 		"{\n"
 		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n";
@@ -106,7 +106,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	if (m_device_props.emulate_conditional_rendering)
 	{
 		OS <<
-			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
+			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly restrict buffer EXT_Conditional_Rendering\n"
 			"{\n"
 			"	uint cr_predicate_value;\n"
 			"};\n\n";
@@ -123,7 +123,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	}
 
 	OS <<
-		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly buffer DrawParametersBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly restrict buffer DrawParametersBuffer\n"
 		"{\n"
 		"	draw_parameters_t draw_parameters[];\n"
 		"};\n\n";
@@ -197,7 +197,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
@@ -212,7 +212,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 				else
 				{
 					// 1. Bind indirection lookup buffer
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_lut_buffer_location << ") readonly buffer InstancingData\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_lut_buffer_location << ") readonly restrict buffer InstancingData\n";
 					OS << "{\n";
 					OS << "	int constants_addressing_lookup[];\n";
 					OS << "};\n\n";
@@ -223,7 +223,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 					inputs.push_back(in);
 
 					// 2. Bind actual constants buffer
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 instanced_constants_array[];\n";
 					OS << "};\n\n";
