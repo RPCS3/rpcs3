@@ -19,10 +19,16 @@ namespace vk
 
 		const auto& memory_map = g_render_device->get_memory_mapping();
 
-		if (flags & heap_pool_low_latency)
+		if ((flags & heap_pool_low_latency) && g_cfg.video.vk.use_rebar_upload_heap)
 		{
 			// Prefer uploading to BAR if low latency is desired.
 			m_prefer_writethrough = memory_map.device_bar_total_bytes > (2048ull * 0x100000);
+
+			// Log it
+			if (m_prefer_writethrough && name)
+			{
+				rsx_log.notice("Data heap %s will attempt to use Re-BAR memory", name);
+			}
 		}
 
 		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
