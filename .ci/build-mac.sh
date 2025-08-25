@@ -16,8 +16,10 @@ arch -x86_64 /usr/local/bin/brew install --quiet "llvm@$LLVM_COMPILER_VER" glew 
 arch -x86_64 /usr/local/bin/brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.3.0 release
+export HOMEBREW_DEVELOPER=1 # Prevents blocking of local formulae
 wget https://raw.githubusercontent.com/Homebrew/homebrew-core/7255441cbcafabaa8950f67c7ec55ff499dbb2d3/Formula/m/molten-vk.rb
 arch -x86_64 /usr/local/bin/brew install -f --overwrite --formula --quiet ./molten-vk.rb
+export HOMEBREW_DEVELOPER=0
 export CXX=clang++
 export CC=clang
 
