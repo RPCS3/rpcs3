@@ -63,6 +63,7 @@ namespace vk
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
 		properties.require_lit_emulation = true;
+		properties.require_clip_functions = true;
 
 		RSXVertexProgram null_prog;
 		std::string shader_str;
@@ -87,6 +88,16 @@ namespace vk
 		comp.insertHeader(builder);
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
+
+		// Outputs
+		builder << "layout(location=16) out flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
 
 		// Insert vp stream input
 		builder << "\n"
@@ -117,6 +128,7 @@ namespace vk
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
 		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_vulkan);
+		comp.insertFSExport(builder);
 
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
@@ -155,6 +167,8 @@ namespace vk
 		std::string shader_str;
 		RSXFragmentProgram frag;
 
+		frag.ctrl |= RSX_SHADER_CONTROL_INTERPRETER_MODEL;
+
 		auto vk_prog = std::make_unique<VKFragmentProgram>();
 		m_fragment_instruction_start = init(vk_prog.get(), compiler_options);
 		m_fragment_textures_start = m_fragment_instruction_start + 1;
@@ -168,6 +182,15 @@ namespace vk
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
+
+		builder << "layout(location=16) in flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+		"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+		"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n"
+		"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+		"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
@@ -244,7 +267,8 @@ namespace vk
 				"#define SAMPLER1D(index) sampler1D_array[index]\n"
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
 				"#define SAMPLER3D(index) sampler3D_array[index]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+				"#define SAMPLERCUBE(index) samplerCube_array[index]\n"
+				"#define texture_base_index _fs_texture_base_index\n\n";
 		}
 
 		builder <<
@@ -256,6 +280,10 @@ namespace vk
 		"	uint reserved2;\n"
 		"	uvec4 fp_instructions[];\n"
 		"};\n\n";
+
+		builder <<
+			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
@@ -416,7 +444,7 @@ namespace vk
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			m_current_interpreter->bind_uniform_array(texture_ptr, 16, set, binding);
+			m_current_interpreter->bind_uniform_array({ texture_ptr, 16 }, set, binding);
 		}
 	}
 

@@ -1,5 +1,7 @@
 #include "stdafx.h"
+
 #include "FragmentProgramDecompiler.h"
+#include "ProgramStateCache.h"
 
 #include <algorithm>
 
@@ -232,23 +234,26 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	const std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	const std::string type = getFloatTypeName(4);
+	const u32 constant_id = m_size + (4 * sizeof(u32));
+	u32 index = umax;
 
-	if (m_parr.HasParam(PF_PARAM_UNIFORM, type, name))
+	if (auto found = m_constant_offsets.find(constant_id);
+		found != m_constant_offsets.end())
 	{
-		return name;
+		index = found->second;
+	}
+	else
+	{
+		index =::size32(properties.constant_offsets);
+		properties.constant_offsets.push_back(constant_id);
+		m_constant_offsets[constant_id] = index;
 	}
 
-	auto data = reinterpret_cast<be_t<u32>*>(reinterpret_cast<uptr>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
+	// Skip next instruction, its just a literal
 	m_offset = 2 * 4 * sizeof(u32);
-	u32 x = GetData(data[0]);
-	u32 y = GetData(data[1]);
-	u32 z = GetData(data[2]);
-	u32 w = GetData(data[3]);
 
-	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, std::bit_cast<f32>(x), std::bit_cast<f32>(y), std::bit_cast<f32>(z), std::bit_cast<f32>(w));
-	return m_parr.AddParam(PF_PARAM_UNIFORM, type, name, var);
+	// Return the next offset index
+	return "_fetch_constant(" + std::to_string(index) + ")";
 }
 
 std::string FragmentProgramDecompiler::AddTex()
@@ -847,6 +852,12 @@ std::string FragmentProgramDecompiler::BuildCode()
 		}
 	}
 
+	if (!properties.constant_offsets.empty())
+	{
+		const std::string var_name = fmt::format("fc[%llu]", properties.constant_offsets.size());
+		m_parr.AddParam(PF_PARAM_CONST, getFloatTypeName(4), var_name);
+	}
+
 	std::stringstream OS;
 
 	if (!m_is_valid_ucode)
@@ -1292,6 +1303,7 @@ std::string FragmentProgramDecompiler::Decompile()
 	m_loop_count = 0;
 	m_code_level = 1;
 	m_is_valid_ucode = true;
+	m_constant_offsets.clear();
 
 	enum
 	{
