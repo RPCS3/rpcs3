@@ -35,40 +35,41 @@ void gl_gs_frame::reset()
 
 draw_context_t gl_gs_frame::make_context()
 {
-	auto context = new GLContext();
-	context->handle = new QOpenGLContext();
+	GLContext* context = nullptr;
 
-	if (m_primary_context)
+	// Workaround for the Qt warning: "Attempting to create QWindow-based QOffscreenSurface outside the gui thread. Expect failures."
+	// This is also necessery in debug builds.
+	Emu.BlockingCallFromMainThread([&]()
 	{
-		QOffscreenSurface* surface = nullptr;
+		context = new GLContext();
+		context->handle = new QOpenGLContext();
 
-		// Workaround for the Qt warning: "Attempting to create QWindow-based QOffscreenSurface outside the gui thread. Expect failures."
-		Emu.BlockingCallFromMainThread([&]()
+		if (m_primary_context)
 		{
-			surface = new QOffscreenSurface();
+			QOffscreenSurface* surface = new QOffscreenSurface();
 			surface->setFormat(m_format);
 			surface->create();
-		});
 
-		// Share resources with the first created context
-		context->handle->setShareContext(m_primary_context->handle);
-		context->surface = surface;
-		context->owner = true;
-	}
-	else
-	{
-		// This is the first created context, all others will share resources with this one
-		m_primary_context = context;
-		context->surface = this;
-		context->owner = false;
-	}
+			// Share resources with the first created context
+			context->handle->setShareContext(m_primary_context->handle);
+			context->surface = surface;
+			context->owner = true;
+		}
+		else
+		{
+			// This is the first created context, all others will share resources with this one
+			m_primary_context = context;
+			context->surface = this;
+			context->owner = false;
+		}
 
-	context->handle->setFormat(m_format);
+		context->handle->setFormat(m_format);
 
-	if (!context->handle->create())
-	{
-		fmt::throw_exception("Failed to create OpenGL context");
-	}
+		if (!context->handle->create())
+		{
+			fmt::throw_exception("Failed to create OpenGL context");
+		}
+	});
 
 	return context;
 }
@@ -80,10 +81,16 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 		fmt::throw_exception("Null context handle passed to set_current");
 	}
 
-	const auto context = static_cast<GLContext*>(ctx);
-
-	if (!context->handle->makeCurrent(context->surface))
+	// Calling this on the main thread is necessery in debug builds.
+	Emu.BlockingCallFromMainThread([&]()
 	{
+		const auto context = static_cast<GLContext*>(ctx);
+
+		if (context->handle->makeCurrent(context->surface))
+		{
+			return;
+		}
+
 		if (!context->owner)
 		{
 			create();
@@ -100,14 +107,18 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 		{
 			fmt::throw_exception("Could not bind OpenGL context");
 		}
-	}
+	});
 }
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
 	const auto gl_ctx = static_cast<GLContext*>(ctx);
 
-	gl_ctx->handle->doneCurrent();
+	// Calling this on the main thread is necessery in debug builds.
+	Emu.BlockingCallFromMainThread([&]()
+	{
+		gl_ctx->handle->doneCurrent();
+	});
 
 #ifdef _MSC_VER
 	//AMD driver crashes when executing wglDeleteContext
