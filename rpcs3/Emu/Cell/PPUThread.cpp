@@ -3618,6 +3618,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		if (new_data != old_data && (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end))
 		{
 			u32 notify = ppu.res_notify;
+			u32 notify_avail = notify;
 
 			if (notify)
 			{
@@ -3634,6 +3635,8 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				ppu.res_notify = 0;
 			}
 
+			// If "addr" != pending notification's address (when "notify" != 0), or a pending notification (when "notify" != 0)
+			// has not been sent ("notify" was set to "0"), or there is no pending notification at all (when "notify" == 0)
 			if ((addr ^ notify) & -128)
 			{
 				// Try to postpone notification to when PPU is asleep or join notifications on the same address
@@ -3644,24 +3647,32 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 				case 0:
 				{
-					// Nothing to do
+					// Instead of skipping the notification, postpone the notification; giving a chance the PPU
+					// will hopefully join notifications on the same address
+					//
+					// NOTE: It improves performance a lot in some games (e.g. in Resistance FOM) and/or fixes
+					//       graphical issues (e.g. red flashing missing textures in Call of Duty 3)
+					//
+					ppu.res_notify = addr;
+					ppu.res_notify_time = index;
 					break;
 				}
 				case 1:
 				{
-					if (!notify)
+					if (!notify_avail) // If there was no pending notification, postpone the notification
 					{
 						ppu.res_notify = addr;
 						ppu.res_notify_time = index;
 						break;
 					}
 
-					// Notify both
+					// Otherwise (a pending notification has been managed; no matter if it has been sent or not),
+					// notify the notification
 					[[fallthrough]];
 				}
 				default:
 				{
-					if (!notify)
+					if (!notify) // If there was no pending notification or a pending notification has not been sent
 					{
 						ppu.state += cpu_flag::wait;
 					}
