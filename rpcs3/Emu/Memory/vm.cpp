@@ -112,12 +112,9 @@ namespace vm
 		{
 			const auto [ok, rtime] = try_reservation_update(addr);
 
-			if (ok || (old & -128) < (rtime & -128))
+			if (ok)
 			{
-				if (ok)
-				{
-					reservation_notifier_notify(addr);
-				}
+				reservation_notifier_notify(addr, rtime);
 
 				if (cpu && !had_wait && cpu->test_stopped())
 				{
@@ -126,7 +123,7 @@ namespace vm
 
 				return;
 			}
-
+	
 			old = rtime;
 		}
 	}
@@ -597,6 +594,38 @@ namespace vm
 		{
 			cpu->state -= cpu_flag::memory + cpu_flag::wait;
 		}
+	}
+
+	atomic_t<u32>* reservation_notifier_notify(u32 raddr, u64 rtime, bool postpone)
+	{
+		const auto waiter = reservation_notifier(raddr, rtime);
+
+		if (waiter->load().wait_flag % 2 == 1)
+		{
+			if (!waiter->fetch_op([](reservation_waiter_t& value)
+			{
+				if (value.wait_flag % 2 == 1)
+				{
+					// Notify and make it even
+					value.wait_flag++;
+					return true;
+				}
+
+				return false;
+			}).second)
+			{
+				return nullptr;
+			}
+
+			if (postpone)
+			{
+				return utils::bless<atomic_t<u32>>(&waiter->raw().wait_flag);
+			}
+
+			utils::bless<atomic_t<u32>>(&waiter->raw().wait_flag)->notify_all();
+		}
+
+		return nullptr;
 	}
 
 	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res)
