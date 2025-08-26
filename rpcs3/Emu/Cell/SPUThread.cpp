@@ -461,7 +461,7 @@ waitpkg_func static void __tpause(u32 cycles, u32 cstate)
 
 namespace vm
 {
-	std::array<atomic_t<reservation_waiter_t>, 1024> g_resrv_waiters_count{};
+	std::array<atomic_t<reservation_waiter_t>, 2048> g_resrv_waiters_count{};
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
@@ -3979,7 +3979,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			if (raddr != spurs_addr || pc != 0x11e4)
 			{
-				vm::reservation_notifier_notify(addr);
+				vm::reservation_notifier_notify(addr, rtime);
 			}
 			else
 			{
@@ -3990,7 +3990,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 				if (switched_from_running_to_idle)
 				{
-					vm::reservation_notifier_notify(addr);
+					vm::reservation_notifier_notify(addr, rtime);
 				}
 			}
 
@@ -4199,7 +4199,10 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier_notify(addr);
+
+	// TODO: Implement properly (notifying previous two times)
+	vm::reservation_notifier_notify(addr, vm::reservation_acquire(addr) - 128);
+	vm::reservation_notifier_notify(addr, vm::reservation_acquire(addr) - 256);
 }
 
 bool spu_thread::do_mfc(bool can_escape, bool must_finish)
@@ -4964,9 +4967,9 @@ bool spu_thread::process_mfc_cmd()
 							g_unchanged++;
 
 							// Notify threads manually, memory data has likely changed and broke the reservation for others
-							if (vm::reservation_notifier_count(addr) && res == new_time)
+							if (vm::reservation_notifier_count(addr, new_time) && res == new_time)
 							{
-								vm::reservation_notifier_notify(addr);
+								vm::reservation_notifier_notify(addr, new_time);
 							}
 						}
 						else
@@ -4984,9 +4987,9 @@ bool spu_thread::process_mfc_cmd()
 				if (this_time == rtime)
 				{
 					// Notify threads manually, memory data has likely changed and broke the reservation for others
-					if (vm::reservation_notifier_count(addr) && res == this_time)
+					if (vm::reservation_notifier_count(addr, this_time) && res == this_time)
 					{
-						vm::reservation_notifier_notify(addr);
+						vm::reservation_notifier_notify(addr, this_time);
 					}
 				}
 
@@ -6151,9 +6154,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 				else if (!cmp_rdata(rdata, *resrv_mem))
 				{
 					// Notify threads manually, memory data has likely changed and broke the reservation for others
-					if (vm::reservation_notifier_count(raddr) && vm::reservation_acquire(raddr) == rtime)
+					if (vm::reservation_notifier_count(raddr, rtime) && vm::reservation_acquire(raddr) == rtime)
 					{
-						vm::reservation_notifier_notify(raddr);
+						vm::reservation_notifier_notify(raddr, rtime);
 					}
 
 					set_lr = true;
@@ -6272,7 +6275,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						{
 							if (check_cache_line_waiter())
 							{
-								utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{300'000});
+								utils::bless<atomic_t<u32>>(&wait_var->raw().wait_flag)->wait(1, atomic_wait_timeout{200'000});
 							}
 
 							vm::reservation_notifier_end_wait(*wait_var);
@@ -6330,7 +6333,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
 							// Notify threads manually, memory data has likely changed and broke the reservation for others
-							if (vm::reservation_notifier_count(raddr) >= 2 && vm::reservation_acquire(raddr) == _this->rtime)
+							if (vm::reservation_notifier_count(raddr, _this->rtime) >= 2 && vm::reservation_acquire(raddr) == _this->rtime)
 							{
 								s_tls_try_notify = true;
 							}
@@ -6362,9 +6365,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 						vm::reservation_notifier_end_wait(*wait_var);
 					}
 
-					if (s_tls_try_notify && vm::reservation_notifier_count(_raddr) && vm::reservation_acquire(_raddr) == rtime)
+					if (s_tls_try_notify && vm::reservation_notifier_count(_raddr, rtime) && vm::reservation_acquire(_raddr) == rtime)
 					{
-						vm::reservation_notifier_notify(_raddr);
+						vm::reservation_notifier_notify(_raddr, rtime);
 					}
 #endif
 				}
@@ -7273,6 +7276,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		u32 prev_resv = 0;
+		u64 prev_rtime = 0;
 
 		for (auto& thread : group->threads)
 		{
@@ -7285,13 +7289,14 @@ bool spu_thread::stop_and_signal(u32 code)
 
 					if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 					{
-						if (prev_resv && prev_resv != resv)
+						if (prev_resv && (prev_resv != resv || thread->rtime != prev_rtime))
 						{
 							// Batch reservation notifications if possible
-							vm::reservation_notifier_notify(prev_resv);
+							vm::reservation_notifier_notify(prev_resv, thread->rtime);
 						}
 
 						prev_resv = resv;
+						prev_rtime = thread->rtime;
 					}
 				}
 			}
@@ -7299,7 +7304,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		if (prev_resv)
 		{
-			vm::reservation_notifier_notify(prev_resv);
+			vm::reservation_notifier_notify(prev_resv, prev_rtime);
 		}
 
 		check_state();
