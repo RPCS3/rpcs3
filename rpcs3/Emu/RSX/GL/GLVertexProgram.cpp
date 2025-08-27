@@ -33,23 +33,21 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"layout(std140, binding = " << GL_VERTEX_PARAMS_BIND_SLOT << ") uniform VertexContextBuffer\n"
 		"{\n"
 		"	mat4 scale_offset_mat;\n"
-		"	ivec4 user_clip_enabled[2];\n"
-		"	vec4 user_clip_factors[2];\n"
+		"	uint user_clip_configuration_bits;\n"
 		"	uint transform_branch_bits;\n"
 		"	float point_size;\n"
 		"	float z_near;\n"
 		"	float z_far;\n"
-		"};\n\n"
+		"};\n"
+		"#define get_user_clip_config() user_clip_configuration_bits\n"
+		"\n\n"
 
 		"layout(std140, binding = " << GL_VERTEX_LAYOUT_BIND_SLOT << ") uniform VertexLayoutBuffer\n"
 		"{\n"
 		"	uint  vertex_base_index;\n"
 		"	uint  vertex_index_offset;\n"
 		"	uvec4 input_attributes_blob[16 / 2];\n"
-		"};\n\n"
-
-		"#define user_clip_factor(idx) user_clip_factors[idx >> 2][idx & 3]\n"
-		"#define is_user_clip_enabled(idx) (user_clip_enabled[idx >> 2][idx & 3] > 0)\n\n";
+		"};\n\n";
 }
 
 void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
@@ -176,6 +174,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.low_precision_tests = dev_caps.vendor_NVIDIA;
 	properties2.require_explicit_invariance = dev_caps.vendor_MESA || (dev_caps.vendor_NVIDIA && g_cfg.video.shader_precision != gpu_preset_level::low);
 	properties2.require_instanced_render = !!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
+	properties2.require_clip_plane_functions = true;
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
