@@ -177,11 +177,11 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_LIT_EMULATION");
 		}
 
-		if (props.require_clip_functions)
+		if (props.require_clip_plane_functions)
 		{
 			OS <<
 				"#define CLIP_PLANE_DISABLED 1\n"
-				"#define is_user_clip_enabled(idx) (_get_bits(get_user_clip_config(), idx * 2, 2) == CLIP_PLANE_DISABLED)\n"
+				"#define is_user_clip_enabled(idx) (_get_bits(get_user_clip_config(), idx * 2, 2) != CLIP_PLANE_DISABLED)\n"
 				"#define user_clip_factor(idx) float(_get_bits(get_user_clip_config(), idx * 2, 2) - 1)\n\n";
 		}
 
