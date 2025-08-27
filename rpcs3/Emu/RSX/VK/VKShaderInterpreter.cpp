@@ -63,7 +63,7 @@ namespace vk
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
 		properties.require_lit_emulation = true;
-		properties.require_clip_functions = true;
+		properties.require_clip_plane_functions = true;
 
 		RSXVertexProgram null_prog;
 		std::string shader_str;
