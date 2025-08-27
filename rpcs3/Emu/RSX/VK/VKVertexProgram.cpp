@@ -334,7 +334,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
-	properties2.require_clip_functions = true;
+	properties2.require_clip_plane_functions = true;
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
 	properties2.low_precision_tests = vk::is_NVIDIA(vk::get_driver_vendor());
