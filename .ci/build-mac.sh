@@ -6,14 +6,10 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-#/usr/sbin/softwareupdate --install-rosetta --agree-to-license
+brew install -f --overwrite --quiet pipenv
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/bin/brew update
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python || arch -x86_64 /usr/local/bin/brew link --overwrite python
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet nasm ninja p7zip ccache pipenv gnutls freetype #create-dmg
-arch -x86_64 /usr/local/bin/brew install -f --quiet ffmpeg@5
-arch -x86_64 /usr/local/bin/brew install --quiet "llvm@$LLVM_COMPILER_VER" glew cmake sdl3 vulkan-headers coreutils
-arch -x86_64 /usr/local/bin/brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet ccache ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.3.0 release
 export HOMEBREW_DEVELOPER=1 # Prevents blocking of local formulae
@@ -44,10 +40,10 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   # archived Qt 6.7.3 URL workaround
   sed -i '' "s/official_releases/archive/g" qt-downloader
   cd "/tmp/Qt"
-  arch -x86_64 "$BREW_X64_PATH/bin/pipenv" --python "$BREW_X64_PATH/bin/python3" run pip3 install py7zr requests semantic_version lxml
+  "/opt/homebrew/bin/pipenv" --python "/opt/homebrew/bin/python3" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
   # sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader" # Qt 6.9.2 workaround
-  arch -x86_64 "$BREW_X64_PATH/bin/pipenv"  --python "$BREW_X64_PATH/bin/python3" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats # -o "$QT_VER/clang_64"
+  "/opt/homebrew/bin/pipenv"  --python "/opt/homebrew/bin/python3" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats # -o "$QT_VER/clang_64"
 fi
 
 cd "$WORKDIR"
@@ -81,7 +77,7 @@ mkdir build && cd build || exit 1
 
 export MACOSX_DEPLOYMENT_TARGET=14.0
 
-"$BREW_X64_PATH/bin/cmake" .. \
+"/opt/homebrew/bin/cmake" .. \
     -DBUILD_RPCS3_TESTS=OFF \
     -DRUN_RPCS3_TESTS=OFF \
     -DUSE_SDL=ON \
@@ -109,6 +105,8 @@ export MACOSX_DEPLOYMENT_TARGET=14.0
     "$CMAKE_EXTRA_OPTS" \
     -DLLVM_TARGET_ARCH=X86_64 \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+    -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+    -DCMAKE_TOOLCHAIN_FILE=buildfiles/cmake/TCDarwinX86_64.cmake \
     -DCMAKE_IGNORE_PATH="$BREW_X64_PATH/lib" \
     -DCMAKE_IGNORE_PREFIX_PATH=/usr/local/opt \
     -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=140000" \
@@ -116,7 +114,7 @@ export MACOSX_DEPLOYMENT_TARGET=14.0
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
     -G Ninja
 
-"$BREW_X64_PATH/bin/ninja"; build_status=$?;
+"/opt/homebrew/bin/ninja"; build_status=$?;
 
 cd ..
 
