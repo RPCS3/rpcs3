@@ -1439,6 +1439,9 @@
     <ClInclude Include="gamemode_control.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_tree_widget.h">
+      <Filter>Gui\widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
