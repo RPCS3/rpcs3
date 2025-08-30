@@ -46,7 +46,6 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 	vbox->addWidget(m_dir_list);
 	vbox->addLayout(selected_config_layout);
 
-	m_dir_list->setStyleSheet("QListView::item:selected { background: palette(Highlight) }"); // Highlight current row
 	setLayout(vbox);
 
 	connect(m_dir_list->model(), &QAbstractItemModel::dataChanged, this, [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles)
