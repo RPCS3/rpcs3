@@ -46,12 +46,8 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 	vbox->addWidget(m_dir_list);
 	vbox->addLayout(selected_config_layout);
 
+	m_dir_list->setStyleSheet("QListView::item:selected { background: palette(Highlight) }"); // Highlight current row
 	setLayout(vbox);
-
-	// Disable focus at startup. It will be eventually enabled later by an explicit row click from the user
-	m_dir_list->setFocusPolicy(Qt::NoFocus);
-
-	update_selection();
 
 	connect(m_dir_list->model(), &QAbstractItemModel::dataChanged, this, [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles)
 	{
@@ -81,22 +77,16 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 
 	connect(m_dir_list, &QListWidget::itemDoubleClicked, this, [](QListWidgetItem* item)
 	{
-		item->setCheckState(Qt::CheckState::Checked); // It also enables and provides focus to current row
+		if (!item) return;
+		item->setCheckState(Qt::CheckState::Checked);
 	});
 
 	connect(m_dir_list, &QListWidget::currentRowChanged, this, [this, button_remove_dir](int row)
 	{
-		m_dir_list->setFocusPolicy(Qt::ClickFocus); // Enable focus on rows
-		m_dir_list->setFocus();                     // Provide focus to current row
 		button_remove_dir->setEnabled(row > 0);
 	});
 
-	connect(m_dir_list, &QListWidget::itemClicked, this, [this, button_remove_dir](QListWidgetItem* item)
-	{
-		m_dir_list->setFocusPolicy(Qt::ClickFocus); // Enable focus on rows
-		m_dir_list->setFocus();                     // Provide focus to current row
-		button_remove_dir->setEnabled(m_dir_list->item(0) != item);
-	});
+	update_selection(); // As last (just to make also use of the defined connections), update the widget
 }
 
 void vfs_dialog_path_widget::reset()
@@ -127,26 +117,14 @@ void vfs_dialog_path_widget::add_new_directory()
 {
 	QString dir = QFileDialog::getExistingDirectory(nullptr, tr("Choose a directory"), QCoreApplication::applicationDirPath(), QFileDialog::DontResolveSymlinks);
 
-	// The dialog box always enables the focus but it doesn't restore the previuos state (e.g. "NoFocus") on closure.
-	// Any focus eventually present on the current row before opening the dialog box is also not restored.
-	// The code takes care and properly manages these possible changes
-
 	if (dir.isEmpty())
-	{
-		// Just to get the focus (otherwise lost by the dialog box opened by the "getExistingDirectory()" method)
-		m_dir_list->currentRowChanged(m_dir_list->currentRow());
 		return;
-	}
 
 	if (!dir.endsWith("/"))
 		dir += '/';
 
-	if (QListWidgetItem* item = add_directory(dir); item)
-	{
-		// Set both the new current item and new current row.
-		// It also triggers the "currentRowChanged" signal, so the row will get also the focus
-		m_dir_list->setCurrentItem(item);
-	}
+	if (QListWidgetItem* item = add_directory(dir))
+		m_dir_list->setCurrentItem(item); // Set both the new current item and new current row
 
 	// Not really necessary an update here due to the added item is not also set as the new checked row.
 	// Keeping just in case of further changes in the current logic
@@ -160,7 +138,7 @@ void vfs_dialog_path_widget::remove_directory()
 		QListWidgetItem* item = m_dir_list->takeItem(row);
 		delete item;
 
-		m_dir_list->setCurrentItem(m_dir_list->item(m_dir_list->count() > row ? row : row - 1)); // set current row, if needed
+		m_dir_list->setCurrentRow(std::min(row, m_dir_list->count() - 1)); // Set current row, if needed
 		update_selection();
 	}
 }
@@ -184,14 +162,8 @@ void vfs_dialog_path_widget::update_selection()
 
 			if (is_selected)
 			{
-				if (m_dir_list->currentRow() == -1) // If no current row is set (e.g. at startup)
-				{
+				if (m_dir_list->currentRow() < 0) // If no current row is set (e.g. at startup)
 					m_dir_list->setCurrentRow(i); // Set both the new current item and new current row
-				}
-				else if (m_dir_list->currentRow() != i) // If current row != checked row, make sure to enable the row
-				{
-					m_dir_list->currentRowChanged(m_dir_list->currentRow());
-				}
 
 				found_path = true;
 			}
