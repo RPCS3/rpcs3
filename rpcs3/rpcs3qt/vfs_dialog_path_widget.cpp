@@ -12,21 +12,14 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 
 	const QStringList all_dirs = m_gui_settings->GetValue(m_list_location).toStringList();
 
-	QListWidgetItem* selected_item = nullptr;
-
 	for (const QString& dir : all_dirs)
 	{
-		QListWidgetItem* item = add_directory(dir);
-
-		if (dir == current_path)
-			selected_item = item;
+		add_directory(dir);
 	}
 
-	// We must show the currently selected config.
-	if (!selected_item)
-		selected_item = add_directory(current_path);
-
-	selected_item->setSelected(true);
+	// Add current path if missing; That should never happen if the list is managed only by the use of the GUI.
+	// Code made robust even in case the path was manually removed from the list stored in "CurrentSettings.ini" file
+	add_directory(current_path);
 
 	m_dir_list->setMinimumWidth(m_dir_list->sizeHintForColumn(0));
 
@@ -54,8 +47,6 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 	vbox->addLayout(selected_config_layout);
 
 	setLayout(vbox);
-
-	update_selection();
 
 	connect(m_dir_list->model(), &QAbstractItemModel::dataChanged, this, [this](const QModelIndex&, const QModelIndex&, const QList<int>& roles)
 	{
@@ -91,8 +82,10 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 
 	connect(m_dir_list, &QListWidget::currentRowChanged, this, [this, button_remove_dir](int row)
 	{
-		button_remove_dir->setEnabled(m_dir_list->item(row) && row > 0);
+		button_remove_dir->setEnabled(row > 0);
 	});
+
+	update_selection(); // As last (just to make also use of the defined connections), update the widget
 }
 
 void vfs_dialog_path_widget::reset()
@@ -129,7 +122,11 @@ void vfs_dialog_path_widget::add_new_directory()
 	if (!dir.endsWith("/"))
 		dir += '/';
 
-	m_dir_list->setCurrentItem(add_directory(dir));
+	if (QListWidgetItem* item = add_directory(dir))
+		m_dir_list->setCurrentItem(item); // Set both the new current item and new current row
+
+	// Not really necessary an update here due to the added item is not also set as the new checked row.
+	// Keeping just in case of further changes in the current logic
 	update_selection();
 }
 
@@ -140,6 +137,7 @@ void vfs_dialog_path_widget::remove_directory()
 		QListWidgetItem* item = m_dir_list->takeItem(row);
 		delete item;
 
+		m_dir_list->setCurrentRow(std::min(row, m_dir_list->count() - 1)); // Set current row, if needed
 		update_selection();
 	}
 }
@@ -163,18 +161,19 @@ void vfs_dialog_path_widget::update_selection()
 
 			if (is_selected)
 			{
-				m_dir_list->setCurrentItem(item);
+				if (m_dir_list->currentRow() < 0) // If no current row is set (e.g. at startup)
+					m_dir_list->setCurrentRow(i); // Set both the new current item and new current row
+
 				found_path = true;
 			}
 		}
 	}
 
-	if (!found_path)
+	if (!found_path) // If no path is selected (no row is checked)
 	{
 		QListWidgetItem* item = m_dir_list->item(0);
 		m_selected_config_label->setText(item->text().isEmpty() ? EmptyPath : item->text());
 		item->setCheckState(Qt::CheckState::Checked);
-		m_dir_list->setCurrentItem(item);
 	}
 
 	m_is_changing_data = false;
