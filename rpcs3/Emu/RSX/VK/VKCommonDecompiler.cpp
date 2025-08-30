@@ -20,7 +20,8 @@ namespace vk
 		{ "spec_color", 12 },
 		{ "spec_color1", 13 },
 		{ "fog_c", 14 },
-		{ "fogc", 14 }
+		{ "fogc", 14 },
+		{ "usr", 15 }, // custom injected stuff
 	} };
 
 	int get_varying_register_location(std::string_view varying_register_name)
