@@ -122,8 +122,12 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	load_gui_settings();
 
 	// Change cursor when in fullscreen.
-	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
+	connect(this, &QWindow::visibilityChanged, this, [this](Visibility visibility)
 	{
+		if (visibility != Visibility::Minimized && visibility != Visibility::Hidden)
+		{
+			m_visibility = visibility; // Only save "visible" visibility
+		}
 		handle_cursor(visibility, true, false, true);
 	});
 
@@ -567,7 +571,7 @@ void gs_frame::update_cursor()
 		// Hide the mouse if the idle timeout was reached (which means that the timer isn't running)
 		show_mouse = false;
 	}
-	else if (visibility() == QWindow::Visibility::FullScreen)
+	else if (visibility() == Visibility::FullScreen)
 	{
 		// Fullscreen: Show or hide the mouse depending on the settings.
 		show_mouse = m_show_mouse_in_fullscreen;
@@ -596,7 +600,7 @@ void gs_frame::hide_on_close()
 {
 	// Make sure not to save the hidden state, which is useless to us.
 	const Visibility current_visibility = visibility();
-	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? Visibility::AutomaticVisibility : current_visibility, false);
+	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? m_visibility : current_visibility, false);
 	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
 	if (!g_progr_text)
@@ -1096,7 +1100,7 @@ void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
 	}
 }
 
-void gs_frame::handle_cursor(QWindow::Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer)
+void gs_frame::handle_cursor(Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer)
 {
 	// Let's reload the gui settings when the visibility or the active window changes.
 	if (visibility_changed || active_changed)
@@ -1107,7 +1111,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool visibility_cha
 		if (visibility_changed)
 		{
 			// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-			m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
+			m_mouse_hide_and_lock = (visibility == Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
 		}
 	}
 
