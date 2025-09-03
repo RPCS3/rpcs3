@@ -824,6 +824,7 @@ public:
 	u8 cpu_work_iteration_count = 0;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
+	std::array<u32, 8> raddr_busy_wait_addr{}; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
