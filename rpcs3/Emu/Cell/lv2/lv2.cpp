@@ -2337,6 +2337,7 @@ void lv2_obj::notify_all() noexcept
 	{
 		if (notifies[i])
 		{
+			vm::reservation_update(notifies[i]);
 			vm::reservation_notifier_notify(notifies[i], notifies_time[i]);
 		}
 	}

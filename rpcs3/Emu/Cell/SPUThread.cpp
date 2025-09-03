@@ -6094,6 +6094,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 			return true;
 		};
 
+		static atomic_t<u8> s_is_reservation_data_checking_thread = false;
+		bool is_reservation_data_checking_thread = false;
+
 		const bool is_LR_wait = raddr && mask1 & SPU_EVENT_LR;
 
 		auto& history = eventstat_wait_time[(raddr % SPU_LS_SIZE) / 128];
@@ -6117,6 +6120,16 @@ s64 spu_thread::get_ch_value(u32 ch)
 			{
 				u8& val = history.front();
 				val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
+			}
+
+			if (!s_is_reservation_data_checking_thread)// && std::find(raddr_busy_wait_addr.begin(), raddr_busy_wait_addr.end(), raddr) != raddr_busy_wait_addr.end())
+			{
+				if (s_is_reservation_data_checking_thread.compare_and_swap_test(0, 1))
+				{
+					eventstat_busy_waiting_switch = 1;
+					is_reservation_data_checking_thread = true;
+					eventstat_raddr = 1;
+				}
 			}
 		}
 		else
@@ -6145,11 +6158,15 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (is_stopped(old))
 			{
-				if (cache_line_waiter_index != umax)
+				if (is_reservation_data_checking_thread)
 				{
-					g_spu_waiters_by_value[cache_line_waiter_index].release(0);
+					s_is_reservation_data_checking_thread = 0;
+
+					// Check again other reservations in other threads
+					lv2_obj::notify_all();
 				}
 
+				deregister_cache_line_waiter(cache_line_waiter_index);
 				return -1;
 			}
 
@@ -6169,6 +6186,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 				}
 				else if (!cmp_rdata(rdata, *resrv_mem))
 				{
+					if (vm::reservation_acquire(raddr) == rtime)
+					{
+						// Confirm change in data only, register address for busy waiting
+						std::rotate(raddr_busy_wait_addr.rbegin(), raddr_busy_wait_addr.rbegin() + 1, raddr_busy_wait_addr.rend());
+						raddr_busy_wait_addr[0] = raddr;
+						vm::reservation_update(raddr);
+					}
+
 					// Notify threads manually, memory data has likely changed and broke the reservation for others
 					if (vm::reservation_notifier_count(raddr, rtime) && vm::reservation_acquire(raddr) == rtime)
 					{
@@ -6198,7 +6223,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Don't be stubborn, force operating sleep if too much time has passed
 				const u64 time_since = get_system_time() - eventstat_evaluate_time;
 
-				if (time_since >= (utils::get_thread_count() >= 9 ? 50'000 : 3000))
+				if (!is_reservation_data_checking_thread && time_since >= (utils::get_thread_count() >= 9 ? 50'000 : 3000))
 				{
 					spu_log.trace("SPU RdEventStat wait for 0x%x failed", raddr);
 					history.front() = 2;
@@ -6357,6 +6382,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
+							if (vm::reservation_acquire(raddr) == _this->rtime)
+							{
+								std::rotate(_this->raddr_busy_wait_addr.rbegin(), _this->raddr_busy_wait_addr.rbegin() + 1, _this->raddr_busy_wait_addr.rend());
+								_this->raddr_busy_wait_addr[0] = raddr;
+							}
+
 							// Notify threads manually, memory data has likely changed and broke the reservation for others
 							if (vm::reservation_notifier_count(raddr, _this->rtime) >= 2 && vm::reservation_acquire(raddr) == _this->rtime)
 							{
@@ -6408,11 +6439,19 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait_on(state, old, 100);
 		}
 
+		if (is_reservation_data_checking_thread)
+		{
+			s_is_reservation_data_checking_thread = 0;
+
+			// Check again other reservations in other threads
+			lv2_obj::notify_all();
+		}
+
 		deregister_cache_line_waiter(cache_line_waiter_index);
 
-		wakeup_delay();
+		const auto old = +state;
 
-		if (is_paused(state - cpu_flag::suspend))
+		if (is_paused(old - cpu_flag::suspend))
 		{
 			if (!raddr && old_raddr)
 			{
@@ -6421,6 +6460,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 				check_state();
 				raddr = 0;
 			}
+		}
+		else if (!is_stopped(old))
+		{
+			wakeup_delay();
 		}
 
 		check_state();
