@@ -2326,6 +2326,7 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 	if (u32 addr = res_notify)
 	{
 		res_notify = 0;
+		res_notify_postpone_streak = 0;
 
 		if (res_notify_time + 128 == (vm::reservation_acquire(addr) & -128))
 		{
@@ -3613,34 +3614,17 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	{
 		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
-		const u32 notify = ppu.res_notify;
-
-		if (notify)
-		{
-			if (auto waiter = vm::reservation_notifier_notify(notify, ppu.res_notify_time, true))
-			{
-				ppu.state += cpu_flag::wait;
-				waiter->notify_all();
-			}
-
-			ppu.res_notify = 0;
-		}
+		u32 notify = ppu.res_notify;
 
 		// Avoid notifications from lwmutex or sys_spinlock
 		const bool is_liblv2_or_null = (ppu.cia >= liblv2_begin && ppu.cia < liblv2_end);
 
-		if (!is_liblv2_or_null && (addr ^ notify) & -128)
+		if (!is_liblv2_or_null)
 		{
 			// Try to postpone notification to when PPU is asleep or join notifications on the same address
 			// This also optimizes a mutex - won't notify after lock is aqcuired (prolonging the critical section duration), only notifies on unlock
-			const u32 count = vm::reservation_notifier_count(addr & -128, rtime);
+			const u32 count = vm::reservation_notifier_count(addr, rtime);
 
-			if (cpu_flag::wait - ppu.state)
-				{
-					ppu.state += cpu_flag::wait;
-				}
-
-			vm::reservation_notifier_notify(addr & -128, rtime);
 			switch (count)
 			{
 			case 0:
@@ -3650,11 +3634,18 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			}
 			case 1:
 			{
-				if (!notify)
+				// Postpone notifications if there is no pending one OR if there is likely a complex operation on reservation going on
+				// Which consists of multiple used addresses
+				if (ppu.res_notify_postpone_streak <= 4)
 				{
-					ppu.res_notify = addr & -128;
-					ppu.res_notify_time = rtime;
-					break;
+					if (!notify || ((notify & -128) == (addr & -128) && new_data != old_data))
+					{
+						ppu.res_notify = addr;
+						ppu.res_notify_time = rtime;
+						ppu.res_notify_postpone_streak++;
+						notify = 0;
+						break;
+					}
 				}
 
 				// Notify both
@@ -3667,10 +3658,22 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 					ppu.state += cpu_flag::wait;
 				}
 
-				vm::reservation_notifier_notify(addr & -128, rtime);
+				vm::reservation_notifier_notify(addr, rtime);
 				break;
 			}
 			}
+		}
+
+		if (notify)
+		{
+			if (auto waiter = vm::reservation_notifier_notify(notify, ppu.res_notify_time, true))
+			{
+				ppu.state += cpu_flag::wait;
+				waiter->notify_all();
+			}
+
+			ppu.res_notify = 0;
+			ppu.res_notify_postpone_streak = 0;
 		}
 
 		static_cast<void>(ppu.test_stopped());
@@ -3700,6 +3703,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		}
 
 		ppu.res_notify = 0;
+		ppu.res_notify_postpone_streak = 0;
 	}
 
 	ppu.raddr = 0;

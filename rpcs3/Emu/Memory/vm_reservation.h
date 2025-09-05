@@ -45,15 +45,14 @@ namespace vm
 
 	static inline atomic_t<reservation_waiter_t>* reservation_notifier(u32 raddr, u64 rtime)
 	{
-		rtime = 0;
 		constexpr u32 wait_vars_for_each = 64;
-		constexpr u32 unique_address_bit_mask = 0b111;
-		constexpr u32 unique_rtime_bit_mask = 0b11;
+		constexpr u32 unique_address_bit_mask = 0b1111;
+		constexpr u32 unique_rtime_bit_mask = 0b1;
 
 		extern std::array<atomic_t<reservation_waiter_t>, wait_vars_for_each * (unique_address_bit_mask + 1) * (unique_rtime_bit_mask + 1)> g_resrv_waiters_count;
 
 		// Storage efficient method to distinguish different nearby addresses (which are likely)
-		const usz index = std::popcount(raddr & -1024) * (1 << 5) + ((rtime / 128) & unique_rtime_bit_mask) * (1 << 3) + ((raddr / 128) & unique_address_bit_mask);
+		const usz index = std::popcount(raddr & -2048) * (1 << 5) + ((rtime / 128) & unique_rtime_bit_mask) * (1 << 4) + ((raddr / 128) & unique_address_bit_mask);
 		return &g_resrv_waiters_count[index];
 	}
 
