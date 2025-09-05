@@ -6122,13 +6122,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 				val = static_cast<u8>(std::min<u32>(val + 1, u8{umax}));
 			}
 
-			if (!s_is_reservation_data_checking_thread)// && std::find(raddr_busy_wait_addr.begin(), raddr_busy_wait_addr.end(), raddr) != raddr_busy_wait_addr.end())
+			if (!s_is_reservation_data_checking_thread && utils::get_thread_count() >= 12)// && std::find(raddr_busy_wait_addr.begin(), raddr_busy_wait_addr.end(), raddr) != raddr_busy_wait_addr.end())
 			{
 				if (s_is_reservation_data_checking_thread.compare_and_swap_test(0, 1))
 				{
 					eventstat_busy_waiting_switch = 1;
 					is_reservation_data_checking_thread = true;
 					eventstat_raddr = 1;
+					eventstat_spin_count = 0;
 				}
 			}
 		}
@@ -6189,8 +6190,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 					if (vm::reservation_acquire(raddr) == rtime)
 					{
 						// Confirm change in data only, register address for busy waiting
-						std::rotate(raddr_busy_wait_addr.rbegin(), raddr_busy_wait_addr.rbegin() + 1, raddr_busy_wait_addr.rend());
-						raddr_busy_wait_addr[0] = raddr;
+						if (std::find(raddr_busy_wait_addr.begin(), raddr_busy_wait_addr.end(), raddr) == raddr_busy_wait_addr.end())
+						{
+							std::rotate(raddr_busy_wait_addr.rbegin(), raddr_busy_wait_addr.rbegin() + 1, raddr_busy_wait_addr.rend());
+							raddr_busy_wait_addr[0] = raddr;
+						}
+
 						vm::reservation_update(raddr);
 					}
 
@@ -6382,10 +6387,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 						}
 						else if (!cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
-							if (vm::reservation_acquire(raddr) == _this->rtime)
+							auto& wait_addrs = _this->raddr_busy_wait_addr;
+
+							if (vm::reservation_acquire(raddr) == _this->rtime && std::find(wait_addrs.begin(), wait_addrs.end(), raddr) == wait_addrs.end())
 							{
-								std::rotate(_this->raddr_busy_wait_addr.rbegin(), _this->raddr_busy_wait_addr.rbegin() + 1, _this->raddr_busy_wait_addr.rend());
-								_this->raddr_busy_wait_addr[0] = raddr;
+								std::rotate(wait_addrs.rbegin(), wait_addrs.rbegin() + 1, wait_addrs.rend());
+								wait_addrs[0] = raddr;
 							}
 
 							// Notify threads manually, memory data has likely changed and broke the reservation for others
