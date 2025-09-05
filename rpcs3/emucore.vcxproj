@@ -640,6 +640,7 @@
     <ClInclude Include="Emu\RSX\color_utils.h" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
+    <ClInclude Include="Emu\RSX\Common\reverse_ptr.hpp" />
     <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp" />
     <ClInclude Include="Emu\RSX\Common\expected.hpp" />
     <ClInclude Include="Emu\RSX\Common\io_buffer.h" />
