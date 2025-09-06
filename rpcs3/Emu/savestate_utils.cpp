@@ -270,17 +270,131 @@ bool is_savestate_version_compatible(const std::vector<version_entry>& data, boo
 	return ok;
 }
 
-std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 abs_id, s64 rel_id)
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_path, s64 rel_id, u64 aggregate_file_size)
 {
 	const std::string title = std::string{title_id.empty() ? boot_path.substr(boot_path.find_last_of(fs::delim) + 1) : title_id};
 
-	if (abs_id == -1 && rel_id == -1)
+	// Internal functionality ATM
+	constexpr s64 abs_id = 0;
+
+	if (aggregate_file_size == umax && rel_id == -1)
 	{
 		// Return directory
 		return fs::get_config_dir() + "savestates/" + title + "/";
 	}
 
-	ensure(rel_id < 0 || abs_id >= 0, "Unimplemented!");
+	if (rel_id >= 0)
+	{
+		const std::string dir_path = fs::get_config_dir() + "/savestates/" + title + "/";
+		fs::dir dir_view{dir_path};
+
+		std::map<std::string, usz, std::greater<>> save_files;
+
+		for (auto&& dir_entry : dir_view)
+		{
+			if (dir_entry.is_directory || dir_entry.size <= 1024)
+			{
+				continue;
+			}
+
+			const std::string& entry = dir_entry.name;
+
+			if (entry.ends_with(".SAVESTAT.zst") || entry.ends_with(".SAVESTAT.gz") || entry.ends_with(".SAVESTAT"))
+			{
+				if (usz dot_idx = entry.rfind(".SAVESTAT"); dot_idx && dot_idx != umax)
+				{
+					if (usz uc_pos = entry.rfind("_", 0, dot_idx); uc_pos != umax && uc_pos + 1 < dot_idx)
+					{
+						if (std::all_of(entry.begin() + uc_pos + 1, entry.begin() + dot_idx, [](char c) { return c >= '0' && c <= '9'; }))
+						{
+							save_files.emplace(entry, dir_entry.size);	
+						}
+					}
+				}
+			}
+		}
+
+		std::string rel_path;
+		std::string size_based_path;
+
+		if (rel_id > 0)
+		{
+			if (rel_id - 1 < save_files.size())
+			{
+				rel_path = std::next(save_files.begin(), rel_id - 1)->first;
+			}
+		}
+
+		if (aggregate_file_size != umax)
+		{
+			usz size_sum = 0;
+
+			for (auto&& [path, size] : save_files)
+			{
+				if (size_sum >= aggregate_file_size)
+				{
+					size_based_path = path;
+					break;
+				}
+
+				size_sum += size;
+			}
+		}
+
+		if (!rel_path.empty() || !size_based_path.empty())
+		{
+			if (rel_path > size_based_path)
+			{
+				return std::move(rel_path);
+			}
+			else
+			{
+				return std::move(size_based_path);
+			}
+		}
+
+		if (rel_id > 0 || aggregate_file_size != umax)
+		{
+			return {};
+		}
+
+		// Increment number in string in reverse
+		// Return index of new character if appended a character, umax otherwise
+		auto increment_string = [](std::string& out, usz pos) -> usz
+		{
+			while (pos != umax && out[pos] == '9')
+			{
+				out[pos] = '0';
+				pos--;
+			}
+
+			if (pos == umax || (out[pos] < '0' || out[pos] > '9'))
+			{
+				out.insert(out.begin() + (pos + 1), '1');
+				return pos + 1;
+			}
+
+			out[pos]++;
+			return umax;
+		};
+
+		if (!save_files.empty())
+		{
+			std::string last_entry = save_files.begin()->first;
+
+			// Increment entry ID
+			if (usz inc_pos = increment_string(last_entry, last_entry.rfind(".SAVESTAT") - 1); inc_pos != umax)
+			{
+				// Increment entry suffix - ID has become wider in length (keeps the string in alphbetic ordering)
+				ensure(inc_pos >= 2);
+				ensure(last_entry[inc_pos - 2]++ != 'z');
+			}
+
+			return last_entry;
+		}
+
+		// Fallback - create new file
+	}
 
 	const std::string save_id = fmt::format("%d", abs_id);
 
