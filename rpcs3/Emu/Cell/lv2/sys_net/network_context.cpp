@@ -267,6 +267,8 @@ void p2p_thread::operator()()
 {
 	std::vector<::pollfd> p2p_fd(lv2_socket::id_count);
 
+	bool had_events = false;
+
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		if (!num_p2p_ports)
@@ -295,12 +297,17 @@ void p2p_thread::operator()()
 		}
 
 #ifdef _WIN32
-		const auto ret_p2p = WSAPoll(p2p_fd.data(), num_p2p_sockets, 1);
+		const int timeout = !had_events && num_p2p_ports == 1 ? 1 : 5;
+
+		// WSAPoll seems to consume a lot of CPU time relative to its waiting duration, upping the timeout solves it
+		const auto ret_p2p = WSAPoll(p2p_fd.data(), num_p2p_sockets, timeout);
 #else
 		const auto ret_p2p = ::poll(p2p_fd.data(), num_p2p_sockets, 1);
 #endif
 		if (ret_p2p > 0)
 		{
+			had_events = true;
+
 			std::lock_guard lock(list_p2p_ports_mutex);
 			auto fd_index = 0;
 
