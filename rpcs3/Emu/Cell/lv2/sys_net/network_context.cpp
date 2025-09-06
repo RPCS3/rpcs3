@@ -295,7 +295,8 @@ void p2p_thread::operator()()
 		}
 
 #ifdef _WIN32
-		const auto ret_p2p = WSAPoll(p2p_fd.data(), num_p2p_sockets, 1);
+		// WSAPoll seems to consume a lot of CPU time relative to its waiting duration, upping the timeout solves it
+		const auto ret_p2p = WSAPoll(p2p_fd.data(), num_p2p_sockets, 5);
 #else
 		const auto ret_p2p = ::poll(p2p_fd.data(), num_p2p_sockets, 1);
 #endif
