@@ -1787,12 +1787,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	});
 
+	connect(ui->lleList, &QListWidget::itemDoubleClicked, this, [](QListWidgetItem* item)
+	{
+		if (!item)
+			return;
+
+		item->setCheckState(item->checkState() ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
+	});
+
 	connect(ui->hleList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
 	{
 		for (auto cb : ui->hleList->selectedItems())
 		{
 			cb->setCheckState(item->checkState());
 		}
+	});
+
+	connect(ui->hleList, &QListWidget::itemDoubleClicked, this, [](QListWidgetItem* item)
+	{
+		if (!item)
+			return;
+
+		item->setCheckState(item->checkState() ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
 	});
 
 	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, reset_library_lists);
