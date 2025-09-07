@@ -93,23 +93,23 @@ private:
 
 hid_device* HidDevice::open()
 {
-#ifdef ANDROID
-	hidDevice = hid_libusb_wrap_sys_device(path, -1);
-#elif defined(__APPLE__)
-	std::unique_lock static_lock(g_hid_mutex, std::defer_lock);
-	if (!static_lock.try_lock())
+	// Lock before calling "hid_open_path()"
+	std::unique_lock lock(g_hid_mutex, std::defer_lock);
+
+	if (!lock.try_lock())
 	{
 		// The enumeration thread is busy. If we lock and open the device, we might get input stutter on other devices.
 		return nullptr;
 	}
+
+#ifdef ANDROID
+	hidDevice = hid_libusb_wrap_sys_device(path, -1);
+#elif defined(__APPLE__)
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		hidDevice = hid_open_path(path.c_str());
 	}, false);
 #else
-	// Lock before calling "hid_open_path()"
-	std::unique_lock static_lock(g_hid_mutex, std::defer_lock);
-
 	hidDevice = hid_open_path(path.data());
 #endif
 
@@ -177,7 +177,7 @@ hid_pad_handler<Device>::~hid_pad_handler()
 	m_enumeration_thread.reset();
 
 	// Lock before accessing any controller (e.g. just to close it with "close()")
-	std::lock_guard static_lock(g_hid_mutex);
+	std::lock_guard lock(g_hid_mutex);
 
 	for (auto& controller : m_controllers)
 	{
@@ -274,7 +274,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 	for (const auto& [vid, pid] : m_ids)
 	{
 		// Let's make sure hid_enumerate is only done one thread at a time
-		std::lock_guard static_lock(g_hid_mutex);
+		std::lock_guard lock(g_hid_mutex);
 
 #if defined(__APPLE__)
 		Emu.BlockingCallFromMainThread([&]()
@@ -352,7 +352,7 @@ void hid_pad_handler<Device>::update_devices()
 	}
 
 	// Lock before accessing any controller (e.g. just to close it with "close()") or before calling "hid_open_path()"
-	std::lock_guard static_lock(g_hid_mutex);
+	std::lock_guard lock(g_hid_mutex);
 
 	// Scrap devices that are not in the new list
 	for (auto& controller : m_controllers)
