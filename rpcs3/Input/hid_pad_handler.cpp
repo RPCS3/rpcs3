@@ -108,7 +108,7 @@ hid_device* HidDevice::open()
 	}, false);
 #else
 	// Lock before calling "hid_open_path()"
-	std::lock_guard static_lock(g_hid_mutex);
+	std::unique_lock static_lock(g_hid_mutex, std::defer_lock);
 
 	hidDevice = hid_open_path(path.data());
 #endif
