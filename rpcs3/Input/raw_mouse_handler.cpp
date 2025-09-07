@@ -268,7 +268,7 @@ void raw_mouse::update_values(s32 scan_code, bool pressed)
 	// Get mouse buttons
 	for (const auto& [button, btn] : m_buttons)
 	{
-		if (!btn.is_key || btn.scan_code != scan_code) return;
+		if (!btn.is_key || btn.scan_code != scan_code) continue;
 
 		m_handler->Button(m_index, button, pressed);
 	}
