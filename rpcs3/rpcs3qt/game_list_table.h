@@ -34,7 +34,7 @@ public:
 	void repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
 
 Q_SIGNALS:
-	void size_on_disk_ready(const game_info& game);
+	void size_on_disk_ready(const game_info& game, movie_item_base* item);
 
 private:
 	game_list_frame* m_game_list_frame{};

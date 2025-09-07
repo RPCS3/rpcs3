@@ -14,14 +14,14 @@ game_list_grid::game_list_grid()
 	setObjectName("game_list_grid");
 	setContextMenuPolicy(Qt::CustomContextMenu);
 
-	m_icon_ready_callback = [this](const movie_item_base* item)
+	m_icon_ready_callback = [this](const game_info& game, const movie_item_base* item)
 	{
-		Q_EMIT IconReady(item);
+		Q_EMIT IconReady(game, item);
 	};
 
-	connect(this, &game_list_grid::IconReady, this, [this](const movie_item_base* item)
+	connect(this, &game_list_grid::IconReady, this, [this](const game_info& game, const movie_item_base* item)
 	{
-		if (item) item->image_change_callback();
+		if (game && item && game->item == item) item->image_change_callback();
 	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
 
 	connect(this, &flow_widget::ItemSelectionChanged, this, [this](int index)

@@ -79,7 +79,7 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	if (!cancel || !cancel->load())
 	{
 		if (m_icon_ready_callback)
-			m_icon_ready_callback(game->item);
+			m_icon_ready_callback(game, game->item);
 	}
 }
 
