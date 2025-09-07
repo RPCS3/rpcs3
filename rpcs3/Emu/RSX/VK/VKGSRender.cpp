@@ -510,16 +510,16 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// VRAM allocation
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
-	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer");
-	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex env buffer");
-	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer");
+	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
+	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex env buffer", 0x10000, VK_TRUE);
+	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
-	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer");
-	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer");
+	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
+	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
+	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer", 0x10000, VK_TRUE);
+	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "instancing data buffer", 0x10000, VK_TRUE);
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "texture upload buffer", 32 * 0x100000);
-	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer");
-	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "instancing data buffer");
 
 	vk::data_heap_manager::register_ring_buffers
 	({
@@ -1998,7 +1998,6 @@ void VKGSRender::load_program_env()
 		if (!io_buf.empty())
 		{
 			m_transform_constants_ring_info.unmap();
-			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
 			m_xform_constants_dynamic_offset = mem_offset;
 		}
 	}
