@@ -209,6 +209,7 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 	cfg->lpadsquircling.def    = 0;
 	cfg->rpadsquircling.def    = 0;
+	cfg->vibration_threshold.def = 0;
 
 	// Set default LED options
 	cfg->led_battery_indicator.def = false;

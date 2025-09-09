@@ -86,6 +86,8 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		">     Digital:   %5s   %5s\n"
 		">       Press:   %5s   %5s\n"
 		">      Sensor:   %5s   %5s\n"
+		"> Large Motor:   %5d   %5d\n"
+		"> Small Motor:   %5d   %5d\n"
 		">\n"
 		">   Digital 1:  0x%04x  0x%04x\n"
 		">   Digital 2:  0x%04x  0x%04x\n"
@@ -126,6 +128,8 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		"on", data.len >= CELL_PAD_LEN_CHANGE_DEFAULT ? "on" : "off",
 		(setting & CELL_PAD_SETTING_PRESS_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_PRESS_ON ? "on" : "off",
 		(setting & CELL_PAD_SETTING_SENSOR_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_SENSOR_ON ? "on" : "off",
+		pad.m_vibrateMotors[0].m_value, pad.m_vibrateMotors[0].m_adjusted_value,
+		pad.m_vibrateMotors[1].m_value, pad.m_vibrateMotors[1].m_adjusted_value,
 		pad.m_digital_1, d1,
 		pad.m_digital_2, d2,
 		pad.m_press_up, !!(d1 & CELL_PAD_CTRL_UP), data.button[CELL_PAD_BTN_OFFSET_PRESS_UP],
