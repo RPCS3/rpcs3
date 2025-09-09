@@ -344,6 +344,8 @@ struct CellPadData
 	be_t<u16> button[CELL_PAD_MAX_CODES];
 };
 
+static constexpr u8 MOTOR_THRESHOLD = 63; // The DS3 does not seem to respond to values <= 63. So we should ignore those in other handlers as well.
+
 static constexpr u16 MOTION_ONE_G = 113;
 static constexpr u16 DEFAULT_MOTION_X = 512;
 static constexpr u16 DEFAULT_MOTION_Y = 399; // 512 - 113 (113 is 1G gravity)
@@ -459,6 +461,7 @@ struct VibrateMotor
 {
 	bool m_is_large_motor = false;
 	u8 m_value = 0;
+	u8 m_adjusted_value = 0;
 
 	VibrateMotor() {}
 	VibrateMotor(bool is_large_motor, u8 value)

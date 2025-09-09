@@ -40,7 +40,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 	}
 
 	// convert [min, max] to [0, 1]
-	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	const f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	// convert [0, 1] to [0, range]
 	return range * val;
@@ -50,7 +50,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
 	// convert [min, max] to [0, 1]
-	f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	if (deadzone > 0)
 	{
@@ -762,6 +762,7 @@ void PadHandlerBase::process()
 				for (VibrateMotor& motor : pad->m_vibrateMotors)
 				{
 					motor.m_value = 0;
+					motor.m_adjusted_value = 0;
 				}
 
 				pad->m_last_rumble_time_us = 0;
