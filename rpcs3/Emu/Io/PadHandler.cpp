@@ -200,6 +200,10 @@ void PadHandlerBase::init_configs()
 {
 	for (u32 i = 0; i < MAX_GAMEPADS; i++)
 	{
+		// We need to restore the original defaults first.
+		m_pad_configs[i].restore_defaults();
+
+		// Set and apply actual defaults depending on pad handler
 		init_config(&m_pad_configs[i]);
 	}
 }
