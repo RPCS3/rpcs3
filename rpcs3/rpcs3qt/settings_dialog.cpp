@@ -1792,7 +1792,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		if (!item)
 			return;
 
-		item->setCheckState(item->checkState() ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
+		item->setCheckState(item->checkState() != Qt::CheckState::Unchecked ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
 	});
 
 	connect(ui->hleList, &QListWidget::itemChanged, [this](QListWidgetItem* item)
