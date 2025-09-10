@@ -553,19 +553,12 @@ void cfg::node::from_default()
 	}
 }
 
-void cfg::_bool::from_default()
+void cfg::node::restore_defaults()
 {
-	m_value = def;
-}
-
-void cfg::string::from_default()
-{
-	m_value = def;
-}
-
-void cfg::set_entry::from_default()
-{
-	m_set = {};
+	for (auto& node : m_nodes)
+	{
+		node->restore_defaults();
+	}
 }
 
 std::string cfg::map_entry::get_value(std::string_view key)

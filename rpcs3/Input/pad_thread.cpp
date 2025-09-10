@@ -883,12 +883,17 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 
 void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
+	// We need to restore the original defaults first.
+	cfg.restore_defaults();
+
 	if (!handler)
 	{
 		handler = GetHandler(type);
 	}
 
 	ensure(!!handler);
+
+	// Set and apply actual defaults depending on pad handler
 	handler->init_config(&cfg);
 }
 
