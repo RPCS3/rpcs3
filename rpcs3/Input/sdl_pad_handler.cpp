@@ -265,11 +265,11 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 	info.pid = SDL_GetGamepadProduct(info.gamepad);
 	info.product_version = SDL_GetGamepadProductVersion(info.gamepad);
 	info.firmware_version = SDL_GetGamepadFirmwareVersion(info.gamepad);
-	info.has_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RGB_LED_BOOLEAN);
-	info.has_mono_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_MONO_LED_BOOLEAN);
-	info.has_player_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_PLAYER_LED_BOOLEAN);
-	info.has_rumble = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN);
-	info.has_rumble_triggers = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_TRIGGER_RUMBLE_BOOLEAN);
+	info.has_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_RGB_LED_BOOLEAN, false);
+	info.has_mono_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_MONO_LED_BOOLEAN, false);
+	info.has_player_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_PLAYER_LED_BOOLEAN, false);
+	info.has_rumble = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
+	info.has_rumble_triggers = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_TRIGGER_RUMBLE_BOOLEAN, false);
 	info.has_accel = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_ACCEL);
 	info.has_gyro = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_GYRO);
 
