@@ -1808,7 +1808,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		if (!item)
 			return;
 
-		item->setCheckState(item->checkState() ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
+		item->setCheckState(item->checkState() != Qt::CheckState::Unchecked ? Qt::CheckState::Unchecked : Qt::CheckState::Checked);
 	});
 
 	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, reset_library_lists);
