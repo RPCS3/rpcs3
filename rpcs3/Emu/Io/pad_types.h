@@ -464,9 +464,8 @@ struct VibrateMotor
 	u8 m_adjusted_value = 0;
 
 	VibrateMotor() {}
-	VibrateMotor(bool is_large_motor, u8 value)
+	VibrateMotor(bool is_large_motor)
 		: m_is_large_motor(is_large_motor)
-		, m_value(value)
 	{}
 };
 
