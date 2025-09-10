@@ -1302,8 +1302,8 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 		return;
 
 	// Handle vibration
-	const u8 force_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
-	const u8 force_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
+	const u8 force_large = cfg->get_large_motor_speed(pad->m_vibrate_motors);
+	const u8 force_small = cfg->get_small_motor_speed(pad->m_vibrate_motors);
 	SetRumble(evdev_device, force_large, force_small);
 }
 
@@ -1478,8 +1478,8 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, m_dev->axis_motion[2].code, m_dev->axis_motion[2].mirrored, m_dev->axis_motion[2].shift, DEFAULT_MOTION_Z);
 	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, m_dev->axis_motion[3].code, m_dev->axis_motion[3].mirrored, m_dev->axis_motion[3].shift, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors[0] = VibrateMotor(true);
-	pad->m_vibrateMotors[1] = VibrateMotor(false);
+	pad->m_vibrate_motors[0] = VibrateMotor(true);
+	pad->m_vibrate_motors[1] = VibrateMotor(false);
 
 	if (std::shared_ptr<EvdevDevice> evdev_device = add_device(player_config->device, false))
 	{

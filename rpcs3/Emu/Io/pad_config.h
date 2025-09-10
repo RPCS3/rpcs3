@@ -28,6 +28,7 @@ struct cfg_pad final : cfg::node
 	static std::vector<std::string> get_buttons(const std::string& str);
 	static std::string get_buttons(std::vector<std::string> vec);
 
+	u8 get_motor_speed(VibrateMotor& motor, f32 multiplier) const;
 	u8 get_large_motor_speed(std::array<VibrateMotor, 2>& motors) const;
 	u8 get_small_motor_speed(std::array<VibrateMotor, 2>& motors) const;
 

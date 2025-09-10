@@ -538,8 +538,8 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
 	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors[0] = VibrateMotor(true);
-	pad->m_vibrateMotors[1] = VibrateMotor(false);
+	pad->m_vibrate_motors[0] = VibrateMotor(true);
+	pad->m_vibrate_motors[1] = VibrateMotor(false);
 
 	m_bindings.emplace_back(pad, pad_device, nullptr);
 
@@ -759,10 +759,10 @@ void PadHandlerBase::process()
 
 			if ((get_system_time() - pad->m_last_rumble_time_us) > 3'000'000)
 			{
-				for (VibrateMotor& motor : pad->m_vibrateMotors)
+				for (VibrateMotor& motor : pad->m_vibrate_motors)
 				{
-					motor.m_value = 0;
-					motor.m_adjusted_value = 0;
+					motor.value = 0;
+					motor.adjusted_value = 0;
 				}
 
 				pad->m_last_rumble_time_us = 0;

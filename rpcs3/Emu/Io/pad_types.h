@@ -459,13 +459,13 @@ struct AnalogSensor
 
 struct VibrateMotor
 {
-	bool m_is_large_motor = false;
-	u8 m_value = 0;
-	u8 m_adjusted_value = 0;
+	bool is_large_motor = false;
+	u8 value = 0;
+	u8 adjusted_value = 0;
 
 	VibrateMotor() {}
 	VibrateMotor(bool is_large_motor)
-		: m_is_large_motor(is_large_motor)
+		: is_large_motor(is_large_motor)
 	{}
 };
 
@@ -546,7 +546,7 @@ struct Pad
 	std::vector<Button> m_buttons;
 	std::array<AnalogStick, 4> m_sticks{};
 	std::array<AnalogSensor, 4> m_sensors{};
-	std::array<VibrateMotor, 2> m_vibrateMotors{};
+	std::array<VibrateMotor, 2> m_vibrate_motors{};
 
 	std::vector<Button> m_buttons_external;
 	std::array<AnalogStick, 4> m_sticks_external{};

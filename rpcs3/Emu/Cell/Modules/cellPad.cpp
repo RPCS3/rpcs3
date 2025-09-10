@@ -128,8 +128,8 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		"on", data.len >= CELL_PAD_LEN_CHANGE_DEFAULT ? "on" : "off",
 		(setting & CELL_PAD_SETTING_PRESS_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_PRESS_ON ? "on" : "off",
 		(setting & CELL_PAD_SETTING_SENSOR_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_SENSOR_ON ? "on" : "off",
-		pad.m_vibrateMotors[0].m_value, pad.m_vibrateMotors[0].m_adjusted_value,
-		pad.m_vibrateMotors[1].m_value, pad.m_vibrateMotors[1].m_adjusted_value,
+		pad.m_vibrate_motors[0].value, pad.m_vibrate_motors[0].adjusted_value,
+		pad.m_vibrate_motors[1].value, pad.m_vibrate_motors[1].adjusted_value,
 		pad.m_digital_1, d1,
 		pad.m_digital_2, d2,
 		pad.m_press_up, !!(d1 & CELL_PAD_CTRL_UP), data.button[CELL_PAD_BTN_OFFSET_PRESS_UP],
@@ -905,7 +905,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_ACTUATOR))
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
-	handler->SetRumble(port_no, param->motor[1], param->motor[0] > 0);
+	handler->SetRumble(port_no, param->motor[1], param->motor[0]);
 
 	return CELL_OK;
 }
