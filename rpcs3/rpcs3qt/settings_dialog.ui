@@ -2009,6 +2009,30 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_dateFormat">
+              <property name="title">
+               <string>Date Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_dateFormat">
+               <item>
+                <widget class="QComboBox" name="dateFormat"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_timeFormat">
+              <property name="title">
+               <string>Time Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_timeFormat">
+               <item>
+                <widget class="QComboBox" name="timeFormat"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_console_time">
               <property name="title">
                <string>Console Time</string>

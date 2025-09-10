@@ -716,3 +716,34 @@ void fmt_class_string<xfloat_accuracy>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<date_format>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](date_format value)
+	{
+		switch (value)
+		{
+		case date_format::yyyymmdd: return "yyyymmdd";
+		case date_format::ddmmyyyy: return "ddmmyyyy";
+		case date_format::mmddyyyy: return "mmddyyyy";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<time_format>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](time_format value)
+	{
+		switch (value)
+		{
+		case time_format::clock12: return "clock12";
+		case time_format::clock24: return "clock24";
+		}
+
+		return unknown;
+	});
+}
