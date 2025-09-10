@@ -203,11 +203,15 @@ enum class emu_settings_type
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
+	DateFormat,
+	TimeFormat,
+	ConsoleTimeOffset,
+
+	// VFS
 	EnableHostRoot,
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
-	ConsoleTimeOffset,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
@@ -405,13 +409,16 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
-	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
+	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"}},
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},
+	{ emu_settings_type::DateFormat,            { "System", "Date Format"}},
+	{ emu_settings_type::TimeFormat,            { "System", "Time Format"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
+
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::EmptyHdd0Tmp,          { "VFS", "Empty /dev_hdd0/tmp/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
-	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},

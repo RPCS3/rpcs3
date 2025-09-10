@@ -1412,6 +1412,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->keyboardType, emu_settings_type::KeyboardType, false, false, 0, true);
 	SubscribeTooltip(ui->gb_keyboardType, tooltips.settings.keyboard_type);
 
+	m_emu_settings->EnhanceComboBox(ui->dateFormat, emu_settings_type::DateFormat);
+	SubscribeTooltip(ui->gb_dateFormat, tooltips.settings.date_format);
+
+	m_emu_settings->EnhanceComboBox(ui->timeFormat, emu_settings_type::TimeFormat);
+	SubscribeTooltip(ui->gb_timeFormat, tooltips.settings.time_format);
+
 	// Checkboxes
 
 	m_emu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings_type::EnableHostRoot);
