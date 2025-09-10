@@ -301,6 +301,8 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellSysutilLang> language{ this, "Language", CellSysutilLang{1} }; // CELL_SYSUTIL_LANG_ENGLISH_US
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
+		cfg::_enum<date_format> date_fmt{ this, "Date Format", date_format::ddmmyyyy };
+		cfg::_enum<time_format> time_fmt{ this, "Time Format", time_format::clock24 };
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
 		cfg::string system_name{this, "System Name", get_random_system_name()};
 		cfg::uint<0, umax> console_psid_high{this, "PSID high"};
