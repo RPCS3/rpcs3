@@ -735,8 +735,8 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
 	if (dev->sdl.has_rumble || dev->sdl.has_rumble_triggers)
 	{
-		const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
-		const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
+		const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrate_motors);
+		const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrate_motors);
 
 		dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 
