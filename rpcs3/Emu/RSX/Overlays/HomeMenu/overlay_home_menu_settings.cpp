@@ -49,6 +49,11 @@ namespace rsx
 
 			add_checkbox(&g_cfg.video.stretch_to_display_area, localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY);
 
+			if (g_cfg.video.stereo_enabled)
+			{
+				add_dropdown(&g_cfg.video.stereo_render_mode, localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE);
+			}
+
 			apply_layout();
 		}
 

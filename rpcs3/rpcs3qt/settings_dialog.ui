@@ -552,6 +552,13 @@
               </property>
               <layout class="QVBoxLayout" name="gb_stereo_layout">
                <item>
+                <widget class="QCheckBox" name="stereoRenderEnabled">
+                 <property name="text">
+                  <string>Enable 3D Support</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
               </layout>
