@@ -172,6 +172,8 @@ namespace rsx
 		u8 get_bpp() const;
 		double get_aspect_ratio() const;
 
+		size2u video_frame_size() const;
+
 		areau aspect_convert_region(const size2u& image_dimensions, const size2u& output_dimensions) const;
 		size2u aspect_convert_dimensions(const size2u& image_dimensions) const;
 	};
