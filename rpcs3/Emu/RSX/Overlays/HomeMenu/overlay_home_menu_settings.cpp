@@ -133,7 +133,8 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_DEBUG))
 		{
 			add_checkbox(&g_cfg.video.debug_overlay, localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY);
-			add_checkbox(&g_cfg.io.debug_overlay, localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY);
+			add_checkbox(&g_cfg.io.pad_debug_overlay, localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY);
+			add_checkbox(&g_cfg.io.mouse_debug_overlay, localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY);
 			add_checkbox(&g_cfg.video.disable_video_output, localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT);
 			add_float_slider(&g_cfg.video.texture_lod_bias, localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS, "", 0.25f);
 
