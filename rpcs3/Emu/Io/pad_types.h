@@ -553,34 +553,7 @@ struct Pad
 
 	std::vector<std::shared_ptr<Pad>> copilots;
 
-	// These hold bits for their respective buttons
-	u16 m_digital_1{0};
-	u16 m_digital_2{0};
-
-	// All sensors go from 0-255
-	u16 m_analog_left_x{128};
-	u16 m_analog_left_y{128};
-	u16 m_analog_right_x{128};
-	u16 m_analog_right_y{128};
-
-	u16 m_press_right{0};
-	u16 m_press_left{0};
-	u16 m_press_up{0};
-	u16 m_press_down{0};
-	u16 m_press_triangle{0};
-	u16 m_press_circle{0};
-	u16 m_press_cross{0};
-	u16 m_press_square{0};
-	u16 m_press_L1{0};
-	u16 m_press_L2{0};
-	u16 m_press_R1{0};
-	u16 m_press_R2{0};
-
-	// Except for these...0-1023
-	u16 m_sensor_x{DEFAULT_MOTION_X};
-	u16 m_sensor_y{DEFAULT_MOTION_Y};
-	u16 m_sensor_z{DEFAULT_MOTION_Z};
-	u16 m_sensor_g{DEFAULT_MOTION_G};
+	CellPadData data {};
 
 	bool ldd{false};
 	CellPadData ldd_data{};
