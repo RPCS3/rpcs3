@@ -483,7 +483,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		};
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
+		if (avconfig.stereo_enabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -617,12 +617,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
-		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
+		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig.stereo_enabled) [[unlikely]]
 		{
 			if (image_to_flip) calibration_src.push_back(image_to_flip);
 			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && !avconfig.stereo_enabled) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
@@ -653,7 +653,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_mode, single_target_pass);
+				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_enabled, g_cfg.video.stereo_render_mode, single_target_pass);
 
 			direct_fbo->release();
 		}

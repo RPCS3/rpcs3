@@ -189,7 +189,7 @@ namespace rsx
 
 	size2u avconf::video_frame_size() const
 	{
-		if (state && stereo_mode != stereo_render_mode_options::disabled)
+		if (state && stereo_enabled)
 		{
 			return size2u{ resolution_x, (resolution_y - 30) / 2 };
 		}

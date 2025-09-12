@@ -149,16 +149,16 @@ namespace rsx
 
 	struct avconf
 	{
-		stereo_render_mode_options stereo_mode = stereo_render_mode_options::disabled;        // Stereo 3D display mode
-		u8 format = 0;             // XRGB
-		u8 aspect = 0;             // AUTO
-		u8 resolution_id = 2;      // 720p
-		u32 scanline_pitch = 0;    // PACKED
-		atomic_t<f32> gamma = 1.f; // NO GAMMA CORRECTION
-		u32 resolution_x = 1280;   // X RES
-		u32 resolution_y = 720;    // Y RES
-		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
-		u8 scan_mode = 1;          // CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE
+		bool stereo_enabled = false; // Stereo 3D display mode
+		u8 format = 0;               // XRGB
+		u8 aspect = 0;               // AUTO
+		u8 resolution_id = 2;        // 720p
+		u32 scanline_pitch = 0;      // PACKED
+		atomic_t<f32> gamma = 1.f;   // NO GAMMA CORRECTION
+		u32 resolution_x = 1280;     // X RES
+		u32 resolution_y = 720;      // Y RES
+		atomic_t<u32> state = 0;     // 1 after cellVideoOutConfigure was called
+		u8 scan_mode = 1;            // CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE
 
 		ENABLE_BITWISE_SERIALIZATION;
 		SAVESTATE_INIT_POS(12);
