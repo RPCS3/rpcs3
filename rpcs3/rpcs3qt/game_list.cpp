@@ -8,9 +8,9 @@
 
 game_list::game_list() : QTableWidget(), game_list_base()
 {
-	m_icon_ready_callback = [this](const movie_item_base* item)
+	m_icon_ready_callback = [this](const game_info& game, const movie_item_base* item)
 	{
-		Q_EMIT IconReady(item);
+		Q_EMIT IconReady(game, item);
 	};
 }
 
