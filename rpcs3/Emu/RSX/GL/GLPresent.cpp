@@ -221,7 +221,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
+		if (avconfig.stereo_enabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -323,7 +323,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 		}
 
-		if (!backbuffer_has_alpha && use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
+		if (!backbuffer_has_alpha && use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig.stereo_enabled)
 		{
 			// Blit source image to the screen
 			m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
@@ -335,7 +335,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 			rsx::simple_array<gl::texture*> images{ image_to_flip, image_to_flip2 };
 
-			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && !avconfig.stereo_enabled) // 3D will be implemented later
 			{
 				for (unsigned i = 0; i < 2 && images[i]; ++i)
 				{
@@ -345,7 +345,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_mode, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_enabled, g_cfg.video.stereo_render_mode, filter);
 		}
 	}
 
