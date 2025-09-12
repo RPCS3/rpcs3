@@ -62,7 +62,7 @@ public:
 	VkShaderModule handle = nullptr;
 	u32 id;
 	vk::glsl::shader shader;
-	std::vector<usz> FragmentConstantOffsetCache;
+	std::vector<u32> constant_offsets;
 
 	std::array<u32, 4> output_color_masks{ {} };
 	std::vector<vk::glsl::program_input> uniforms;

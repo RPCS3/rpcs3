@@ -13,14 +13,26 @@ namespace vk
 {
 	data_heap g_upload_heap;
 
-	void data_heap::create(VkBufferUsageFlags usage, usz size, const char* name, usz guard, VkBool32 notify)
+	void data_heap::create(VkBufferUsageFlags usage, usz size, rsx::flags32_t flags, const char* name, usz guard, VkBool32 notify)
 	{
 		::data_heap::init(size, name, guard);
 
 		const auto& memory_map = g_render_device->get_memory_mapping();
 
+		if ((flags & heap_pool_low_latency) && g_cfg.video.vk.use_rebar_upload_heap)
+		{
+			// Prefer uploading to BAR if low latency is desired.
+			m_prefer_writethrough = memory_map.device_bar_total_bytes > (2048ull * 0x100000);
+
+			// Log it
+			if (m_prefer_writethrough && name)
+			{
+				rsx_log.notice("Data heap %s will attempt to use Re-BAR memory", name);
+			}
+		}
+
 		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		auto memory_index = memory_map.host_visible_coherent;
+		auto memory_index = m_prefer_writethrough ? memory_map.device_bar : memory_map.host_visible_coherent;
 
 		if (!(get_heap_compatible_buffer_types() & usage))
 		{
@@ -75,7 +87,7 @@ namespace vk
 		const auto& memory_map = g_render_device->get_memory_mapping();
 
 		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		auto memory_index = memory_map.host_visible_coherent;
+		auto memory_index = m_prefer_writethrough ? memory_map.device_bar : memory_map.host_visible_coherent;
 
 		// Update heap information and reset the allocator
 		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
@@ -163,7 +175,7 @@ namespace vk
 	{
 		if (!g_upload_heap.heap)
 		{
-			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap", 0x100000);
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, vk::heap_pool_default, "auxilliary upload heap", 0x100000);
 		}
 
 		return &g_upload_heap;

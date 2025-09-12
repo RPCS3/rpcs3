@@ -14,7 +14,7 @@ namespace rsx
 {
 	namespace utility
 	{
-		std::vector<u8> get_rtt_indexes(surface_target color_target);
+		rsx::simple_array<u8> get_rtt_indexes(surface_target color_target);
 		u8 get_mrt_buffers_count(surface_target color_target);
 		usz get_aligned_pitch(surface_color_format format, u32 width);
 		usz get_packed_pitch(surface_color_format format, u32 width);
@@ -245,9 +245,9 @@ namespace rsx
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
 			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range,
-				surface_ranged_map& data) -> std::vector<std::pair<u32, surface_type>>
+				surface_ranged_map& data) -> rsx::simple_array<std::pair<u32, surface_type>>
 			{
-				std::vector<std::pair<u32, surface_type>> result;
+				rsx::simple_array<std::pair<u32, surface_type>> result;
 				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
 					auto surface = Traits::get(it->second);
@@ -314,7 +314,7 @@ namespace rsx
 				}
 			}
 
-			std::vector<std::pair<u32, surface_type>> surface_info;
+			rsx::simple_array<std::pair<u32, surface_type>> surface_info;
 			if (list1.empty())
 			{
 				surface_info = std::move(list2);
@@ -629,7 +629,7 @@ namespace rsx
 			invalidated_resources.push_back(std::move(storage));
 		}
 
-		int remove_duplicates_fast_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range32& range)
+		int remove_duplicates_fast_impl(rsx::simple_array<surface_overlap_info>& sections, const rsx::address_range32& range)
 		{
 			// Range tests to check for gaps
 			std::list<utils::address_range32> m_ranges;
@@ -697,7 +697,7 @@ namespace rsx
 			return removed_count;
 		}
 
-		void remove_duplicates_fallback_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range32& range)
+		void remove_duplicates_fallback_impl(rsx::simple_array<surface_overlap_info>& sections, const rsx::address_range32& range)
 		{
 			// Originally used to debug crashes but this function breaks often enough that I'll leave the checks in for now.
 			// Safe to remove after some time if no asserts are reported.
@@ -866,10 +866,10 @@ namespace rsx
 				std::forward<Args>(extra_params)...);
 		}
 
-		std::tuple<std::vector<surface_type>, std::vector<surface_type>>
+		std::tuple<rsx::simple_array<surface_type>, rsx::simple_array<surface_type>>
 		find_overlapping_set(const utils::address_range32& range) const
 		{
-			std::vector<surface_type> color_result, depth_result;
+			rsx::simple_array<surface_type> color_result, depth_result;
 			utils::address_range32 result_range;
 
 			if (m_render_targets_memory_range.valid() &&
@@ -916,8 +916,8 @@ namespace rsx
 			u64 src_offset, dst_offset, write_length;
 			auto block_length = block_range.length();
 
-			auto all_data = std::move(color_data);
-			all_data.insert(all_data.end(), depth_stencil_data.begin(), depth_stencil_data.end());
+			auto& all_data = color_data;
+			all_data += depth_stencil_data;
 
 			if (all_data.size() > 1)
 			{
@@ -1088,10 +1088,10 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
+		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
 		{
-			std::vector<surface_overlap_info> result;
-			std::vector<std::pair<u32, bool>> dirty;
+			rsx::simple_array<surface_overlap_info> result;
+			rsx::simple_array<std::pair<u32, bool>> dirty;
 
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
@@ -1236,7 +1236,7 @@ namespace rsx
 			return result;
 		}
 
-		void check_for_duplicates(std::vector<surface_overlap_info>& sections)
+		void check_for_duplicates(rsx::simple_array<surface_overlap_info>& sections)
 		{
 			utils::address_range32 test_range;
 			for (const auto& section : sections)

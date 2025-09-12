@@ -42,12 +42,12 @@ namespace vk
 	{
 		if (!m_vao.heap)
 		{
-			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, "overlays VAO", 128);
+			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, vk::heap_pool_default, "overlays VAO", 128);
 		}
 
 		if (!m_ubo.heap && m_num_uniform_buffers > 0)
 		{
-			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, "overlays UBO", 128);
+			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, vk::heap_pool_default, "overlays UBO", 128);
 		}
 	}
 
