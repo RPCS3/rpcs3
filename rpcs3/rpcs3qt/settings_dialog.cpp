@@ -640,21 +640,27 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
+	m_emu_settings->EnhanceCheckBox(ui->stereoRenderEnabled, emu_settings_type::StereoRenderEnabled);
 	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
 	if (game)
 	{
-		const auto on_resolution = [this](int index)
+		const auto enable_3D_modes = [this]()
 		{
-			const auto [text, value] = get_data(ui->resBox, index);
-			ui->stereoRenderMode->setEnabled(value == static_cast<int>(video_resolution::_720p));
+			const auto [text, value] = get_data(ui->resBox, ui->resBox->currentIndex());
+			const bool stereo_allowed = value == static_cast<int>(video_resolution::_720p);
+			const bool stereo_enabled = ui->stereoRenderEnabled->checkState() == Qt::CheckState::Checked;
+			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
+			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
 		};
-		connect(ui->resBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, on_resolution);
-		on_resolution(ui->resBox->currentIndex());
+		connect(ui->resBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [enable_3D_modes](int){ enable_3D_modes(); });
+		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
+		enable_3D_modes();
 	}
 	else
 	{
 		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
-		ui->stereoRenderMode->setEnabled(false);
+		ui->stereoRenderEnabled->setChecked(false);
+		ui->gb_stereo->setEnabled(false);
 	}
 
 	// Checkboxes: main options

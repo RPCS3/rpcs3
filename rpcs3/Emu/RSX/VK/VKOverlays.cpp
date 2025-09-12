@@ -894,11 +894,12 @@ namespace vk
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
+		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb,
+		bool stereo_enabled, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
 	{
 		config.gamma = gamma;
 		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo_display_mode = static_cast<u8>(stereo_mode);
+		config.stereo_display_mode = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
 		config.stereo_image_count = std::min(::size32(src), 2u);
 
 		std::vector<vk::image_view*> views;
