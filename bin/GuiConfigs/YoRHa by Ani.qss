@@ -302,7 +302,7 @@ QCalendarWidget QWidget{
 
 
 /* Main Window, Dialogs and some Dialogs that are actually widgets */
-QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer, QMainWindow#main_window {
+QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer, QWidget#savestate_manager, QMainWindow#main_window {
 	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 
