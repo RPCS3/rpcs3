@@ -262,7 +262,7 @@ QTabWidget::tab-bar {
 }
 
 /* Top menu bar */
-QMenuBar {
+QMenuBar#menuBar {
 	height:1.50em;
 	text-transform: uppercase;
 }
