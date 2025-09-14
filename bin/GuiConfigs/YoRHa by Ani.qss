@@ -247,6 +247,7 @@ QDockWidget {
 QDockWidget::title {
 	background: #4d4940;
 	padding-top: 0.2em;
+	padding-left: 0.2em;
 }
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #b3ac98;
