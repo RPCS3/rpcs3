@@ -32,17 +32,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-namespace
-{
-	// Helper converters
-	QString FormatTimestamp(s64 time)
-	{
-		QDateTime dateTime;
-		dateTime.setSecsSinceEpoch(time);
-		return dateTime.toString("yyyy-MM-dd HH:mm:ss");
-	}
-}
-
 enum SaveColumns
 {
 	Icon = 0,
@@ -376,7 +365,7 @@ void save_manager_dialog::UpdateList()
 		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, SaveColumns::Name, titleItem);
 
-		custom_table_widget_item* timeItem = new custom_table_widget_item(FormatTimestamp(entry.mtime));
+		custom_table_widget_item* timeItem = new custom_table_widget_item(gui::utils::format_timestamp(entry.mtime));
 		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
 		m_list->setItem(i, SaveColumns::Time, timeItem);
 
@@ -683,7 +672,7 @@ void save_manager_dialog::UpdateDetails()
 
 		m_details_title->setText(QString::fromStdString(save.title));
 		m_details_subtitle->setText(QString::fromStdString(save.subtitle));
-		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));
+		m_details_modified->setText(tr("Last modified: %1").arg(gui::utils::format_timestamp(save.mtime)));
 		m_details_details->setText(tr("Details:\n").append(QString::fromStdString(save.details)));
 		QString note = tr("Note:\n");
 		const QString dir_name = QString::fromStdString(save.dirName);
