@@ -56,31 +56,6 @@ QTextEdit, QPlainTextEdit {
 }
 
 /*
-	QListWidget, QTreeWidget: Style checkboxes and rows
-
-	RPCS3: LLE/HLE Selector, Debugger
-*/
-QListWidget::item {
-	margin-top: 0.05em;
-	margin-bottom: 0.05em;
-}
-QListWidget::indicator, QTreeWidget::indicator {
-	border: 0.05em solid #4d4940;
-}
-QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
-	background-color: #b3ac98;
-}
-QListWidget::indicator::checked, QTreeWidget::indicator::checked {
-	background-color: #4d4940;
-}
-QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
-	background-color: #828790;
-}
-QListWidget::item::selected, QTreeWidget::item::selected {
-	background-color: #4d4940;
-}
-
-/*
 	QTableView: Style selected row
 
 	RPCS3: Game List
@@ -141,30 +116,37 @@ QTabBar::tab::selected {
 	color: #aea993;
 }
 
-/* Checkboxes */
-QCheckBox::indicator {
+/* Checkboxes
+   Radio Buttons 
+   
+   QListWidget, QTreeWidget: Style indicators (checkboxes) and selected rows
+
+   RPCS3: LLE/HLE Selector, Debugger, Game Patches
+*/
+QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	border-radius: 0.1em;
 }
-/* Radio Buttons */
 QRadioButton::indicator {
 	border-radius: 0.4em;
 }
-/* Checkboxes and Radio Buttons */
-QCheckBox::indicator, QRadioButton::indicator {
+QCheckBox::indicator, QRadioButton::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	border: 0.05em solid #4d4940;
 	margin-top: 0.05em;
 	margin-bottom: 0.05em;
 	width: 0.8em;
 	height: 0.8em;
 }
-QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+QCheckBox::indicator:checked, QRadioButton::indicator:checked, QListWidget::indicator::checked, QTreeWidget::indicator::checked{
 	background-color: #4d4940; /* Dark */
 }
-QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked {
+QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked, QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
 	background-color: #b3ac98; /* Light */
 }
-QCheckBox::indicator::disabled, QRadioButton::indicator::disabled {
+QCheckBox::indicator::disabled, QRadioButton::indicator::disabled, QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
 	background-color: #828790; /* Gray */
+}
+QListWidget::item::selected, QTreeWidget::item::selected {
+	background-color: #4d4940;
 }
 
 /* Combo Boxes, Datetime dropdown */
