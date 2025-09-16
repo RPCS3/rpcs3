@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include <cmath>
 
 namespace audio
 {

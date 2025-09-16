@@ -59,13 +59,23 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 {
 	ensure(param.ch_cnt > 1 && param.ch_cnt % 2 == 0); // Tends to produce faster code
 
+	// Fast path when no volume change is needed
+	if (param.current_volume == param.target_volume)
+	{
+		apply_volume_static(param.target_volume, sample_cnt, src, dst);
+		return param.target_volume;
+	}
+
 	const f32 vol_incr = (param.target_volume - param.initial_volume) / (VOLUME_CHANGE_DURATION * param.freq);
 	f32 crnt_vol = param.current_volume;
 	u32 sample_idx = 0;
 
+	// Use epsilon for float comparison to avoid infinite loops
+	constexpr f32 epsilon = 1e-6f;
+
 	if (vol_incr >= 0)
 	{
-		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
+		for (sample_idx = 0; sample_idx < sample_cnt && (param.target_volume - crnt_vol) > epsilon; sample_idx += param.ch_cnt)
 		{
 			crnt_vol = std::min(crnt_vol + vol_incr, param.target_volume);
 
@@ -77,7 +87,7 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 	}
 	else
 	{
-		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
+		for (sample_idx = 0; sample_idx < sample_cnt && (crnt_vol - param.target_volume) > epsilon; sample_idx += param.ch_cnt)
 		{
 			crnt_vol = std::max(crnt_vol + vol_incr, param.target_volume);
 
