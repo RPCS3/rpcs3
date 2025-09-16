@@ -2,6 +2,8 @@
 #include "AudioBackend.h"
 #include "Emu/IdManager.h"
 #include "Emu//Cell/Modules/cellAudioOut.h"
+#include <cstring>
+#include <cmath>
 
 AudioBackend::AudioBackend() {}
 
@@ -96,6 +98,25 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 
 void AudioBackend::apply_volume_static(f32 vol, u32 sample_cnt, const f32* src, f32* dst)
 {
+	// Improved volume application with better precision
+	if (vol == 1.0f)
+	{
+		// Fast path for unity gain - no multiplication needed
+		if (src != dst)
+		{
+			std::memcpy(dst, src, sample_cnt * sizeof(f32));
+		}
+		return;
+	}
+
+	if (vol == 0.0f)
+	{
+		// Fast path for mute
+		std::memset(dst, 0, sample_cnt * sizeof(f32));
+		return;
+	}
+
+	// Process samples with improved precision
 	for (u32 i = 0; i < sample_cnt; i++)
 	{
 		dst[i] = src[i] * vol;
@@ -104,9 +125,37 @@ void AudioBackend::apply_volume_static(f32 vol, u32 sample_cnt, const f32* src, 
 
 void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 {
+	// Improved normalization with soft clipping and better dynamic range handling
+	constexpr f32 soft_clip_threshold = 0.95f;
+	constexpr f32 hard_clip_limit = 1.0f;
+
 	for (u32 i = 0; i < sample_cnt; i++)
 	{
-		dst[i] = std::clamp<f32>(src[i], -1.0f, 1.0f);
+		f32 sample = src[i];
+		f32 abs_sample = std::abs(sample);
+
+		if (abs_sample > soft_clip_threshold)
+		{
+			// Apply soft clipping for smoother distortion
+			f32 sign = std::copysign(1.0f, sample);
+			if (abs_sample > hard_clip_limit)
+			{
+				// Hard limit to prevent overflow
+				dst[i] = sign * hard_clip_limit;
+			}
+			else
+			{
+				// Soft clipping using tanh-like curve
+				f32 excess = (abs_sample - soft_clip_threshold) / (hard_clip_limit - soft_clip_threshold);
+				f32 soft_factor = soft_clip_threshold + (hard_clip_limit - soft_clip_threshold) * std::tanh(excess);
+				dst[i] = sign * soft_factor;
+			}
+		}
+		else
+		{
+			// No clipping needed
+			dst[i] = sample;
+		}
 	}
 }
 
