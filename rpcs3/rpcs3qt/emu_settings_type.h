@@ -81,6 +81,7 @@ enum class emu_settings_type
 	DisableFIFOReordering,
 	StrictTextureFlushing,
 	ShaderPrecisionQuality,
+	StereoRenderEnabled,
 	StereoRenderMode,
 	AnisotropicFilterOverride,
 	TextureLodBias,
@@ -168,6 +169,7 @@ enum class emu_settings_type
 	MidiDevices,
 	SDLMappings,
 	IoDebugOverlay,
+	MouseDebugOverlay,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -203,11 +205,15 @@ enum class emu_settings_type
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
+	DateFormat,
+	TimeFormat,
+	ConsoleTimeOffset,
+
+	// VFS
 	EnableHostRoot,
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
-	ConsoleTimeOffset,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
@@ -279,6 +285,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::DisableOcclusionQueries,    { "Video", "Disable ZCull Occlusion Queries"}},
 	{ emu_settings_type::DisableVideoOutput,         { "Video", "Disable Video Output"}},
 	{ emu_settings_type::DisableFIFOReordering,      { "Video", "Disable FIFO Reordering"}},
+	{ emu_settings_type::StereoRenderEnabled,        { "Video", "3D Display Enabled"}},
 	{ emu_settings_type::StereoRenderMode,           { "Video", "3D Display Mode"}},
 	{ emu_settings_type::StrictTextureFlushing,      { "Video", "Strict Texture Flushing"}},
 	{ emu_settings_type::ForceCPUBlitEmulation,      { "Video", "Force CPU Blit"}},
@@ -353,24 +360,25 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::MusicHandler,            { "Audio", "Music Handler"}},
 
 	// Input / Output
-	{ emu_settings_type::BackgroundInput, { "Input/Output", "Background input enabled"}},
-	{ emu_settings_type::ShowMoveCursor,  { "Input/Output", "Show move cursor"}},
-	{ emu_settings_type::LockOvlIptToP1,  { "Input/Output", "Lock overlay input to player one"}},
-	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
-	{ emu_settings_type::PadConnection,   { "Input/Output", "Keep pads connected" }},
-	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
-	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
-	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
-	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
-	{ emu_settings_type::CameraFlip,      { "Input/Output", "Camera flip"}},
-	{ emu_settings_type::CameraID,        { "Input/Output", "Camera ID"}},
-	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
-	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
-	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
-	{ emu_settings_type::GHLtar,          { "Input/Output", "GHLtar emulated controller" }},
-	{ emu_settings_type::MidiDevices,     { "Input/Output", "Emulated Midi devices" }},
-	{ emu_settings_type::SDLMappings,     { "Input/Output", "Load SDL GameController Mappings" }},
-	{ emu_settings_type::IoDebugOverlay,  { "Input/Output", "IO Debug overlay" }},
+	{ emu_settings_type::BackgroundInput,   { "Input/Output", "Background input enabled"}},
+	{ emu_settings_type::ShowMoveCursor,    { "Input/Output", "Show move cursor"}},
+	{ emu_settings_type::LockOvlIptToP1,    { "Input/Output", "Lock overlay input to player one"}},
+	{ emu_settings_type::PadHandlerMode,    { "Input/Output", "Pad handler mode"}},
+	{ emu_settings_type::PadConnection,     { "Input/Output", "Keep pads connected" }},
+	{ emu_settings_type::KeyboardHandler,   { "Input/Output", "Keyboard"}},
+	{ emu_settings_type::MouseHandler,      { "Input/Output", "Mouse"}},
+	{ emu_settings_type::Camera,            { "Input/Output", "Camera"}},
+	{ emu_settings_type::CameraType,        { "Input/Output", "Camera type"}},
+	{ emu_settings_type::CameraFlip,        { "Input/Output", "Camera flip"}},
+	{ emu_settings_type::CameraID,          { "Input/Output", "Camera ID"}},
+	{ emu_settings_type::Move,              { "Input/Output", "Move" }},
+	{ emu_settings_type::Buzz,              { "Input/Output", "Buzz emulated controller" }},
+	{ emu_settings_type::Turntable,         { "Input/Output", "Turntable emulated controller" }},
+	{ emu_settings_type::GHLtar,            { "Input/Output", "GHLtar emulated controller" }},
+	{ emu_settings_type::MidiDevices,       { "Input/Output", "Emulated Midi devices" }},
+	{ emu_settings_type::SDLMappings,       { "Input/Output", "Load SDL GameController Mappings" }},
+	{ emu_settings_type::IoDebugOverlay,    { "Input/Output", "IO Debug overlay" }},
+	{ emu_settings_type::MouseDebugOverlay, { "Input/Output", "Mouse Debug overlay" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,               { "Miscellaneous", "Exit RPCS3 when process finishes" }},
@@ -405,13 +413,16 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
-	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
+	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"}},
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},
+	{ emu_settings_type::DateFormat,            { "System", "Date Format"}},
+	{ emu_settings_type::TimeFormat,            { "System", "Time Format"}},
+	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
+
 	{ emu_settings_type::EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 	{ emu_settings_type::EmptyHdd0Tmp,          { "VFS", "Empty /dev_hdd0/tmp/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
-	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},

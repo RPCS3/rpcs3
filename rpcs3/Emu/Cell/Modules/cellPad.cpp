@@ -86,6 +86,8 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		">     Digital:   %5s   %5s\n"
 		">       Press:   %5s   %5s\n"
 		">      Sensor:   %5s   %5s\n"
+		"> Large Motor:   %5d   %5d\n"
+		"> Small Motor:   %5d   %5d\n"
 		">\n"
 		">   Digital 1:  0x%04x  0x%04x\n"
 		">   Digital 2:  0x%04x  0x%04x\n"
@@ -126,6 +128,8 @@ void show_debug_overlay(const CellPadData& data, const Pad& pad, const pad_info&
 		"on", data.len >= CELL_PAD_LEN_CHANGE_DEFAULT ? "on" : "off",
 		(setting & CELL_PAD_SETTING_PRESS_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_PRESS_ON ? "on" : "off",
 		(setting & CELL_PAD_SETTING_SENSOR_ON) ? "on" : "off", data.len >= CELL_PAD_LEN_CHANGE_SENSOR_ON ? "on" : "off",
+		pad.m_vibrate_motors[0].value, pad.m_vibrate_motors[0].adjusted_value,
+		pad.m_vibrate_motors[1].value, pad.m_vibrate_motors[1].adjusted_value,
 		pad.m_digital_1, d1,
 		pad.m_digital_2, d2,
 		pad.m_press_up, !!(d1 & CELL_PAD_CTRL_UP), data.button[CELL_PAD_BTN_OFFSET_PRESS_UP],
@@ -717,7 +721,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	pad_get_data(port_no, data.get_ptr());
 
-	if (g_cfg.io.debug_overlay && !g_cfg.video.debug_overlay && port_no == 0)
+	if (g_cfg.io.pad_debug_overlay && !g_cfg.video.debug_overlay && port_no == 0)
 	{
 		show_debug_overlay(*data, *pad, config);
 	}
@@ -901,7 +905,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_ACTUATOR))
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
-	handler->SetRumble(port_no, param->motor[1], param->motor[0] > 0);
+	handler->SetRumble(port_no, param->motor[1], param->motor[0]);
 
 	return CELL_OK;
 }

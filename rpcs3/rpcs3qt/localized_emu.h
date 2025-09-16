@@ -238,6 +238,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_OUTPUT_SCALING: return tr("Output Scaling", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RCAS_SHARPENING: return tr("FidelityFX CAS Sharpening Intensity", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY: return tr("Stretch To Display Area", "Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE: return tr("Stereo Mode", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT: return tr("Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_BACKGROUND_INPUT: return tr("Background Input Enabled", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_KEEP_PADS_CONNECTED: return tr("Keep Pads Connected", "Input");
@@ -285,6 +286,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");
+		case localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY: return tr("Mouse Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");

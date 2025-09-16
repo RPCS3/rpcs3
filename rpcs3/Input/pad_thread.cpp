@@ -253,7 +253,7 @@ void pad_thread::Init()
 	input::set_mouse_and_keyboard(m_handlers.contains(pad_handler::keyboard) ? input::active_mouse_and_keyboard::pad : input::active_mouse_and_keyboard::emulated);
 }
 
-void pad_thread::SetRumble(u32 pad, u8 large_motor, bool small_motor)
+void pad_thread::SetRumble(u32 pad, u8 large_motor, u8 small_motor)
 {
 	if (pad >= m_pads.size() || !m_pads[pad])
 		return;
@@ -261,8 +261,8 @@ void pad_thread::SetRumble(u32 pad, u8 large_motor, bool small_motor)
 	const u64 now_us = get_system_time();
 
 	m_pads[pad]->m_last_rumble_time_us = now_us;
-	m_pads[pad]->m_vibrateMotors[0].m_value = large_motor;
-	m_pads[pad]->m_vibrateMotors[1].m_value = small_motor ? 255 : 0;
+	m_pads[pad]->m_vibrate_motors[0].value = large_motor;
+	m_pads[pad]->m_vibrate_motors[1].value = small_motor;
 
 	// Rumble copilots as well
 	for (const auto& copilot : m_pads[pad]->copilots)
@@ -270,8 +270,8 @@ void pad_thread::SetRumble(u32 pad, u8 large_motor, bool small_motor)
 		if (copilot && copilot->is_connected())
 		{
 			copilot->m_last_rumble_time_us = now_us;
-			copilot->m_vibrateMotors[0].m_value = large_motor;
-			copilot->m_vibrateMotors[1].m_value = small_motor ? 255 : 0;
+			copilot->m_vibrate_motors[0].value = large_motor;
+			copilot->m_vibrate_motors[1].value = small_motor;
 		}
 	}
 }
@@ -883,12 +883,17 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 
 void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
+	// We need to restore the original defaults first.
+	cfg.restore_defaults();
+
 	if (!handler)
 	{
 		handler = GetHandler(type);
 	}
 
 	ensure(!!handler);
+
+	// Set and apply actual defaults depending on pad handler
 	handler->init_config(&cfg);
 }
 

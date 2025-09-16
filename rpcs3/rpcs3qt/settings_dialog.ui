@@ -552,6 +552,13 @@
               </property>
               <layout class="QVBoxLayout" name="gb_stereo_layout">
                <item>
+                <widget class="QCheckBox" name="stereoRenderEnabled">
+                 <property name="text">
+                  <string>Enable 3D Support</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
               </layout>
@@ -2004,6 +2011,30 @@
               <layout class="QVBoxLayout" name="verticalLayout_keyboardType">
                <item>
                 <widget class="QComboBox" name="keyboardType"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_dateFormat">
+              <property name="title">
+               <string>Date Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_dateFormat">
+               <item>
+                <widget class="QComboBox" name="dateFormat"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_timeFormat">
+              <property name="title">
+               <string>Time Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_timeFormat">
+               <item>
+                <widget class="QComboBox" name="timeFormat"/>
                </item>
               </layout>
              </widget>
@@ -4520,6 +4551,13 @@
                  <widget class="QCheckBox" name="debugOverlayIO">
                   <property name="text">
                    <string>Debug Overlay For Pad Input</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="debugOverlayMouse">
+                  <property name="text">
+                   <string>Debug Overlay For Mouse Input</string>
                   </property>
                  </widget>
                 </item>

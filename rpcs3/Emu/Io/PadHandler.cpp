@@ -40,7 +40,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 	}
 
 	// convert [min, max] to [0, 1]
-	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	const f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	// convert [0, 1] to [0, range]
 	return range * val;
@@ -50,7 +50,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
 	// convert [min, max] to [0, 1]
-	f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	if (deadzone > 0)
 	{
@@ -200,6 +200,10 @@ void PadHandlerBase::init_configs()
 {
 	for (u32 i = 0; i < MAX_GAMEPADS; i++)
 	{
+		// We need to restore the original defaults first.
+		m_pad_configs[i].restore_defaults();
+
+		// Set and apply actual defaults depending on pad handler
 		init_config(&m_pad_configs[i]);
 	}
 }
@@ -538,8 +542,8 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
 	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors[0] = VibrateMotor(true, 0);
-	pad->m_vibrateMotors[1] = VibrateMotor(false, 0);
+	pad->m_vibrate_motors[0] = VibrateMotor(true);
+	pad->m_vibrate_motors[1] = VibrateMotor(false);
 
 	m_bindings.emplace_back(pad, pad_device, nullptr);
 
@@ -759,9 +763,10 @@ void PadHandlerBase::process()
 
 			if ((get_system_time() - pad->m_last_rumble_time_us) > 3'000'000)
 			{
-				for (VibrateMotor& motor : pad->m_vibrateMotors)
+				for (VibrateMotor& motor : pad->m_vibrate_motors)
 				{
-					motor.m_value = 0;
+					motor.value = 0;
+					motor.adjusted_value = 0;
 				}
 
 				pad->m_last_rumble_time_us = 0;

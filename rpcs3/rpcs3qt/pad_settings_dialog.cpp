@@ -1133,6 +1133,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->sb_vibration_small->setRange(cfg.multiplier_vibration_motor_small.min, cfg.multiplier_vibration_motor_small.max);
 		ui->sb_vibration_small->setValue(cfg.multiplier_vibration_motor_small.get());
 
+		ui->sb_vibration_threshold->setRange(cfg.vibration_threshold.min, cfg.vibration_threshold.max);
+		ui->sb_vibration_threshold->setValue(cfg.vibration_threshold.get());
+
 		ui->chb_vibration_switch->setChecked(cfg.switch_vibration_motors.get());
 
 		// Update Trigger Thresholds
@@ -1886,6 +1889,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	{
 		cfg.multiplier_vibration_motor_large.set(ui->sb_vibration_large->value());
 		cfg.multiplier_vibration_motor_small.set(ui->sb_vibration_small->value());
+		cfg.vibration_threshold.set(ui->sb_vibration_threshold->value());
 		cfg.switch_vibration_motors.set(ui->chb_vibration_switch->isChecked());
 	}
 
