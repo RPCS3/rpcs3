@@ -8,6 +8,7 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 /opt/homebrew/bin/brew install -f --overwrite --quiet nasm ninja p7zip ccache pipenv gnutls freetype googletest #create-dmg
 /opt/homebrew/bin/brew install -f --quiet ffmpeg@5
+/opt/homebrew/bin/brew uninstall cmake || true
 /opt/homebrew/bin/brew install --quiet "llvm@$LLVM_COMPILER_VER" glew cmake sdl3 vulkan-headers coreutils
 /opt/homebrew/bin/brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
