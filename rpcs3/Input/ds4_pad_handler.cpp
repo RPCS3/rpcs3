@@ -918,8 +918,8 @@ void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	cfg_pad* config = dev->config;
 
 	// Attempt to send rumble no matter what
-	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
-	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrate_motors);
+	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrate_motors);
 
 	const bool wireless    = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 2;

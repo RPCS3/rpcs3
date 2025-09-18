@@ -426,11 +426,11 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
-		*value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
+		*value = static_cast<s32>(g_cfg.sys.date_fmt.get());
 		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
-		*value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
+		*value = static_cast<s32>(g_cfg.sys.time_fmt.get());
 		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:

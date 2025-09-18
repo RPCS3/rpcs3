@@ -209,6 +209,7 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 	cfg->lpadsquircling.def    = 0;
 	cfg->rpadsquircling.def    = 0;
+	cfg->vibration_threshold.def = 0;
 
 	// Set default LED options
 	cfg->led_battery_indicator.def = false;
@@ -548,8 +549,8 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
-	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrate_motors);
+	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrate_motors);
 
 	const bool wireless    = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 25;

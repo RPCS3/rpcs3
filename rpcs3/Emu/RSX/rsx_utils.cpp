@@ -187,6 +187,16 @@ namespace rsx
 		}
 	}
 
+	size2u avconf::video_frame_size() const
+	{
+		if (state && stereo_enabled)
+		{
+			return size2u{ resolution_x, (resolution_y - 30) / 2 };
+		}
+
+		return size2u{ resolution_x, resolution_y };
+	}
+
 	size2u avconf::aspect_convert_dimensions(const size2u& image_dimensions) const
 	{
 		if (image_dimensions.width == 0 || image_dimensions.height == 0)
@@ -210,7 +220,7 @@ namespace rsx
 
 		// Fit the input image into the virtual display 'window'
 		const auto source_aspect = 1. * image_dimensions.width / image_dimensions.height;
-		const auto virtual_output = size2u{ resolution_x, resolution_y };
+		const auto virtual_output = video_frame_size();
 		const auto area1 = convert_aspect_ratio_impl(virtual_output, source_aspect);
 
 		// Fit the virtual display into the physical display

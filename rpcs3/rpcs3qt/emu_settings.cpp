@@ -1336,6 +1336,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case vk_gpu_scheduler_mode::fast: return tr("Fast", "Asynchronous Queue Scheduler");
 		}
 		break;
+	case emu_settings_type::DateFormat:
+		switch (static_cast<date_format>(index))
+		{
+		case date_format::yyyymmdd: return tr("Year/Month/Day", "Date Format");
+		case date_format::ddmmyyyy: return tr("Day/Month/Year", "Date Format");
+		case date_format::mmddyyyy: return tr("Month/Day/Year", "Date Format");
+		}
+		break;
+	case emu_settings_type::TimeFormat:
+		switch (static_cast<time_format>(index))
+		{
+		case time_format::clock12: return tr("12-hour clock", "Time Format");
+		case time_format::clock24: return tr("24-hour clock", "Time Format");
+		}
+		break;
 	case emu_settings_type::Language:
 		switch (static_cast<CellSysutilLang>(index))
 		{

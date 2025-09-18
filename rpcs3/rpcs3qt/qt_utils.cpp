@@ -656,5 +656,22 @@ namespace gui
 
 			return QStringLiteral("%0 %1").arg(QString::number((size + 0.) / divisor, 'f', 2)).arg(s_units[byte_unit]);
 		}
+
+		QDateTime datetime(s64 time)
+		{
+			QDateTime dateTime;
+			dateTime.setSecsSinceEpoch(time);
+			return dateTime;
+		}
+
+		QString format_datetime(const QDateTime& date, const QString& fmt)
+		{
+			return date.toString(fmt);
+		}
+
+		QString format_timestamp(s64 time, const QString& fmt)
+		{
+			return format_datetime(datetime(time), fmt);
+		}
 	} // utils
 } // gui

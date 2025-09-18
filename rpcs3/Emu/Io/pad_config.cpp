@@ -1,8 +1,7 @@
 #include "stdafx.h"
 #include "pad_config.h"
 #include "Emu/system_utils.hpp"
-
-LOG_CHANNEL(input_log, "Input");
+#include "Emu/Io/PadHandler.h"
 
 extern std::string g_input_config_override;
 
@@ -32,18 +31,27 @@ std::string cfg_pad::get_buttons(std::vector<std::string> vec)
 	return fmt::merge(vec, ",");
 }
 
-u8 cfg_pad::get_large_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const
+u8 cfg_pad::get_motor_speed(VibrateMotor& motor, f32 multiplier) const
 {
-	const u8 idx = switch_vibration_motors ? 1 : 0;
-	const f32 multiplier = multiplier_vibration_motor_large / 100.0f;
-	return static_cast<u8>(std::clamp(motor_speed[idx].m_value * multiplier, 0.0f, 255.0f));
+	// If motor is small, use either 0 or 255.
+	const u8 value = motor.is_large_motor ? motor.value : (motor.value > 0 ? 255 : 0);
+
+	// Ignore lower range. Scale remaining range to full range.
+	const f32 adjusted = PadHandlerBase::ScaledInput(value, static_cast<f32>(vibration_threshold.get()), 255.0f, 0.0f, 255.0f);
+
+	// Apply multiplier
+	motor.adjusted_value = static_cast<u8>(std::clamp(adjusted * multiplier, 0.0f, 255.0f));
+	return motor.adjusted_value;
 }
 
-u8 cfg_pad::get_small_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const
+u8 cfg_pad::get_large_motor_speed(std::array<VibrateMotor, 2>& motors) const
 {
-	const u8 idx = switch_vibration_motors ? 0 : 1;
-	const f32 multiplier = multiplier_vibration_motor_small / 100.0f;
-	return static_cast<u8>(std::clamp(motor_speed[idx].m_value * multiplier, 0.0f, 255.0f));
+	return get_motor_speed(motors[switch_vibration_motors ? 1 : 0], multiplier_vibration_motor_large / 100.0f);
+}
+
+u8 cfg_pad::get_small_motor_speed(std::array<VibrateMotor, 2>& motors) const
+{
+	return get_motor_speed(motors[switch_vibration_motors ? 0 : 1], multiplier_vibration_motor_small / 100.0f);
 }
 
 bool cfg_input::load(const std::string& title_id, const std::string& config_file, bool strict)

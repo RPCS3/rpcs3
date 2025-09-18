@@ -1,6 +1,6 @@
 #pragma once
 
-#include <list>
+#include <deque>
 #include <vector>
 #include "Utilities/StrFmt.h"
 #include "Utilities/mutex.h"
@@ -96,6 +96,9 @@ struct MouseData
 	s8 y_axis = 0;
 	s8 wheel = 0;
 	s8 tilt = 0;
+
+	s32 pixel_x = 0;
+	s32 pixel_y = 0;
 };
 
 struct MouseTabletData
@@ -104,8 +107,8 @@ struct MouseTabletData
 	u8 data[MOUSE_MAX_CODES]{};
 };
 
-using MouseTabletDataList = std::list<MouseTabletData>;
-using MouseDataList = std::list<MouseData>;
+using MouseTabletDataList = std::deque<MouseTabletData>;
+using MouseDataList = std::deque<MouseData>;
 
 struct Mouse
 {

@@ -41,10 +41,10 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	setColumnCount(static_cast<int>(gui::game_list_columns::count));
 	setMouseTracking(true);
 
-	connect(this, &game_list_table::size_on_disk_ready, this, [this](const game_info& game)
+	connect(this, &game_list_table::size_on_disk_ready, this, [this](const game_info& game, movie_item_base* item)
 	{
-		if (!game || !game->item) return;
-		if (QTableWidgetItem* size_item = item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
+		if (!game || !game->item || game->item != item) return;
+		if (QTableWidgetItem* size_item = this->item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
 		{
 			const u64& game_size = game->info.size_on_disk;
 			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
@@ -52,9 +52,9 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		}
 	});
 
-	connect(this, &game_list::IconReady, this, [this](const movie_item_base* item)
+	connect(this, &game_list::IconReady, this, [this](const game_info& game, const movie_item_base* item)
 	{
-		if (item) item->image_change_callback();
+		if (game && item && game->item == item) item->image_change_callback();
 	});
 }
 
@@ -284,7 +284,7 @@ void game_list_table::populate(
 
 				if (!cancel || !cancel->load())
 				{
-					Q_EMIT size_on_disk_ready(game);
+					Q_EMIT size_on_disk_ready(game, game->item);
 					return;
 				}
 			}

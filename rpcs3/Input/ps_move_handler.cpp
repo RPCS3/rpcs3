@@ -816,7 +816,7 @@ void ps_move_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrate_motors);
 
 	dev->new_output_data |= dev->large_motor != speed_large;
 	dev->large_motor = speed_large;

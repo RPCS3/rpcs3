@@ -417,9 +417,6 @@
     <ClCompile Include="curl\lib\cf-socket.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\vquic\curl_msh3.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vquic\curl_ngtcp2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -544,6 +541,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\curlx\wait.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cf-ip-happy.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -977,9 +977,6 @@
     <ClInclude Include="curl\lib\cf-socket.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\vquic\curl_msh3.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\vquic\curl_ngtcp2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1107,6 +1104,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curlx\wait.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-ip-happy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curl_mem_undef.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

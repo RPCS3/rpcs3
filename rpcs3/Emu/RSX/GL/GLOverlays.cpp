@@ -487,7 +487,8 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
+		bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -498,7 +499,7 @@ namespace gl
 
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
+		program_handle.uniforms["stereo_display_mode"] = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);

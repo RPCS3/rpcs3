@@ -925,7 +925,7 @@ void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 			}
 			if (QTableWidgetItem* date_item = m_trophy_table->item(row, static_cast<int>(gui::trophy_list_columns::time_unlocked)))
 			{
-				date_item->setText(tick ? QLocale().toString(TickToDateTime(tick), gui::persistent::last_played_date_with_time_of_day_format) : tr("Unknown"));
+				date_item->setText(tick ? gui::utils::format_datetime(TickToDateTime(tick), gui::persistent::last_played_date_with_time_of_day_format) : tr("Unknown"));
 				date_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(tick));
 			}
 		});
@@ -1129,8 +1129,6 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
 
-	const QLocale locale{};
-
 	std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
 	if (!trophy_base)
 	{
@@ -1189,7 +1187,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 
 		// Get timestamp
 		const u64 tick = data->trop_usr->GetTrophyTimestamp(trophy_id);
-		const QString datetime = tick ? locale.toString(TickToDateTime(tick), gui::persistent::last_played_date_with_time_of_day_format) : tr("Unknown");
+		const QString datetime = tick ? gui::utils::format_datetime(TickToDateTime(tick), gui::persistent::last_played_date_with_time_of_day_format) : tr("Unknown");
 
 		const QString unlockstate = data->trop_usr->GetTrophyUnlockState(trophy_id) ? tr("Earned") : tr("Not Earned");
 

@@ -71,6 +71,8 @@ void MouseHandlerBase::Button(u32 index, u8 button, bool pressed)
 		MouseData new_data{};
 		new_data.update = CELL_MOUSE_DATA_UPDATE;
 		new_data.buttons = mouse.buttons;
+		new_data.pixel_x = mouse.x_pos;
+		new_data.pixel_y = mouse.y_pos;
 
 		datalist.push_back(std::move(new_data));
 	}
@@ -100,6 +102,8 @@ void MouseHandlerBase::Scroll(u32 index, s8 x, s8 y)
 		new_data.buttons = mouse.buttons;
 		new_data.wheel = y;
 		new_data.tilt = x;
+		new_data.pixel_x = mouse.x_pos;
+		new_data.pixel_y = mouse.y_pos;
 
 		datalist.push_back(std::move(new_data));
 	}
@@ -137,6 +141,8 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 
 		new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
 		new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
+		new_data.pixel_x = x_pos_new;
+		new_data.pixel_y = y_pos_new;
 
 		mouse.x_max = x_max;
 		mouse.y_max = y_max;
