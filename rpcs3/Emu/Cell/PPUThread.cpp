@@ -5754,7 +5754,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
-	_module->setTargetTriple(jit_compiler::triple1());
+	_module->setTargetTriple(Triple(jit_compiler::triple1()));
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
