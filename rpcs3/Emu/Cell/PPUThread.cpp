@@ -195,17 +195,17 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.push(x86::rdi);
 	c.push(x86::rbp);
 	c.push(x86::rbx);
-	c.sub(x86::rsp, 0xa8);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm15);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm14);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm13);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm12);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm11);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm10);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm9);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm8);
-	c.movaps(x86::oword_ptr(x86::rsp, 0x10), x86::xmm7);
-	c.movaps(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+	c.sub(x86::rsp, 0xc8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0xb0), x86::xmm15);
+	c.movaps(x86::oword_ptr(x86::rsp, 0xa0), x86::xmm14);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm13);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm12);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm11);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm10);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm9);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm7);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm6);
 #else
 	c.push(x86::rbp);
 	c.push(x86::r15);
@@ -252,17 +252,17 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	}
 
 #ifdef _WIN32
-	c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
-	c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x10));
-	c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x20));
-	c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x30));
-	c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x40));
-	c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x50));
-	c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x60));
-	c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x70));
-	c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0x80));
-	c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0x90));
-	c.add(x86::rsp, 0xa8);
+	c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0x20));
+	c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x30));
+	c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x40));
+	c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x50));
+	c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x60));
+	c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x70));
+	c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x80));
+	c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x90));
+	c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0xa0));
+	c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0xb0));
+	c.add(x86::rsp, 0xc8);
 	c.pop(x86::rbx);
 	c.pop(x86::rbp);
 	c.pop(x86::rdi);
