@@ -6942,6 +6942,8 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 		group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
 		spu.state += cpu_flag::signal;
 		ensure(spu.state & cpu_flag::suspend);
+		notify_spus[spu.index] = group->threads[spu.index];
+		ensure(notify_spus[spu.index].get() == &spu);
 		return;
 	}
 

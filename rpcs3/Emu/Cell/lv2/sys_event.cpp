@@ -134,7 +134,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		{
 			for (auto& spu : spus)
 			{
-				if (spu && spu->state & cpu_flag::wait)
+				if (spu)
 				{
 					spu->state.notify_one();
 				}
@@ -284,7 +284,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		{
 			for (auto& spu : spus)
 			{
-				if (spu && spu->state & cpu_flag::wait)
+				if (spu)
 				{
 					spu->state.notify_one();
 				}
