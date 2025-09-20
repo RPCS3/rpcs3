@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include "sdl_instance.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
+#include "Emu/Cell/timers.hpp"
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -37,7 +39,19 @@ void sdl_instance::pump_events()
 
 	if (m_initialized)
 	{
-		SDL_PumpEvents();
+		const u64 sleep_us = std::clamp<u64>(g_cfg.io.pad_sleep.get(), 1000, 16000); // 1ms to 16ms
+
+		if ((get_system_time() - m_last_pump_us) < sleep_us)
+		{
+			return;
+		}
+
+		Emu.CallFromMainThread([this]()
+		{
+			if (!m_initialized) return;
+			SDL_PumpEvents();
+			m_last_pump_us = get_system_time();
+		}, nullptr, false);
 	}
 }
 
