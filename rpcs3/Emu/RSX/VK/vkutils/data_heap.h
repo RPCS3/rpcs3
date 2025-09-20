@@ -11,6 +11,12 @@
 
 namespace vk
 {
+	enum data_heap_pool_flags
+	{
+		heap_pool_default = 0,
+		heap_pool_low_latency = 1,
+	};
+
 	class data_heap : public ::data_heap
 	{
 	private:
@@ -19,6 +25,7 @@ namespace vk
 		void* _ptr = nullptr;
 
 		bool notify_on_grow = false;
+		bool m_prefer_writethrough = false;
 
 		std::unique_ptr<buffer> shadow;
 		std::vector<VkBufferCopy> dirty_ranges;
@@ -33,7 +40,7 @@ namespace vk
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, usz size, const char* name, usz guard = 0x10000, VkBool32 notify = VK_FALSE);
+		void create(VkBufferUsageFlags usage, usz size, rsx::flags32_t flags, const char* name, usz guard = 0x10000, VkBool32 notify = VK_FALSE);
 		void destroy();
 
 		void* map(usz offset, usz size);

@@ -26,6 +26,7 @@ namespace glsl
 		bool require_lit_emulation : 1;
 		bool require_explicit_invariance : 1;
 		bool require_instanced_render : 1;
+		bool require_clip_plane_functions : 1;
 		bool emulate_zclip_transform : 1;
 		bool emulate_depth_clip_only : 1;
 

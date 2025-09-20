@@ -4,6 +4,7 @@
 #include "RSXFragmentProgram.h"
 
 #include <sstream>
+#include <unordered_map>
 
 /**
  * This class is used to translate RSX Fragment program to GLSL/HLSL code
@@ -43,13 +44,13 @@ class FragmentProgramDecompiler
 	u32 m_const_index = 0;
 	u32 m_offset;
 	u32 m_location = 0;
+	bool m_is_valid_ucode = true;
 
 	u32 m_loop_count;
 	int m_code_level;
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
-
-	bool m_is_valid_ucode = true;
+	std::unordered_map<u32, u32> m_constant_offsets;
 
 	std::array<rsx::MixedPrecisionRegister, 64> temp_registers;
 
@@ -189,6 +190,9 @@ public:
 		bool has_tex2D = false;
 		bool has_tex3D = false;
 		bool has_texShadowProj = false;
+
+		// Literal offsets
+		std::vector<u32> constant_offsets;
 	}
 	properties;
 

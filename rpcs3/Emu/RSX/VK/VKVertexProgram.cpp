@@ -77,22 +77,26 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"#version 450\n\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
+	glsl::insert_subheader_block(OS);
+
 	OS <<
-		"layout(std140, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform VertexContextBuffer\n"
+		// Variable redirection
+		"#define get_draw_params() draw_parameters[draw_parameters_offset]\n"
+		"#define vs_context_offset get_draw_params().vs_context_offset\n\n"
+		// Helpers
+		"#define get_vertex_context() vertex_contexts[vs_context_offset]\n"
+		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
+
+	OS <<
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly restrict buffer VertexContextBuffer\n"
 		"{\n"
-		"	mat4 scale_offset_mat;\n"
-		"	ivec4 user_clip_enabled[2];\n"
-		"	vec4 user_clip_factor[2];\n"
-		"	uint transform_branch_bits;\n"
-		"	float point_size;\n"
-		"	float z_near;\n"
-		"	float z_far;\n"
+		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n";
 
 	const vk::glsl::program_input context_input
 	{
 		.domain = glsl::glsl_vertex_program,
-		.type = vk::glsl::input_type_uniform_buffer,
+		.type = vk::glsl::input_type_storage_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.context_buffer_location,
 		.name = "VertexContextBuffer"
@@ -102,9 +106,9 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	if (m_device_props.emulate_conditional_rendering)
 	{
 		OS <<
-			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly buffer EXT_Conditional_Rendering\n"
+			"layout(std430, set=0, binding=" << vk_prog->binding_table.cr_pred_buffer_location << ") readonly restrict buffer EXT_Conditional_Rendering\n"
 			"{\n"
-			"	uint conditional_rendering_predicate;\n"
+			"	uint cr_predicate_value;\n"
 			"};\n\n";
 
 		const vk::glsl::program_input predicate_input
@@ -119,28 +123,32 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	}
 
 	OS <<
-		"layout(push_constant) uniform VertexLayoutBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.vertex_buffers_location + 2 << ") readonly restrict buffer DrawParametersBuffer\n"
 		"{\n"
-		"	uint vertex_base_index;\n"
-		"	uint vertex_index_offset;\n"
-		"	uint draw_id;\n"
-		"	uint layout_ptr_offset;\n"
-		"	uint xform_constants_offset;\n";
+		"	draw_parameters_t draw_parameters[];\n"
+		"};\n\n";
 
-	u32 push_constants_size = 5 * sizeof(u32);
-	if (m_device_props.emulate_conditional_rendering)
+	const vk::glsl::program_input layouts_input
 	{
-		push_constants_size += sizeof(u32);
-		OS << "	uint conditional_rendering_enabled;\n";
-	}
+		.domain = glsl::glsl_vertex_program,
+		.type = vk::glsl::input_type_storage_buffer,
+		.set = vk::glsl::binding_set_index_vertex,
+		.location = vk_prog->binding_table.vertex_buffers_location + 2,
+		.name = "DrawParametersBuffer"
+	};
+	inputs.push_back(layouts_input);
 
-	OS << "};\n\n";
+	OS <<
+		"layout(push_constant) uniform push_constants_block\n"
+		"{\n"
+		"	uint draw_parameters_offset;\n"
+		"};\n\n";
 
 	const vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
-		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = push_constants_size },
+		.bound_data = vk::glsl::push_constant_ref{ .offset = 0, .size = 4 },
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = umax,
 		.name = "push_constants_block"
@@ -153,8 +161,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	static const char* input_streams[] =
 	{
 		"persistent_input_stream",    // Data stream with persistent vertex data (cacheable)
-		"volatile_input_stream",      // Data stream with per-draw data (registers and immediate draw data)
-		"vertex_layout_stream"        // Data stream defining vertex data layout"
+		"volatile_input_stream"      // Data stream with per-draw data (registers and immediate draw data)
 	};
 
 	u32 location = vk_prog->binding_table.vertex_buffers_location;
@@ -190,7 +197,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
@@ -205,7 +212,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 				else
 				{
 					// 1. Bind indirection lookup buffer
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_lut_buffer_location << ") readonly buffer InstancingData\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_lut_buffer_location << ") readonly restrict buffer InstancingData\n";
 					OS << "{\n";
 					OS << "	int constants_addressing_lookup[];\n";
 					OS << "};\n\n";
@@ -216,7 +223,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 					inputs.push_back(in);
 
 					// 2. Bind actual constants buffer
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_cbuf_location << ") readonly buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.instanced_cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 instanced_constants_array[];\n";
 					OS << "};\n\n";
@@ -274,13 +281,13 @@ static const vertex_reg_info reg_table[] =
 	{ "spec_color1", true, "dst_reg4", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: With spir-v if you declare clip distance var, you must assign a value even when its disabled! Runtime does not assign a default value
-	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
-	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
-	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
+	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor(0)", false, "is_user_clip_enabled(0)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 },
+	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor(1)", false, "is_user_clip_enabled(1)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 },
+	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor(2)", false, "is_user_clip_enabled(2)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE },
-	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
-	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
-	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
+	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor(3)", false, "is_user_clip_enabled(3)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 },
+	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor(4)", false, "is_user_clip_enabled(4)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 },
+	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor(5)", false, "is_user_clip_enabled(5)", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
 	{ "tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
 	{ "tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
@@ -303,6 +310,23 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 		}
 	}
+
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
+	{
+		OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
+	}
+}
+
+void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
+{
+	OS <<
+		"void write_fs_payload()\n"
+		"{\n"
+		"	draw_params_payload.x = get_draw_params().fs_constants_offset;\n"
+		"	draw_params_payload.y = get_draw_params().fs_context_offset;\n"
+		"	draw_params_payload.z = get_draw_params().fs_texture_base_index;\n"
+		"	draw_params_payload.w = get_draw_params().fs_stipple_pattern_offset;\n"
+		"}\n\n";
 }
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -310,6 +334,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.require_clip_plane_functions = true;
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
 	properties2.low_precision_tests = vk::is_NVIDIA(vk::get_driver_vendor());
@@ -318,6 +343,8 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
+
+	insertFSExport(OS);
 
 	// Declare global registers with optional initialization
 	std::string registers;
@@ -348,6 +375,14 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		OS << registers << ";\n";
 	}
 
+	// Expand indexed uniform structs here. We don't need to commit registers - these are very rarely consumed anyway.
+	OS <<
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
+
 	OS << "void vs_main()\n";
 	OS << "{\n";
 
@@ -374,6 +409,8 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
 	}
+
+	OS << "\nuint xform_constants_offset = get_draw_params().xform_constants_offset;\n\n";
 }
 
 void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
@@ -385,7 +422,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
-		OS << "	if (conditional_rendering_enabled != 0 && conditional_rendering_predicate == 0)\n";
+		OS << "	if (cr_predicate_value == 0)\n";
 		OS << "	{\n";
 		OS << "		gl_Position = vec4(0., 0., 0., -1.);\n";
 		OS << "		return;\n";
@@ -393,6 +430,9 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	OS << "	vs_main();\n\n";
+
+	// FS payload
+	OS << "write_fs_payload();\n\n";
 
 	for (auto &i : reg_table)
 	{
