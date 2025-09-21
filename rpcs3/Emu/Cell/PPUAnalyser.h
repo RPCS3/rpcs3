@@ -145,6 +145,7 @@ struct ppu_module : public Type
 	std::shared_ptr<std::pair<u32, u32>> jit_bounds; // JIT instance modules addresses range
 	std::unordered_map<u32, void*> imports; // Imports information for release upon unload (TODO: OVL implementation!) 
 	std::map<u32, std::vector<std::pair<ppua_reg_mask_t, u64>>> stub_addr_to_constant_state_of_registers; // Tells possible constant states of registers of functions
+	std::vector<u32> excluded_funcs; // Function code not be overwritten
 	bool is_relocatable = false; // Is code relocatable(?)
 
 	template <typename T>

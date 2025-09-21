@@ -934,13 +934,40 @@ struct ppu_far_jumps_t
 	ppu_far_jumps_t(int) noexcept {}
 
 	std::map<u32, all_info_t> vals;
+	std::pair<u32, u32> vals_range{0, 0};
 	::jit_runtime rt;
 
 	mutable shared_mutex mutex;
 
+	void add_value(u32 addr, all_info_t info)
+	{
+		vals.insert_or_assign(addr, std::move(info));
+
+		if (vals.size() == 1)
+		{
+			vals_range.first = addr;
+			vals_range.second = addr;
+		}
+		else
+		{
+			vals_range.first = std::min<u32>(vals_range.first, addr);
+			vals_range.second = std::max<u32>(vals_range.second, addr);
+		}
+	}
+
 	// Get target address, 'ppu' is used in ppu_far_jump in order to modify registers
 	u32 get_target(u32 pc, ppu_thread* ppu = nullptr)
 	{
+		if (vals_range.first > pc)
+		{
+			return 0;
+		}
+
+		if (vals_range.second < pc)
+		{
+			return 0;
+		}
+
 		reader_lock lock(mutex);
 
 		if (auto it = vals.find(pc); it != vals.end())
@@ -949,13 +976,23 @@ struct ppu_far_jumps_t
 			return all_info.get_target(pc, ppu);
 		}
 
-		return {};
+		return 0;
 	}
 
 	// Get function patches in range (entry -> target)
 	std::vector<std::pair<u32, u32>> get_targets(u32 pc, u32 size)
 	{
 		std::vector<std::pair<u32, u32>> targets;
+
+		if (vals_range.first >= pc + size)
+		{
+			return targets;
+		}
+
+		if (vals_range.second < pc)
+		{
+			return targets;
+		}
 
 		reader_lock lock(mutex);
 
@@ -1110,7 +1147,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, st
 	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
 
 	std::lock_guard lock(jumps.mutex);
-	jumps.vals.insert_or_assign(entry, ppu_far_jumps_t::all_info_t{target, link, with_toc, std::move(module_name)});
+	jumps.add_value(entry, ppu_far_jumps_t::all_info_t{target, link, with_toc, std::move(module_name)});
 	ppu_register_function_at(entry, 4, g_cfg.core.ppu_decoder == ppu_decoder_type::_static ? &ppu_far_jump : ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump<false>(entry)));
 
 	return true;
@@ -5214,6 +5251,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				{
 					// Replace the function with ppu_far_jump
 					fpos++;
+					part.excluded_funcs.emplace_back(func.addr);
 					continue;
 				}
 			}
@@ -5242,6 +5280,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			for (const auto& func : part.get_funcs())
 			{
 				if (func.size == 0)
+				{
+					continue;
+				}
+
+				if (std::count(part.excluded_funcs.begin(), part.excluded_funcs.end(), func.addr))
 				{
 					continue;
 				}
@@ -5340,6 +5383,13 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				{
 					if (func.size == 0)
 					{
+						continue;
+					}
+
+					if (g_fxo->is_init<ppu_far_jumps_t>() && !g_fxo->get<ppu_far_jumps_t>().get_targets(func.addr, func.size).empty())
+					{
+						// Filter out functions with patches
+						part.excluded_funcs.emplace_back(func.addr);
 						continue;
 					}
 
@@ -5779,6 +5829,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	{
 		if (func.size)
 		{
+			if (std::count(module_part.excluded_funcs.begin(), module_part.excluded_funcs.end(), func.addr))
+			{
+				continue;
+			}
+
 			const auto f = cast<Function>(_module->getOrInsertFunction(fmt::format("__0x%x", func.addr - reloc), _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
 			f->addParamAttr(1, llvm::Attribute::NoAlias);
@@ -5834,6 +5889,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 
 			if (mod_func.size)
 			{
+				if (std::count(module_part.excluded_funcs.begin(), module_part.excluded_funcs.end(), mod_func.addr))
+				{
+					continue;
+				}
+
 				num_func++;
 				guest_code_size += mod_func.size;
 				max_addr = std::max<u32>(max_addr, mod_func.addr + mod_func.size);
