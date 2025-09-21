@@ -1910,7 +1910,7 @@ void spu_thread::cpu_task()
 		}
 		else
 		{
-			const u32 arg = static_cast<u32>(group->args[index][1]);
+			const u32 arg = static_cast<u32>(group->args[group->threads_map[index]][1]);
 
 			if (group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg))
 			{
