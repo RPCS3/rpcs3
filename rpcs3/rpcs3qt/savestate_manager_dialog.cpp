@@ -82,7 +82,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->verticalScrollBar()->installEventFilter(this);
 	m_savestate_table->verticalScrollBar()->setSingleStep(20);
 	m_savestate_table->horizontalScrollBar()->setSingleStep(20);
-	m_savestate_table->setItemDelegate(new game_list_delegate(m_savestate_table));
+	m_savestate_table->setItemDelegate(new table_item_delegate(m_savestate_table, false));
 	m_savestate_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_savestate_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_savestate_table->setColumnCount(static_cast<int>(gui::savestate_list_columns::count));
@@ -676,14 +676,12 @@ void savestate_manager_dialog::PopulateSavestateTable()
 	m_savestate_table->setRowCount(static_cast<int>(savestates.size()));
 	m_savestate_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
-	const QLocale locale{};
-
 	for (int i = 0; i < static_cast<int>(savestates.size()); i++)
 	{
 		const savestate_data& savestate = savestates[i];
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::name), new custom_table_widget_item(savestate.name));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::compatible), new custom_table_widget_item(savestate.is_compatible ? tr("Compatible") : tr("Not compatible"), Qt::UserRole, savestate.is_compatible));
-		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(savestate.date.toString(), Qt::UserRole, savestate.date));
+		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(gui::utils::format_datetime(savestate.date), Qt::UserRole, savestate.date));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::path), new custom_table_widget_item(savestate.path));
 	}
 

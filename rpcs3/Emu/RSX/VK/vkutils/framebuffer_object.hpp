@@ -47,35 +47,35 @@ namespace vk
 			vkDestroyFramebuffer(m_device, value, nullptr);
 		}
 
-		u32 width()
+		u32 width() const
 		{
 			return m_width;
 		}
 
-		u32 height()
+		u32 height() const
 		{
 			return m_height;
 		}
 
-		u8 samples()
+		u8 samples() const
 		{
 			ensure(!attachments.empty());
 			return attachments[0]->image()->samples();
 		}
 
-		VkFormat format()
+		VkFormat format() const
 		{
 			ensure(!attachments.empty());
 			return attachments[0]->image()->format();
 		}
 
-		VkFormat depth_format()
+		VkFormat depth_format() const
 		{
 			ensure(!attachments.empty());
 			return attachments.back()->image()->format();
 		}
 
-		bool matches(const std::vector<vk::image*>& fbo_images, u32 width, u32 height)
+		bool matches(const std::vector<vk::image*>& fbo_images, u32 width, u32 height) const
 		{
 			if (m_width != width || m_height != height)
 				return false;
