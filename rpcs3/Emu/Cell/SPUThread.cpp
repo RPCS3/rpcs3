@@ -6959,7 +6959,7 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 				thread->state -= cpu_flag::suspend;
 			}
 
-			notify_spus[thread->index] = thread;
+			notify_spus[group->threads_map[thread->index]] = thread;
 		}
 	}
 }
