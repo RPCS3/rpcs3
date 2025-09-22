@@ -21,6 +21,7 @@ private:
 
 	bool m_initialized = false;
 	std::mutex m_instance_mutex;
+	atomic_t<u64> m_last_pump_us {0};
 };
 
 #endif
