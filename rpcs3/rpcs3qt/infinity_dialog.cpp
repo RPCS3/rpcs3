@@ -407,46 +407,93 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 {
 	setWindowTitle(tr("Figure Creator"));
 	setObjectName("figure_creator");
-	setMinimumSize(QSize(500, 150));
+	setMinimumSize(QSize(500, 200));
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
+
+	// Add series filter buttons
+	QHBoxLayout* hbox_filters = new QHBoxLayout();
+	QLabel* filter_label = new QLabel(tr("Filter by Series:"));
+	QPushButton* btn_all = new QPushButton(tr("All"));
+	QPushButton* btn_series1 = new QPushButton(tr("1.0"));
+	QPushButton* btn_series2 = new QPushButton(tr("2.0"));
+	QPushButton* btn_series3 = new QPushButton(tr("3.0"));
+
+	// Style the active filter button
+	btn_all->setCheckable(true);
+	btn_series1->setCheckable(true);
+	btn_series2->setCheckable(true);
+	btn_series3->setCheckable(true);
+	btn_all->setChecked(true); // Default to "All"
+
+	hbox_filters->addWidget(filter_label);
+	hbox_filters->addWidget(btn_all);
+	hbox_filters->addWidget(btn_series1);
+	hbox_filters->addWidget(btn_series2);
+	hbox_filters->addWidget(btn_series3);
+	hbox_filters->addStretch();
+
+	vbox_panel->addLayout(hbox_filters);
 
 	QComboBox* combo_figlist = new QComboBox();
 	QStringList filterlist;
 	u32 first_entry = 0;
 
-	for (const auto& [figure, entry] : list_figures)
-	{
-		// Only display entry if it is a piece appropriate for the slot
-		if ((slot == 0 &&
-				((figure > 0x1E8480 && figure < 0x2DC6BF) || (figure > 0x3D0900 && figure < 0x4C4B3F))) ||
-			((slot == 1 || slot == 2) && (figure > 0x3D0900 && figure < 0x4C4B3F)) ||
-			((slot == 3 || slot == 6) && figure < 0x1E847F) ||
-			((slot == 4 || slot == 5 || slot == 7 || slot == 8) &&
-				(figure > 0x2DC6C0 && figure < 0x3D08FF)))
+	// Lambda to populate the combo box based on series filter
+	auto populate_combo = [&](int series_filter) {
+		combo_figlist->clear();
+		filterlist.clear();
+		first_entry = 0;
+
+		for (const auto& [figure, entry] : list_figures)
 		{
 			const auto& [num, figure_name] = entry;
-			const u32 qnum = (figure << 8) | num;
-			QString name = QString::fromStdString(figure_name);
-			combo_figlist->addItem(name, QVariant(qnum));
-			filterlist << std::move(name);
-			if (first_entry == 0)
+			
+			// Apply series filter (0 = all, 1-3 = specific series)
+			if (series_filter != 0 && num != series_filter)
+				continue;
+
+			// Only display entry if it is a piece appropriate for the slot
+			if ((slot == 0 &&
+					((figure > 0x1E8480 && figure < 0x2DC6BF) || (figure > 0x3D0900 && figure < 0x4C4B3F))) ||
+				((slot == 1 || slot == 2) && (figure > 0x3D0900 && figure < 0x4C4B3F)) ||
+				((slot == 3 || slot == 6) && figure < 0x1E847F) ||
+				((slot == 4 || slot == 5 || slot == 7 || slot == 8) &&
+					(figure > 0x2DC6C0 && figure < 0x3D08FF)))
 			{
-				first_entry = figure;
+				const u32 qnum = (figure << 8) | num;
+				QString name = QString::fromStdString(figure_name);
+				// Add series indicator to the name for clarity
+				QString display_name = QString("%1 (%2.0)").arg(name).arg(num);
+				combo_figlist->addItem(display_name, QVariant(qnum));
+				filterlist << display_name;
+				if (first_entry == 0)
+				{
+					first_entry = figure;
+				}
 			}
 		}
-	}
 
-	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
-	combo_figlist->setEditable(true);
-	combo_figlist->setInsertPolicy(QComboBox::NoInsert);
-	combo_figlist->model()->sort(0, Qt::AscendingOrder);
+		combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
+		combo_figlist->setEditable(true);
+		combo_figlist->setInsertPolicy(QComboBox::NoInsert);
+		combo_figlist->model()->sort(0, Qt::AscendingOrder);
 
-	QCompleter* co_compl = new QCompleter(filterlist, this);
-	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
-	co_compl->setCompletionMode(QCompleter::PopupCompletion);
-	co_compl->setFilterMode(Qt::MatchContains);
-	combo_figlist->setCompleter(co_compl);
+		// Update completer with new filter list
+		QCompleter* co_compl = new QCompleter(filterlist, this);
+		co_compl->setCaseSensitivity(Qt::CaseInsensitive);
+		co_compl->setCompletionMode(QCompleter::PopupCompletion);
+		co_compl->setFilterMode(Qt::MatchContains);
+		combo_figlist->setCompleter(co_compl);
+
+		connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated), [=](const QString& text)
+			{
+				combo_figlist->setCurrentIndex(combo_figlist->findText(text));
+			});
+	};
+
+	// Initially populate with all figures
+	populate_combo(0);
 
 	vbox_panel->addWidget(combo_figlist);
 
@@ -479,6 +526,39 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	vbox_panel->addLayout(hbox_buttons);
 
 	setLayout(vbox_panel);
+
+	// Connect filter buttons
+	connect(btn_all, &QPushButton::clicked, [=]() {
+		btn_all->setChecked(true);
+		btn_series1->setChecked(false);
+		btn_series2->setChecked(false);
+		btn_series3->setChecked(false);
+		populate_combo(0);
+	});
+
+	connect(btn_series1, &QPushButton::clicked, [=]() {
+		btn_all->setChecked(false);
+		btn_series1->setChecked(true);
+		btn_series2->setChecked(false);
+		btn_series3->setChecked(false);
+		populate_combo(1);
+	});
+
+	connect(btn_series2, &QPushButton::clicked, [=]() {
+		btn_all->setChecked(false);
+		btn_series1->setChecked(false);
+		btn_series2->setChecked(true);
+		btn_series3->setChecked(false);
+		populate_combo(2);
+	});
+
+	connect(btn_series3, &QPushButton::clicked, [=]() {
+		btn_all->setChecked(false);
+		btn_series1->setChecked(false);
+		btn_series2->setChecked(false);
+		btn_series3->setChecked(true);
+		populate_combo(3);
+	});
 
 	connect(combo_figlist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
 		{
@@ -534,11 +614,6 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 		});
 
 	connect(btn_cancel, &QAbstractButton::clicked, this, &QDialog::reject);
-
-	connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated), [=](const QString& text)
-		{
-			combo_figlist->setCurrentIndex(combo_figlist->findText(text));
-		});
 }
 
 bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
