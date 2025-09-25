@@ -107,6 +107,7 @@ enum class emu_settings_type
 	OutputScalingMode,
 	ForceHwMSAAResolve,
 	DisableAsyncHostMM,
+	UseReBAR,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -316,6 +317,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
 	{ emu_settings_type::FsrSharpeningStrength,               { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
 	{ emu_settings_type::ExclusiveFullscreenMode,             { "Video", "Vulkan", "Exclusive Fullscreen Mode"}},
+	{ emu_settings_type::UseReBAR,                            { "Video", "Vulkan", "Use Re-BAR for GPU uploads"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },

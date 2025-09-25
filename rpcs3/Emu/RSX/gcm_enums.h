@@ -456,6 +456,7 @@ namespace gcm
 		// Custom
 		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000, // Rasterizing triangles and not lines or points
 		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x20000, // Support instance ID offsets when loading constants
+		RSX_SHADER_CONTROL_INTERPRETER_MODEL       = 0x40000, // Compile internals expecting interpreter
 	};
 
 	// GCM Reports
