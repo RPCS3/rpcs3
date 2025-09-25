@@ -27,6 +27,7 @@ cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
+    -DUSE_LTO=OFF                                      \
     -DCMAKE_C_FLAGS="$CFLAGS"                          \
     -DCMAKE_CXX_FLAGS="$CFLAGS"                        \
     -DCMAKE_EXE_LINKER_FLAGS="${LINKER_FLAG}"          \
