@@ -1295,7 +1295,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 	case dmux_pamf_state::setting_au_reset_error: goto label10_setting_au_reset_error_state;
 	case dmux_pamf_state::processing_event: goto label11_processing_event_state;
 	case dmux_pamf_state::au_found_waiting_for_spu: goto label12_au_found_waiting_for_spu_state;
-	case dmux_pamf_state::unsetting_au_cancel: goto label13_unsetting_au_cancel_state;
+	case dmux_pamf_state::unsetting_au_reset: goto label13_unsetting_au_reset_state;
 	case dmux_pamf_state::demux_done_notifying: goto label14_demux_done_notifying_state;
 	case dmux_pamf_state::demux_done_mutex_lock: goto label15_demux_done_mutex_lock_state;
 	case dmux_pamf_state::demux_done_cond_signal: goto label16_demux_done_cond_signal_state;
@@ -1477,14 +1477,11 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			au_info->specific_info_size = es->au_specific_info_size;
 			au_info->is_rap = static_cast<b8>(event.au_found.is_rap);
 
-			if (!is_raw_es)
+			if (!is_raw_es && dmuxPamfStreamIdToTypeChannel(event.au_found.stream_id, event.au_found.private_stream_id).first == DMUX_PAMF_STREAM_TYPE_INDEX_LPCM)
 			{
-				if (dmuxPamfStreamIdToTypeChannel(event.au_found.stream_id, event.au_found.private_stream_id).first == DMUX_PAMF_STREAM_TYPE_INDEX_LPCM)
-				{
-					es->au_specific_info[0] = read_from_ptr<u8>(event.au_found.stream_header_buf) >> 4;
-					es->au_specific_info[1] = read_from_ptr<u8>(event.au_found.stream_header_buf) & 0xf;
-					es->au_specific_info[2] = read_from_ptr<u8>(&event.au_found.stream_header_buf[1]) >> 6;
-				}
+				es->au_specific_info[0] = read_from_ptr<u8>(event.au_found.stream_header_buf) >> 4;
+				es->au_specific_info[1] = read_from_ptr<u8>(event.au_found.stream_header_buf) & 0xf;
+				es->au_specific_info[2] = read_from_ptr<u8>(&event.au_found.stream_header_buf[1]) >> 6;
 			}
 
 			if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
@@ -1509,8 +1506,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			{
 				stream_reset_in_progress = false;
 
-				savestate = dmux_pamf_state::unsetting_au_cancel;
-				label13_unsetting_au_cancel_state:
+				savestate = dmux_pamf_state::unsetting_au_reset;
+				label13_unsetting_au_reset_state:
 
 				if (set_au_reset<false>(ppu) != CELL_OK)
 				{
@@ -1763,7 +1760,7 @@ u32 dmuxPamfGetAuQueueMaxSize(u16 stream_id, u16 private_stream_id)
 
 u32 dmuxPamfGetLpcmAuSize(vm::cptr<CellDmuxPamfEsSpecificInfoLpcm> lpcm_info)
 {
-	return lpcm_info->samplingFreq * lpcm_info->bitsPerSample * (lpcm_info->numOfChannels + (lpcm_info->numOfChannels & 1)) / 1600; // Streams with an odd number of channels contain an empty dummy channel
+	return lpcm_info->samplingFreq * lpcm_info->bitsPerSample / CHAR_BIT * (lpcm_info->numOfChannels + (lpcm_info->numOfChannels & 1)) / DMUX_PAMF_LPCM_FRAMES_PER_SEC; // Streams with an odd number of channels contain an empty dummy channel
 }
 
 u32 dmuxPamfGetAuQueueBufferSize(u16 stream_id, u16 private_stream_id, bool is_avc, vm::cptr<void> es_specific_info)
@@ -2014,6 +2011,8 @@ error_code _CellDmuxCoreOpOpen(ppu_thread& ppu, vm::cptr<CellDmuxPamfSpecificInf
 	}
 
 	ensure(demuxerResource->memAddr.aligned(0x10)); // Not checked on LLE
+	ensure(demuxerResource->memSize >= sizeof(CellDmuxPamfHandle)); // Not checked on LLE
+	ensure(vm::check_addr(demuxerResource->memAddr.addr(), vm::page_readable | vm::page_writable, demuxerResource->memSize));
 
 	const auto _handle = vm::static_ptr_cast<CellDmuxPamfHandle>(demuxerResource->memAddr);
 
@@ -2547,6 +2546,8 @@ error_code _CellDmuxCoreOpEnableEs(ppu_thread& ppu, vm::ptr<CellDmuxPamfHandle> 
 	}
 
 	ensure(!!esHandle && esResource->memAddr.aligned(0x10)); // Not checked on LLE
+	ensure(esResource->memSize >= sizeof(CellDmuxPamfEsHandle)); // Not checked on LLE
+	ensure(vm::check_addr(esResource->memAddr.addr(), vm::page_readable | vm::page_writable, esResource->memSize));
 
 	const auto es_handle = vm::static_ptr_cast<CellDmuxPamfEsHandle>(esResource->memAddr);
 
