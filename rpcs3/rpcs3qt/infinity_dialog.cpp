@@ -463,7 +463,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 					(figure > 0x2DC6C0 && figure < 0x3D08FF)))
 			{
 				const u32 qnum = (figure << 8) | num;
-				QString name = QString::fromStdString(figure_name);
+				const QString name = QString::fromStdString(figure_name);
 				// Add series indicator to the name for clarity
 				QString display_name = QString("%1 (%2.0)").arg(name).arg(num);
 				combo_figlist->addItem(display_name, QVariant(qnum));
