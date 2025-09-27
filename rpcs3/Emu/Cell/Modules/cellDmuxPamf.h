@@ -783,6 +783,8 @@ enum CellDmuxPamfLpcmBitsPerSamples
 	CELL_DMUX_PAMF_LPCM_BITS_PER_SAMPLE_24 = 3,
 };
 
+constexpr u8 DMUX_PAMF_LPCM_FRAMES_PER_SEC = 200;
+
 struct CellDmuxPamfSpecificInfo
 {
 	be_t<u32> thisSize;
@@ -832,7 +834,7 @@ enum class dmux_pamf_state : u8
 	setting_au_reset_error,
 	processing_event,
 	au_found_waiting_for_spu,
-	unsetting_au_cancel,
+	unsetting_au_reset,
 	demux_done_notifying,
 	demux_done_mutex_lock,
 	demux_done_cond_signal,
