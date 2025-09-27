@@ -535,11 +535,10 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	filter_group->addButton(btn_series2, 2);    // ID 2 for series 2
 	filter_group->addButton(btn_series3, 3);    // ID 3 for series 3
 
-	connect(filter_group, QOverload<int>::of(&QButtonGroup::idClicked), 
-		[=, this](int id)
-		{
-			populate_combo(id);
-		});
+	connect(filter_group, QOverload<int>::of(&QButtonGroup::idClicked), [=](int id)
+	{
+		populate_combo(id);
+	});
 
 	connect(combo_figlist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
 	{
