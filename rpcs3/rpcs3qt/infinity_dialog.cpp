@@ -532,7 +532,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	QButtonGroup* filter_group = new QButtonGroup(this);
 	filter_group->addButton(btn_all, 0);        // ID 0 for "All"
 	filter_group->addButton(btn_series1, 1);    // ID 1 for series 1
-	filter_group->addButton(btn_series2, 2);    // ID 2 for series 2  
+	filter_group->addButton(btn_series2, 2);    // ID 2 for series 2
 	filter_group->addButton(btn_series3, 3);    // ID 3 for series 3
 
 	connect(filter_group, QOverload<int>::of(&QButtonGroup::idClicked), 
