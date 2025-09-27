@@ -436,15 +436,13 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	vbox_panel->addLayout(hbox_filters);
 
 	QComboBox* combo_figlist = new QComboBox();
-	QStringList filterlist;
-	u32 first_entry = 0;
 
 	// Lambda to populate the combo box based on series filter
-	auto populate_combo = [=](int series_filter)
+	auto populate_combo = [=](int series_filter) -> u32
 	{
 		combo_figlist->clear();
-		filterlist.clear();
-		first_entry = 0;
+		QStringList filterlist;
+		u32 first_entry = 0;
 
 		for (const auto& [figure, entry] : list_figures)
 		{
@@ -488,13 +486,15 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 		combo_figlist->setCompleter(co_compl);
 
 		connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated), [=](const QString& text)
-			{
-				combo_figlist->setCurrentIndex(combo_figlist->findText(text));
-			});
+		{
+			combo_figlist->setCurrentIndex(combo_figlist->findText(text));
+		});
+
+		return first_entry;
 	};
 
 	// Initially populate with all figures
-	populate_combo(0);
+	u32 first_entry = populate_combo(0);
 
 	vbox_panel->addWidget(combo_figlist);
 
@@ -528,91 +528,71 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 
 	setLayout(vbox_panel);
 
-	// Connect filter buttons
-	connect(btn_all, &QPushButton::clicked, [=]() {
-		btn_all->setChecked(true);
-		btn_series1->setChecked(false);
-		btn_series2->setChecked(false);
-		btn_series3->setChecked(false);
-		populate_combo(0);
-	});
+	// Connect filter buttons using QButtonGroup
+	QButtonGroup* filter_group = new QButtonGroup(this);
+	filter_group->addButton(btn_all, 0);        // ID 0 for "All"
+	filter_group->addButton(btn_series1, 1);    // ID 1 for series 1
+	filter_group->addButton(btn_series2, 2);    // ID 2 for series 2  
+	filter_group->addButton(btn_series3, 3);    // ID 3 for series 3
 
-	connect(btn_series1, &QPushButton::clicked, [=]() {
-		btn_all->setChecked(false);
-		btn_series1->setChecked(true);
-		btn_series2->setChecked(false);
-		btn_series3->setChecked(false);
-		populate_combo(1);
-	});
-
-	connect(btn_series2, &QPushButton::clicked, [=]() {
-		btn_all->setChecked(false);
-		btn_series1->setChecked(false);
-		btn_series2->setChecked(true);
-		btn_series3->setChecked(false);
-		populate_combo(2);
-	});
-
-	connect(btn_series3, &QPushButton::clicked, [=]() {
-		btn_all->setChecked(false);
-		btn_series1->setChecked(false);
-		btn_series2->setChecked(false);
-		btn_series3->setChecked(true);
-		populate_combo(3);
-	});
+	connect(filter_group, QOverload<int>::of(&QButtonGroup::idClicked), 
+		[=, this](int id)
+		{
+			populate_combo(id);
+		});
 
 	connect(combo_figlist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
+	{
+		const u32 fig_info = combo_figlist->itemData(index).toUInt();
+		if (fig_info != 0xFFFFFFFF)
 		{
-			const u32 fig_info = combo_figlist->itemData(index).toUInt();
-			if (fig_info != 0xFFFFFFFF)
-			{
-				const u32 fig_num = fig_info >> 8;
-				const u8 series = fig_info & 0xFF;
+			const u32 fig_num = fig_info >> 8;
+			const u8 series = fig_info & 0xFF;
 
-				edit_number->setText(QString::number(fig_num));
-				edit_series->setText(QString::number(series));
-			}
-		});
+			edit_number->setText(QString::number(fig_num));
+			edit_series->setText(QString::number(series));
+		}
+	});
 
 	connect(btn_create, &QAbstractButton::clicked, this, [=, this]()
+	{
+		bool ok_num = false, ok_series = false;
+		const u32 fig_num = edit_number->text().toULong(&ok_num);
+		if (!ok_num)
 		{
-			bool ok_num = false, ok_series = false;
-			const u32 fig_num = edit_number->text().toULong(&ok_num);
-			if (!ok_num)
-			{
-				QMessageBox::warning(this, tr("Error converting value"), tr("Figure number entered is invalid!"), QMessageBox::Ok);
-				return;
-			}
-			const u8 series = edit_series->text().toUShort(&ok_series);
-			if (!ok_series || series > 3 || series < 1)
-			{
-				QMessageBox::warning(this, tr("Error converting value"), tr("Series number entered is invalid!"), QMessageBox::Ok);
-				return;
-			}
-			const auto found_figure = list_figures.find(fig_num);
-			if (found_figure != list_figures.cend())
-			{
-				s_last_figure_path += QString::fromStdString(found_figure->second.second + ".bin");
-			}
-			else
-			{
-				s_last_figure_path += QString("Unknown(%1 %2).bin").arg(fig_num).arg(series);
-			}
+			QMessageBox::warning(this, tr("Error converting value"), tr("Figure number entered is invalid!"), QMessageBox::Ok);
+			return;
+		}
+		const u8 series = edit_series->text().toUShort(&ok_series);
+		if (!ok_series || series > 3 || series < 1)
+		{
+			QMessageBox::warning(this, tr("Error converting value"), tr("Series number entered is invalid!"), QMessageBox::Ok);
+			return;
+		}
+		const auto found_figure = list_figures.find(fig_num);
+		if (found_figure != list_figures.cend())
+		{
+			s_last_figure_path += QString::fromStdString(found_figure->second.second + ".bin");
+		}
+		else
+		{
+			s_last_figure_path += QString("Unknown(%1 %2).bin").arg(fig_num).arg(series);
+		}
 
-			m_file_path = QFileDialog::getSaveFileName(this, tr("Create Figure File"), s_last_figure_path, tr("Infinity Figure (*.bin);;"));
-			if (m_file_path.isEmpty())
-			{
-				return;
-			}
-			if (!create_blank_figure(fig_num, series))
-			{
-				QMessageBox::warning(this, tr("Failed to create figure file!"), tr("Failed to create figure file:\n%1").arg(m_file_path), QMessageBox::Ok);
-				return;
-			}
+		m_file_path = QFileDialog::getSaveFileName(this, tr("Create Figure File"), s_last_figure_path, tr("Infinity Figure (*.bin);;"));
+		if (m_file_path.isEmpty())
+		{
+			return;
+		}
+		if (!create_blank_figure(fig_num, series))
+		{
+			QMessageBox::warning(this, tr("Failed to create figure file!"), tr("Failed to create figure file:\n%1").arg(m_file_path), QMessageBox::Ok);
+			return;
+		}
 
-			s_last_figure_path = QFileInfo(m_file_path).absolutePath() + "/";
-			accept();
-		});
+		s_last_figure_path = QFileInfo(m_file_path).absolutePath() + "/";
+		accept();
+	});
 
 	connect(btn_cancel, &QAbstractButton::clicked, this, &QDialog::reject);
 }
