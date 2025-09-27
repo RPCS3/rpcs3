@@ -14,6 +14,7 @@
 #include <QPushButton>
 #include <QStringList>
 #include <QCompleter>
+#include <QButtonGroup>
 
 infinity_dialog* infinity_dialog::inst = nullptr;
 std::array<std::optional<u32>, 9> infinity_dialog::figure_slots = {};
