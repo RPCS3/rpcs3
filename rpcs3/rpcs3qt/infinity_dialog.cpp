@@ -440,7 +440,8 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	u32 first_entry = 0;
 
 	// Lambda to populate the combo box based on series filter
-	auto populate_combo = [&](int series_filter) {
+	auto populate_combo = [=](int series_filter)
+	{
 		combo_figlist->clear();
 		filterlist.clear();
 		first_entry = 0;
