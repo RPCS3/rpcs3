@@ -467,7 +467,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 				// Add series indicator to the name for clarity
 				QString display_name = QString("%1 (%2.0)").arg(name).arg(num);
 				combo_figlist->addItem(display_name, QVariant(qnum));
-				filterlist << display_name;
+				filterlist << std::move(display_name);
 				if (first_entry == 0)
 				{
 					first_entry = figure;
