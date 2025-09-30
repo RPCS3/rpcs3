@@ -208,6 +208,21 @@ void PadHandlerBase::init_configs()
 	}
 }
 
+pad_capabilities PadHandlerBase::get_capabilities(const std::string& /*pad_id*/)
+{
+	return pad_capabilities
+	{
+		.has_led = b_has_rgb,
+		.has_mono_led = b_has_led,
+		.has_player_led = b_has_player_led,
+		.has_battery_led = b_has_battery_led,
+		.has_rumble = b_has_rumble,
+		.has_accel = b_has_motion,
+		.has_gyro = b_has_motion,
+		.has_pressure_sensitivity = b_has_pressure_intensity_button
+	};
+}
+
 cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
 {
 	int index = 0;
@@ -331,12 +346,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 	if (callback)
 	{
 		pad_preview_values preview_values = get_preview_values(data);
+		pad_capabilities capabilities = get_capabilities(pad_id);
 		const u32 battery_level = get_battery_level(pad_id);
 
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values));
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 		else
-			callback(0, "", pad_id, battery_level, std::move(preview_values));
+			callback(0, "", pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 	}
 
 	return status;
