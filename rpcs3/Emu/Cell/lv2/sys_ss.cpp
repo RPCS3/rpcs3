@@ -206,12 +206,11 @@ error_code sys_ss_get_console_id(vm::ptr<u8> buf)
 	return sys_ss_appliance_info_manager(0x19003, buf);
 }
 
-error_code sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
+error_code sys_ss_get_open_psid(vm::ptr<u128> psid)
 {
 	sys_ss.notice("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
-	psid->high = g_cfg.sys.console_psid_high;
-	psid->low = g_cfg.sys.console_psid_low;
+	*psid = g_cfg.sys.console_psid.get();
 
 	return CELL_OK;
 }
@@ -259,8 +258,8 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19005:
 	{
 		// AIM_get_open_ps_id
-		be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
-		std::memcpy(buffer.get_ptr(), psid, 16);
+		const be_t<u128> psid = g_cfg.sys.console_psid.get();
+		std::memcpy(buffer.get_ptr(), &psid, 16);
 		break;
 	}
 	case 0x19006:
