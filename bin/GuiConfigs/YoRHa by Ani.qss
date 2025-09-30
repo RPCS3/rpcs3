@@ -11,18 +11,21 @@ r4 (2025.09.14)
 Color Scheme
 
 - Pod Programs
-8c806a
-bd9d86
-c1b398
-eadfb1
-ebe4d2
+#8c806a
+#bd9d86
+#c1b398
+#eadfb1
+#ebe4d2
 
 - Light
-b3ac98
-aea993
+#b3ac98
+#aea993
 
 - Dark
-4d4940
+#4d4940
+
+- Disabled
+#828790
 */
 
 
@@ -297,6 +300,21 @@ QToolButton::hover {
 QCalendarWidget QWidget{
 	background: #b3ac98;
 	color: #4d4940;
+}
+
+/* Scrollbars */
+QScrollBar::handle, QTableView QScrollBar::handle {
+	background: #4d4940;
+}
+QScrollBar::handle:disabled {
+	background: #828790;
+}
+QScrollBar::add-page, QScrollBar::sub-page {
+	background: #8c806a;
+}
+QScrollBar::up-arrow, QScrollBar::down-arrow, QScrollBar::up-button:vertical, QScrollBar::down-button, QScrollBar::sub-line, QScrollBar::add-line {
+	background: transparent;
+	color: transparent;
 }
 
 
