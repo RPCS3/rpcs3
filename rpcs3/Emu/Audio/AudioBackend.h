@@ -17,11 +17,11 @@ enum : u32
 
 enum class AudioFreq : u32
 {
-	FREQ_32K  = 32000,
-	FREQ_44K  = 44100,
-	FREQ_48K  = 48000,
-	FREQ_88K  = 88200,
-	FREQ_96K  = 96000,
+	FREQ_32K = 32000,
+	FREQ_44K = 44100,
+	FREQ_48K = 48000,
+	FREQ_88K = 88200,
+	FREQ_96K = 96000,
 	FREQ_176K = 176400,
 	FREQ_192K = 192000,
 };
@@ -35,7 +35,7 @@ enum class AudioSampleSize : u32
 // This enum is only used for emulation
 enum class AudioChannelCnt : u32
 {
-	STEREO       = 2,
+	STEREO = 2,
 	SURROUND_5_1 = 6,
 	SURROUND_7_1 = 8,
 };
@@ -49,7 +49,6 @@ enum class AudioStateEvent : u32
 class AudioBackend
 {
 public:
-
 	struct VolumeParam
 	{
 		f32 initial_volume = 1.0f;
@@ -93,7 +92,10 @@ public:
 	virtual f64 GetCallbackFrameLen() = 0;
 
 	// Returns true if audio is currently being played, false otherwise. Reflects end result of Play() and Pause() calls.
-	virtual bool IsPlaying() { return m_playing; }
+	virtual bool IsPlaying()
+	{
+		return m_playing;
+	}
 
 	// Start playing enqueued data.
 	virtual void Play() = 0;
@@ -105,17 +107,26 @@ public:
 	 * This virtual method should be reimplemented if backend can fail to be initialized under non-error conditions
 	 * eg. when there is no audio devices attached
 	 */
-	virtual bool Initialized() { return true; }
+	virtual bool Initialized()
+	{
+		return true;
+	}
 
 	/*
 	 * This virtual method should be reimplemented if backend can fail during normal operation
 	 */
-	virtual bool Operational() { return true; }
+	virtual bool Operational()
+	{
+		return true;
+	}
 
 	/*
 	 * This virtual method should be reimplemented if backend can report device changes
 	 */
-	virtual bool DefaultDeviceChanged() { return false; }
+	virtual bool DefaultDeviceChanged()
+	{
+		return false;
+	}
 
 	/*
 	 * Helper methods
@@ -180,20 +191,21 @@ public:
 	/*
 	 * Downmix audio stream.
 	 */
-	template<AudioChannelCnt src_ch_cnt, audio_channel_layout dst_layout>
+	template <AudioChannelCnt src_ch_cnt, audio_channel_layout dst_layout>
 	static void downmix(u32 sample_cnt, const f32* src, f32* dst)
 	{
 		const u32 dst_ch_cnt = default_layout_channel_count(dst_layout);
-		if (static_cast<u32>(src_ch_cnt) <= dst_ch_cnt) fmt::throw_exception("src channel count must be bigger than dst channel count");
+		if (static_cast<u32>(src_ch_cnt) <= dst_ch_cnt)
+			fmt::throw_exception("src channel count must be bigger than dst channel count");
 
 		static constexpr f32 center_coef = std::numbers::sqrt2_v<f32> / 2;
 		static constexpr f32 surround_coef = std::numbers::sqrt2_v<f32> / 2;
 
 		for (u32 src_sample = 0, dst_sample = 0; src_sample < sample_cnt; src_sample += static_cast<u32>(src_ch_cnt), dst_sample += dst_ch_cnt)
 		{
-			const f32 left  = src[src_sample + 0];
+			const f32 left = src[src_sample + 0];
 			const f32 right = src[src_sample + 1];
-			
+
 			if constexpr (src_ch_cnt == AudioChannelCnt::STEREO)
 			{
 				if constexpr (dst_layout == audio_channel_layout::mono)
@@ -203,9 +215,9 @@ public:
 			}
 			else if constexpr (src_ch_cnt == AudioChannelCnt::SURROUND_5_1)
 			{
-				const f32 center     = src[src_sample + 2];
-				const f32 low_freq   = src[src_sample + 3];
-				const f32 side_left  = src[src_sample + 4];
+				const f32 center = src[src_sample + 2];
+				const f32 low_freq = src[src_sample + 3];
+				const f32 side_left = src[src_sample + 4];
 				const f32 side_right = src[src_sample + 5];
 
 				if constexpr (dst_layout == audio_channel_layout::quadraphonic || dst_layout == audio_channel_layout::quadraphonic_lfe)
@@ -239,11 +251,11 @@ public:
 			}
 			else if constexpr (src_ch_cnt == AudioChannelCnt::SURROUND_7_1)
 			{
-				const f32 center     = src[src_sample + 2];
-				const f32 low_freq   = src[src_sample + 3];
-				const f32 rear_left  = src[src_sample + 4];
+				const f32 center = src[src_sample + 2];
+				const f32 low_freq = src[src_sample + 3];
+				const f32 rear_left = src[src_sample + 4];
 				const f32 rear_right = src[src_sample + 5];
-				const f32 side_left  = src[src_sample + 6];
+				const f32 side_left = src[src_sample + 6];
 				const f32 side_right = src[src_sample + 7];
 
 				if constexpr (dst_layout == audio_channel_layout::surround_5_1)
@@ -372,12 +384,12 @@ protected:
 	void setup_channel_layout(u32 input_channel_count, u32 output_channel_count, audio_channel_layout layout, logs::channel& log);
 
 	AudioSampleSize m_sample_size = AudioSampleSize::FLOAT;
-	AudioFreq       m_sampling_rate = AudioFreq::FREQ_48K;
-	u32             m_channels = 2;
+	AudioFreq m_sampling_rate = AudioFreq::FREQ_48K;
+	u32 m_channels = 2;
 	audio_channel_layout m_layout = audio_channel_layout::automatic;
 
 	std::timed_mutex m_cb_mutex{};
-	std::function<u32(u32, void *)> m_write_callback{};
+	std::function<u32(u32, void*)> m_write_callback{};
 
 	shared_mutex m_state_cb_mutex{};
 	std::function<void(AudioStateEvent)> m_state_callback{};
@@ -385,6 +397,5 @@ protected:
 	bool m_playing = false;
 
 private:
-
-	static constexpr f32 VOLUME_CHANGE_DURATION = 0.016f; // sec
+	static constexpr f32 VOLUME_CHANGE_DURATION = 0.032f; // sec - Increased for smoother transitions
 };
