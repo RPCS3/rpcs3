@@ -173,6 +173,7 @@ private:
 		std::string pad_name;
 		u32 battery_level = 0;
 		std::array<int, 6> preview_values{};
+		pad_capabilities capabilities{};
 
 		struct input_values
 		{

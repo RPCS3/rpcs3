@@ -270,7 +270,11 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 		// qa values (dex only) ??
 		[[fallthrough]];
 	}
-	default: sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+	default:
+	{
+		sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+		break;
+	}
 	}
 
 	return CELL_OK;
