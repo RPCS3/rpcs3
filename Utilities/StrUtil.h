@@ -28,6 +28,9 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
 // Convert string to unsigned integer
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
 
+// Convert string to unsigned int128_t
+bool try_to_uint128(u128* out, std::string_view value);
+
 // Convert string to float
 bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
 

@@ -38,6 +38,7 @@ namespace cfg
 		_enum, // cfg::_enum type
 		_int, // cfg::_int type
 		uint, // cfg::uint type
+		uint128, // cfg::uint128 type
 		string, // cfg::string type
 		set, // cfg::set_entry type
 		map, // cfg::map_entry type
@@ -577,6 +578,86 @@ namespace cfg
 
 	// Alias for 64 bit int
 	using uint64 = uint<0, u64{umax}>;
+
+	// Unsigned 128-bit integer entry.
+	class uint128 final : public _base
+	{
+		using int_type = u128;
+
+		atomic_t<int_type> m_value{};
+		int_type original_def = 0;
+
+	public:
+		int_type def;
+
+		uint128(node* owner, const std::string& name, int_type def = 0, bool dynamic = false)
+			: _base(type::uint128, owner, name, dynamic)
+			, m_value(def)
+			, original_def(def)
+			, def(def)
+		{
+		}
+
+		operator int_type() const
+		{
+			return m_value;
+		}
+
+		operator ullong() const
+		{
+			return static_cast<ullong>(m_value.load());
+		}
+
+		int_type get() const
+		{
+			return m_value;
+		}
+
+		void from_default() override
+		{
+			m_value = def;
+		}
+
+		void restore_defaults() override
+		{
+			def = original_def;
+		}
+
+		static std::string to_string(u128 value) noexcept;
+
+		std::string to_string() const override
+		{
+			return to_string(m_value.load());
+		}
+
+		std::string def_to_string() const override
+		{
+			return to_string(def);
+		}
+
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
+		{
+			u128 result;
+			if (try_to_uint128(&result, value))
+			{
+				m_value = result;
+				return true;
+			}
+
+			return false;
+		}
+
+		void set(u128 value)
+		{
+			m_value = value;
+		}
+
+		std::vector<std::string> to_list() const override
+		{
+			// Should not be used
+			return make_uint_range(0, 1);
+		}
+	};
 
 	// Simple string entry with mutex
 	class string : public _base
