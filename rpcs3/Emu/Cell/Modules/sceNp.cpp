@@ -3930,8 +3930,8 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	myLanguages->language1 = SCE_NP_LANG_ENGLISH_US;
-	myLanguages->language2 = g_cfg.sys.language != CELL_SYSUTIL_LANG_ENGLISH_US ? g_cfg.sys.language : -1;
+	myLanguages->language1 = g_cfg.sys.language;
+	myLanguages->language2 = g_cfg.sys.language != CELL_SYSUTIL_LANG_ENGLISH_US ? CELL_SYSUTIL_LANG_ENGLISH_US : -1;
 	myLanguages->language3 = -1;
 
 	return CELL_OK;
