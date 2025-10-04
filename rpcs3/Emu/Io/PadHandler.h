@@ -81,8 +81,20 @@ struct pad_list_entry
 	{}
 };
 
+struct pad_capabilities
+{
+	bool has_led = false;
+	bool has_mono_led = false;
+	bool has_player_led = false;
+	bool has_battery_led = false;
+	bool has_rumble = false;
+	bool has_accel = false;
+	bool has_gyro = false;
+	bool has_pressure_sensitivity = false;
+};
+
 using pad_preview_values = std::array<int, 6>;
-using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values /*preview_values*/)>;
+using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values, pad_capabilities)>;
 using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
 
 using motion_preview_values = std::array<u16, 4>;
@@ -325,6 +337,8 @@ public:
 	bool has_pressure_intensity_button() const { return b_has_pressure_intensity_button; }
 	bool has_analog_limiter_button() const { return b_has_analog_limiter_button; }
 	bool has_orientation() const { return b_has_orientation; }
+
+	virtual pad_capabilities get_capabilities(const std::string& /*pad_id*/);
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
