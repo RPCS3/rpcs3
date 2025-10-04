@@ -21,10 +21,15 @@ std::string cfg_root::node_sys::get_random_system_name()
 
 u128 cfg_root::node_sys::get_random_psid()
 {
-	std::random_device rnd;
-	std::mt19937_64 prng(rnd());
-	std::uniform_int_distribution<u64> uniformDist;
-	u128 result = uniformDist(prng);
-	result += u128{uniformDist(prng)} << 64;
+	// Generate seed for each 32-bits for maximum entropy using Standard Library
+	std::uniform_int_distribution<u32> uniform_dist;
+	std::mt19937 prng;
+
+	u128 result{};
+	prng.seed(std::random_device()()), result += u128{uniform_dist(prng)} << 0;
+	prng.seed(std::random_device()()), result += u128{uniform_dist(prng)} << 32;
+	prng.seed(std::random_device()()), result += u128{uniform_dist(prng)} << 64;
+	prng.seed(std::random_device()()), result += u128{uniform_dist(prng)} << 96;
+
 	return result;
 }
