@@ -49,6 +49,8 @@ public:
 
 	void Task();
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
+
+	void insertFSExport(std::stringstream& OS);
 };
 
 class VKVertexProgram : public rsx::VertexProgramBase

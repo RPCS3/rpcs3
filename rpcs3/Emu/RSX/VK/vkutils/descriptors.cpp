@@ -404,30 +404,15 @@ namespace vk
 		vkUpdateDescriptorSets(*g_render_device, 1, &writer, 0, nullptr);
 	}
 
-	void descriptor_set::push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
+	void descriptor_set::push(const rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
 	{
 		m_push_type_mask |= type_mask;
-
-		if (m_pending_copies.empty()) [[likely]]
-		{
-			m_pending_copies = std::move(copy_cmd);
-			return;
-		}
-
 		m_pending_copies += copy_cmd;
 	}
 
-	void descriptor_set::push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
+	void descriptor_set::push(const rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask)
 	{
 		m_push_type_mask |= type_mask;
-
-#if !defined(__clang__) || (__clang_major__ >= 16)
-		if (m_pending_writes.empty()) [[unlikely]]
-		{
-			m_pending_writes = std::move(write_cmds);
-			return;
-		}
-#endif
 		m_pending_writes += write_cmds;
 	}
 
@@ -452,7 +437,8 @@ namespace vk
 
 		// We have queued writes
 		if ((m_push_type_mask & ~m_update_after_bind_mask) ||
-			(m_pending_writes.size() >= max_cache_size))
+			(m_pending_writes.size() >= max_cache_size) ||
+			storage_cache_pressure())
 		{
 			flush();
 			return;
@@ -468,7 +454,8 @@ namespace vk
 		// Notify
 		on_bind();
 
-		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, ::size32(m_dynamic_offsets), m_dynamic_offsets.data());
+		VkDescriptorSet sets[1] = { m_handle };
+		cmd.bind_descriptor_sets(sets, m_dynamic_offsets, bind_point, layout);
 	}
 
 	void descriptor_set::flush()
@@ -478,9 +465,13 @@ namespace vk
 			return;
 		}
 
+		std::lock_guard lock(m_storage_lock);
+
 		const auto num_writes = ::size32(m_pending_writes);
 		const auto num_copies = ::size32(m_pending_copies);
 		vkUpdateDescriptorSets(*g_render_device, num_writes, m_pending_writes.data(), num_copies, m_pending_copies.data());
+
+		m_storage_cache_id++;
 
 		m_push_type_mask = 0;
 		m_pending_writes.clear();

@@ -53,12 +53,13 @@ namespace vk
 		table.add(0x15F7, 0x15F9, chip_class::NV_pascal);   // GP100 (Tesla P100)
 		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
 		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
-		table.add(0x1E02, 0x1F54, chip_class::NV_turing);   // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
-		table.add(0x1F82, 0x1FB9, chip_class::NV_turing);   // TU117, TU117M, TU117GL
-		table.add(0x2182, 0x21D1, chip_class::NV_turing);   // TU116, TU116M, TU116GL
-		table.add(0x20B0, 0x20BE, chip_class::NV_ampere);   // GA100
-		table.add(0x2204, 0x25AF, chip_class::NV_ampere);   // GA10x (RTX 30 series)
-		table.add(0x2684, 0x27FF, chip_class::NV_lovelace); // AD102, AD103 (RTX40 series)
+		table.add(0x1E02, 0x1F54, chip_class::NV_turing);    // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
+		table.add(0x1F82, 0x1FB9, chip_class::NV_turing);    // TU117, TU117M, TU117GL
+		table.add(0x2182, 0x21D1, chip_class::NV_turing);    // TU116, TU116M, TU116GL
+		table.add(0x20B0, 0x20BE, chip_class::NV_ampere);    // GA100
+		table.add(0x2204, 0x25AF, chip_class::NV_ampere);    // GA10x (RTX 30 series)
+		table.add(0x2684, 0x27FF, chip_class::NV_lovelace);  // AD102, AD103 (RTX40 series)
+		table.add(0x2B85, 0x2F58, chip_class::NV_blackwell); // RTX50, RTX PRO Blackwell series
 
 		return table;
 	}();
