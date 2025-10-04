@@ -206,11 +206,14 @@ error_code sys_ss_get_console_id(vm::ptr<u8> buf)
 	return sys_ss_appliance_info_manager(0x19003, buf);
 }
 
-error_code sys_ss_get_open_psid(vm::ptr<u128> psid)
+error_code sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
 	sys_ss.notice("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
-	*psid = g_cfg.sys.console_psid.get();
+	const u128 configured_psid = g_cfg.sys.console_psid.get();
+
+	psid->high = static_cast<u64>(configured_psid >> 64);
+	psid->low = static_cast<u64>(configured_psid);
 
 	return CELL_OK;
 }
