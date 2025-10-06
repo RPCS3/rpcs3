@@ -46,12 +46,9 @@ void sdl_instance::pump_events()
 			return;
 		}
 
-		Emu.CallFromMainThread([this]()
-		{
-			if (!m_initialized) return;
-			SDL_PumpEvents();
-			m_last_pump_us = get_system_time();
-		}, nullptr, false);
+		SDL_UpdateJoysticks();
+
+		m_last_pump_us = get_system_time();
 	}
 }
 
