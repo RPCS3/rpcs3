@@ -336,6 +336,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		case gui::shortcuts::shortcut::gw_savestate_2: index = 2; break;
 		case gui::shortcuts::shortcut::gw_savestate_3: index = 3; break;
 		case gui::shortcuts::shortcut::gw_savestate_4: index = 4; break;
+		default: break; // unreachable
 		}
 
 		boot_current_game_savestate(false, index);

@@ -136,6 +136,7 @@ bool config_checker::check_config(QString content, QString& result, bool is_log)
 		case cfg::type::_enum:
 		case cfg::type::_int:
 		case cfg::type::uint:
+		case cfg::type::uint128:
 		case cfg::type::string:
 		{
 			const std::string val = base->to_string();
