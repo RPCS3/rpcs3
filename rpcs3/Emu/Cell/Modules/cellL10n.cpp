@@ -2498,7 +2498,7 @@ s32 UCS2stoSBCSs(vm::cptr<u16> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::p
 
 	for (u32 src_pos = 0; src_pos < *src_len; src_pos++)
 	{
-		const s16 ucs2 = src[src_pos];
+		const u16 ucs2 = src[src_pos];
 
 		if (ucs2 >= 0xfffe)
 		{
