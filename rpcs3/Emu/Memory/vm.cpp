@@ -98,7 +98,6 @@ namespace vm
 
 	void reservation_update(u32 addr)
 	{
-		u64 old = -1;
 		const auto cpu = get_current_cpu_thread();
 
 		const bool had_wait = cpu && cpu->state & cpu_flag::wait;
@@ -126,8 +125,6 @@ namespace vm
 
 				return;
 			}
-	
-			old = rtime;
 		}
 	}
 
