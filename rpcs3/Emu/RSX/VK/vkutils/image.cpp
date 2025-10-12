@@ -3,12 +3,15 @@
 #include "device.h"
 #include "image.h"
 #include "image_helpers.h"
+#include "sampler.h"
 
 #include "../VKResourceManager.h"
 #include <memory>
 
 namespace vk
 {
+	static atomic_t<u64> s_image_uid_counter = 0;
+
 	void image::validate(const vk::render_device& dev, const VkImageCreateInfo& info) const
 	{
 		const auto& gpu_limits = dev.gpu().get_limits();
@@ -117,6 +120,8 @@ namespace vk
 		info.flags &= ~VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3;
 
 		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
+
+		m_uid = s_image_uid_counter++;
 
 		VkMemoryRequirements memory_req;
 		vkGetImageMemoryRequirements(m_device, value, &memory_req);

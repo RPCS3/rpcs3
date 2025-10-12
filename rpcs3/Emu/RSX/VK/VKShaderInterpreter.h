@@ -85,6 +85,6 @@ namespace vk
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images);
+		void update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images);
 	};
 }

@@ -188,9 +188,8 @@ namespace vk
 
 		for (uint n = 0; n < src.size(); ++n)
 		{
-			VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
 			const auto [set, location] = program->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "fs" + std::to_string(n));
-			program->bind_uniform(info, set, location);
+			program->bind_uniform({ *src[n], *m_sampler }, set, location);
 		}
 
 		program->bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS);
