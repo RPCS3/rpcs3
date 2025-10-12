@@ -55,8 +55,8 @@ namespace vk
 		{
 			auto msaa_view = multisampled->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_VIEW_MULTISAMPLED));
 			auto resolved_view = resolve->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY));
-			m_program->bind_uniform({ VK_NULL_HANDLE, msaa_view->value, multisampled->current_layout }, 0, 0);
-			m_program->bind_uniform({ VK_NULL_HANDLE, resolved_view->value, resolve->current_layout }, 0, 1);
+			m_program->bind_uniform({ *msaa_view }, 0, 0);
+			m_program->bind_uniform({ *resolved_view }, 0, 1);
 		}
 
 		void run(const vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)

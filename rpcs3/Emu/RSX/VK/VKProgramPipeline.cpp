@@ -3,22 +3,23 @@
 #include "VKResourceManager.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/device.h"
+#include "vkutils/image.h"
+#include "vkutils/sampler.h"
 
 #include "../Program/SPIRVCommon.h"
 
 namespace vk
 {
-	extern const vk::render_device* get_current_renderer();
-
 	namespace glsl
 	{
 		using namespace ::glsl;
 
-		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfo& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfoEx& b)
 		{
-			const auto ptr = std::get_if<VkDescriptorImageInfo>(&a);
+			const auto ptr = std::get_if<VkDescriptorImageInfoEx>(&a);
 			return !!ptr &&
 				ptr->imageView == b.imageView &&
+				ptr->resourceId == b.resourceId &&
 				ptr->sampler == b.sampler &&
 				ptr->imageLayout == b.imageLayout;
 		}
@@ -38,7 +39,7 @@ namespace vk
 			return !!ptr && *ptr == b;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfo>& b)
+		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfoEx>& b)
 		{
 			const auto ptr = std::get_if<descriptor_image_array_t>(&a);
 			return !!ptr && ptr->size() == b.size() && !std::memcmp(ptr->data(), b.data(), b.size_bytes());
@@ -313,7 +314,7 @@ namespace vk
 			return { umax, umax };
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo& image_descriptor, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorImageInfoEx& image_descriptor, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptor)
 			{
@@ -343,7 +344,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_view);
 		}
 
-		void program::bind_uniform_array(const std::span<const VkDescriptorImageInfo>& image_descriptors, u32 set_id, u32 binding_point)
+		void program::bind_uniform_array(const std::span<const VkDescriptorImageInfoEx>& image_descriptors, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptors)
 			{
@@ -479,7 +480,7 @@ namespace vk
 				writer.descriptorCount = 1;
 				writer.descriptorType = type;
 
-				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
 				{
 					m_descriptor_set.push(*ptr, type, idx);
 					return;
@@ -530,7 +531,7 @@ namespace vk
 			{
 				const auto& slot = m_descriptor_slots[idx];
 				const VkDescriptorType type = m_descriptor_types[idx];
-				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
 				{
 					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
 					return;
@@ -690,7 +691,7 @@ namespace vk
 		void descriptor_table_t::create_descriptor_pool()
 		{
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
-			m_descriptor_pool->create(*vk::get_current_renderer(), m_descriptor_pool_sizes);
+			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes);
 		}
 
 		void descriptor_table_t::validate() const

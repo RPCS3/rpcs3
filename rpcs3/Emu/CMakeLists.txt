@@ -577,6 +577,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/buffer_object.cpp
         RSX/VK/vkutils/chip_class.cpp
         RSX/VK/vkutils/commands.cpp
+        RSX/VK/vkutils/ex.cpp
         RSX/VK/vkutils/data_heap.cpp
         RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
