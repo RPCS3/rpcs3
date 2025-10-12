@@ -221,12 +221,18 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 
 	Emu.ConfigurePPUCache();
 
+	stx::g_launch_retainer = 1;
+
 	g_fxo->init(false, ar, [](){ Emu.ExecPostponedInitCode(); });
 
 	Emu.GetCallbacks().init_gs_render(ar);
-	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
 	Emu.GetCallbacks().init_kb_handler();
 	Emu.GetCallbacks().init_mouse_handler();
+
+	stx::g_launch_retainer = 0;
+	stx::g_launch_retainer.notify_all();
+
+	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
 
 	usz pos = 0;
 
@@ -859,6 +865,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	GetCallbacks().on_run(false);
 	m_state = system_state::starting;
+	m_state.notify_all();
 
 	ensure(g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame)));
 
@@ -2472,6 +2479,7 @@ void Emulator::Run(bool start_playtime)
 	rpcs3::utils::configure_logs();
 
 	m_state = system_state::starting;
+	m_state.notify_all();
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
@@ -3254,6 +3262,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	}
 
 	// Signal threads
+	m_state.notify_all();
 
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
