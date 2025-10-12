@@ -1632,7 +1632,7 @@ public:
 		m_ir->SetInsertPoint(label_test);
 
 		// Set block hash for profiling (if enabled)
-		if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+		if ((g_cfg.core.spu_prof || g_cfg.core.spu_debug) && g_cfg.core.spu_verification)
 			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr(&spu_thread::block_hash));
 
 		if (!g_cfg.core.spu_verification)
@@ -1989,7 +1989,7 @@ public:
 			set_function(m_functions[m_entry].chunk);
 
 			// Set block hash for profiling (if enabled)
-			if (g_cfg.core.spu_prof)
+			if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 				m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (m_entry >> 2)), spu_ptr(&spu_thread::block_hash));
 
 			m_finfo = &m_functions[m_entry];

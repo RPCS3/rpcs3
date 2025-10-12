@@ -659,7 +659,7 @@ void cpu_thread::operator()()
 	}
 	case thread_class::spu:
 	{
-		if (g_cfg.core.spu_prof)
+		if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 		{
 			g_fxo->get<cpu_profiler>().registered.push(id);
 		}
@@ -1546,7 +1546,7 @@ void cpu_thread::flush_profilers() noexcept
 		return;
 	}
 
-	if (g_cfg.core.spu_prof)
+	if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 	{
 		g_fxo->get<cpu_profiler>().registered.push(0);
 	}
