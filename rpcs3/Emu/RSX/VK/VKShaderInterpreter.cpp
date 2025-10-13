@@ -63,6 +63,7 @@ namespace vk
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
 		properties.require_lit_emulation = true;
+		properties.require_clip_plane_functions = true;
 
 		RSXVertexProgram null_prog;
 		std::string shader_str;
@@ -70,7 +71,7 @@ namespace vk
 
 		// Initialize binding layout
 		auto vk_prog = std::make_unique<VKVertexProgram>();
-		m_vertex_instruction_start = init(vk_prog.get(), compiler_options);
+		const u32 vertex_instruction_start = init(vk_prog.get(), compiler_options);
 
 		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
 			? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS
@@ -88,9 +89,20 @@ namespace vk
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
+		// Outputs
+		builder << "layout(location=16) out flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define xform_constants_offset get_draw_params().xform_constants_offset\n"
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
+
 		// Insert vp stream input
 		builder << "\n"
-		"layout(std140, set=0, binding=" << m_vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
+		"layout(std140, set=0, binding=" << vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
 		"{\n"
 		"	uint base_address;\n"
 		"	uint entry;\n"
@@ -117,6 +129,7 @@ namespace vk
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
 		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_vulkan);
+		comp.insertFSExport(builder);
 
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
@@ -131,7 +144,7 @@ namespace vk
 		vk::glsl::program_input in;
 		in.set = 0;
 		in.domain = ::glsl::glsl_vertex_program;
-		in.location = m_vertex_instruction_start;
+		in.location = vertex_instruction_start;
 		in.type = glsl::input_type_storage_buffer;
 		in.name = "VertexInstructionBlock";
 		vs_inputs.push_back(in);
@@ -155,9 +168,11 @@ namespace vk
 		std::string shader_str;
 		RSXFragmentProgram frag;
 
+		frag.ctrl |= RSX_SHADER_CONTROL_INTERPRETER_MODEL;
+
 		auto vk_prog = std::make_unique<VKFragmentProgram>();
-		m_fragment_instruction_start = init(vk_prog.get(), compiler_options);
-		m_fragment_textures_start = m_fragment_instruction_start + 1;
+		const u32 fragment_instruction_start = init(vk_prog.get(), compiler_options);
+		const u32 fragment_textures_start = fragment_instruction_start + 1;
 
 		VKFragmentDecompilerThread comp(shader_str, arr, frag, len, *vk_prog);
 
@@ -168,6 +183,15 @@ namespace vk
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
+
+		builder << "layout(location=16) in flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+		"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+		"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n"
+		"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+		"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
@@ -234,7 +258,7 @@ namespace vk
 		{
 			builder << "#define WITH_TEXTURES\n\n";
 
-			for (int i = 0, bind_location = m_fragment_textures_start; i < 4; ++i)
+			for (int i = 0, bind_location = fragment_textures_start; i < 4; ++i)
 			{
 				builder << "layout(set=1, binding=" << bind_location++ << ") " << "uniform " << type_names[i] << " " << type_names[i] << "_array[16];\n";
 			}
@@ -244,11 +268,12 @@ namespace vk
 				"#define SAMPLER1D(index) sampler1D_array[index]\n"
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
 				"#define SAMPLER3D(index) sampler3D_array[index]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+				"#define SAMPLERCUBE(index) samplerCube_array[index]\n"
+				"#define texture_base_index _fs_texture_base_index\n\n";
 		}
 
 		builder <<
-		"layout(std430, set=1, binding=" << m_fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
+		"layout(std430, set=1, binding=" << fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
 		"{\n"
 		"	uint shader_control;\n"
 		"	uint texture_control;\n"
@@ -256,6 +281,10 @@ namespace vk
 		"	uint reserved2;\n"
 		"	uvec4 fp_instructions[];\n"
 		"};\n\n";
+
+		builder <<
+			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
@@ -270,14 +299,14 @@ namespace vk
 		vk::glsl::program_input in;
 		in.set = 1;
 		in.domain = ::glsl::glsl_fragment_program;
-		in.location = m_fragment_instruction_start;
+		in.location = fragment_instruction_start;
 		in.type = glsl::input_type_storage_buffer;
 		in.name = "FragmentInstructionBlock";
 		inputs.push_back(in);
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
 		{
-			for (int i = 0, location = m_fragment_textures_start; i < 4; ++i, ++location)
+			for (int i = 0, location = fragment_textures_start; i < 4; ++i, ++location)
 			{
 				in.location = location;
 				in.name = std::string(type_names[i]) + "_array[16]";
@@ -404,7 +433,7 @@ namespace vk
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images)
 	{
 		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
 		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "sampler1D_array[16]");
@@ -413,10 +442,10 @@ namespace vk
 			return;
 		}
 
-		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
+		const VkDescriptorImageInfoEx* texture_ptr = sampled_images.data();
 		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			m_current_interpreter->bind_uniform_array(texture_ptr, 16, set, binding);
+			m_current_interpreter->bind_uniform_array({ texture_ptr, 16 }, set, binding);
 		}
 	}
 
@@ -476,6 +505,7 @@ namespace vk
 		}
 		else
 		{
+			m_current_pipeline_info_ex = *get_pipeline_info_ex(key.compiler_opt);
 			m_current_key = key;
 		}
 
@@ -498,12 +528,12 @@ namespace vk
 
 	u32 shader_interpreter::get_vertex_instruction_location() const
 	{
-		return m_vertex_instruction_start;
+		return m_current_pipeline_info_ex.vertex_instruction_location;
 	}
 
 	u32 shader_interpreter::get_fragment_instruction_location() const
 	{
-		return m_fragment_instruction_start;
+		return m_current_pipeline_info_ex.fragment_instruction_location;
 	}
 
 	std::pair<VKVertexProgram*, VKFragmentProgram*> shader_interpreter::get_shaders() const
@@ -516,5 +546,28 @@ namespace vk
 		}
 
 		return { nullptr, nullptr };
+	}
+
+	const shader_interpreter::pipeline_info_ex_t* shader_interpreter::get_pipeline_info_ex(u64 compiler_opt)
+	{
+		if (auto found = m_pipeline_info_cache.find(compiler_opt); found != m_pipeline_info_cache.end())
+		{
+			return &found->second;
+		}
+
+		VKVertexProgram vs_stub{};
+		VKFragmentProgram fs_stub{};
+		const auto vi_location = init(&vs_stub, compiler_opt);
+		const auto fi_location = init(&fs_stub, compiler_opt);
+
+		pipeline_info_ex_t result
+		{
+			.vertex_instruction_location = vi_location,
+			.fragment_instruction_location = fi_location,
+			.fragment_textures_location = fi_location + 1
+		};
+
+		auto it = m_pipeline_info_cache.insert_or_assign(compiler_opt, result);
+		return &it.first->second;
 	}
 };

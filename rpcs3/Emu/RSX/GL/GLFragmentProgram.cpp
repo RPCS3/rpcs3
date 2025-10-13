@@ -158,50 +158,40 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	OS << "\n";
 
-	std::string constants_block;
-	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	if (!properties.constant_offsets.empty())
 	{
-		if (PT.type == "sampler1D" ||
-			PT.type == "sampler2D" ||
-			PT.type == "sampler3D" ||
-			PT.type == "samplerCube")
-			continue;
-
-		for (const ParamItem& PI : PT.items)
-		{
-			constants_block += "	" + PT.type + " " + PI.name + ";\n";
-		}
+		OS <<
+			"layout(std140, binding = " << GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT << ") uniform FragmentConstantsBuffer\n"
+			"{\n"
+			"	vec4 fc[" << properties.constant_offsets.size() << "];\n"
+			"};\n"
+			"#define _fetch_constant(x) fc[x]\n\n";
 	}
 
-	if (!constants_block.empty())
-	{
-		OS << "layout(std140, binding = " << GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT << ") uniform FragmentConstantsBuffer\n";
-		OS << "{\n";
-		OS << constants_block;
-		OS << "};\n\n";
-	}
+	OS <<
+	"layout(std140, binding = " << GL_FRAGMENT_STATE_BIND_SLOT << ") uniform FragmentStateBuffer\n"
+	"{\n"
+	"	float fog_param0;\n"
+	"	float fog_param1;\n"
+	"	uint rop_control;\n"
+	"	float alpha_ref;\n"
+	"	uint reserved;\n"
+	"	uint fog_mode;\n"
+	"	float wpos_scale;\n"
+	"	float wpos_bias;\n"
+	"};\n\n"
 
-	OS << "layout(std140, binding = " << GL_FRAGMENT_STATE_BIND_SLOT << ") uniform FragmentStateBuffer\n";
-	OS << "{\n";
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint rop_control;\n";
-	OS << "	float alpha_ref;\n";
-	OS << "	uint reserved;\n";
-	OS << "	uint fog_mode;\n";
-	OS << "	float wpos_scale;\n";
-	OS << "	float wpos_bias;\n";
-	OS << "};\n\n";
+	"layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n"
+	"{\n"
+	"	sampler_info texture_parameters[16];\n"
+	"};\n\n"
 
-	OS << "layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n";
-	OS << "{\n";
-	OS << "	sampler_info texture_parameters[16];\n";
-	OS << "};\n\n";
+	"layout(std140, binding = " << GL_RASTERIZER_STATE_BIND_SLOT << ") uniform RasterizerHeap\n"
+	"{\n"
+	"	uvec4 stipple_pattern[8];\n"
+	"};\n\n"
 
-	OS << "layout(std140, binding = " << GL_RASTERIZER_STATE_BIND_SLOT << ") uniform RasterizerHeap\n";
-	OS << "{\n";
-	OS << "	uvec4 stipple_pattern[8];\n";
-	OS << "};\n\n";
+	"#define texture_base_index 0\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
@@ -373,21 +363,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 	decompiler.Task();
 
-	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
-	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (PT.type == "sampler1D" ||
-				PT.type == "sampler2D" ||
-				PT.type == "sampler3D" ||
-				PT.type == "samplerCube")
-				continue;
-
-			usz offset = atoi(PI.name.c_str() + 2);
-			FragmentConstantOffsetCache.push_back(offset);
-		}
-	}
-
+	constant_offsets = std::move(decompiler.properties.constant_offsets);
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
 	id = shader.id();
 }

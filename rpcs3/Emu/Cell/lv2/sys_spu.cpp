@@ -776,8 +776,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_ESRCH;
 	}
 
-	std::unique_lock lock(group->mutex);
-
 	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
 		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
@@ -793,6 +791,34 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EBUSY;
 	}
 
+	const u32 inited_before_lock = group->init;
+
+	u32 tid = (inited_before_lock << 24) | (group_id & 0xffffff);
+	
+	const auto spu_ptr = ensure(idm::make_ptr<named_thread<spu_thread>>(group.get(), spu_num, thread_name, tid, false, option));
+	
+	std::unique_lock lock(group->mutex);
+
+	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+	{
+		lock.unlock();
+		idm::remove<named_thread<spu_thread>>(idm::last_id());
+
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_EBUSY;
+	}
+
+	if (group->threads_map[spu_num] != -1)
+	{
+		lock.unlock();
+		idm::remove<named_thread<spu_thread>>(idm::last_id());
+		return CELL_EBUSY;
+	}
+
 	if (option & SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE)
 	{
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
@@ -800,15 +826,13 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	const u32 inited = group->init;
 
-	const u32 tid = (inited << 24) | (group_id & 0xffffff);
+	tid = (inited << 24) | (group_id & 0xffffff);
 
-	ensure(idm::import<named_thread<spu_thread>>([&]()
-	{
-		const auto spu = stx::make_shared<named_thread<spu_thread>>(group.get(), spu_num, thread_name, tid, false, option);
-		group->threads[inited] = spu;
-		group->threads_map[spu_num] = static_cast<s8>(inited);
-		return spu;
-	}));
+	// Update lv2_id (potentially changed after locking)
+	spu_ptr->lv2_id = tid;
+
+	group->threads[inited] = spu_ptr;
+	group->threads_map[spu_num] = static_cast<s8>(inited);
 
 	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
 	auto& spu = group->threads[inited];
@@ -1501,6 +1525,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	}
 
 	u32 prev_resv = 0;
+	u64 prev_time = 0;
 
 	for (auto& thread : group->threads)
 	{
@@ -1510,20 +1535,21 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 			{
-				if (prev_resv && prev_resv != resv)
+				if (prev_resv && (prev_resv != resv || prev_time != thread->rtime))
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier_notify(prev_resv);
+					vm::reservation_notifier_notify(prev_resv, prev_time);
 				}
 
 				prev_resv = resv;
+				prev_time = thread->rtime;
 			}
 		}
 	}
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier_notify(prev_resv);
+		vm::reservation_notifier_notify(prev_resv, prev_time);
 	}
 
 	group->exit_status = value;

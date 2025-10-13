@@ -138,7 +138,7 @@ namespace rsx
 		is_disjoint_primitive = is_primitive_disjointed(primitive);
 	}
 
-	const simple_array<draw_range_t>& draw_clause::get_subranges() const
+	const rsx::simple_array<draw_range_t>& draw_clause::get_subranges() const
 	{
 		ensure(!is_single_draw());
 

@@ -81,8 +81,20 @@ struct pad_list_entry
 	{}
 };
 
+struct pad_capabilities
+{
+	bool has_led = false;
+	bool has_mono_led = false;
+	bool has_player_led = false;
+	bool has_battery_led = false;
+	bool has_rumble = false;
+	bool has_accel = false;
+	bool has_gyro = false;
+	bool has_pressure_sensitivity = false;
+};
+
 using pad_preview_values = std::array<int, 6>;
-using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values /*preview_values*/)>;
+using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values, pad_capabilities)>;
 using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
 
 using motion_preview_values = std::array<u16, 4>;
@@ -255,15 +267,6 @@ protected:
 		return {};
 	}
 
-	// Get new multiplied value based on the multiplier
-	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
-
-	// Get new scaled value between 0 and 255 based on its minimum and maximum
-	static f32 ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
-
-	// Get new scaled value between -255 and 255 based on its minimum and maximum
-	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
-
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, u32 threshold) const;
 
@@ -275,6 +278,17 @@ protected:
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 	// return is new x and y values in 0-255 range
 	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone, u32 anti_deadzone) const;
+
+public:
+
+	// Get new multiplied value based on the multiplier
+	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
+
+	// Get new scaled value between 0 and 255 based on its minimum and maximum
+	static f32 ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
+
+	// Get new scaled value between -255 and 255 based on its minimum and maximum
+	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// get clamped value between 0 and 255
 	static u16 Clamp0To255(f32 input);
@@ -291,7 +305,6 @@ protected:
 	// This function assumes inX and inY is already in 0-255
 	static void ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
 
-public:
 	// u32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
 	u32 thumb_max = 255;
 	u32 trigger_min = 0;
@@ -324,6 +337,8 @@ public:
 	bool has_pressure_intensity_button() const { return b_has_pressure_intensity_button; }
 	bool has_analog_limiter_button() const { return b_has_analog_limiter_button; }
 	bool has_orientation() const { return b_has_orientation; }
+
+	virtual pad_capabilities get_capabilities(const std::string& /*pad_id*/);
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
 	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;

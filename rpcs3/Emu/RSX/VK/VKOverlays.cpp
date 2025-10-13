@@ -42,12 +42,12 @@ namespace vk
 	{
 		if (!m_vao.heap)
 		{
-			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, "overlays VAO", 128);
+			m_vao.create(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 1 * 0x100000, vk::heap_pool_default, "overlays VAO", 128);
 		}
 
 		if (!m_ubo.heap && m_num_uniform_buffers > 0)
 		{
-			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, "overlays UBO", 128);
+			m_ubo.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 8 * 0x100000, vk::heap_pool_default, "overlays UBO", 128);
 		}
 	}
 
@@ -188,9 +188,8 @@ namespace vk
 
 		for (uint n = 0; n < src.size(); ++n)
 		{
-			VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
 			const auto [set, location] = program->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "fs" + std::to_string(n));
-			program->bind_uniform(info, set, location);
+			program->bind_uniform({ *src[n], *m_sampler }, set, location);
 		}
 
 		program->bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -894,11 +893,12 @@ namespace vk
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
+		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb,
+		bool stereo_enabled, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
 	{
 		config.gamma = gamma;
 		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo_display_mode = static_cast<u8>(stereo_mode);
+		config.stereo_display_mode = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
 		config.stereo_image_count = std::min(::size32(src), 2u);
 
 		std::vector<vk::image_view*> views;

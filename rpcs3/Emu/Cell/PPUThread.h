@@ -267,6 +267,7 @@ public:
 	u32 res_cached{0}; // Reservation "cached" addresss
 	u32 res_notify{0};
 	u64 res_notify_time{0};
+	u32 res_notify_postpone_streak{0};
 
 	union ppu_prio_t
 	{

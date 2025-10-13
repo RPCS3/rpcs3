@@ -578,6 +578,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/buffer_object.cpp
         RSX/VK/vkutils/chip_class.cpp
         RSX/VK/vkutils/commands.cpp
+        RSX/VK/vkutils/ex.cpp
         RSX/VK/vkutils/data_heap.cpp
         RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
@@ -643,6 +644,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::libevdev
         3rdparty::flatbuffers
         3rdparty::pugixml
+        3rdparty::vulkanmemoryallocator
         Threads::Threads
     PRIVATE
         3rdparty::glslang

@@ -344,6 +344,8 @@ struct CellPadData
 	be_t<u16> button[CELL_PAD_MAX_CODES];
 };
 
+static constexpr u8 MOTOR_THRESHOLD = 63; // The DS3 does not seem to respond to values <= 63. So we should ignore those in other handlers as well.
+
 static constexpr u16 MOTION_ONE_G = 113;
 static constexpr u16 DEFAULT_MOTION_X = 512;
 static constexpr u16 DEFAULT_MOTION_Y = 399; // 512 - 113 (113 is 1G gravity)
@@ -457,13 +459,13 @@ struct AnalogSensor
 
 struct VibrateMotor
 {
-	bool m_is_large_motor = false;
-	u8 m_value = 0;
+	bool is_large_motor = false;
+	u8 value = 0;
+	u8 adjusted_value = 0;
 
 	VibrateMotor() {}
-	VibrateMotor(bool is_large_motor, u8 value)
-		: m_is_large_motor(is_large_motor)
-		, m_value(value)
+	VibrateMotor(bool is_large_motor)
+		: is_large_motor(is_large_motor)
 	{}
 };
 
@@ -544,41 +546,14 @@ struct Pad
 	std::vector<Button> m_buttons;
 	std::array<AnalogStick, 4> m_sticks{};
 	std::array<AnalogSensor, 4> m_sensors{};
-	std::array<VibrateMotor, 2> m_vibrateMotors{};
+	std::array<VibrateMotor, 2> m_vibrate_motors{};
 
 	std::vector<Button> m_buttons_external;
 	std::array<AnalogStick, 4> m_sticks_external{};
 
 	std::vector<std::shared_ptr<Pad>> copilots;
 
-	// These hold bits for their respective buttons
-	u16 m_digital_1{0};
-	u16 m_digital_2{0};
-
-	// All sensors go from 0-255
-	u16 m_analog_left_x{128};
-	u16 m_analog_left_y{128};
-	u16 m_analog_right_x{128};
-	u16 m_analog_right_y{128};
-
-	u16 m_press_right{0};
-	u16 m_press_left{0};
-	u16 m_press_up{0};
-	u16 m_press_down{0};
-	u16 m_press_triangle{0};
-	u16 m_press_circle{0};
-	u16 m_press_cross{0};
-	u16 m_press_square{0};
-	u16 m_press_L1{0};
-	u16 m_press_L2{0};
-	u16 m_press_R1{0};
-	u16 m_press_R2{0};
-
-	// Except for these...0-1023
-	u16 m_sensor_x{DEFAULT_MOTION_X};
-	u16 m_sensor_y{DEFAULT_MOTION_Y};
-	u16 m_sensor_z{DEFAULT_MOTION_Z};
-	u16 m_sensor_g{DEFAULT_MOTION_G};
+	CellPadData data {};
 
 	bool ldd{false};
 	CellPadData ldd_data{};

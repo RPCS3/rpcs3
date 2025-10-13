@@ -43,14 +43,19 @@ namespace vk
 			std::unique_ptr<VKVertexProgram> m_vs;
 		};
 
+		struct pipeline_info_ex_t
+		{
+			u32 vertex_instruction_location = 0;
+			u32 fragment_instruction_location = 0;
+			u32 fragment_textures_location = 0;
+		};
+
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, shader_cache_entry_t> m_shader_cache;
-
-		u32 m_vertex_instruction_start = 0;
-		u32 m_fragment_instruction_start = 0;
-		u32 m_fragment_textures_start = 0;
+		std::unordered_map<u64, pipeline_info_ex_t> m_pipeline_info_cache;
 
 		pipeline_key m_current_key{};
+		pipeline_info_ex_t m_current_pipeline_info_ex{};
 
 		VKVertexProgram* build_vs(u64 compiler_opt);
 		VKFragmentProgram* build_fs(u64 compiler_opt);
@@ -58,6 +63,8 @@ namespace vk
 
 		u32 init(VKVertexProgram* vk_prog, u64 compiler_opt) const;
 		u32 init(VKFragmentProgram* vk_prog, u64 compiler_opt) const;
+
+		const pipeline_info_ex_t* get_pipeline_info_ex(u64 compiler_opt);
 
 	public:
 		void init(const vk::render_device& dev);
@@ -78,6 +85,6 @@ namespace vk
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images);
+		void update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images);
 	};
 }

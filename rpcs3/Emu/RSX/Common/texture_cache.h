@@ -143,7 +143,7 @@ namespace rsx
 		struct deferred_subresource : image_section_attributes_t
 		{
 			image_resource_type external_handle = 0;
-			std::vector<copy_region_descriptor> sections_to_copy;
+			rsx::simple_array<copy_region_descriptor> sections_to_copy;
 			texture_channel_remap_t remap;
 			deferred_request_command op = deferred_request_command::nop;
 			u32 external_ref_addr = 0;
@@ -491,10 +491,10 @@ namespace rsx
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range32 &rsx_range, const image_section_attributes_t& attrs, const GCM_tile_reference& tile, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
@@ -652,7 +652,7 @@ namespace rsx
 			}
 
 			// Resync any exclusions that do not require flushing
-			std::vector<section_storage_type*> surfaces_to_inherit;
+			rsx::simple_array<section_storage_type*> surfaces_to_inherit;
 			for (auto& surface : data.sections_to_exclude)
 			{
 				if (surface->get_context() != texture_upload_context::framebuffer_storage)
@@ -1187,9 +1187,9 @@ namespace rsx
 		}
 
 		template <bool check_unlocked = false>
-		std::vector<section_storage_type*> find_texture_from_range(const address_range32 &test_range, u32 required_pitch = 0, u32 context_mask = 0xFF)
+		rsx::simple_array<section_storage_type*> find_texture_from_range(const address_range32 &test_range, u32 required_pitch = 0, u32 context_mask = 0xFF)
 		{
-			std::vector<section_storage_type*> results;
+			rsx::simple_array<section_storage_type*> results;
 
 			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
@@ -1731,7 +1731,7 @@ namespace rsx
 			}
 			case deferred_request_command::cubemap_unwrap:
 			{
-				std::vector<copy_region_descriptor> sections(6);
+				rsx::simple_array<copy_region_descriptor> sections(6);
 				for (u16 n = 0; n < 6; ++n)
 				{
 					sections[n] =
@@ -1761,7 +1761,7 @@ namespace rsx
 			}
 			case deferred_request_command::_3d_unwrap:
 			{
-				std::vector<copy_region_descriptor> sections;
+				rsx::simple_array<copy_region_descriptor> sections;
 				sections.resize(desc.depth);
 				for (u16 n = 0; n < desc.depth; ++n)
 				{
@@ -1894,8 +1894,8 @@ namespace rsx
 					}
 				}
 
-				std::vector<typename SurfaceStoreType::surface_overlap_info> overlapping_fbos;
-				std::vector<section_storage_type*> overlapping_locals;
+				rsx::simple_array<typename SurfaceStoreType::surface_overlap_info> overlapping_fbos;
+				rsx::simple_array<section_storage_type*> overlapping_locals;
 
 				auto fast_fbo_check = [&]() -> sampled_image_descriptor
 				{
@@ -1966,14 +1966,10 @@ namespace rsx
 				if (!overlapping_locals.empty())
 				{
 					// Remove everything that is not a transfer target
-					overlapping_locals.erase
-					(
-						std::remove_if(overlapping_locals.begin(), overlapping_locals.end(), [](const auto& e)
-						{
-							return e->is_dirty() || (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
-						}),
-						overlapping_locals.end()
-					);
+					overlapping_locals.erase_if([](const auto& e)
+					{
+						return e->is_dirty() || (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
+					});
 				}
 
 				if (!options.prefer_surface_cache)
@@ -2411,7 +2407,7 @@ namespace rsx
 				// 1. Only 2D images will invoke this routine
 				// 2. The image has to have been generated on the GPU (fbo or blit target only)
 
-				std::vector<copy_region_descriptor> sections;
+				rsx::simple_array<copy_region_descriptor> sections;
 				const bool use_upscaling = (result.upload_context == rsx::texture_upload_context::framebuffer_storage && g_cfg.video.resolution_scale_percent != 100);
 
 				if (!helpers::append_mipmap_level(sections, result, attributes, 0, use_upscaling, attributes)) [[unlikely]]

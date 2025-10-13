@@ -768,7 +768,7 @@ public:
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
 	const u32 option; // sys_spu_thread_initialize option
-	const u32 lv2_id; // The actual id that is used by syscalls
+	u32 lv2_id; // The actual id that is used by syscalls
 	u32 spurs_addr = 0;
 	bool spurs_waited = false;
 	bool spurs_entered_wait = false;
@@ -824,6 +824,7 @@ public:
 	u8 cpu_work_iteration_count = 0;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
+	std::array<u32, 8> raddr_busy_wait_addr{}; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function

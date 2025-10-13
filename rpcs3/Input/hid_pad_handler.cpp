@@ -21,9 +21,12 @@ LOG_CHANNEL(hid_log, "HID");
 #ifdef ANDROID
 std::vector<android_usb_device> g_android_usb_devices;
 std::mutex g_android_usb_devices_mutex;
-#elif defined(__APPLE__)
-std::mutex g_hid_mutex;
 #endif
+
+// Global mutex to allow "hid_enumerate()" and "hid_open_path()" are accessed by one thread at a time
+// (e.g. thread running "process()" and thread running enumerate_devices()).
+// It avoids the emulation crash in case the controller gets disconnected (e.g. due to inactivity)
+std::mutex g_hid_mutex;
 
 struct hid_instance
 {
@@ -90,15 +93,18 @@ private:
 
 hid_device* HidDevice::open()
 {
-#ifdef ANDROID
-	hidDevice = hid_libusb_wrap_sys_device(path, -1);
-#elif defined(__APPLE__)
-	std::unique_lock static_lock(g_hid_mutex, std::defer_lock);
-	if (!static_lock.try_lock())
+	// Lock before calling "hid_open_path()"
+	std::unique_lock lock(g_hid_mutex, std::defer_lock);
+
+	if (!lock.try_lock())
 	{
 		// The enumeration thread is busy. If we lock and open the device, we might get input stutter on other devices.
 		return nullptr;
 	}
+
+#ifdef ANDROID
+	hidDevice = hid_libusb_wrap_sys_device(path, -1);
+#elif defined(__APPLE__)
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		hidDevice = hid_open_path(path.c_str());
@@ -170,9 +176,8 @@ hid_pad_handler<Device>::~hid_pad_handler()
 	// Join thread
 	m_enumeration_thread.reset();
 
-#if defined(__APPLE__)
-	std::lock_guard static_lock(g_hid_mutex);
-#endif
+	// Lock before accessing any controller (e.g. just to close it with "close()")
+	std::lock_guard lock(g_hid_mutex);
 
 	for (auto& controller : m_controllers)
 	{
@@ -268,9 +273,10 @@ void hid_pad_handler<Device>::enumerate_devices()
 #else
 	for (const auto& [vid, pid] : m_ids)
 	{
-#if defined(__APPLE__)
 		// Let's make sure hid_enumerate is only done one thread at a time
-		std::lock_guard static_lock(g_hid_mutex);
+		std::lock_guard lock(g_hid_mutex);
+
+#if defined(__APPLE__)
 		Emu.BlockingCallFromMainThread([&]()
 		{
 #endif
@@ -345,9 +351,8 @@ void hid_pad_handler<Device>::update_devices()
 		m_enumerated_serials = std::move(m_new_enumerated_serials);
 	}
 
-#if defined(__APPLE__)
-	std::lock_guard static_lock(g_hid_mutex);
-#endif
+	// Lock before accessing any controller (e.g. just to close it with "close()") or before calling "hid_open_path()"
+	std::lock_guard lock(g_hid_mutex);
 
 	// Scrap devices that are not in the new list
 	for (auto& controller : m_controllers)

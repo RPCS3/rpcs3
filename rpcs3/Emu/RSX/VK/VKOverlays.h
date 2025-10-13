@@ -220,7 +220,8 @@ namespace vk
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override;
 
 		void run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-			const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass);
+			const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb,
+			bool stereo_enabled, stereo_render_mode_options stereo_mode, VkRenderPass render_pass);
 	};
 
 	// TODO: Replace with a proper manager

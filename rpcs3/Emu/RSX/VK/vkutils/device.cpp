@@ -586,7 +586,7 @@ namespace vk
 		// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
 
 		enabled_features.samplerAnisotropy = VK_TRUE;
-		enabled_features.textureCompressionBC = pgpu->optional_features_support.texture_compression_bc;
+		enabled_features.textureCompressionBC = pgpu->features.textureCompressionBC;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 		// Optionally disable unsupported stuff

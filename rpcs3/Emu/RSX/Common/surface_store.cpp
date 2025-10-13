@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace utility
 	{
-		std::vector<u8> get_rtt_indexes(surface_target color_target)
+		rsx::simple_array<u8> get_rtt_indexes(surface_target color_target)
 		{
 			switch (color_target)
 			{

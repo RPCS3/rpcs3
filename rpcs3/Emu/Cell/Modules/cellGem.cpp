@@ -3482,7 +3482,7 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 			{
 				if (!binding.device || binding.device->player_id != pad_index) continue;
 
-				handler->SetRumble(pad_index, rumble, rumble > 0);
+				handler->SetRumble(pad_index, rumble, rumble);
 				break;
 			}
 		}
