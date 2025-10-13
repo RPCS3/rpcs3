@@ -182,7 +182,7 @@ namespace glsl
 			OS <<
 				"#define CLIP_PLANE_DISABLED 1\n"
 				"#define is_user_clip_enabled(idx) (_get_bits(get_user_clip_config(), idx * 2, 2) != CLIP_PLANE_DISABLED)\n"
-				"#define user_clip_factor(idx) float(_get_bits(get_user_clip_config(), idx * 2, 2) - 1)\n\n";
+				"#define user_clip_factor(idx) (float(_get_bits(get_user_clip_config(), idx * 2, 2)) - 1.f)\n\n";
 		}
 
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
