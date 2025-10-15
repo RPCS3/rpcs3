@@ -4,8 +4,17 @@
 #include <functional>
 #include <algorithm>
 
+#include "reverse_ptr.hpp"
+
 namespace rsx
 {
+	template <typename C, typename T>
+	concept span_like =
+		requires(C& c) {
+			{ c.data() } -> std::convertible_to<const T*>;
+			{ c.size() } -> std::integral;
+	};
+
 	template <typename Ty>
 		requires std::is_trivially_destructible_v<Ty>
 	struct simple_array
@@ -13,6 +22,8 @@ namespace rsx
 	public:
 		using iterator = Ty*;
 		using const_iterator = const Ty*;
+		using reverse_iterator = reverse_pointer<Ty>;
+		using const_reverse_iterator = reverse_pointer<const Ty>;
 		using value_type = Ty;
 
 	private:
@@ -76,6 +87,18 @@ namespace rsx
 		simple_array(simple_array&& other) noexcept
 		{
 			swap(other);
+		}
+
+		template <typename Container>
+			requires span_like<Container, Ty>
+		simple_array(const Container& container)
+		{
+			resize(container.size());
+
+			if (_size)
+			{
+				std::memcpy(_data, container.data(), size_bytes());
+			}
 		}
 
 		simple_array& operator=(const simple_array& other)
@@ -380,6 +403,46 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator cbegin() const
+		{
+			return _data;
+		}
+
+		const_iterator cend() const
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		reverse_iterator rbegin()
+		{
+			return reverse_iterator(end() - 1);
+		}
+
+		reverse_iterator rend()
+		{
+			return reverse_iterator(begin() - 1);
+		}
+
+		const_reverse_iterator rbegin() const
+		{
+			return crbegin();
+		}
+
+		const_reverse_iterator rend() const
+		{
+			return crend();
+		}
+
+		const_reverse_iterator crbegin() const
+		{
+			return const_reverse_iterator(cend() - 1);
+		}
+
+		const_reverse_iterator crend() const
+		{
+			return const_reverse_iterator(cbegin() - 1);
 		}
 
 		bool any(std::predicate<const Ty&> auto predicate) const

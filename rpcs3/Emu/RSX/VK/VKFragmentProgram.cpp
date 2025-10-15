@@ -29,27 +29,19 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void VKFragmentDecompilerThread::prepareBindingTable()
 {
 	// First check if we have constants and textures as those need extra work
-	bool has_constants = false, has_textures = false;
+	bool has_textures = false;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
-		if (has_constants && has_textures)
-		{
-			break;
-		}
-
 		if (PT.type.starts_with("sampler"))
 		{
 			has_textures = true;
-			continue;
+			break;
 		}
-
-		ensure(PT.type.starts_with("vec"));
-		has_constants = true;
 	}
 
 	unsigned location = 0; // All bindings must be set from this var
 	vk_prog->binding_table.context_buffer_location = location++;
-	if (has_constants)
+	if (!properties.constant_offsets.empty())
 	{
 		vk_prog->binding_table.cbuf_location = location++;
 	}
@@ -174,6 +166,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
+	// Fixed inputs from shader decompilation process
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (!PT.type.starts_with("sampler"))
@@ -233,73 +226,70 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	std::string constants_block;
-	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
+	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
 	{
-		if (PT.type.starts_with("sampler"))
-		{
-			continue;
-		}
-
-		for (const ParamItem& PI : PT.items)
-		{
-			constants_block += "	" + PT.type + " " + PI.name + ";\n";
-		}
+		OS <<
+			"layout(location=" << vk::get_varying_register_location("usr") << ") in flat uvec4 draw_params_payload;\n\n";
 	}
 
-	if (!constants_block.empty())
+	OS <<
+		"#define _fs_constants_offset draw_params_payload.x\n"
+		"#define _fs_context_offset draw_params_payload.y\n"
+		"#define _fs_texture_base_index draw_params_payload.z\n"
+		"#define _fs_stipple_pattern_array_offset draw_params_payload.w\n\n";
+
+	if (!properties.constant_offsets.empty())
 	{
-		OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
+		OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
 		OS << "{\n";
-		OS << constants_block;
-		OS << "};\n\n";
+		OS << "	vec4 fc[];\n";
+		OS << "};\n";
+		OS << "#define _fetch_constant(x) fc[x + _fs_constants_offset]\n\n";
 	}
 
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n";
+	OS <<
+		"layout(std430, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer FragmentStateBuffer\n"
+		"{\n"
+		"	fragment_context_t fs_contexts[];\n"
+		"};\n\n";
+
+	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") readonly buffer TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	float fog_param0;\n";
-	OS << "	float fog_param1;\n";
-	OS << "	uint rop_control;\n";
-	OS << "	float alpha_ref;\n";
-	OS << "	uint reserved;\n";
-	OS << "	uint fog_mode;\n";
-	OS << "	float wpos_scale;\n";
-	OS << "	float wpos_bias;\n";
+	OS << "	sampler_info texture_parameters[];\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
+	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") readonly buffer RasterizerHeap\n";
 	OS << "{\n";
-	OS << "	sampler_info texture_parameters[16];\n";
-	OS << "};\n\n";
-
-	OS << "layout(std140, set=1, binding=" << vk_prog->binding_table.polygon_stipple_params_location << ") uniform RasterizerHeap\n";
-	OS << "{\n";
-	OS << "	uvec4 stipple_pattern[8];\n";
+	OS << "	uvec4 stipple_pattern[];\n";
 	OS << "};\n\n";
 
 	vk::glsl::program_input in
 	{
 		.domain = glsl::glsl_fragment_program,
-		.type = vk::glsl::input_type_uniform_buffer,
 		.set = vk::glsl::binding_set_index_fragment
 	};
 
-	if (!constants_block.empty())
+	if (!properties.constant_offsets.empty())
 	{
 		in.location = vk_prog->binding_table.cbuf_location;
 		in.name = "FragmentConstantsBuffer";
+		in.type = vk::glsl::input_type_storage_buffer,
 		inputs.push_back(in);
 	}
 
 	in.location = vk_prog->binding_table.context_buffer_location;
 	in.name = "FragmentStateBuffer";
+	in.type = vk::glsl::input_type_storage_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.tex_param_location;
 	in.name = "TextureParametersBuffer";
+	in.type = vk::glsl::input_type_storage_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;
+	in.type = vk::glsl::input_type_storage_buffer;
 	in.name = "RasterizerHeap";
 	inputs.push_back(in);
 }
@@ -328,6 +318,25 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
 	m_shader_props.require_tex3D_ops = properties.has_tex3D;
 	m_shader_props.require_shadowProj_ops = properties.shadow_sampler_mask != 0 && properties.has_texShadowProj;
+
+	// Declare global constants
+	if (m_shader_props.require_fog_read)
+	{
+		OS <<
+			"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+			"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+			"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n\n";
+	}
+
+	if (m_shader_props.require_wpos)
+	{
+		OS <<
+			"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+			"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
+	}
+
+	OS <<
+		"#define texture_base_index _fs_texture_base_index\n\n";
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -422,6 +431,11 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
+	// FIXME: Workaround
+	OS <<
+		"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+		"	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
+
 	::glsl::insert_rop_init(OS);
 
 	OS << "\n" << "	fs_main();\n\n";
@@ -478,19 +492,8 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
 	decompiler.Task();
 
+	constant_offsets = std::move(decompiler.properties.constant_offsets);
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
-
-	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
-	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (PT.type.starts_with("sampler"))
-				continue;
-
-			usz offset = atoi(PI.name.c_str() + 2);
-			FragmentConstantOffsetCache.push_back(offset);
-		}
-	}
 }
 
 void VKFragmentProgram::Compile()

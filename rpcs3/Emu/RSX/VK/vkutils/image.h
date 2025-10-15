@@ -67,6 +67,10 @@ namespace vk
 		image(const image&) = delete;
 		image(image&&) = delete;
 
+		// Identifiers
+		u64 id() const { return m_uid; }
+		VkImage handle() const { return value; }
+
 		// Properties
 		u32 width() const;
 		u32 height() const;
@@ -94,7 +98,8 @@ namespace vk
 		void set_debug_name(const std::string& name);
 
 	protected:
-		VkDevice m_device;
+		VkDevice m_device = VK_NULL_HANDLE;
+		u64 m_uid = 0ull;
 	};
 
 	struct image_view

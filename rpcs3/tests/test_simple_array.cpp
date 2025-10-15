@@ -214,4 +214,30 @@ namespace rsx
 			EXPECT_EQ(arr[i], i + 1);
 		}
 	}
+
+	TEST(SimpleArray, ReverseIterator)
+	{
+		rsx::simple_array<int> arr{ 1, 2, 3, 4, 5 };
+		rsx::simple_array<int> arr2{ 5, 4, 3, 2, 1 };
+
+		int rindex = 0;
+		int sum = 0;
+		for (auto it = arr.rbegin(); it != arr.rend(); ++it, ++rindex)
+		{
+			EXPECT_EQ(*it, arr2[rindex]);
+			sum += *it;
+		}
+
+		EXPECT_EQ(sum, 15);
+
+		rindex = 0;
+		sum = 0;
+		for (auto it = arr.crbegin(); it != arr.crend(); ++it, ++rindex)
+		{
+			EXPECT_EQ(*it, arr2[rindex]);
+			sum += *it;
+		}
+
+		EXPECT_EQ(sum, 15);
+	}
 }

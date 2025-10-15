@@ -58,6 +58,7 @@ public:
 		const QString compatible_savestates        = tr("When this mode is on, SPU emulation prioritizes savestate compatibility, however, it may reduce performance slightly.\nWhen this mode is off, some games may not allow making a savestate and show an SPU pause error in the log.");
 		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
 		const QString spu_profiler                 = tr("When enabled, SPU performance is measured at runtime.\nEnable only at a developer's request because when enabled it reduces performance a bit by itself.");
+		const QString use_ReBAR                    = tr("When enabled, Vulkan will try to use PCI-e resizable bar address space for GPU uploads of timing-sensitive data.\nThis yields a massive performance win on NVIDIA cards when the base framerate is low.\nFor games with very high framerates, this option can result in worse performance for all GPU vendors.\n");
 
 		// audio
 

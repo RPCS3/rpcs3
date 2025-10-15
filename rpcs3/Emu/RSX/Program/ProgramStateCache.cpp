@@ -782,10 +782,10 @@ bool fragment_program_compare::compare_properties(const RSXFragmentProgram& bina
 namespace rsx
 {
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
-	static inline void write_fragment_constants_to_buffer_sse2(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	static inline void write_fragment_constants_to_buffer_sse2(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize)
 	{
 		f32* dst = buffer.data();
-		for (usz offset_in_fragment_program : offsets_cache)
+		for (u32 offset_in_fragment_program : offsets_cache)
 		{
 			const char* data = static_cast<const char*>(rsx_prog.get_data()) + offset_in_fragment_program;
 
@@ -809,7 +809,7 @@ namespace rsx
 		}
 	}
 #else
-	static inline void write_fragment_constants_to_buffer_fallback(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	static inline void write_fragment_constants_to_buffer_fallback(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize)
 	{
 		f32* dst = buffer.data();
 
@@ -837,7 +837,7 @@ namespace rsx
 	}
 #endif
 
-	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize)
+	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize)
 	{
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
 		write_fragment_constants_to_buffer_sse2(buffer, rsx_prog, offsets_cache, sanitize);

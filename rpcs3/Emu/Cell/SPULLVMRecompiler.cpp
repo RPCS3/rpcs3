@@ -1598,7 +1598,11 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
+#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
+		_module->setTargetTriple(Triple(jit_compiler::triple2()));
+#else
 		_module->setTargetTriple(jit_compiler::triple2());
+#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -1632,7 +1636,7 @@ public:
 		m_ir->SetInsertPoint(label_test);
 
 		// Set block hash for profiling (if enabled)
-		if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+		if ((g_cfg.core.spu_prof || g_cfg.core.spu_debug) && g_cfg.core.spu_verification)
 			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr(&spu_thread::block_hash));
 
 		if (!g_cfg.core.spu_verification)
@@ -1989,7 +1993,7 @@ public:
 			set_function(m_functions[m_entry].chunk);
 
 			// Set block hash for profiling (if enabled)
-			if (g_cfg.core.spu_prof)
+			if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 				m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (m_entry >> 2)), spu_ptr(&spu_thread::block_hash));
 
 			m_finfo = &m_functions[m_entry];
@@ -2873,7 +2877,11 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
+#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
+		_module->setTargetTriple(Triple(jit_compiler::triple2()));
+#else
 		_module->setTargetTriple(jit_compiler::triple2());
+#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 

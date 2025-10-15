@@ -108,8 +108,8 @@ namespace vk
 					VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 			}
 
-			m_program->bind_uniform({ m_sampler->value, m_input_image->value, m_input_image->image()->current_layout }, 0, 0);
-			m_program->bind_uniform({ VK_NULL_HANDLE, m_output_image->value, m_output_image->image()->current_layout }, 0, 1);
+			m_program->bind_uniform({ *m_input_image, *m_sampler }, 0, 0);
+			m_program->bind_uniform({ *m_output_image }, 0, 1);
 		}
 
 		void fsr_pass::run(const vk::command_buffer& cmd, vk::viewable_image* src, vk::viewable_image* dst, const size2u& input_size, const size2u& output_size)

@@ -3968,7 +3968,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 	ensure(ccode.size() == sizeof(SceNpCountryCode::data));
 	std::memcpy(countryCode->data, ccode.data(), sizeof(SceNpCountryCode::data));
 
-	*language = CELL_SYSUTIL_LANG_ENGLISH_US;
+	*language = g_cfg.sys.language;
 
 	return CELL_OK;
 }

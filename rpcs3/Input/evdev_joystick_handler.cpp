@@ -421,7 +421,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	if (call_type != gui_call_type::blacklist && call_type != gui_call_type::reset_input && !has_new_event)
 	{
 		if (callback)
-			callback(0, "", padId, 0, preview_values);
+			callback(0, "", padId, 0, preview_values, get_capabilities(padId));
 		return connection::no_data;
 	}
 
@@ -543,10 +543,12 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	if (callback)
 	{
+		pad_capabilities capabilities = get_capabilities(padId);
+
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values));
+			callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values), std::move(capabilities));
 		else
-			callback(0, "", padId, 0, std::move(preview_values));
+			callback(0, "", padId, 0, std::move(preview_values), std::move(capabilities));
 	}
 
 	return connection::connected;

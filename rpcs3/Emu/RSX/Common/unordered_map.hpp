@@ -5,15 +5,29 @@
 
 namespace rsx
 {
-	template<typename T, typename U>
-	using unordered_map = std::unordered_map<T, U>;
+	template<
+		typename _Key,
+		typename _Tp,
+		typename _Hash = std::hash<_Key>,
+		typename _Pred = std::equal_to<_Key>>
+	>
+	using unordered_map = std::unordered_map<
+		_Key, _Tp, _Hash, _Pred
+	>;
 }
 #else
 #include "3rdparty/unordered_dense/include/unordered_dense.h"
 
 namespace rsx
 {
-	template<typename T, typename U>
-	using unordered_map = ankerl::unordered_dense::map<T, U>;
+	template <
+		typename Key,
+		typename T,
+		typename Hash = ankerl::unordered_dense::hash<Key>,
+		typename KeyEqual = std::equal_to<Key>
+	>
+	using unordered_map = ankerl::unordered_dense::map<
+		Key, T, Hash, KeyEqual
+	>;
 }
 #endif

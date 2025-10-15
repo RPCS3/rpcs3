@@ -463,12 +463,28 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		const auto update_preview = [this](const std::string& pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry)
+		const auto update_preview = [this](const std::string& pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry, const pad_capabilities& capabilities)
 		{
 			SwitchPadInfo(pad_name, is_connected);
 
-			if (is_connected != m_enable_buttons && (!is_connected || !m_remap_timer.isActive()))
+			if ((!is_connected || !m_remap_timer.isActive()) && (
+				is_connected != m_enable_buttons ||
+				(is_connected && (
+					!capabilities.has_pressure_sensitivity != m_enable_pressure_intensity_button ||
+					capabilities.has_rumble != m_enable_rumble ||
+					capabilities.has_battery_led != m_enable_battery_led ||
+					(capabilities.has_led || capabilities.has_mono_led) != m_enable_led ||
+					(capabilities.has_accel || capabilities.has_gyro) != m_enable_motion))))
 			{
+				if (is_connected)
+				{
+					m_enable_pressure_intensity_button = !capabilities.has_pressure_sensitivity;
+					m_enable_rumble = capabilities.has_rumble;
+					m_enable_battery_led = capabilities.has_battery_led;
+					m_enable_led = capabilities.has_led || capabilities.has_mono_led;
+					m_enable_motion = capabilities.has_accel || capabilities.has_gyro;
+				}
+
 				SwitchButtons(is_connected);
 			}
 
@@ -497,12 +513,12 @@ void pad_settings_dialog::InitButtons()
 		if (data.status == PadHandlerBase::connection::disconnected)
 		{
 			// Disable Button Remapping
-			update_preview(data.pad_name, false, 0, 0, 0, 0, 0, 0, 0);
+			update_preview(data.pad_name, false, 0, 0, 0, 0, 0, 0, 0, data.capabilities);
 			return;
 		}
 
 		// Enable Button Remapping
-		update_preview(data.pad_name, true, data.battery_level, data.preview_values[0], data.preview_values[1], data.preview_values[2], data.preview_values[3], data.preview_values[4], data.preview_values[5]);
+		update_preview(data.pad_name, true, data.battery_level, data.preview_values[0], data.preview_values[1], data.preview_values[2], data.preview_values[3], data.preview_values[4], data.preview_values[5], data.capabilities);
 
 		// Handle Button Presses
 		for (const input_callback_data::input_values& values : data.values)
@@ -566,7 +582,7 @@ void pad_settings_dialog::InitButtons()
 			const PadHandlerBase::gui_call_type call_type = first_call ? PadHandlerBase::gui_call_type::reset_input : PadHandlerBase::gui_call_type::normal;
 
 			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
-				[this, button_id](u16 val, std::string button_name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+				[this, button_id](u16 val, std::string button_name, std::string pad_name, u32 battery_level, pad_preview_values preview_values, pad_capabilities capabilities)
 				{
 					std::lock_guard lock(m_input_mutex);
 					if (m_input_callback_data.pad_name != pad_name)
@@ -576,6 +592,7 @@ void pad_settings_dialog::InitButtons()
 					}
 					m_input_callback_data.battery_level = battery_level;
 					m_input_callback_data.preview_values = std::move(preview_values);
+					m_input_callback_data.capabilities = std::move(capabilities);
 					m_input_callback_data.has_new_data = true;
 					m_input_callback_data.status = PadHandlerBase::connection::connected;
 					if (val > 0)
@@ -1235,12 +1252,9 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->pressure_intensity_deadzone->setValue(cfg.pressure_intensity_deadzone.get());
 
 		// Apply stored/default LED settings to the device
-		m_enable_led = m_handler->has_led();
-		m_enable_battery_led = m_handler->has_battery_led();
 		SetPadData(0, 0);
 
 		// Enable battery and LED group box
-		m_enable_battery = m_handler->has_battery();
 		ui->gb_battery->setVisible(m_enable_battery || m_enable_led);
 	}
 
@@ -1472,22 +1486,15 @@ void pad_settings_dialog::ChangeHandler()
 	m_rx = 0;
 	m_ry = 0;
 
-	// Enable Vibration Checkboxes
+	// Enable Capabilities
+	m_enable_led = m_handler->has_led();
+	m_enable_battery_led = m_handler->has_battery_led();
+	m_enable_battery = m_handler->has_battery();
 	m_enable_rumble = m_handler->has_rumble();
-
-	// Enable Motion Settings
 	m_enable_motion = m_handler->has_motion();
-
-	// Enable Deadzone Settings
 	m_enable_deadzones = m_handler->has_deadzones();
-
-	// Enable Pressure Sensitivity Settings
 	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
-
-	// Enable Analog Limiter Settings
 	m_enable_analog_limiter_button = m_handler->has_analog_limiter_button();
-
-	// Enable Orientation Reset Settings
 	m_enable_orientation_reset_button = m_handler->has_orientation();
 
 	// Change our contextual widgets

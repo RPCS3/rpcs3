@@ -195,6 +195,7 @@ struct cfg_root : cfg::node
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
 			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
+			cfg::_bool use_rebar_upload_heap{ this, "Use Re-BAR for GPU uploads", true, false };
 
 		} vk{ this };
 
@@ -338,6 +339,8 @@ struct cfg_root : cfg::node
 		cfg::_bool compatible_mode{ this, "Compatible Savestate Mode", false }; // SPU emulation optimized for savestate compatibility (off by default for performance reasons)
 		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
 		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
+		cfg::uint<0, 64> max_files{ this, "Maximum SaveState Files", 4 };
+		cfg::uint<0, 1024 * 512> max_files_size{ this, "Maximum SaveState Files Space (MiB)", 4096 };
 	} savestate{this};
 
 	struct node_misc : cfg::node
