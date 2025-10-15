@@ -30,7 +30,6 @@ $clangBuiltinsDirShort = Get-ShortPath $clangBuiltinsDir
 $clangBuiltinsLib = Split-Path -Leaf $clangBuiltinsLibPath.FullName
 $clangPath = "C:\Program Files\LLVM\bin"
 #$clangPath = Get-ChildItem -Path "D:\a\rpcs3\rpcs3\llvm-*\bin"
-#$llvmPath = Get-ChildItem -Path "D:\a\rpcs3\rpcs3\llvm-*\lib\cmake\llvm"
 
 Write-Host "Found Clang builtins library: $clangBuiltinsLib in $clangBuiltinsDir or short $clangBuiltinsDirShort"
 Write-Host "Found Clang Path: $clangPath"
@@ -80,7 +79,6 @@ $submodules = Select-String -Path .gitmodules -Pattern 'path = (.+)' | ForEach-O
 
 Write-Host "Updating submodules: $($submodules -join ', ')"
 & git submodule update --init --quiet $submodules
-& git -C 3rdparty/OpenAL/openal-soft reset --hard master
 
 # Create and enter build directory
 Write-Host "Creating build directory"

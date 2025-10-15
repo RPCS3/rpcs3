@@ -5,8 +5,8 @@ defaults:
     shell: bash
 on:
   push:
-    #branches:
-    #  - master # Only trigger push event on 'master' branch
+    branches:
+      - master # Only trigger push event on 'master' branch
   pull_request:
   workflow_dispatch:
 
@@ -337,7 +337,7 @@ jobs:
             compiler: clang
             arch: win64
           - compiler: clang-cl
-            llvmver: 20.1.8
+            llvmver: 19.1.7
             arch: win64
 
     env:
@@ -350,7 +350,6 @@ jobs:
         uses: actions/checkout@main
         with:
           fetch-depth: 0
-        
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
         if: ${{ matrix.compiler == 'clang' }}
@@ -387,7 +386,6 @@ jobs:
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
-          
       - name: Restore vcpkg cache
         if: ${{ matrix.compiler == 'clang-cl' }}
         uses: actions/cache/restore@main
@@ -437,15 +435,14 @@ jobs:
           path: ./llvm-${{ matrix.llvmver }}
           key: ${{ runner.os }}-llvm-dl-cache-${{ hashFiles('**/llvm-${{ matrix.llvmver }}') }}
           restore-keys: ${{ runner.os }}-clang-dl-cache-
-          
       - name: Add LLVM
         if: ${{ matrix.compiler == 'clang-cl' }}
         shell: pwsh
         run: |
           if (!(Test-Path -Path D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\)) {
             rm -r llvm-*
-            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/llvm-20.1.8/llvm-20.1.8-windows-amd64-msvc17-msvcrt.7z
-            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/clang-20.1.8/clang-20.1.8-windows-amd64-msvc17-msvcrt.7z
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/llvm-${{ matrix.llvmver }}/llvm-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/clang-${{ matrix.llvmver }}/clang-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
             7z x llvm-*.7z
             mv llvm* llvm-${{ matrix.llvmver }}
             rm llvm-*.7z
@@ -455,7 +452,6 @@ jobs:
           }
           Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
           C:\PROGRA~1\LLVM\bin\clang-cl.exe --version
- 
       - name: Save LLVM Cache
         if: ${{ matrix.compiler == 'clang-cl' && steps.llvm-cache.outputs.cache-hit != 'true' }}
         #if: github.ref == 'refs/heads/master'

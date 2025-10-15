@@ -6,7 +6,6 @@ git config --global --add safe.directory '*'
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
 git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/ffmpeg/ && !/curl/ && !/FAudio/ && !/zlib/ { print $3 }' .gitmodules)
-git -C 3rdparty/OpenAL/openal-soft reset --hard master
 
 mkdir build && cd build || exit 1
 
