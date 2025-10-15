@@ -1585,22 +1585,30 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 
 			idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
 			{
-				spu_list.emplace_back(ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
+				if (give_up)
+				{
+					return;
+				}
 
-				if (spu.current_func && spu.unsavable)
+				if (spu.current_func && spu.unsavable && !force_collect)
 				{
 					const u64 start = spu.start_time;
 
-					// Automatically give up if it is asleep 15 seconds or more
-					if (start && current > start && current - start >= 15'000'000)
+					// Automatically give up if it is asleep 5 seconds or more
+					if (start && current > start && current - start >= 5'000'000)
 					{
 						give_up = true;
+						return;
 					}
 				}
+
+				spu_list.emplace_back(ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
 			});
 
-			if (!force_collect && give_up)
+			if (give_up)
 			{
+				spu_list.clear();
+				old_counter = umax;
 				return decltype(&spu_list){};
 			}
 
@@ -1625,6 +1633,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		}
 		else if (get_system_time() - start >= 150'000)
 		{
+			std::this_thread::sleep_for(1ms);
 			passed_count++;
 			start = 0;
 			continue;
@@ -1636,36 +1645,28 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		if (!spu_list)
 		{
 			// Give up for now
-			std::this_thread::sleep_for(10ms);
+			std::this_thread::sleep_for(50ms);
 			passed_count++;
 			start = 0;
 			continue;
 		}
 
 		// Avoid using suspend_all when more than 2 threads known to be unsavable
-		u32 unsavable_threads = 0;
+		u32 savable_threads = 0;
 
 		for (auto& spu : *spu_list)
 		{
-			if (spu->unsavable)
+			if (!spu->unsavable)
 			{
-				unsavable_threads++;
-
-				if (unsavable_threads >= 3)
-				{
-					break;
-				}
+				savable_threads++;
 			}
 		}
 
-		if (unsavable_threads >= 3)
+		if (!savable_threads)
 		{
 			std::this_thread::yield();
 			continue;
 		}
-
-		// Flag for optimization
-		bool paused_anyone = false;
 
 		if (cpu_thread::suspend_all(nullptr, {}, [&]()
 		{
@@ -1695,19 +1696,13 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 						break;
 					}
 				}
-				else
-				{
-					paused_anyone = true;
-					ensure(!spu->state.test_and_set(cpu_flag::dbg_global_pause));
-				}
 			}
 
-			if (failed && paused_anyone)
+			for (auto& spu : *spu_list)
 			{
-				// For faster signalling, first remove state flags then batch notifications
-				for (auto& spu : *spu_list)
+				if (!failed && !is_emu_paused)
 				{
-					spu->state -= cpu_flag::dbg_global_pause;
+					ensure(!spu->state.test_and_set(cpu_flag::dbg_global_pause));
 				}
 			}
 
@@ -1717,13 +1712,6 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 			if (Emu.IsPaused())
 			{
 				return false;
-			}
-
-			if (!paused_anyone)
-			{
-				// Need not do anything
-				std::this_thread::yield();
-				continue;
 			}
 
 			for (auto& spu : *spu_list)
@@ -1755,7 +1743,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 		{
 			spu->state.notify_one();
 		}
-	};
+	}
 
 	return false;
 }
