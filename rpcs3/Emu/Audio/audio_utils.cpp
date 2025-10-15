@@ -52,6 +52,6 @@ namespace audio
 		g_cfg.audio.volume.set(std::clamp<s32>(new_volume, g_cfg.audio.volume.min, g_cfg.audio.volume.max));
 		Emu.GetCallbacks().update_emu_settings();
 
-		rsx::overlays::queue_message(get_localized_string(localized_string_id::AUDIO_CHANGED, fmt::format("%d%%", g_cfg.audio.volume.get()).c_str()), 3'000'000);
+		rsx::overlays::queue_message(localized_string(localized_string_id::AUDIO_CHANGED, "%d%%", g_cfg.audio.volume.get()), 3'000'000, {}, rsx::overlays::message_pin_location::top_left, {}, true, true);
 	}
 } // namespace audio
