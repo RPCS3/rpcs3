@@ -111,8 +111,6 @@ void AtracXdecDecoder::alloc_avcodec()
 		fmt::throw_exception("avcodec_find_decoder() failed");
 	}
 
-	//ensure(!(codec->capabilities & AV_CODEC_CAP_SUBFRAMES));
-
 	packet = av_packet_alloc();
 	if (!packet)
 	{
@@ -154,7 +152,7 @@ void AtracXdecDecoder::init_avcodec()
 	{
 		fmt::throw_exception("avcodec_alloc_context3() failed");
 	}
-	
+
 	// Allows FFmpeg to output directly into guest memory
 	ctx->opaque = this;
 	ctx->thread_type = FF_THREAD_SLICE; // Silences a warning by FFmpeg about requesting frame threading with a custom get_buffer2(). Default is FF_THREAD_FRAME & FF_THREAD_SLICE

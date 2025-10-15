@@ -589,7 +589,7 @@ namespace rsx
 	{
 		if (REGS(m_ctx)->clip_planes_mask() == 0) [[ likely ]]
 		{
-			*reinterpret_cast<u32*>(buffer) = 0u;
+			*reinterpret_cast<u32*>(buffer) = 0b0101010101010101;
 			return;
 		}
 
@@ -631,7 +631,7 @@ namespace rsx
 				break;
 
 			case rsx::user_clip_plane_op::less_than:
-				clip_configuration_field |= CLIP_DISTANCE_FACTOR(2) << shift_offset;
+				clip_configuration_field |= CLIP_DISTANCE_FACTOR(-1) << shift_offset;
 				break;
 			}
 		}
