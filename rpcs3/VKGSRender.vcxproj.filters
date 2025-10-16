@@ -84,6 +84,9 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\ex.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\unique_resource.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -204,6 +207,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\ex.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\unique_resource.h">
       <Filter>vkutils</Filter>
     </ClInclude>
   </ItemGroup>

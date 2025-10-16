@@ -6,6 +6,7 @@
 #include "commands.h"
 #include "device.h"
 #include "memory.h"
+#include "unique_resource.h"
 
 #include <stack>
 
@@ -26,7 +27,7 @@ namespace vk
 		VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3 = (VK_IMAGE_CREATE_ALLOW_NULL_RPCS3 | VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 	};
 
-	class image
+	class image : public unique_resource
 	{
 		std::stack<VkImageLayout> m_layout_stack;
 		VkImageAspectFlags m_storage_aspect = 0;
@@ -68,7 +69,6 @@ namespace vk
 		image(image&&) = delete;
 
 		// Identifiers
-		u64 id() const { return m_uid; }
 		VkImage handle() const { return value; }
 
 		// Properties
@@ -99,7 +99,6 @@ namespace vk
 
 	protected:
 		VkDevice m_device = VK_NULL_HANDLE;
-		u64 m_uid = 0ull;
 	};
 
 	struct image_view

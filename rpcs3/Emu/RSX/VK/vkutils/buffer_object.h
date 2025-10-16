@@ -3,10 +3,11 @@
 #include "../VulkanAPI.h"
 #include "device.h"
 #include "memory.h"
+#include "unique_resource.h"
 
 namespace vk
 {
-	struct buffer_view
+	struct buffer_view : public unique_resource
 	{
 		VkBufferView value;
 		VkBufferViewCreateInfo info = {};
