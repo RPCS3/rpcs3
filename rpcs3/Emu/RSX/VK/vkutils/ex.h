@@ -5,6 +5,7 @@
 // Custom extensions to vulkan core
 namespace vk
 {
+	struct buffer_view;
 	struct image_view;
 	struct sampler;
 
@@ -20,8 +21,20 @@ namespace vk
 		VkDescriptorImageInfoEx(const vk::image_view& view, VkSampler sampler);
 		VkDescriptorImageInfoEx(const vk::image_view& view);
 	};
+
+	struct VkDescriptorBufferViewEx {
+		u64 resourceId = 0ull;
+		VkBufferView view = VK_NULL_HANDLE;
+
+		VkDescriptorBufferViewEx() = default;
+		VkDescriptorBufferViewEx(u64 uid, VkBufferView view)
+			: resourceId(uid), view(view)
+		{}
+		VkDescriptorBufferViewEx(const vk::buffer_view& view);
+	};
 }
 
 // Re-export
 using VkDescriptorImageInfoEx = vk::VkDescriptorImageInfoEx;
+using VkDescriptorBufferViewEx = vk::VkDescriptorBufferViewEx;
 

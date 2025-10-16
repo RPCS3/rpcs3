@@ -67,6 +67,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\instance.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\unique_resource.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
@@ -113,6 +114,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\unique_resource.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
