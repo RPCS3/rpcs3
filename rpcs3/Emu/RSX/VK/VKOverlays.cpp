@@ -183,7 +183,7 @@ namespace vk
 
 		if (m_num_uniform_buffers > 0)
 		{
-			program->bind_uniform({ m_ubo.heap->value, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, 0);
+			program->bind_uniform({ *m_ubo.heap, m_ubo_offset, std::max(m_ubo_length, 4u) }, 0, 0);
 		}
 
 		for (uint n = 0; n < src.size(); ++n)
