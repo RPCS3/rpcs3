@@ -402,6 +402,11 @@ namespace rsx
 			set_unicode_text(get_localized_u32string(id));
 		}
 
+		void overlay_element::set_text(const localized_string& container)
+		{
+			set_text(container.str);
+		}
+
 		void overlay_element::set_font(const char* font_name, u16 font_size)
 		{
 			font_ref = fontmgr::get(font_name, font_size);
