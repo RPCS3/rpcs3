@@ -332,15 +332,27 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			if (g_cfg.video.record_with_overlays)
 			{
 				m_sshot_fbo.create();
-				m_sshot_tex = std::make_unique<gl::texture>(
-					GLenum(image_to_flip->get_target()),
-					image_to_flip->width(),
-					image_to_flip->height(),
-					image_to_flip->depth(),
-					image_to_flip->levels(),
-					image_to_flip->samples(),
-					GLenum(image_to_flip->get_internal_format()),
-					image_to_flip->format_class());
+
+				if (!m_sshot_tex ||
+					m_sshot_tex->get_target() != image_to_flip->get_target() ||
+					m_sshot_tex->width() != image_to_flip->width() ||
+					m_sshot_tex->height() != image_to_flip->height() ||
+					m_sshot_tex->depth() != image_to_flip->depth() ||
+					m_sshot_tex->levels() != image_to_flip->levels() ||
+					m_sshot_tex->samples() != image_to_flip->samples() ||
+					m_sshot_tex->get_internal_format() != image_to_flip->get_internal_format() ||
+					m_sshot_tex->format_class() != image_to_flip->format_class())
+				{
+					m_sshot_tex = std::make_unique<gl::texture>(
+						GLenum(image_to_flip->get_target()),
+						image_to_flip->width(),
+						image_to_flip->height(),
+						image_to_flip->depth(),
+						image_to_flip->levels(),
+						image_to_flip->samples(),
+						GLenum(image_to_flip->get_internal_format()),
+						image_to_flip->format_class());
+				}
 
 				tex = m_sshot_tex.get();
 
