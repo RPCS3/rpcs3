@@ -17,13 +17,21 @@ namespace vk
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfoEx& b)
 		{
 			const auto ptr = std::get_if<VkDescriptorImageInfoEx>(&a);
-			return !!ptr && ptr->resourceId == b.resourceId;
+			return !!ptr &&
+				ptr->resourceId == b.resourceId &&
+				ptr->imageView == b.imageView &&
+				ptr->sampler == b.sampler &&
+				ptr->imageLayout == b.imageLayout;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfoEx& b)
 		{
 			const auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&a);
-			return !!ptr && ptr->resourceId == b.resourceId;
+			return !!ptr &&
+				ptr->resourceId == b.resourceId &&
+				ptr->buffer == b.buffer &&
+				ptr->offset == b.offset &&
+				ptr->range == b.range;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferViewEx& b)
