@@ -392,7 +392,6 @@ jobs:
         id: restore-vcpkg-cache
         with:
           path: |
-            vcpkg/vcpkg.exe
             vcpkg/installed
             vcpkg/buildtrees
           key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ hashFiles('**/vcpkg') }}
@@ -422,7 +421,6 @@ jobs:
         uses: actions/cache/save@main
         with:
           path: |
-            vcpkg/vcpkg.exe
             vcpkg/installed
             vcpkg/buildtrees
           key: ${{ steps.restore-vcpkg-cache.outputs.cache-primary-key }}
@@ -481,13 +479,12 @@ jobs:
         run: |
           mkdir -p "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional" || true
           cp -r "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/DIA SDK" "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK"
+          "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
 
       - name: Build RPCS3
         if: ${{ matrix.compiler == 'clang-cl' }}
         shell: cmd
-        run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
-          powershell -ExecutionPolicy Bypass -File .ci/build-windows-clang-cl.ps1
+        run: .ci/build-windows-clang-cl.sh
 
       - name: Save build Ccache
         #if: github.ref == 'refs/heads/master'
