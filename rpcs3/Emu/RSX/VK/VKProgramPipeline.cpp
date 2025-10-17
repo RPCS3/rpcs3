@@ -17,11 +17,7 @@ namespace vk
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfoEx& b)
 		{
 			const auto ptr = std::get_if<VkDescriptorImageInfoEx>(&a);
-			return !!ptr &&
-				ptr->imageView == b.imageView &&
-				ptr->resourceId == b.resourceId &&
-				ptr->sampler == b.sampler &&
-				ptr->imageLayout == b.imageLayout;
+			return !!ptr && ptr->resourceId == b.resourceId;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfo& b)
@@ -33,10 +29,10 @@ namespace vk
 				ptr->range == b.range;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkBufferView& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferViewEx& b)
 		{
-			const auto ptr = std::get_if<VkBufferView>(&a);
-			return !!ptr && *ptr == b;
+			const auto ptr = std::get_if<VkDescriptorBufferViewEx>(&a);
+			return !!ptr && ptr->resourceId == b.resourceId;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfoEx>& b)
@@ -334,7 +330,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_descriptor);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_view)
 			{
@@ -492,9 +488,9 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
 				{
-					m_descriptor_set.push(*ptr, type, idx);
+					m_descriptor_set.push(ptr->view, type, idx);
 					return;
 				}
 
@@ -543,9 +539,9 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
 				{
-					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(*ptr);
+					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(ptr->view);
 					return;
 				}
 
