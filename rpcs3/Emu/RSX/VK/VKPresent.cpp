@@ -469,7 +469,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
-	vk::viewable_image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
+	vk::viewable_image* image_to_flip = nullptr;
+	vk::viewable_image* image_to_flip2 = nullptr;
+
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
@@ -699,7 +701,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 
-			VkBufferImageCopy copy_info;
+			VkBufferImageCopy copy_info {};
 			copy_info.bufferOffset                    = 0;
 			copy_info.bufferRowLength                 = 0;
 			copy_info.bufferImageHeight               = 0;
@@ -714,7 +716,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			copy_info.imageExtent.height              = buffer_height;
 			copy_info.imageExtent.depth               = 1;
 
-			std::unique_ptr<vk::image> tmp_tex;
 			vk::image* image_to_copy = image_to_flip;
 
 			if (g_cfg.video.record_with_overlays && has_overlay)
@@ -723,26 +724,34 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				single_target_pass = vk::get_renderpass(*m_device, key);
 				ensure(single_target_pass != VK_NULL_HANDLE);
 
-				tmp_tex = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT, image_to_flip->current_layout,
-					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					0, VMM_ALLOCATION_POOL_UNDEFINED);
+				if (!m_overlay_recording_img ||
+					m_overlay_recording_img->type() != image_to_flip->type() ||
+					m_overlay_recording_img->format() != image_to_flip->format() ||
+					m_overlay_recording_img->width() != image_to_flip->width() ||
+					m_overlay_recording_img->height() != image_to_flip->height() ||
+					m_overlay_recording_img->layers() != image_to_flip->layers())
+				{
+					m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT,
+						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+						0, VMM_ALLOCATION_POOL_UNDEFINED);
+				}
 
-				tmp_tex->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				const areai rect = areai(0, 0, buffer_width, buffer_height);
-				vk::copy_image(*m_current_command_buffer, image_to_flip, tmp_tex.get(), rect, rect, 1);
+				vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect, 1);
 
 				image_to_flip->pop_layout(*m_current_command_buffer);
-				tmp_tex->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
-				vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { tmp_tex.get() });
+				vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { m_overlay_recording_img.get() });
 				sshot_fbo->add_ref();
 				render_overlays(sshot_fbo, areau(rect));
 				sshot_fbo->release();
 
-				image_to_copy = tmp_tex.get();
+				image_to_copy = m_overlay_recording_img.get();
 			}
 
 			image_to_copy->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);

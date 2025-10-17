@@ -186,6 +186,8 @@ private:
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
 
+	std::unique_ptr<vk::image> m_overlay_recording_img;
+
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
