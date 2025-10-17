@@ -294,7 +294,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		m_overlay_manager->dispose(uids_to_dispose);
 	}
 
-	const auto render_overlays = [this, &cmd](gl::texture* dst, const areau& aspect_ratio)
+	const auto render_overlays = [this, &cmd](gl::texture* dst, const areau& aspect_ratio, bool flip_vertically = false)
 	{
 		if (m_overlay_manager && m_overlay_manager->has_visible())
 		{
@@ -316,7 +316,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer.run(cmd, aspect_ratio, target, *view.get());
+				m_ui_renderer.run(cmd, aspect_ratio, target, *view.get(), flip_vertically);
 			}
 		}
 	};
@@ -359,7 +359,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				static const position3u offset{};
 				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, 0, 0, offset, offset, { tex->width(), tex->height(), 1 });
 
-				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()));
+				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
 				m_sshot_fbo.remove();
 			}
 			

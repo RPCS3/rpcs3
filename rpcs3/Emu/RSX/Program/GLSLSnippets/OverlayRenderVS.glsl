@@ -33,12 +33,14 @@ layout(%push_block) uniform Configuration
 struct config_t
 {
 	bool no_vertex_snap;
+	bool flip_vertically;
 };
 
 config_t unpack_vertex_options()
 {
 	config_t result;
 	result.no_vertex_snap = bitfieldExtract(vertex_config, 0, 1) != 0;
+	result.flip_vertically = bitfieldExtract(vertex_config, 1, 1) != 0;
 	return result;
 }
 
@@ -47,12 +49,14 @@ vec2 snap_to_grid(const in vec2 normalized)
 	return floor(fma(normalized, viewport.xy, vec2(0.5))) / viewport.xy;
 }
 
-vec4 clip_to_ndc(const in vec4 coord)
+vec4 clip_to_ndc(const in vec4 coord, const in bool flip_vertically)
 {
 	vec4 ret = (coord * ui_scale.zwzw) / ui_scale.xyxy;
 #ifndef VULKAN
 	// Flip Y for OpenGL
-	ret.yw = 1. - ret.yw;
+	if (!flip_vertically) ret.yw = 1. - ret.yw;
+#else
+	if (flip_vertically) ret.yw = 1. - ret.yw;
 #endif
 	return ret;
 }
@@ -64,12 +68,13 @@ vec4 ndc_to_window(const in vec4 coord)
 
 void main()
 {
+	config_t config = unpack_vertex_options();
+
 	tc0.xy = in_pos.zw;
 	color = albedo;
-	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds));
+	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds, config.flip_vertically));
 
-	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);
-	config_t config = unpack_vertex_options();
+	vec4 pos = vec4(clip_to_ndc(in_pos, config.flip_vertically).xy, 0.5, 1.);
 
 	if (!config.no_vertex_snap)
 	{
