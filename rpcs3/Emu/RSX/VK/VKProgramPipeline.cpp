@@ -20,13 +20,10 @@ namespace vk
 			return !!ptr && ptr->resourceId == b.resourceId;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfo& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfoEx& b)
 		{
-			const auto ptr = std::get_if<VkDescriptorBufferInfo>(&a);
-			return !!ptr &&
-				ptr->buffer == b.buffer &&
-				ptr->offset == b.offset &&
-				ptr->range == b.range;
+			const auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&a);
+			return !!ptr && ptr->resourceId == b.resourceId;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferViewEx& b)
@@ -320,7 +317,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptor);
 		}
 
-		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferInfoEx &buffer_descriptor, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_descriptor)
 			{
@@ -482,7 +479,7 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
 				{
 					m_descriptor_set.push(*ptr, type, idx);
 					return;
@@ -533,7 +530,7 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
 				{
 					m_descriptor_template[idx].pBufferInfo = m_descriptor_set.store(*ptr);
 					return;

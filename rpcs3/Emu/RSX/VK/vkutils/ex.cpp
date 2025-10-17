@@ -29,4 +29,9 @@ namespace vk
 		: resourceId(view.uid())
 		, view(view.value)
 	{}
+
+	VkDescriptorBufferInfoEx::VkDescriptorBufferInfoEx(const vk::buffer& buffer, u64 offset, u64 range)
+		: VkDescriptorBufferInfo(buffer.value, offset, range)
+		, resourceId(buffer.uid())
+	{}
 }

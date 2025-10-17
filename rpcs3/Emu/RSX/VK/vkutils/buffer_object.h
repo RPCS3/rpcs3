@@ -24,7 +24,7 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	struct buffer
+	struct buffer : public unique_resource
 	{
 		VkBuffer value;
 		VkBufferCreateInfo info = {};
