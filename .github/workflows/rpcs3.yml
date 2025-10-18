@@ -136,7 +136,7 @@ jobs:
       CCACHE_DIR: /tmp/ccache_dir
       QT_VER: '6.7.3'
       QT_VER_MAIN: '6'
-      LLVM_COMPILER_VER: '19'
+      LLVM_COMPILER_VER: '21'
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
