@@ -396,7 +396,7 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	switch (result.result)
 	{
 	case CELL_SAVEDATA_CBRESULT_ERR_NOSPACE:
-		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_SPACE, fmt::format("%d", result.errNeedSizeKB).c_str());
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_SPACE, "%d", result.errNeedSizeKB);
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_FAILURE:
 		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_FAILURE);

@@ -246,7 +246,7 @@ namespace vk
 	void cs_shuffle_base::bind_resources(const vk::command_buffer& cmd)
 	{
 		set_parameters(cmd);
-		m_program->bind_uniform({ m_data->value, m_data_offset, m_data_length }, 0, 0);
+		m_program->bind_uniform({ *m_data, m_data_offset, m_data_length }, 0, 0);
 	}
 
 	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd)
@@ -296,7 +296,7 @@ namespace vk
 	void cs_interleave_task::bind_resources(const vk::command_buffer& cmd)
 	{
 		set_parameters(cmd);
-		m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
+		m_program->bind_uniform({ *m_data, m_data_offset, m_ssbo_length }, 0, 0);
 	}
 
 	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
@@ -355,8 +355,8 @@ namespace vk
 
 	void cs_aggregator::bind_resources(const vk::command_buffer& /*cmd*/)
 	{
-		m_program->bind_uniform({ src->value, 0, block_length }, 0, 0);
-		m_program->bind_uniform({ dst->value, 0, 4 }, 0, 1);
+		m_program->bind_uniform({ *src, 0, block_length }, 0, 0);
+		m_program->bind_uniform({ *dst, 0, 4 }, 0, 1);
 	}
 
 	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
