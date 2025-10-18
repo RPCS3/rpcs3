@@ -57,5 +57,5 @@ cd ..
 
 # If it compiled succesfully let's deploy.
 if [ "$build_status" -eq 0 ]; then
-    .ci/deploy-windows-clang.sh "x86_64"
+    echo "Build succeeded"
 fi
