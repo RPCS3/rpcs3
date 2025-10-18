@@ -344,7 +344,10 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
 		{
-			ensure(m_texbuffer_view_size >= required.first); // "Incompatible driver (MacOS?)"
+			if (m_texbuffer_view_size < required.first) // "Incompatible driver (PanVK)"
+			{
+				rsx_log.error("Not enough texbuffer memory, required.first=%d, available=%d", required.first, m_texbuffer_view_size);
+			}
 			vk::get_resource_manager()->dispose(m_persistent_attribute_storage);
 
 			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
@@ -358,7 +361,10 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
 		{
-			ensure(m_texbuffer_view_size >= required.second); // "Incompatible driver (MacOS?)"
+			if (m_texbuffer_view_size < required.second) // "Incompatible driver (PanVK)"
+			{
+				rsx_log.error("Not enough texbuffer memory, required.second=%d, available=%d", required.second, m_texbuffer_view_size);
+			}
 			vk::get_resource_manager()->dispose(m_volatile_attribute_storage);
 
 			const usz view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
