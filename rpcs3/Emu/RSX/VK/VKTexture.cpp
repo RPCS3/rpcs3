@@ -867,7 +867,7 @@ namespace vk
 	static const vk::command_buffer& prepare_for_transfer(const vk::command_buffer& primary_cb, vk::image* dst_image, rsx::flags32_t& flags)
 	{
 		AsyncTaskScheduler* async_scheduler = (flags & image_upload_options::upload_contents_async)
-			? std::addressof(g_fxo->get<AsyncTaskScheduler>())
+			? g_fxo->try_get<AsyncTaskScheduler>()
 			: nullptr;
 
 		if (async_scheduler && (dst_image->aspect() & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)))
