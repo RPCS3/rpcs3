@@ -131,7 +131,7 @@ jobs:
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
     name: RPCS3 Mac ${{ matrix.name }} 
-    runs-on: macos-26
+    runs-on: macos-15
     env:
       CCACHE_DIR: /tmp/ccache_dir
       QT_VER: '6.7.3'
