@@ -107,7 +107,7 @@ add_subdirectory(yaml-cpp)
 
 # OpenGL
 
-if (NOT ANDROID OR APPLE)
+if (NOT ANDROID)
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
@@ -119,6 +119,8 @@ if (NOT ANDROID OR APPLE)
 		else()
 			target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
 		endif()
+	elseif(APPLE)
+		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 	else()
 		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
 	endif()
