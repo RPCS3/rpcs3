@@ -3068,13 +3068,14 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="recordWithOverlays">
+                 <property name="text">
+                  <string>Record with overlays</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="enableGamemode">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="visible">
-                  <bool>false</bool>
-                 </property>
                  <property name="text">
                   <string>Enable GameMode</string>
                  </property>

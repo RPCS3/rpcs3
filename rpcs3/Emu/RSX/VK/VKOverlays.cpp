@@ -543,7 +543,7 @@ namespace vk
 		push_buf[14] = m_clip_region.x2;
 		push_buf[15] = m_clip_region.y2;
 
-		rsx::overlays::vertex_options vert_opts;
+		rsx::overlays::vertex_options vert_opts {};
 		const auto vert_config = vert_opts
 			.disable_vertex_snap(m_disable_vertex_snap)
 			.get();
@@ -552,7 +552,7 @@ namespace vk
 		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
 
 		// 2. Fragment stuff
-		rsx::overlays::fragment_options frag_opts;
+		rsx::overlays::fragment_options frag_opts {};
 		const auto frag_config = frag_opts
 			.texture_mode(m_texture_type)
 			.clip_fragments(m_clip_enabled)
