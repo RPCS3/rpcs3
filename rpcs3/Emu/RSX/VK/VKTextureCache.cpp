@@ -1115,7 +1115,7 @@ namespace vk
 		const bool upload_async = rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute;
 		rsx::flags32_t create_flags = 0;
 
-		if (upload_async && g_fxo->get<AsyncTaskScheduler>().is_host_mode())
+		if (upload_async && ensure(g_fxo->try_get<AsyncTaskScheduler>())->is_host_mode())
 		{
 			create_flags |= texture_create_flags::do_not_reuse;
 			if (m_device->get_graphics_queue() != m_device->get_transfer_queue())
