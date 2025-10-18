@@ -29,7 +29,7 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Plugins/virtualkeyboard" \
 "rpcs3.app/Contents/Resources/git"
 
-../../.ci/optimize-mac.sh rpcs3.app
+# ../../.ci/optimize-mac.sh rpcs3.app
 
 # Hack
 install_name_tool \
