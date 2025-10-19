@@ -46,16 +46,21 @@ inline void scatter_d24x8_cpu(uint32_t* base_words,
                               size_t s_offset_words,
                               size_t numThreads = std::thread::hardware_concurrency())
 {
-    if (!base_words) throw std::runtime_error("scatter_d24x8_cpu: null buffer");
+    if (!base_words) {
+		rsx_log.error("scatter_d24x8_cpu: null buffer");
+		return;
+	}
     if (block_length_words == 0) return;
 
     if ((block_length_words + z_offset_words) > total_words) {
-        throw std::runtime_error("scatter_d24x8_cpu: z-offset out of range");
+        rsx_log.error("scatter_d24x8_cpu: z-offset out of range");
+		return;
     }
 
     size_t stencil_word_count = (block_length_words + 3) / 4;
     if ((stencil_word_count + s_offset_words) > total_words) {
-        throw std::runtime_error("scatter_d24x8_cpu: stencil offset out of range");
+        rsx_log.error("scatter_d24x8_cpu: stencil offset out of range");
+		return;
     }
 
     cpu_compute::parallel_for(block_length_words, numThreads, [&](size_t index) {
@@ -424,7 +429,10 @@ inline uint64_t parallel_sum_u32(const uint32_t* src, size_t count, size_t numTh
 		ensure(stencil_offset > data_offset);
 
 		void* mapped = const_cast<vk::buffer*>(data)->map(data_offset, data_length);
-		if (!mapped) throw std::runtime_error("cs_interleave_task::run: failed to map buffer");
+		if (!mapped) {
+			rsx_log.error("cs_interleave_task::run: failed to map buffer");
+			return;
+		}
 
 		uint8_t* base_bytes = reinterpret_cast<uint8_t*>(mapped);
 		uint8_t* region_start = base_bytes + data_offset;
@@ -437,12 +445,14 @@ inline uint64_t parallel_sum_u32(const uint32_t* src, size_t count, size_t numTh
 
 		if ((block_length_words + z_offset_words) > region_total_words) {
 			const_cast<vk::buffer*>(data)->unmap();
-			throw std::runtime_error("cs_interleave_task::run: z_offset out of bounds");
+			rsx_log.error("cs_interleave_task::run: z_offset out of bounds");
+			return;
 		}
 		size_t stencil_word_count = (block_length_words + 3) / 4;
 		if ((stencil_word_count + s_offset_words) > region_total_words) {
 			const_cast<vk::buffer*>(data)->unmap();
-			throw std::runtime_error("cs_interleave_task::run: stencil offset out of bounds");
+			rsx_log.error("cs_interleave_task::run: stencil offset out of bounds");
+			return;
 		}
 
 		cpu_compute::scatter_d24x8_cpu(
@@ -519,7 +529,10 @@ inline uint64_t parallel_sum_u32(const uint32_t* src, size_t count, size_t numTh
 		size_t numThreads = std::min<size_t>(hw, 8);
 
 		void* src_map = const_cast<vk::buffer*>(src)->map(0, num_words * 4);
-		if (!src_map) throw std::runtime_error("cs_aggregator::run: failed to map src buffer");
+		if (!src_map) {
+			rsx_log.error("cs_aggregator::run: failed to map src buffer");
+			return;
+		}
 
 		const uint32_t* src_words = reinterpret_cast<const uint32_t*>(src_map);
 		uint64_t sum = cpu_compute::parallel_sum_u32(src_words, static_cast<size_t>(num_words), numThreads);
@@ -527,7 +540,10 @@ inline uint64_t parallel_sum_u32(const uint32_t* src, size_t count, size_t numTh
 		const_cast<vk::buffer*>(src)->unmap();
 
 		void* dst_map = const_cast<vk::buffer*>(dst)->map(0, 4);
-		if (!dst_map) throw std::runtime_error("cs_aggregator::run: failed to map dst buffer");
+		if (!dst_map) {
+			rsx_log.error("cs_aggregator::run: failed to map dst buffer");
+			return;
+		}
 
 		uint32_t result32 = static_cast<uint32_t>(sum);
 		std::memcpy(dst_map, &result32, sizeof(result32));
