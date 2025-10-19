@@ -244,6 +244,12 @@ if(USE_SDL)
 endif()
 
 # OpenAL
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  add_compile_options(-include cstdlib)
+elseif(MSVC)
+  add_compile_options(/FI cstdlib)
+endif()
+
 if (NOT ANDROID)
 	add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 else()
