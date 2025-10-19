@@ -3,11 +3,122 @@
 #include "VKRenderPass.h"
 #include "vkutils/buffer_object.h"
 #include "VKPipelineCompiler.h"
+#include <thread>
+#include <vector>
+#include <atomic>
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include <stdexcept>
+#include <cmath>
 
 #define VK_MAX_COMPUTE_TASKS 8192   // Max number of jobs per frame
 
 namespace vk
 {
+namespace cpu_compute {
+
+template <typename Worker>
+inline void parallel_for(size_t n, size_t numThreads, Worker&& worker)
+{
+	if (n == 0) return;
+	numThreads = std::max<size_t>(1, std::min(numThreads, n));
+	std::vector<std::thread> threads;
+	threads.reserve(numThreads);
+	size_t chunk = n / numThreads;
+	size_t rem = n % numThreads;
+	size_t start = 0;
+	for (size_t t = 0; t < numThreads; ++t)
+	{
+		size_t sz = chunk + (t < rem ? 1 : 0);
+		size_t s = start;
+		size_t e = s + sz;
+		threads.emplace_back([s,e, &worker](){ for (size_t i = s; i < e; ++i) worker(i); });
+		start = e;
+	}
+	for (auto &th : threads) th.join();
+}
+
+inline void scatter_d24x8_cpu(uint32_t* base_words,
+                              size_t total_words,
+                              size_t block_length_words,
+                              size_t z_offset_words,
+                              size_t s_offset_words,
+                              size_t numThreads = std::thread::hardware_concurrency())
+{
+    if (!base_words) throw std::runtime_error("scatter_d24x8_cpu: null buffer");
+    if (block_length_words == 0) return;
+
+    if ((block_length_words + z_offset_words) > total_words) {
+        throw std::runtime_error("scatter_d24x8_cpu: z-offset out of range");
+    }
+
+    size_t stencil_word_count = (block_length_words + 3) / 4;
+    if ((stencil_word_count + s_offset_words) > total_words) {
+        throw std::runtime_error("scatter_d24x8_cpu: stencil offset out of range");
+    }
+
+    cpu_compute::parallel_for(block_length_words, numThreads, [&](size_t index) {
+        uint32_t value = base_words[index];
+        base_words[index + z_offset_words] = (value >> 8);
+
+        size_t stencil_offset = index >> 2;
+        uint32_t stencil_shift = static_cast<uint32_t>((index & 3) << 3);
+        uint32_t stencil_mask = (value & 0xFFu) << stencil_shift;
+
+        uint32_t* stencil_word_ptr = base_words + (stencil_offset + s_offset_words);
+
+#if defined(__cpp_lib_atomic_ref)
+        std::atomic_ref<uint32_t> ref(*stencil_word_ptr);
+        ref.fetch_or(stencil_mask, std::memory_order_relaxed);
+#else
+        std::atomic<uint32_t>* atomic_ptr = reinterpret_cast<std::atomic<uint32_t>*>(stencil_word_ptr);
+        uint32_t oldv = atomic_ptr->load(std::memory_order_relaxed);
+        uint32_t newv;
+        do {
+            newv = oldv | stencil_mask;
+        } while (!atomic_ptr->compare_exchange_weak(oldv, newv, std::memory_order_relaxed));
+#endif
+    });
+}
+
+// parallel sum for u32 source; returns 64-bit sum
+inline uint64_t parallel_sum_u32(const uint32_t* src, size_t count, size_t numThreads = std::thread::hardware_concurrency())
+{
+    if (count == 0) return 0;
+    numThreads = std::max<size_t>(1, std::min(numThreads, count));
+    std::vector<uint64_t> partials(numThreads, 0);
+
+    size_t chunk = count / numThreads;
+    size_t rem = count % numThreads;
+    size_t start = 0;
+    std::vector<std::thread> threads;
+    threads.reserve(numThreads);
+
+	for (size_t t = 0; t < numThreads; ++t)
+	{
+		size_t sz = chunk + (t < rem ? 1 : 0);
+		size_t s = start;
+		size_t e = s + sz;
+		threads.emplace_back([=, &partials]() {
+			uint64_t acc = 0;
+			const uint32_t* p = src + s;
+			size_t len = e - s;
+			// plain loop — compiler will usually vectorize
+			for (size_t i = 0; i < len; ++i) acc += p[i];
+			partials[t] = acc;
+		});
+		start = e;
+	}
+    for (auto &th : threads) th.join();
+
+    uint64_t total = 0;
+    for (auto v : partials) total += v;
+    return total;
+}
+
+} // namespace cpu_compute
+
 	std::vector<glsl::program_input> compute_task::get_inputs()
 	{
 		std::vector<glsl::program_input> result;
@@ -68,7 +179,7 @@ namespace vk
 				// Warps are multiples of 32. Increasing kernel depth seems to hurt performance (Nier, Big Duck sample)
 				unroll_loops = true;
 				optimal_kernel_size = 1;
-				optimal_group_size = 32;
+				optimal_group_size = 128; //32;
 				break;
 			case vk::driver_vendor::AMD:
 			case vk::driver_vendor::RADV:
@@ -299,13 +410,51 @@ namespace vk
 		m_program->bind_uniform({ *m_data, m_data_offset, m_ssbo_length }, 0, 0);
 	}
 
-	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
+	void cs_interleave_task::run(const vk::command_buffer& /*cmd*/,
+								const vk::buffer* data,
+								u32 data_offset,
+								u32 data_length,
+								u32 zeta_offset,
+								u32 stencil_offset)
 	{
-		m_params = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
+		size_t hw = std::max<size_t>(1, std::thread::hardware_concurrency());
+		size_t numThreads = std::min<size_t>(hw, 8);
 
+		m_params = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
 		ensure(stencil_offset > data_offset);
-		m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
-		cs_shuffle_base::run(cmd, data, data_length, data_offset);
+
+		void* mapped = const_cast<vk::buffer*>(data)->map(data_offset, data_length);
+		if (!mapped) throw std::runtime_error("cs_interleave_task::run: failed to map buffer");
+
+		uint8_t* base_bytes = reinterpret_cast<uint8_t*>(mapped);
+		uint8_t* region_start = base_bytes + data_offset;
+		uint32_t* words = reinterpret_cast<uint32_t*>(region_start);
+
+		const size_t region_total_words = (data->size() - data_offset) / 4;
+		const size_t block_length_words = data_length / 4;
+		const size_t z_offset_words = (zeta_offset - data_offset) / 4;
+		const size_t s_offset_words = (stencil_offset - data_offset) / 4;
+
+		if ((block_length_words + z_offset_words) > region_total_words) {
+			const_cast<vk::buffer*>(data)->unmap();
+			throw std::runtime_error("cs_interleave_task::run: z_offset out of bounds");
+		}
+		size_t stencil_word_count = (block_length_words + 3) / 4;
+		if ((stencil_word_count + s_offset_words) > region_total_words) {
+			const_cast<vk::buffer*>(data)->unmap();
+			throw std::runtime_error("cs_interleave_task::run: stencil offset out of bounds");
+		}
+
+		cpu_compute::scatter_d24x8_cpu(
+			/*base_words=*/ words,
+			/*total_words=*/ region_total_words,
+			/*block_length_words=*/ block_length_words,
+			/*z_offset_words=*/ z_offset_words,
+			/*s_offset_words=*/ s_offset_words,
+			/*numThreads=*/ numThreads
+		);
+
+		const_cast<vk::buffer*>(data)->unmap();
 	}
 
 	cs_scatter_d24x8::cs_scatter_d24x8()
@@ -359,14 +508,30 @@ namespace vk
 		m_program->bind_uniform({ *dst, 0, 4 }, 0, 1);
 	}
 
-	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
+	void cs_aggregator::run(const vk::command_buffer& /*cmd*/, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
 	{
 		this->dst = dst;
 		this->src = src;
 		word_count = num_words;
 		block_length = num_words * 4;
 
-		const u32 linear_invocations = utils::aligned_div(word_count, optimal_group_size);
-		compute_task::run(cmd, linear_invocations);
+		size_t hw = std::max<size_t>(1, std::thread::hardware_concurrency());
+		size_t numThreads = std::min<size_t>(hw, 8);
+
+		void* src_map = const_cast<vk::buffer*>(src)->map(0, num_words * 4);
+		if (!src_map) throw std::runtime_error("cs_aggregator::run: failed to map src buffer");
+
+		const uint32_t* src_words = reinterpret_cast<const uint32_t*>(src_map);
+		uint64_t sum = cpu_compute::parallel_sum_u32(src_words, static_cast<size_t>(num_words), numThreads);
+
+		const_cast<vk::buffer*>(src)->unmap();
+
+		void* dst_map = const_cast<vk::buffer*>(dst)->map(0, 4);
+		if (!dst_map) throw std::runtime_error("cs_aggregator::run: failed to map dst buffer");
+
+		uint32_t result32 = static_cast<uint32_t>(sum);
+		std::memcpy(dst_map, &result32, sizeof(result32));
+
+		const_cast<vk::buffer*>(dst)->unmap();
 	}
 }

@@ -132,6 +132,12 @@ if(MSVC)
     add_compile_options(/MP)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  add_compile_options(-msse4.1 -mavx2 -mfma -march=native -O3)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  add_compile_options(/arch:AVX2)
+endif()
+
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message( FATAL_ERROR "RPCS3 can only be compiled on 64-bit platforms." )
 endif()
