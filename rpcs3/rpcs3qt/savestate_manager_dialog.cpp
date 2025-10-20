@@ -686,7 +686,7 @@ void savestate_manager_dialog::PopulateSavestateTable()
 		const savestate_data& savestate = savestates[i];
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::name), new custom_table_widget_item(savestate.name));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::compatible), new custom_table_widget_item(savestate.is_compatible ? tr("Compatible") : tr("Not compatible"), Qt::UserRole, savestate.is_compatible));
-		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(gui::utils::format_datetime(savestate.date), Qt::UserRole, savestate.date));
+		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(gui::utils::format_datetime(savestate.date, "yyyy-MM-dd HH:mm", true, "HH:mm"), Qt::UserRole, savestate.date));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::path), new custom_table_widget_item(savestate.path));
 	}
 
