@@ -549,31 +549,36 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 		return;
 	}
 
-	std::vector<std::unique_ptr<game_savestates_data>> game_data(count);
+	std::vector<std::unique_ptr<game_savestates_data>> game_data;
 
 	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (int i = 0; i < count; ++i)
 	{
-		indices.append(i);
-
-		game_data[i] = std::make_unique<game_savestates_data>();
-		game_data[i]->title_id = folder_list[i].toStdString();
+		auto game_data_ptr = std::make_unique<game_savestates_data>();
+		game_data_ptr->title_id = folder_list[i].toStdString();
 
 		for (const game_info& gameinfo : m_game_info)
 		{
-			if (gameinfo && gameinfo->info.serial == game_data[i]->title_id)
+			if (gameinfo && gameinfo->info.serial == game_data_ptr->title_id)
 			{
-				game_data[i]->game_name = gameinfo->info.name;
-				game_data[i]->game_icon_path = gameinfo->info.icon_path;
+				game_data_ptr->game_name = gameinfo->info.name;
+				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
 				break;
 			}
 		}
 
-		if (game_data[i]->game_name.empty())
+		if (!game_data_ptr->game_name.empty())
 		{
-			game_data[i]->game_name = game_data[i]->title_id;
+			indices.append(game_data.size());
+			game_data.emplace_back(std::move(game_data_ptr));
 		}
+	}
+
+	if (game_data.empty())
+	{
+		RepaintUI(true);
+		return;
 	}
 
 	QFutureWatcher<void> future_watcher;
