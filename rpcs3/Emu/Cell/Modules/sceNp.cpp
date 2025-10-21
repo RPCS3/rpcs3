@@ -3198,7 +3198,7 @@ error_code sceNpLookupTerm()
 
 error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId ? communicationId->data : "", selfNpId);
+	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId ? std::string_view(communicationId->data, 9) : "", selfNpId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
