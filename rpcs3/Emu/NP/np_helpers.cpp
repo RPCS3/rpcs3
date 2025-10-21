@@ -24,7 +24,8 @@ namespace np
 
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId)
 	{
-		return fmt::format("%s_%02d", communicationId.data, communicationId.num);
+		const std::string com_id_data(communicationId.data, communicationId.data + 9);
+		return fmt::format("%s_%02d", com_id_data, communicationId.num);
 	}
 
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
