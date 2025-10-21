@@ -1300,7 +1300,7 @@ error_code sceNpMatching2GrantRoomOwner(
 error_code sceNpMatching2CreateContext(
     vm::cptr<SceNpId> npId, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passPhrase, vm::ptr<SceNpMatching2ContextId> ctxId, s32 option)
 {
-	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", passPhrase, ctxId, option);
+	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? std::string_view(commId->data, 9) : "", passPhrase, ctxId, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

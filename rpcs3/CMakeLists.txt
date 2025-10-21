@@ -162,7 +162,7 @@ if (NOT ANDROID)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${WINDEPLOYQT_EXECUTABLE} --no-compiler-runtime --no-opengl-sw --no-patchqt
                 --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
-                --plugindir $<TARGET_FILE_DIR:rpcs3>/qt6/plugins
+                --plugindir "$<IF:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>,$<TARGET_FILE_DIR:rpcs3>/qt6/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
                 --verbose 0
                 $<TARGET_FILE:rpcs3>
             )

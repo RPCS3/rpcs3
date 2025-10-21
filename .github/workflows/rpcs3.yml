@@ -24,7 +24,7 @@ env:
 jobs:
   Linux_Build:
     # Only run push event on master branch of main repo, but run all PRs
-    #if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +117,7 @@ jobs:
 
   Mac_Build:
     # Only run push event on master branch of main repo, but run all PRs
-    #if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
       matrix:
@@ -191,14 +191,14 @@ jobs:
         run: .ci/github-upload.sh
 
       - name: Save Build Ccache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
       - name: Save Qt Cache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: /tmp/Qt
@@ -206,7 +206,7 @@ jobs:
 
   Windows_Build:
     # Only run push event on master branch of main repo, but run all PRs
-    #if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 Windows
     runs-on: windows-2025
     env:
@@ -312,14 +312,14 @@ jobs:
         run: .ci/github-upload.sh
 
       - name: Save Build Ccache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
       - name: Save Dependencies Cache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.DEPS_CACHE_DIR }}
@@ -327,7 +327,7 @@ jobs:
 
   Windows_Build_Clang:
     # Only run push event on master branch of main repo, but run all PRs
-    #if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     runs-on: windows-2025
     strategy:
       fail-fast: false
@@ -415,9 +415,7 @@ jobs:
           --clean-after-build
 
       - name: Save vcpkg cache
-        if: ${{ matrix.compiler == 'clang-cl' }}
-        #if: ${{ !steps.restore-vcpkg-cache.outputs.cache-hit && matrix.compiler == 'clang-cl' }}
-        #if: github.ref == 'refs/heads/master'
+        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
         uses: actions/cache/save@main
         with:
           path: |
@@ -451,8 +449,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
           C:\PROGRA~1\LLVM\bin\clang-cl.exe --version
       - name: Save LLVM Cache
-        if: ${{ matrix.compiler == 'clang-cl' && steps.llvm-cache.outputs.cache-hit != 'true' }}
-        #if: github.ref == 'refs/heads/master'
+        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
         uses: actions/cache/save@main
         with:
           path: ./llvm-${{ matrix.llvmver }}
@@ -473,6 +470,8 @@ jobs:
           export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
           echo "CCACHE_DIR=$CCACHE_DIR"
           .ci/build-windows-clang.sh
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/deploy-windows-${{ matrix.compiler }}.sh
           
       - name: install DIA SDK
         if: ${{ matrix.compiler == 'clang-cl' }}      
@@ -484,20 +483,17 @@ jobs:
       - name: Build RPCS3
         if: ${{ matrix.compiler == 'clang-cl' }}
         shell: bash
-        run: .ci/build-windows-clang-cl.sh
+        run: |
+          .ci/build-windows-clang-cl.sh
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/deploy-windows-${{ matrix.compiler }}.sh
 
       - name: Save build Ccache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
-
-      - name: Prepare Artifacts
-        shell: bash
-        run: |
-          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
-          .ci/deploy-windows-${{ matrix.compiler }}.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@main
@@ -508,8 +504,8 @@ jobs:
           if-no-files-found: error
 
   FreeBSD_Build:
-      # Only run push event on master branch of main repo, but run all PRs
-    #if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -540,7 +536,7 @@ jobs:
           run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
 
       - name: Save Build Ccache
-        #if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
