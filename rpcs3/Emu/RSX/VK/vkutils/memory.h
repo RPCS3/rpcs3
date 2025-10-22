@@ -49,6 +49,7 @@ namespace vk
 		const_iterator end() const;
 		u32 first() const;
 		size_t count() const;
+		u64 total_bytes() const;
 
 		operator bool() const;
 		bool operator == (const memory_type_info& other) const;
