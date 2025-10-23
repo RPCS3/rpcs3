@@ -15,6 +15,15 @@ mkdir ./bin/config/input_configs
 curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./bin/config/input_configs/gamecontrollerdb.txt
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
 
+mkdir -p ./bin/qt6/translations
+curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
+  | grep '"download_url":' \
+  | cut -d '"' -f 4 \
+  | while read -r url; do
+      echo "Downloading $(basename "$url")..."
+      curl -fsSL "$url" -o "./bin/qt6/translations/$(basename "$url")"
+    done
+
 # Download SSL certificate (not needed with CURLSSLOPT_NATIVE_CA)
 #curl -fsSL 'https://curl.haxx.se/ca/cacert.pem' 1> ./bin/cacert.pem
 
