@@ -15,7 +15,7 @@ u32 SPUDisAsm::disasm(u32 pc)
 {
 	last_opcode.clear();
 
-	if (!m_shm || pc < m_start_pc || pc >= SPU_LS_SIZE)
+	if (pc < m_start_pc || pc >= SPU_LS_SIZE)
 	{
 		return 0;
 	}
