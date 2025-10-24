@@ -30,9 +30,13 @@ namespace rsx
 			void ensure_expired();
 			compiled_resource& get_compiled() override;
 
+			bool id_matches(localized_string_id id) const;
 			bool text_matches(const std::u32string& text) const;
 
+			void set_label_text(const std::string& text);
+
 		private:
+			localized_string_id m_loc_id = localized_string_id::INVALID;
 			label m_text{};
 			std::shared_ptr<overlay_element> m_icon{};
 			animation_color_interpolate m_fade_in_animation;
@@ -59,7 +63,8 @@ namespace rsx
 				std::shared_ptr<atomic_t<u32>> refs,
 				message_pin_location location = message_pin_location::top_left,
 				std::shared_ptr<overlay_element> icon = {},
-				bool allow_refresh = false)
+				bool allow_refresh = false,
+				bool compare_id = false)
 			{
 				std::lock_guard lock(m_mutex_queue);
 
@@ -85,13 +90,13 @@ namespace rsx
 				{
 					for (auto id : msg_id)
 					{
-						if (!message_exists(location, id, allow_refresh))
+						if (!message_exists(location, id, allow_refresh, compare_id))
 						{
 							queue->emplace_back(id, expiration, refs, icon);
 						}
 					}
 				}
-				else if (!message_exists(location, msg_id, allow_refresh))
+				else if (!message_exists(location, msg_id, allow_refresh, compare_id))
 				{
 					queue->emplace_back(msg_id, expiration, std::move(refs), icon);
 				}
@@ -119,9 +124,11 @@ namespace rsx
 			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
 
 			// Stacking. Extends the lifetime of a message instead of inserting a duplicate
-			bool message_exists(message_pin_location location, localized_string_id id, bool allow_refresh);
-			bool message_exists(message_pin_location location, const std::string& msg, bool allow_refresh);
-			bool message_exists(message_pin_location location, const std::u32string& msg, bool allow_refresh);
+			bool check_lists(message_pin_location location, std::function<bool(std::deque<message_item>& list)> check_list);
+			bool message_exists(message_pin_location location, localized_string_id id, bool allow_refresh, bool compare_id);
+			bool message_exists(message_pin_location location, const std::string& msg, bool allow_refresh, bool compare_id);
+			bool message_exists(message_pin_location location, const std::u32string& msg, bool allow_refresh, bool compare_id);
+			bool message_exists(message_pin_location location, const localized_string& container, bool allow_refresh, bool compare_id);
 		};
 
 		template <typename T>
@@ -131,7 +138,8 @@ namespace rsx
 			std::shared_ptr<atomic_t<u32>> refs = {},
 			message_pin_location location = message_pin_location::top_left,
 			std::shared_ptr<overlay_element> icon = {},
-			bool allow_refresh = false)
+			bool allow_refresh = false,
+			bool compare_id = false)
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
@@ -141,7 +149,7 @@ namespace rsx
 					msg_overlay = std::make_shared<rsx::overlays::message>();
 					msg_overlay = manager->add(msg_overlay);
 				}
-				msg_overlay->queue_message(msg_id, expiration, std::move(refs), location, std::move(icon), allow_refresh);
+				msg_overlay->queue_message(msg_id, expiration, std::move(refs), location, std::move(icon), allow_refresh, compare_id);
 			}
 		}
 

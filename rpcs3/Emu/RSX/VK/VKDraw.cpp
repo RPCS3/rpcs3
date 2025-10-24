@@ -505,16 +505,17 @@ void VKGSRender::load_texture_env()
 		}
 	}
 
-	if (g_cfg.video.vk.asynchronous_texture_streaming)
+	if (backend_config.supports_asynchronous_compute)
 	{
 		// We have to do this here, because we have to assume the CB will be dumped
-		auto& async_task_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
+		auto async_task_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>();
 
-		if (async_task_scheduler.is_recording() &&
-			!async_task_scheduler.is_host_mode())
+		if (async_task_scheduler &&
+			async_task_scheduler->is_recording() &&
+			!async_task_scheduler->is_host_mode())
 		{
 			// Sync any async scheduler tasks
-			if (auto ev = async_task_scheduler.get_primary_sync_label())
+			if (auto ev = async_task_scheduler->get_primary_sync_label())
 			{
 				ev->gpu_wait(*m_current_command_buffer, m_async_compute_dependency_info);
 			}
@@ -816,8 +817,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
 	}
 
-	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
-	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
+	VkDescriptorBufferViewEx persistent_buffer = m_persistent_attribute_storage ? *m_persistent_attribute_storage : *null_buffer_view;
+	VkDescriptorBufferViewEx volatile_buffer = m_volatile_attribute_storage ? *m_volatile_attribute_storage : *null_buffer_view;
 	bool update_descriptors = false;
 
 	if (m_current_draw.subdraw_id == 0)

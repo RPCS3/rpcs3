@@ -206,6 +206,7 @@ namespace rsx
 			virtual void set_text(const std::string& text);
 			virtual void set_unicode_text(const std::u32string& text);
 			void set_text(localized_string_id id);
+			void set_text(const localized_string& container);
 			virtual void set_font(const char* font_name, u16 font_size);
 			virtual void align_text(text_align align);
 			virtual void set_wrap_text(bool state);

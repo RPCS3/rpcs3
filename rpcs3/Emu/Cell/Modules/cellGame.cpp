@@ -550,7 +550,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	case CELL_HDDGAME_CBRESULT_ERR_NOSPACE:
 		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", result->errNeedSizeKB);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, fmt::format("%d", result->errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, "%d", result->errNeedSizeKB);
 		break;
 
 	case CELL_HDDGAME_CBRESULT_ERR_BROKEN:
@@ -565,12 +565,12 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	case CELL_HDDGAME_CBRESULT_ERR_INVALID:
 		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_INVALID. Error message: %s", result->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, "%s", result->invalidMsg);
 		break;
 
 	default:
 		cellGame.error("cellHddGameCheck(): callback returned unknown error (code=0x%x). Error message: %s", result->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, "%s", result->invalidMsg);
 		break;
 	}
 
@@ -1169,7 +1169,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	}
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", cbResult->errNeedSizeKB);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, fmt::format("%d", cbResult->errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, "%d", cbResult->errNeedSizeKB);
 		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
@@ -1184,12 +1184,12 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID. Error message: %s", cbResult->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, "%s", cbResult->invalidMsg);
 		break;
 
 	default:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x). Error message: %s", cbResult->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, "%s", cbResult->invalidMsg);
 		break;
 	}
 
@@ -1686,7 +1686,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		break;
 	case CELL_GAME_ERRDIALOG_NOSPACE:
 		// Not enough available space. The application will continue.
-		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, fmt::format("%d", errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, "%d", errNeedSizeKB);
 		break;
 	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA:
 		// Game data is corrupted. The application will be terminated.
@@ -1698,7 +1698,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		break;
 	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:
 		// Not enough available space. The application will be terminated.
-		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, fmt::format("%d", errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, "%d", errNeedSizeKB);
 		break;
 	default:
 		return CELL_GAME_ERROR_PARAM;
@@ -1712,7 +1712,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		}
 
 		error_msg += '\n';
-		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
+		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, "%s", dirName);
 	}
 
 	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE, msg_dialog_source::_cellGame);

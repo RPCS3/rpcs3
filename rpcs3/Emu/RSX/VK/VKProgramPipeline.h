@@ -115,7 +115,11 @@ namespace vk
 		};
 
 		using descriptor_image_array_t = rsx::simple_array<VkDescriptorImageInfoEx>;
-		using descriptor_slot_t = std::variant<VkDescriptorImageInfoEx, VkDescriptorBufferInfo, VkBufferView, descriptor_image_array_t>;
+		using descriptor_slot_t = std::variant<
+			VkDescriptorImageInfoEx,
+			VkDescriptorBufferInfoEx,
+			VkDescriptorBufferViewEx,
+			descriptor_image_array_t>;
 
 		struct descriptor_table_t
 		{
@@ -202,9 +206,9 @@ namespace vk
 			std::pair<u32, u32> get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name);
 
 			void bind_uniform(const VkDescriptorImageInfoEx& image_descriptor, u32 set_id, u32 binding_point);
-			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 set_id, u32 binding_point);
-			void bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point);
-			void bind_uniform(const VkBufferView &buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
+			void bind_uniform(const VkDescriptorBufferInfoEx& buffer_descriptor, u32 set_id, u32 binding_point);
+			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point);
+			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
 
 			void bind_uniform_array(const std::span<const VkDescriptorImageInfoEx>& image_descriptors,u32 set_id, u32 binding_point);
 
