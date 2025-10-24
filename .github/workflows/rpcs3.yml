@@ -328,24 +328,31 @@ jobs:
   Windows_Build_Clang:
     # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
-    name: RPCS3 Windows Clang
     runs-on: windows-2025
     strategy:
+      fail-fast: false
       matrix:
         include:
           - msys2: clang64
             compiler: clang
             arch: win64
+          - compiler: clang-cl
+            llvmver: 19.1.7
+            arch: win64
+
     env:
       CCACHE_DIR: 'C:\ccache'
+      VCPKG_TRIPLET: x64-windows
+      VCPKG_BUILD_TYPE: release
+    name: RPCS3 Windows ${{ matrix.compiler }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
           fetch-depth: 0
-
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
+        if: ${{ matrix.compiler == 'clang' }}
         with:
           msystem: ${{ matrix.msys2 }}
           update: true
@@ -373,6 +380,81 @@ jobs:
             git
             p7zip
 
+      - name: Clone and bootstrap vcpkg
+        if: ${{ matrix.compiler == 'clang-cl' }}
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+      - name: Restore vcpkg cache
+        if: ${{ matrix.compiler == 'clang-cl' }}
+        uses: actions/cache/restore@main
+        id: restore-vcpkg-cache
+        with:
+          path: |
+            vcpkg/installed
+            vcpkg/buildtrees
+          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ hashFiles('**/vcpkg') }}
+          restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: Install dependencies with vcpkg
+        if: ${{ matrix.compiler == 'clang-cl' }}
+        shell: pwsh
+        run: >-
+          .\vcpkg\vcpkg.exe install
+          ffmpeg[avcodec,avformat,swscale,swresample]
+          libpng
+          opencv
+          qtbase
+          qtmultimedia
+          qtsvg
+          qttools
+          vulkan
+          zlib
+          --triplet $env:VCPKG_TRIPLET
+          --clean-after-build
+
+      - name: Save vcpkg cache
+        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
+        uses: actions/cache/save@main
+        with:
+          path: |
+            vcpkg/installed
+            vcpkg/buildtrees
+          key: ${{ steps.restore-vcpkg-cache.outputs.cache-primary-key }}
+
+      - name: Restore LLVM Cache
+        if: ${{ matrix.compiler == 'clang-cl' }} 
+        uses: actions/cache/restore@main
+        id: llvm-cache
+        with:
+          path: ./llvm-${{ matrix.llvmver }}
+          key: ${{ runner.os }}-llvm-dl-cache-${{ hashFiles('**/llvm-${{ matrix.llvmver }}') }}
+          restore-keys: ${{ runner.os }}-clang-dl-cache-
+      - name: Add LLVM
+        if: ${{ matrix.compiler == 'clang-cl' }}
+        shell: pwsh
+        run: |
+          if (!(Test-Path -Path D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\)) {
+            rm -r llvm-*
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/llvm-${{ matrix.llvmver }}/llvm-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/clang-${{ matrix.llvmver }}/clang-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
+            7z x llvm-*.7z
+            mv llvm* llvm-${{ matrix.llvmver }}
+            rm llvm-*.7z
+            7z x clang-*.7z
+            Copy-Item -Path "D:\a\rpcs3\rpcs3\clang*\*" -Destination "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}" -Recurse -Force
+            rm -r clang*
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
+          C:\PROGRA~1\LLVM\bin\clang-cl.exe --version
+      - name: Save LLVM Cache
+        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
+        uses: actions/cache/save@main
+        with:
+          path: ./llvm-${{ matrix.llvmver }}
+          key: ${{ steps.llvm-cache.outputs.cache-primary-key }}
+        
       - name: Restore build Ccache
         uses: actions/cache/restore@main
         id: restore-build-ccache
@@ -382,12 +464,29 @@ jobs:
           restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
 
       - name: Build RPCS3
+        if: ${{ matrix.compiler == 'clang' }}
         shell: msys2 {0}
         run: |
           export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
           echo "CCACHE_DIR=$CCACHE_DIR"
-          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
           .ci/build-windows-clang.sh
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/deploy-windows-${{ matrix.compiler }}.sh
+          
+      - name: install DIA SDK
+        if: ${{ matrix.compiler == 'clang-cl' }}      
+        run: |
+          mkdir -p "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional" || true
+          cp -r "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/DIA SDK" "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK"
+          "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+
+      - name: Build RPCS3
+        if: ${{ matrix.compiler == 'clang-cl' }}
+        shell: bash
+        run: |
+          .ci/build-windows-clang-cl.sh
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/deploy-windows-${{ matrix.compiler }}.sh
 
       - name: Save build Ccache
         if: github.ref == 'refs/heads/master'
@@ -405,7 +504,7 @@ jobs:
           if-no-files-found: error
 
   FreeBSD_Build:
-      # Only run push event on master branch of main repo, but run all PRs
+    # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
