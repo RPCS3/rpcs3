@@ -8,6 +8,7 @@ namespace np
 {
 	std::string ip_to_string(u32 addr);
 	std::string ether_to_string(std::array<u8, 6>& ether);
+	bool validate_communication_id(const SceNpCommunicationId& com_id);
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId);
 
 	void string_to_npid(std::string_view str, SceNpId& npid);

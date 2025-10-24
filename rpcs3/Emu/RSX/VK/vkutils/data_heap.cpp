@@ -22,12 +22,17 @@ namespace vk
 		if ((flags & heap_pool_low_latency) && g_cfg.video.vk.use_rebar_upload_heap)
 		{
 			// Prefer uploading to BAR if low latency is desired.
-			m_prefer_writethrough = memory_map.device_bar_total_bytes > (2048ull * 0x100000);
+			const int max_usage = memory_map.device_bar_total_bytes <= (256 * 0x100000) ? 75 : 90;
+			m_prefer_writethrough = can_allocate_heap(memory_map.device_bar, size, max_usage);
 
 			// Log it
-			if (m_prefer_writethrough && name)
+			if (m_prefer_writethrough)
 			{
-				rsx_log.notice("Data heap %s will attempt to use Re-BAR memory", name);
+				rsx_log.notice("Data heap %s will attempt to use Re-BAR memory", m_name);
+			}
+			else
+			{
+				rsx_log.warning("Could not fit heap '%s' into Re-BAR memory", m_name);
 			}
 		}
 
@@ -86,6 +91,17 @@ namespace vk
 		VkBufferUsageFlags usage = heap->info.usage;
 		const auto& memory_map = g_render_device->get_memory_mapping();
 
+		if (m_prefer_writethrough)
+		{
+			const int max_usage = memory_map.device_bar_total_bytes <= (256 * 0x100000) ? 75 : 90;
+			m_prefer_writethrough = can_allocate_heap(memory_map.device_bar, aligned_new_size, max_usage);
+
+			if (!m_prefer_writethrough)
+			{
+				rsx_log.warning("Could not fit heap '%s' into Re-BAR memory during reallocation", m_name);
+			}
+		}
+
 		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		auto memory_index = m_prefer_writethrough ? memory_map.device_bar : memory_map.host_visible_coherent;
 
@@ -114,6 +130,14 @@ namespace vk
 		}
 
 		return true;
+	}
+
+	bool data_heap::can_allocate_heap(const vk::memory_type_info& target_heap, usz size, int max_usage_percent)
+	{
+		const auto current_usage = vmm_get_application_memory_usage(target_heap);
+		const auto after_usage = current_usage + size;
+		const auto limit = (target_heap.total_bytes() * max_usage_percent) / 100;
+		return after_usage < limit;
 	}
 
 	void* data_heap::map(usz offset, usz size)
