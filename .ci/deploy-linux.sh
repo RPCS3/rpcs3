@@ -32,6 +32,14 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
 
+    # Download translations
+    curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
+      | grep '"download_url":' \
+      | cut -d '"' -f 4 \
+      | while read -r url; do
+          curl -fsSL "$url" -o "./AppDir/usr/translations/$(basename "$url")"
+        done
+
     curl -fsSLo /uruntime "https://github.com/VHSgunzo/uruntime/releases/download/v0.3.4/uruntime-appimage-dwarfs-$CPU_ARCH"
     chmod +x /uruntime
     /uruntime --appimage-mkdwarfs -f --set-owner 0 --set-group 0 --no-history --no-create-timestamp \
