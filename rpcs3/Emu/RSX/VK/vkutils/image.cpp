@@ -3,6 +3,7 @@
 #include "device.h"
 #include "image.h"
 #include "image_helpers.h"
+#include "sampler.h"
 
 #include "../VKResourceManager.h"
 #include <memory>

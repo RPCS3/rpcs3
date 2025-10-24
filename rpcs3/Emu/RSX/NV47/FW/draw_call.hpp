@@ -18,10 +18,10 @@ namespace rsx
 	class draw_clause
 	{
 		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
-		simple_array<draw_range_t> draw_command_ranges{};
+		rsx::simple_array<draw_range_t> draw_command_ranges{};
 
 		// Stores rasterization barriers for primitive types sensitive to adjacency
-		simple_array<barrier_t> draw_command_barriers{};
+		rsx::simple_array<barrier_t> draw_command_barriers{};
 
 		// Counter used to parse the commands in order
 		u32 current_range_index{};
@@ -33,7 +33,7 @@ namespace rsx
 		u32 draw_command_barrier_mask = 0;
 
 		// Draw-time iterator to the draw_command_barriers struct
-		mutable simple_array<barrier_t>::iterator current_barrier_it;
+		mutable rsx::simple_array<barrier_t>::iterator current_barrier_it;
 
 		// Subranges memory cache
 		mutable rsx::simple_array<draw_range_t> subranges_store;
@@ -77,7 +77,7 @@ namespace rsx
 		bool is_rendering{};               // Set while we're actually pushing the draw calls to host GPU
 		bool is_trivial_instanced_draw{};  // Set if the draw call can be executed on the host GPU as a single instanced draw.
 
-		simple_array<u32> inline_vertex_array{};
+		rsx::simple_array<u32> inline_vertex_array{};
 
 		void operator()(utils::serial& ar);
 
@@ -307,6 +307,6 @@ namespace rsx
 		 * Returns a compiled list of all subdraws.
 		 * NOTE: This is a non-trivial operation as it takes disjoint primitive boundaries into account.
 		 */
-		const simple_array<draw_range_t>& get_subranges() const;
+		const rsx::simple_array<draw_range_t>& get_subranges() const;
 	};
 }

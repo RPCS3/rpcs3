@@ -361,7 +361,7 @@ public:
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 		{
-			auto& handler = g_fxo->get<MouseHandlerBase>();
+			auto& handler = *ensure(g_fxo->try_get<MouseHandlerBase>());
 			std::lock_guard mouse_lock(handler.mutex);
 			const MouseInfo& info = handler.GetInfo();
 
@@ -374,7 +374,7 @@ public:
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun:
 		{
-			gun_thread& gun = g_fxo->get<gun_thread>();
+			gun_thread& gun = *ensure(g_fxo->try_get<gun_thread>());
 			std::scoped_lock lock(gun.handler.mutex);
 			gun.num_devices = gun.handler.init() ? gun.handler.get_num_guns() : 0;
 
@@ -505,7 +505,7 @@ public:
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 		{
-			auto& handler = g_fxo->get<MouseHandlerBase>();
+			auto& handler = *ensure(g_fxo->try_get<MouseHandlerBase>());
 			std::lock_guard mouse_lock(handler.mutex);
 
 			// Make sure that the mouse handler is initialized
@@ -522,7 +522,7 @@ public:
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun:
 		{
-			gun_thread& gun = g_fxo->get<gun_thread>();
+			gun_thread& gun = *ensure(g_fxo->try_get<gun_thread>());
 			std::scoped_lock lock(gun.handler.mutex);
 			gun.num_devices = gun.handler.init() ? gun.handler.get_num_guns() : 0;
 			connected_controllers = std::min<u32>(std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM), gun.num_devices);

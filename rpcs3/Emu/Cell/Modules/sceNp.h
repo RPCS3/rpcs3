@@ -1584,6 +1584,16 @@ struct SceNpSignalingNetInfo
 	be_t<u16> npport;
 };
 
+struct SceNpSignalingNetInfoDeprecated
+{
+	be_t<u32> size;
+	be_t<u32> local_addr; // in_addr
+	be_t<u32> mapped_addr; // in_addr
+	be_t<s32> nat_status;
+	be_t<s32> upnp_status;
+	be_t<s32> npport_status;
+};
+
 struct SceNpCustomMenuAction
 {
 	be_t<u32> options;

@@ -421,7 +421,7 @@ namespace rsx
 				m_list->select_entry(selected_index);
 			}
 
-			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_TROPHY_LIST_TITLE, fmt::format("%d%% (%d/%d)", percentage, unlocked_trophies, all_trophies).c_str()));
+			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_TROPHY_LIST_TITLE, "%d%% (%d/%d)", percentage, unlocked_trophies, all_trophies));
 			m_description->auto_resize();
 		}
 	} // namespace overlays

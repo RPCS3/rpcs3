@@ -23,6 +23,7 @@ public Q_SLOTS:
 
 private:
 	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
+	QShortcut* make_shortcut(gui::shortcuts::shortcut key, const shortcut_info& info, const QKeySequence& key_sequence);
 
 	gui::shortcuts::shortcut_handler_id m_handler_id;
 	std::shared_ptr<gui_settings> m_gui_settings;

@@ -98,7 +98,6 @@ namespace vm
 
 	void reservation_update(u32 addr)
 	{
-		u64 old = -1;
 		const auto cpu = get_current_cpu_thread();
 
 		const bool had_wait = cpu && cpu->state & cpu_flag::wait;
@@ -126,8 +125,6 @@ namespace vm
 
 				return;
 			}
-	
-			old = rtime;
 		}
 	}
 
@@ -1332,6 +1329,16 @@ namespace vm
 				std::vector<std::pair<u64, u64>> event_data;
 				ensure(size == _page_unmap(it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data));
 
+				if (it->second.second && addr < 0xE0000000)
+				{
+					if (it->second.second.use_count() != 1)
+					{
+						fmt::throw_exception("External memory usage at block 0x%x (addr=0x%x, size=0x%x)", this->addr, it->first, size);
+					}
+
+					it->second.second.reset();
+				}
+
 				it = next;
 			}
 
@@ -1341,6 +1348,8 @@ namespace vm
 #ifdef _WIN32
 				m_common->unmap_critical(vm::get_super_ptr(addr));
 #endif
+				ensure(m_common.use_count() == 1);
+				m_common.reset();
 			}
 
 			return true;
@@ -1352,6 +1361,7 @@ namespace vm
 	block_t::~block_t()
 	{
 		ensure(!is_valid());
+		ensure(!m_common || m_common.use_count() == 1);
 	}
 
 	u32 block_t::alloc(const u32 orig_size, const std::shared_ptr<utils::shm>* src, u32 align, u64 flags)
@@ -2247,7 +2257,11 @@ namespace vm
 
 			for (auto& block : g_locations)
 			{
-				if (block) _unmap_block(block);
+				if (block)
+				{
+					_unmap_block(block);
+					ensure(block.use_count() == 1);
+				}
 			}
 
 			g_locations.clear();

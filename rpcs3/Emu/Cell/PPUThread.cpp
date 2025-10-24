@@ -5803,7 +5803,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
+#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
+	_module->setTargetTriple(Triple(jit_compiler::triple1()));
+#else
 	_module->setTargetTriple(jit_compiler::triple1());
+#endif
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator

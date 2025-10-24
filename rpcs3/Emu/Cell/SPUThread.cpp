@@ -1612,10 +1612,14 @@ std::string spu_thread::dump_misc() const
 
 	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
 
-	if (g_cfg.core.spu_prof)
+	if (u64 hash = atomic_storage<u64>::load(block_hash))
 	{
 		// Get short function hash and position in chunk
-		fmt::append(ret, "\nCurrent block: %s", spu_block_hash{atomic_storage<u64>::load(block_hash)});
+		fmt::append(ret, "\nCurrent block: %s", spu_block_hash{hash});
+	}
+	else if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
+	{
+		fmt::append(ret, "\nCurrent block: N/A");
 	}
 
 	const u32 offset = group ? SPU_FAKE_BASE_ADDR + (id & 0xffffff) * SPU_LS_SIZE : RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET;

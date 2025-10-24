@@ -837,7 +837,7 @@ namespace rsx
 	{
 		while (Emu.IsReady())
 		{
-			thread_ctrl::wait_for(1000);
+			Emu.WaitReady();
 		}
 
 		do

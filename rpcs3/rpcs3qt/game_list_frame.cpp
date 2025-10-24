@@ -1223,21 +1223,30 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 1); is_savestate_compatible(sstate))
 	{
-		QAction* boot_state = menu.addAction(is_current_running_game
-			? tr("&Reboot with savestate")
-			: tr("&Boot with savestate"));
-		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate, current_game]
-		{
-			if (!get_savestate_file(current_game.serial, current_game.path, 2).empty())
-			{
-				// If there is any ambiguity, launch the savestate manager
-				Q_EMIT RequestSaveStateManager(gameinfo);
-				return;
-			}
+		const bool has_ambiguity = !get_savestate_file(current_game.serial, current_game.path, 2).empty();
 
+		QAction* boot_state = menu.addAction(is_current_running_game
+			? tr("&Reboot with last SaveState")
+			: tr("&Boot with last SaveState"));
+
+		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate]
+		{
 			sys_log.notice("Booting savestate from gamelist per context menu...");
 			Q_EMIT RequestBoot(gameinfo, cfg_mode::custom, "", sstate);
 		});
+
+		if (has_ambiguity)
+		{
+			QAction* choose_state = menu.addAction(is_current_running_game
+				? tr("&Choose SaveState to reboot")
+				: tr("&Choose SaveState to boot"));
+
+			connect(choose_state, &QAction::triggered, [this, gameinfo]
+			{
+				// If there is any ambiguity, launch the savestate manager
+				Q_EMIT RequestSaveStateManager(gameinfo);
+			});
+		}
 	}
 
 	menu.addSeparator();

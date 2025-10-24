@@ -20,6 +20,7 @@
 #include <QWheelEvent>
 #include <QHoverEvent>
 #include <QMouseEvent>
+#include <QCloseEvent>
 #include <QTimer>
 #include <QThread>
 #include <QKeyEvent>
@@ -732,7 +733,7 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 	}
 	case thread_class::spu:
 	{
-		if (size <= SPU_LS_SIZE && SPU_LS_SIZE - size >= (addr % SPU_LS_SIZE))
+		if (m_spu_shm && size <= SPU_LS_SIZE && SPU_LS_SIZE - size >= (addr % SPU_LS_SIZE))
 		{
 			return m_spu_shm->map_self() + (addr % SPU_LS_SIZE);
 		}
@@ -959,6 +960,14 @@ void memory_viewer_panel::keyPressEvent(QKeyEvent* event)
 	}
 
 	QDialog::keyPressEvent(event);
+}
+
+void memory_viewer_panel::closeEvent(QCloseEvent* event)
+{
+	event->accept();
+	m_spu_shm.reset();
+	m_disasm.reset();
+	m_get_cpu = [](){ return std::add_pointer_t<cpu_thread>{}; };
 }
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const

@@ -241,6 +241,9 @@ void debugger_frame::closeEvent(QCloseEvent* event)
 
 	QDockWidget::closeEvent(event);
 	Q_EMIT DebugFrameClosed();
+
+	m_spu_disasm_memory.reset();
+	m_cpu.reset();
 }
 
 void debugger_frame::showEvent(QShowEvent* event)

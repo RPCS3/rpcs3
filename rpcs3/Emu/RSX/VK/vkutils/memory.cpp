@@ -44,6 +44,16 @@ namespace vk
 		return type_ids.size();
 	}
 
+	u64 memory_type_info::total_bytes() const
+	{
+		u64 result = 0;
+		for (const auto& size : type_sizes)
+		{
+			result += size;
+		}
+		return result;
+	}
+
 	memory_type_info::operator bool() const
 	{
 		return !type_ids.empty();

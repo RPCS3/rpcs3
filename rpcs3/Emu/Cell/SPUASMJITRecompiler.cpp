@@ -186,7 +186,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
 
-	if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+	if ((g_cfg.core.spu_prof || g_cfg.core.spu_debug) && g_cfg.core.spu_verification)
 	{
 		c->mov(x86::rax, m_hash_start & -0xffff);
 		c->mov(SPU_OFF_64(block_hash), x86::rax);
@@ -755,7 +755,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 	c->add(SPU_OFF_64(block_counter), ::size32(words) / (words_align / 4));
 
 	// Set block hash for profiling (if enabled)
-	if (g_cfg.core.spu_prof)
+	if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 	{
 		c->mov(x86::rax, m_hash_start | 0xffff);
 		c->mov(SPU_OFF_64(block_hash), x86::rax);
@@ -1199,7 +1199,7 @@ void spu_recompiler::branch_set_link(u32 target)
 				c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)), x86::xmm0);
 
 				// Set block hash for profiling (if enabled)
-				if (g_cfg.core.spu_prof)
+				if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 				{
 					c->mov(x86::rax, m_hash_start | 0xffff);
 					c->mov(SPU_OFF_64(block_hash), x86::rax);

@@ -664,9 +664,22 @@ namespace gui
 			return dateTime;
 		}
 
-		QString format_datetime(const QDateTime& date, const QString& fmt)
+		QString format_datetime(const QDateTime& date, const QString& fmt, bool is_relative, const QString& fmt_relative)
 		{
-			return date.toString(fmt);
+			const qint64 exctrated_date = date.date().toJulianDay();
+			const qint64 current_date = QDate::currentDate().toJulianDay();
+
+			if (!is_relative || exctrated_date > current_date || current_date - exctrated_date >= 3)
+			{
+				return date.toString(fmt);
+			}
+
+			if (current_date == exctrated_date)
+			{
+				return QString("Today %1").arg(date.toString(fmt_relative));
+			}
+
+			return QString("%1 days ago %2").arg(current_date - exctrated_date).arg(date.toString(fmt_relative));
 		}
 
 		QString format_timestamp(s64 time, const QString& fmt)

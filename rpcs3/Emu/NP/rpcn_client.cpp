@@ -2752,7 +2752,7 @@ namespace rpcn
 
 	void rpcn_client::write_communication_id(const SceNpCommunicationId& com_id, std::vector<u8>& data)
 	{
-		ensure(com_id.data[9] == 0 && com_id.num <= 99, "rpcn_client::write_communication_id: Invalid SceNpCommunicationId");
+		ensure(np::validate_communication_id(com_id), "rpcn_client::write_communication_id: Invalid SceNpCommunicationId");
 		const std::string com_id_str = np::communication_id_to_string(com_id);
 		ensure(com_id_str.size() == 12, "rpcn_client::write_communication_id: Error formatting SceNpCommunicationId");
 		memcpy(data.data(), com_id_str.data(), COMMUNICATION_ID_SIZE);

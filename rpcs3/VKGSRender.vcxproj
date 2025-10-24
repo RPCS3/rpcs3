@@ -46,6 +46,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\ex.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\image.h" />
@@ -66,6 +67,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\instance.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\unique_resource.h" />
     <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
@@ -100,6 +102,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\commands.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\ex.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp" />
@@ -111,6 +114,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\unique_resource.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />

@@ -575,12 +575,12 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 
 		if (setting & CELL_PAD_SETTING_PRESS_ON)
 		{
-			constexpr u32 copy_size = (CELL_PAD_LEN_CHANGE_PRESS_ON - CELL_PAD_BTN_OFFSET_DIGITAL1) * sizeof(u16);
+			constexpr u32 copy_size = (static_cast<u32>(CELL_PAD_LEN_CHANGE_PRESS_ON) - static_cast<u32>(CELL_PAD_BTN_OFFSET_DIGITAL1)) * sizeof(u16);
 			std::memcpy(&data->button[CELL_PAD_BTN_OFFSET_DIGITAL1], &output.button[CELL_PAD_BTN_OFFSET_DIGITAL1], copy_size);
 		}
 		else
 		{
-			constexpr u32 copy_size = (CELL_PAD_LEN_CHANGE_DEFAULT - CELL_PAD_BTN_OFFSET_DIGITAL1) * sizeof(u16);
+			constexpr u32 copy_size = (static_cast<u32>(CELL_PAD_LEN_CHANGE_DEFAULT) - static_cast<u32>(CELL_PAD_BTN_OFFSET_DIGITAL1)) * sizeof(u16);
 			std::memcpy(&data->button[CELL_PAD_BTN_OFFSET_DIGITAL1], &output.button[CELL_PAD_BTN_OFFSET_DIGITAL1], copy_size);
 
 			// Clear area if setting is not used
@@ -590,7 +590,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 
 		if (data->len == CELL_PAD_LEN_CHANGE_SENSOR_ON)
 		{
-			constexpr u32 copy_size = (CELL_PAD_LEN_CHANGE_SENSOR_ON - CELL_PAD_BTN_OFFSET_SENSOR_X) * sizeof(u16);
+			constexpr u32 copy_size = (static_cast<u32>(CELL_PAD_LEN_CHANGE_SENSOR_ON) - static_cast<u32>(CELL_PAD_BTN_OFFSET_SENSOR_X)) * sizeof(u16);
 			std::memcpy(&data->button[CELL_PAD_BTN_OFFSET_SENSOR_X], &output.button[CELL_PAD_BTN_OFFSET_SENSOR_X], copy_size);
 		}
 	}

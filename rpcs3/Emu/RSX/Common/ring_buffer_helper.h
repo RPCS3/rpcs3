@@ -76,9 +76,9 @@ public:
 	data_heap(const data_heap&) = delete;
 	data_heap(data_heap&&) = delete;
 
-	void init(usz heap_size, const char* buffer_name = "unnamed", usz min_guard_size=0x10000)
+	void init(usz heap_size, const char* buffer_name = nullptr, usz min_guard_size=0x10000)
 	{
-		m_name = const_cast<char*>(buffer_name);
+		m_name = const_cast<char*>(buffer_name ? buffer_name : "<unnamed>");
 
 		m_size = heap_size;
 		m_put_pos = 0;

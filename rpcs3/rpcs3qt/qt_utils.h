@@ -161,7 +161,7 @@ namespace gui
 		QDateTime datetime(s64 time);
 
 		// Convert a QDateTime to a readable string
-		QString format_datetime(const QDateTime& date, const QString& fmt = "yyyy-MM-dd HH:mm:ss");
+		QString format_datetime(const QDateTime& date, const QString& fmt = "yyyy-MM-dd HH:mm:ss", bool is_relative = false, const QString& fmt_relative = "HH:mm:ss");
 
 		// Convert a timestamp to a readable string
 		QString format_timestamp(s64 time, const QString& fmt = "yyyy-MM-dd HH:mm:ss");

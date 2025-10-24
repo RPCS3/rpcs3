@@ -85,43 +85,6 @@ namespace vk
 		void init(VkDescriptorSet new_set);
 
 	public:
-		descriptor_set(VkDescriptorSet set);
-		descriptor_set() = default;
-		~descriptor_set();
-
-		descriptor_set(const descriptor_set&) = delete;
-
-		void swap(descriptor_set& other);
-		descriptor_set& operator = (VkDescriptorSet set);
-
-		VkDescriptorSet value() const { return m_handle; }
-		operator bool() const { return m_handle != VK_NULL_HANDLE; }
-
-		VkDescriptorSet* ptr();
-		void push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding);
-		void push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding);
-		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
-		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
-		void push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask = umax);
-		void push(rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask = umax);
-		void push(const descriptor_set_dynamic_offset_t& offset);
-
-		void on_bind();
-		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
-
-		void flush();
-
-	private:
-		VkDescriptorSet m_handle = VK_NULL_HANDLE;
-		u64 m_update_after_bind_mask = 0;
-		u64 m_push_type_mask = 0;
-		bool m_in_use = false;
-
-		rsx::simple_array<VkBufferView> m_buffer_view_pool;
-		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
-		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
-		rsx::simple_array<u32> m_dynamic_offsets;
-
 #if defined(__clang__) && (__clang_major__ < 16)
 		// Clang (pre 16.x) does not support LWG 2089, std::construct_at for POD types
 		struct WriteDescriptorSetT : public VkWriteDescriptorSet
@@ -153,6 +116,90 @@ namespace vk
 #else
 		using WriteDescriptorSetT = VkWriteDescriptorSet;
 #endif
+
+	public:
+		descriptor_set(VkDescriptorSet set);
+		descriptor_set() = default;
+		~descriptor_set();
+
+		descriptor_set(const descriptor_set&) = delete;
+
+		void swap(descriptor_set& other);
+		descriptor_set& operator = (VkDescriptorSet set);
+
+		VkDescriptorSet value() const { return m_handle; }
+		operator bool() const { return m_handle != VK_NULL_HANDLE; }
+
+		VkDescriptorSet* ptr();
+		void push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
+		void push(const rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask = umax);
+		void push(const rsx::simple_array<VkWriteDescriptorSet>& write_cmds, u32 type_mask = umax);
+		void push(const descriptor_set_dynamic_offset_t& offset);
+
+		// Event handlers
+		void on_bind();
+		void bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
+
+		void flush();
+
+		// Typed temporary storage access. Should be inline, the overhead is significant
+		FORCE_INLINE VkBufferView* store(const VkBufferView& buffer_view)
+		{
+			m_buffer_view_pool.push_back(buffer_view);
+			return &m_buffer_view_pool.back();
+		}
+
+		FORCE_INLINE VkDescriptorBufferInfo* store(const VkDescriptorBufferInfo& buffer_info)
+		{
+			m_buffer_info_pool.push_back(buffer_info);
+			return &m_buffer_info_pool.back();
+		}
+
+		FORCE_INLINE VkDescriptorImageInfo* store(const VkDescriptorImageInfo& image_info)
+		{
+			m_image_info_pool.push_back(image_info);
+			return &m_image_info_pool.back();
+		}
+
+		FORCE_INLINE VkDescriptorImageInfo* store(const rsx::simple_array<VkDescriptorImageInfo>& image_infos)
+		{
+			const auto offset = m_image_info_pool.size();
+			m_image_info_pool += image_infos;
+			return &m_image_info_pool[offset];
+		}
+
+		FORCE_INLINE bool storage_cache_pressure() const
+		{
+			return
+				m_image_info_pool.size() >= max_cache_size ||
+				m_buffer_info_pool.size() >= max_cache_size ||
+				m_buffer_view_pool.size() >= max_cache_size;
+		}
+
+		// Temporary storage accessors
+		const rsx::simple_array<WriteDescriptorSetT> peek() const { return m_pending_writes; }
+		u64 cache_id() const { return m_storage_cache_id; }
+
+		// Basic lockable for storage coherence
+		void lock() { m_storage_lock.lock(); }
+		void unlock() { m_storage_lock.unlock(); }
+
+	private:
+		VkDescriptorSet m_handle = VK_NULL_HANDLE;
+		u64 m_update_after_bind_mask = 0;
+		u64 m_push_type_mask = 0;
+		bool m_in_use = false;
+
+		shared_mutex m_storage_lock;
+		atomic_t<u64> m_storage_cache_id = 0;
+
+		rsx::simple_array<VkBufferView> m_buffer_view_pool;
+		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
+		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
+		rsx::simple_array<u32> m_dynamic_offsets;
 
 		rsx::simple_array<WriteDescriptorSetT> m_pending_writes;
 		rsx::simple_array<VkCopyDescriptorSet> m_pending_copies;

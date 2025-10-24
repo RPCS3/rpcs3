@@ -3,39 +3,47 @@
 #include "VKResourceManager.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/device.h"
+#include "vkutils/image.h"
+#include "vkutils/sampler.h"
 
 #include "../Program/SPIRVCommon.h"
 
 namespace vk
 {
-	extern const vk::render_device* get_current_renderer();
-
 	namespace glsl
 	{
 		using namespace ::glsl;
 
-		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfo& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorImageInfoEx& b)
 		{
-			const auto ptr = std::get_if<VkDescriptorImageInfo>(&a);
+			const auto ptr = std::get_if<VkDescriptorImageInfoEx>(&a);
 			return !!ptr &&
+				ptr->resourceId == b.resourceId &&
 				ptr->imageView == b.imageView &&
 				ptr->sampler == b.sampler &&
 				ptr->imageLayout == b.imageLayout;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfo& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfoEx& b)
 		{
-			const auto ptr = std::get_if<VkDescriptorBufferInfo>(&a);
+			const auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&a);
 			return !!ptr &&
+				ptr->resourceId == b.resourceId &&
 				ptr->buffer == b.buffer &&
 				ptr->offset == b.offset &&
 				ptr->range == b.range;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkBufferView& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferViewEx& b)
 		{
-			const auto ptr = std::get_if<VkBufferView>(&a);
-			return !!ptr && *ptr == b;
+			const auto ptr = std::get_if<VkDescriptorBufferViewEx>(&a);
+			return !!ptr && ptr->resourceId == b.resourceId;
+		}
+
+		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfoEx>& b)
+		{
+			const auto ptr = std::get_if<descriptor_image_array_t>(&a);
+			return !!ptr && ptr->size() == b.size() && !std::memcmp(ptr->data(), b.data(), b.size_bytes());
 		}
 
 		VkDescriptorType to_descriptor_type(program_input_type type)
@@ -307,7 +315,7 @@ namespace vk
 			return { umax, umax };
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo& image_descriptor, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorImageInfoEx& image_descriptor, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptor)
 			{
@@ -317,7 +325,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptor);
 		}
 
-		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferInfoEx &buffer_descriptor, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_descriptor)
 			{
@@ -327,7 +335,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_descriptor);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_view)
 			{
@@ -337,25 +345,14 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_view);
 		}
 
-		void program::bind_uniform_array(const VkDescriptorImageInfo* image_descriptors, int count, u32 set_id, u32 binding_point)
+		void program::bind_uniform_array(const std::span<const VkDescriptorImageInfoEx>& image_descriptors, u32 set_id, u32 binding_point)
 		{
-			// Non-caching write
-			auto& set = m_sets[set_id];
-			auto& arr = set.m_scratch_images_array;
-
-			descriptor_array_ref_t data
+			if (m_sets[set_id].m_descriptor_slots[binding_point] == image_descriptors)
 			{
-				.first = arr.size(),
-				.count = static_cast<u32>(count)
-			};
-
-			arr.reserve(arr.size() + static_cast<u32>(count));
-			for (int i = 0; i < count; ++i)
-			{
-				arr.push_back(image_descriptors[i]);
+				return;
 			}
 
-			set.notify_descriptor_slot_updated(binding_point, data);
+			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptors);
 		}
 
 		void program::create_pipeline_layout()
@@ -414,8 +411,8 @@ namespace vk
 				bind_sets[count++] = set.commit();   // Commit variable changes and return handle to the new set
 			}
 
-			vkCmdBindPipeline(cmd, bind_point, m_pipeline);
-			vkCmdBindDescriptorSets(cmd, bind_point, m_pipeline_layout, 0, count, bind_sets, 0, nullptr);
+			cmd.bind_pipeline(m_pipeline, bind_point);
+			cmd.bind_descriptor_sets({ bind_sets, count }, bind_point, m_pipeline_layout);
 			return *this;
 		}
 
@@ -472,6 +469,120 @@ namespace vk
 			return m_descriptor_pool->allocate(m_descriptor_set_layout);
 		}
 
+		void descriptor_table_t::create_descriptor_template()
+		{
+			auto push_descriptor_slot = [this](unsigned idx, VkWriteDescriptorSet& writer)
+			{
+				const auto& slot = m_descriptor_slots[idx];
+				const VkDescriptorType type = m_descriptor_types[idx];
+
+				writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				writer.dstBinding = idx;
+				writer.descriptorCount = 1;
+				writer.descriptorType = type;
+
+				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
+				{
+					m_descriptor_set.push(*ptr, type, idx);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
+				{
+					m_descriptor_set.push(*ptr, type, idx);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
+				{
+					m_descriptor_set.push(ptr->view, type, idx);
+					return;
+				}
+
+				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
+				{
+					writer.descriptorCount = ptr->size();
+					m_descriptor_set.push(ptr->data(), ptr->size(), type, idx);
+					return;
+				}
+
+				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
+			};
+
+			m_descriptor_template_typemask = 0u;
+			m_descriptor_template.clear();
+
+			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			{
+				m_descriptor_template_typemask |= (1u << static_cast<u32>(m_descriptor_types[i]));
+				VkWriteDescriptorSet _template{};
+
+				push_descriptor_slot(i, _template);
+				m_descriptors_dirty[i] = false;
+				m_descriptor_template.push_back(_template);
+			}
+
+			m_descriptor_template_cache_id = umax;
+			ensure(m_descriptor_template.size() == m_descriptor_slots.size());
+		}
+
+		void descriptor_table_t::update_descriptor_template()
+		{
+			auto update_descriptor_slot = [this](unsigned idx)
+			{
+				const auto& slot = m_descriptor_slots[idx];
+				const VkDescriptorType type = m_descriptor_types[idx];
+				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
+				{
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
+				{
+					m_descriptor_template[idx].pBufferInfo = m_descriptor_set.store(*ptr);
+					return;
+				}
+
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
+				{
+					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(ptr->view);
+					return;
+				}
+
+				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
+				{
+					ensure(m_descriptor_template[idx].descriptorCount == ptr->size());
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
+					return;
+				}
+
+				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
+			};
+
+			{
+				std::lock_guard lock(m_descriptor_set);
+				const bool cache_is_valid = m_descriptor_template_cache_id == m_descriptor_set.cache_id();
+
+				for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+				{
+					m_descriptor_template[i].dstSet = m_descriptor_set.value();
+					if (!m_descriptors_dirty[i] && cache_is_valid)
+					{
+						continue;
+					}
+
+					// Update
+					update_descriptor_slot(i);
+					m_descriptors_dirty[i] = false;
+				}
+			}
+
+			// Push
+			m_descriptor_set.push(m_descriptor_template, m_descriptor_template_typemask);
+			m_descriptor_template_cache_id = m_descriptor_set.cache_id();
+		}
+
 		VkDescriptorSet descriptor_table_t::commit()
 		{
 			if (!m_descriptor_set)
@@ -486,59 +597,21 @@ namespace vk
 				return m_descriptor_set.value();
 			}
 
-			auto push_descriptor_slot = [this](unsigned idx)
-			{
-				const auto& slot = m_descriptor_slots[idx];
-				const VkDescriptorType type = m_descriptor_types[idx];
-				if (auto ptr = std::get_if<VkDescriptorImageInfo>(&slot))
-				{
-					m_descriptor_set.push(*ptr, type, idx);
-					return;
-				}
-
-				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
-				{
-					m_descriptor_set.push(*ptr, type, idx);
-					return;
-				}
-
-				if (auto ptr = std::get_if<VkBufferView>(&slot))
-				{
-					m_descriptor_set.push(*ptr, type, idx);
-					return;
-				}
-
-				if (auto ptr = std::get_if<descriptor_array_ref_t>(&slot))
-				{
-					ensure(type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); // Only type supported at the moment
-					ensure((ptr->first + ptr->count) <= m_scratch_images_array.size());
-					m_descriptor_set.push(m_scratch_images_array.data() + ptr->first, ptr->count, type, idx);
-					return;
-				}
-
-				fmt::throw_exception("Unexpected descriptor structure at index %u", idx);
-			};
-
 			m_descriptor_set = allocate_descriptor_set();
 
-			for (unsigned i = 0; i < m_descriptor_slots.size(); ++i)
+			if (!m_descriptor_template.empty()) [[ likely ]]
 			{
-				if (m_descriptors_dirty[i])
-				{
-					// Push
-					push_descriptor_slot(i);
-					m_descriptors_dirty[i] = false;
-					continue;
-				}
-
-				// We should copy here if possible.
-				// Without descriptor_buffer, the most efficient option is to just use the normal bind logic due to the pointer-based nature of the descriptor inputs and no stride.
-				push_descriptor_slot(i);
+				// Run pointer updates. Optimized for cached back-to-back updates which are quite frequent.
+				update_descriptor_template();
+			}
+			else
+			{
+				// Creating the template also seeds initial values
+				create_descriptor_template();
 			}
 
 			m_descriptor_set.on_bind();
 			m_any_descriptors_dirty = false;
-			m_scratch_images_array.clear();
 
 			return m_descriptor_set.value();
 		}
@@ -593,7 +666,7 @@ namespace vk
 						.binding = input.location,
 						.descriptorType = type,
 						.descriptorCount = descriptor_count(input.name),
-						.stageFlags = to_shader_stage_flags(input.domain)
+						.stageFlags = to_shader_stage_flags(input.domain) | input.ex_stages
 					};
 					bindings.push_back(binding);
 
@@ -619,7 +692,7 @@ namespace vk
 		void descriptor_table_t::create_descriptor_pool()
 		{
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
-			m_descriptor_pool->create(*vk::get_current_renderer(), m_descriptor_pool_sizes);
+			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes);
 		}
 
 		void descriptor_table_t::validate() const

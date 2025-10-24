@@ -2732,6 +2732,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="useReBAR">
+                 <property name="text">
+                  <string>Use Re-BAR memory for GPU uploads</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
                   <string>Disable MSL Fast Math</string>

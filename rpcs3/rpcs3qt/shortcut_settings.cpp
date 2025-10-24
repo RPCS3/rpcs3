@@ -114,13 +114,5 @@ QKeySequence shortcut_settings::get_key_sequence(const shortcut_info& entry, con
 
 	const QString saved_value = gui_settings->GetValue(get_shortcut_gui_save(entry.name)).toString();
 
-	QKeySequence key_sequence = QKeySequence::fromString(saved_value);
-
-	if (key_sequence.isEmpty())
-	{
-		// Use the default shortcut if no shortcut was configured
-		key_sequence = QKeySequence::fromString(entry.key_sequence);
-	}
-
-	return key_sequence;
+	return QKeySequence::fromString(saved_value);
 }

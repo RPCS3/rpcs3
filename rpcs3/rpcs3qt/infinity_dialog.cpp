@@ -439,7 +439,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	QComboBox* combo_figlist = new QComboBox();
 
 	// Lambda to populate the combo box based on series filter
-	auto populate_combo = [=](int series_filter) -> u32
+	auto populate_combo = [=, this](int series_filter) -> u32
 	{
 		combo_figlist->clear();
 		QStringList filterlist;

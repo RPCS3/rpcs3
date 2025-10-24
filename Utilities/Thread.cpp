@@ -106,6 +106,11 @@ thread_local u64 g_tls_wait_fail = 0;
 thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
 
+namespace stx
+{
+	atomic_t<u32> g_launch_retainer{0};
+}
+
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
