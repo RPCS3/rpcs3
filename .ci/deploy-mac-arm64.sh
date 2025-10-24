@@ -31,6 +31,14 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 ../../.ci/optimize-mac.sh rpcs3.app
 
+# Download translations
+curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
+  | grep '"download_url":' \
+  | cut -d '"' -f 4 \
+  | while read -r url; do
+      curl -fsSL "$url" -o "rpcs3.app/Contents/translations/$(basename "$url")"
+    done
+
 # Hack
 install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/lib not needed"
 install_name_tool -delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib not needed"
