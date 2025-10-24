@@ -32,6 +32,7 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 ../../.ci/optimize-mac.sh rpcs3.app
 
 # Download translations
+mkdir -p "rpcs3.app/Contents/translations"
 curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
   | grep '"download_url":' \
   | cut -d '"' -f 4 \
