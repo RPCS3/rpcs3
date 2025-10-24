@@ -21,7 +21,6 @@ curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
   | grep '"download_url":' \
   | cut -d '"' -f 4 \
   | while read -r url; do
-      echo "Downloading $(basename "$url")..."
       curl -fsSL "$url" -o "./bin/qt6/translations/$(basename "$url")"
     done
 
