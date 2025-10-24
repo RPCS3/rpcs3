@@ -200,6 +200,23 @@ namespace vk
 
 		// Allow fastest possible allocation on start
 		set_fastest_allocation_flags();
+
+		// Determine the rebar heap. We will exclude it from stats
+		const auto& memory_map = dev.get_memory_mapping();
+		if (memory_map.device_bar_total_bytes !=
+			memory_map.device_local_total_bytes)
+		{
+			for (u32 i = 0; i < ::size32(memory_map.heaps); ++i)
+			{
+				const auto& heap = memory_map.heaps[i];
+				if ((heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) &&
+					heap.size == memory_map.device_bar_total_bytes)
+				{
+					m_rebar_heap_idx = i;
+					break;
+				}
+			}
+		}
 	}
 
 	void mem_allocator_vma::destroy()
@@ -312,6 +329,12 @@ namespace vk
 	f32 mem_allocator_vma::get_memory_usage()
 	{
 		vmaGetHeapBudgets(m_allocator, stats.data());
+
+		// Filter out the Re-BAR heap
+		if (::size32(stats) > m_rebar_heap_idx)
+		{
+			stats[m_rebar_heap_idx].budget = 0;
+		}
 
 		float max_usage = 0.f;
 		for (const auto& info : stats)

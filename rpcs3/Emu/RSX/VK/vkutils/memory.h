@@ -59,6 +59,13 @@ namespace vk
 		void rebalance();
 	};
 
+	struct memory_heap_info
+	{
+		u32 index;
+		u32 flags;
+		u64 size;
+	};
+
 	class mem_allocator_base
 	{
 	public:
@@ -113,6 +120,7 @@ namespace vk
 	private:
 		VmaAllocator m_allocator;
 		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
+		u32 m_rebar_heap_idx = UINT32_MAX;
 	};
 
 
