@@ -1010,6 +1010,8 @@ namespace vk
 				.heap = memory_properties.memoryHeaps[i],
 				.types = {}
 			});
+
+			result.heaps.push_back({ i, memory_properties.memoryHeaps[i].flags, memory_properties.memoryHeaps[i].size });
 		}
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
