@@ -31,6 +31,14 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 ../../.ci/optimize-mac.sh rpcs3.app
 
+# Download translations
+curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
+  | grep '"download_url":' \
+  | cut -d '"' -f 4 \
+  | while read -r url; do
+      curl -fsSL "$url" -o "rpcs3.app/Contents/translations/$(basename "$url")"
+    done
+
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
