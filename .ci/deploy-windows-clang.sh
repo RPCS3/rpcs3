@@ -24,6 +24,15 @@ mkdir ./bin/config/input_configs
 curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./bin/config/input_configs/gamecontrollerdb.txt
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
 
+# Download translations
+mkdir -p ./bin/qt6/translations
+curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/contents/qm" \
+  | grep '"download_url":' \
+  | cut -d '"' -f 4 \
+  | while read -r url; do
+      curl -fsSL "$url" -o "./bin/qt6/translations/$(basename "$url")"
+    done
+
 # Package artifacts
 7z a -m0=LZMA2 -mx9 "$BUILD" ./bin/*
 
