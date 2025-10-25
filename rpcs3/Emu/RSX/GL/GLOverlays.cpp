@@ -395,7 +395,7 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
+	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically)
 	{
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
@@ -445,12 +445,13 @@ namespace gl
 			}
 			}
 
-			rsx::overlays::vertex_options vert_opts;
+			rsx::overlays::vertex_options vert_opts {};
 			program_handle.uniforms["vertex_config"] = vert_opts
 				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.enable_vertical_flip(flip_vertically)
 				.get();
 
-			rsx::overlays::fragment_options draw_opts;
+			rsx::overlays::fragment_options draw_opts {};
 			program_handle.uniforms["fragment_config"] = draw_opts
 				.texture_mode(texture_mode)
 				.clip_fragments(cmd.config.clip_region)
