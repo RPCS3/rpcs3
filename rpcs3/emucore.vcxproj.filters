@@ -879,6 +879,9 @@
     <ClCompile Include="Emu\Io\Skylander.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\KamenRider.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -2077,6 +2080,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Skylander.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\KamenRider.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\md5.h">

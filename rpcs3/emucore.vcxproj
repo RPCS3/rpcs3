@@ -450,6 +450,7 @@
     <ClCompile Include="Emu\Io\Dimensions.cpp" />
     <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
+    <ClCompile Include="Emu\Io\KamenRider.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\Io\usb_vfs.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
@@ -809,6 +810,7 @@
     <ClInclude Include="Emu\Io\Dimensions.h" />
     <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
+    <ClInclude Include="Emu\Io\KamenRider.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
     <ClInclude Include="Emu\Io\usb_vfs.h" />
     <ClInclude Include="Emu\IPC.h" />

@@ -402,6 +402,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/GunCon3.cpp
     Io/Infinity.cpp
     Io/interception.cpp
+    Io/KamenRider.cpp
     Io/KeyboardHandler.cpp
     Io/midi_config_types.cpp
     Io/mouse_config.cpp

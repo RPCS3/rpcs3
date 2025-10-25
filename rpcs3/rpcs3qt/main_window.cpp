@@ -23,6 +23,7 @@
 #include "skylander_dialog.h"
 #include "infinity_dialog.h"
 #include "dimensions_dialog.h"
+#include "kamen_rider_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
 #include "patch_creator_dialog.h"
@@ -2441,7 +2442,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 				}
 			}
 		}
-		
+
 		if (!game_data_shortcuts.empty() && !locations.empty())
 		{
 			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
@@ -2997,6 +2998,12 @@ void main_window::CreateConnects()
 	{
 		dimensions_dialog* dim_dlg = dimensions_dialog::get_dlg(this);
 		dim_dlg->show();
+	});
+
+	connect(ui->actionManage_KamenRider_RideGate, &QAction::triggered, this, [this]
+	{
+		kamen_rider_dialog* kam_dlg = kamen_rider_dialog::get_dlg(this);
+		kam_dlg->show();
 	});
 
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
