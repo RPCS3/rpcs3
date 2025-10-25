@@ -249,6 +249,8 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
+	// Sync
+	void write_barrier(u32 address, u32 range) override;
 	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 address, u32 data) override;
 
