@@ -5,12 +5,44 @@
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Host/MM.h"
 
+#include "Utilities/deferred_op.hpp"
+
 #include "context_accessors.define.h"
 
 namespace rsx
 {
 	namespace nv0039
 	{
+		// Transfer with stride
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 width, u32 height, u32 src_pitch, u32 dst_pitch, u8 src_stride, u8 dst_stride)
+		{
+			for (u32 row = 0; row < height; ++row)
+			{
+				auto dst_ptr = dst;
+				auto src_ptr = src;
+				while (src_ptr < src + width)
+				{
+					*dst_ptr = *src_ptr;
+
+					src_ptr += src_stride;
+					dst_ptr += dst_stride;
+				}
+
+				dst += dst_pitch;
+				src += src_pitch;
+			}
+		}
+
+		inline void block2d_copy(u8* dst, const u8* src, u32 width, u32 height, u32 src_pitch, u32 dst_pitch)
+		{
+			for (u32 i = 0; i < height; ++i)
+			{
+				std::memcpy(dst, src, width);
+				dst += dst_pitch;
+				src += src_pitch;
+			}
+		}
+
 		void buffer_notify(context* ctx, u32, u32 arg)
 		{
 			s32 in_pitch = REGS(ctx)->nv0039_input_pitch();
@@ -56,6 +88,13 @@ namespace rsx
 				}
 			}
 
+			// Deferred write_barrier on RSX side
+			utils::deferred_op deferred([&]()
+			{
+				RSX(ctx)->write_barrier(write_address, write_length);
+				// res->release(0);
+			});
+
 			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
 			u8* dst = vm::_ptr<u8>(write_address);
@@ -81,68 +120,34 @@ namespace rsx
 				// The formats are just input channel strides. You can use this to do cool tricks like gathering channels
 				// Very rare, only seen in use by Destiny
 				// TODO: Hw accel
-				for (u32 row = 0; row < line_count; ++row)
-				{
-					auto dst_ptr = dst;
-					auto src_ptr = src;
-					while (src_ptr < src + line_length)
-					{
-						*dst_ptr = *src_ptr;
-
-						src_ptr += in_format;
-						dst_ptr += out_format;
-					}
-
-					dst += out_pitch;
-					src += in_pitch;
-				}
+				block2d_copy_with_stride(dst, src, line_length, line_count, in_pitch, out_pitch, in_format, out_format);
+				return;
 			}
-			else if (is_overlapping) [[ unlikely ]]
-			{
-				if (is_block_transfer)
-				{
-					std::memmove(dst, src, read_length);
-				}
-				else
-				{
-					std::vector<u8> temp(line_length * line_count);
-					u8* buf = temp.data();
 
-					for (u32 y = 0; y < line_count; ++y)
-					{
-						std::memcpy(buf, src, line_length);
-						buf += line_length;
-						src += in_pitch;
-					}
-
-					buf = temp.data();
-
-					for (u32 y = 0; y < line_count; ++y)
-					{
-						std::memcpy(dst, buf, line_length);
-						buf += line_length;
-						dst += out_pitch;
-					}
-				}
-			}
-			else
+			if (!is_overlapping)
 			{
 				if (is_block_transfer)
 				{
 					std::memcpy(dst, src, read_length);
+					return;
 				}
-				else
-				{
-					for (u32 i = 0; i < line_count; ++i)
-					{
-						std::memcpy(dst, src, line_length);
-						dst += out_pitch;
-						src += in_pitch;
-					}
-				}
+
+				block2d_copy(dst, src, line_length, line_count, in_pitch, out_pitch);
+				return;
 			}
 
-			//res->release(0);
+			if (is_block_transfer)
+			{
+				std::memmove(dst, src, read_length);
+				return;
+			}
+
+			// Handle overlapping 2D range using double-copy to temp.
+			std::vector<u8> temp(line_length * line_count);
+			u8* buf = temp.data();
+
+			block2d_copy(buf, src, line_length, line_count, in_pitch, line_length);
+			block2d_copy(dst, buf, line_length, line_count, line_length, out_pitch);
 		}
 	}
 }
