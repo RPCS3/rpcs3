@@ -7,7 +7,7 @@ export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
 brew install -f --overwrite --quiet ccache pipenv "llvm@$LLVM_COMPILER_VER"
-brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" 
+brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers python@3.13
 arch -x86_64 /usr/local/bin/brew unlink python@3.13
