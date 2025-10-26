@@ -16,7 +16,7 @@
 #include <QCompleter>
 
 kamen_rider_dialog* kamen_rider_dialog::inst = nullptr;
-std::optional<std::tuple<u8, u8, u8>> kamen_rider_dialog::figure_slots[UI_FIG_NUM];
+std::array<std::optional<std::tuple<u8, u8, u8>>, UI_FIG_NUM> kamen_rider_dialog::figure_slots = {};
 QString last_kamen_rider_path;
 
 static const std::map<const std::pair<const u8, const u8>, const std::string> list_kamen_riders = {
