@@ -21,10 +21,11 @@ void kamen_rider_figure::save()
 	kamen_file.write(data.data(), 0x14 * 0x10);
 }
 
-u8 rider_gate::generate_checksum(const std::array<u8, 64>& data, int num_of_bytes) const
+u8 rider_gate::generate_checksum(const std::array<u8, 64>& data, u32 num_of_bytes) const
 {
+	ensure(num_of_bytes <= data.size());
 	int checksum = 0;
-	for (int i = 0; i < num_of_bytes; i++)
+	for (u32 i = 0; i < num_of_bytes; i++)
 	{
 		checksum += data[i];
 	}
@@ -33,11 +34,11 @@ u8 rider_gate::generate_checksum(const std::array<u8, 64>& data, int num_of_byte
 
 kamen_rider_figure& rider_gate::get_figure_by_uid(const std::array<u8, 7> uid)
 {
-	for (u8 i = 0; i < figures.size(); i++)
+	for (kamen_rider_figure& figure : figures)
 	{
-		if (figures[i].uid == uid)
+		if (figure.uid == uid)
 		{
-			return figures[i];
+			return figure;
 		}
 	}
 	return figures[7];
@@ -65,7 +66,7 @@ void rider_gate::get_list_tags(std::array<u8, 64>& reply_buf, u8 command, u8 seq
 
 	reply_buf = {0x55, 0x02, command, sequence};
 	u8 index = 4;
-	for (auto& figure : figures)
+	for (const kamen_rider_figure& figure : figures)
 	{
 		if (figure.present)
 		{
@@ -84,9 +85,9 @@ void rider_gate::query_block(std::array<u8, 64>& reply_buf, u8 command, u8 seque
 
 	reply_buf = {0x55, 0x13, command, sequence, 0x00};
 
-	std::array<u8, 7> uid_array = {uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
+	const std::array<u8, 7> uid_array = {uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
 
-	kamen_rider_figure& figure = get_figure_by_uid(uid_array);
+	const kamen_rider_figure& figure = get_figure_by_uid(uid_array);
 	if (figure.present)
 	{
 		if (sector < 5 && block < 4)
@@ -101,7 +102,7 @@ void rider_gate::write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequen
 {
 	std::lock_guard lock(kamen_mutex);
 
-	std::array<u8, 7> uid_array = {uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
+	const std::array<u8, 7> uid_array = {uid[0], uid[1], uid[2], uid[3], uid[4], uid[5], uid[6]};
 
 	kamen_rider_figure& figure = get_figure_by_uid(uid_array);
 	if (figure.present)
@@ -143,7 +144,7 @@ bool rider_gate::remove_figure(u8 index)
 			std::array<u8, 64> figure_removed_response = {0x56, 0x09, 0x09, 0x00};
 			memcpy(&figure_removed_response[4], figure.uid.data(), figure.uid.size());
 			figure_removed_response[11] = generate_checksum(figure_removed_response, 11);
-			m_figure_added_removed_responses.push(figure_removed_response);
+			m_figure_added_removed_responses.push(std::move(figure_removed_response));
 		}
 		figure.uid = {};
 		return true;
@@ -183,7 +184,7 @@ u8 rider_gate::load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_f
 			std::array<u8, 64> figure_added_response = {0x56, 0x09, 0x09, 0x01};
 			memcpy(&figure_added_response[4], figure.uid.data(), figure.uid.size());
 			figure_added_response[11] = generate_checksum(figure_added_response, 11);
-			m_figure_added_removed_responses.push(figure_added_response);
+			m_figure_added_removed_responses.push(std::move(figure_added_response));
 		}
 	}
 	return found_slot;
@@ -283,6 +284,6 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 			break;
 		}
 
-		m_queries.push(q_result);
+		m_queries.push(std::move(q_result));
 	}
 }

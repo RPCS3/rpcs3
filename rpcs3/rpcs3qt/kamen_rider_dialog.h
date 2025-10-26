@@ -42,7 +42,7 @@ protected:
 
 protected:
 	QLineEdit* edit_kamen_riders[UI_FIG_NUM]{};
-	static std::optional<std::tuple<u8, u8, u8>> figure_slots[UI_FIG_NUM];
+	static std::array<std::optional<std::tuple<u8, u8, u8>>, UI_FIG_NUM> figure_slots;
 
 private:
 	static kamen_rider_dialog* inst;

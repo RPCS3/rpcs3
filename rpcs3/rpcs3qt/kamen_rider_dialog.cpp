@@ -93,7 +93,7 @@ static u32 kamen_rider_crc32(const std::array<u8, 16>& buffer)
 	u32 ret = 0;
 	for (u32 i = 0; i < 12; ++i)
 	{
-		u8 index = u8(ret & 0xFF) ^ buffer[i];
+		const u8 index = u8(ret & 0xFF) ^ buffer[i];
 		ret = ((ret >> 8) ^ CRC32_TABLE[index]);
 	}
 
@@ -336,7 +336,7 @@ kamen_rider_dialog* kamen_rider_dialog::get_dlg(QWidget* parent)
 
 void kamen_rider_dialog::clear_kamen_rider(u8 slot)
 {
-	if (const auto& slot_infos = figure_slots[slot])
+	if (const auto& slot_infos = ::at32(figure_slots, slot))
 	{
 		const auto& [cur_slot, id, var] = slot_infos.value();
 		g_ridergate.remove_figure(cur_slot);

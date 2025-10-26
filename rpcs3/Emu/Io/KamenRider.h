@@ -30,10 +30,10 @@ public:
 
 protected:
 	shared_mutex kamen_mutex;
-	std::array<kamen_rider_figure, 8> figures;
+	std::array<kamen_rider_figure, 8> figures{};
 
 private:
-	u8 generate_checksum(const std::array<u8, 64>& data, int num_of_bytes) const;
+	u8 generate_checksum(const std::array<u8, 64>& data, u32 num_of_bytes) const;
 	kamen_rider_figure& get_figure_by_uid(const std::array<u8, 7> uid);
 
 	std::queue<std::array<u8, 64>> m_figure_added_removed_responses;
