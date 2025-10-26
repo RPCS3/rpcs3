@@ -41,7 +41,7 @@ protected:
 	void update_edits();
 
 protected:
-	std::array<QLineEdit, UI_FIG_NUM> edit_kamen_riders{};
+	std::array<QLineEdit*, UI_FIG_NUM> edit_kamen_riders{};
 	static std::array<std::optional<std::tuple<u8, u8, u8>>, UI_FIG_NUM> figure_slots;
 
 private:
