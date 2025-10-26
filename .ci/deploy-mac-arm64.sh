@@ -32,10 +32,8 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 ../../.ci/optimize-mac.sh rpcs3.app
 
 # Hack
-install_name_tool \
--delete_rpath /opt/homebrew/lib \
--delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3
-#-delete_rpath /opt/homebrew1/Cellar/sdl3/3.2.8/lib
+install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/lib not needed"
+install_name_tool -delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib not needed"
 
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
