@@ -12,6 +12,7 @@ rm /usr/local/bin/pip3
 rm /usr/local/bin/pydoc3
 rm /usr/local/bin/python3
 rm /usr/local/bin/python3-config
+rm /usr/local/bin/idle3.14
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
 arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
