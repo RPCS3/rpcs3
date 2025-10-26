@@ -57,8 +57,8 @@ export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN
 export SDL3_DIR="$BREW_X64_PATH/opt/sdl3/lib/cmake/SDL3"
 
 export PATH="/opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
-LLVMLIBC=$(brew --prefix llvm)/lib/c++
-export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib,-L$LLVMLIBC"
+# shellcheck disable=SC2155
+export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib,-L$(brew --prefix llvm)/lib/c++"
 export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie -D__MAC_OS_X_VERSION_MIN_REQUIRED=140000"
 export CFLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=140000"
 export LIBRARY_PATH="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER/lib:$BREW_X64_PATH/lib"
