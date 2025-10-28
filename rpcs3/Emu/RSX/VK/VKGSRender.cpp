@@ -553,13 +553,13 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	// Initialize optional allocation information with placeholders
-	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_vertex_layout_stream_info = { m_vertex_layout_ring_info.heap->value, 0, VK_WHOLE_SIZE };
-	m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
+	m_vertex_env_buffer_info = { *m_vertex_env_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_vertex_constants_buffer_info = { *m_transform_constants_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_fragment_env_buffer_info = { *m_fragment_env_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_fragment_texture_params_buffer_info = { *m_fragment_texture_params_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_raster_env_buffer_info = { *m_raster_env_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_vertex_layout_stream_info = { *m_vertex_layout_ring_info.heap, 0, VK_WHOLE_SIZE };
+	m_fragment_constants_buffer_info = { *m_fragment_constants_ring_info.heap, 0, VK_WHOLE_SIZE };
 
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
@@ -1981,8 +1981,8 @@ void VKGSRender::load_program_env()
 		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, bound_vertex_prog);
 		m_instancing_buffer_ring_info.unmap();
 
-		m_instancing_indirection_buffer_info = { m_instancing_buffer_ring_info.heap->value, indirection_table_offset, indirection_table_buf.size() };
-		m_instancing_constants_array_buffer_info = { m_instancing_buffer_ring_info.heap->value, constants_data_table_offset, constants_array_buf.size() };
+		m_instancing_indirection_buffer_info = { *m_instancing_buffer_ring_info.heap, indirection_table_offset, indirection_table_buf.size() };
+		m_instancing_constants_array_buffer_info = { *m_instancing_buffer_ring_info.heap, constants_data_table_offset, constants_array_buf.size() };
 	}
 	else if (update_transform_constants)
 	{
@@ -2067,7 +2067,7 @@ void VKGSRender::load_program_env()
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();
 
-			m_vertex_instructions_buffer_info = { m_vertex_instructions_buffer.heap->value, vp_mapping, vp_block_length };
+			m_vertex_instructions_buffer_info = { *m_vertex_instructions_buffer.heap, vp_mapping, vp_block_length };
 		}
 
 		if (m_interpreter_state & rsx::fragment_program_dirty)
@@ -2085,7 +2085,7 @@ void VKGSRender::load_program_env()
 			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
 
-			m_fragment_instructions_buffer_info = { m_fragment_instructions_buffer.heap->value, fp_mapping, fp_block_length };
+			m_fragment_instructions_buffer_info = { *m_fragment_instructions_buffer.heap, fp_mapping, fp_block_length };
 		}
 	}
 
@@ -2112,7 +2112,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		const VkBuffer predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
+		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4);
 		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}

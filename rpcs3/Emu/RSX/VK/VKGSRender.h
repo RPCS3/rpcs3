@@ -4,6 +4,7 @@
 
 #include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
+#include "vkutils/ex.h"
 #include "vkutils/instance.h"
 #include "vkutils/sync.h"
 #include "vkutils/swapchain.h"
@@ -136,18 +137,18 @@ private:
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
 
-	VkDescriptorBufferInfo m_vertex_env_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_env_buffer_info {};
-	VkDescriptorBufferInfo m_vertex_layout_stream_info {};
-	VkDescriptorBufferInfo m_vertex_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
-	VkDescriptorBufferInfo m_raster_env_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_indirection_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_constants_array_buffer_info{};
+	VkDescriptorBufferInfoEx m_vertex_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_layout_stream_info {};
+	VkDescriptorBufferInfoEx m_vertex_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_texture_params_buffer_info {};
+	VkDescriptorBufferInfoEx m_raster_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_indirection_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_constants_array_buffer_info{};
 
-	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_instructions_buffer_info {};
 
 	rsx::simple_array<u8> m_multidraw_parameters_buffer;
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.

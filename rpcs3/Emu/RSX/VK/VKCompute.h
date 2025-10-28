@@ -347,7 +347,7 @@ namespace vk
 		void bind_resources(const vk::command_buffer& cmd) override
 		{
 			set_parameters(cmd);
-			m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
+			m_program->bind_uniform({ *m_data, m_data_offset, m_ssbo_length }, 0, 0);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
@@ -449,8 +449,8 @@ namespace vk
 		{
 			set_parameters(cmd);
 
-			m_program->bind_uniform({ src_buffer->value, in_offset, block_length }, 0, 0);
-			m_program->bind_uniform({ dst_buffer->value, out_offset, block_length }, 0, 1);
+			m_program->bind_uniform({ *src_buffer, in_offset, block_length }, 0, 0);
+			m_program->bind_uniform({ *dst_buffer, out_offset, block_length }, 0, 1);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
@@ -579,8 +579,8 @@ namespace vk
 			set_parameters(cmd);
 
 			const auto op = static_cast<u32>(Op);
-			m_program->bind_uniform({ src_buffer->value, in_offset, in_block_length }, 0u, 0u ^ op);
-			m_program->bind_uniform({ dst_buffer->value, out_offset, out_block_length }, 0u, 1u ^ op);
+			m_program->bind_uniform({ *src_buffer, in_offset, in_block_length }, 0u, 0u ^ op);
+			m_program->bind_uniform({ *dst_buffer, out_offset, out_block_length }, 0u, 1u ^ op);
 		}
 
 		void set_parameters(const vk::command_buffer& cmd)
