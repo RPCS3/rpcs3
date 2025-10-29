@@ -330,7 +330,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 					));
 				}
 
-				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
+				QMessageBox mb;
+				mb.setWindowModality(Qt::WindowModal);
+				mb.setWindowTitle(title);
+				mb.setIcon(QMessageBox::Critical);
+				mb.setTextFormat(Qt::RichText);
+				mb.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+				mb.setDefaultButton(QMessageBox::No);
+				mb.setText(message);
+				mb.layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+				if (mb.exec() == QMessageBox::No)
 				{
 					// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
 					ui->enableTSX->setCurrentIndex(find_item(ui->enableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
