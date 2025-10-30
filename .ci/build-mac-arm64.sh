@@ -9,9 +9,9 @@ export HOMEBREW_NO_INSTALL_CLEANUP=1
 brew install -f --overwrite --quiet ccache pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
-# moltenvk based on commit for 1.3.0 release
+# moltenvk based on commit for 1.4.0 release
 export HOMEBREW_DEVELOPER=1 # Prevents blocking of local formulae
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/7255441cbcafabaa8950f67c7ec55ff499dbb2d3/Formula/m/molten-vk.rb
+wget https://raw.githubusercontent.com/Homebrew/homebrew-core/ea2bec5f1f4384e188d7fc0702ab21a20a2ced08/Formula/m/molten-vk.rb
 /opt/homebrew/bin/brew install -f --overwrite --formula --quiet ./molten-vk.rb
 export HOMEBREW_DEVELOPER=0
 
