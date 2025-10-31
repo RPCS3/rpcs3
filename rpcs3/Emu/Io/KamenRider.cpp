@@ -123,6 +123,7 @@ bool rider_gate::has_figure_been_added_removed() const
 
 std::array<u8, 64> rider_gate::pop_added_removed_response()
 {
+	std::lock_guard lock(kamen_mutex);
 	std::array<u8, 64> response = m_figure_added_removed_responses.front();
 	m_figure_added_removed_responses.pop();
 	return response;
@@ -229,6 +230,7 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 
 	if (endpoint == 0x81)
 	{
+		std::lock_guard lock(m_query_mutex);
 		// Respond after FF command
 		transfer->expected_time = get_timestamp() + 1000;
 		if (g_ridergate.has_figure_been_added_removed())
@@ -284,6 +286,7 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 			break;
 		}
 
+		std::lock_guard lock(m_query_mutex);
 		m_queries.push(std::move(q_result));
 	}
 }
