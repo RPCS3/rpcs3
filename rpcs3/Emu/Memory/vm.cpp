@@ -581,6 +581,8 @@ namespace vm
 					break;
 				}
 
+				to_clear &= get_range_lock_bits(false);
+
 				utils::pause();
 			}
 
