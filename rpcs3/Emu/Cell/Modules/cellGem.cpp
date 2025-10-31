@@ -2284,6 +2284,8 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 
 error_code cellGemConvertVideoFinish(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemConvertVideoFinish()");
 
 	auto& gem = g_fxo->get<gem_config>();
