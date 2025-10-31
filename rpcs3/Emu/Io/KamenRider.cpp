@@ -226,7 +226,6 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 
 	if (endpoint == 0x81)
 	{
-		std::lock_guard lock(m_query_mutex);
 		// Respond after FF command
 		transfer->expected_time = get_timestamp() + 1000;
 		std::optional<std::array<u8, 64>> response = g_ridergate.pop_added_removed_response();
@@ -287,8 +286,6 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 			kamen_rider_log.error("Unhandled Query Type: 0x%02X", command);
 			break;
 		}
-
-		std::lock_guard lock(m_query_mutex);
 		m_queries.push(std::move(q_result));
 	}
 }

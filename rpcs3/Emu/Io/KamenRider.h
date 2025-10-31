@@ -56,6 +56,5 @@ public:
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 
 protected:
-	shared_mutex m_query_mutex;
 	std::queue<std::array<u8, 64>> m_queries;
 };
