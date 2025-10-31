@@ -901,7 +901,8 @@ public:
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
-	bool reservation_check(u32 addr, const decltype(rdata)& data) const;
+	// Optionally pass a known allocated address for internal optimization (the current Effective-Address of the MFC command)
+	bool reservation_check(u32 addr, const decltype(rdata)& data, u32 current_eal = 0) const;
 	static bool reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_lock);
 	usz register_cache_line_waiter(u32 addr);
 	void deregister_cache_line_waiter(usz index);
