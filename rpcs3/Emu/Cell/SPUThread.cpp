@@ -5595,7 +5595,7 @@ bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_
 	if ((addr >> 28) < 2 || (addr >> 28) == 0xd)
 	{
 		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
-		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) == hash;
+		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) != hash;
 	}
 
 	// Ensure data is allocated (HACK: would raise LR event if not)
