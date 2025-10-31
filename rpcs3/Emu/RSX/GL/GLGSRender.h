@@ -137,6 +137,8 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
 
 	// Present
+	gl::fbo m_sshot_fbo;
+	std::unique_ptr<gl::texture> m_sshot_tex;
 	std::unique_ptr<gl::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 

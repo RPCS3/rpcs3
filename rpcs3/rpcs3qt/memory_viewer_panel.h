@@ -19,6 +19,7 @@ class QLabel;
 class QThread;
 class QHBoxLayout;
 class QKeyEvent;
+class QCloseEvent;
 
 class cpu_thread;
 class CPUDisAsm;
@@ -95,10 +96,10 @@ private:
 	QHBoxLayout* m_hbox_mem_panel = nullptr;
 	QThread* m_search_thread = nullptr;
 
-	const std::function<cpu_thread*()> m_get_cpu;
+	std::function<cpu_thread*()> m_get_cpu;
 	const thread_class m_type;
 	const std::add_pointer_t<rsx::thread> m_rsx;
-	const std::shared_ptr<utils::shm> m_spu_shm;
+	std::shared_ptr<utils::shm> m_spu_shm;
 	const u32 m_addr_mask;
 
 	std::shared_ptr<CPUDisAsm> m_disasm;
@@ -119,6 +120,7 @@ private:
 	u64 OnSearch(std::string wstr, u32 mode);
 
 	void keyPressEvent(QKeyEvent* event) override;
+	void closeEvent(QCloseEvent* event) override;
 };
 
 // Lifetime management with IDM

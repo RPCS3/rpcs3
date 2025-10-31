@@ -30,6 +30,8 @@ namespace vk
 
 	struct memory_type_mapping
 	{
+		std::vector<memory_heap_info> heaps;
+
 		memory_type_info host_visible_coherent;
 		memory_type_info device_local;
 		memory_type_info device_bar;

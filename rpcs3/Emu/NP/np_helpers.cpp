@@ -1,3 +1,4 @@
+#include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
 #include "util/types.hpp"
 #include "Utilities/StrUtil.h"
@@ -22,9 +23,15 @@ namespace np
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
 
+	bool validate_communication_id(const SceNpCommunicationId& com_id)
+	{
+		return std::all_of(com_id.data, com_id.data + 9, [](char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'); }) && com_id.num <= 99;
+	}
+
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId)
 	{
-		return fmt::format("%s_%02d", communicationId.data, communicationId.num);
+		std::string_view com_id_data(communicationId.data, 9);
+		return fmt::format("%s_%02d", com_id_data, communicationId.num);
 	}
 
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
