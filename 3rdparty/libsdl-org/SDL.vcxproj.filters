@@ -1457,9 +1457,6 @@
     <ClCompile Include="SDL\src\sensor\windows\SDL_windowssensor.c">
       <Filter>sensor\windows</Filter>
     </ClCompile>
-    <ClCompile Include="SDL\src\render\SDL_d3dmath.c">
-      <Filter>render</Filter>
-    </ClCompile>
     <ClCompile Include="SDL\src\render\SDL_render.c">
       <Filter>render</Filter>
     </ClCompile>
