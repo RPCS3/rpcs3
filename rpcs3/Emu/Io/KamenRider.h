@@ -3,6 +3,7 @@
 #include "Emu/Io/usb_device.h"
 #include "Utilities/mutex.h"
 #include <array>
+#include <optional>
 #include <queue>
 
 struct kamen_rider_figure
@@ -22,8 +23,7 @@ public:
 	void get_list_tags(std::array<u8, 64>& replyBuf, u8 command, u8 sequence);
 	void query_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block);
 	void write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block, const u8* to_write_buf);
-	bool has_figure_been_added_removed() const;
-	std::array<u8, 64> pop_added_removed_response();
+	std::optional<std::array<u8, 64>> pop_added_removed_response();
 
 	bool remove_figure(u8 position);
 	u8 load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_file);

@@ -1,11 +1,6 @@
 #include "stdafx.h"
 #include "KamenRider.h"
 
-#include <bit>
-
-#include "Crypto/aes.h"
-#include "Crypto/sha1.h"
-
 LOG_CHANNEL(kamen_rider_log, "kamen_rider");
 
 rider_gate g_ridergate;
@@ -116,14 +111,15 @@ void rider_gate::write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequen
 	get_blank_response(command, sequence, replyBuf);
 }
 
-bool rider_gate::has_figure_been_added_removed() const
-{
-	return !m_figure_added_removed_responses.empty();
-}
-
-std::array<u8, 64> rider_gate::pop_added_removed_response()
+std::optional<std::array<u8, 64>> rider_gate::pop_added_removed_response()
 {
 	std::lock_guard lock(kamen_mutex);
+
+	if (m_figure_added_removed_responses.empty())
+	{
+		return std::nullopt;
+	}
+
 	std::array<u8, 64> response = m_figure_added_removed_responses.front();
 	m_figure_added_removed_responses.pop();
 	return response;
@@ -233,14 +229,20 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 		std::lock_guard lock(m_query_mutex);
 		// Respond after FF command
 		transfer->expected_time = get_timestamp() + 1000;
-		if (g_ridergate.has_figure_been_added_removed())
+		std::optional<std::array<u8, 64>> response = g_ridergate.pop_added_removed_response();
+		if (response)
 		{
-			memcpy(buf, g_ridergate.pop_added_removed_response().data(), 0x20);
+			memcpy(buf, response.value().data(), 0x40);
 		}
 		else if (!m_queries.empty())
 		{
 			memcpy(buf, m_queries.front().data(), 0x20);
 			m_queries.pop();
+		}
+		else
+		{
+			transfer->expected_count = 0;
+			transfer->expected_result = EHCI_CC_HALTED;
 		}
 	}
 	else if (endpoint == 0x01)
