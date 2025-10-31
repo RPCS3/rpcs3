@@ -4125,7 +4125,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr != addr)
 			{
 				// Last check for event before we replace the reservation with a new one
-				if (reservation_check(raddr, rdata))
+				if (~ch_events.load().events & SPU_EVENT_LR && reservation_check(raddr, rdata, addr))
 				{
 					set_events(SPU_EVENT_LR);
 				}
@@ -4821,7 +4821,7 @@ bool spu_thread::process_mfc_cmd()
 		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
-bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
+bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data, u32 current_eal) const
 {
 	if (!addr)
 	{
@@ -4838,6 +4838,21 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 	{
 		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
 		return !cmp_rdata(data, *vm::get_super_ptr<decltype(rdata)>(addr));
+	}
+
+	if ((addr >> 20) == (current_eal >> 20))
+	{
+		if (vm::check_addr(addr, vm::page_1m_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
+
+		if ((addr >> 16) == (current_eal >> 16) && vm::check_addr(addr, vm::page_64k_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
 	}
 
 	// Ensure data is allocated (HACK: would raise LR event if not)
