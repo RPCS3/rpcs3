@@ -414,12 +414,56 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 		sys_rsx.warning("sys_rsx_context_iomap(): RSX is not idle while mapping io");
 	}
 
+	constexpr u32 _1m = 1u << 20;
+
+	std::unique_lock fast_lock(render->sys_rsx_mtx, std::defer_lock);
+
+	// Fast path for when mapping is the same
+	for (u32 attempts = 0;; attempts++)
+	{
+		if (attempts == 2)
+		{
+			// Nothing to do
+			return CELL_OK;
+		}
+
+		if (attempts == 1 && size >= _1m * 2)
+		{
+			// Confirm mapped the same by rechecking with mutex
+			fast_lock.lock();
+		}
+
+		for (u32 i = 0; i < size; i += _1m)
+		{
+			const auto& table = render->iomap_table;
+
+			const u32 prev_ea = table.ea[(io + i) / _1m];
+			const u32 prev_io = table.io[(ea + i) / _1m];
+
+			if (prev_ea != ea + i || prev_io != io + i)
+			{
+				attempts = umax;
+				break;
+			}
+		}
+
+		if (attempts == umax)
+		{
+			break;
+		}
+	}
+
+	if (fast_lock.owns_lock())
+	{
+		fast_lock.unlock();
+	}
+
 	// Wait until we have no active RSX locks and reserve iomap for use. Must do so before acquiring vm lock to avoid deadlocks
 	rsx::reservation_lock<true> rsx_lock(ea, size);
 
 	vm::writer_lock rlock;
 
-	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	for (u32 addr = ea, end = ea + size; addr < end; addr += _1m)
 	{
 		if (!vm::check_addr(addr, vm::page_readable | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
 		{
