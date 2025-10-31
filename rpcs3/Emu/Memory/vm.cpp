@@ -547,6 +547,13 @@ namespace vm
 			{
 				to_clear = for_all_range_locks(to_clear & ~get_range_lock_bits(true), [&](u64 addr2, u32 size2)
 				{
+					constexpr u32 range_size_loc = vm::range_pos - 32;
+
+					if ((size2 >> range_size_loc) == (vm::range_readable >> vm::range_pos))
+					{
+						return 0;
+					}
+
 					// Split and check every 64K page separately
 					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
