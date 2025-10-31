@@ -30,9 +30,10 @@ fi
 
 echo "Found llvm-mt.exe at: $mtPath"
 
-VcpkgRoot="$(pwd)/vcpkg"
+VcpkgRoot="$VCPKG_ROOT"
+VcpkgBuildRoot="$GITHUB_WORKSPACE/build"
 VcpkgTriplet="$VCPKG_TRIPLET"
-VcpkgInstall="$VcpkgRoot/installed/$VcpkgTriplet"
+VcpkgInstall="$VcpkgBuildRoot/vcpkg_installed/$VcpkgTriplet"
 VcpkgInclude="$VcpkgInstall/include"
 VcpkgLib="$VcpkgInstall/lib"
 
@@ -42,8 +43,10 @@ git config --global --add safe.directory '*'
 
 # Initialize submodules except certain ones
 echo "Initializing submodules"
+set -x
 # shellcheck disable=SC2046
 git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/FAudio/ && !/libpng/ && !/zlib/ && !/feralinteractive/ { print $3 }' .gitmodules)
+set +x
 
 # Create and enter build directory
 echo "Creating build directory"

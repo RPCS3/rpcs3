@@ -171,7 +171,7 @@ namespace vm
 
 			auto stamp0 = utils::get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))					
 			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
 #else
 			status = _xbegin();
@@ -180,7 +180,7 @@ namespace vm
 			{
 				if (res & rsrv_unique_lock)
 				{
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 					__asm__ volatile ("xend; mov $-1, %%eax;" ::: "memory");
 #else
 					_xend();
@@ -192,7 +192,7 @@ namespace vm
 				{
 					std::invoke(op, *sptr);
 					const u64 old_time = res.fetch_add(128);
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 					__asm__ volatile ("xend;" ::: "memory");
 #else
 					_xend();
@@ -206,7 +206,7 @@ namespace vm
 					if (auto result = std::invoke(op, *sptr))
 					{
 						const u64 old_time = res.fetch_add(128);
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 						__asm__ volatile ("xend;" ::: "memory");
 #else
 						_xend();
@@ -247,7 +247,7 @@ namespace vm
 					break;
 				}
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 				__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
 #else
 				status = _xbegin();
@@ -260,7 +260,7 @@ namespace vm
 				if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 				{
 					std::invoke(op, *sptr);
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 					__asm__ volatile ("xend;" ::: "memory");
 #else
 					_xend();
@@ -274,7 +274,7 @@ namespace vm
 				{
 					if (auto result = std::invoke(op, *sptr))
 					{
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 						__asm__ volatile ("xend;" ::: "memory");
 #else
 						_xend();
@@ -286,7 +286,7 @@ namespace vm
 					}
 					else
 					{
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 						__asm__ volatile ("xend;" ::: "memory");
 #else
 						_xend();

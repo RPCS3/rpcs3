@@ -344,12 +344,15 @@ jobs:
       CCACHE_DIR: 'C:\ccache'
       VCPKG_TRIPLET: x64-windows
       VCPKG_BUILD_TYPE: release
+      VCPKG_ROOT: "${{github.workspace}}/vcpkg"
+      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
     name: RPCS3 Windows ${{ matrix.compiler }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
           fetch-depth: 0
+
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
         if: ${{ matrix.compiler == 'clang' }}
@@ -386,42 +389,21 @@ jobs:
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
-      - name: Restore vcpkg cache
-        if: ${{ matrix.compiler == 'clang-cl' }}
-        uses: actions/cache/restore@main
-        id: restore-vcpkg-cache
-        with:
-          path: |
-            vcpkg/installed
-            vcpkg/buildtrees
-          key: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-${{ hashFiles('**/vcpkg') }}
-          restore-keys: vcpkg-${{ runner.os }}-${{ matrix.compiler }}-${{ runner.arch }}-
 
-      - name: Install dependencies with vcpkg
+      - name: 'Setup NuGet Credentials for vcpkg'
         if: ${{ matrix.compiler == 'clang-cl' }}
-        shell: pwsh
-        run: >-
-          .\vcpkg\vcpkg.exe install
-          ffmpeg[avcodec,avformat,swscale,swresample]
-          libpng
-          opencv
-          qtbase
-          qtmultimedia
-          qtsvg
-          qttools
-          vulkan
-          zlib
-          --triplet $env:VCPKG_TRIPLET
-          --clean-after-build
-
-      - name: Save vcpkg cache
-        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
-        uses: actions/cache/save@main
-        with:
-          path: |
-            vcpkg/installed
-            vcpkg/buildtrees
-          key: ${{ steps.restore-vcpkg-cache.outputs.cache-primary-key }}
+        shell: 'bash'
+        run: |
+          `./vcpkg/vcpkg fetch nuget | tail -n 1` \
+          sources add \
+          -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+          -storepasswordincleartext \
+          -name "GitHub" \
+          -username "${{ github.repository_owner }}" \
+          -password "${{ secrets.GITHUB_TOKEN }}"
+          `./vcpkg/vcpkg fetch nuget | tail -n 1` \
+          setapikey "${{ secrets.GITHUB_TOKEN }}" \
+          -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
       - name: Restore LLVM Cache
         if: ${{ matrix.compiler == 'clang-cl' }} 
@@ -431,6 +413,7 @@ jobs:
           path: ./llvm-${{ matrix.llvmver }}
           key: ${{ runner.os }}-llvm-dl-cache-${{ hashFiles('**/llvm-${{ matrix.llvmver }}') }}
           restore-keys: ${{ runner.os }}-clang-dl-cache-
+
       - name: Add LLVM
         if: ${{ matrix.compiler == 'clang-cl' }}
         shell: pwsh
@@ -447,14 +430,14 @@ jobs:
             rm -r clang*
           }
           Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
-          C:\PROGRA~1\LLVM\bin\clang-cl.exe --version
+
       - name: Save LLVM Cache
         if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
         uses: actions/cache/save@main
         with:
           path: ./llvm-${{ matrix.llvmver }}
           key: ${{ steps.llvm-cache.outputs.cache-primary-key }}
-        
+
       - name: Restore build Ccache
         uses: actions/cache/restore@main
         id: restore-build-ccache
@@ -472,7 +455,7 @@ jobs:
           .ci/build-windows-clang.sh
           .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
           .ci/deploy-windows-${{ matrix.compiler }}.sh
-          
+ 
       - name: install DIA SDK
         if: ${{ matrix.compiler == 'clang-cl' }}      
         run: |

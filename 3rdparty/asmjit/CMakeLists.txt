@@ -11,6 +11,7 @@ include("${ASMJIT_DIR}/CMakeLists.txt")
 add_library(asmjit ${ASMJIT_SRC})
 target_include_directories(asmjit PUBLIC ${ASMJIT_DIR}/src)
 target_link_libraries(asmjit PRIVATE ${ASMJIT_DEPS})
+target_compile_options(asmjit PRIVATE -Wno-nontrivial-memcall -Wno-deprecated-anon-enum-enum-conversion)
 
 # ASMJIT should have a option for disabling installing and this wouldnt
 # be required to avoid installing ASMJIT...
