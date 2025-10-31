@@ -298,7 +298,7 @@ public:
 		const QString sdl         = tr("The SDL handler supports a variety of controllers across different platforms.");
 
 		const QString orientation_reset  = tr("Resets the sensor orientation when pressed.<br>Toggle the checkbox to enable or disable the orientation feature.<br>Currently only used for PS Move interactions.");
-		const QString analog_limiter     = tr("Applies the stick multipliers while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the analog limiter on button press instead.");
+		const QString analog_limiter     = tr("Applies the stick multipliers while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the analog limiter on button press instead.<br>If no button has been assigned, the stick multipliers are always applied.");
 		const QString pressure_intensity = tr("Controls the intensity of pressure sensitive buttons while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the intensity on button press instead.<br>Use the percentage to change how hard you want to press a button.");
 		const QString pressure_deadzone  = tr("Controls the deadzone of pressure sensitive buttons. It determines how far the button has to be pressed until it is recognized by the game. The resulting range will be projected onto the full button sensitivity range.");
 		const QString squircle_factor    = tr("The actual DualShock 3's stick range is not circular but formed like a rounded square (or squircle) which represents the maximum range of the emulated sticks. You can use the squircle values to modify the stick input if your sticks can't reach the corners of that range. A value of 0 does not apply any so called squircling. A value of 8000 is usually recommended.");
