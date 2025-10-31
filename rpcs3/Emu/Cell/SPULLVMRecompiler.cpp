@@ -2231,6 +2231,12 @@ public:
 					{
 						for (auto& [a, b] : m_blocks)
 						{
+							if (has_gpr_memory_barriers)
+							{
+								// Dive deeper and inspect GPR store barriers
+								break;
+							}
+
 							// Check if the store occurs before any barrier in the block
 							if (b.store[i] && b.store[i] != bs && b.store_context_first_id[i] == 1)
 							{

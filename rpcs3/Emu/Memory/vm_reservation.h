@@ -217,7 +217,7 @@ namespace vm
 					}
 					else
 					{
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 						__asm__ volatile ("xend;" ::: "memory");
 #else
 						_xend();

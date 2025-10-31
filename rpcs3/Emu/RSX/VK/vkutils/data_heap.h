@@ -32,6 +32,7 @@ namespace vk
 
 	protected:
 		bool grow(usz size) override;
+		bool can_allocate_heap(const vk::memory_type_info& target_heap, usz size, int max_usage_percent);
 
 	public:
 		std::unique_ptr<buffer> heap;
