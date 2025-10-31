@@ -477,20 +477,23 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 		}
 	}
 
-	io >>= 20, ea >>= 20, size >>= 20;
-
 	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
-	for (u32 i = 0; i < size; i++)
+	for (u32 i = 0; i < size; i += _1m)
 	{
 		auto& table = render->iomap_table;
 
-		// TODO: Investigate relaxed memory ordering
-		const u32 prev_ea = table.ea[io + i];
-		table.ea[io + i].release((ea + i) << 20);
-		if (prev_ea + 1) table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
-		table.io[ea + i].release((io + i) << 20);
+		const u32 prev_ea = table.ea[(io + i) / _1m];
+
+		table.ea[(io + i) / _1m].release(ea + i);
+
+		if (prev_ea != umax)
+		{
+			table.io[prev_ea / _1m].release(-1); // Clear previous mapping if exists
+		}
+
+		table.io[(ea + i) / _1m].release(io + i);
 	}
 
 	return CELL_OK;
