@@ -564,7 +564,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
 
-	if (m_texbuffer_view_size < 0x800000)
+	if (m_texbuffer_view_size <= 65536)
+	{
+		// Expected on PanVK
+		rsx_log.error("Your GPU does not support enough addressable texels for a buffer view. Graphics will not render correctly.", m_texbuffer_view_size);
+	}
+	else if (m_texbuffer_view_size < 0x800000)
 	{
 		// Warn, only possibly expected on macOS
 		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
