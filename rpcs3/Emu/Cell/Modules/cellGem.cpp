@@ -2308,8 +2308,10 @@ error_code cellGemConvertVideoFinish(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
+error_code cellGemConvertVideoStart(ppu_thread& ppu, vm::cptr<void> video_frame)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
 
 	auto& gem = g_fxo->get<gem_config>();
@@ -2461,6 +2463,8 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 
 error_code cellGemEnd(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemEnd()");
 
 	auto& gem = g_fxo->get<gem_config>();
@@ -3605,6 +3609,8 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 error_code cellGemUpdateFinish(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemUpdateFinish()");
 
 	auto& gem = g_fxo->get<gem_config>();
