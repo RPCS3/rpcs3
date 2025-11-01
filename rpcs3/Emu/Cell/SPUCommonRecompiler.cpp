@@ -69,6 +69,59 @@ struct span_less
 template <typename T>
 inline constexpr span_less<T> s_span_less{};
 
+// Just madness to keep some members uninitialized and get zero initialization otherwise
+template <typename T>
+struct alignas(T) un_t
+{
+	std::byte data[sizeof(T)];
+
+	T* get() noexcept
+	{
+		return std::launder(reinterpret_cast<T*>(+data));
+	}
+
+	const T* get() const noexcept
+	{
+		return std::launder(reinterpret_cast<const T*>(+data));
+	}
+
+	T& operator =(const T& r) noexcept
+	{
+		return *get() = r;
+	}
+
+	T* operator ->() noexcept
+	{
+		return get();
+	}
+
+	const T* operator ->() const noexcept
+	{
+		return get();
+	}
+
+	operator T&() noexcept
+	{
+		return *get();
+	}
+
+	operator const T&() const noexcept
+	{
+		return *get();
+	}
+
+	static void init(un_t& un)
+	{
+		new (un.data) T();
+	}
+
+	void destroy()
+	{
+		get()->~T();
+	}
+};
+
+
 // Move 4 args for calling native function from a GHC calling convention function
 #if defined(ARCH_X64)
 static u8* move_args_ghc_to_native(u8* raw)
@@ -2557,13 +2610,13 @@ using vf = spu_recompiler_base::vf;
 
 bool reg_state_t::is_const() const
 {
-	return !!(flag & vf::is_const);
+	return !(flag & vf::is_mask) && bit_range == 0 && value_range == 1;
 }
 
 bool reg_state_t::compare_tags(const reg_state_t& rhs) const
 {
-	// Compare by tag, address of instruction origin
-	return tag == rhs.tag && origin == rhs.origin && is_instruction == rhs.is_instruction;
+	// Compare by tag, address of instruction origin 
+	return value == rhs.value && tag == rhs.tag && origin == rhs.origin && is_instruction == rhs.is_instruction;
 }
 
 bool reg_state_t::operator&(vf to_test) const
@@ -2578,7 +2631,7 @@ bool reg_state_t::is_less_than(u32 imm) const
 		return true;
 	}
 
-	if (~known_zeroes < imm)
+	if (~get_known_zeroes() < imm)
 	{
 		// The highest number possible within the mask's limit is less than imm
 		return true;
@@ -2589,12 +2642,12 @@ bool reg_state_t::is_less_than(u32 imm) const
 
 bool reg_state_t::operator==(const reg_state_t& r) const
 {
-	if ((flag ^ r.flag) - (vf::is_null + vf::is_mask))
+	if ((flag ^ r.flag) - (vf::is_null))
 	{
 		return false;
 	}
 
-	return (flag & vf::is_const ? value == r.value : (compare_tags(r) && known_ones == r.known_ones && known_zeroes == r.known_zeroes));
+	return (flag.is_const() ? value == r.value : (compare_tags(r) && bit_range == r.bit_range && value_range == r.value_range));
 }
 
 bool reg_state_t::operator==(u32 imm) const
@@ -2610,7 +2663,7 @@ bool reg_state_t::compare_with_mask_indifference(const reg_state_t& r, u32 mask_
 		return true;
 	}
 
-	if ((r.flag & flag) & vf::is_const)
+	if (r.is_const() || is_const())
 	{
 		// Simplified path for consts
 		if (((value ^ r.value) & mask_bits) == 0)
@@ -2628,8 +2681,8 @@ bool reg_state_t::compare_with_mask_indifference(const reg_state_t& r, u32 mask_
 		return true;
 	}
 
-	const auto _this = this->downgrade();
-	const auto _r = r.downgrade();
+	const auto& _this = *this;
+	const auto& _r = r;
 
 	const bool is_mask_equal = (_this.compare_tags(_r) && _this.flag == _r.flag && !((_this.known_ones ^ _r.known_ones) & mask_bits) && !((_this.known_zeroes ^ _r.known_zeroes) & mask_bits));
 
@@ -2643,7 +2696,7 @@ bool reg_state_t::compare_with_mask_indifference(u32 imm, u32 mask_bits) const
 		return true;
 	}
 
-	if (flag & vf::is_const)
+	if (is_const())
 	{
 		if (((value ^ imm) & mask_bits) == 0)
 		{
@@ -2662,7 +2715,7 @@ bool reg_state_t::unequal_with_mask_indifference(const reg_state_t& r, u32 mask_
 		return true;
 	}
 
-	if ((r.flag & flag) & vf::is_const)
+	if (r.is_const() && is_const())
 	{
 		// Simplified path for consts
 		if ((value ^ r.value) & mask_bits)
@@ -2696,21 +2749,6 @@ bool reg_state_t::unequal_with_mask_indifference(const reg_state_t& r, u32 mask_
 	return (((_this.known_ones ^ _r.known_ones) & mask_bits) & ((_this.known_zeroes ^ _r.known_zeroes) & mask_bits)) != 0;
 }
 
-reg_state_t reg_state_t::downgrade() const
-{
-	if (flag & vf::is_const)
-	{
-		return reg_state_t{vf::is_mask, 0, umax, this->value, ~this->value, this->origin};
-	}
-
-	if (!(flag - vf::is_null))
-	{
-		return reg_state_t{vf::is_mask, 0, this->tag, 0, 0, this->origin};
-	}
-
-	return *this;
-}
-
 reg_state_t reg_state_t::merge(const reg_state_t& rhs, u32 current_pc) const
 {
 	if (rhs == *this)
@@ -2719,18 +2757,17 @@ reg_state_t reg_state_t::merge(const reg_state_t& rhs, u32 current_pc) const
 		return rhs;
 	}
 
-	if ((rhs.flag + flag).all_of(vf::is_const + vf::is_mask))
+	if ((rhs.bit_range | bit_range) != umax)
 	{
-		// Try to downgrade to a known-bits type value
-		const reg_state_t _rhs = rhs.downgrade();
-		const reg_state_t _this = this->downgrade();
+		const reg_state_t& _rhs = rhs;
+		const reg_state_t& _this = *this;
 
 		if ((_rhs.flag & _this.flag) & vf::is_mask)
 		{
 			// Now it is possible to merge the two values
-			reg_state_t res{vf::is_mask, 0, 0, _rhs.known_ones & _this.known_ones, _rhs.known_zeroes & _this.known_zeroes};
+			reg_state_t res{{}, 0, 0, _rhs.known_ones & _this.known_ones, _rhs.known_zeroes & _this.known_zeroes};
 
-			if (res.known_zeroes | res.known_ones)
+			if (res.bit_range != umax)
 			{
 				// Success (create new value tag)
 				res.tag = reg_state_t::alloc_tag();
@@ -2763,23 +2800,13 @@ reg_state_t reg_state_t::build_on_top_of(const reg_state_t& rhs) const
 
 u32 reg_state_t::get_known_zeroes() const
 {
-	if (flag & vf::is_const)
-	{
-		return ~value;
-	}
-
-	return known_zeroes;
+	return (~value) & ~bit_range;
 }
 
 
 u32 reg_state_t::get_known_ones() const
 {
-	if (flag & vf::is_const)
-	{
-		return value;
-	}
-
-	return known_ones;
+	return value & ~bit_range;
 }
 
 reg_state_t reg_state_t::from_value(u32 value) noexcept
@@ -3009,7 +3036,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 
 		// Analyse instruction
-		switch (const auto type = g_spu_itype.decode(data))
+		const auto type = g_spu_itype.decode(data);
+
+		switch (type)
 		{
 		case spu_itype::UNK:
 		case spu_itype::DFCEQ:
@@ -4248,7 +4277,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
 					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
+						const u32 expected = block.reg_origin[i] == umax || block.reg_mod[i] ? addr : block.reg_origin[i];
 
 						if (tb.reg_origin[i] == 0x80000000)
 						{
@@ -4838,19 +4867,148 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		return map;
 	};
 
-	struct putllc16_statistics_t
+	struct break_stats_t
 	{
 		atomic_t<u64> all = 0;
 		atomic_t<u64> single = 0;
-		atomic_t<u64> nowrite = 0;
 		std::array<atomic_t<u64>, 128> breaking_reason{};
 	};
 
-	struct rchcnt_statistics_t
+	struct putllc16_statistics_t : break_stats_t
 	{
-		atomic_t<u64> all = 0;
-		atomic_t<u64> single = 0;
-		std::array<atomic_t<u64>, 128> breaking_reason{};
+		atomic_t<u64> nowrite = 0;
+	};
+
+	struct rchcnt_statistics_t : break_stats_t
+	{
+	};
+
+	struct rddec_statistics_t : break_stats_t
+	{
+	};
+
+	struct alignas(u8) masked_regs_t
+	{
+		u8 mask[s_reg_max / 8]{};
+
+		masked_regs_t() noexcept = default;
+
+		explicit masked_regs_t(int) noexcept
+		{
+			for (u32 i = 0; i < s_reg_max / 8; i++)
+			{
+				mask[i] = umax;
+			}
+		}
+
+		bool test(usz index) const noexcept
+		{
+			return (mask[index / 8] >> (index % 8)) % 2 != 0;
+		}
+
+		bool test_and_set(usz index) noexcept
+		{
+			const u64 or_mask = (1ull << (index % 8));
+			const u64 old = mask[index / 8];
+			mask[index / 8] |= or_mask;
+			return (mask[index / 9] & or_mask) != 0;
+		}
+
+		masked_regs_t join(const masked_regs_t& rhs)
+		{
+			masked_regs_t result = *this;
+			for (u32 i = 0; i < s_reg_max / 8; i++)
+			{
+				result.mask[i] |= rhs.mask[i];
+			}
+
+			return result;
+		}
+
+		void init()
+		{
+			*this = {};
+		}
+	};
+
+	struct masked_reg_state_t : masked_regs_t
+	{
+		std::array<un_t<reg_state_t>, s_reg_max> state;
+
+		reg_state_t& get(usz index) noexcept
+		{
+			if (!test_and_set(index))
+			{
+				state[index]->init();
+			}
+
+			return state[index];
+		}
+
+		const reg_state_t& get(usz index) const noexcept
+		{
+			ensure(test(index));
+			return state[index];
+		}
+
+		reg_state_t& get(usz index) noexcept
+		{
+			ensure(test(index));
+			return state[index];
+		}
+
+		template <typename Func>
+		auto compare_known(const masked_reg_state_t& rhs, Func& func)
+		{
+			for (int i = 0; i < s_reg_mask; i++)
+			{
+				if (test(i) && rhs.test(i))
+				{
+					const reg_state_t& a = get(i);
+					const reg_state_t& b = rhs.get(i);
+
+					if (func(a, b))
+					{
+						return;
+					}
+				}
+			}
+		}
+	};
+
+	struct masked_reg_origin_t : masked_regs_t
+	{
+		usz count_tracked = 0;
+		u8 tracked_names[32]{};
+		std::array<un_t<masked_regs_t>, 32> tracked_regs;
+		masked_regs_t reg_unk{1};
+
+		masked_regs_t& get(u8 index) const noexcept
+		{
+			for (u32 i = 0; i < count_tracked; i++)
+			{
+				if (tracked_names[i] == index)
+				{
+					return *tracked_regs[i];
+				}
+			}
+
+			if (count_tracked < std::size(tracked_names))
+			{
+				auto& ptr = tracked_regs[count_tracked++];
+				ptr->init();
+				return *ptr;
+			}
+
+
+			return reg_unk;
+			// // const v128 p1 = v128::loadu(tracked_regs, 0);
+			// // const v128 p2 = v128::loadu(tracked_regs, 1);
+			// // const v128 pindex = v128::from8p(index);
+
+			// // gv_eq8(p1,)
+			// return state[index];
+		}
 	};
 
 	// Pattern structures
@@ -4932,6 +5090,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 	};
 
+	struct rddec_noop_loop_t
+	{
+		bool active = false;
+		u32 read_pc = SPU_LS_SIZE; // PC of RDCH (that encloses the loop)
+		masked_reg_state_t current_state;
+	};
+
 	// Reset tags
 	reg_state_t::alloc_tag(true);
 
@@ -4954,6 +5119,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// RDCH/RCHCNT Loop analysis tracker
 		rchcnt_loop_t rchcnt_loop{};
 
+		// RdDec (RDCH) Loop analysis tracker
+		rddec_noop_loop_t rddec_loop{};
+
 		block_reg_state_iterator(u32 _pc, usz _parent_iterator_index = umax, usz _parent_target_index = 0) noexcept
 			: pc(_pc)
 			, parent_iterator_index(_parent_iterator_index)
@@ -4964,8 +5132,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	std::vector<block_reg_state_iterator> reg_state_it;
 
-	std::map<u32, atomic16_t> atomic16_all; // RdAtomicStat location -> atomic loop optimization state
-	std::map<u32, rchcnt_loop_t> rchcnt_loop_all; // RDCH/RCHCNT location -> channel read loop optimization state
+	auto_typemap<spu_recompiler_base> pattern_map;
+
+	auto& atomic16_all = pattern_map.get<std::map<u32, atomic16_t>>(); // RdAtomicStat location -> atomic loop optimization state
+	auto& rchcnt_loop_all = pattern_map.get<std::map<u32, rchcnt_loop_t>>(); // RDCH/RCHCNT location -> channel read loop optimization state
+	auto& rddec_noop_loop_all = pattern_map.get<std::map<u32, rddec_noop_loop_t>>(); // RDCH/RCHCNT location -> channel read loop optimization state
 	std::map<u32, bool> getllar_starts; // True for failed loops
 	std::map<u32, bool> run_on_block;
 	std::map<u32, bool> logged_block;
@@ -4973,7 +5144,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	std::array<reg_state_t, s_reg_max>* true_state_walkby = nullptr;
 
 	atomic16_t dummy16{};
-	rchcnt_loop_t dummy_loop{};
+	rchcnt_loop_t dummy_rdcnt{};
+	rddec_noop_loop_t dummy_rddec{};
 
 	bool likely_putllc_loop = false;
 	bool had_putllc_evaluation = false;
@@ -5087,7 +5259,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		auto& vregs = is_form_block ? infos[bpc]->local_state : *true_state_walkby;
 		const auto atomic16 = is_pattern_match ? &::at32(reg_state_it, wi).atomic16 : &dummy16;
-		const auto rchcnt_loop = is_pattern_match ? &::at32(reg_state_it, wi).rchcnt_loop : &dummy_loop;
+		const auto rchcnt_loop = is_pattern_match ? &::at32(reg_state_it, wi).rchcnt_loop : &dummy_rdcnt;
+		const auto rddec_loop = is_pattern_match ? &::at32(reg_state_it, wi).rddec_loop : &dummy_rddec;
 
 		const u32 pos = wa;
 
@@ -5152,27 +5325,29 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		};
 
-		const auto break_channel_pattern = [&](u32 cause, rchcnt_loop_t previous)
+		const auto break_a_pattern = <typename BreakT, typename Stats>[&](u32 cause, BreakT previous, std::string_view pattern_name)
 		{
-			if (previous.active && rchcnt_loop_all.contains(previous.read_pc))
+			auto& all_patterns = pattern_map.get<std::map<u32, BreakT>>();
+
+			if (previous.active && all_patterns.contains(previous.read_pc))
 			{
-				const bool is_first = !std::exchange(rchcnt_loop_all[previous.read_pc].failed, true);
+				const bool is_first = !std::exchange(all_patterns[previous.read_pc].failed, true);
 
 				if (!is_first)
 				{
 					return;
 				}
 
-				g_fxo->get<rchcnt_statistics_t>().breaking_reason[cause]++;
+				g_fxo->get<Stats>().breaking_reason[cause]++;
 
 				if (!spu_log.notice)
 				{
 					return;
 				}
 
-				std::string break_error = fmt::format("Channel pattern breakage [%x cause=%u] (read_pc=0x%x)", pos, cause, previous.read_pc);
+				std::string break_error = fmt::format("%s pattern breakage [%x cause=%u] (read_pc=0x%x)", pattern_name, pos, cause, previous.read_pc);
 
-				const auto values = sort_breakig_reasons(g_fxo->get<rchcnt_statistics_t>().breaking_reason);
+				const auto values = sort_breakig_reasons(g_fxo->get<Stats>().breaking_reason);
 
 				std::string tracing = "Top Breaking Reasons:";
 
@@ -5209,10 +5384,21 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		};
 
+		const auto break_channel_pattern = [&](u32 cause)
+		{
+			break_a_pattern(cause, rchcnt_loop->discard(), "Channel");
+		};
+
+		const auto break_rddec_pattern = [&](u32 cause)
+		{
+			break_a_pattern(cause, rddec_loop->discard(), "RdDec");
+		};
+
 		const auto break_all_patterns = [&](u32 cause)
 		{
 			break_putllc16(cause, atomic16->discard());
 			break_channel_pattern(cause, rchcnt_loop->discard());
+			break_rddec_pattern(cause, rddec_loop->discard());
 		};
 
 		const auto calculate_absolute_ls_difference = [](u32 addr1, u32 addr2)
@@ -5502,6 +5688,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Backup analyser information
 				const auto atomic16_info = reg_state_it[stackframe_it].atomic16;
 				const auto rchcnt_loop_info = reg_state_it[stackframe_it].rchcnt_loop;
+				const auto rddec_loop_info = reg_state_it[stackframe_it].rddec_loop;
 
 				// Clean from the back possible because it does not affect old indices
 				// Technically should always do a full cleanup at the moment
@@ -5531,6 +5718,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						// Restore analyser information (if not an entry)
 						next.atomic16 = atomic16_info;
+						next.rddec_loop = rchcnt_loop_info;
 
 						if (previous_pc != rchcnt_loop_info.branch_pc || target_pc == rchcnt_loop_info.branch_target)
 							next.rchcnt_loop = rchcnt_loop_info;
@@ -5546,6 +5734,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						{
 							// Does not post-dominates channel read
 							auto& pair = rchcnt_loop_all[rchcnt_loop_info.read_pc];
+							pair.failed = true;
+							pair.active = false;
+						}
+
+						if (rddec_loop_info.active)
+						{
+							// Does not post-dominates channel read
+							auto& pair = rddec_noop_loop_all[rddec_loop_info.read_pc];
 							pair.failed = true;
 							pair.active = false;
 						}
@@ -5635,18 +5831,18 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				return;
 			}
 
-			const u32 ones = (state.known_ones | mask_ones) & ~mask_zeroes;
+			const u32 ones = (state.get_known_ones() | mask_ones) & ~mask_zeroes;
 			const u32 zeroes = (state.known_zeroes | mask_zeroes) & ~mask_ones;
 
-			if ((ones ^ zeroes) == umax)
-			{
-				// Special case: create a constant from full masks
-				vregs[reg] = reg_state_t::from_value(ones);
-				return;
-			}
+
+			const u32 new_value = (state.value | ones) & ~zeroes;
+			const u32 bit_mask = state.bit_range & ~(ones | zeroes);
 
 			ensure(state.tag != umax);
-			vregs[reg] = reg_state_t{vf::is_mask, 0, state.tag, ones, zeroes, state.origin};
+			vregs[reg].origin = state.origin;
+			vregs[reg].bit_range = bit_mask;
+			vregs[reg].value = state.value;
+			vregs[reg].tag = state.tag;
 		};
 
 		const auto unconst = [&](u32 reg, u32 pc)
@@ -5714,6 +5910,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		}
 
+		auto emplace_origin = [&](std::vector<u32>& origins, u32 origin)
+		{
+			if (!std::count(origins.begin(), origins.end(), pos))
+			{
+				origins.emplace_back(origin);
+			}
+		};
+
 		if (rchcnt_loop->active)
 		{
 			if (std::find(rchcnt_loop->origins.begin(), rchcnt_loop->origins.end(), pos) != rchcnt_loop->origins.end())
@@ -5778,6 +5982,77 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			spu_log.always()("[SPU=0%x, it=%d] %s%s     [%d]", pos, reg_state_it[wi].iterator_id, dis_asm.last_opcode, consts, atomic16->active);
+		}
+
+		// Make unknown value
+		const reg_state_t* ra_state = nullptr;
+		const reg_state_t* rb_state = nullptr;
+		const reg_state_t* rc_state = nullptr;
+		reg_state_t reg_saved_state;
+		{
+			u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
+
+			if (m_use_ra.test(pos / 4))
+			{
+				ra = op.ra;
+				ra_state = &vregs[op.ra];
+			}
+
+			if (m_use_rb.test(pos / 4))
+			{
+				rb = op.rb;
+				rb_state = &vregs[op.rb];
+			}
+
+			if (type & spu_itype::_quadrop && m_use_rc.test(pos / 4))
+			{
+				rc = op.rc;
+				rc_state = &vregs[op.rc];
+			}
+
+			if (!(type & spu_itype::zregmod))
+			{
+				const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
+
+				if (op_rt == ra)
+				{
+					reg_saved_state = *ra_state;
+					ra_state = &reg_saved_state;
+				}
+
+				if (op_rt == rb)
+				{
+					reg_saved_state = *rb_state;
+					rb_state = &reg_saved_state;
+				}
+
+				if (op_rt == rc)
+				{
+					reg_saved_state = *rc_state;
+					rc_state = &reg_saved_state;
+				}
+
+				masked_regs_t dest{};
+
+				if (ra != s_reg_max)
+				{
+					dest = dest.join(loop->current_state.get(ra));
+				}
+
+				if (rb != s_reg_max)
+				{
+					dest = dest.join(loop->current_state.get(rb));
+				}
+
+				if (rc != s_reg_max)
+				{
+					rddec_loop->current_state.get(op_rt) = dest.join(loop->current_state.get(rc));
+				}
+				else
+				{
+					rddec_loop->current_state.get(op_rt) = dest;
+				}
+			}
 		}
 
 		// Analyse instruction
@@ -6167,20 +6442,21 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			const bool is_read = type == spu_itype::RDCH;
 			bool invalidate = true;
 
-			const auto it = rchcnt_loop_all.find(pos);
+			const auto cntit = rchcnt_loop_all.find(pos);
+			const auto decit = rchcnt_loop_all.find(pos);
 
-			if (it != rchcnt_loop_all.end())
+			if (cntit != rchcnt_loop_all.end())
 			{
 				if (rchcnt_loop->failed || !rchcnt_loop->conditioned || rchcnt_loop->read_pc != pos)
 				{
 					// Propagate faiure
-					it->second.failed = true;
-					it->second.active = false;
-					it->second.conditioned = false;
+					cntit->second.failed = true;
+					cntit->second.active = false;
+					cntit->second.conditioned = false;
 				}
 				else
 				{
-					it->second.active = false;
+					cntit->second.active = false;
 				}
 
 				rchcnt_loop->active = false;
@@ -6191,6 +6467,31 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				if (rchcnt_loop->read_pc != pos)
 				{
 					break_channel_pattern(53, rchcnt_loop->discard());
+				}
+			}
+
+			if (decit != rddec_noop_loop_all.end())
+			{
+				if (rddec_loop->failed || !rddec_loop->conditioned || rddec_loop->read_pc != pos)
+				{
+					// Propagate faiure
+					decit->second.failed = true;
+					decit->second.active = false;
+					decit->second.conditioned = false;
+				}
+				else
+				{
+					decit->second.active = false;
+				}
+
+				rddec_loop->active = false;
+			}
+
+			if (rddec_loop->active)
+			{
+				if (rddec_loop->read_pc != pos)
+				{
+					break_channel_pattern(53, rddec_loop->discard());
 				}
 			}
 
@@ -6733,7 +7034,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			hbr_loc = spu_branch_target(pos, op.roh << 7 | op.rt);
 			const auto [af, av, at, ao, az, apc, ainst] = get_reg(op.ra);
-			hbr_tg  = af & vf::is_const && !op.c ? av & 0x3fffc : -1;
+			hbr_tg  = af.is_const() && !op.c ? av & 0x3fffc : -1;
 			break;
 		}
 
@@ -7040,65 +7341,62 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 		default:
 		{
-			// Make unknown value
-			if (!(type & spu_itype::zregmod))
+			break;
+		}
+		}
+
+		// Make unknown value
+		if (!(type & spu_itype::zregmod))
+		{
+			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
+
+			u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
+
+			if (m_use_ra.test(pos / 4))
 			{
-				const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
+				ra = op.ra;
+			}
 
-				u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
+			if (m_use_rb.test(pos / 4))
+			{
+				rb = op.rb;
+			}
 
-				if (m_use_ra.test(pos / 4))
+			if (type & spu_itype::_quadrop && m_use_rc.test(pos / 4))
+			{
+				rc = op.rc;
+			}
+
+			u32 reg_pos = SPU_LS_SIZE;
+
+			for (u32 reg : {ra, rb, rc})
+			{
+				if (reg != s_reg_max)
 				{
-					ra = op.ra;
-				}
-
-				if (m_use_rb.test(pos / 4))
-				{
-					rb = op.rb;
-				}
-
-				if (type & spu_itype::_quadrop && m_use_rc.test(pos / 4))
-				{
-					rc = op.rc;
-				}
-
-				u32 reg_pos = SPU_LS_SIZE;
-
-				for (u32 reg : {ra, rb, rc})
-				{
-					if (reg != s_reg_max)
+					if (reg_pos == SPU_LS_SIZE)
 					{
-						if (reg_pos == SPU_LS_SIZE)
-						{
-							reg = vregs[reg].origin;
-						}
-						else if (reg_pos != vregs[reg].origin)
-						{
-							const u32 block_start = reg_state_it[wi].pc;
-
-							// if (vregs[reg].origin >= block_start && vregs[reg].origin <= pos)
-							// {
-							// 	reg_pos = std::max<u32>(vregs[reg].origin, reg_pos);
-							// }
-							reg_pos = block_start;
-							break;
-						}
+						reg = vregs[reg].origin;
 					}
-				}
-
-				unconst(op_rt, reg_pos == SPU_LS_SIZE ? pos : reg_pos);
-
-				if (rchcnt_loop->active)
-				{
-					if (std::find(rchcnt_loop->origins.begin(), rchcnt_loop->origins.end(), vregs[op_rt].origin) == rchcnt_loop->origins.end())
+					else if (reg_pos != vregs[reg].origin)
 					{
-						rchcnt_loop->origins.push_back(vregs[op_rt].origin);
+						const u32 block_start = reg_state_it[wi].pc;
+
+						// if (vregs[reg].origin >= block_start && vregs[reg].origin <= pos)
+						// {
+						// 	reg_pos = std::max<u32>(vregs[reg].origin, reg_pos);
+						// }
+						reg_pos = block_start;
+						break;
 					}
 				}
 			}
 
-			break;
-		}
+			unconst(op_rt, reg_pos == SPU_LS_SIZE ? pos : reg_pos);
+
+			if (rchcnt_loop->active)
+			{
+				emplace_origin(rchcnt_loop->origins, vregs[op_rt].origin);
+			}
 		}
 
 		if (m_targets.count(pos))
