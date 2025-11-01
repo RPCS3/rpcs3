@@ -9,7 +9,7 @@ extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 
 #ifdef _M_X64
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 extern "C"
 {
 	u32 _xbegin();
@@ -46,7 +46,7 @@ namespace utils
 
 		for (auto stamp0 = get_tsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = get_tsc())
 		{
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
 #else
 			status = _xbegin();
@@ -60,7 +60,7 @@ namespace utils
 			if constexpr (std::is_void_v<R>)
 			{
 				std::invoke(op);
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))
 				__asm__ volatile ("xend;" ::: "memory");
 #else
 				_xend();
@@ -70,7 +70,7 @@ namespace utils
 			else
 			{
 				auto result = std::invoke(op);
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))		
 				__asm__ volatile ("xend;" ::: "memory");
 #else
 				_xend();
@@ -242,7 +242,7 @@ namespace utils
 
 	constexpr u32 popcnt128(const u128& v)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		return popcnt64(v.lo) + popcnt64(v.hi);
 #else
 		return popcnt64(v) + popcnt64(v >> 64);
@@ -274,7 +274,7 @@ namespace utils
 
 	inline s64 div128(s64 high, s64 low, s64 divisor, s64* remainder = nullptr)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		s64 rem = 0;
 		s64 r = _div128(high, low, divisor, &rem);
 
@@ -296,7 +296,7 @@ namespace utils
 
 	inline u64 udiv128(u64 high, u64 low, u64 divisor, u64* remainder = nullptr)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		u64 rem = 0;
 		u64 r = _udiv128(high, low, divisor, &rem);
 
@@ -316,7 +316,7 @@ namespace utils
 		return r;
 	}
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 	inline u128 operator/(u128 lhs, u64 rhs)
 	{
 		u64 rem = 0;
@@ -326,7 +326,7 @@ namespace utils
 
 	constexpr u32 ctz128(u128 arg)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		if (!arg.lo)
 			return std::countr_zero(arg.hi) + 64u;
 		else
@@ -341,7 +341,7 @@ namespace utils
 
 	constexpr u32 clz128(u128 arg)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		if (arg.hi)
 			return std::countl_zero(arg.hi);
 		else
@@ -463,6 +463,6 @@ namespace utils
 
 using utils::busy_wait;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 using utils::operator/;
 #endif

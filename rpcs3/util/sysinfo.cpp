@@ -46,7 +46,7 @@ static inline std::array<u32, 4> get_cpuid(u32 func, u32 subfunc)
 
 static inline u64 get_xgetbv(u32 xcr)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 	return _xgetbv(xcr);
 #else
 	u32 eax, edx;

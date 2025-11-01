@@ -425,7 +425,7 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 #endif
 }
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__clang__)	
 #define mwaitx_func
 #define waitpkg_func
 #else
