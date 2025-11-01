@@ -4772,7 +4772,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr != addr)
 			{
 				// Last check for event before we replace the reservation with a new one
-				if (reservation_check(raddr, rdata))
+				if (~ch_events.load().events & SPU_EVENT_LR && reservation_check(raddr, rdata, addr))
 				{
 					set_events(SPU_EVENT_LR);
 				}
@@ -5482,7 +5482,7 @@ bool spu_thread::process_mfc_cmd()
 		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
-bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
+bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data, u32 current_eal) const
 {
 	if (!addr)
 	{
@@ -5501,9 +5501,24 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 		return !cmp_rdata(data, *vm::get_super_ptr<decltype(rdata)>(addr));
 	}
 
+	if ((addr >> 20) == (current_eal >> 20))
+	{
+		if (vm::check_addr(addr, vm::page_1m_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
+
+		if ((addr >> 16) == (current_eal >> 16) && vm::check_addr(addr, vm::page_64k_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
+	}
+
 	// Ensure data is allocated (HACK: would raise LR event if not)
 	// Set range_lock first optimistically
-	range_lock->store(u64{128} << 32 | addr);
+	range_lock->store(u64{128} << 32 | addr | vm::range_readable);
 
 	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;
@@ -5579,12 +5594,12 @@ bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_
 	if ((addr >> 28) < 2 || (addr >> 28) == 0xd)
 	{
 		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
-		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) == hash;
+		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) != hash;
 	}
 
 	// Ensure data is allocated (HACK: would raise LR event if not)
 	// Set range_lock first optimistically
-	range_lock->store(u64{128} << 32 | addr);
+	range_lock->store(u64{128} << 32 | addr | vm::range_readable);
 
 	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;

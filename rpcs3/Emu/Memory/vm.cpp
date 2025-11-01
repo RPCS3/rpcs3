@@ -480,24 +480,23 @@ namespace vm
 			}
 		}
 
-		for (u64 i = 0;; i++)
+		for (usz i = 0, diff = range_lock ? range_lock - g_range_lock_set : 0;; i++)
 		{
 			auto& bits = get_range_lock_bits(true);
+			const u64 bits_val = bits.load();
 
 			if (!range_lock)
 			{
-				if (!bits && bits.compare_and_swap_test(0, u64{umax}))
+				if (!bits_val && bits.compare_and_swap_test(0, u64{umax}))
 				{
 					break;
 				}
 			}
-			else
+			else if (~bits_val & (1ull << diff))
 			{
 				range_lock->release(addr | u64{size} << 32 | flags);
 
-				const auto diff = range_lock - g_range_lock_set;
-
-				if (bits != umax && !bits.bit_test_set(static_cast<u32>(diff)))
+				if (!bits.bit_test_set(static_cast<u32>(diff)))
 				{
 					break;
 				}
@@ -547,6 +546,13 @@ namespace vm
 			{
 				to_clear = for_all_range_locks(to_clear & ~get_range_lock_bits(true), [&](u64 addr2, u32 size2)
 				{
+					constexpr u32 range_size_loc = vm::range_pos - 32;
+
+					if ((size2 >> range_size_loc) == (vm::range_readable >> vm::range_pos))
+					{
+						return 0;
+					}
+
 					// Split and check every 64K page separately
 					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
@@ -574,6 +580,8 @@ namespace vm
 				{
 					break;
 				}
+
+				to_clear &= get_range_lock_bits(false);
 
 				utils::pause();
 			}

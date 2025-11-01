@@ -81,7 +81,7 @@ namespace vm
 	bool check_addr(u32 addr, u8 flags, u32 size);
 
 	template <u32 Size = 1>
-	bool check_addr(u32 addr, u8 flags = page_readable)
+	inline bool check_addr(u32 addr, u8 flags = page_readable)
 	{
 		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
 
@@ -92,6 +92,16 @@ namespace vm
 		}
 
 		return !(~g_pages[addr / 4096] & (flags | page_allocated));
+	}
+
+	// Like check_addr but should only be used in lock-free context with care
+	inline std::pair<bool, u8> get_addr_flags(u32 addr) noexcept
+	{
+		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
+
+		const u8 flags = g_pages[addr / 4096].load();
+
+		return std::make_pair(!!(flags & page_allocated), flags);
 	}
 
 	// Read string in a safe manner (page aware) (bool true = if null-termination)
