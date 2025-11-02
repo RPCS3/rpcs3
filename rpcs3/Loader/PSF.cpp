@@ -253,7 +253,7 @@ namespace psf
 				if (indices[i].param_fmt == format::string)
 				{
 					// Find null terminator
-					value.resize(std::strlen(value.c_str()));
+					value.resize(value.find_first_of('\0'));
 				}
 
 				result.sfo.emplace(std::piecewise_construct,
