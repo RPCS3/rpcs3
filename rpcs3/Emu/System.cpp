@@ -2083,30 +2083,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 		}
 
-		// Check game updates
-		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
-				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
-				&& resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
-				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
-		{
-			if (const psf::registry update_sfo = psf::load(hdd0_game + m_title_id + "/PARAM.SFO").sfo;
-				psf::get_string(update_sfo, "TITLE_ID") == m_title_id && psf::get_string(update_sfo, "CATEGORY") == "GD")
-			{
-				// Booting game update
-				sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
-				m_path = hdd0_boot;
-
-				const game_boot_result boot_result = Load(m_title_id, true, recursion_count + 1);
-				if (boot_result == game_boot_result::no_errors)
-				{
-					return game_boot_result::no_errors;
-				}
-
-				sys_log.error("Failed to boot update at \"%s\", game update may be corrupted! Consider uninstalling or reinstalling it. (reason: %s)", m_path, boot_result);
-				return boot_result;
-			}
-		}
-
 		// Check firmware version
 		if (const std::string_view game_fw_version = psf::get_string(_psf, "PS3_SYSTEM_VER", ""); !game_fw_version.empty())
 		{
@@ -2143,12 +2119,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Replace newlines with spaces
 		std::replace(m_title.begin(), m_title.end(), '\n', ' ');
 		std::replace(m_localized_title.begin(), m_localized_title.end(), '\n', ' ');
-
-		// Mount /host_root/ if necessary (special value)
-		if (g_cfg.vfs.host_root)
-		{
-			vfs::mount("/host_root", "/");
-		}
 
 		// Open SELF or ELF
 		std::string elf_path = m_path;
@@ -2214,9 +2184,40 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			return game_boot_result::decryption_error;
 		}
 
+		// Check EBOOT.BIN (before updates - disc games)
+		ppu_exec_object ppu_exec;
+		ppu_exec.open(elf_file);
+
+		// Check game updates
+		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
+				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
+				&& resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
+				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot)
+				&& ppu_exec == elf_error::ok)
+		{
+			if (const psf::registry update_sfo = psf::load(hdd0_game + m_title_id + "/PARAM.SFO").sfo;
+				psf::get_string(update_sfo, "TITLE_ID") == m_title_id && psf::get_string(update_sfo, "CATEGORY") == "GD")
+			{
+				ppu_exec = {};
+				elf_file.close();
+
+				// Booting game update
+				sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
+				m_path = hdd0_boot;
+
+				const game_boot_result boot_result = Load(m_title_id, true, recursion_count + 1);
+				if (boot_result == game_boot_result::no_errors)
+				{
+					return game_boot_result::no_errors;
+				}
+
+				sys_log.error("Failed to boot update at \"%s\", game update may be corrupted! Consider uninstalling or reinstalling it. (reason: %s)", m_path, boot_result);
+				return boot_result;
+			}
+		}
+
 		m_state = system_state::ready;
 
-		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		ppu_rel_object ppu_rel;
 		spu_exec_object spu_exec;
@@ -2224,19 +2225,25 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		vm::init();
 
-		if (m_ar)
+		if (ppu_exec == elf_error::ok)
 		{
-			vm::load(*m_ar);
-		}
+			if (m_ar)
+			{
+				vm::load(*m_ar);
+			}
 
-		if (!hdd1.empty())
-		{
-			vfs::mount("/dev_hdd1", hdd1);
-			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
-		}
+			// Mount /host_root/ if necessary (special value)
+			if (g_cfg.vfs.host_root)
+			{
+				vfs::mount("/host_root", "/");
+			}
 
-		if (ppu_exec.open(elf_file) == elf_error::ok)
-		{
+			if (!hdd1.empty())
+			{
+				vfs::mount("/dev_hdd1", hdd1);
+				sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
+			}
+
 			// PS3 executable
 			GetCallbacks().on_ready();
 
@@ -2384,6 +2391,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
 			// PPU PRX
+			m_ar.reset();
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, false, m_path);
@@ -2392,6 +2400,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
 			// SPU executable
+			m_ar.reset();
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
@@ -2400,6 +2409,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		else if (spu_rel.open(elf_file) == elf_error::ok)
 		{
 			// SPU linker file
+			m_ar.reset();
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_rel_exec(spu_rel);
@@ -2408,6 +2418,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		else if (ppu_rel.open(elf_file) == elf_error::ok)
 		{
 			// PPU linker file
+			m_ar.reset();
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_rel_exec(ppu_rel);
