@@ -258,7 +258,7 @@ QString kamen_rider_creator_dialog::get_file_path() const
 kamen_rider_dialog::kamen_rider_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("kamen_riders Manager"));
+	setWindowTitle(tr("Kamen Rider Manager"));
 	setObjectName("kamen_riders_manager");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(QSize(700, 200));
