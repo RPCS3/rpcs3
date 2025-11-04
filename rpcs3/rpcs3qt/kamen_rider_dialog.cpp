@@ -258,7 +258,7 @@ QString kamen_rider_creator_dialog::get_file_path() const
 kamen_rider_dialog::kamen_rider_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("kamen_riders Manager"));
+	setWindowTitle(tr("Kamen Rider Manager"));
 	setObjectName("kamen_riders_manager");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(QSize(700, 200));
@@ -273,7 +273,7 @@ kamen_rider_dialog::kamen_rider_dialog(QWidget* parent)
 		vbox->addWidget(line);
 	};
 
-	QGroupBox* group_kamen_riders = new QGroupBox(tr("Active Portal Kamen Riders:"));
+	QGroupBox* group_kamen_riders = new QGroupBox(tr("Active Kamen Riders:"));
 	QVBoxLayout* vbox_group = new QVBoxLayout();
 
 	for (auto i = 0; i < UI_FIG_NUM; i++)
@@ -385,8 +385,8 @@ void kamen_rider_dialog::load_kamen_rider_path(u8 slot, const QString& path)
 
 	clear_kamen_rider(slot);
 
-	u8 fig_id = data[0x19];
-	u8 fig_type = data[0x1B];
+	u8 fig_id = data[0x1B];
+	u8 fig_type = data[0x19];
 
 	u8 portal_slot = g_ridergate.load_figure(data, std::move(fig_file));
 	figure_slots[slot] = std::tuple(portal_slot, fig_id, fig_type);
