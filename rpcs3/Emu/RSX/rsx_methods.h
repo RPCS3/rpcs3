@@ -226,9 +226,9 @@ namespace rsx
 			return decode<NV4097_SET_SHADER_WINDOW>().window_shader_origin();
 		}
 
-		window_pixel_center shader_window_pixel() const
+		window_pixel_center pixel_center() const
 		{
-			return decode<NV4097_SET_SHADER_WINDOW>().window_shader_pixel_center();
+			return decode<NV4097_SET_SHADER_WINDOW>().pixel_center();
 		}
 
 		u16 shader_window_height() const
