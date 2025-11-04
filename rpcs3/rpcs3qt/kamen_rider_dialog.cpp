@@ -273,7 +273,7 @@ kamen_rider_dialog::kamen_rider_dialog(QWidget* parent)
 		vbox->addWidget(line);
 	};
 
-	QGroupBox* group_kamen_riders = new QGroupBox(tr("Active Portal Kamen Riders:"));
+	QGroupBox* group_kamen_riders = new QGroupBox(tr("Active Kamen Riders:"));
 	QVBoxLayout* vbox_group = new QVBoxLayout();
 
 	for (auto i = 0; i < UI_FIG_NUM; i++)
