@@ -40,10 +40,15 @@ namespace utils
 	/**
 	 * Stream a 128 bits vector from src to dst.
 	 */
-	static inline
-		void stream_vector_from_memory(void* dst, void* src)
+	template <int Count = 1>
+	void stream_vector_from_memory(void* dst, void* src)
 	{
-		const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(src));
-		_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
+		auto _src = reinterpret_cast<__m128i*>(src);
+		auto _dst = reinterpret_cast<__m128i*>(dst);
+		for (int i = 0; i < Count; ++i, ++_src, ++_dst)
+		{
+			const __m128i vector = _mm_loadu_si128(_src);
+			_mm_stream_si128(_dst, vector);
+		}
 	}
 }
