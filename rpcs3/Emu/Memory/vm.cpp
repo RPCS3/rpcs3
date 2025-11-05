@@ -518,14 +518,6 @@ namespace vm
 		{
 			perf_meter<"SUSPEND"_u64> perf0;
 
-			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
-			{
-				if (auto ptr = +*lock; ptr && ptr->state.none_of(cpu_flag::wait + cpu_flag::memory))
-				{
-					ptr->state.test_and_set(cpu_flag::memory);
-				}
-			}
-
 			u64 addr1 = addr;
 
 			if (u64 is_shared = g_shmem[addr >> 16]) [[unlikely]]
@@ -584,6 +576,14 @@ namespace vm
 				to_clear &= get_range_lock_bits(false);
 
 				utils::pause();
+			}
+
+			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
+			{
+				if (auto ptr = +*lock; ptr && ptr->state.none_of(cpu_flag::wait + cpu_flag::memory))
+				{
+					ptr->state.test_and_set(cpu_flag::memory);
+				}
 			}
 
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
