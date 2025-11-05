@@ -32,6 +32,25 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
 
+    # Download translations
+    mkdir -p "./AppDir/usr/translations"
+    ZIP_URL=$(curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \
+      | grep "browser_download_url" \
+      | grep "RPCS3-languages.zip" \
+      | cut -d '"' -f 4)
+    if [ -z "$ZIP_URL" ]; then
+      echo "Failed to find RPCS3-languages.zip in the latest release. Continuing without translations."
+    else
+      echo "Downloading translations from: $ZIP_URL"
+      curl -L -o translations.zip "$ZIP_URL" || {
+        echo "Failed to download translations.zip. Continuing without translations."
+        exit 0
+      }
+      unzip -o translations.zip -d "./AppDir/usr/translations" >/dev/null 2>&1 || \
+        echo "Failed to extract translations.zip. Continuing without translations."
+      rm -f translations.zip
+    fi
+
     curl -fsSLo /uruntime "https://github.com/VHSgunzo/uruntime/releases/download/v0.3.4/uruntime-appimage-dwarfs-$CPU_ARCH"
     chmod +x /uruntime
     /uruntime --appimage-mkdwarfs -f --set-owner 0 --set-group 0 --no-history --no-create-timestamp \

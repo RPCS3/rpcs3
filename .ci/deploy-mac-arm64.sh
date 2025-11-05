@@ -31,6 +31,25 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 ../../.ci/optimize-mac.sh rpcs3.app
 
+# Download translations
+mkdir -p "rpcs3.app/Contents/translations"
+ZIP_URL=$(curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \
+  | grep "browser_download_url" \
+  | grep "RPCS3-languages.zip" \
+  | cut -d '"' -f 4)
+if [ -z "$ZIP_URL" ]; then
+  echo "Failed to find RPCS3-languages.zip in the latest release. Continuing without translations."
+else
+  echo "Downloading translations from: $ZIP_URL"
+  curl -L -o translations.zip "$ZIP_URL" || {
+    echo "Failed to download translations.zip. Continuing without translations."
+    exit 0
+  }
+  unzip -o translations.zip -d "rpcs3.app/Contents/translations" >/dev/null 2>&1 || \
+    echo "Failed to extract translations.zip. Continuing without translations."
+  rm -f translations.zip
+fi
+
 # Hack
 install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/lib not needed"
 install_name_tool -delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib not needed"
