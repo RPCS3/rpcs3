@@ -1411,6 +1411,12 @@ void GLGSRender::on_guest_texture_read()
 	enqueue_host_context_write(::offset32(&rsx::host_gpu_context_t::texture_load_complete_event), 8, &event_id);
 }
 
+void GLGSRender::write_barrier(u32 address, u32 range)
+{
+	ensure(is_current_thread());
+	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
+}
+
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;

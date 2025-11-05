@@ -3132,7 +3132,7 @@ struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 			return to_window_origin(window_shader_origin_raw());
 		}
 
-		auto window_shader_pixel_center() const
+		auto pixel_center() const
 		{
 			return to_window_pixel_center(window_shader_pixel_center_raw());
 		}
@@ -3146,7 +3146,7 @@ struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 	static void dump(std::string& out, const decoded_type& decoded)
 	{
 		fmt::append(out, "Viewport: height: %u origin: %s pixel center: %s", decoded.window_shader_height()
-			, decoded.window_shader_origin(), decoded.window_shader_pixel_center());
+			, decoded.window_shader_origin(), decoded.pixel_center());
 	}
 };
 

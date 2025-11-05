@@ -1613,6 +1613,12 @@ void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 	vkCmdUpdateBuffer(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 }
 
+void VKGSRender::write_barrier(u32 address, u32 range)
+{
+	ensure(is_current_thread());
+	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
+}
+
 void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
 	rsx::thread::sync_hint(hint, payload);

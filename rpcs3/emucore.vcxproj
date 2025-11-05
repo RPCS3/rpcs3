@@ -546,6 +546,7 @@
     <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
+    <ClInclude Include="..\Utilities\deferred_op.hpp" />
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />
     <ClInclude Include="..\Utilities\stack_trace.h" />
     <ClInclude Include="..\Utilities\transactional_storage.h" />

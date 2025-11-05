@@ -664,7 +664,21 @@ namespace rsx
 
 	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/) const
 	{
+#pragma pack(push, 1)
+		struct fragment_context_t
+		{
+			f32 fog_param0;
+			f32 fog_param1;
+			u32 rop_control;
+			f32 alpha_ref;
+			u32 fog_mode;
+			f32 wpos_scale;
+			f32 wpos_bias[2];
+		};
+#pragma pack(pop)
+
 		ROP_control_t rop_control{};
+		alignas(16) fragment_context_t payload{};
 
 		if (REGS(m_ctx)->alpha_test_enabled())
 		{
@@ -720,10 +734,6 @@ namespace rsx
 			}
 		}
 
-		const f32 fog0 = REGS(m_ctx)->fog_params_0();
-		const f32 fog1 = REGS(m_ctx)->fog_params_1();
-		const u32 fog_mode = static_cast<u32>(REGS(m_ctx)->fog_equation());
-
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
 		switch (REGS(m_ctx)->surface_color())
 		{
@@ -745,21 +755,37 @@ namespace rsx
 		}
 
 		// Generate wpos coefficients
-		// wpos equation is now as follows:
+		// wpos equation is now as follows (ignoring pixel center offset):
 		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)
 		// wpos.x = (frag_coord / resolution_scale)
 		// wpos.zw = frag_coord.zw
 
+		payload.fog_param0 = REGS(m_ctx)->fog_params_0();
+		payload.fog_param1 = REGS(m_ctx)->fog_params_1();
+		payload.fog_mode = static_cast<u32>(REGS(m_ctx)->fog_equation());
+		payload.rop_control = rop_control.value;
+		payload.alpha_ref = REGS(m_ctx)->alpha_ref();
+
+
 		const auto window_origin = REGS(m_ctx)->shader_window_origin();
 		const u32 window_height = REGS(m_ctx)->shader_window_height();
+		const auto pixel_center = REGS(m_ctx)->pixel_center();
 		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
-		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
-		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
-		const f32 alpha_ref = REGS(m_ctx)->alpha_ref();
 
-		u32* dst = static_cast<u32*>(buffer);
-		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
-		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+		payload.wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
+		payload.wpos_bias[0] = 0.f;
+		payload.wpos_bias[1] = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
+
+		if (pixel_center == window_pixel_center::integer)
+		{
+			// We could technically fix this shader side, but...
+			// 1. We have full control over gl_FragCoord consumption, so fix it using our own pipeline as it is an emulated input.
+			// 2. Vulkan does not support pixel_center_integer decoration. SPIR-V modules only permit pixel center at half offset.
+			payload.wpos_bias[0] -= 0.5f;
+			payload.wpos_bias[1] -= 0.5f;
+		}
+
+		utils::stream_vector_from_memory<2>(buffer, &payload);
 	}
 
 	void draw_command_processor::fill_constants_instancing_buffer(rsx::io_buffer& indirection_table_buf, rsx::io_buffer& constants_data_array_buffer, const VertexProgramBase* prog) const
