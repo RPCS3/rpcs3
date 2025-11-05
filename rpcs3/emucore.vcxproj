@@ -450,6 +450,7 @@
     <ClCompile Include="Emu\Io\Dimensions.cpp" />
     <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
+    <ClCompile Include="Emu\Io\KamenRider.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\Io\usb_vfs.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
@@ -545,6 +546,7 @@
     <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
+    <ClInclude Include="..\Utilities\deferred_op.hpp" />
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />
     <ClInclude Include="..\Utilities\stack_trace.h" />
     <ClInclude Include="..\Utilities\transactional_storage.h" />
@@ -809,6 +811,7 @@
     <ClInclude Include="Emu\Io\Dimensions.h" />
     <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
+    <ClInclude Include="Emu\Io\KamenRider.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
     <ClInclude Include="Emu\Io\usb_vfs.h" />
     <ClInclude Include="Emu\IPC.h" />

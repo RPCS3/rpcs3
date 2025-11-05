@@ -80,10 +80,12 @@
     <ClCompile Include="curl\lib\cshutdn.c" />
     <ClCompile Include="curl\lib\curlx\base64.c" />
     <ClCompile Include="curl\lib\curlx\dynbuf.c" />
+    <ClCompile Include="curl\lib\curlx\fopen.c" />
     <ClCompile Include="curl\lib\curlx\inet_ntop.c" />
     <ClCompile Include="curl\lib\curlx\inet_pton.c" />
     <ClCompile Include="curl\lib\curlx\multibyte.c" />
     <ClCompile Include="curl\lib\curlx\nonblock.c" />
+    <ClCompile Include="curl\lib\curlx\strerr.c" />
     <ClCompile Include="curl\lib\curlx\strparse.c" />
     <ClCompile Include="curl\lib\curlx\timediff.c" />
     <ClCompile Include="curl\lib\curlx\timeval.c" />
@@ -92,9 +94,9 @@
     <ClCompile Include="curl\lib\curlx\warnless.c" />
     <ClCompile Include="curl\lib\curlx\winapi.c" />
     <ClCompile Include="curl\lib\curl_addrinfo.c" />
-    <ClCompile Include="curl\lib\curl_des.c" />
     <ClCompile Include="curl\lib\curl_endian.c" />
     <ClCompile Include="curl\lib\curl_fnmatch.c" />
+    <ClCompile Include="curl\lib\curl_fopen.c" />
     <ClCompile Include="curl\lib\curl_gethostname.c" />
     <ClCompile Include="curl\lib\curl_get_line.c" />
     <ClCompile Include="curl\lib\curl_gssapi.c" />
@@ -120,7 +122,6 @@
     <ClCompile Include="curl\lib\fake_addrinfo.c" />
     <ClCompile Include="curl\lib\file.c" />
     <ClCompile Include="curl\lib\fileinfo.c" />
-    <ClCompile Include="curl\lib\fopen.c" />
     <ClCompile Include="curl\lib\formdata.c" />
     <ClCompile Include="curl\lib\ftp.c" />
     <ClCompile Include="curl\lib\ftplistparser.c" />
@@ -147,7 +148,6 @@
     <ClCompile Include="curl\lib\idn.c" />
     <ClCompile Include="curl\lib\if2ip.c" />
     <ClCompile Include="curl\lib\imap.c" />
-    <ClCompile Include="curl\lib\krb5.c" />
     <ClCompile Include="curl\lib\ldap.c" />
     <ClCompile Include="curl\lib\llist.c" />
     <ClCompile Include="curl\lib\macos.c" />
@@ -159,6 +159,7 @@
     <ClCompile Include="curl\lib\mqtt.c" />
     <ClCompile Include="curl\lib\multi.c" />
     <ClCompile Include="curl\lib\multi_ev.c" />
+    <ClCompile Include="curl\lib\multi_ntfy.c" />
     <ClCompile Include="curl\lib\netrc.c" />
     <ClCompile Include="curl\lib\noproxy.c" />
     <ClCompile Include="curl\lib\openldap.c" />
@@ -203,6 +204,7 @@
     <ClCompile Include="curl\lib\version.c" />
     <ClCompile Include="curl\lib\vquic\curl_ngtcp2.c" />
     <ClCompile Include="curl\lib\vquic\curl_quiche.c" />
+    <ClCompile Include="curl\lib\vtls\apple.c" />
     <ClCompile Include="curl\lib\vtls\cipher_suite.c" />
     <ClCompile Include="curl\lib\vtls\hostcheck.c" />
     <ClCompile Include="curl\lib\vtls\rustls.c" />
@@ -225,7 +227,6 @@
     <ClCompile Include="curl\lib\vssh\curl_path.c" />
     <ClCompile Include="curl\lib\vssh\libssh.c" />
     <ClCompile Include="curl\lib\vssh\libssh2.c" />
-    <ClCompile Include="curl\lib\vssh\wolfssh.c" />
     <ClCompile Include="curl\lib\vtls\gtls.c" />
     <ClCompile Include="curl\lib\vtls\keylog.c" />
     <ClCompile Include="curl\lib\vtls\mbedtls.c" />
@@ -274,10 +275,12 @@
     <ClInclude Include="curl\lib\curlx\binmode.h" />
     <ClInclude Include="curl\lib\curlx\curlx.h" />
     <ClInclude Include="curl\lib\curlx\dynbuf.h" />
+    <ClInclude Include="curl\lib\curlx\fopen.h" />
     <ClInclude Include="curl\lib\curlx\inet_ntop.h" />
     <ClInclude Include="curl\lib\curlx\inet_pton.h" />
     <ClInclude Include="curl\lib\curlx\multibyte.h" />
     <ClInclude Include="curl\lib\curlx\nonblock.h" />
+    <ClInclude Include="curl\lib\curlx\strerr.h" />
     <ClInclude Include="curl\lib\curlx\strparse.h" />
     <ClInclude Include="curl\lib\curlx\timediff.h" />
     <ClInclude Include="curl\lib\curlx\timeval.h" />
@@ -287,14 +290,13 @@
     <ClInclude Include="curl\lib\curlx\winapi.h" />
     <ClInclude Include="curl\lib\curl_addrinfo.h" />
     <ClInclude Include="curl\lib\curl_ctype.h" />
-    <ClInclude Include="curl\lib\curl_des.h" />
     <ClInclude Include="curl\lib\curl_endian.h" />
     <ClInclude Include="curl\lib\curl_fnmatch.h" />
+    <ClInclude Include="curl\lib\curl_fopen.h" />
     <ClInclude Include="curl\lib\curl_gethostname.h" />
     <ClInclude Include="curl\lib\curl_get_line.h" />
     <ClInclude Include="curl\lib\curl_gssapi.h" />
     <ClInclude Include="curl\lib\curl_hmac.h" />
-    <ClInclude Include="curl\lib\curl_krb5.h" />
     <ClInclude Include="curl\lib\curl_ldap.h" />
     <ClInclude Include="curl\lib\curl_md4.h" />
     <ClInclude Include="curl\lib\curl_md5.h" />
@@ -325,7 +327,6 @@
     <ClInclude Include="curl\lib\fake_addrinfo.h" />
     <ClInclude Include="curl\lib\file.h" />
     <ClInclude Include="curl\lib\fileinfo.h" />
-    <ClInclude Include="curl\lib\fopen.h" />
     <ClInclude Include="curl\lib\formdata.h" />
     <ClInclude Include="curl\lib\ftp.h" />
     <ClInclude Include="curl\lib\ftplistparser.h" />
@@ -357,6 +358,7 @@
     <ClInclude Include="curl\lib\multihandle.h" />
     <ClInclude Include="curl\lib\multiif.h" />
     <ClInclude Include="curl\lib\multi_ev.h" />
+    <ClInclude Include="curl\lib\multi_ntfy.h" />
     <ClInclude Include="curl\lib\netrc.h" />
     <ClInclude Include="curl\lib\noproxy.h" />
     <ClInclude Include="curl\lib\parsedate.h" />
@@ -403,6 +405,7 @@
     <ClInclude Include="curl\lib\vquic\curl_ngtcp2.h" />
     <ClInclude Include="curl\lib\vquic\curl_quiche.h" />
     <ClInclude Include="curl\lib\vquic\vquic_int.h" />
+    <ClInclude Include="curl\lib\vtls\apple.h" />
     <ClInclude Include="curl\lib\vtls\cipher_suite.h" />
     <ClInclude Include="curl\lib\vtls\hostcheck.h" />
     <ClInclude Include="curl\lib\vtls\rustls.h" />

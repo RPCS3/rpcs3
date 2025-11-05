@@ -16,7 +16,8 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/"
 
-cp "/usr/local/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+cp "/usr/local/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
+cp "/usr/local/opt/llvm@$LLVM_COMPILER_VER/lib/unwind/libunwind.1.dylib" "rpcs3.app/Contents/Frameworks/libunwind.1.dylib"
 cp "$(realpath /usr/local/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /usr/local/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 

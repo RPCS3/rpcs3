@@ -330,7 +330,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 					));
 				}
 
-				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
+				QMessageBox mb;
+				mb.setWindowModality(Qt::WindowModal);
+				mb.setWindowTitle(title);
+				mb.setIcon(QMessageBox::Critical);
+				mb.setTextFormat(Qt::RichText);
+				mb.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+				mb.setDefaultButton(QMessageBox::No);
+				mb.setText(message);
+				mb.layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+				if (mb.exec() == QMessageBox::No)
 				{
 					// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
 					ui->enableTSX->setCurrentIndex(find_item(ui->enableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
@@ -1873,14 +1883,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->useNativeInterface, tooltips.settings.use_native_interface);
 
 #if defined(__linux__)
-	ui->enableGamemode->setVisible(true);
-#endif
 #if defined(GAMEMODE_AVAILABLE)
-	ui->enableGamemode->setEnabled(true);
 	m_emu_settings->EnhanceCheckBox(ui->enableGamemode, emu_settings_type::EnableGamemode);
 	SubscribeTooltip(ui->enableGamemode, tooltips.settings.enable_gamemode);
 #else
+	ui->enableGamemode->setEnabled(false);
 	SubscribeTooltip(ui->enableGamemode, tooltips.settings.no_gamemode);
+#endif
+#else
+	ui->enableGamemode->setVisible(false);
 #endif
 
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
@@ -1903,6 +1914,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->showCaptureHints, emu_settings_type::ShowCaptureHints);
 	SubscribeTooltip(ui->showCaptureHints, tooltips.settings.show_capture_hints);
+
+	m_emu_settings->EnhanceCheckBox(ui->recordWithOverlays, emu_settings_type::RecordWithOverlays);
+	SubscribeTooltip(ui->recordWithOverlays, tooltips.settings.record_with_overlays);
 
 	m_emu_settings->EnhanceCheckBox(ui->pauseDuringHomeMenu, emu_settings_type::PauseDuringHomeMenu);
 	SubscribeTooltip(ui->pauseDuringHomeMenu, tooltips.settings.pause_during_home_menu);

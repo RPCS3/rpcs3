@@ -43,10 +43,9 @@ struct fragment_context_t
 	float fog_param1;
 	uint rop_control;
 	float alpha_ref;
-	uint reserved;
 	uint fog_mode;
 	float wpos_scale;
-	float wpos_bias;
+	vec2 wpos_bias;
 };
 
 )"

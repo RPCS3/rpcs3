@@ -137,6 +137,8 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
 
 	// Present
+	gl::fbo m_sshot_fbo;
+	std::unique_ptr<gl::texture> m_sshot_tex;
 	std::unique_ptr<gl::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 
@@ -190,7 +192,11 @@ public:
 
 	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
+	// NV3089
 	bool scaled_image_from_memory(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate) override;
+
+	// Sync
+	void write_barrier(u32 address, u32 range) override;
 
 	// ZCULL
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;

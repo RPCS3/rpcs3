@@ -464,6 +464,8 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	{
 		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
 		get->getParam = {};
+
+		cellGame.warning("cellHddGameCheck(): New data.");
 	}
 	else
 	{
@@ -476,13 +478,22 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		if (psf.contains("RESOLUTION")) get->getParam.resolution = ::at32(psf, "RESOLUTION").as_integer();
 		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = ::at32(psf, "SOUND_FORMAT").as_integer();
 		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, ::at32(psf, "TITLE").as_string());
-		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, ::at32(psf, "APP_VER").as_string());
-		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
+
+		// Old games do not have APP_VER key
+		strcpy_trunc(get->getParam.dataVersion, psf::get_string(psf, "APP_VER", psf::get_string(sfo, "VERSION", "")));
+
+		if (psf.contains("TITLE_ID"))
+		{
+			strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
+		}
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
 			strcpy_trunc(get->getParam.titleLang[i], psf::get_string(psf, fmt::format("TITLE_%02d", i)));
 		}
+
+		cellGame.warning("cellHddGameCheck(): Data exists:\nATTRIBUTE: 0x%x, RESOLUTION: 0x%x, RESOLUTION: 0x%x, SOUND_FORMAT: 0x%x, dataVersion: %s"
+			, get->getParam.attribute, get->getParam.resolution, get->getParam.soundFormat, get->getParam.soundFormat, std::span<const u8>(reinterpret_cast<const u8*>(get->getParam.dataVersion), 6));
 	}
 
 	// TODO ?

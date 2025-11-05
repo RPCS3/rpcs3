@@ -107,6 +107,9 @@
     <Filter Include="Gui\infinity">
       <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\kamen_rider">
+      <UniqueIdentifier>{8b4d2dff-2b4e-4794-9859-4379ef0e75c0}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\skylanders">
       <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
     </Filter>
@@ -639,6 +642,9 @@
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\kamen_rider_dialog.cpp">
+      <Filter>Gui\infinity</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
       <Filter>Gui\skylanders</Filter>
     </ClCompile>
@@ -751,6 +757,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_infinity_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_kamen_rider_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_kamen_rider_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
@@ -1620,6 +1632,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\kamen_rider_dialog.h">
+      <Filter>Gui\kamen_rider</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
       <Filter>Gui\skylanders</Filter>

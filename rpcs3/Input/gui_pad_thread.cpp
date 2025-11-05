@@ -169,7 +169,7 @@ bool gui_pad_thread::init()
 	usetup.id.bustype = BUS_USB;
 	usetup.id.vendor = 0x1234;
 	usetup.id.product = 0x1234;
-	std::strcpy(usetup.name, "RPCS3 GUI Input Device");
+	strcpy_trunc(usetup.name, "RPCS3 GUI Input Device"sv);
 
 	// The ioctls below will enable the device that is about to be created to pass events.
 	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_EVBIT, EV_KEY));
