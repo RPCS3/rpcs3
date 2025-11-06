@@ -1321,6 +1321,16 @@ namespace rsx
 		{
 			return decode<NV4097_SET_POLYGON_STIPPLE>().enabled();
 		}
+
+		polygon_mode polygon_mode_front() const
+		{
+			return decode<NV4097_SET_FRONT_POLYGON_MODE>().front_polygon_mode();
+		}
+
+		polygon_mode polygon_mode_back() const
+		{
+			return decode<NV4097_SET_BACK_POLYGON_MODE>().back_polygon_mode();
+		}
 	};
 
 	extern rsx_state method_registers;
