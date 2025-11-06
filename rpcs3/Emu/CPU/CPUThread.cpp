@@ -867,9 +867,9 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
-			if (flags & cpu_flag::notify)
+			if (flags & (cpu_flag::notify + cpu_flag::measure))
 			{
-				flags -= cpu_flag::notify;
+				flags -= cpu_flag::notify + cpu_flag::measure;
 				store = true;
 			}
 
