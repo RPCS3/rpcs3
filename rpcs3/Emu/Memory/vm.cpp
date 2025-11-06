@@ -8,6 +8,7 @@
 #include "Utilities/address_range.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
 #include <deque>
@@ -402,7 +403,7 @@ namespace vm
 					return;
 				}
 
-				if (i < 100)
+				if (1 || i < 100)
 					busy_wait(200);
 				else
 					std::this_thread::yield();
@@ -460,9 +461,13 @@ namespace vm
 	{
 	}
 
-	writer_lock::writer_lock(u32 const addr, atomic_t<u64, 64>* range_lock, u32 const size, u64 const flags) noexcept
+	writer_lock::writer_lock(u32 const addr, atomic_t<u64, 64>* range_lock, bool halt_ppus) noexcept
 		: range_lock(range_lock)
 	{
+		// Constant-ized arguments
+		constexpr u32 size = 128;
+		constexpr u64 flags = vm::range_locked;
+
 		cpu_thread* cpu{};
 
 		if (g_tls_locked)
@@ -578,7 +583,7 @@ namespace vm
 				utils::pause();
 			}
 
-			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
+			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; halt_ppus && lock != end; lock++)
 			{
 				if (auto ptr = +*lock; ptr && ptr->state.none_of(cpu_flag::wait + cpu_flag::memory))
 				{
@@ -586,9 +591,9 @@ namespace vm
 				}
 			}
 
-			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
+			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; halt_ppus && lock != end; lock++)
 			{
-				if (auto ptr = +*lock)
+				if (auto ptr = static_cast<named_thread<ppu_thread>*>(lock->load()))
 				{
 					while (!(ptr->state & cpu_flag::wait))
 					{
