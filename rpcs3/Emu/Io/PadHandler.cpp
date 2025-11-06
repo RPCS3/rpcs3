@@ -170,7 +170,7 @@ u16 PadHandlerBase::ConvertAxis(f32 value)
 
 // The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 // using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
-// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
+// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
 // This function assumes inX and inY is already in 0-255
 void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
 {

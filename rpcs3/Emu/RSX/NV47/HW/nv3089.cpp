@@ -333,68 +333,68 @@ namespace rsx
 					return src_range.overlaps(dst_range);
 				}();
 
-					if (is_overlapping) [[ unlikely ]]
+				if (is_overlapping) [[ unlikely ]]
+				{
+					if (need_clip)
 					{
-						if (need_clip)
-						{
-							temp2.resize(dst.pitch * dst.clip_height);
-							clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
-							return;
-						}
-
-						if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
-						{
-							const u32 buffer_pitch = dst.bpp * out_w;
-							temp2.resize(buffer_pitch * out_h);
-							std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
-
-							// Read the whole buffer from source
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(buf, pixels, buffer_pitch);
-								pixels += src.pitch;
-								buf += buffer_pitch;
-							}
-
-							buf = temp2.data(), pixels = dst.pixels;
-
-							// Write to destination
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(pixels, buf, buffer_pitch);
-								pixels += dst.pitch;
-								buf += buffer_pitch;
-							}
-
-							return;
-						}
-
-						std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
+						temp2.resize(dst.pitch * dst.clip_height);
+						clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
 						return;
 					}
 
-					if (need_clip) [[ unlikely ]]
+					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
 					{
-						clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
-						return;
-					}
+						const u32 buffer_pitch = dst.bpp * out_w;
+						temp2.resize(buffer_pitch * out_h);
+						std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
 
-					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
-					{
-						u8* dst_pixels = dst.pixels, * src_pixels = src.pixels;
-
+						// Read the whole buffer from source
 						for (u32 y = 0; y < out_h; ++y)
 						{
-							std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
-							dst_pixels += dst.pitch;
-							src_pixels += src.pitch;
+							std::memcpy(buf, pixels, buffer_pitch);
+							pixels += src.pitch;
+							buf += buffer_pitch;
+						}
+
+						buf = temp2.data(), pixels = dst.pixels;
+
+						// Write to destination
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							std::memcpy(pixels, buf, buffer_pitch);
+							pixels += dst.pitch;
+							buf += buffer_pitch;
 						}
 
 						return;
 					}
 
-					std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+					std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
 					return;
+				}
+
+				if (need_clip) [[ unlikely ]]
+				{
+					clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
+					return;
+				}
+
+				if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
+				{
+					u8* dst_pixels = dst.pixels, * src_pixels = src.pixels;
+
+					for (u32 y = 0; y < out_h; ++y)
+					{
+						std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
+						dst_pixels += dst.pitch;
+						src_pixels += src.pitch;
+					}
+
+					return;
+				}
+
+				std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+				return;
 			}
 
 			if (need_clip) [[ unlikely ]]
