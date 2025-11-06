@@ -3269,7 +3269,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 	extern error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2);
 	extern error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2);
-	extern error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info);
+	extern error_code cellCameraGetBufferInfoEx(ppu_thread&, s32 dev_num, vm::ptr<CellCameraInfoEx> info);
 
 	vm::var<CellCameraInfoEx> info = vm::make_var<CellCameraInfoEx>({});
 	vm::var<u32> arg1 = vm::make_var<u32>({});
@@ -3277,7 +3277,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 	cellCameraGetAttribute(0, 0x3e6, arg1, arg2);
 	cellCameraSetAttribute(0, 0x3e6, 0x3e, *arg2 | 0x80);
-	cellCameraGetBufferInfoEx(0, info);
+	cellCameraGetBufferInfoEx(*cpu_thread::get_current<ppu_thread>(), 0, info);
 
 	if (info->width == 640)
 	{
