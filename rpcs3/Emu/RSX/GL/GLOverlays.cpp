@@ -176,6 +176,8 @@ namespace gl
 				cmd->disablei(GL_BLEND, 0);
 			}
 
+			cmd->polygon_mode(GL_FILL);
+
 			// Render
 			cmd->use_program(program_handle.id());
 			on_load();
