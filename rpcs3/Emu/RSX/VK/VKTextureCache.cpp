@@ -403,6 +403,8 @@ namespace vk
 		const auto dst_aspect = dst->aspect();
 		const auto dst_bpp = vk::get_format_texel_width(dst->format());
 
+		std::unordered_set<decltype(sections_to_transfer.front().src)> processed_input_images;
+
 		for (const auto& section : sections_to_transfer)
 		{
 			if (!section.src)
@@ -436,11 +438,15 @@ namespace vk
 			const bool typeless = section.src->aspect() != dst_aspect ||
 				!formats_are_bitcast_compatible(dst, section.src);
 
-			// Avoid inserting unnecessary barrier GENERAL->TRANSFER_SRC->GENERAL in active render targets
-			const auto preferred_layout = (section.src->current_layout != VK_IMAGE_LAYOUT_GENERAL) ?
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+			if (!processed_input_images.contains(section.src))
+			{
+				// Avoid inserting unnecessary barrier GENERAL->TRANSFER_SRC->GENERAL in active render targets
+				const auto preferred_layout = (section.src->current_layout != VK_IMAGE_LAYOUT_GENERAL) ?
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
 
-			section.src->push_layout(cmd, preferred_layout);
+				section.src->push_layout(cmd, preferred_layout);
+				processed_input_images.insert(section.src);
+			}
 
 			auto src_image = section.src;
 			auto src_x = section.src_x;
@@ -541,8 +547,12 @@ namespace vk
 					vkCmdCopyImage(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 				}
 			}
+		}
 
-			section.src->pop_layout(cmd);
+		// Pop unique image layouts here
+		for (auto& image : processed_input_images)
+		{
+			image->pop_layout(cmd);
 		}
 	}
 
