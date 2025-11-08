@@ -485,8 +485,6 @@ namespace vk
 					const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 					const areai dst_rect = coordi{{ section.dst_x, section.dst_y }, { section.dst_w, section.dst_h }};
 					vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, 1);
-
-					section.src->pop_layout(cmd);
 					continue;
 				}
 
