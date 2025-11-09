@@ -501,8 +501,11 @@ namespace vk
 
 				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
+					// We need to convert the VkDescriptorImageInfoEx entries back to the native vulkan variants since we're going to be flushing an array with no stride check
+					auto vk_data = ptr->map(FN(static_cast<VkDescriptorImageInfo>(x)));
+
 					writer.descriptorCount = ptr->size();
-					m_descriptor_set.push(ptr->data(), ptr->size(), type, idx);
+					m_descriptor_set.push(vk_data.data(), vk_data.size(), type, idx);
 					return;
 				}
 
@@ -552,8 +555,9 @@ namespace vk
 
 				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
+					auto vk_data = ptr->map(FN(static_cast<VkDescriptorImageInfo>(x))); // This can be optimized to update only changed ids but this is an interpreter-only feature for now
 					ensure(m_descriptor_template[idx].descriptorCount == ptr->size());
-					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(vk_data);
 					return;
 				}
 
