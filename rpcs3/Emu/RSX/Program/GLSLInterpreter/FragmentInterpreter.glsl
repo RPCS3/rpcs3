@@ -529,7 +529,7 @@ void initialize()
 
 	// WPOS
 	vr0 = vec4(abs(wpos_scale), wpos_scale, 1., 1.);
-	vr1 = vec4(0., wpos_bias, 0., 0.);
+	vr1 = vec4(wpos_bias, 0., 0.);
 	wpos = gl_FragCoord * vr0 + vr1;
 
 	// Other
