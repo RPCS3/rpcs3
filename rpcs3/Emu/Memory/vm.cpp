@@ -950,7 +950,7 @@ namespace vm
 		return true;
 	}
 
-	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm, std::vector<std::pair<u64, u64>>& unmap_events)
+	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm, std::vector<std::pair<u64, u64>>& unmap_events, bool is_block_termination = false)
 	{
 		perf_meter<"PAGE_UNm"_u64> perf0;
 
@@ -1021,7 +1021,11 @@ namespace vm
 		ppu_remove_hle_instructions(addr, size);
 
 		// Actually unmap memory
-		if (is_noop)
+		if (is_block_termination && (!shm || is_noop))
+		{
+			// We can skip it if the block is freed
+		}
+		else if (is_noop)
 		{
 			std::memset(g_sudo_addr + addr, 0, size);
 		}
@@ -1327,7 +1331,7 @@ namespace vm
 				const auto size = it->second.first;
 
 				std::vector<std::pair<u64, u64>> event_data;
-				ensure(size == _page_unmap(it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data));
+				ensure(size == _page_unmap(it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data, true));
 
 				if (it->second.second && addr < 0xE0000000)
 				{
