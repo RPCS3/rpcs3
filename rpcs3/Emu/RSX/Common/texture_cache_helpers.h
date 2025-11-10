@@ -279,7 +279,12 @@ namespace rsx
 			{
 				const auto range = fbos[index].surface->get_memory_range();
 				sort_ranges.push_back(range);
-				sort_list.push_back({ fbos[index].surface->last_use_tag, 0, index, range });
+				sort_list.push_back({
+					.tag = fbos[index].surface->last_use_tag,
+					.list = 0,
+					.index = index,
+					.bounds = range
+				});
 			}
 
 			for (u32 index = 0; index < local.size(); ++index)
@@ -289,7 +294,12 @@ namespace rsx
 
 				const auto range = local[index]->get_section_range();
 				sort_ranges.push_back(range);
-				sort_list.push_back({ local[index]->last_write_tag, 1, index, range });
+				sort_list.push_back({
+					.tag = local[index]->last_write_tag,
+					.list = 1,
+					.index = index,
+					.bounds = range
+				});
 			}
 
 			if (!fbos.empty() && !local.empty())
@@ -375,7 +385,7 @@ namespace rsx
 				return { section_end <= slice_end, section_end >= slice_end };
 			};
 
-			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
+			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
 			{
 				// Intersect this resource with the original one.
 				// Note that intersection takes place in a normalized coordinate space (bpp = 1)
@@ -488,7 +498,7 @@ namespace rsx
 					}
 					else
 					{
-						std::tie(remove, slice_complete) = add_local_resource(local[e.index], current_address, slice);
+						std::tie(remove, slice_complete) = add_local_resource(local[e.index], current_address, slice, !fbos.empty());
 					}
 
 					if (remove)
