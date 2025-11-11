@@ -453,7 +453,7 @@ namespace vk
 			}
 
 			m_descriptor_slots.resize(bind_slots_count);
-			std::memset(m_descriptor_slots.data(), 0, sizeof(descriptor_slot_t) * bind_slots_count);
+			std::fill(m_descriptor_slots.begin(), m_descriptor_slots.end(), descriptor_slot_t{});
 
 			m_descriptors_dirty.resize(bind_slots_count);
 			std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
@@ -534,7 +534,7 @@ namespace vk
 			auto update_descriptor_slot = [this](unsigned idx)
 			{
 				const auto& slot = m_descriptor_slots[idx];
-				const VkDescriptorType type = m_descriptor_types[idx];
+
 				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
 				{
 					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
