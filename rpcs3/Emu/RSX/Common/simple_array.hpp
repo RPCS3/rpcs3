@@ -16,7 +16,7 @@ namespace rsx
 	};
 
 	template <typename Ty>
-		requires std::is_trivially_destructible_v<Ty>
+		requires std::is_trivially_destructible_v<Ty> && std::is_trivially_copyable_v<Ty>
 	struct simple_array
 	{
 	public:
@@ -178,24 +178,11 @@ namespace rsx
 				return;
 			}
 
-			if constexpr (std::is_trivially_copyable_v<Ty>)
-			{
-				// Use memcpy to allow compiler optimizations
-				Ty _stack_alloc[_local_capacity];
-				std::memcpy(_stack_alloc, that._data, that.size_bytes());
-				std::memcpy(that._data, _data, size_bytes());
-				std::memcpy(_data, _stack_alloc, that.size_bytes());
-			}
-			else
-			{
-				// Safe path: use element-wise std::swap
-				const usz count = std::max(size(), that.size());
-				for (usz i = 0; i < count; ++i)
-				{
-					std::swap(_data[i], that._data[i]);
-				}
-			}
-
+			// Use memcpy to allow compiler optimizations
+			Ty _stack_alloc[_local_capacity];
+			std::memcpy(_stack_alloc, that._data, that.size_bytes());
+			std::memcpy(that._data, _data, size_bytes());
+			std::memcpy(_data, _stack_alloc, that.size_bytes());
 			std::swap(_size, that._size);
 		}
 
