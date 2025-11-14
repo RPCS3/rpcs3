@@ -2213,8 +2213,11 @@ inline v128 gv_cvtu32_tofs(const v128& src)
 #if defined(__AVX512VL__)
 	return _mm_cvtepu32_ps(src);
 #elif defined(ARCH_X64)
-	const auto fix = _mm_and_ps(_mm_castsi128_ps(_mm_srai_epi32(src, 31)), _mm_set1_ps(0x80000000));
-	return _mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(src, _mm_set1_epi32(0x7fffffff))), fix);
+	constexpr u64 bit_shift = 9;
+	const auto shifted = _mm_srli_epi32(src, bit_shift);
+	const auto cleared = _mm_slli_epi32(shifted, bit_shift);
+	const auto low_bits = _mm_sub_epi32(src, cleared);
+	return _mm_add_ps(_mm_cvtepi32_ps(low_bits), _mm_mul_ps(_mm_cvtepi32_ps(shifted), _mm_set_ps1(1u << bit_shift)));
 #elif defined(ARCH_ARM64)
 	return vcvtq_f32_u32(src);
 #endif
