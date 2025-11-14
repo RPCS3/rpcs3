@@ -38,7 +38,7 @@ bool _fragment_discard = false;
 vec4 get_wpos()
 {
 	float abs_scale = abs(wpos_scale);
-	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);
+	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(wpos_bias, 0., 0.);
 }
 #endif
 

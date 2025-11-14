@@ -79,6 +79,5 @@ public:
 	void isochronous_transfer(UsbTransfer* transfer) override;
 
 protected:
-	shared_mutex m_query_mutex;
 	std::queue<std::array<u8, 32>> m_queries;
 };

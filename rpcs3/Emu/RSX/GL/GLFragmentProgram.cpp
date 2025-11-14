@@ -175,10 +175,9 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	"	float fog_param1;\n"
 	"	uint rop_control;\n"
 	"	float alpha_ref;\n"
-	"	uint reserved;\n"
 	"	uint fog_mode;\n"
 	"	float wpos_scale;\n"
-	"	float wpos_bias;\n"
+	"	vec2 wpos_bias;\n"
 	"};\n\n"
 
 	"layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n"

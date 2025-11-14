@@ -18,6 +18,7 @@
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
 #include "Emu/Io/Dimensions.h"
+#include "Emu/Io/KamenRider.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/guncon3_config.h"
@@ -175,7 +176,7 @@ private:
 		{0x1430, 0x0150, 0x0150, "Skylanders Portal", &usb_device_skylander::get_num_emu_devices, &usb_device_skylander::make_instance},
 		{0x0E6F, 0x0129, 0x0129, "Disney Infinity Base", &usb_device_infinity::get_num_emu_devices, &usb_device_infinity::make_instance},
 		{0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal", &usb_device_dimensions::get_num_emu_devices, &usb_device_dimensions::make_instance},
-		{0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal", nullptr, nullptr},
+		{0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal", &usb_device_kamen_rider::get_num_emu_devices, &usb_device_kamen_rider::make_instance},
 
 		// Cameras
 		// {0x1415, 0x0020, 0x2000, "Sony Playstation Eye", nullptr, nullptr}, // TODO: verifiy

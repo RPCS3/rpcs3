@@ -646,7 +646,7 @@ namespace np
 
 		for (; it != end; ++it)
 		{
-			strcpy(ifr.ifr_name, it->ifr_name);
+			strcpy_trunc(ifr.ifr_name, it->ifr_name);
 			if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
 			{
 				if (!(ifr.ifr_flags & IFF_LOOPBACK))

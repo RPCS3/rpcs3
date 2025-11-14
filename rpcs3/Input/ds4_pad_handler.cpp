@@ -189,8 +189,6 @@ void ds4_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
 
 	// Set default color value
 	cfg->colorR.def = 0;

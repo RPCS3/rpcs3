@@ -3844,7 +3844,8 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			}
 
 			// Writeback of unchanged data. Only check memory change
-			if (cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128))
+			// For the comparison, load twice for atomicity
+			if (cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res == rtime && cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128))
 			{
 				raddr = 0; // Disable notification
 				return true;

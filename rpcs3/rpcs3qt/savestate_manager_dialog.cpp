@@ -552,7 +552,7 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 	std::vector<std::unique_ptr<game_savestates_data>> game_data;
 
 	qRegisterMetaType<QVector<int>>("QVector<int>");
-	QList<int> indices;
+	QList<u64> indices;
 	for (int i = 0; i < count; ++i)
 	{
 		auto game_data_ptr = std::make_unique<game_savestates_data>();
@@ -595,7 +595,7 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 	});
 
 	atomic_t<usz> error_count{};
-	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &game_data](const int& i)
+	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &game_data](u64 i)
 	{
 		gui_log.trace("Loading savestate dir: %s", game_data[i]->title_id);
 

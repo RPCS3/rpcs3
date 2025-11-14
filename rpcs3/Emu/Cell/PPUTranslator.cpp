@@ -1115,7 +1115,24 @@ void PPUTranslator::VCFSX(ppu_opcode_t op)
 void PPUTranslator::VCFUX(ppu_opcode_t op)
 {
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+
+#ifdef ARCH_ARM64
+	return set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+#else
+	if (m_use_avx512)
+	{
+		return set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+	}
+
+	constexpr int bit_shift = 9;
+	const auto shifted = (b >> bit_shift);
+	const auto cleared = shifted << bit_shift;
+	const auto low_bits = b - cleared;
+	const auto high_part = fpcast<f32[4]>(noncast<s32[4]>(shifted)) * fsplat<f32[4]>(static_cast<f32>(1u << bit_shift));
+	const auto low_part = fpcast<f32[4]>(noncast<s32[4]>(low_bits));
+	const auto temp = high_part + low_part;
+	set_vr(op.vd, temp * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+#endif
 }
 
 void PPUTranslator::VCMPBFP(ppu_opcode_t op)

@@ -544,9 +544,7 @@ std::optional<std::array<u8, 32>> dimensions_toypad::pop_added_removed_response(
 	std::lock_guard lock(m_dimensions_mutex);
 
 	if (m_figure_added_removed_responses.empty())
-	{
 		return std::nullopt;
-	}
 
 	std::array<u8, 32> response = m_figure_added_removed_responses.front();
 	m_figure_added_removed_responses.pop();
@@ -597,7 +595,6 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 	{
 		// Read Endpoint, if a request has not been sent via the write endpoint, set expected result as
 		// EHCI_CC_HALTED so the game doesn't report the Toypad as being disconnected.
-		std::lock_guard lock(m_query_mutex);
 		std::optional<std::array<u8, 32>> response = g_dimensionstoypad.pop_added_removed_response();
 		if (response)
 		{
@@ -696,7 +693,6 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 			break;
 		}
 		}
-		std::lock_guard lock(m_query_mutex);
 		m_queries.push(q_result);
 		break;
 	}
