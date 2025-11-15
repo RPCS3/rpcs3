@@ -769,7 +769,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		}
 
 		// TODO: better way to do this?
-		switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
+		switch (cheat->type)
 		{
 		case cheat_type::unsigned_8_cheat: results = convert_and_set<u8>(final_offset); break;
 		case cheat_type::unsigned_16_cheat: results = convert_and_set<u16>(final_offset); break;
@@ -1062,7 +1062,5 @@ QString cheat_manager_dialog::get_localized_cheat_type(cheat_type type)
 	case cheat_type::float_32_cheat: return tr("Float 32 bits");
 	case cheat_type::max: break;
 	}
-	std::string type_formatted;
-	fmt::append(type_formatted, "%s", type);
-	return QString::fromStdString(type_formatted);
+	return QString::fromStdString(fmt::format("%s", type));
 }
