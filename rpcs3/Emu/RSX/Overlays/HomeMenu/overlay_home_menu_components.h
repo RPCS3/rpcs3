@@ -18,7 +18,8 @@ namespace rsx
 			stay,
 			back,
 			next,
-			exit
+			exit,
+			exit_for_screenshot
 		};
 
 		struct home_menu_entry : horizontal_layout
