@@ -303,6 +303,33 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 }
 #endif
 
+// Check if only a single 16-bytes block has changed
+// Returning its position, or -1 if that is not the situation
+static inline usz scan16_rdata(const decltype(spu_thread::rdata)& _lhs, const decltype(spu_thread::rdata)& _rhs)
+{
+	const auto lhs = reinterpret_cast<const v128*>(_lhs);
+	const auto rhs = reinterpret_cast<const v128*>(_rhs);
+
+	u32 mask = 0;
+
+	for (usz i = 0; i < 8; i += 4)
+	{
+		const u32 a = (lhs[i + 0] != rhs[i + 0]) ? 1 : 0;
+		const u32 b = (lhs[i + 1] != rhs[i + 1]) ? 1 : 0;
+		const u32 c = (lhs[i + 2] != rhs[i + 2]) ? 1 : 0;
+		const u32 d = (lhs[i + 3] != rhs[i + 3]) ? 1 : 0;
+
+		mask |= ((a << 0) + (b << 1) + (c << 2) + (c << 3)) << i;
+	}
+
+	if (mask && (mask & (mask - 1)) == 0)
+	{
+		return std::countr_zero(mask);
+	}
+
+	return umax;
+}
+
 #ifdef _MSC_VER
 __forceinline
 #endif
@@ -3854,6 +3881,11 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			return false;
 		}
 
+		static const auto cast_as = [](void* ptr, usz pos){ return reinterpret_cast<u128*>(ptr) + pos; };
+		static const auto cast_as_const = [](const void* ptr, usz pos){ return reinterpret_cast<const u128*>(ptr) + pos; };
+
+		const usz diff16_pos = scan16_rdata(to_write, rdata);
+
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
 			if ((r & -128) != rtime || (r & 127))
@@ -3975,8 +4007,19 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 			if (cmp_rdata(rdata, super_data))
 			{
-				mov_rdata(super_data, to_write);
-				return true;
+				if (diff16_pos != umax)
+				{
+					// Do it with CMPXCHG16B if possible, this allows to improve accuracy whenever "RSX Accurate Reservations" is off 
+					if (atomic_storage<u128>::compare_exchange(*cast_as(super_data, diff16_pos), *cast_as(rdata, diff16_pos), *cast_as_const(to_write, diff16_pos)))
+					{
+						return true;
+					}
+				}
+				else
+				{
+					mov_rdata(super_data, to_write);
+					return true;
+				}
 			}
 
 			return false;
