@@ -319,7 +319,7 @@ static inline usz scan16_rdata(const decltype(spu_thread::rdata)& _lhs, const de
 		const u32 c = (lhs[i + 2] != rhs[i + 2]) ? 1 : 0;
 		const u32 d = (lhs[i + 3] != rhs[i + 3]) ? 1 : 0;
 
-		mask |= ((a << 0) + (b << 1) + (c << 2) + (c << 3)) << i;
+		mask |= ((a << 0) + (b << 1) + (c << 2) + (d << 3)) << i;
 	}
 
 	if (mask && (mask & (mask - 1)) == 0)
