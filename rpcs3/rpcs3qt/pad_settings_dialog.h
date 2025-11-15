@@ -74,7 +74,8 @@ class pad_settings_dialog : public QDialog
 		id_reset_parameters,
 		id_blacklist,
 		id_refresh,
-		id_add_config_file
+		id_add_config_file,
+		id_remove_config_file
 	};
 
 	struct pad_button
@@ -101,6 +102,7 @@ private Q_SLOTS:
 	void ChangeDevice(int index);
 	void HandleDeviceClassChange(u32 class_id) const;
 	void AddConfigFile();
+	void RemoveConfigFile();
 	/** Update the current player config with the GUI values. */
 	void ApplyCurrentPlayerConfig(int new_player_id);
 	void RefreshPads();
@@ -192,6 +194,9 @@ private:
 	void start_input_thread();
 	void pause_input_thread();
 
+	std::pair<QStringList, QString> get_config_files();
+
+	void save(bool check_duplicates);
 	void SaveExit();
 	void CancelExit();
 
