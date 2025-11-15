@@ -767,7 +767,12 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	}
 
 	// Read thread name
-	const std::string thread_name(attr_data.name.get_ptr(), std::max<u32>(attr_data.name_len, 1) - 1);
+	std::string thread_name;
+
+	if (attr_data.name_len && !vm::read_string(attr_data.name.addr(), attr_data.name_len - 1, thread_name, true))
+	{
+		return { CELL_EFAULT, attr_data.name.addr() };
+	}
 
 	const auto group = idm::get_unlocked<lv2_spu_group>(group_id);
 
@@ -906,7 +911,7 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> 
 	return CELL_ESTAT;
 }
 
-error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
+error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<reduced_sys_spu_thread_group_attribute> attr)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -914,11 +919,30 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	const s32 min_prio = g_ps3_process_info.has_root_perm() ? 0 : 16;
 
-	const sys_spu_thread_group_attribute attr_data = *attr;
+	sys_spu_thread_group_attribute attr_data{};
+	{
+		const reduced_sys_spu_thread_group_attribute attr_reduced = *attr;
+		attr_data.name = attr_reduced.name;
+		attr_data.nsize = attr_reduced.nsize;
+		attr_data.type = attr_reduced.type;
+
+		// Read container-id member at offset 12 bytes conditionally (that's what LV2 does)
+		if (attr_data.type & SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER)
+		{
+			attr_data.ct = vm::unsafe_ptr_cast<sys_spu_thread_group_attribute>(attr)->ct;
+		}
+	}
 
 	if (attr_data.nsize > 0x80 || !num)
 	{
 		return CELL_EINVAL;
+	}
+
+	std::string group_name;
+
+	if (attr_data.nsize && !vm::read_string(attr_data.name.addr(), attr_data.nsize - 1, group_name, true))
+	{
+		return { CELL_EFAULT, attr_data.name.addr() };
 	}
 
 	const s32 type = attr_data.type;
@@ -1075,7 +1099,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		return CELL_EBUSY;
 	}
 
-	const auto group = idm::make_ptr<lv2_spu_group>(std::string(attr_data.name.get_ptr(), std::max<u32>(attr_data.nsize, 1) - 1), num, prio, type, ct, use_scheduler, mem_size);
+	const auto group = idm::make_ptr<lv2_spu_group>(std::move(group_name), num, prio, type, ct, use_scheduler, mem_size);
 
 	if (!group)
 	{
