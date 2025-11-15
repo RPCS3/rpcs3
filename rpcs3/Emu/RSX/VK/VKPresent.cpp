@@ -694,7 +694,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 
-		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
+		const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
+
+		if (user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
 			const usz sshot_size = buffer_height * buffer_width * 4;
 
@@ -766,7 +768,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
 
-			if (g_user_asked_for_screenshot.exchange(false))
+			if (user_asked_for_screenshot)
 			{
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
 			}
