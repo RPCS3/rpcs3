@@ -4,6 +4,8 @@
 #include "Emu/system_config.h"
 #include "Utilities/date_time.h"
 
+extern atomic_t<bool> g_user_asked_for_screenshot;
+
 namespace rsx
 {
 	namespace overlays
@@ -94,12 +96,13 @@ namespace rsx
 				break;
 			}
 			case page_navigation::exit:
+			case page_navigation::exit_for_screenshot:
 			{
 				fade_animation.current = color4f(1.f);
 				fade_animation.end = color4f(0.f);
 				fade_animation.active = true;
 
-				fade_animation.on_finish = [this]
+				fade_animation.on_finish = [this, navigation]
 				{
 					close(true, true);
 
@@ -109,6 +112,12 @@ namespace rsx
 						{
 							Emu.Resume();
 						});
+					}
+
+					if (navigation == page_navigation::exit_for_screenshot)
+					{
+						rsx_log.notice("Taking screenshot after exiting home menu");
+						g_user_asked_for_screenshot = true;
 					}
 				};
 				break;

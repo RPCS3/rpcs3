@@ -323,7 +323,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
+		const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
+
+		if (user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
 			static const gl::pixel_pack_settings pack_settings{};
 
@@ -374,7 +376,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			{
 				screenshot_log.error("Failed to capture image: 0x%x", err);
 			}
-			else if (g_user_asked_for_screenshot.exchange(false))
+			else if (user_asked_for_screenshot)
 			{
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 			}
