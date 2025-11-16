@@ -1252,8 +1252,8 @@ void rsx_debugger::GetVertexProgram() const
 		rsx::method_registers.clip_planes_mask()
 	};
 
-	vp_blob.resize(vp_blob.size() + vp.data.size());
-	std::copy(vp.data.begin(), vp.data.end(), vp_blob.begin() + 14);
+	vp_blob.reserve(vp_blob.size() + vp.data.size());
+	vp_blob.insert(vp_blob.end(), vp.data.begin(), vp.data.end());
 
 	std::span<u32> vp_binary(vp_blob);
 	CgBinaryDisasm vp_disasm(vp_binary);
