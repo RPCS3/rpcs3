@@ -80,7 +80,11 @@ class FragmentProgramDecompiler
 	void AddCodeCond(const std::string& lhs, const std::string& rhs);
 	std::string GetRawCond();
 	std::string GetCond();
-	template<typename T> std::string GetSRC(T src);
+
+	template<typename T>
+		requires std::is_same_v<T, SRC0> || std::is_same_v<T, SRC1> || std::is_same_v<T, SRC2>
+	std::string GetSRC(T src);
+
 	std::string BuildCode();
 
 	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }
@@ -103,7 +107,7 @@ class FragmentProgramDecompiler
 	* Calculates the lane mask for a given input
 	* This is a temporary workaround until the decompiler is rewritten with some IR to allow granular split/gather passes
 	*/
-	u32 get_src_vector_mask(u32 opcode, int operand);
+	u32 get_src_vector_mask(u32 opcode, u32 operand);
 
 protected:
 	const RSXFragmentProgram &m_prog;

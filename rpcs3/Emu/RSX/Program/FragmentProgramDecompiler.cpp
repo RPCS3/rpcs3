@@ -32,7 +32,7 @@ enum VectorLane : u8
 	W = 3,
 };
 
-u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, int operand)
+u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand)
 {
 	auto decode = [&](const std::string& expr) -> u32
 	{
@@ -58,8 +58,6 @@ u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, int operand)
 	constexpr u32 xyz = 0b111;
 	constexpr u32 xyzw = 0b1111;
 	constexpr u32 use_dst_mask = 1u << 31;
-
-	u32 temp = 0;
 
 	switch (opcode)
 	{
@@ -672,11 +670,13 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::s
 	AddCode(lhs + " = _select(" + lhs + ", " + src_prefix + rhs + ", " + cond + ");");
 }
 
-template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
+template<typename T>
+	requires std::is_same_v<T, SRC0> || std::is_same_v<T, SRC1> || std::is_same_v<T, SRC2>
+std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	u32 precision_modifier = 0;
-	int operand_idx = -1;
+	u32 operand_idx = umax;
 
 	if constexpr (std::is_same_v<T, SRC0>)
 	{
@@ -693,8 +693,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		precision_modifier = src1.src2_prec_mod;
 		operand_idx = 2;
 	}
-
-	ensure(operand_idx != -1);
+	else
+	{
+		// Unreachable unless we add another SRC type
+		fmt::throw_exception("Invalid SRC input");
+	}
 
 	switch (src.reg_type)
 	{
