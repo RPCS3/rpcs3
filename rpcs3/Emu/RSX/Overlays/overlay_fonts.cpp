@@ -185,9 +185,10 @@ namespace rsx
 
 				// Check if the character exists in the font
 				stbtt_fontinfo info;
-				stbtt_InitFont(&info, bytes.data(), stbtt_GetFontOffsetForIndex(bytes.data(), 0));
-
-				font_found = stbtt_FindGlyphIndex(&info, c) != 0;
+				if (stbtt_InitFont(&info, bytes.data(), stbtt_GetFontOffsetForIndex(bytes.data(), 0)) != 0)
+				{
+					font_found = stbtt_FindGlyphIndex(&info, c) != 0;
+				}
 
 				if (!font_found)
 				{
