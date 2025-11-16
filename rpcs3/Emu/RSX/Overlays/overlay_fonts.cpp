@@ -299,7 +299,7 @@ namespace rsx
 
 				for (const auto& e : m_glyph_map)
 				{
-					if (e.first == unsigned(page_id))
+					if (e.first == page_id)
 					{
 						codepage_cache.page = e.second.get();
 						break;
