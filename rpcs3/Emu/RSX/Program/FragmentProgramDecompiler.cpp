@@ -32,6 +32,174 @@ enum VectorLane : u8
 	W = 3,
 };
 
+u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, int operand)
+{
+	auto decode = [&](const std::string& expr) -> u32
+	{
+		const auto ops = fmt::split(expr, { "," });
+		u32 ret = 0;
+
+		if (ops.size() <= operand)
+		{
+			return 0;
+		}
+
+		const auto& m = ops[operand];
+		if (m.find("x") != std::string::npos) ret &= 1;
+		if (m.find("y") != std::string::npos) ret &= (1 << 1);
+		if (m.find("z") != std::string::npos) ret &= (1 << 2);
+		if (m.find("w") != std::string::npos) ret &= (1 << 3);
+
+		return ret;
+	};
+
+	constexpr u32 x = 0b1;
+	constexpr u32 xy = 0b11;
+	constexpr u32 xyz = 0b111;
+	constexpr u32 xyzw = 0b1111;
+	constexpr u32 use_dst_mask = 1u << 31;
+
+	u32 temp = 0;
+
+	switch (opcode)
+	{
+		case RSX_FP_OPCODE_NOP:
+			return 0;
+		case RSX_FP_OPCODE_MOV:
+		case RSX_FP_OPCODE_MUL:
+		case RSX_FP_OPCODE_ADD:
+		case RSX_FP_OPCODE_MAD:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_DP3:
+			return xyz;
+		case RSX_FP_OPCODE_DP4:
+			return xyzw;
+		case RSX_FP_OPCODE_DST:
+			return decode("yz, yw");
+		case RSX_FP_OPCODE_MIN:
+		case RSX_FP_OPCODE_MAX:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_SLT:
+		case RSX_FP_OPCODE_SGE:
+		case RSX_FP_OPCODE_SLE:
+		case RSX_FP_OPCODE_SGT:
+		case RSX_FP_OPCODE_SNE:
+		case RSX_FP_OPCODE_SEQ:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_FRC:
+		case RSX_FP_OPCODE_FLR:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_KIL:
+			return 0;
+		case RSX_FP_OPCODE_PK4:
+			return xyzw;
+		case RSX_FP_OPCODE_UP4:
+			return x;
+		case RSX_FP_OPCODE_DDX:
+		case RSX_FP_OPCODE_DDY:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_TEX:
+		case RSX_FP_OPCODE_TXD:
+			switch (m_prog.get_texture_dimension(dst.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				return x;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				return xy;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				return xyz;
+			default:
+				return 0;
+			}
+		case RSX_FP_OPCODE_TXP:
+			switch (m_prog.get_texture_dimension(dst.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				return xy;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				return xyz;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				return xyzw;
+			default:
+				return 0;
+			}
+		case RSX_FP_OPCODE_RCP:
+		case RSX_FP_OPCODE_RSQ:
+		case RSX_FP_OPCODE_EX2:
+		case RSX_FP_OPCODE_LG2:
+			return x;
+		case RSX_FP_OPCODE_LIT:
+			return xyzw;
+		case RSX_FP_OPCODE_LRP:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_STR:
+		case RSX_FP_OPCODE_SFL:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_COS:
+		case RSX_FP_OPCODE_SIN:
+			return x;
+		case RSX_FP_OPCODE_PK2:
+			return xy;
+		case RSX_FP_OPCODE_UP2:
+			return x;
+		case RSX_FP_OPCODE_POW:
+			fmt::throw_exception("Unimplemented POW instruction."); // Unused ??
+		case RSX_FP_OPCODE_PKB:
+			return xyzw;
+		case RSX_FP_OPCODE_UPB:
+			return x;
+		case RSX_FP_OPCODE_PK16:
+			return xy;
+		case RSX_FP_OPCODE_UP16:
+			return x;
+		case RSX_FP_OPCODE_BEM:
+			return decode("xy, xy, xyzw");
+		case RSX_FP_OPCODE_PKG:
+			return xyzw;
+		case RSX_FP_OPCODE_UPG:
+			return x;
+		case RSX_FP_OPCODE_DP2A:
+			return decode("xy, xy, x");
+		case RSX_FP_OPCODE_TXL:
+		case RSX_FP_OPCODE_TXB:
+			return decode("xy, x");
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXPBEM:
+			return decode("xy, xy, xyzw"); // Coordinate generated from BEM operation
+		case RSX_FP_OPCODE_BEMLUM:
+			fmt::throw_exception("Unimplemented BEMLUM instruction"); // Unused
+		case RSX_FP_OPCODE_REFL:
+			return xyzw;
+		case RSX_FP_OPCODE_TIMESWTEX:
+			fmt::throw_exception("Unimplemented TIMESWTEX instruction"); // Unused
+		case RSX_FP_OPCODE_DP2:
+			return xy;
+		case RSX_FP_OPCODE_NRM:
+			return xyz;
+		case RSX_FP_OPCODE_DIV:
+		case RSX_FP_OPCODE_DIVSQ:
+			return decode("xyzw, x");
+		case RSX_FP_OPCODE_LIF:
+			return decode("yw");
+		case RSX_FP_OPCODE_FENCT:
+		case RSX_FP_OPCODE_FENCB:
+		case RSX_FP_OPCODE_BRK:
+		case RSX_FP_OPCODE_CAL:
+		case RSX_FP_OPCODE_IFE:
+		case RSX_FP_OPCODE_LOOP:
+		case RSX_FP_OPCODE_REP:
+		case RSX_FP_OPCODE_RET:
+			// Flow control. Special registers are provided for these outside the common file
+			return 0;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
@@ -508,19 +676,25 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	u32 precision_modifier = 0;
+	int operand_idx = -1;
 
 	if constexpr (std::is_same_v<T, SRC0>)
 	{
 		precision_modifier = src1.src0_prec_mod;
+		operand_idx = 0;
 	}
 	else if constexpr (std::is_same_v<T, SRC1>)
 	{
 		precision_modifier = src1.src1_prec_mod;
+		operand_idx = 1;
 	}
 	else if constexpr (std::is_same_v<T, SRC2>)
 	{
 		precision_modifier = src1.src2_prec_mod;
+		operand_idx = 2;
 	}
+
+	ensure(operand_idx != -1);
 
 	switch (src.reg_type)
 	{
@@ -528,33 +702,30 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 		if (!src.fp16)
 		{
-			// We may need to perform gather on all the f32 lanes.
-			// First, confirm that we're actually reading all the lanes
-			// TODO: GetSRC should take a lane count argument
-			std::unordered_set<u8> to_gather;
+			// We need to determine if any vector lanes need a gather op
+			// In theory, splitting can also be required, but that is currently unsupported
+			u32 src_lane_mask = get_src_vector_mask(dst.opcode, operand_idx);
+			std::unordered_set<u8> lanes_to_gather;
 
-			// Unpack instructions always read the whole vector
-			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
-				dst.opcode == RSX_FP_OPCODE_UP2 ||
-				dst.opcode == RSX_FP_OPCODE_UP4 ||
-				dst.opcode == RSX_FP_OPCODE_UPB ||
-				dst.opcode == RSX_FP_OPCODE_UPG)
+			const bool apply_dst_mask = src_lane_mask & (1u << 31);
+			src_lane_mask &= ~(1u << 31);
+
+			if (apply_dst_mask && !dst.no_dest)
 			{
-				to_gather.insert(src.swizzle_x);
+				if (!dst.mask_x) src_lane_mask &= ~(1u << 0);
+				if (!dst.mask_y) src_lane_mask &= ~(1u << 1);
+				if (!dst.mask_z) src_lane_mask &= ~(1u << 2);
+				if (!dst.mask_w) src_lane_mask &= ~(1u << 3);
 			}
-			else if (!dst.no_dest)
-			{
-				// FIXME: No_DST inputs also require lane gather. A regalloc pre-pass will solve this.
-				// We try to guess which channels will be read. Since there is no lane count, mask input on output mask
-				if (dst.mask_x) to_gather.insert(src.swizzle_x);
-				if (dst.mask_y) to_gather.insert(src.swizzle_y);
-				if (dst.mask_z) to_gather.insert(src.swizzle_z);
-				if (dst.mask_w) to_gather.insert(src.swizzle_w);
-			}
+
+			if (src_lane_mask & (1u << 0)) lanes_to_gather.insert(src.swizzle_x);
+			if (src_lane_mask & (1u << 1)) lanes_to_gather.insert(src.swizzle_y);
+			if (src_lane_mask & (1u << 2)) lanes_to_gather.insert(src.swizzle_z);
+			if (src_lane_mask & (1u << 3)) lanes_to_gather.insert(src.swizzle_w);
 
 			auto& reg = temp_registers[src.tmp_reg_index];
 			bool skip_reg_assign = false;
-			for (const auto& ch : to_gather)
+			for (const auto& ch : lanes_to_gather)
 			{
 				if (reg.requires_gather(ch))
 				{

@@ -99,6 +99,12 @@ class FragmentProgramDecompiler
 	*/
 	bool handle_tex_srb(u32 opcode);
 
+	/**
+	* Calculates the lane mask for a given input
+	* This is a temporary workaround until the decompiler is rewritten with some IR to allow granular split/gather passes
+	*/
+	u32 get_src_vector_mask(u32 opcode, int operand);
+
 protected:
 	const RSXFragmentProgram &m_prog;
 	u32 m_ctrl = 0;
