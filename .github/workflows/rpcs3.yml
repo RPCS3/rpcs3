@@ -325,28 +325,20 @@ jobs:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
 
-  Windows_Build_Clang:
+
+  Windows_Build_MSYS2:
     # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     runs-on: windows-2025
     strategy:
-      fail-fast: false
       matrix:
         include:
           - msys2: clang64
             compiler: clang
             arch: win64
-          - compiler: clang-cl
-            llvmver: 19.1.7
-            arch: win64
-
     env:
       CCACHE_DIR: 'C:\ccache'
-      VCPKG_TRIPLET: x64-windows
-      VCPKG_BUILD_TYPE: release
-      VCPKG_ROOT: "${{github.workspace}}/vcpkg"
-      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
-    name: RPCS3 Windows ${{ matrix.compiler }}
+    name: RPCS3 Windows Clang (MSYS2)
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -355,7 +347,6 @@ jobs:
 
       - name: Setup msys2
         uses: msys2/setup-msys2@v2
-        if: ${{ matrix.compiler == 'clang' }}
         with:
           msystem: ${{ matrix.msys2 }}
           update: true
@@ -383,16 +374,69 @@ jobs:
             git
             p7zip
 
+      - name: Restore build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: Build RPCS3
+        shell: msys2 {0}
+        run: |
+          export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
+          echo "CCACHE_DIR=$CCACHE_DIR"
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/build-windows-clang.sh
+
+      - name: Save build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+          if-no-files-found: error
+
+  Windows_Build_CLANG-CL:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: clang-cl
+            llvmver: 19.1.7
+            arch: win64
+
+    env:
+      CCACHE_DIR: 'C:\ccache'
+      VCPKG_TRIPLET: x64-windows
+      VCPKG_BUILD_TYPE: release
+      VCPKG_ROOT: "${{github.workspace}}/vcpkg"
+      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+    name: RPCS3 Windows Clang (Clang-CL)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
       - name: Clone and bootstrap vcpkg
-        if: ${{ matrix.compiler == 'clang-cl' }}
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg.git
           .\vcpkg\bootstrap-vcpkg.bat
 
       - name: 'Setup NuGet Credentials for vcpkg'
-        if: ${{ matrix.compiler == 'clang-cl' }}
-        shell: 'bash'
         run: |
           `./vcpkg/vcpkg fetch nuget | tail -n 1` \
           sources add \
@@ -406,7 +450,6 @@ jobs:
           -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
       - name: Restore LLVM Cache
-        if: ${{ matrix.compiler == 'clang-cl' }} 
         uses: actions/cache/restore@main
         id: llvm-cache
         with:
@@ -415,7 +458,6 @@ jobs:
           restore-keys: ${{ runner.os }}-clang-dl-cache-
 
       - name: Add LLVM
-        if: ${{ matrix.compiler == 'clang-cl' }}
         shell: pwsh
         run: |
           if (!(Test-Path -Path D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\)) {
@@ -432,7 +474,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
 
       - name: Save LLVM Cache
-        if: ${{ github.ref == 'refs/heads/master' && matrix.compiler == 'clang-cl' }}
+        if: ${{ github.ref == 'refs/heads/master' }}
         uses: actions/cache/save@main
         with:
           path: ./llvm-${{ matrix.llvmver }}
@@ -446,26 +488,13 @@ jobs:
           key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
           restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
 
-      - name: Build RPCS3
-        if: ${{ matrix.compiler == 'clang' }}
-        shell: msys2 {0}
-        run: |
-          export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
-          echo "CCACHE_DIR=$CCACHE_DIR"
-          .ci/build-windows-clang.sh
-          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
-          .ci/deploy-windows-${{ matrix.compiler }}.sh
- 
       - name: install DIA SDK
-        if: ${{ matrix.compiler == 'clang-cl' }}      
         run: |
           mkdir -p "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional" || true
           cp -r "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/DIA SDK" "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK"
           "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
 
       - name: Build RPCS3
-        if: ${{ matrix.compiler == 'clang-cl' }}
-        shell: bash
         run: |
           .ci/build-windows-clang-cl.sh
           .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}

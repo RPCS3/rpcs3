@@ -171,7 +171,7 @@ namespace vm
 
 			auto stamp0 = utils::get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
 
-#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))					
+#if !defined(_MSC_VER) || (defined(__clang__) && defined(_MSC_VER))	
 			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
 #else
 			status = _xbegin();

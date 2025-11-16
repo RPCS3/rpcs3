@@ -10,10 +10,8 @@ if(MSVC)
 		if(COMPILER_SUPPORTS_MARCH_NATIVE)
 			add_compile_options(-march=native)
 		endif()
-		add_link_options(/dynamicbase)
 	else()
 		add_compile_options(/Zc:throwingNew- /constexpr:steps16777216)
-		add_link_options(/DYNAMICBASE)
 	endif()
 	add_compile_definitions(
 		_CRT_SECURE_NO_DEPRECATE=1 _CRT_NON_CONFORMING_SWPRINTFS=1 _SCL_SECURE_NO_WARNINGS=1
