@@ -1,8 +1,10 @@
 #pragma once
 
-#include "gui_settings.h"
+#include "gui_save.h"
 
 #include <QKeySequence>
+
+class gui_settings;
 
 namespace gui
 {
