@@ -11,4 +11,41 @@ struct sampler_info
 	uint flags;                       // 48
 };
 
+struct vertex_context_t
+{
+	mat4 scale_offset_mat;
+	uint user_clip_configuration_bits;
+	uint transform_branch_bits;
+	float point_size;
+	float z_near;
+	float z_far;
+	float reserved[3];
+};
+
+struct draw_parameters_t
+{
+	uint vertex_base_index;
+	uint vertex_index_offset;
+	uint draw_id;
+	uint xform_constants_offset;
+	uint vs_context_offset;
+	uint fs_constants_offset;
+	uint fs_context_offset;
+	uint fs_texture_base_index;
+	uint fs_stipple_pattern_offset;
+	uint reserved;
+	uvec2 attrib_data[16];
+};
+
+struct fragment_context_t
+{
+	float fog_param0;
+	float fog_param1;
+	uint rop_control;
+	float alpha_ref;
+	uint fog_mode;
+	float wpos_scale;
+	vec2 wpos_bias;
+};
+
 )"

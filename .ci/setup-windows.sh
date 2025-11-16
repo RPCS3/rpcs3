@@ -1,10 +1,5 @@
 #!/bin/sh -ex
 
-# These are Azure specific, so we wrap them for portability
-REPO_NAME="$BUILD_REPOSITORY_NAME"
-REPO_BRANCH="$SYSTEM_PULLREQUEST_SOURCEBRANCH"
-PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
-
 # Resource/dependency URLs
 # Qt mirrors can be volatile and slow, so we list 2
 #QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
@@ -13,7 +8,7 @@ QT_URL_VER=$(echo "$QT_VER" | sed "s/\.//g")
 QT_VER_MSVC_UP=$(echo "${QT_VER_MSVC}" | tr '[:lower:]' '[:upper:]')
 QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt${QT_VER_MAIN}_${QT_URL_VER}/qt${QT_VER_MAIN}_${QT_URL_VER}/qt.qt${QT_VER_MAIN}.${QT_URL_VER}."
 QT_PREFIX_2="win64_${QT_VER_MSVC}_64/${QT_VER}-0-${QT_DATE}"
-QT_SUFFIX="-Windows-Windows_11_23H2-${QT_VER_MSVC_UP}-Windows-Windows_11_23H2-X86_64.7z"
+QT_SUFFIX="-Windows-Windows_11_24H2-${QT_VER_MSVC_UP}-Windows-Windows_11_24H2-X86_64.7z"
 QT_BASE_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtbase${QT_SUFFIX}"
 QT_DECL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qttools${QT_SUFFIX}"
@@ -33,13 +28,13 @@ DEP_URLS="         \
     $VULKAN_SDK_URL\
     $CCACHE_URL"
 
-# Azure pipelines doesn't make a cache dir if it doesn't exist, so we do it manually
+# CI doesn't make a cache dir if it doesn't exist, so we do it manually
 [ -d "$DEPS_CACHE_DIR" ] || mkdir "$DEPS_CACHE_DIR"
 
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/FAudio/ && !/llvm/ && !/feralinteractive/ { print $3 }' .gitmodules)
 
 # Git bash doesn't have rev, so here it is
 rev()
@@ -99,33 +94,3 @@ done
 CCACHE_SH_DIR=$(cygpath -u "$CCACHE_BIN_DIR")
 mv "$CCACHE_SH_DIR"/ccache-*/* "$CCACHE_SH_DIR"
 cp "$CCACHE_SH_DIR"/ccache.exe "$CCACHE_SH_DIR"/cl.exe
-
-# Gather explicit version number and number of commits
-COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
-COMM_COUNT=$(git rev-list --count HEAD)
-COMM_HASH=$(git rev-parse --short=8 HEAD)
-
-# Format the above into filenames
-if [ -n "$PR_NUMBER" ]; then
-    AVVER="${COMM_TAG}-${COMM_HASH}"
-    BUILD_RAW="rpcs3-v${AVVER}_win64"
-    BUILD="${BUILD_RAW}.7z"
-else
-    AVVER="${COMM_TAG}-${COMM_COUNT}"
-    BUILD_RAW="rpcs3-v${AVVER}-${COMM_HASH}_win64"
-    BUILD="${BUILD_RAW}.7z"
-fi
-
-# BRANCH is used for experimental build warnings for pr builds, used in main_window.cpp.
-# BUILD is the name of the release artifact
-# BUILD_RAW is just filename
-# AVVER is used for GitHub releases, it is the version number.
-BRANCH="${REPO_NAME}/${REPO_BRANCH}"
-
-# SC2129
-{
-    echo "BRANCH=$BRANCH"
-    echo "BUILD=$BUILD"
-    echo "BUILD_RAW=$BUILD_RAW"
-    echo "AVVER=$AVVER"
-} >> .ci/ci-vars.env

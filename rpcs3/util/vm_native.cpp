@@ -536,21 +536,33 @@ namespace utils
 		{
 			f.close();
 
-			for (u32 try_count = 3, i = 0; !f && i < try_count; i++)
+			for (u32 i = 1; i <= 3; i++)
+			{
+				// Cleanup
+				fs::remove_file(fmt::format("%s.%d.tmp", path, i));
+			}
+
+			for (u32 try_count = 3, i = 0; !f && i < try_count; i++, ::Sleep(100))
 			{
 				// Bug workaround: removing old file may be safer than rewriting it
 				if (!fs::remove_file(path) && fs::g_tls_error != fs::error::noent)
 				{
-					return false;
+					// Try MoveFile
+					fs::rename(path, fmt::format("%s.%d.tmp", path, i + 1), true);
 				}
 
-				if (!f.open(path, fs::read + fs::write + fs::create + fs::excl) && fs::g_tls_error != fs::error::exist)
+				if (f.open(path, fs::read + fs::write + fs::create + fs::excl))
+				{
+					return true;
+				}
+
+				if (fs::g_tls_error != fs::error::exist && fs::g_tls_error != fs::error::acces)
 				{
 					return false;
 				}
 			}
 
-			return f.operator bool();
+			return false;
 		};
 
 		std::string storage1 = fs::get_temp_dir();

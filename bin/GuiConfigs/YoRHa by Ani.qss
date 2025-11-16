@@ -4,24 +4,28 @@ by Ani @ https://github.com/AniLeo
 r1 (2018.02.27)
 r2 (2021.08.28)
 r3 (2022.08.20)
+r4 (2025.09.14)
 */
 
 /*
 Color Scheme
 
 - Pod Programs
-8c806a
-bd9d86
-c1b398
-eadfb1
-ebe4d2
+#8c806a
+#bd9d86
+#c1b398
+#eadfb1
+#ebe4d2
 
 - Light
-b3ac98
-aea993
+#b3ac98
+#aea993
 
 - Dark
-4d4940
+#4d4940
+
+- Disabled
+#828790
 */
 
 
@@ -53,31 +57,6 @@ QTextEdit, QPlainTextEdit {
 	color: #b3ac98;
 	font-family: none;
 	font-size: 8.50pt;
-}
-
-/*
-	QListWidget, QTreeWidget: Style checkboxes and rows
-
-	RPCS3: LLE/HLE Selector, Debugger
-*/
-QListWidget::item {
-	margin-top: 0.05em;
-	margin-bottom: 0.05em;
-}
-QListWidget::indicator, QTreeWidget::indicator {
-	border: 0.05em solid #4d4940;
-}
-QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
-	background-color: #b3ac98;
-}
-QListWidget::indicator::checked, QTreeWidget::indicator::checked {
-	background-color: #4d4940;
-}
-QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
-	background-color: #828790;
-}
-QListWidget::item::selected, QTreeWidget::item::selected {
-	background-color: #4d4940;
 }
 
 /*
@@ -141,30 +120,37 @@ QTabBar::tab::selected {
 	color: #aea993;
 }
 
-/* Checkboxes */
-QCheckBox::indicator {
+/* Checkboxes
+   Radio Buttons 
+   
+   QListWidget, QTreeWidget: Style indicators (checkboxes) and selected rows
+
+   RPCS3: LLE/HLE Selector, Debugger, Game Patches
+*/
+QCheckBox::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	border-radius: 0.1em;
 }
-/* Radio Buttons */
 QRadioButton::indicator {
 	border-radius: 0.4em;
 }
-/* Checkboxes and Radio Buttons */
-QCheckBox::indicator, QRadioButton::indicator {
+QCheckBox::indicator, QRadioButton::indicator, QListWidget::indicator, QTreeWidget::indicator {
 	border: 0.05em solid #4d4940;
 	margin-top: 0.05em;
 	margin-bottom: 0.05em;
 	width: 0.8em;
 	height: 0.8em;
 }
-QCheckBox::indicator:checked, QRadioButton::indicator:checked {
+QCheckBox::indicator:checked, QRadioButton::indicator:checked, QListWidget::indicator::checked, QTreeWidget::indicator::checked{
 	background-color: #4d4940; /* Dark */
 }
-QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked {
+QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked, QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
 	background-color: #b3ac98; /* Light */
 }
-QCheckBox::indicator::disabled, QRadioButton::indicator::disabled {
+QCheckBox::indicator::disabled, QRadioButton::indicator::disabled, QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
 	background-color: #828790; /* Gray */
+}
+QListWidget::item::selected, QTreeWidget::item::selected {
+	background-color: #4d4940;
 }
 
 /* Combo Boxes, Datetime dropdown */
@@ -215,6 +201,7 @@ QPushButton::disabled {
 /* QSpinBox (Settings -> Emulator -> width/height) */
 /* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */
 QSpinBox, QDoubleSpinBox {
+	height: 0.1em;
 	background-color: #b3ac98;
 }
 QSpinBox::disabled, QDoubleSpinBox::disabled {
@@ -247,6 +234,7 @@ QDockWidget {
 QDockWidget::title {
 	background: #4d4940;
 	padding-top: 0.2em;
+	padding-left: 0.2em;
 }
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #b3ac98;
@@ -262,7 +250,7 @@ QTabWidget::tab-bar {
 }
 
 /* Top menu bar */
-QMenuBar {
+QMenuBar#menuBar {
 	height:1.50em;
 	text-transform: uppercase;
 }
@@ -314,12 +302,27 @@ QCalendarWidget QWidget{
 	color: #4d4940;
 }
 
+/* Scrollbars */
+QScrollBar::handle, QTableView QScrollBar::handle {
+	background: #4d4940;
+}
+QScrollBar::handle:disabled {
+	background: #828790;
+}
+QScrollBar::add-page, QScrollBar::sub-page {
+	background: #8c806a;
+}
+QScrollBar::up-arrow, QScrollBar::down-arrow, QScrollBar::up-button:vertical, QScrollBar::down-button, QScrollBar::sub-line, QScrollBar::add-line {
+	background: transparent;
+	color: transparent;
+}
+
 
 /*** RPCS3 Specifics ***/
 
 
 /* Main Window, Dialogs and some Dialogs that are actually widgets */
-QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer, QMainWindow#main_window {
+QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer, QWidget#savestate_manager, QMainWindow#main_window {
 	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 

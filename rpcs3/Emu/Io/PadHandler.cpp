@@ -40,7 +40,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 	}
 
 	// convert [min, max] to [0, 1]
-	const f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	const f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	// convert [0, 1] to [0, range]
 	return range * val;
@@ -50,7 +50,7 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
 	// convert [min, max] to [0, 1]
-	f32 val = static_cast<f32>(std::clamp(raw_value, minimum, maximum) - minimum) / (maximum - minimum);
+	f32 val = static_cast<f32>(std::max(minimum, std::min(raw_value, maximum)) - minimum) / (maximum - minimum);
 
 	if (deadzone > 0)
 	{
@@ -170,7 +170,7 @@ u16 PadHandlerBase::ConvertAxis(f32 value)
 
 // The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 // using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
-// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
+// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
 // This function assumes inX and inY is already in 0-255
 void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
 {
@@ -200,8 +200,27 @@ void PadHandlerBase::init_configs()
 {
 	for (u32 i = 0; i < MAX_GAMEPADS; i++)
 	{
+		// We need to restore the original defaults first.
+		m_pad_configs[i].restore_defaults();
+
+		// Set and apply actual defaults depending on pad handler
 		init_config(&m_pad_configs[i]);
 	}
+}
+
+pad_capabilities PadHandlerBase::get_capabilities(const std::string& /*pad_id*/)
+{
+	return pad_capabilities
+	{
+		.has_led = b_has_rgb,
+		.has_mono_led = b_has_led,
+		.has_player_led = b_has_player_led,
+		.has_battery_led = b_has_battery_led,
+		.has_rumble = b_has_rumble,
+		.has_accel = b_has_motion,
+		.has_gyro = b_has_motion,
+		.has_pressure_sensitivity = b_has_pressure_intensity_button
+	};
 }
 
 cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
@@ -327,12 +346,13 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 	if (callback)
 	{
 		pad_preview_values preview_values = get_preview_values(data);
+		pad_capabilities capabilities = get_capabilities(pad_id);
 		const u32 battery_level = get_battery_level(pad_id);
 
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values));
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 		else
-			callback(0, "", pad_id, battery_level, std::move(preview_values));
+			callback(0, "", pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 	}
 
 	return status;
@@ -538,8 +558,8 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
 	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors[0] = VibrateMotor(true, 0);
-	pad->m_vibrateMotors[1] = VibrateMotor(false, 0);
+	pad->m_vibrate_motors[0] = VibrateMotor(true);
+	pad->m_vibrate_motors[1] = VibrateMotor(false);
 
 	m_bindings.emplace_back(pad, pad_device, nullptr);
 
@@ -759,9 +779,10 @@ void PadHandlerBase::process()
 
 			if ((get_system_time() - pad->m_last_rumble_time_us) > 3'000'000)
 			{
-				for (VibrateMotor& motor : pad->m_vibrateMotors)
+				for (VibrateMotor& motor : pad->m_vibrate_motors)
 				{
-					motor.m_value = 0;
+					motor.value = 0;
+					motor.adjusted_value = 0;
 				}
 
 				pad->m_last_rumble_time_us = 0;

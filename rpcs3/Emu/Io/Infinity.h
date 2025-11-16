@@ -3,6 +3,7 @@
 #include "Emu/Io/usb_device.h"
 #include "Utilities/mutex.h"
 #include <array>
+#include <optional>
 #include <queue>
 
 struct infinity_figure
@@ -24,8 +25,7 @@ public:
 	void query_block(u8 fig_num, u8 block, std::array<u8, 32>& reply_buf, u8 sequence);
 	void write_block(u8 fig_num, u8 block, const u8* to_write_buf, std::array<u8, 32>& reply_buf, u8 sequence);
 	void get_figure_identifier(u8 fig_num, u8 sequence, std::array<u8, 32>& reply_buf);
-	bool has_figure_been_added_removed() const;
-	std::array<u8, 32> pop_added_removed_response();
+	std::optional<std::array<u8, 32>> pop_added_removed_response();
 
 	bool remove_figure(u8 position);
 	u32 load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_file, u8 position);

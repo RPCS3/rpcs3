@@ -209,6 +209,7 @@ void ds3_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 	cfg->lpadsquircling.def    = 0;
 	cfg->rpadsquircling.def    = 0;
+	cfg->vibration_threshold.def = 0;
 
 	// Set default LED options
 	cfg->led_battery_indicator.def = false;
@@ -259,7 +260,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		if (res <= 0 || buf[0] != 0x0)
 		{
 			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
-			hid_close(hidDevice);
+			HidDevice::close(hidDevice);
 			return;
 		}
 	}
@@ -273,7 +274,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		ds3_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 
@@ -505,17 +506,12 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 
 	if (dev->hidDevice == nullptr)
 	{
-#ifdef ANDROID
-		if (hid_device* hid_dev = hid_libusb_wrap_sys_device(dev->path, -1))
-#else
-		if (hid_device* hid_dev = hid_open_path(dev->path.c_str()))
-#endif
+		if (hid_device* hid_dev = dev->open())
 		{
 			if (hid_set_nonblocking(hid_dev, 1) == -1)
 			{
 				ds3_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(hid_dev));
 			}
-			dev->hidDevice = hid_dev;
 		}
 		else
 		{
@@ -545,8 +541,8 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
-	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrate_motors);
+	const u8 speed_small = config->get_small_motor_speed(pad->m_vibrate_motors);
 
 	const bool wireless    = dev->cable_state == 0;
 	const bool low_battery = dev->battery_level < 25;

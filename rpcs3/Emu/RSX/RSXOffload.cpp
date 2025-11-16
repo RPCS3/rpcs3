@@ -212,7 +212,7 @@ namespace rsx
 	}
 
 	// Fault recovery
-	utils::address_range dma_manager::get_fault_range(bool writing) const
+	utils::address_range32 dma_manager::get_fault_range(bool writing) const
 	{
 		const auto m_current_job = ensure(m_thread->m_current_job);
 
@@ -237,6 +237,6 @@ namespace rsx
 			fmt::throw_exception("Unreachable");
 		}
 
-		return utils::address_range::start_length(vm::get_addr(address), range);
+		return utils::address_range32::start_length(vm::get_addr(address), range);
 	}
 }

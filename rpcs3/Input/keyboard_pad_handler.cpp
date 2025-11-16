@@ -68,8 +68,6 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def       = 0;
 	cfg->ltriggerthreshold.def    = 0;
 	cfg->rtriggerthreshold.def    = 0;
-	cfg->lpadsquircling.def       = 8000;
-	cfg->rpadsquircling.def       = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -1072,8 +1070,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	pad->m_sensors[2] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Z, 0, 0, 0, DEFAULT_MOTION_Z);
 	pad->m_sensors[3] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_G, 0, 0, 0, DEFAULT_MOTION_G);
 
-	pad->m_vibrateMotors[0] = VibrateMotor(true, 0);
-	pad->m_vibrateMotors[1] = VibrateMotor(false, 0);
+	pad->m_vibrate_motors[0] = VibrateMotor(true);
+	pad->m_vibrate_motors[1] = VibrateMotor(false);
 
 	m_bindings.emplace_back(pad, nullptr, nullptr);
 	m_pads_internal.push_back(*pad);

@@ -1,5 +1,5 @@
 #define VMA_IMPLEMENTATION
-#define VMA_VULKAN_VERSION 1000000
+#define VMA_VULKAN_VERSION 1002000
 
 #include "util/atomic.hpp"
 #include "Utilities/mutex.h"
@@ -36,7 +36,7 @@ private:
 #define VMA_RW_MUTEX VmaRWMutex
 #define VMA_MUTEX VmaRWMutex
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(push, 0)
 #else
 #pragma GCC diagnostic push
@@ -55,7 +55,7 @@ private:
 #pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 #endif
-#include "3rdparty/GPUOpen/VulkanMemoryAllocator/include/vk_mem_alloc.h"
+#include <vk_mem_alloc.h>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else

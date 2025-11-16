@@ -36,7 +36,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
 	void FocusToSearchBar();
-	void IconReady(const movie_item_base* item);
+	void IconReady(const game_info& game, const movie_item_base* item);
 
 protected:
 	movie_item* m_last_hover_item = nullptr;

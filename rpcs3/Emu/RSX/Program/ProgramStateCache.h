@@ -137,7 +137,7 @@ namespace rsx
 		RSXVertexProgram m_cached_vp_properties;
 	};
 
-	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<usz>& offsets_cache, bool sanitize = true);
+	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize = true);
 }
 
 
@@ -447,14 +447,14 @@ public:
 
 	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize = false) const
 	{
-		if (dst_buffer.size_bytes() < (fragment_program.FragmentConstantOffsetCache.size() * 16))
+		if (dst_buffer.size_bytes() < (fragment_program.constant_offsets.size() * 16))
 		{
 			// This can happen if CELL alters the shader after it has been loaded by RSX.
 			rsx_log.error("Insufficient constants buffer size passed to fragment program! Corrupt shader?");
 			return;
 		}
 
-		rsx::write_fragment_constants_to_buffer(dst_buffer, rsx_prog, fragment_program.FragmentConstantOffsetCache, sanitize);
+		rsx::write_fragment_constants_to_buffer(dst_buffer, rsx_prog, fragment_program.constant_offsets, sanitize);
 	}
 
 	void clear()

@@ -1,8 +1,6 @@
 RPCS3
 =====
 
-[![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=8&_a=summary&repositoryFilter=4)
-[![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3/master?label=Cirrus%20CI&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/RPCS3/rpcs3/rpcs3.yml?branch=master&logo=github&label=Actions)](https://github.com/RPCS3/rpcs3/actions/workflows/rpcs3.yml)
 [![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.gg/rpcs3)
 
@@ -22,7 +20,6 @@ If you want to contribute as a developer, please take a look at the following pa
 
 * [Coding Style](https://github.com/RPCS3/rpcs3/wiki/Coding-Style)
 * [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information)
-* [Roadmap](https://rpcs3.net/roadmap)
 
 You should also contact any of the developers in the forums or in the Discord server to learn more about the current state of the emulator.
 

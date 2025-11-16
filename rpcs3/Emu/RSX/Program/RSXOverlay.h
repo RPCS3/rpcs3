@@ -59,12 +59,31 @@ namespace rsx
 
 		class vertex_options
 		{
+		private:
 			u32 value = 0;
+
+			void set_bit(u32 bit, bool enable)
+			{
+				if (enable)
+				{
+					value |= (1u << bit);
+				}
+				else
+				{
+					value &= ~(1u << bit);
+				}
+			}
 
 		public:
 			vertex_options& disable_vertex_snap(bool enable)
 			{
-				value = enable ? 1 : 0;
+				set_bit(0, enable);
+				return *this;
+			}
+
+			vertex_options& enable_vertical_flip(bool enable)
+			{
+				set_bit(1, enable);
 				return *this;
 			}
 

@@ -202,7 +202,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	CellVideoOutResolution res;
 	if (_IntGetResolutionInfo(config->resolutionId, &res) != CELL_OK ||
-		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && g_cfg.video.stereo_render_mode == stereo_render_mode_options::disabled))
+		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && !g_cfg.video.stereo_enabled))
 	{
 		// Resolution not supported
 		cellSysutil.error("Unusual resolution requested: 0x%x", config->resolutionId);
@@ -211,7 +211,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	auto& conf = g_fxo->get<rsx::avconf>();
 	conf.resolution_id = config->resolutionId;
-	conf.stereo_mode = (config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING) ? g_cfg.video.stereo_render_mode.get() : stereo_render_mode_options::disabled;
+	conf.stereo_enabled = (config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING) && g_cfg.video.stereo_enabled;
 	conf.aspect = config->aspect;
 	conf.format = config->format;
 	conf.scanline_pitch = config->pitch;
@@ -393,7 +393,7 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 		break;
 	}
 
-	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled && g_cfg.video.resolution == video_resolution::_720p)
+	if (g_cfg.video.stereo_enabled && g_cfg.video.resolution == video_resolution::_720p)
 	{
 		// Register 3D-capable display mode
 		if (true) // TODO
@@ -454,7 +454,7 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 			return not_an_error(1);
 		}
 
-		if ((g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled) && g_cfg.video.resolution == video_resolution::_720p)
+		if (g_cfg.video.stereo_enabled && g_cfg.video.resolution == video_resolution::_720p)
 		{
 			switch (resolutionId)
 			{

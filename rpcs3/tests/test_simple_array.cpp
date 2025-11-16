@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "util/pair.hpp"
+
 #define private public
 #include "Emu/RSX/Common/simple_array.hpp"
 #undef private
@@ -187,6 +189,82 @@ namespace rsx
 		for (u32 i = 0; i < arr.size(); ++i)
 		{
 			EXPECT_EQ(arr[i], i + 1);
+		}
+	}
+
+	TEST(SimpleArray, Merge)
+	{
+		rsx::simple_array<int> arr{ 1 };
+		rsx::simple_array<int> arr2{ 2, 3, 4, 5, 6, 7, 8, 9 };
+		rsx::simple_array<int> arr3{ 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 };
+
+		// Check small vector optimization
+		EXPECT_TRUE(arr.is_local_storage());
+
+		// Small vector optimization holds after append
+		arr += arr2;
+		EXPECT_TRUE(arr.is_local_storage());
+
+		// Exceed the boundary and we move into dynamic alloc
+		arr += arr3;
+		EXPECT_FALSE(arr.is_local_storage());
+
+		// Verify contents
+		EXPECT_EQ(arr.size(), 30);
+		for (int i = 0; i < 30; ++i)
+		{
+			EXPECT_EQ(arr[i], i + 1);
+		}
+	}
+
+	TEST(SimpleArray, ReverseIterator)
+	{
+		rsx::simple_array<int> arr{ 1, 2, 3, 4, 5 };
+		rsx::simple_array<int> arr2{ 5, 4, 3, 2, 1 };
+
+		int rindex = 0;
+		int sum = 0;
+		for (auto it = arr.rbegin(); it != arr.rend(); ++it, ++rindex)
+		{
+			EXPECT_EQ(*it, arr2[rindex]);
+			sum += *it;
+		}
+
+		EXPECT_EQ(sum, 15);
+
+		rindex = 0;
+		sum = 0;
+		for (auto it = arr.crbegin(); it != arr.crend(); ++it, ++rindex)
+		{
+			EXPECT_EQ(*it, arr2[rindex]);
+			sum += *it;
+		}
+
+		EXPECT_EQ(sum, 15);
+	}
+
+	TEST(SimpleArray, SimplePair)
+	{
+		struct some_struct
+		{
+			u64 v {};
+			char s[12] = "Hello World";
+		};
+		some_struct s {};
+
+		rsx::simple_array<utils::pair<int, some_struct>> arr;
+		for (int i = 0; i < 5; ++i)
+		{
+			s.v = i;
+			arr.push_back(utils::pair(i, s));
+		}
+
+		EXPECT_EQ(arr.size(), 5);
+		for (int i = 0; i < 5; ++i)
+		{
+			EXPECT_EQ(arr[i].first, i);
+			EXPECT_EQ(arr[i].second.v, i);
+			EXPECT_EQ(std::memcmp(arr[i].second.s, "Hello World", sizeof(arr[i].second.s)), 0);
 		}
 	}
 }

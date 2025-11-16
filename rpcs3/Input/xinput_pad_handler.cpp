@@ -128,8 +128,6 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE; // between 0 and 32767
 	cfg->ltriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
 	cfg->rtriggerthreshold.def = XINPUT_GAMEPAD_TRIGGER_THRESHOLD;    // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -566,8 +564,8 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
-	const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrate_motors);
+	const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrate_motors);
 
 	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 

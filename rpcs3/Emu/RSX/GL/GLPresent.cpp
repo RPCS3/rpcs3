@@ -129,7 +129,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		initialize_scratch_image();
 
 		gl::command_context cmd{ gl_state };
-		const auto range = utils::address_range::start_length(info->address, info->pitch * info->height);
+		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
 		flip_image->copy_from(vm::base(info->address), static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);
@@ -187,9 +187,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled ? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
-		buffer_width = std::min(buffer_width, avconfig.resolution_x);
-		buffer_height = std::min(buffer_height, video_frame_height);
+		const size2u video_frame_size = avconfig.video_frame_size();
+		buffer_width = std::min(buffer_width, video_frame_size.width);
+		buffer_height = std::min(buffer_height, video_frame_size.height);
 	}
 	else
 	{
@@ -204,7 +204,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	// Enable drawing to window backbuffer
 	gl::screen.bind();
 
-	gl::texture *image_to_flip = nullptr, *image_to_flip2 = nullptr;
+	gl::texture* image_to_flip = nullptr;
+	gl::texture* image_to_flip2 = nullptr;
 
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -221,7 +222,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
+		if (avconfig.stereo_enabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -276,27 +277,112 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		gl::screen.clear(gl::buffers::color);
 	}
 
+	if (m_overlay_manager && m_overlay_manager->has_dirty())
+	{
+		m_overlay_manager->lock_shared();
+
+		std::vector<u32> uids_to_dispose;
+		uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+
+		for (const auto& view : m_overlay_manager->get_dirty())
+		{
+			m_ui_renderer.remove_temp_resources(view->uid);
+			uids_to_dispose.push_back(view->uid);
+		}
+
+		m_overlay_manager->unlock_shared();
+		m_overlay_manager->dispose(uids_to_dispose);
+	}
+
+	const auto render_overlays = [this, &cmd](gl::texture* dst, const areau& aspect_ratio, bool flip_vertically = false)
+	{
+		if (m_overlay_manager && m_overlay_manager->has_visible())
+		{
+			GLuint target = 0;
+
+			if (dst)
+			{
+				m_sshot_fbo.bind();
+				m_sshot_fbo.color = dst->id();
+				target = dst->id();
+			}
+			else
+			{
+				gl::screen.bind();
+			}
+
+			// Lock to avoid modification during run-update chain
+			std::lock_guard lock(*m_overlay_manager);
+
+			for (const auto& view : m_overlay_manager->get_views())
+			{
+				m_ui_renderer.run(cmd, aspect_ratio, target, *view.get(), flip_vertically);
+			}
+		}
+	};
+
 	if (image_to_flip)
 	{
-		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
+		const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
+
+		if (user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
+			static const gl::pixel_pack_settings pack_settings{};
+
+			gl::texture* tex = image_to_flip;
+
+			if (g_cfg.video.record_with_overlays)
+			{
+				m_sshot_fbo.create();
+
+				if (!m_sshot_tex ||
+					m_sshot_tex->get_target() != image_to_flip->get_target() ||
+					m_sshot_tex->width() != image_to_flip->width() ||
+					m_sshot_tex->height() != image_to_flip->height() ||
+					m_sshot_tex->depth() != image_to_flip->depth() ||
+					m_sshot_tex->levels() != image_to_flip->levels() ||
+					m_sshot_tex->samples() != image_to_flip->samples() ||
+					m_sshot_tex->get_internal_format() != image_to_flip->get_internal_format() ||
+					m_sshot_tex->format_class() != image_to_flip->format_class())
+				{
+					m_sshot_tex = std::make_unique<gl::texture>(
+						GLenum(image_to_flip->get_target()),
+						image_to_flip->width(),
+						image_to_flip->height(),
+						image_to_flip->depth(),
+						image_to_flip->levels(),
+						image_to_flip->samples(),
+						GLenum(image_to_flip->get_internal_format()),
+						image_to_flip->format_class());
+				}
+
+				tex = m_sshot_tex.get();
+
+				static const position3u offset{};
+				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, 0, 0, offset, offset, { tex->width(), tex->height(), 1 });
+
+				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
+				m_sshot_fbo.remove();
+			}
+			
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			gl::pixel_pack_settings pack_settings{};
-			image_to_flip->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			tex->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+
+			m_sshot_tex.reset();
 
 			if (GLenum err = glGetError(); err != GL_NO_ERROR)
 			{
 				screenshot_log.error("Failed to capture image: 0x%x", err);
 			}
-			else if (g_user_asked_for_screenshot.exchange(false))
+			else if (user_asked_for_screenshot)
 			{
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 			}
 			else
 			{
-				m_frame->present_frame(sshot_frame, buffer_width * 4, buffer_width, buffer_height, false);
+				m_frame->present_frame(std::move(sshot_frame), buffer_width * 4, buffer_width, buffer_height, false);
 			}
 		}
 
@@ -323,7 +409,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 		}
 
-		if (!backbuffer_has_alpha && use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
+		if (!backbuffer_has_alpha && use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig.stereo_enabled)
 		{
 			// Blit source image to the screen
 			m_upscaler->scale_output(cmd, image_to_flip, screen_area, aspect_ratio.flipped_vertical(), UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
@@ -335,7 +421,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto filter = m_output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 			rsx::simple_array<gl::texture*> images{ image_to_flip, image_to_flip2 };
 
-			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && !avconfig.stereo_enabled) // 3D will be implemented later
 			{
 				for (unsigned i = 0; i < 2 && images[i]; ++i)
 				{
@@ -345,42 +431,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_mode, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_enabled, g_cfg.video.stereo_render_mode, filter);
 		}
 	}
 
-	if (m_overlay_manager)
-	{
-		if (m_overlay_manager->has_dirty())
-		{
-			m_overlay_manager->lock_shared();
-
-			std::vector<u32> uids_to_dispose;
-			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
-
-			for (const auto& view : m_overlay_manager->get_dirty())
-			{
-				m_ui_renderer.remove_temp_resources(view->uid);
-				uids_to_dispose.push_back(view->uid);
-			}
-
-			m_overlay_manager->unlock_shared();
-			m_overlay_manager->dispose(uids_to_dispose);
-		}
-
-		if (m_overlay_manager->has_visible())
-		{
-			gl::screen.bind();
-
-			// Lock to avoid modification during run-update chain
-			std::lock_guard lock(*m_overlay_manager);
-
-			for (const auto& view : m_overlay_manager->get_views())
-			{
-				m_ui_renderer.run(cmd, areau(aspect_ratio), 0, *view.get());
-			}
-		}
-	}
+	render_overlays(nullptr, areau(aspect_ratio));
 
 	if (g_cfg.video.debug_overlay)
 	{

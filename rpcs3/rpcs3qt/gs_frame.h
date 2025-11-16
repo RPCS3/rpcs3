@@ -34,7 +34,8 @@ private:
 
 	u64 m_frames = 0;
 	std::string m_window_title;
-	QWindow::Visibility m_last_visibility = Visibility::Windowed;
+	Visibility m_last_visibility = Visibility::Windowed;
+	Visibility m_visibility = Visibility::Windowed;
 	atomic_t<bool> m_is_closing = false;
 	atomic_t<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
@@ -78,7 +79,7 @@ public:
 	bool get_mouse_lock_state();
 
 	bool can_consume_frame() const override;
-	void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
+	void present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
 protected:
@@ -111,7 +112,7 @@ private:
 	void toggle_recording();
 	void toggle_mouselock();
 	void update_cursor();
-	void handle_cursor(QWindow::Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer);
+	void handle_cursor(Visibility visibility, bool visibility_changed, bool active_changed, bool start_idle_timer);
 
 private Q_SLOTS:
 	void mouse_hide_timeout();

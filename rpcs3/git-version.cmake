@@ -38,10 +38,9 @@ function(gen_git_version rpcs3_src_dir)
 	set(GIT_VERSION_FILE "${rpcs3_src_dir}/git-version.h")
 	set(GIT_VERSION_UPDATE "1")
 
-	# These environment variables are defined by Azure pipelines
+	# These environment variables are defined by CI
 	# BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
 	# BUILD_SOURCEBRANCHNAME will look like "master"
-	# See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
 	if (DEFINED ENV{BUILD_REPOSITORY_NAME} AND NOT "$ENV{BUILD_REPOSITORY_NAME}" STREQUAL "")
 		set(RPCS3_GIT_FULL_BRANCH "$ENV{BUILD_REPOSITORY_NAME}/$ENV{BUILD_SOURCEBRANCHNAME}")
 	endif()

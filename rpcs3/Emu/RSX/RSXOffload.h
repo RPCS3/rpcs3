@@ -83,6 +83,6 @@ namespace rsx
 		void clear_mem_fault_flag();
 
 		// Fault recovery
-		utils::address_range get_fault_range(bool writing) const;
+		utils::address_range32 get_fault_range(bool writing) const;
 	};
 }

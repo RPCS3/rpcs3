@@ -366,19 +366,19 @@ vec4 _texture(in vec4 coord, float bias)
 	switch (type)
 	{
 	case RSX_SAMPLE_TEXTURE_1D:
-		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER1D(ur0), coord.x, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_2D:
-		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER2D(ur0), coord.xy, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_CUBE:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLERCUBE(ur0), coord.xyz, bias);
 		break;
 	case RSX_SAMPLE_TEXTURE_3D:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = texture(SAMPLER3D(ur0), coord.xyz, bias);
 		break;
 	}
@@ -405,19 +405,19 @@ vec4 _textureLod(in vec4 coord, float lod)
 	switch (type)
 	{
 	case RSX_SAMPLE_TEXTURE_1D:
-		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0]);
+		coord.x = _texcoord_xform(coord.x, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER1D(ur0), coord.x, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_2D:
-		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0]);
+		coord.xy = _texcoord_xform(coord.xy, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER2D(ur0), coord.xy, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_CUBE:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLERCUBE(ur0), coord.xyz, lod);
 		break;
 	case RSX_SAMPLE_TEXTURE_3D:
-		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0]);
+		coord.xyz = _texcoord_xform(coord.xyz, texture_parameters[ur0 + texture_base_index]);
 		vr0 = textureLod(SAMPLER3D(ur0), coord.xyz, lod);
 		break;
 	}
@@ -529,7 +529,7 @@ void initialize()
 
 	// WPOS
 	vr0 = vec4(abs(wpos_scale), wpos_scale, 1., 1.);
-	vr1 = vec4(0., wpos_bias, 0., 0.);
+	vr1 = vec4(wpos_bias, 0., 0.);
 	wpos = gl_FragCoord * vr0 + vr1;
 
 	// Other
@@ -552,6 +552,9 @@ void main()
 	ur1 = ur0 & 31u;                               // address % 32 -> fetch bit offset
 	ur1 = (1u << ur1);                             // address mask
 	uvr0.x = (ur0 >> 7u);                          // address to uvec4 row (each row has 32x4 bits)
+#ifdef VULKAN
+	uvr0.x += _fs_stipple_pattern_array_offset;     // Address base offset. Only applies to vulkan.
+#endif
 	ur0 = (ur0 >> 5u) & 3u;                        // address to uvec4 word (address / 32) % 4
 
 	if ((stipple_pattern[uvr0.x][ur0] & ur1) == 0u)

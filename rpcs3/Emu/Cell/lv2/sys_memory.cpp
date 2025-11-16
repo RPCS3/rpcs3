@@ -213,6 +213,8 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 
 			if (alloc_addr)
 			{
+				sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
+
 				vm::lock_sudo(addr, static_cast<u32>(size));
 				cpu.check_state();
 				*alloc_addr = addr;

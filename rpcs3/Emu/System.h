@@ -112,6 +112,7 @@ struct EmuCallbacks
 	std::function<void(bool)> enable_display_sleep;
 	std::function<void()> check_microphone_permissions;
 	std::function<std::unique_ptr<class video_source>()> make_video_source;
+	std::function<void(bool)> enable_gamemode;
 };
 
 namespace utils
@@ -438,6 +439,7 @@ public:
 	bool IsStopped(bool test_fully = false) const { return test_fully ? m_state == system_state::stopped : m_state <= system_state::stopping; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	bool IsStarting() const { return m_state == system_state::starting; }
+	void WaitReady() const { m_state.wait(system_state::ready); }
 	auto GetStatus(bool fixup = true) const { system_state state = m_state; return fixup && state == system_state::frozen ? system_state::paused : fixup && state == system_state::stopping ? system_state::stopped : state; }
 
 	bool HasGui() const { return m_has_gui; }

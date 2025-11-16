@@ -506,7 +506,7 @@ error_code cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallba
 	default:         string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT;  break; // An error has occurred.
 	}
 
-	const std::string error = get_localized_string(string_id, fmt::format("%08x", errorCode).c_str());
+	const std::string error = get_localized_string(string_id, "%08x", errorCode);
 
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(error), callback, userData, extParam);
 }

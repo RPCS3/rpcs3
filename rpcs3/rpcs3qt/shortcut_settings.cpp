@@ -24,6 +24,10 @@ void fmt_class_string<shortcut>::format(std::string& out, u64 arg)
 		case shortcut::gw_toggle_recording: return "gw_toggle_recording";
 		case shortcut::gw_pause_play: return "gw_pause_play";
 		case shortcut::gw_savestate: return "gw_savestate";
+		case shortcut::gw_savestate_1: return "gw_savestate1";
+		case shortcut::gw_savestate_2: return "gw_savestate2";
+		case shortcut::gw_savestate_3: return "gw_savestate3";
+		case shortcut::gw_savestate_4: return "gw_savestate4";
 		case shortcut::gw_restart: return "gw_restart";
 		case shortcut::gw_rsx_capture: return "gw_rsx_capture";
 		case shortcut::gw_frame_limit: return "gw_frame_limit";
@@ -71,6 +75,10 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::gw_screenshot, shortcut_info{ "game_window_screenshot", tr("Screenshot"), "F12", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_pause_play, shortcut_info{ "game_window_pause_play", tr("Pause/Play"), "Ctrl+P", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_savestate, shortcut_info{ "game_window_savestate", tr("Savestate"), "Ctrl+S", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_1, shortcut_info{ "game_window_savestate_1", tr("Savestate"), "Alt+Ctrl+1", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_2, shortcut_info{ "game_window_savestate_2", tr("Savestate"), "Alt+Ctrl+2", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_3, shortcut_info{ "game_window_savestate_3", tr("Savestate"), "Alt+Ctrl+3", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_4, shortcut_info{ "game_window_savestate_4", tr("Savestate"), "Alt+Ctrl+4", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_restart, shortcut_info{ "game_window_restart", tr("Restart"), "Ctrl+R", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_rsx_capture, shortcut_info{ "game_window_rsx_capture", tr("RSX Capture"), "Alt+C", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window, false } },
@@ -106,13 +114,5 @@ QKeySequence shortcut_settings::get_key_sequence(const shortcut_info& entry, con
 
 	const QString saved_value = gui_settings->GetValue(get_shortcut_gui_save(entry.name)).toString();
 
-	QKeySequence key_sequence = QKeySequence::fromString(saved_value);
-
-	if (key_sequence.isEmpty())
-	{
-		// Use the default shortcut if no shortcut was configured
-		key_sequence = QKeySequence::fromString(entry.key_sequence);
-	}
-
-	return key_sequence;
+	return QKeySequence::fromString(saved_value);
 }

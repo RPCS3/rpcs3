@@ -198,9 +198,9 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 		const auto gamepad_handler = pad::get_pad_thread();
 		const auto& pads = gamepad_handler->GetPads();
 		const auto& pad = ::at32(pads, m_controller_index);
-		if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+		if (pad->is_connected() && !pad->is_copilot())
 		{
-			for (Button& button : pad->m_buttons)
+			for (Button& button : pad->m_buttons_external)
 			{
 				if (!button.m_pressed)
 				{

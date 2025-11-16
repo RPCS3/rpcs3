@@ -46,15 +46,16 @@ namespace vk
 				const fragment_program_type& fragmentProgramData,
 				const vk::pipeline_props& pipelineProperties,
 				bool compile_async,
-				std::function<pipeline_type*(pipeline_storage_type&)> callback,
-				VkPipelineLayout common_pipeline_layout)
+				std::function<pipeline_type*(pipeline_storage_type&)> callback)
 		{
-			const auto compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
-			VkShaderModule modules[2] = { vertexProgramData.handle, fragmentProgramData.handle };
+			vk::pipe_compiler::op_flags compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
+			compiler_flags |= vk::pipe_compiler::SEPARATE_SHADER_OBJECTS;
 
 			auto compiler = vk::get_pipe_compiler();
 			auto result = compiler->compile(
-				pipelineProperties, modules, common_pipeline_layout,
+				pipelineProperties,
+				vertexProgramData.handle,
+				fragmentProgramData.handle,
 				compiler_flags, callback,
 				vertexProgramData.uniforms,
 				fragmentProgramData.uniforms);

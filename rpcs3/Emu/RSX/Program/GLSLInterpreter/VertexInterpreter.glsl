@@ -545,6 +545,11 @@ void main()
 		}
 	}
 
+#ifdef VULKAN
+	// Inject FS custom payload
+	write_fs_payload();
+#endif
+
 	// Unconditionally update COLOR0 and SPECULAR0
 	write_output(1, 0);
 	write_output(2, 1);
@@ -576,12 +581,12 @@ void main()
 		gl_PointSize = point_size;
 	}
 
-	write_clip_distance(0, 6, user_clip_enabled[0].x > 0, dest[5].y * user_clip_factor[0].x);
-	write_clip_distance(1, 7, user_clip_enabled[0].y > 0, dest[5].z * user_clip_factor[0].y);
-	write_clip_distance(2, 8, user_clip_enabled[0].z > 0, dest[5].w * user_clip_factor[0].z);
-	write_clip_distance(3, 9, user_clip_enabled[0].w > 0, dest[6].y * user_clip_factor[0].w);
-	write_clip_distance(4, 10, user_clip_enabled[1].x > 0, dest[6].z * user_clip_factor[1].x);
-	write_clip_distance(5, 11, user_clip_enabled[1].y > 0, dest[6].w * user_clip_factor[1].y);
+	write_clip_distance(0, 6, is_user_clip_enabled(0), dest[5].y * user_clip_factor(0));
+	write_clip_distance(1, 7, is_user_clip_enabled(1), dest[5].z * user_clip_factor(1));
+	write_clip_distance(2, 8, is_user_clip_enabled(2), dest[5].w * user_clip_factor(2));
+	write_clip_distance(3, 9, is_user_clip_enabled(3), dest[6].y * user_clip_factor(3));
+	write_clip_distance(4, 10, is_user_clip_enabled(4), dest[6].z * user_clip_factor(4));
+	write_clip_distance(5, 11, is_user_clip_enabled(5), dest[6].w * user_clip_factor(5));
 
 	write_output(15, 12);
 	write_output(6, 13);

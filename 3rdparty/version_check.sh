@@ -1,7 +1,11 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 verbose=0
 git_verbose=0
+max_jobs=16
+
+lockfile="$(pwd)/version_check.lock"
+resultfile="$(pwd)/version_check_results.txt"
 
 if [ "$1" = "-v" ]; then
     verbose=1
@@ -10,9 +14,13 @@ elif [ "$1" = "-vv" ]; then
     git_verbose=1
 fi
 
-max_dir_length=0
-result_dirs=()
-result_msgs=()
+# Limit concurrent jobs
+job_control()
+{
+    while [ "$(jobs | wc -l)" -ge "$max_jobs" ]; do
+        sleep 0.1
+    done
+}
 
 git_call()
 {
@@ -27,47 +35,48 @@ git_call()
 
 check_tags()
 {
-    path=$(echo "$1" | sed 's:/*$::')
+    local path=$(echo "$1" | sed 's:/*$::')
 
     echo "Checking $path"
 
     git_call fetch --prune --all
 
     # Get the latest tag (by commit date, not tag name)
-    tag_list=$(git_call rev-list --tags --max-count=1)
-    latest_tag=$(git_call describe --tags "$tag_list")
+    local tag_list=$(git_call rev-list --tags --max-count=1)
+    local latest_tag=$(git_call describe --tags "$tag_list")
+    local highest_tag=$(git_call tag -l | sort -V | tail -n1)
 
-    if [ -n "$latest_tag" ]; then
+    if [ -n "$latest_tag" ] || [ -n "$highest_tag" ]; then
 
         # Get the current tag
-        current_tag=$(git_call describe --tags --abbrev=0)
+        local current_tag=$(git_call describe --tags --abbrev=0)
 
         if [ -n "$current_tag" ]; then
 
             if [ "$verbose" -eq 1 ]; then
-                echo "$path -> latest: $latest_tag, current: $current_tag"
+                echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag"
             fi
 
-            ts1=$(git_call log -1 --format=%ct $latest_tag)
-            ts2=$(git_call log -1 --format=%ct $current_tag)
+            local ts0=$(git_call log -1 --format=%ct $highest_tag)
+            local ts1=$(git_call log -1 --format=%ct $latest_tag)
+            local ts2=$(git_call log -1 --format=%ct $current_tag)
 
-            if (( ts1 > ts2 )); then
+            if (( ts0 > ts2 )) || (( ts1 > ts2 )); then
                 if [ "$verbose" -eq 1 ]; then
                     echo -e "\t $path: latest is newer"
                 elif [ "$verbose" -eq 0 ]; then
-                    echo "$path -> latest: $latest_tag, current: $current_tag"
+                    echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag"
                 fi
 
-                path_length=${#path}
-                if (( $path_length > $max_dir_length )); then
-                    max_dir_length=$path_length
-                fi
-                result_dirs+=("$path")
-                result_msgs+=("latest: $latest_tag, current: $current_tag")
+                # Critical section guarded by flock
+                (
+                    flock 200
+                    echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag" >> "$resultfile"
+                ) 200>"$lockfile"
             fi
 
         elif [ "$verbose" -eq 1 ]; then
-            echo "$path -> latest: $latest_tag"
+            echo "$path -> latest: $latest_tag, highest: $highest_tag"
         fi
     elif [ "$verbose" -eq 1 ]; then
 
@@ -79,19 +88,21 @@ check_tags()
     fi
 }
 
+# Fetch and check repositories multi threaded
 for submoduledir in */ ;
 do
     cd "$submoduledir" || continue
 
     if [ -e ".git" ]; then
-        check_tags "$submoduledir"
+        job_control
+        check_tags "$submoduledir" &
     else
-        # find */ -mindepth 1 -maxdepth 1 -type d | while read -r sub;
         for sub in */ ;
         do
             if [ -e "$sub/.git" ]; then
                 cd "$sub" || continue
-                check_tags "$submoduledir$sub"
+                job_control
+                check_tags "$submoduledir$sub" &
                 cd .. || exit
             fi
         done
@@ -100,16 +111,27 @@ do
     cd .. || exit
 done
 
+# Wait for all background jobs to finish
+wait
+
+# Print results
 echo -e "\n\nResult:\n"
-i=0
-for result_dir in "${result_dirs[@]}"; do
-    msg=""
-    diff=$(($max_dir_length - ${#result_dir}))
-    if (( $diff > 0 )); then
-        msg+=$(printf "%${diff}s" "")
+
+# Find the max length of the paths (before '->')
+max_len=0
+while IFS='->' read -r left _; do
+    len=$(echo -n "$left" | wc -c)
+    if (( len > max_len )); then
+        max_len=$len
     fi
-    msg+="$result_dir"
-    echo "$msg -> ${result_msgs[$i]}"
-    ((i++))
-done
-echo ""
+done < "$resultfile"
+
+# Print with padding so '->' lines up
+while IFS='->' read -r left right; do
+    right=$(echo "$right" | sed 's/^[[:space:]]*>*[[:space:]]*//')
+    printf "%-${max_len}s -> %s\n" "$left" "$right"
+done < "$resultfile"
+
+# Remove tmp files
+rm -f "$resultfile"
+rm -f "$lockfile"

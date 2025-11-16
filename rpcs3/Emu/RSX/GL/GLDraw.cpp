@@ -7,36 +7,14 @@
 
 namespace gl
 {
-	GLenum comparison_op(rsx::comparison_function op)
+	inline GLenum comparison_op(rsx::comparison_function op)
 	{
-		switch (op)
-		{
-		case rsx::comparison_function::never: return GL_NEVER;
-		case rsx::comparison_function::less: return GL_LESS;
-		case rsx::comparison_function::equal: return GL_EQUAL;
-		case rsx::comparison_function::less_or_equal: return GL_LEQUAL;
-		case rsx::comparison_function::greater: return GL_GREATER;
-		case rsx::comparison_function::not_equal: return GL_NOTEQUAL;
-		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
-		case rsx::comparison_function::always: return GL_ALWAYS;
-		}
-		fmt::throw_exception("Unsupported comparison op 0x%X", static_cast<u32>(op));
+		return static_cast<GLenum>(op);
 	}
 
-	GLenum stencil_op(rsx::stencil_op op)
+	inline GLenum stencil_op(rsx::stencil_op op)
 	{
-		switch (op)
-		{
-		case rsx::stencil_op::invert: return GL_INVERT;
-		case rsx::stencil_op::keep: return GL_KEEP;
-		case rsx::stencil_op::zero: return GL_ZERO;
-		case rsx::stencil_op::replace: return GL_REPLACE;
-		case rsx::stencil_op::incr: return GL_INCR;
-		case rsx::stencil_op::decr: return GL_DECR;
-		case rsx::stencil_op::incr_wrap: return GL_INCR_WRAP;
-		case rsx::stencil_op::decr_wrap: return GL_DECR_WRAP;
-		}
-		fmt::throw_exception("Unsupported stencil op 0x%X", static_cast<u32>(op));
+		return static_cast<GLenum>(op);
 	}
 
 	GLenum blend_equation(rsx::blend_equation op)
@@ -62,76 +40,33 @@ namespace gl
 		}
 	}
 
-	GLenum blend_factor(rsx::blend_factor op)
+	inline GLenum blend_factor(rsx::blend_factor op)
 	{
-		switch (op)
-		{
-		case rsx::blend_factor::zero: return GL_ZERO;
-		case rsx::blend_factor::one: return GL_ONE;
-		case rsx::blend_factor::src_color: return GL_SRC_COLOR;
-		case rsx::blend_factor::one_minus_src_color: return GL_ONE_MINUS_SRC_COLOR;
-		case rsx::blend_factor::dst_color: return GL_DST_COLOR;
-		case rsx::blend_factor::one_minus_dst_color: return GL_ONE_MINUS_DST_COLOR;
-		case rsx::blend_factor::src_alpha: return GL_SRC_ALPHA;
-		case rsx::blend_factor::one_minus_src_alpha: return GL_ONE_MINUS_SRC_ALPHA;
-		case rsx::blend_factor::dst_alpha: return GL_DST_ALPHA;
-		case rsx::blend_factor::one_minus_dst_alpha: return GL_ONE_MINUS_DST_ALPHA;
-		case rsx::blend_factor::src_alpha_saturate: return GL_SRC_ALPHA_SATURATE;
-		case rsx::blend_factor::constant_color: return GL_CONSTANT_COLOR;
-		case rsx::blend_factor::one_minus_constant_color: return GL_ONE_MINUS_CONSTANT_COLOR;
-		case rsx::blend_factor::constant_alpha: return GL_CONSTANT_ALPHA;
-		case rsx::blend_factor::one_minus_constant_alpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
-		}
-		fmt::throw_exception("Unsupported blend factor 0x%X", static_cast<u32>(op));
+		return static_cast<GLenum>(op);
 	}
 
-	GLenum logic_op(rsx::logic_op op)
+	inline GLenum logic_op(rsx::logic_op op)
 	{
-		switch (op)
-		{
-		case rsx::logic_op::logic_clear: return GL_CLEAR;
-		case rsx::logic_op::logic_and: return GL_AND;
-		case rsx::logic_op::logic_and_reverse: return GL_AND_REVERSE;
-		case rsx::logic_op::logic_copy: return GL_COPY;
-		case rsx::logic_op::logic_and_inverted: return GL_AND_INVERTED;
-		case rsx::logic_op::logic_noop: return GL_NOOP;
-		case rsx::logic_op::logic_xor: return GL_XOR;
-		case rsx::logic_op::logic_or: return GL_OR;
-		case rsx::logic_op::logic_nor: return GL_NOR;
-		case rsx::logic_op::logic_equiv: return GL_EQUIV;
-		case rsx::logic_op::logic_invert: return GL_INVERT;
-		case rsx::logic_op::logic_or_reverse: return GL_OR_REVERSE;
-		case rsx::logic_op::logic_copy_inverted: return GL_COPY_INVERTED;
-		case rsx::logic_op::logic_or_inverted: return GL_OR_INVERTED;
-		case rsx::logic_op::logic_nand: return GL_NAND;
-		case rsx::logic_op::logic_set: return GL_SET;
-		}
-		fmt::throw_exception("Unsupported logic op 0x%X", static_cast<u32>(op));
+		return static_cast<GLenum>(op);
 	}
 
-	GLenum front_face(rsx::front_face op)
+	inline GLenum front_face(rsx::front_face op)
 	{
-		//NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
-		//shader_window_origin register does not affect this
-		//verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
-		//correctness of face winding checked using stencil test (GOW collection shadows)
-		switch (op)
-		{
-		case rsx::front_face::cw: return GL_CCW;
-		case rsx::front_face::ccw: return GL_CW;
-		}
-		fmt::throw_exception("Unsupported front face 0x%X", static_cast<u32>(op));
+		// NOTE: RSX face winding is always based off of upper-left corner like vulkan, but GL is bottom left
+		// shader_window_origin register does not affect this
+		// verified with Outrun Online Arcade (window_origin::top) and DS2 (window_origin::bottom)
+		// correctness of face winding checked using stencil test (GOW collection shadows)
+		return static_cast<GLenum>(op) ^ 1u;
 	}
 
-	GLenum cull_face(rsx::cull_face op)
+	inline GLenum cull_face(rsx::cull_face op)
 	{
-		switch (op)
-		{
-		case rsx::cull_face::front: return GL_FRONT;
-		case rsx::cull_face::back: return GL_BACK;
-		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
-		}
-		fmt::throw_exception("Unsupported cull face 0x%X", static_cast<u32>(op));
+		return static_cast<GLenum>(op);
+	}
+
+	inline GLenum polygon_mode(rsx::polygon_mode mode)
+	{
+		return static_cast<GLenum>(mode);
 	}
 }
 
@@ -335,6 +270,10 @@ void GLGSRender::update_draw_state()
 	// Clip planes
 	gl_state.clip_planes((current_vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
 
+	// Polygon mode. We can only have one polygon mode active at one time, so we need to determine if any face is currently culled.
+	const bool show_back = REGS(m_ctx)->cull_face_enabled() && REGS(m_ctx)->cull_face_mode() == rsx::cull_face::front;
+	gl_state.polygon_mode(gl::polygon_mode(show_back ? REGS(m_ctx)->polygon_mode_back() : REGS(m_ctx)->polygon_mode_front()));
+
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
 	//NV4097_SET_SPECULAR_ENABLE
@@ -342,9 +281,6 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_FLAT_SHADE_OP
 	//NV4097_SET_EDGE_FLAG
 	//NV4097_SET_COLOR_KEY_COLOR
-	//NV4097_SET_SHADER_CONTROL
-	//NV4097_SET_ZMIN_MAX_CONTROL
-	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
 	// For OGL Z range is updated every draw as it is separate from viewport config
@@ -485,7 +421,7 @@ void GLGSRender::bind_texture_env()
 		}
 		else
 		{
-			auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
 			cmd->bind_texture(GL_FRAGMENT_TEXTURES_START + i, target, m_null_textures[target]->id());
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
@@ -569,7 +505,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 	if (vertex_state && !m_vertex_layout.validate())
 	{
 		// No vertex inputs enabled
-		// Execute remainining pipeline barriers with NOP draw
+		// Execute remaining pipeline barriers with NOP draw
 		do
 		{
 			draw_call.execute_pipeline_dependencies(m_ctx);
@@ -619,9 +555,9 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 		else
 		{
-			const auto subranges = draw_call.get_subranges();
+			const auto& subranges = draw_call.get_subranges();
 			const auto draw_count = subranges.size();
-			const auto driver_caps = gl::get_driver_caps();
+			const auto& driver_caps = gl::get_driver_caps();
 			bool use_draw_arrays_fallback = false;
 
 			m_scratch_buffer.resize(draw_count * 24);
@@ -631,7 +567,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 			u32 first = 0;
 			u32 dst_index = 0;
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				firsts[dst_index] = first;
 				counts[dst_index] = range.count;

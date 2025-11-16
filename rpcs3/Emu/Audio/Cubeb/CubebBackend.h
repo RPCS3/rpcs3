@@ -61,5 +61,4 @@ private:
 	};
 
 	device_handle GetDevice(std::string_view dev_id = "");
-	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, u32 ch_cnt);
 };

@@ -45,6 +45,7 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
+    kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
     localized_emu.cpp
@@ -133,6 +134,7 @@ add_library(rpcs3_ui STATIC
     welcome_dialog.ui
 
     ../display_sleep_control.cpp
+    ../gamemode_control.cpp
     ../headless_application.cpp
     ../main_application.cpp
     ../module_verifier.cpp

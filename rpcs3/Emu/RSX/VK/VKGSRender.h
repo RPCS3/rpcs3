@@ -4,6 +4,7 @@
 
 #include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
+#include "vkutils/ex.h"
 #include "vkutils/instance.h"
 #include "vkutils/sync.h"
 #include "vkutils/swapchain.h"
@@ -25,6 +26,9 @@
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
+
+using vs_binding_table_t = decltype(VKVertexProgram::binding_table);
+using fs_binding_table_t = decltype(VKFragmentProgram::binding_table);
 
 namespace vk
 {
@@ -53,6 +57,9 @@ private:
 	vk::glsl::program *m_prev_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
+	const vs_binding_table_t* m_vs_binding_table = nullptr;
+	const fs_binding_table_t* m_fs_binding_table = nullptr;
+
 	vk::texture_cache m_texture_cache;
 	vk::surface_cache m_rtts;
 
@@ -73,10 +80,11 @@ private:
 
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
-	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
 	VkDependencyInfoKHR m_async_compute_dependency_info {};
 	VkMemoryBarrier2KHR m_async_compute_memory_barrier {};
+
+	std::pair<const vs_binding_table_t*, const fs_binding_table_t*> get_binding_table() const;
 
 public:
 	//vk::fbo draw_fbo;
@@ -105,11 +113,6 @@ private:
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 
 	std::unique_ptr<vk::buffer> m_host_object_data;
-
-	vk::descriptor_pool m_descriptor_pool;
-	VkDescriptorSetLayout m_descriptor_layouts = VK_NULL_HANDLE;
-	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
-
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
 	sizeu m_swapchain_dims{};
@@ -134,21 +137,27 @@ private:
 	vk::data_heap m_fragment_instructions_buffer;
 	vk::data_heap m_vertex_instructions_buffer;
 
-	VkDescriptorBufferInfo m_vertex_env_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_env_buffer_info {};
-	VkDescriptorBufferInfo m_vertex_layout_stream_info {};
-	VkDescriptorBufferInfo m_vertex_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
-	VkDescriptorBufferInfo m_raster_env_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_indirection_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_constants_array_buffer_info{};
+	VkDescriptorBufferInfoEx m_vertex_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_layout_stream_info {};
+	VkDescriptorBufferInfoEx m_vertex_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_texture_params_buffer_info {};
+	VkDescriptorBufferInfoEx m_raster_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_indirection_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_constants_array_buffer_info{};
 
-	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_instructions_buffer_info {};
 
 	rsx::simple_array<u8> m_multidraw_parameters_buffer;
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
+	u64 m_vertex_env_dynamic_offset = 0;
+	u64 m_vertex_layout_dynamic_offset = 0;
+	u64 m_fragment_constants_dynamic_offset = 0;
+	u64 m_fragment_env_dynamic_offset = 0;
+	u64 m_texture_parameters_dynamic_offset = 0;
+	u64 m_stipple_array_dynamic_offset = 0;
 
 	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
@@ -170,13 +179,15 @@ private:
 
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
-	utils::address_range m_offloader_fault_range;
+	utils::address_range32 m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
 	vk::draw_call_t m_current_draw {};
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
+
+	std::unique_ptr<vk::image> m_overlay_recording_img;
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
@@ -220,8 +231,6 @@ private:
 	void update_draw_state();
 	void check_present_status();
 
-	VkDescriptorSet allocate_descriptor_set();
-
 	vk::vertex_upload_info upload_vertex_data();
 	rsx::simple_array<u8> m_scratch_mem;
 
@@ -240,6 +249,8 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
+	// Sync
+	void write_barrier(u32 address, u32 range) override;
 	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 address, u32 data) override;
 
@@ -289,6 +300,6 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
 };

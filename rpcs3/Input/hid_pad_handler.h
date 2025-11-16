@@ -4,7 +4,7 @@
 #include "Utilities/CRC.h"
 #include "Utilities/Thread.h"
 
-#include "hidapi.h"
+#include <hidapi.h>
 
 #ifdef ANDROID
 #include "hidapi_libusb.h"
@@ -29,7 +29,7 @@ extern std::mutex g_android_usb_devices_mutex;
 #else
 using hid_enumerated_device_type = std::string;
 using hid_enumerated_device_view = std::string_view;
-inline constexpr auto hid_enumerated_device_default = std::string();
+inline const auto hid_enumerated_device_default = std::string();
 #endif
 
 struct CalibData
@@ -56,6 +56,8 @@ enum CalibIndex
 class HidDevice : public PadDevice
 {
 public:
+	hid_device* open();
+	static void close(hid_device* dev);
 	void close();
 
 	hid_device* hidDevice{nullptr};
@@ -102,9 +104,10 @@ protected:
 	// pseudo 'controller id' to keep track of unique controllers
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
-	std::set<hid_enumerated_device_type> m_last_enumerated_devices;
+	std::set<hid_enumerated_device_type> m_enumerated_devices;
 	std::set<hid_enumerated_device_type> m_new_enumerated_devices;
 	std::map<hid_enumerated_device_type, std::wstring> m_enumerated_serials;
+	std::map<hid_enumerated_device_type, std::wstring> m_new_enumerated_serials;
 	std::mutex m_enumeration_mutex;
 	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
 

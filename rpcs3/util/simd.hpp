@@ -2213,8 +2213,11 @@ inline v128 gv_cvtu32_tofs(const v128& src)
 #if defined(__AVX512VL__)
 	return _mm_cvtepu32_ps(src);
 #elif defined(ARCH_X64)
-	const auto fix = _mm_and_ps(_mm_castsi128_ps(_mm_srai_epi32(src, 31)), _mm_set1_ps(0x80000000));
-	return _mm_add_ps(_mm_cvtepi32_ps(_mm_and_si128(src, _mm_set1_epi32(0x7fffffff))), fix);
+	constexpr u64 bit_shift = 9;
+	const auto shifted = _mm_srli_epi32(src, bit_shift);
+	const auto cleared = _mm_slli_epi32(shifted, bit_shift);
+	const auto low_bits = _mm_sub_epi32(src, cleared);
+	return _mm_add_ps(_mm_cvtepi32_ps(low_bits), _mm_mul_ps(_mm_cvtepi32_ps(shifted), _mm_set_ps1(1u << bit_shift)));
 #elif defined(ARCH_ARM64)
 	return vcvtq_f32_u32(src);
 #endif
@@ -2983,7 +2986,7 @@ inline v128 gv_rol16(const v128& a, const v128& b)
 #else
 	v128 r;
 	for (u32 i = 0; i < 8; i++)
-		r._u16[i] = utils::rol16(a._u16[i], b._u16[i]);
+		r._u16[i] = std::rotl<u16>(a._u16[i], b._u16[i]);
 	return r;
 #endif
 }
@@ -3017,7 +3020,7 @@ inline v128 gv_rol32(const v128& a, const v128& b)
 #else
 	v128 r;
 	for (u32 i = 0; i < 4; i++)
-		r._u32[i] = utils::rol32(a._u32[i], b._u32[i]);
+		r._u32[i] = std::rotl<u32>(a._u32[i], b._u32[i]);
 	return r;
 #endif
 }
@@ -3036,7 +3039,7 @@ inline v128 gv_rol32(const v128& a)
 #else
 	v128 r;
 	for (u32 i = 0; i < 4; i++)
-		r._u32[i] = utils::rol32(a._u32[i], count);
+		r._u32[i] = std::rotl<u32>(a._u32[i], count);
 	return r;
 #endif
 }

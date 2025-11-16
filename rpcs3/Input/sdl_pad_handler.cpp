@@ -158,8 +158,6 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = 8000; // between 0 and SDL_JOYSTICK_AXIS_MAX
 	cfg->ltriggerthreshold.def = 0; // between 0 and SDL_JOYSTICK_AXIS_MAX
 	cfg->rtriggerthreshold.def = 0; // between 0 and SDL_JOYSTICK_AXIS_MAX
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
 
 	// Set default color value
 	cfg->colorR.def = 0;
@@ -265,11 +263,11 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 	info.pid = SDL_GetGamepadProduct(info.gamepad);
 	info.product_version = SDL_GetGamepadProductVersion(info.gamepad);
 	info.firmware_version = SDL_GetGamepadFirmwareVersion(info.gamepad);
-	info.has_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RGB_LED_BOOLEAN);
-	info.has_mono_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_MONO_LED_BOOLEAN);
-	info.has_player_led = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_PLAYER_LED_BOOLEAN);
-	info.has_rumble = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN);
-	info.has_rumble_triggers = SDL_HasProperty(property_id, SDL_PROP_GAMEPAD_CAP_TRIGGER_RUMBLE_BOOLEAN);
+	info.has_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_RGB_LED_BOOLEAN, false);
+	info.has_mono_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_MONO_LED_BOOLEAN, false);
+	info.has_player_led = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_PLAYER_LED_BOOLEAN, false);
+	info.has_rumble = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_RUMBLE_BOOLEAN, false);
+	info.has_rumble_triggers = SDL_GetBooleanProperty(property_id, SDL_PROP_GAMEPAD_CAP_TRIGGER_RUMBLE_BOOLEAN, false);
 	info.has_accel = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_ACCEL);
 	info.has_gyro = SDL_GamepadHasSensor(info.gamepad, SDL_SENSOR_GYRO);
 
@@ -722,6 +720,29 @@ PadHandlerBase::connection sdl_pad_handler::get_next_button_press(const std::str
 	return PadHandlerBase::get_next_button_press(padId, callback, fail_callback, call_type, buttons);
 }
 
+pad_capabilities sdl_pad_handler::get_capabilities(const std::string& pad_id)
+{
+	pad_capabilities capabilities = PadHandlerBase::get_capabilities(pad_id);
+
+	std::shared_ptr<PadDevice> device = get_device(pad_id);
+	SDLDevice* dev = static_cast<SDLDevice*>(device.get());
+	if (!dev || dev->sdl.is_virtual_device)
+	{
+		return capabilities;
+	}
+
+	capabilities.has_led &= dev->sdl.has_led;
+	capabilities.has_mono_led &= dev->sdl.has_mono_led;
+	capabilities.has_player_led &= dev->sdl.has_player_led;
+	capabilities.has_battery_led &= (dev->sdl.has_led || dev->sdl.has_mono_led);
+	capabilities.has_rumble &= dev->sdl.has_rumble;
+	capabilities.has_accel &= dev->sdl.has_accel;
+	capabilities.has_gyro &= dev->sdl.has_gyro;
+	capabilities.has_pressure_sensitivity &= dev->sdl.is_ds3_with_pressure_buttons;
+
+	return capabilities;
+}
+
 void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
 	const auto& pad = binding.pad;
@@ -735,8 +756,8 @@ void sdl_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
 	if (dev->sdl.has_rumble || dev->sdl.has_rumble_triggers)
 	{
-		const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrateMotors);
-		const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrateMotors);
+		const u8 speed_large = cfg->get_large_motor_speed(pad->m_vibrate_motors);
+		const u8 speed_small = cfg->get_small_motor_speed(pad->m_vibrate_motors);
 
 		dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 

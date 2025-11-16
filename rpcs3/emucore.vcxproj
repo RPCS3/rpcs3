@@ -450,6 +450,7 @@
     <ClCompile Include="Emu\Io\Dimensions.cpp" />
     <ClCompile Include="Emu\Io\Infinity.cpp" />
     <ClCompile Include="Emu\Io\Skylander.cpp" />
+    <ClCompile Include="Emu\Io\KamenRider.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\Io\usb_vfs.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
@@ -545,6 +546,7 @@
     <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
+    <ClInclude Include="..\Utilities\deferred_op.hpp" />
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />
     <ClInclude Include="..\Utilities\stack_trace.h" />
     <ClInclude Include="..\Utilities\transactional_storage.h" />
@@ -640,6 +642,7 @@
     <ClInclude Include="Emu\RSX\color_utils.h" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
+    <ClInclude Include="Emu\RSX\Common\reverse_ptr.hpp" />
     <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp" />
     <ClInclude Include="Emu\RSX\Common\expected.hpp" />
     <ClInclude Include="Emu\RSX\Common\io_buffer.h" />
@@ -733,6 +736,8 @@
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
+    <ClInclude Include="util\pair.hpp" />
+    <ClInclude Include="util\tuple.hpp" />
     <ClInclude Include="util\video_sink.h" />
     <ClInclude Include="util\video_provider.h" />
     <ClInclude Include="util\media_utils.h" />
@@ -808,6 +813,7 @@
     <ClInclude Include="Emu\Io\Dimensions.h" />
     <ClInclude Include="Emu\Io\Infinity.h" />
     <ClInclude Include="Emu\Io\Skylander.h" />
+    <ClInclude Include="Emu\Io\KamenRider.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
     <ClInclude Include="Emu\Io\usb_vfs.h" />
     <ClInclude Include="Emu\IPC.h" />

@@ -152,7 +152,7 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	const auto handler = pad::get_pad_thread();
 	const auto& pad    = ::at32(handler->GetPads(), m_controller_index);
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!pad->is_connected() || pad->is_copilot())
 	{
 		return;
 	}

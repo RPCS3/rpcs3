@@ -166,6 +166,55 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 	return true;
 }
 
+bool try_to_uint128(u128* out, std::string_view value)
+{
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_uint128(): called with an empty string");
+		return false;
+	}
+
+	u64 result_low = 0, result_high = 0;
+	const char* start_high64 = value.data();
+	const char* end = value.data() + value.size();
+
+	if (start_high64[0] == '0' && value.size() >= 2 && (start_high64[1] == 'x' || start_high64[1] == 'X'))
+	{
+		// Hex support
+		start_high64 += 2;
+	}
+
+	const char* start_low64 = end - std::min<usz>(end - start_high64, 16);
+
+	// Hexadecimal-only
+	constexpr int base = 16;
+
+	auto ret = std::from_chars(start_low64, end, result_low, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end)
+	{
+		if (out) cfg_log.error("cfg::try_to_uint128('%s'): invalid integer", value);
+		return false;
+	}
+
+	if (start_high64 == start_low64)
+	{
+		if (out) *out = result_low;
+		return true;
+	}
+
+	ret = std::from_chars(start_high64, start_low64, result_high, base);
+
+	if (ret.ec != std::errc() || ret.ptr != start_low64)
+	{
+		if (out) cfg_log.error("cfg::try_to_uint128('%s'): invalid integer", value);
+		return false;
+	}
+
+	if (out) *out = result_low + (u128{result_high} << 64);
+	return true;
+}
+
 std::vector<std::string> cfg::make_float_range(f64 min, f64 max)
 {
 	return {std::to_string(min), std::to_string(max)};
@@ -276,6 +325,19 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (out) *out = result;
 	return true;
+}
+
+std::string cfg::uint128::to_string(u128 value) noexcept
+{
+	std::string result = "0x";
+	result.resize(result.size() + 32);
+
+	for (u32 i = 0; i < 32; i++)
+	{
+		result[result.size() - 1 - i] = "0123456789ABCDEF"[static_cast<u64>(value >> (i * 4)) % 16];
+	}
+
+	return result;
 }
 
 std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
@@ -553,19 +615,12 @@ void cfg::node::from_default()
 	}
 }
 
-void cfg::_bool::from_default()
+void cfg::node::restore_defaults()
 {
-	m_value = def;
-}
-
-void cfg::string::from_default()
-{
-	m_value = def;
-}
-
-void cfg::set_entry::from_default()
-{
-	m_set = {};
+	for (auto& node : m_nodes)
+	{
+		node->restore_defaults();
+	}
 }
 
 std::string cfg::map_entry::get_value(std::string_view key)

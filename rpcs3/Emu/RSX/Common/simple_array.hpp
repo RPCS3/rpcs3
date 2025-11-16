@@ -4,15 +4,26 @@
 #include <functional>
 #include <algorithm>
 
+#include "reverse_ptr.hpp"
+
 namespace rsx
 {
+	template <typename C, typename T>
+	concept span_like =
+		requires(C& c) {
+			{ c.data() } -> std::convertible_to<const T*>;
+			{ c.size() } -> std::integral;
+	};
+
 	template <typename Ty>
-		requires std::is_trivially_destructible_v<Ty>
+		requires std::is_trivially_destructible_v<Ty> && std::is_trivially_copyable_v<Ty>
 	struct simple_array
 	{
 	public:
 		using iterator = Ty*;
 		using const_iterator = const Ty*;
+		using reverse_iterator = reverse_pointer<Ty>;
+		using const_reverse_iterator = reverse_pointer<const Ty>;
 		using value_type = Ty;
 
 	private:
@@ -76,6 +87,18 @@ namespace rsx
 		simple_array(simple_array&& other) noexcept
 		{
 			swap(other);
+		}
+
+		template <typename Container>
+			requires span_like<Container, Ty>
+		simple_array(const Container& container)
+		{
+			resize(container.size());
+
+			if (_size)
+			{
+				std::memcpy(_data, container.data(), size_bytes());
+			}
 		}
 
 		simple_array& operator=(const simple_array& other)
@@ -173,7 +196,7 @@ namespace rsx
 			if (is_local_storage())
 			{
 				// Switch to heap storage
-				_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size));
+				ensure(_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size)));
 				std::memcpy(static_cast<void*>(_data), _local_storage, size_bytes());
 			}
 			else
@@ -285,6 +308,13 @@ namespace rsx
 			return pos;
 		}
 
+		void operator += (const rsx::simple_array<Ty>& that)
+		{
+			const auto old_size = _size;
+			resize(_size + that._size);
+			std::memcpy(data() + old_size, that.data(), that.size_bytes());
+		}
+
 		void clear()
 		{
 			_size = 0;
@@ -301,6 +331,11 @@ namespace rsx
 		}
 
 		u64 size_bytes() const
+		{
+			return _size * sizeof(Ty);
+		}
+
+		u32 size_bytes32() const
 		{
 			return _size * sizeof(Ty);
 		}
@@ -368,6 +403,46 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator cbegin() const
+		{
+			return _data;
+		}
+
+		const_iterator cend() const
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		reverse_iterator rbegin()
+		{
+			return reverse_iterator(end() - 1);
+		}
+
+		reverse_iterator rend()
+		{
+			return reverse_iterator(begin() - 1);
+		}
+
+		const_reverse_iterator rbegin() const
+		{
+			return crbegin();
+		}
+
+		const_reverse_iterator rend() const
+		{
+			return crend();
+		}
+
+		const_reverse_iterator crbegin() const
+		{
+			return const_reverse_iterator(cend() - 1);
+		}
+
+		const_reverse_iterator crend() const
+		{
+			return const_reverse_iterator(cbegin() - 1);
 		}
 
 		bool any(std::predicate<const Ty&> auto predicate) const

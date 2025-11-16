@@ -340,7 +340,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 
 	const auto ftype = FunctionType::get(get_type<void>(), {
 		get_type<u8*>(), // Exec base
-		GetContextType()->getPointerTo(), // PPU context
+		m_ir->getPtrTy(), // PPU context
 		get_type<u64>(), // Segment address (for PRX)
 		get_type<u8*>(), // Memory base
 		get_type<u64>(), // r0
@@ -364,6 +364,12 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 			continue;
 		}
 
+		if (std::count(info.excluded_funcs.begin(), info.excluded_funcs.end(), f.addr))
+		{
+			// Excluded function (possibly patched)
+			continue;
+		}
+
 		vec_addrs.push_back(static_cast<u32>(f.addr - base));
 		functions.push_back(cast<Function>(m_module->getOrInsertFunction(fmt::format("__0x%x", f.addr - base), ftype).getCallee()));
 	}
@@ -380,7 +386,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
 
 	// Create an array of function pointers
-	const auto func_table_type = ArrayType::get(ftype->getPointerTo(), functions.size());
+	const auto func_table_type = ArrayType::get(m_ir->getPtrTy(), functions.size());
 	const auto init_func_table = ConstantArray::get(func_table_type, functions);
 	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
 
@@ -407,18 +413,17 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto func_pc = ZExt(m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst), get_type<u64>());
 
 	ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(func_table->getValueType(), func_table, {m_ir->getInt64(0), index_value}));
-	assert(ptr_inst->getResultElementType() == ftype->getPointerTo());
+	assert(ptr_inst->getResultElementType() == m_ir->getPtrTy());
 
 	const auto faddr = m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst);
 	const auto faddr_int = m_ir->CreatePtrToInt(faddr, get_type<uptr>());
 	const auto pos_32 = m_reloc ? m_ir->CreateAdd(func_pc, m_seg0) : func_pc;
 	const auto pos = m_ir->CreateShl(pos_32, 1);
-	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
+	const auto ptr = m_ir->CreatePtrAdd(m_exec, pos);
 
-	const auto seg_base_ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(
-		m_ir->CreatePtrToInt(m_exec, get_type<u64>()), m_ir->getInt64(vm::g_exec_addr_seg_offset)), m_exec->getType());
+	const auto seg_base_ptr = m_ir->CreatePtrAdd(m_exec, m_ir->getInt64(vm::g_exec_addr_seg_offset));
 	const auto seg_pos = m_ir->CreateLShr(pos_32, 1);
-	const auto seg_ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), seg_base_ptr, seg_pos));
+	const auto seg_ptr = m_ir->CreatePtrAdd(seg_base_ptr, seg_pos);
 	const auto seg_val = m_ir->CreateTrunc(m_ir->CreateLShr(m_seg0, 13), get_type<u16>());
 
 	// Store to jumptable
@@ -610,15 +615,14 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		}
 
 		const auto pos = m_ir->CreateShl(indirect, 1);
-		const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
+		const auto ptr = m_ir->CreatePtrAdd(m_exec, pos);
 		const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
-		callee = FunctionCallee(type, m_ir->CreateIntToPtr(val, type->getPointerTo()));
+		callee = FunctionCallee(type, m_ir->CreateIntToPtr(val, m_ir->getPtrTy()));
 
 		// Load new segment address
-		const auto seg_base_ptr = m_ir->CreateIntToPtr(m_ir->CreateAdd(
-			m_ir->CreatePtrToInt(m_exec, get_type<u64>()), m_ir->getInt64(vm::g_exec_addr_seg_offset)), m_exec->getType());
+		const auto seg_base_ptr = m_ir->CreatePtrAdd(m_exec, m_ir->getInt64(vm::g_exec_addr_seg_offset));
 		const auto seg_pos = m_ir->CreateLShr(indirect, 1);
-		const auto seg_ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), seg_base_ptr, seg_pos));
+		const auto seg_ptr = m_ir->CreatePtrAdd(seg_base_ptr, seg_pos);
 		const auto seg_val = m_ir->CreateZExt(m_ir->CreateLoad(get_type<u16>(), seg_ptr), get_type<u64>());
 		seg0 = m_ir->CreateShl(seg_val, 13);
 	}
@@ -824,7 +828,7 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 
 llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr)
 {
-	return m_ir->CreateGEP(get_type<u8>(), m_base, addr);
+	return m_ir->CreatePtrAdd(m_base, addr);
 }
 
 void PPUTranslator::TestAborted()
@@ -1111,7 +1115,24 @@ void PPUTranslator::VCFSX(ppu_opcode_t op)
 void PPUTranslator::VCFUX(ppu_opcode_t op)
 {
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+
+#ifdef ARCH_ARM64
+	return set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+#else
+	if (m_use_avx512)
+	{
+		return set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+	}
+
+	constexpr int bit_shift = 9;
+	const auto shifted = (b >> bit_shift);
+	const auto cleared = shifted << bit_shift;
+	const auto low_bits = b - cleared;
+	const auto high_part = fpcast<f32[4]>(noncast<s32[4]>(shifted)) * fsplat<f32[4]>(static_cast<f32>(1u << bit_shift));
+	const auto low_part = fpcast<f32[4]>(noncast<s32[4]>(low_bits));
+	const auto temp = high_part + low_part;
+	set_vr(op.vd, temp * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
+#endif
 }
 
 void PPUTranslator::VCMPBFP(ppu_opcode_t op)
@@ -2794,8 +2815,8 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 	else if (std::none_of(m_cr + 0, m_cr + 32, [](auto* p) { return p; }))
 	{
 		// MFCR (optimized)
-		Value* ln0 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(m_thread_type, m_thread, 99), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
-		Value* ln1 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(m_thread_type, m_thread, 115), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
+		Value* ln0 = m_ir->CreateStructGEP(m_thread_type, m_thread, 99);
+		Value* ln1 = m_ir->CreateStructGEP(m_thread_type, m_thread, 115);
 
 		ln0 = m_ir->CreateLoad(GetType<u8[16]>(), ln0);
 		ln1 = m_ir->CreateLoad(GetType<u8[16]>(), ln1);
@@ -5384,7 +5405,7 @@ MDNode* PPUTranslator::CheckBranchProbability(u32 bo)
 void PPUTranslator::build_interpreter()
 {
 #define BUILD_VEC_INST(i) { \
-		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), m_thread_type->getPointerTo()).getCallee()); \
+		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), m_ir->getPtrTy()).getCallee()); \
 		std::fill(std::begin(m_globals), std::end(m_globals), nullptr); \
 		std::fill(std::begin(m_locals), std::end(m_locals), nullptr); \
 		IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function)); \

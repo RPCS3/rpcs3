@@ -3198,7 +3198,7 @@ error_code sceNpLookupTerm()
 
 error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId ? communicationId->data : "", selfNpId);
+	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId ? std::string_view(communicationId->data, 9) : "", selfNpId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3930,8 +3930,8 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	myLanguages->language1 = SCE_NP_LANG_ENGLISH_US;
-	myLanguages->language2 = g_cfg.sys.language != CELL_SYSUTIL_LANG_ENGLISH_US ? g_cfg.sys.language : -1;
+	myLanguages->language1 = g_cfg.sys.language;
+	myLanguages->language2 = g_cfg.sys.language != CELL_SYSUTIL_LANG_ENGLISH_US ? CELL_SYSUTIL_LANG_ENGLISH_US : -1;
 	myLanguages->language3 = -1;
 
 	return CELL_OK;
@@ -3968,7 +3968,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 	ensure(ccode.size() == sizeof(SceNpCountryCode::data));
 	std::memcpy(countryCode->data, ccode.data(), sizeof(SceNpCountryCode::data));
 
-	*language = CELL_SYSUTIL_LANG_ENGLISH_US;
+	*language = g_cfg.sys.language;
 
 	return CELL_OK;
 }
@@ -4265,7 +4265,7 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	return CELL_OK;
+	return SCE_NP_ERROR_ID_NOT_FOUND;
 }
 
 error_code sceNpManagerGetSigninId(vm::ptr<void> signInId)
@@ -6962,7 +6962,7 @@ error_code sceNpSignalingGetConnectionFromPeerAddress(u32 ctx_id, np_in_addr_t p
 	return CELL_OK;
 }
 
-error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetInfo> info)
+error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetInfoDeprecated> info)
 {
 	sceNp.warning("sceNpSignalingGetLocalNetInfo(ctx_id=%d, info=*0x%x)", ctx_id, info);
 
@@ -6973,7 +6973,8 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!info || info->size != sizeof(SceNpSignalingNetInfo))
+	// Library has backward support for a version of SceNpSignalingNetInfo without npport
+	if (!info || (info->size != sizeof(SceNpSignalingNetInfo) && info->size != sizeof(SceNpSignalingNetInfoDeprecated)))
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
@@ -6985,7 +6986,12 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 	info->nat_status    = SCE_NP_SIGNALING_NETINFO_NAT_STATUS_TYPE2;
 	info->upnp_status   = nph.get_upnp_status();
 	info->npport_status = SCE_NP_SIGNALING_NETINFO_NPPORT_STATUS_OPEN;
-	info->npport        = SCE_NP_PORT;
+
+	if (info->size == sizeof(SceNpSignalingNetInfo))
+	{
+		auto new_info = vm::unsafe_ptr_cast<SceNpSignalingNetInfo>(info);
+		new_info->npport = SCE_NP_PORT;
+	}
 
 	return CELL_OK;
 }

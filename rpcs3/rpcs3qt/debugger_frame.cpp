@@ -40,8 +40,6 @@
 #include "rpcs3qt/debugger_add_bp_window.h"
 #include "util/asm.hpp"
 
-constexpr auto qstr = QString::fromStdString;
-
 constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
@@ -243,6 +241,9 @@ void debugger_frame::closeEvent(QCloseEvent* event)
 
 	QDockWidget::closeEvent(event);
 	Q_EMIT DebugFrameClosed();
+
+	m_spu_disasm_memory.reset();
+	m_cpu.reset();
 }
 
 void debugger_frame::showEvent(QShowEvent* event)
@@ -1030,7 +1031,7 @@ void debugger_frame::UpdateUnitList()
 		std::function<cpu_thread*()> func_cpu = make_check_cpu(std::addressof(cpu), true);
 
 		// Space at the end is to pad a gap on the right
-		cpu_list.emplace_back(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
+		cpu_list.emplace_back(QString::fromStdString((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
 
 		if (old_cpu_ptr == std::addressof(cpu))
 		{
@@ -1373,7 +1374,7 @@ void debugger_frame::WritePanels()
 	int loc = m_misc_state->verticalScrollBar()->value();
 	int hloc = m_misc_state->horizontalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setPlainText(qstr(cpu->dump_misc()));
+	m_misc_state->setPlainText(QString::fromStdString(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
@@ -1382,7 +1383,7 @@ void debugger_frame::WritePanels()
 	m_regs->clear();
 	m_last_reg_state.clear();
 	cpu->dump_regs(m_last_reg_state, m_dump_reg_func_data);
-	m_regs->setPlainText(qstr(m_last_reg_state));
+	m_regs->setPlainText(QString::fromStdString(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 

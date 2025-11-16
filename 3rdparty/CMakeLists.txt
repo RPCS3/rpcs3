@@ -51,6 +51,14 @@ else()
 	add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 endif()
 
+if (USE_SYSTEM_VULKAN_MEMORY_ALLOCATOR)
+	find_package(VulkanMemoryAllocator REQUIRED GLOBAL)
+	add_library(3rdparty::vulkanmemoryallocator ALIAS GPUOpen::VulkanMemoryAllocator)
+else()
+	add_library(3rdparty_vulkanmemoryallocator INTERFACE)
+	target_include_directories(3rdparty_vulkanmemoryallocator INTERFACE GPUOpen/VulkanMemoryAllocator/include)
+	add_library(3rdparty::vulkanmemoryallocator ALIAS 3rdparty_vulkanmemoryallocator)
+endif()
 
 # libusb
 if(CMAKE_SYSTEM_NAME MATCHES "DragonFly|FreeBSD")
@@ -92,9 +100,6 @@ add_subdirectory(hidapi)
 
 # glslang
 add_subdirectory(glslang EXCLUDE_FROM_ALL)
-add_library(3rdparty_glslang INTERFACE)
-target_link_libraries(3rdparty_glslang INTERFACE SPIRV)
-
 
 # yaml-cpp
 add_subdirectory(yaml-cpp)
@@ -131,7 +136,14 @@ add_subdirectory(stblib)
 add_subdirectory(discord-rpc)
 
 # Cubeb
-add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+if(USE_SYSTEM_CUBEB)
+	find_package(cubeb REQUIRED GLOBAL)
+	message(STATUS "Using system cubeb version '${cubeb_VERSION}'")
+	add_library(3rdparty::cubeb ALIAS cubeb::cubeb)
+else()
+	message(STATUS "Using static cubeb from 3rdparty")
+	add_subdirectory(cubeb EXCLUDE_FROM_ALL)
+endif()
 
 # SoundTouch
 add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
@@ -350,6 +362,9 @@ add_subdirectory(opencv EXCLUDE_FROM_ALL)
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
 
+# FERAL INTERACTIVE
+add_subdirectory(feralinteractive EXCLUDE_FROM_ALL)
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
@@ -378,7 +393,8 @@ add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS 3rdparty_libcurl)
 add_library(3rdparty::soundtouch ALIAS soundtouch)
 add_library(3rdparty::sdl3 ALIAS ${SDL3_TARGET})
-add_library(3rdparty::miniupnpc ALIAS libminiupnpc-static)
+add_library(3rdparty::miniupnpc ALIAS 3rdparty_miniupnpc)
 add_library(3rdparty::rtmidi ALIAS rtmidi)
 add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
+add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)

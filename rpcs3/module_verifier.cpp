@@ -51,36 +51,39 @@ void WIN32_module_verifier::run_module_verification()
 		}
 
 		WCHAR wpath[MAX_PATH];
-		if (const auto len = GetModuleFileName(hModule, wpath, MAX_PATH))
+		const auto len = GetModuleFileName(hModule, wpath, MAX_PATH);
+		if (!len)
 		{
-			if (::StrStrI(wpath, windir) != wpath)
-			{
-				const std::string path = wchar_to_utf8(wpath);
-				const std::string win_path = wchar_to_utf8(windir);
-				const std::string module_name = wchar_to_utf8(module.name);
-				const std::string error_message = fmt::format(
-					"<p>"
-					"The module <strong>%s</strong> was incorrectly installed at<br>"
-					"'%s'<br>"
-					"<br>"
-					"This module is part of the <strong>%s</strong> package.<br>"
-					"Install this package, then delete <strong>%s</strong> from rpcs3's installation directory.<br>"
-					"<br>"
-					"You can install this package from this URL:<br>"
-					"<a href='%s'>%s</a>"
-					"</p>",
-					module_name,
-					path,
-					module.package_name,
-					module_name,
-					module.dl_link,
-					module.dl_link
-				);
+			continue;
+		}
 
-				sys_log.error("Found incorrectly installed module: '%s' (path='%s', windows='%s')", module_name, path, win_path);
+		if (::StrStrI(wpath, windir) != wpath)
+		{
+			const std::string path = wchar_to_utf8(wpath);
+			const std::string win_path = wchar_to_utf8(windir);
+			const std::string module_name = wchar_to_utf8(module.name);
+			const std::string error_message = fmt::format(
+				"<p>"
+				"The module <strong>%s</strong> was incorrectly installed at<br>"
+				"'%s'<br>"
+				"<br>"
+				"This module is part of the <strong>%s</strong> package.<br>"
+				"Install this package, then delete <strong>%s</strong> from rpcs3's installation directory.<br>"
+				"<br>"
+				"You can install this package from this URL:<br>"
+				"<a href='%s'>%s</a>"
+				"</p>",
+				module_name,
+				path,
+				module.package_name,
+				module_name,
+				module.dl_link,
+				module.dl_link
+			);
 
-				report_fatal_error(error_message, true, false);
-			}
+			sys_log.error("Found incorrectly installed module: '%s' (path='%s', windows='%s')", module_name, path, win_path);
+
+			report_fatal_error(error_message, true, false);
 		}
 	}
 }

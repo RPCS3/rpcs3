@@ -2,6 +2,7 @@
 #include "video_provider.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/system_config.h"
 
 extern "C"
 {
@@ -89,7 +90,11 @@ namespace utils
 		if (!m_video_sink || m_video_sink->has_error)
 		{
 			g_recording_mode = recording_mode::stopped;
-			rsx::overlays::queue_message(localized_string_id::RECORDING_ABORTED);
+
+			if (g_cfg.misc.show_capture_hints)
+			{
+				rsx::overlays::queue_message(localized_string_id::RECORDING_ABORTED);
+			}
 		}
 
 		if (g_recording_mode == recording_mode::stopped)
@@ -122,7 +127,7 @@ namespace utils
 		return pts > m_last_video_pts_incoming;
 	}
 
-	void video_provider::present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra)
+	void video_provider::present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra)
 	{
 		if (!m_active)
 		{

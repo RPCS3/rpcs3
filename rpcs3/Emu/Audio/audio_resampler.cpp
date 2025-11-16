@@ -4,8 +4,12 @@
 
 audio_resampler::audio_resampler()
 {
-	resampler.setSetting(SETTING_SEQUENCE_MS, 20); // Resampler frame size (reduce latency at cost of slight sound quality degradation)
-	resampler.setSetting(SETTING_USE_QUICKSEEK, 1); // Use fast quick seeking algorithm (substantally reduces computation time)
+	// Improved quality settings for better audio output
+	resampler.setSetting(SETTING_SEQUENCE_MS, 40);   // Increased sequence length for better quality (was 20)
+	resampler.setSetting(SETTING_SEEKWINDOW_MS, 15); // Better seeking window for smoother transitions
+	resampler.setSetting(SETTING_OVERLAP_MS, 8);     // Improved overlap for better quality
+	resampler.setSetting(SETTING_USE_QUICKSEEK, 0);  // Disable quick seek for higher quality (was 1)
+	resampler.setSetting(SETTING_USE_AA_FILTER, 1);  // Enable anti-aliasing filter for cleaner sound
 }
 
 audio_resampler::~audio_resampler()
@@ -35,7 +39,7 @@ std::pair<f32* /* buffer */, u32 /* samples */> audio_resampler::get_samples(u32
 {
 	// NOTE: Make sure to get the buffer first because receiveSamples advances its position internally
 	//       and std::make_pair evaluates the second parameter first...
-	f32 *const buf = resampler.bufBegin();
+	f32* const buf = resampler.bufBegin();
 	return std::make_pair(buf, resampler.receiveSamples(sample_cnt));
 }
 

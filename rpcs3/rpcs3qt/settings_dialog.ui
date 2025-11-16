@@ -552,6 +552,13 @@
               </property>
               <layout class="QVBoxLayout" name="gb_stereo_layout">
                <item>
+                <widget class="QCheckBox" name="stereoRenderEnabled">
+                 <property name="text">
+                  <string>Enable 3D Support</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
               </layout>
@@ -2009,6 +2016,30 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_dateFormat">
+              <property name="title">
+               <string>Date Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_dateFormat">
+               <item>
+                <widget class="QComboBox" name="dateFormat"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_timeFormat">
+              <property name="title">
+               <string>Time Format</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_timeFormat">
+               <item>
+                <widget class="QComboBox" name="timeFormat"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_console_time">
               <property name="title">
                <string>Console Time</string>
@@ -2701,6 +2732,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="useReBAR">
+                 <property name="text">
+                  <string>Use Re-BAR memory for GPU uploads</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
                   <string>Disable MSL Fast Math</string>
@@ -3009,6 +3047,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showCaptureHints">
+                 <property name="text">
+                  <string>Show capture hints</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="startGameFullscreen">
                  <property name="text">
                   <string>Start games in fullscreen mode</string>
@@ -3019,6 +3064,20 @@
                 <widget class="QCheckBox" name="useNativeInterface">
                  <property name="text">
                   <string>Use native user interface</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="recordWithOverlays">
+                 <property name="text">
+                  <string>Record with overlays</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="enableGamemode">
+                 <property name="text">
+                  <string>Enable GameMode</string>
                  </property>
                 </widget>
                </item>
@@ -4500,6 +4559,13 @@
                  <widget class="QCheckBox" name="debugOverlayIO">
                   <property name="text">
                    <string>Debug Overlay For Pad Input</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="debugOverlayMouse">
+                  <property name="text">
+                   <string>Debug Overlay For Mouse Input</string>
                   </property>
                  </widget>
                 </item>

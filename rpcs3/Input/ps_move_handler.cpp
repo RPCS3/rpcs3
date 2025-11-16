@@ -303,7 +303,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		move_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
-		hid_close(hidDevice);
+		HidDevice::close(hidDevice);
 		return;
 	}
 #endif
@@ -434,17 +434,12 @@ PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_
 			move_device->hidDevice = dev;
 		}
 #else
-#ifdef ANDROID
-		if (hid_device* dev = hid_libusb_wrap_sys_device(move_device->path, -1))
-#else
-		if (hid_device* dev = hid_open_path(move_device->path.c_str()))
-#endif
+		if (hid_device* dev = move_device->open())
 		{
 			if (hid_set_nonblocking(dev, 1) == -1)
 			{
 				move_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", move_device->path, hid_error(dev));
 			}
-			move_device->hidDevice = dev;
 		}
 #endif
 		else
@@ -821,7 +816,7 @@ void ps_move_handler::apply_pad_data(const pad_ensemble& binding)
 
 	cfg_pad* config = dev->config;
 
-	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrateMotors);
+	const u8 speed_large = config->get_large_motor_speed(pad->m_vibrate_motors);
 
 	dev->new_output_data |= dev->large_motor != speed_large;
 	dev->large_motor = speed_large;

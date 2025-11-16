@@ -94,8 +94,6 @@ if defined BUILD_SOURCEBRANCHNAME (
 
 	rem // This must be a CI build
 
-	echo SYSTEM_PULLREQUEST_SOURCEBRANCH: %SYSTEM_PULLREQUEST_SOURCEBRANCH%
-
 	if defined BUILD_REPOSITORY_NAME (
 		echo BUILD_REPOSITORY_NAME: %BUILD_REPOSITORY_NAME%
 	) else (
@@ -110,9 +108,7 @@ if defined BUILD_SOURCEBRANCHNAME (
 
 	rem // These environment variables are defined by CI
 	rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
-	rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
 	rem // BUILD_SOURCEBRANCHNAME will look like "master"
-	rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
 	set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
 	echo GIT_FULL_BRANCH: !GIT_FULL_BRANCH!
 
@@ -129,12 +125,12 @@ if defined BUILD_SOURCEBRANCHNAME (
 		rem // This must be a pull request or a build from a fork.
 		echo Assuming pull request build
 
-		if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
+		if "%BUILD_SOURCEBRANCHNAME%"=="master" (
 			rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
 			for /f "tokens=1* delims=/" %%a in ("%BUILD_REPOSITORY_NAME%") do set user=%%a
-			set "GIT_BRANCH=!user!/%SYSTEM_PULLREQUEST_SOURCEBRANCH%"
+			set "GIT_BRANCH=!user!/%BUILD_SOURCEBRANCHNAME%"
 		) else (
-			set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
+			set GIT_BRANCH=%BUILD_SOURCEBRANCHNAME%
 		)
 
 		rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds

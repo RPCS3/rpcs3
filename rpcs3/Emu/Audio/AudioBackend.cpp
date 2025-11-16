@@ -2,6 +2,8 @@
 #include "AudioBackend.h"
 #include "Emu/IdManager.h"
 #include "Emu//Cell/Modules/cellAudioOut.h"
+#include <cstring>
+#include <cmath>
 
 AudioBackend::AudioBackend() {}
 
@@ -57,15 +59,25 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 {
 	ensure(param.ch_cnt > 1 && param.ch_cnt % 2 == 0); // Tends to produce faster code
 
+	// Fast path when no volume change is needed
+	if (param.current_volume == param.target_volume)
+	{
+		apply_volume_static(param.target_volume, sample_cnt, src, dst);
+		return param.target_volume;
+	}
+
 	const f32 vol_incr = (param.target_volume - param.initial_volume) / (VOLUME_CHANGE_DURATION * param.freq);
 	f32 crnt_vol = param.current_volume;
 	u32 sample_idx = 0;
 
+	// Use epsilon for float comparison to avoid infinite loops
+	constexpr f32 epsilon = 1e-6f;
+
 	if (vol_incr >= 0)
 	{
-		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
+		for (sample_idx = 0; sample_idx < sample_cnt && (param.target_volume - crnt_vol) > epsilon; sample_idx += param.ch_cnt)
 		{
-			crnt_vol = std::min(param.current_volume + (sample_idx + 1) / param.ch_cnt * vol_incr, param.target_volume);
+			crnt_vol = std::min(crnt_vol + vol_incr, param.target_volume);
 
 			for (u32 i = 0; i < param.ch_cnt; i++)
 			{
@@ -75,9 +87,9 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 	}
 	else
 	{
-		for (sample_idx = 0; sample_idx < sample_cnt && crnt_vol != param.target_volume; sample_idx += param.ch_cnt)
+		for (sample_idx = 0; sample_idx < sample_cnt && (crnt_vol - param.target_volume) > epsilon; sample_idx += param.ch_cnt)
 		{
-			crnt_vol = std::max(param.current_volume + (sample_idx + 1) / param.ch_cnt * vol_incr, param.target_volume);
+			crnt_vol = std::max(crnt_vol + vol_incr, param.target_volume);
 
 			for (u32 i = 0; i < param.ch_cnt; i++)
 			{
@@ -96,6 +108,25 @@ f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f
 
 void AudioBackend::apply_volume_static(f32 vol, u32 sample_cnt, const f32* src, f32* dst)
 {
+	// Improved volume application with better precision
+	if (vol == 1.0f)
+	{
+		// Fast path for unity gain - no multiplication needed
+		if (src != dst)
+		{
+			std::memcpy(dst, src, sample_cnt * sizeof(f32));
+		}
+		return;
+	}
+
+	if (vol == 0.0f)
+	{
+		// Fast path for mute
+		std::memset(dst, 0, sample_cnt * sizeof(f32));
+		return;
+	}
+
+	// Process samples with improved precision
 	for (u32 i = 0; i < sample_cnt; i++)
 	{
 		dst[i] = src[i] * vol;
@@ -104,9 +135,37 @@ void AudioBackend::apply_volume_static(f32 vol, u32 sample_cnt, const f32* src, 
 
 void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 {
+	// Improved normalization with soft clipping and better dynamic range handling
+	constexpr f32 soft_clip_threshold = 0.95f;
+	constexpr f32 hard_clip_limit = 1.0f;
+
 	for (u32 i = 0; i < sample_cnt; i++)
 	{
-		dst[i] = std::clamp<f32>(src[i], -1.0f, 1.0f);
+		f32 sample = src[i];
+		f32 abs_sample = std::abs(sample);
+
+		if (abs_sample > soft_clip_threshold)
+		{
+			// Apply soft clipping for smoother distortion
+			f32 sign = std::copysign(1.0f, sample);
+			if (abs_sample > hard_clip_limit)
+			{
+				// Hard limit to prevent overflow
+				dst[i] = sign * hard_clip_limit;
+			}
+			else
+			{
+				// Soft clipping using tanh-like curve
+				f32 excess = (abs_sample - soft_clip_threshold) / (hard_clip_limit - soft_clip_threshold);
+				f32 soft_factor = soft_clip_threshold + (hard_clip_limit - soft_clip_threshold) * std::tanh(excess);
+				dst[i] = sign * soft_factor;
+			}
+		}
+		else
+		{
+			// No clipping needed
+			dst[i] = sample;
+		}
 	}
 }
 

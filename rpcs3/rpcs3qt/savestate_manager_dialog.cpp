@@ -82,7 +82,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->verticalScrollBar()->installEventFilter(this);
 	m_savestate_table->verticalScrollBar()->setSingleStep(20);
 	m_savestate_table->horizontalScrollBar()->setSingleStep(20);
-	m_savestate_table->setItemDelegate(new game_list_delegate(m_savestate_table));
+	m_savestate_table->setItemDelegate(new table_item_delegate(m_savestate_table, false));
 	m_savestate_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_savestate_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_savestate_table->setColumnCount(static_cast<int>(gui::savestate_list_columns::count));
@@ -549,31 +549,36 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 		return;
 	}
 
-	std::vector<std::unique_ptr<game_savestates_data>> game_data(count);
+	std::vector<std::unique_ptr<game_savestates_data>> game_data;
 
 	qRegisterMetaType<QVector<int>>("QVector<int>");
-	QList<int> indices;
+	QList<u64> indices;
 	for (int i = 0; i < count; ++i)
 	{
-		indices.append(i);
-
-		game_data[i] = std::make_unique<game_savestates_data>();
-		game_data[i]->title_id = folder_list[i].toStdString();
+		auto game_data_ptr = std::make_unique<game_savestates_data>();
+		game_data_ptr->title_id = folder_list[i].toStdString();
 
 		for (const game_info& gameinfo : m_game_info)
 		{
-			if (gameinfo && gameinfo->info.serial == game_data[i]->title_id)
+			if (gameinfo && gameinfo->info.serial == game_data_ptr->title_id)
 			{
-				game_data[i]->game_name = gameinfo->info.name;
-				game_data[i]->game_icon_path = gameinfo->info.icon_path;
+				game_data_ptr->game_name = gameinfo->info.name;
+				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
 				break;
 			}
 		}
 
-		if (game_data[i]->game_name.empty())
+		if (!game_data_ptr->game_name.empty())
 		{
-			game_data[i]->game_name = game_data[i]->title_id;
+			indices.append(game_data.size());
+			game_data.emplace_back(std::move(game_data_ptr));
 		}
+	}
+
+	if (game_data.empty())
+	{
+		RepaintUI(true);
+		return;
 	}
 
 	QFutureWatcher<void> future_watcher;
@@ -590,7 +595,7 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 	});
 
 	atomic_t<usz> error_count{};
-	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &game_data](const int& i)
+	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &game_data](u64 i)
 	{
 		gui_log.trace("Loading savestate dir: %s", game_data[i]->title_id);
 
@@ -676,14 +681,12 @@ void savestate_manager_dialog::PopulateSavestateTable()
 	m_savestate_table->setRowCount(static_cast<int>(savestates.size()));
 	m_savestate_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
-	const QLocale locale{};
-
 	for (int i = 0; i < static_cast<int>(savestates.size()); i++)
 	{
 		const savestate_data& savestate = savestates[i];
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::name), new custom_table_widget_item(savestate.name));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::compatible), new custom_table_widget_item(savestate.is_compatible ? tr("Compatible") : tr("Not compatible"), Qt::UserRole, savestate.is_compatible));
-		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(savestate.date.toString(), Qt::UserRole, savestate.date));
+		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::date), new custom_table_widget_item(gui::utils::format_datetime(savestate.date, "yyyy-MM-dd HH:mm", true, "HH:mm"), Qt::UserRole, savestate.date));
 		m_savestate_table->setItem(i, static_cast<int>(gui::savestate_list_columns::path), new custom_table_widget_item(savestate.path));
 	}
 

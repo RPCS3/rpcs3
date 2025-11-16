@@ -28,8 +28,9 @@ struct cfg_pad final : cfg::node
 	static std::vector<std::string> get_buttons(const std::string& str);
 	static std::string get_buttons(std::vector<std::string> vec);
 
-	u8 get_large_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const;
-	u8 get_small_motor_speed(const std::array<VibrateMotor, 2>& motor_speed) const;
+	u8 get_motor_speed(VibrateMotor& motor, f32 multiplier) const;
+	u8 get_large_motor_speed(std::array<VibrateMotor, 2>& motors) const;
+	u8 get_small_motor_speed(std::array<VibrateMotor, 2>& motors) const;
 
 	cfg::string ls_left{ this, "Left Stick Left", "" };
 	cfg::string ls_down{ this, "Left Stick Down", "" };
@@ -87,8 +88,8 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 1000000> rstick_anti_deadzone{ this, "Right Stick Anti-Deadzone", 0 };
 	cfg::uint<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
 	cfg::uint<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
-	cfg::uint<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 8000 };
-	cfg::uint<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 8000 };
+	cfg::uint<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 4000 };
+	cfg::uint<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 4000 };
 
 	cfg::uint<0, 255> colorR{ this, "Color Value R", 0 };
 	cfg::uint<0, 255> colorG{ this, "Color Value G", 0 };
@@ -102,6 +103,7 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 200> multiplier_vibration_motor_large{ this, "Large Vibration Motor Multiplier", 100 };
 	cfg::uint<0, 200> multiplier_vibration_motor_small{ this, "Small Vibration Motor Multiplier", 100 };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
+	cfg::uint<0, 255> vibration_threshold{ this, "Vibration Threshold", MOTOR_THRESHOLD };
 
 	cfg::_enum<mouse_movement_mode> mouse_move_mode{ this, "Mouse Movement Mode", mouse_movement_mode::relative };
 	cfg::uint<0, 255> mouse_deadzone_x{ this, "Mouse Deadzone X Axis", 60 };

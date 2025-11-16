@@ -3,6 +3,7 @@
 #include "device.h"
 #include "image.h"
 #include "image_helpers.h"
+#include "sampler.h"
 
 #include "../VKResourceManager.h"
 #include <memory>
@@ -11,7 +12,7 @@ namespace vk
 {
 	void image::validate(const vk::render_device& dev, const VkImageCreateInfo& info) const
 	{
-		const auto gpu_limits = dev.gpu().get_limits();
+		const auto& gpu_limits = dev.gpu().get_limits();
 		u32 longest_dim, dim_limit;
 
 		switch (info.imageType)

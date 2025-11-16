@@ -10,26 +10,16 @@ include(CheckFunctionExists)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(ADDITIONAL_LIBS "")
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    #on some Linux distros shm_unlink and similar functions are in librt only
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
-elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
-    #it seems like glibc includes the iconv functions we use but other libc
-    #implementations like the one on OSX don't seem implement them
-    set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
-endif()
-
 if(UNIX AND NOT APPLE AND NOT ANDROID)
-    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
+    add_compile_definitions(DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
     # Optionally enable X11 for window management
     find_package(X11)
     if(X11_FOUND)
-        add_definitions(-DHAVE_X11)
+        add_compile_definitions(HAVE_X11)
     endif()
     find_package(Wayland)
     if(WAYLAND_FOUND)
-        add_definitions(-DHAVE_WAYLAND)
+        add_compile_definitions(HAVE_WAYLAND)
     endif()
 endif()
 
@@ -78,8 +68,16 @@ if (NOT ANDROID)
             3rdparty::libcurl
             3rdparty::zlib
             3rdparty::opencv
-            3rdparty::fusion
-            ${ADDITIONAL_LIBS})
+            3rdparty::fusion)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        #on some Linux distros shm_unlink and similar functions are in librt only
+        target_link_libraries(rpcs3_lib PRIVATE rt)
+    elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
+        #it seems like glibc includes the iconv functions we use but other libc
+        #implementations like the one on OSX don't seem implement them
+        target_link_libraries(rpcs3_lib PRIVATE iconv)
+    endif()
 
     # Unix display manager
     if(X11_FOUND)
@@ -106,19 +104,16 @@ if (NOT ANDROID)
     endif()
 
     # Build rpcs3 executable
+    add_executable(rpcs3 WIN32 MACOSX_BUNDLE)
     if(WIN32)
-        add_executable(rpcs3 WIN32)
         target_sources(rpcs3 PRIVATE rpcs3.rc)
         target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
     elseif(APPLE)
-        add_executable(rpcs3 MACOSX_BUNDLE)
         target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
         set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
         set_target_properties(rpcs3
             PROPERTIES
                 MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")
-    else()
-        add_executable(rpcs3)
     endif()
 
     target_sources(rpcs3
@@ -137,28 +132,23 @@ if (NOT ANDROID)
 
     # Copy icons to executable directory
     if(APPLE)
-        if (CMAKE_BUILD_TYPE MATCHES "Debug" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
-            set(QT_DEPLOY_FLAGS "-no-strip")
-        else()
-            set(QT_DEPLOY_FLAGS "")
-        endif()
         qt_finalize_target(rpcs3)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
-            COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "${QT_DEPLOY_FLAGS}")
+            COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "$<$<CONFIG:Debug,RelWithDebInfo>:-no-strip>")
     elseif(UNIX)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs)
     elseif(WIN32)
         add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:OpenAL::OpenAL> $<TARGET_FILE_DIR:rpcs3>
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
             COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
-                --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-ffmpeg --no-quick-import
+                --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
                 --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
                 --verbose 0 "$<TARGET_FILE:rpcs3>")
     endif()
@@ -188,7 +178,6 @@ endif()
 
 # Unit tests
 if(BUILD_RPCS3_TESTS)
-    enable_testing()
     find_package(GTest REQUIRED)
 
     message(STATUS "Building unit tests...")
@@ -199,12 +188,16 @@ if(BUILD_RPCS3_TESTS)
         PRIVATE
             tests/test.cpp
             tests/test_fmt.cpp
+            tests/test_pair.cpp
+            tests/test_tuple.cpp
             tests/test_simple_array.cpp
+            tests/test_address_range.cpp
     )
 
     target_link_libraries(rpcs3_test
         PRIVATE
             rpcs3_lib
+            rpcs3_emu
             GTest::gtest
     )
 

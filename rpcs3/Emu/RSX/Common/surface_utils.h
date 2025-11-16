@@ -146,7 +146,7 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
-		rsx::address_range memory_range;
+		rsx::address_range32 memory_range;
 
 		std::unique_ptr<typename std::remove_pointer_t<image_storage_type>> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
@@ -367,7 +367,7 @@ namespace rsx
 
 			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>();
 			const u32 excess = (rsx_pitch - native_pitch);
-			memory_range = rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
+			memory_range = rsx::address_range32::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		void sync_tag()
@@ -419,7 +419,7 @@ namespace rsx
 
 			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>();
 			const u32 excess = (rsx_pitch - native_pitch);
-			memory_range = rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
+			memory_range = rsx::address_range32::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		void sync_tag()
@@ -658,7 +658,7 @@ namespace rsx
 			return { 0, 0, internal_width, internal_height };
 		}
 
-		inline rsx::address_range get_memory_range() const
+		inline rsx::address_range32 get_memory_range() const
 		{
 			return memory_range;
 		}

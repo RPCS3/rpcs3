@@ -18,7 +18,7 @@ namespace rsx
 	{
 		for (const auto& block : g_deferred_mprotect_queue)
 		{
-			utils::memory_protect(reinterpret_cast<void*>(block.start), block.length, block.prot);
+			utils::memory_protect(reinterpret_cast<void*>(block.range.start), block.range.length(), block.prot);
 		}
 
 		g_deferred_mprotect_queue.clear();
@@ -28,7 +28,7 @@ namespace rsx
 	{
 		// We could stack and merge requests here, but that is more trouble than it is truly worth.
 		// A fresh call to memory_protect only takes a few nanoseconds of setup overhead, it is not worth the risk of hanging because of conflicts.
-		g_deferred_mprotect_queue.push_back({ start, length, prot });
+		g_deferred_mprotect_queue.push_back({ utils::address_range64::start_length(start, length), prot });
 	}
 
 	void mm_protect(void* ptr, u64 length, utils::protection prot)
@@ -41,7 +41,7 @@ namespace rsx
 
 		// Naive merge. Eventually it makes more sense to do conflict resolution, but it's not as important.
 		const auto start = reinterpret_cast<u64>(ptr);
-		const auto end = start + length;
+		const auto range = utils::address_range64::start_length(start, length);
 
 		std::lock_guard lock(g_mprotect_queue_lock);
 
@@ -50,7 +50,7 @@ namespace rsx
 			// Basically an unlock op. Flush if any overlap is detected
 			for (const auto& block : g_deferred_mprotect_queue)
 			{
-				if (block.overlaps(start, end))
+				if (block.overlaps(range))
 				{
 					mm_flush_mprotect_queue_internal();
 					break;
@@ -83,6 +83,24 @@ namespace rsx
 		for (const auto& block : g_deferred_mprotect_queue)
 		{
 			if (block.overlaps(addr))
+			{
+				mm_flush_mprotect_queue_internal();
+				return;
+			}
+		}
+	}
+
+	void mm_flush(const rsx::simple_array<utils::address_range64>& ranges)
+	{
+		std::lock_guard lock(g_mprotect_queue_lock);
+		if (g_deferred_mprotect_queue.empty())
+		{
+			return;
+		}
+
+		for (const auto& block : g_deferred_mprotect_queue)
+		{
+			if (ranges.any(FN(block.overlaps(x))))
 			{
 				mm_flush_mprotect_queue_internal();
 				return;

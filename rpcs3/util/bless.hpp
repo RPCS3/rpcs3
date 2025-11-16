@@ -16,6 +16,8 @@ namespace utils
 		T* result;
 		__asm__("mov %0, %1" : "=r" (result) : "r" (ptr) : "memory");
 		return result;
+#else
+#error "Missing utils::bless() implementation"
 #endif
 	}
 }

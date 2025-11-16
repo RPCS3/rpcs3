@@ -46,7 +46,7 @@ LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
-std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 abs_id, s64 rel_id);
+std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 rel_id, u64 aggregate_file_size = umax);
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
@@ -265,15 +265,15 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	{
 		if (m_is_list_layout)
 		{
-			return m_category_filters.contains(qstr(game->info.category));
+			return m_category_filters.contains(QString::fromStdString(game->info.category));
 		}
 
-		return m_grid_category_filters.contains(qstr(game->info.category));
+		return m_grid_category_filters.contains(QString::fromStdString(game->info.category));
 	};
 
-	const QString serial = qstr(game->info.serial);
+	const QString serial = QString::fromStdString(game->info.serial);
 	const bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
-	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial, search_fallback);
+	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
 bool game_list_frame::RemoveContentPath(const std::string& path, const std::string& desc)
@@ -1068,7 +1068,7 @@ void game_list_frame::CreateShortcuts(const std::vector<game_info>& games, const
 
 		if (!fs::create_path(target_icon_dir))
 		{
-			game_list_log.error("Failed to create shortcut path %s (%s)", qstr(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
+			game_list_log.error("Failed to create shortcut path %s (%s)", QString::fromStdString(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
 			success = false;
 			continue;
 		}
@@ -1094,11 +1094,11 @@ void game_list_frame::CreateShortcuts(const std::vector<game_info>& games, const
 
 			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
 			{
-				game_list_log.success("Created %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+				game_list_log.success("Created %s shortcut for %s", destination, QString::fromStdString(gameinfo->info.name).simplified());
 			}
 			else
 			{
-				game_list_log.error("Failed to create %s shortcut for %s", destination, qstr(gameinfo->info.name).simplified());
+				game_list_log.error("Failed to create %s shortcut for %s", destination, QString::fromStdString(gameinfo->info.name).simplified());
 				success = false;
 			}
 		}
@@ -1144,8 +1144,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	GameInfo current_game = gameinfo->info;
-	const QString serial = qstr(current_game.serial);
-	const QString name = qstr(current_game.name).simplified();
+	const QString serial = QString::fromStdString(current_game.serial);
+	const QString name = QString::fromStdString(current_game.name).simplified();
 
 	const std::string cache_base_dir = GetCacheDirBySerial(current_game.serial);
 	const std::string config_data_base_dir = GetDataDirBySerial(current_game.serial);
@@ -1221,16 +1221,32 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	extern bool is_savestate_compatible(const std::string& filepath);
 
-	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 0, 0); is_savestate_compatible(sstate))
+	if (const std::string sstate = get_savestate_file(current_game.serial, current_game.path, 1); is_savestate_compatible(sstate))
 	{
+		const bool has_ambiguity = !get_savestate_file(current_game.serial, current_game.path, 2).empty();
+
 		QAction* boot_state = menu.addAction(is_current_running_game
-			? tr("&Reboot with savestate")
-			: tr("&Boot with savestate"));
+			? tr("&Reboot with last SaveState")
+			: tr("&Boot with last SaveState"));
+
 		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate]
 		{
 			sys_log.notice("Booting savestate from gamelist per context menu...");
 			Q_EMIT RequestBoot(gameinfo, cfg_mode::custom, "", sstate);
 		});
+
+		if (has_ambiguity)
+		{
+			QAction* choose_state = menu.addAction(is_current_running_game
+				? tr("&Choose SaveState to reboot")
+				: tr("&Choose SaveState to boot"));
+
+			connect(choose_state, &QAction::triggered, [this, gameinfo]
+			{
+				// If there is any ambiguity, launch the savestate manager
+				Q_EMIT RequestSaveStateManager(gameinfo);
+			});
+		}
 	}
 
 	menu.addSeparator();
@@ -1520,7 +1536,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 		for (const auto& [type, icon_name, suffix, actions] : icon_map)
 		{
-			const QString icon_path = qstr(custom_icon_dir_path) + icon_name;
+			const QString icon_path = QString::fromStdString(custom_icon_dir_path) + icon_name;
 
 			if (QFile::exists(icon_path))
 			{
@@ -1547,7 +1563,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Open Folder menu
 	QMenu* open_folder_menu = menu.addMenu(tr("&Open Folder"));
 
-	const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
+	const bool is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
 	const std::string captures_dir = fs::get_config_dir() + "/captures/";
 	const std::string recordings_dir = fs::get_config_dir() + "/recordings/" + current_game.serial;
 	const std::string screenshots_dir = fs::get_config_dir() + "/screenshots/" + current_game.serial;
@@ -1723,7 +1739,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			return;
 		}
 
-		const bool is_disc_game = qstr(current_game.category) == cat::cat_disc_game;
+		const bool is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
 		const bool is_in_games_dir = is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir());
 		std::vector<std::string> data_dir_list;
 
@@ -1737,11 +1753,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		}
 
 		const bool has_data_dir = !data_dir_list.empty(); // "true" if data path is present (it could be absent for a disc game)
-		QString text = tr("%0 - %1\n").arg(qstr(current_game.serial)).arg(name);
+		QString text = tr("%0 - %1\n").arg(QString::fromStdString(current_game.serial)).arg(name);
 
 		if (is_disc_game)
 		{
-			text += tr("\nDisc Game Info:\nPath: %0\n").arg(qstr(current_game.path));
+			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game.path));
 
 			if (current_game.size_on_disk != umax) // If size was properly detected
 			{
@@ -1757,7 +1773,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 			for (const std::string& data_dir : data_dir_list)
 			{
-				text += tr("Path: %0\n").arg(qstr(data_dir));
+				text += tr("Path: %0\n").arg(QString::fromStdString(data_dir));
 
 				if (const u64 data_size = fs::get_dir_size(data_dir, 1); data_size != umax) // If size was properly detected
 				{
@@ -1835,8 +1851,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (has_data_dir && RemoveContentPathList(data_dir_list, gameinfo->localized_category.toStdString()) != data_dir_list.size())
 			{
 				QMessageBox::critical(this, tr("Failure!"), remove_caches
-					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(qstr(data_dir_list[0]))
-					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(qstr(data_dir_list[0])));
+					? tr("Failed to remove %0 from drive!\nPath: %1\nCaches and custom configs have been left intact.").arg(name).arg(QString::fromStdString(data_dir_list[0]))
+					: tr("Failed to remove %0 from drive!\nPath: %1").arg(name).arg(QString::fromStdString(data_dir_list[0])));
 
 				return;
 			}
@@ -1981,7 +1997,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 
 	// Disable options depending on software category
-	const QString category = qstr(current_game.category);
+	const QString category = QString::fromStdString(current_game.category);
 
 	if (category == cat::cat_ps3_os)
 	{
@@ -2072,7 +2088,7 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 	g_cfg_input_configs.save();
 	game_list_log.notice("Removed active input configuration entry for key '%s'", title_id);
 
-	if (QDir(qstr(config_dir)).removeRecursively())
+	if (QDir(QString::fromStdString(config_dir)).removeRecursively())
 	{
 		if (game)
 		{
@@ -2108,7 +2124,7 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_total   = 0;
 
 	const QStringList filter{ QStringLiteral("shaders_cache") };
-	const QString q_base_dir = qstr(base_dir);
+	const QString q_base_dir = QString::fromStdString(base_dir);
 
 	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
@@ -2159,7 +2175,7 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
-	const QString q_base_dir = qstr(base_dir);
+	const QString q_base_dir = QString::fromStdString(base_dir);
 
 	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
@@ -2210,7 +2226,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
-	const QString q_base_dir = qstr(base_dir);
+	const QString q_base_dir = QString::fromStdString(base_dir);
 
 	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
@@ -2260,9 +2276,9 @@ void game_list_frame::RemoveHDD1Cache(const std::string& base_dir, const std::st
 	u32 dirs_removed = 0;
 	u32 dirs_total = 0;
 
-	const QString q_base_dir = qstr(base_dir);
+	const QString q_base_dir = QString::fromStdString(base_dir);
 
-	const QStringList filter{ qstr(title_id + "_*") };
+	const QStringList filter{ QString::fromStdString(title_id + "_*") };
 
 	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot);
 

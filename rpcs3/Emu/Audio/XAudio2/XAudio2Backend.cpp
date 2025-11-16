@@ -337,7 +337,7 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 	return std::max<f64>(min_latency, _10ms); // 10ms is the minimum for XAudio
 }
 
-void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
+void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired) noexcept
 {
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
 	if (BytesRequired && !m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && m_write_callback && m_playing)
@@ -366,7 +366,7 @@ void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 	}
 }
 
-void XAudio2Backend::OnCriticalError(HRESULT Error)
+void XAudio2Backend::OnCriticalError(HRESULT Error) noexcept
 {
 	XAudio.error("OnCriticalError() called: %s (0x%08x)", std::system_category().message(Error), static_cast<u32>(Error));
 

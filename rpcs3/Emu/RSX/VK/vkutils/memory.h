@@ -8,8 +8,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 #endif
-#define VMA_VULKAN_VERSION 1000000
-#include "3rdparty/GPUOpen/VulkanMemoryAllocator/include/vk_mem_alloc.h"
+#define VMA_VULKAN_VERSION 1002000
+#include <vk_mem_alloc.h>
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -49,6 +49,7 @@ namespace vk
 		const_iterator end() const;
 		u32 first() const;
 		size_t count() const;
+		u64 total_bytes() const;
 
 		operator bool() const;
 		bool operator == (const memory_type_info& other) const;
@@ -56,6 +57,13 @@ namespace vk
 		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
 
 		void rebalance();
+	};
+
+	struct memory_heap_info
+	{
+		u32 index;
+		u32 flags;
+		u64 size;
 	};
 
 	class mem_allocator_base
@@ -112,6 +120,7 @@ namespace vk
 	private:
 		VmaAllocator m_allocator;
 		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
+		u32 m_rebar_heap_idx = UINT32_MAX;
 	};
 
 

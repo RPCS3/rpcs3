@@ -1,10 +1,10 @@
 #pragma once
 
 #include "io_buffer.h"
+#include "simple_array.hpp"
 #include "../color_utils.h"
 #include "../RSXTexture.h"
 
-#include <stack>
 #include <vector>
 
 namespace rsx
@@ -140,7 +140,7 @@ namespace rsx
 #pragma pack(pop)
 
 		// Texure matrix stack
-		std::stack<texcoord_xform_t> m_texcoord_xform_stack;
+		rsx::simple_array<texcoord_xform_t> m_texcoord_xform_stack;
 
 	public:
 		virtual ~sampled_image_descriptor_base() = default;
@@ -148,14 +148,14 @@ namespace rsx
 
 		void push_texcoord_xform()
 		{
-			m_texcoord_xform_stack.push(texcoord_xform);
+			m_texcoord_xform_stack.push_back(texcoord_xform);
 		}
 
 		void pop_texcoord_xform()
 		{
 			ensure(!m_texcoord_xform_stack.empty());
-			std::memcpy(&texcoord_xform, &m_texcoord_xform_stack.top(), sizeof(texcoord_xform_t));
-			m_texcoord_xform_stack.pop();
+			std::memcpy(&texcoord_xform, &m_texcoord_xform_stack.back(), sizeof(texcoord_xform_t));
+			m_texcoord_xform_stack.pop_back();
 		}
 
 		texture_upload_context upload_context = texture_upload_context::shader_read;

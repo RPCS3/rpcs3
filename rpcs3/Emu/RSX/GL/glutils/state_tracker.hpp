@@ -17,6 +17,7 @@ namespace gl
 		const u32 STENCIL_FRONT_OP   = 0xFFFF0007;
 		const u32 STENCIL_BACK_OP    = 0xFFFF0008;
 		const u32 STENCIL_BACK_MASK  = 0xFFFF0009;
+		const u32 POLYGON_MODE       = 0xFFFF000A;
 
 		std::unordered_map<GLenum, u64> properties = {};
 		std::unordered_map<GLenum, std::array<u64, 4>> indexed_properties = {};
@@ -350,6 +351,15 @@ namespace gl
 						glDisable(GL_CLIP_DISTANCE0 + i);
 					}
 				}
+			}
+		}
+
+		void polygon_mode(GLenum mode)
+		{
+			if (!test_and_set_property(POLYGON_MODE, mode))
+			{
+				// Note: GL4+ does not support separate polygon mode per-face-type
+				glPolygonMode(GL_FRONT_AND_BACK, mode);
 			}
 		}
 

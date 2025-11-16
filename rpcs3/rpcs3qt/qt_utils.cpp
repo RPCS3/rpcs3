@@ -16,8 +16,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-constexpr auto qstr = QString::fromStdString;
-
 namespace gui
 {
 	namespace utils
@@ -397,7 +395,7 @@ namespace gui
 			if (!found_file)
 			{
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
-				const QString qpath = qstr(path);
+				const QString qpath = QString::fromStdString(path);
 				const std::string path_list[] = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
 					                              qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
 
@@ -422,7 +420,7 @@ namespace gui
 			if (found_file)
 			{
 				// load the image from path. It will most likely be a rectangle
-				const QImage source = QImage(qstr(icon_path));
+				const QImage source = QImage(QString::fromStdString(icon_path));
 				const int edge_max = std::max(source.width(), source.height());
 
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
@@ -448,7 +446,7 @@ namespace gui
 
 		void open_dir(const std::string& spath)
 		{
-			QString path = qstr(spath);
+			QString path = QString::fromStdString(spath);
 
 			if (fs::is_file(spath))
 			{
@@ -470,7 +468,7 @@ namespace gui
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
 #else
 				// open parent directory
-				const QUrl url = QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath)));
+				const QUrl url = QUrl::fromLocalFile(QString::fromStdString(fs::get_parent_dir(spath)));
 				const std::string url_path = url.toString().toStdString();
 				gui_log.notice("gui::utils::open_dir: About to open parent dir url '%s' for path '%s'", url_path, spath);
 
@@ -657,6 +655,36 @@ namespace gui
 			}
 
 			return QStringLiteral("%0 %1").arg(QString::number((size + 0.) / divisor, 'f', 2)).arg(s_units[byte_unit]);
+		}
+
+		QDateTime datetime(s64 time)
+		{
+			QDateTime dateTime;
+			dateTime.setSecsSinceEpoch(time);
+			return dateTime;
+		}
+
+		QString format_datetime(const QDateTime& date, const QString& fmt, bool is_relative, const QString& fmt_relative)
+		{
+			const qint64 exctrated_date = date.date().toJulianDay();
+			const qint64 current_date = QDate::currentDate().toJulianDay();
+
+			if (!is_relative || exctrated_date > current_date || current_date - exctrated_date >= 3)
+			{
+				return date.toString(fmt);
+			}
+
+			if (current_date == exctrated_date)
+			{
+				return QString("Today %1").arg(date.toString(fmt_relative));
+			}
+
+			return QString("%1 days ago %2").arg(current_date - exctrated_date).arg(date.toString(fmt_relative));
+		}
+
+		QString format_timestamp(s64 time, const QString& fmt)
+		{
+			return format_datetime(datetime(time), fmt);
 		}
 	} // utils
 } // gui

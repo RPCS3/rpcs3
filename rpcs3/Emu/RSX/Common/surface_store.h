@@ -9,12 +9,13 @@
 #include <list>
 
 #include "util/asm.hpp"
+#include "util/pair.hpp"
 
 namespace rsx
 {
 	namespace utility
 	{
-		std::vector<u8> get_rtt_indexes(surface_target color_target);
+		rsx::simple_array<u8> get_rtt_indexes(surface_target color_target);
 		u8 get_mrt_buffers_count(surface_target color_target);
 		usz get_aligned_pitch(surface_color_format format, u32 width);
 		usz get_packed_pitch(surface_color_format format, u32 width);
@@ -52,8 +53,8 @@ namespace rsx
 		surface_ranged_map m_render_targets_storage = {};
 		surface_ranged_map m_depth_stencil_storage = {};
 
-		rsx::address_range m_render_targets_memory_range;
-		rsx::address_range m_depth_stencil_memory_range;
+		rsx::address_range32 m_render_targets_memory_range;
+		rsx::address_range32 m_depth_stencil_memory_range;
 
 		surface_cache_dma_map m_dma_block;
 
@@ -244,10 +245,9 @@ namespace rsx
 		template <bool is_depth_surface>
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
-			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range,
-				surface_ranged_map& data) -> std::vector<std::pair<u32, surface_type>>
+			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range, surface_ranged_map& data)
 			{
-				std::vector<std::pair<u32, surface_type>> result;
+				rsx::simple_array<utils::pair<u32, surface_type>> result;
 				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
 					auto surface = Traits::get(it->second);
@@ -277,7 +277,7 @@ namespace rsx
 					}
 
 					// Range check
-					const rsx::address_range this_range = surface->get_memory_range();
+					const rsx::address_range32 this_range = surface->get_memory_range();
 					if (!this_range.overlaps(mem_range))
 					{
 						continue;
@@ -290,7 +290,7 @@ namespace rsx
 				return result;
 			};
 
-			const rsx::address_range mem_range = new_surface->get_memory_range();
+			const rsx::address_range32 mem_range = new_surface->get_memory_range();
 			auto list1 = scan_list(mem_range, m_render_targets_storage);
 			auto list2 = scan_list(mem_range, m_depth_stencil_storage);
 
@@ -314,7 +314,7 @@ namespace rsx
 				}
 			}
 
-			std::vector<std::pair<u32, surface_type>> surface_info;
+			rsx::simple_array<utils::pair<u32, surface_type>> surface_info;
 			if (list1.empty())
 			{
 				surface_info = std::move(list2);
@@ -410,7 +410,7 @@ namespace rsx
 			// Workaround. Preserve new surface tag value because pitch convert is unimplemented
 			u64 new_content_tag = 0;
 
-			address_range* storage_bounds;
+			address_range32* storage_bounds;
 			surface_ranged_map* primary_storage;
 			surface_ranged_map* secondary_storage;
 			if constexpr (depth)
@@ -488,7 +488,7 @@ namespace rsx
 			{
 				// Range test
 				const auto aa_factor_v = get_aa_factor_v(antialias);
-				rsx::address_range range = rsx::address_range::start_length(address, static_cast<u32>(pitch * height * aa_factor_v));
+				rsx::address_range32 range = rsx::address_range32::start_length(address, static_cast<u32>(pitch * height * aa_factor_v));
 				*storage_bounds = range.get_min_max(*storage_bounds);
 
 				// Search invalidated resources for a suitable surface
@@ -504,6 +504,7 @@ namespace rsx
 						{
 							// Exchange this surface with the invalidated one
 							surface = std::move(old_surface_storage);
+							old_surface_storage = {};
 						}
 						else
 						{
@@ -628,10 +629,10 @@ namespace rsx
 			invalidated_resources.push_back(std::move(storage));
 		}
 
-		int remove_duplicates_fast_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		int remove_duplicates_fast_impl(rsx::simple_array<surface_overlap_info>& sections, const rsx::address_range32& range)
 		{
 			// Range tests to check for gaps
-			std::list<utils::address_range> m_ranges;
+			std::list<utils::address_range32> m_ranges;
 			bool invalidate_sections = false;
 			int removed_count = 0;
 
@@ -677,6 +678,7 @@ namespace rsx
 						}
 
 						m_ranges.insert(pos, this_range);
+						inserted = true;
 						break;
 					}
 				}
@@ -695,7 +697,7 @@ namespace rsx
 			return removed_count;
 		}
 
-		void remove_duplicates_fallback_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		void remove_duplicates_fallback_impl(rsx::simple_array<surface_overlap_info>& sections, const rsx::address_range32& range)
 		{
 			// Originally used to debug crashes but this function breaks often enough that I'll leave the checks in for now.
 			// Safe to remove after some time if no asserts are reported.
@@ -864,11 +866,11 @@ namespace rsx
 				std::forward<Args>(extra_params)...);
 		}
 
-		std::tuple<std::vector<surface_type>, std::vector<surface_type>>
-		find_overlapping_set(const utils::address_range& range) const
+		std::tuple<rsx::simple_array<surface_type>, rsx::simple_array<surface_type>>
+		find_overlapping_set(const utils::address_range32& range) const
 		{
-			std::vector<surface_type> color_result, depth_result;
-			utils::address_range result_range;
+			rsx::simple_array<surface_type> color_result, depth_result;
+			utils::address_range32 result_range;
 
 			if (m_render_targets_memory_range.valid() &&
 				range.overlaps(m_render_targets_memory_range))
@@ -903,7 +905,7 @@ namespace rsx
 
 		void write_to_dma_buffers(
 			command_list_type command_list,
-			const utils::address_range& range)
+			const utils::address_range32& range)
 		{
 			auto block_range = m_dma_block.to_block_range(range);
 			auto [color_data, depth_stencil_data] = find_overlapping_set(block_range);
@@ -914,8 +916,8 @@ namespace rsx
 			u64 src_offset, dst_offset, write_length;
 			auto block_length = block_range.length();
 
-			auto all_data = std::move(color_data);
-			all_data.insert(all_data.end(), depth_stencil_data.begin(), depth_stencil_data.end());
+			auto& all_data = color_data;
+			all_data += depth_stencil_data;
 
 			if (all_data.size() > 1)
 			{
@@ -1086,10 +1088,10 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
+		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
 		{
-			std::vector<surface_overlap_info> result;
-			std::vector<std::pair<u32, bool>> dirty;
+			rsx::simple_array<surface_overlap_info> result;
+			rsx::simple_array<utils::pair<u32, bool>> dirty;
 
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
@@ -1101,7 +1103,7 @@ namespace rsx
 				return {};
 			}
 
-			const auto test_range = utils::address_range::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
+			const auto test_range = utils::address_range32::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
 
 			auto process_list_function = [&](surface_ranged_map& data, bool is_depth)
 			{
@@ -1234,9 +1236,9 @@ namespace rsx
 			return result;
 		}
 
-		void check_for_duplicates(std::vector<surface_overlap_info>& sections)
+		void check_for_duplicates(rsx::simple_array<surface_overlap_info>& sections)
 		{
-			utils::address_range test_range;
+			utils::address_range32 test_range;
 			for (const auto& section : sections)
 			{
 				const auto range = section.surface->get_memory_range();
@@ -1293,7 +1295,7 @@ namespace rsx
 		void invalidate_all()
 		{
 			// Unbind and invalidate all resources
-			auto free_resource_list = [&](auto &data, const utils::address_range& range)
+			auto free_resource_list = [&](auto &data, const utils::address_range32& range)
 			{
 				for (auto it = data.begin_range(range); it != data.end(); ++it)
 				{
@@ -1316,7 +1318,7 @@ namespace rsx
 			}
 		}
 
-		void invalidate_range(const rsx::address_range& range)
+		void invalidate_range(const rsx::address_range32& range)
 		{
 			for (auto it = m_render_targets_storage.begin_range(range); it != m_render_targets_storage.end(); ++it)
 			{
@@ -1382,7 +1384,7 @@ namespace rsx
 
 		void collapse_dirty_surfaces(command_list_type cmd, problem_severity severity)
 		{
-			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range& range)
+			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
 			{
 				for (auto It = data.begin_range(range); It != data.end();)
 				{

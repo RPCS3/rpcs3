@@ -18,6 +18,7 @@
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
 #include "Emu/Io/Dimensions.h"
+#include "Emu/Io/KamenRider.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/guncon3_config.h"
@@ -175,7 +176,7 @@ private:
 		{0x1430, 0x0150, 0x0150, "Skylanders Portal", &usb_device_skylander::get_num_emu_devices, &usb_device_skylander::make_instance},
 		{0x0E6F, 0x0129, 0x0129, "Disney Infinity Base", &usb_device_infinity::get_num_emu_devices, &usb_device_infinity::make_instance},
 		{0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal", &usb_device_dimensions::get_num_emu_devices, &usb_device_dimensions::make_instance},
-		{0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal", nullptr, nullptr},
+		{0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal", &usb_device_kamen_rider::get_num_emu_devices, &usb_device_kamen_rider::make_instance},
 
 		// Cameras
 		// {0x1415, 0x0020, 0x2000, "Sony Playstation Eye", nullptr, nullptr}, // TODO: verifiy
@@ -285,8 +286,10 @@ private:
 
 	libusb_context* ctx = nullptr;
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 	libusb_hotplug_callback_handle callback_handle {};
+#endif
 #endif
 
 	bool hotplug_supported = false;
@@ -302,12 +305,14 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device * /*dev*/, libusb_hotplug_event event, void * /*user_data*/)
 {
 	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED);
 	return 0;
 }
+#endif
 #endif
 
 #if LIBUSB_API_VERSION >= 0x0100010A
@@ -597,9 +602,11 @@ usb_handler_thread::~usb_handler_thread()
 			libusb_free_transfer(transfers[index].transfer);
 	}
 
+#ifndef _WIN32
 #if LIBUSB_API_VERSION >= 0x01000102
 	if (ctx && hotplug_supported)
 		libusb_hotplug_deregister_callback(ctx, callback_handle);
+#endif
 #endif
 
 	if (ctx)

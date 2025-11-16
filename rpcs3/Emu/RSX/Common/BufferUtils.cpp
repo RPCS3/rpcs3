@@ -6,17 +6,17 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+
 #if defined(ARCH_ARM64)
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 #undef FORCE_INLINE
 #include "Emu/CPU/sse2neon.h"
-#endif
-
-#if !defined(_MSC_VER)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
 #if defined(_MSC_VER) || !defined(__SSE2__)

@@ -58,7 +58,7 @@ private:
 	void load_patches(bool show_error);
 	void populate_tree();
 	void save_config() const;
-	void update_patch_info(const gui_patch_info& info) const;
+	void update_patch_info(const gui_patch_info& info, bool force_update) const;
 	static bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void download_update(bool automatic, bool auto_accept);
 	bool handle_json(const QByteArray& data);

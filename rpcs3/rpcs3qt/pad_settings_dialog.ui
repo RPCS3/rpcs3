@@ -170,7 +170,17 @@
              <item>
               <widget class="QPushButton" name="b_addConfig">
                <property name="text">
-                <string>Add Configuration</string>
+                <string>Add New</string>
+               </property>
+               <property name="autoDefault">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="b_remConfig">
+               <property name="text">
+                <string>Remove</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>
@@ -937,7 +947,7 @@
                   <property name="title">
                    <string>Enable Vibration</string>
                   </property>
-                  <layout class="QHBoxLayout" name="gb_vibration_layout" stretch="1,1,1">
+                  <layout class="QVBoxLayout" name="v_layout_vibration">
                    <property name="leftMargin">
                     <number>5</number>
                    </property>
@@ -951,31 +961,49 @@
                     <number>5</number>
                    </property>
                    <item>
-                    <widget class="QSpinBox" name="sb_vibration_large">
-                     <property name="suffix">
-                      <string>%</string>
-                     </property>
-                     <property name="prefix">
-                      <string>Large </string>
-                     </property>
-                    </widget>
+                    <layout class="QHBoxLayout" name="h_layout_vibration_0">
+                     <item>
+                      <widget class="QSpinBox" name="sb_vibration_small">
+                       <property name="suffix">
+                        <string>%</string>
+                       </property>
+                       <property name="prefix">
+                        <string>Small </string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSpinBox" name="sb_vibration_large">
+                       <property name="suffix">
+                        <string>%</string>
+                       </property>
+                       <property name="prefix">
+                        <string>Large </string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
                    </item>
                    <item>
-                    <widget class="QSpinBox" name="sb_vibration_small">
-                     <property name="suffix">
-                      <string>%</string>
-                     </property>
-                     <property name="prefix">
-                      <string>Small </string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QCheckBox" name="chb_vibration_switch">
-                     <property name="text">
-                      <string>Switch</string>
-                     </property>
-                    </widget>
+                    <layout class="QHBoxLayout" name="h_layout_vibration_1">
+                     <item>
+                      <widget class="QSpinBox" name="sb_vibration_threshold">
+                       <property name="prefix">
+                        <string>Threshold </string>
+                       </property>
+                       <property name="maximum">
+                        <number>255</number>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QCheckBox" name="chb_vibration_switch">
+                       <property name="text">
+                        <string>Switch</string>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
                    </item>
                   </layout>
                  </widget>

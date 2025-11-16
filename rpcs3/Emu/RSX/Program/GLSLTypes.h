@@ -6,7 +6,10 @@ namespace glsl
 	{
 		glsl_vertex_program = 0,
 		glsl_fragment_program = 1,
-		glsl_compute_program = 2
+		glsl_compute_program = 2,
+
+		// Meta
+		glsl_invalid_program = 0xff
 	};
 
 	enum glsl_rules : unsigned char
@@ -23,6 +26,7 @@ namespace glsl
 		bool require_lit_emulation : 1;
 		bool require_explicit_invariance : 1;
 		bool require_instanced_render : 1;
+		bool require_clip_plane_functions : 1;
 		bool emulate_zclip_transform : 1;
 		bool emulate_depth_clip_only : 1;
 

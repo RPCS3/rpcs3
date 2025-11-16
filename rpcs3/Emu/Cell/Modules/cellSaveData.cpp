@@ -396,7 +396,7 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	switch (result.result)
 	{
 	case CELL_SAVEDATA_CBRESULT_ERR_NOSPACE:
-		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_SPACE, fmt::format("%d", result.errNeedSizeKB).c_str());
+		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_NO_SPACE, "%d", result.errNeedSizeKB);
 		break;
 	case CELL_SAVEDATA_CBRESULT_ERR_FAILURE:
 		msg = get_localized_string(localized_string_id::CELL_SAVEDATA_CB_FAILURE);
@@ -700,11 +700,32 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	if (const auto& [ok, list] = setList.try_read(); ok)
-		cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
+	if (setList)
+	{
+		if (const auto& [ok, list] = setList.try_read(); ok)
+		{
+			cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
+		}
+		else
+		{
+			cellSaveData.error("savedata_op(): Failed to read setList!");
+		}
+	}
 
-	if (const auto& [ok, buf] = setBuf.try_read(); ok)
-		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
+	if (setBuf)
+	{
+		if (const auto& [ok, buf] = setBuf.try_read(); ok)
+		{
+			cellSaveData.notice("savedata_op(): setBuf = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
+		}
+		else
+		{
+			cellSaveData.error("savedata_op(): Failed to read setBuf!");
+		}
+	}
+
+	// There is a lot going on in this function, ensure function log and past log commands have completed for ease of debugging
+	logs::listener::sync_all();
 
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
@@ -858,25 +879,34 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const u32 order = setList->sortOrder;
 			const u32 type = setList->sortType;
 
-			std::sort(save_entries.begin(), save_entries.end(), [=](const SaveDataEntry& entry1, const SaveDataEntry& entry2)
+			std::sort(save_entries.begin(), save_entries.end(), [order, type](const SaveDataEntry& entry1, const SaveDataEntry& entry2) -> bool
 			{
-				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+				const bool mtime_lower = entry1.mtime < entry2.mtime;
+				const bool mtime_equal = entry1.mtime == entry2.mtime;
+				const bool subtitle_lower = entry1.subtitle < entry2.subtitle;
+				const bool subtitle_equal = entry1.subtitle == entry2.subtitle;
+				const bool revert_order = order == CELL_SAVEDATA_SORTORDER_DESCENT;
+
+				if (type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
 				{
-					return entry1.mtime >= entry2.mtime;
+					if (mtime_equal)
+					{
+						return subtitle_lower != revert_order;
+					}
+
+					return mtime_lower != revert_order;
 				}
-				if (order == CELL_SAVEDATA_SORTORDER_DESCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				else if (type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
 				{
-					return entry1.subtitle >= entry2.subtitle;
-				}
-				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
-				{
-					return entry1.mtime < entry2.mtime;
-				}
-				if (order == CELL_SAVEDATA_SORTORDER_ASCENT && type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-				{
-					return entry1.subtitle < entry2.subtitle;
+					if (subtitle_equal)
+					{
+						return mtime_lower != revert_order;
+					}
+
+					return subtitle_lower != revert_order;
 				}
 
+				ensure(false);
 				return true;
 			});
 		}

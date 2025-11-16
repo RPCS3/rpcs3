@@ -11,7 +11,7 @@
 #include <cmath>
 
 #ifndef WITHOUT_OPENAL
-#include "3rdparty/OpenAL/openal-soft/include/AL/alext.h"
+#include "alext.h"
 #endif
 
 LOG_CHANNEL(cellMic);

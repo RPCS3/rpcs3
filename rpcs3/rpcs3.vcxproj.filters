@@ -107,6 +107,9 @@
     <Filter Include="Gui\infinity">
       <UniqueIdentifier>{f5fcca0d-918b-46ba-bb91-2f2f9d9ddbba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\kamen_rider">
+      <UniqueIdentifier>{8b4d2dff-2b4e-4794-9859-4379ef0e75c0}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Gui\skylanders">
       <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
     </Filter>
@@ -639,6 +642,9 @@
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\kamen_rider_dialog.cpp">
+      <Filter>Gui\infinity</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
       <Filter>Gui\skylanders</Filter>
     </ClCompile>
@@ -751,6 +757,12 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_infinity_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_kamen_rider_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_kamen_rider_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
@@ -1209,6 +1221,9 @@
     <ClCompile Include="rpcs3.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="gamemode_control.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1433,6 +1448,12 @@
     <ClInclude Include="rpcs3.h">
       <Filter>rpcs3</Filter>
     </ClInclude>
+    <ClInclude Include="gamemode_control.h">
+      <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_tree_widget.h">
+      <Filter>Gui\widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1611,6 +1632,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\kamen_rider_dialog.h">
+      <Filter>Gui\kamen_rider</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
       <Filter>Gui\skylanders</Filter>
@@ -1806,12 +1830,6 @@
     <None Include="..\Utilities\git-version-gen.cmd">
       <Filter>Scripts</Filter>
     </None>
-    <None Include="..\.cirrus.yml">
-      <Filter>CI</Filter>
-    </None>
-    <None Include="..\azure-pipelines.yml">
-      <Filter>CI</Filter>
-    </None>
     <None Include="..\.ci\build-freebsd.sh">
       <Filter>CI</Filter>
     </None>
@@ -1819,6 +1837,9 @@
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\build-mac.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\build-windows-clang.sh">
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\deploy-linux.sh">
@@ -1830,12 +1851,6 @@
     <None Include="..\.ci\deploy-windows.sh">
       <Filter>CI</Filter>
     </None>
-    <None Include="..\.ci\export-azure-vars.sh">
-      <Filter>CI</Filter>
-    </None>
-    <None Include="..\.ci\export-cirrus-vars.sh">
-      <Filter>CI</Filter>
-    </None>
     <None Include="..\.ci\get_keys-windows.sh">
       <Filter>CI</Filter>
     </None>
@@ -1843,6 +1858,9 @@
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\setup-windows.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\setup-windows-ci-vars.sh">
       <Filter>CI</Filter>
     </None>
     <None Include="..\.ci\install-freebsd.sh">
@@ -1903,6 +1921,21 @@
       <Filter>Darwin</Filter>
     </None>
     <None Include="..\.github\workflows\rpcs3.yml">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\deploy-llvm.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\generate-qt-ts.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.ci\setup-llvm.sh">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.github\workflows\llvm.yml">
+      <Filter>CI</Filter>
+    </None>
+    <None Include="..\.github\workflows\qt-ts.yml">
       <Filter>CI</Filter>
     </None>
   </ItemGroup>

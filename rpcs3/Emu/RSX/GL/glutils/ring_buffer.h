@@ -88,7 +88,7 @@ namespace gl
 		struct barrier
 		{
 			fence signal;
-			utils::address_range range;
+			utils::address_range32 range;
 		};
 
 		buffer m_storage;

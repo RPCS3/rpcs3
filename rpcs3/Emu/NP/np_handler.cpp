@@ -23,8 +23,8 @@
 #include <iphlpapi.h>
 #else
 #ifdef __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
 #endif
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -34,7 +34,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #ifdef __clang__
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
 #endif
 #endif
 
@@ -646,7 +646,7 @@ namespace np
 
 		for (; it != end; ++it)
 		{
-			strcpy(ifr.ifr_name, it->ifr_name);
+			strcpy_trunc(ifr.ifr_name, it->ifr_name);
 			if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
 			{
 				if (!(ifr.ifr_flags & IFF_LOOPBACK))

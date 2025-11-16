@@ -111,7 +111,41 @@ void AtracXdecDecoder::alloc_avcodec()
 		fmt::throw_exception("avcodec_find_decoder() failed");
 	}
 
-	ensure(!(codec->capabilities & AV_CODEC_CAP_SUBFRAMES));
+	packet = av_packet_alloc();
+	if (!packet)
+	{
+		fmt::throw_exception("av_packet_alloc() failed");
+	}
+
+	frame = av_frame_alloc();
+	if (!frame)
+	{
+		fmt::throw_exception("av_frame_alloc() failed");
+	}
+}
+
+void AtracXdecDecoder::free_avcodec()
+{
+	if (packet)
+	{
+		av_packet_free(&packet);
+	}
+	if (frame)
+	{
+		av_frame_free(&frame);
+	}
+	if (ctx)
+	{
+		avcodec_free_context(&ctx);
+	}
+}
+
+void AtracXdecDecoder::init_avcodec()
+{
+	if (ctx)
+	{
+		avcodec_free_context(&ctx);
+	}
 
 	ctx = avcodec_alloc_context3(codec);
 	if (!ctx)
@@ -133,34 +167,6 @@ void AtracXdecDecoder::alloc_avcodec()
 		frame->buf[0] = av_buffer_create(frame->data[0], ATXDEC_SAMPLES_PER_FRAME * sizeof(f32) * frame->ch_layout.nb_channels, [](void*, uint8_t*){}, nullptr, 0);
 		return 0;
 	};
-
-	packet = av_packet_alloc();
-	if (!packet)
-	{
-		fmt::throw_exception("av_packet_alloc() failed");
-	}
-
-	frame = av_frame_alloc();
-	if (!frame)
-	{
-		fmt::throw_exception("av_frame_alloc() failed");
-	}
-}
-
-void AtracXdecDecoder::free_avcodec()
-{
-	av_packet_free(&packet);
-	av_frame_free(&frame);
-	avcodec_free_context(&ctx);
-}
-
-void AtracXdecDecoder::init_avcodec()
-{
-	if (int err = avcodec_close(ctx); err)
-	{
-		fmt::throw_exception("avcodec_close() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-	}
-
 	ctx->block_align = nbytes;
 	ctx->ch_layout.nb_channels = nch_in;
 	ctx->sample_rate = sampling_freq;

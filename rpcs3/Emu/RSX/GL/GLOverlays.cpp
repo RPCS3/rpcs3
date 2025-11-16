@@ -176,6 +176,8 @@ namespace gl
 				cmd->disablei(GL_BLEND, 0);
 			}
 
+			cmd->polygon_mode(GL_FILL);
+
 			// Render
 			cmd->use_program(program_handle.id());
 			on_load();
@@ -395,7 +397,7 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
+	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically)
 	{
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
@@ -445,12 +447,13 @@ namespace gl
 			}
 			}
 
-			rsx::overlays::vertex_options vert_opts;
+			rsx::overlays::vertex_options vert_opts {};
 			program_handle.uniforms["vertex_config"] = vert_opts
 				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.enable_vertical_flip(flip_vertically)
 				.get();
 
-			rsx::overlays::fragment_options draw_opts;
+			rsx::overlays::fragment_options draw_opts {};
 			program_handle.uniforms["fragment_config"] = draw_opts
 				.texture_mode(texture_mode)
 				.clip_fragments(cmd.config.clip_region)
@@ -487,7 +490,8 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
+		bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -498,7 +502,7 @@ namespace gl
 
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
+		program_handle.uniforms["stereo_display_mode"] = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);

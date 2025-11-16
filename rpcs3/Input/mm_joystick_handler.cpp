@@ -62,8 +62,6 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = 0; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0; // between 0 and 255
 	cfg->rtriggerthreshold.def = 0; // between 0 and 255
-	cfg->lpadsquircling.def    = 8000;
-	cfg->rpadsquircling.def    = 8000;
 
 	// apply defaults
 	cfg->from_default();
@@ -384,10 +382,12 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 				preview_values[5] = get_key_value(buttons[9]) - get_key_value(buttons[8]);
 			}
 
+			pad_capabilities capabilities = get_capabilities(padId);
+
 			if (pressed_button.value > 0)
-				callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values));
+				callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values), std::move(capabilities));
 			else
-				callback(0, "", padId, 0, std::move(preview_values));
+				callback(0, "", padId, 0, std::move(preview_values), std::move(capabilities));
 		}
 
 		return connection::connected;

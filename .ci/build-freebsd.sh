@@ -1,9 +1,10 @@
 #!/bin/sh -ex
 
-# Pull all the submodules except llvm, opencv, libpng, sdl and curl
+# Pull all the submodules except some
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libpng/ && !/libsdl-org/ && !/curl/ { print $3 }' .gitmodules)
+git config --global --add safe.directory .
+git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libpng/ && !/libsdl-org/ && !/curl/ && !/zlib/ && !/libusb/ && !/feralinteractive/ { print $3 }' .gitmodules)
 
 CONFIGURE_ARGS="
 	-DWITH_LLVM=ON
@@ -13,6 +14,7 @@ CONFIGURE_ARGS="
 	-DUSE_SYSTEM_FFMPEG=ON
 	-DUSE_SYSTEM_CURL=ON
 	-DUSE_SYSTEM_LIBPNG=ON
+ 	-DUSE_SYSTEM_LIBUSB=ON
 	-DUSE_SYSTEM_OPENCV=ON
 "
 

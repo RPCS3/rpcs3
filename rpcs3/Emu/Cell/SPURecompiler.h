@@ -397,7 +397,7 @@ protected:
 
 	struct pattern_info
 	{
-		utils::address_range range;
+		utils::address_range32 range;
 	};
 
 	std::unordered_map<u32, pattern_info> m_patterns;

@@ -767,7 +767,12 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	}
 
 	// Read thread name
-	const std::string thread_name(attr_data.name.get_ptr(), std::max<u32>(attr_data.name_len, 1) - 1);
+	std::string thread_name;
+
+	if (attr_data.name_len && !vm::read_string(attr_data.name.addr(), attr_data.name_len - 1, thread_name, true))
+	{
+		return { CELL_EFAULT, attr_data.name.addr() };
+	}
 
 	const auto group = idm::get_unlocked<lv2_spu_group>(group_id);
 
@@ -775,8 +780,6 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	{
 		return CELL_ESRCH;
 	}
-
-	std::unique_lock lock(group->mutex);
 
 	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
@@ -793,6 +796,34 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EBUSY;
 	}
 
+	const u32 inited_before_lock = group->init;
+
+	u32 tid = (inited_before_lock << 24) | (group_id & 0xffffff);
+	
+	const auto spu_ptr = ensure(idm::make_ptr<named_thread<spu_thread>>(group.get(), spu_num, thread_name, tid, false, option));
+	
+	std::unique_lock lock(group->mutex);
+
+	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
+	{
+		lock.unlock();
+		idm::remove<named_thread<spu_thread>>(idm::last_id());
+
+		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_EBUSY;
+	}
+
+	if (group->threads_map[spu_num] != -1)
+	{
+		lock.unlock();
+		idm::remove<named_thread<spu_thread>>(idm::last_id());
+		return CELL_EBUSY;
+	}
+
 	if (option & SYS_SPU_THREAD_OPTION_ASYNC_INTR_ENABLE)
 	{
 		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
@@ -800,15 +831,13 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	const u32 inited = group->init;
 
-	const u32 tid = (inited << 24) | (group_id & 0xffffff);
+	tid = (inited << 24) | (group_id & 0xffffff);
 
-	ensure(idm::import<named_thread<spu_thread>>([&]()
-	{
-		const auto spu = stx::make_shared<named_thread<spu_thread>>(group.get(), spu_num, thread_name, tid, false, option);
-		group->threads[inited] = spu;
-		group->threads_map[spu_num] = static_cast<s8>(inited);
-		return spu;
-	}));
+	// Update lv2_id (potentially changed after locking)
+	spu_ptr->lv2_id = tid;
+
+	group->threads[inited] = spu_ptr;
+	group->threads_map[spu_num] = static_cast<s8>(inited);
 
 	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
 	auto& spu = group->threads[inited];
@@ -882,7 +911,7 @@ error_code sys_spu_thread_get_exit_status(ppu_thread& ppu, u32 id, vm::ptr<s32> 
 	return CELL_ESTAT;
 }
 
-error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr)
+error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<reduced_sys_spu_thread_group_attribute> attr)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -890,11 +919,30 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	const s32 min_prio = g_ps3_process_info.has_root_perm() ? 0 : 16;
 
-	const sys_spu_thread_group_attribute attr_data = *attr;
+	sys_spu_thread_group_attribute attr_data{};
+	{
+		const reduced_sys_spu_thread_group_attribute attr_reduced = *attr;
+		attr_data.name = attr_reduced.name;
+		attr_data.nsize = attr_reduced.nsize;
+		attr_data.type = attr_reduced.type;
+
+		// Read container-id member at offset 12 bytes conditionally (that's what LV2 does)
+		if (attr_data.type & SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER)
+		{
+			attr_data.ct = vm::unsafe_ptr_cast<sys_spu_thread_group_attribute>(attr)->ct;
+		}
+	}
 
 	if (attr_data.nsize > 0x80 || !num)
 	{
 		return CELL_EINVAL;
+	}
+
+	std::string group_name;
+
+	if (attr_data.nsize && !vm::read_string(attr_data.name.addr(), attr_data.nsize - 1, group_name, true))
+	{
+		return { CELL_EFAULT, attr_data.name.addr() };
 	}
 
 	const s32 type = attr_data.type;
@@ -1051,7 +1099,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		return CELL_EBUSY;
 	}
 
-	const auto group = idm::make_ptr<lv2_spu_group>(std::string(attr_data.name.get_ptr(), std::max<u32>(attr_data.nsize, 1) - 1), num, prio, type, ct, use_scheduler, mem_size);
+	const auto group = idm::make_ptr<lv2_spu_group>(std::move(group_name), num, prio, type, ct, use_scheduler, mem_size);
 
 	if (!group)
 	{
@@ -1501,6 +1549,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	}
 
 	u32 prev_resv = 0;
+	u64 prev_time = 0;
 
 	for (auto& thread : group->threads)
 	{
@@ -1510,20 +1559,21 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
 			{
-				if (prev_resv && prev_resv != resv)
+				if (prev_resv && (prev_resv != resv || prev_time != thread->rtime))
 				{
 					// Batch reservation notifications if possible
-					vm::reservation_notifier_notify(prev_resv);
+					vm::reservation_notifier_notify(prev_resv, prev_time);
 				}
 
 				prev_resv = resv;
+				prev_time = thread->rtime;
 			}
 		}
 	}
 
 	if (prev_resv)
 	{
-		vm::reservation_notifier_notify(prev_resv);
+		vm::reservation_notifier_notify(prev_resv, prev_time);
 	}
 
 	group->exit_status = value;

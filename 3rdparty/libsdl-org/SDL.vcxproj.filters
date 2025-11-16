@@ -172,9 +172,6 @@
     <Filter Include="render\direct3d12">
       <UniqueIdentifier>{f48c2b17-1bee-4fec-a7c8-24cf619abe08}</UniqueIdentifier>
     </Filter>
-    <Filter Include="video\intrin">
-      <UniqueIdentifier>{653672cc-90ae-4eba-a256-6479f2c31804}</UniqueIdentifier>
-    </Filter>
     <Filter Include="main">
       <UniqueIdentifier>{00001967ea2801028a046a722a070000}</UniqueIdentifier>
     </Filter>
@@ -1459,9 +1456,6 @@
     </ClCompile>
     <ClCompile Include="SDL\src\sensor\windows\SDL_windowssensor.c">
       <Filter>sensor\windows</Filter>
-    </ClCompile>
-    <ClCompile Include="SDL\src\render\SDL_d3dmath.c">
-      <Filter>render</Filter>
     </ClCompile>
     <ClCompile Include="SDL\src\render\SDL_render.c">
       <Filter>render</Filter>

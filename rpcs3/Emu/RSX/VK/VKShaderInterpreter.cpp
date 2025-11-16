@@ -12,23 +12,71 @@
 
 namespace vk
 {
-	glsl::shader* shader_interpreter::build_vs(u64 compiler_options)
+	u32 shader_interpreter::init(VKVertexProgram* vk_prog, u64 compiler_options) const
+	{
+		std::memset(&vk_prog->binding_table, 0xff, sizeof(vk_prog->binding_table));
+
+		u32 location = 0;
+		vk_prog->binding_table.vertex_buffers_location = location;
+		location += 3;
+
+		vk_prog->binding_table.context_buffer_location = location++;
+
+		if (vk::emulate_conditional_rendering())
+		{
+			vk_prog->binding_table.cr_pred_buffer_location = location++;
+		}
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
+		{
+			vk_prog->binding_table.instanced_lut_buffer_location = location++;
+			vk_prog->binding_table.instanced_cbuf_location = location++;
+		}
+		else
+		{
+			vk_prog->binding_table.cbuf_location = location++;
+		}
+
+		if (vk::emulate_conditional_rendering())
+		{
+			vk_prog->binding_table.cr_pred_buffer_location = location++;
+		}
+
+		// Return next index
+		return location;
+	}
+
+	u32 shader_interpreter::init(VKFragmentProgram* vk_prog, u64 /*compiler_opt*/) const
+	{
+		std::memset(&vk_prog->binding_table, 0xff, sizeof(vk_prog->binding_table));
+
+		vk_prog->binding_table.context_buffer_location = 0;
+		vk_prog->binding_table.tex_param_location = 1;
+		vk_prog->binding_table.polygon_stipple_params_location = 2;
+
+		// Return next index
+		return 3;
+	}
+
+	VKVertexProgram* shader_interpreter::build_vs(u64 compiler_options)
 	{
 		::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_vertex_program;
 		properties.require_lit_emulation = true;
+		properties.require_clip_plane_functions = true;
 
-		// TODO: Extend decompiler thread
-		// TODO: Rename decompiler thread, it no longer spawns a thread
 		RSXVertexProgram null_prog;
 		std::string shader_str;
 		ParamArray arr;
-		VKVertexProgram vk_prog;
+
+		// Initialize binding layout
+		auto vk_prog = std::make_unique<VKVertexProgram>();
+		const u32 vertex_instruction_start = init(vk_prog.get(), compiler_options);
 
 		null_prog.ctrl = (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
 			? RSX_SHADER_CONTROL_INSTANCED_CONSTANTS
 			: 0;
-		VKVertexDecompilerThread comp(null_prog, shader_str, arr, vk_prog);
+		VKVertexDecompilerThread comp(null_prog, shader_str, arr, *vk_prog);
 
 		// Initialize compiler properties
 		comp.properties.has_indexed_constants = true;
@@ -41,9 +89,20 @@ namespace vk
 		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
+		// Outputs
+		builder << "layout(location=16) out flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define xform_constants_offset get_draw_params().xform_constants_offset\n"
+		"#define scale_offset_mat get_vertex_context().scale_offset_mat\n"
+		"#define transform_branch_bits get_vertex_context().transform_branch_bits\n"
+		"#define point_size get_vertex_context().point_size\n"
+		"#define z_near get_vertex_context().z_near\n"
+		"#define z_far get_vertex_context().z_far\n\n";
+
 		// Insert vp stream input
 		builder << "\n"
-		"layout(std140, set=0, binding=" << m_vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
+		"layout(std140, set=0, binding=" << vertex_instruction_start << ") readonly restrict buffer VertexInstructionBlock\n"
 		"{\n"
 		"	uint base_address;\n"
 		"	uint entry;\n"
@@ -51,6 +110,12 @@ namespace vk
 		"	uint control;\n"
 		"	uvec4 vp_instructions[];\n"
 		"};\n\n";
+
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_VTX_TEXTURES)
+		{
+			// FIXME: Unimplemented
+			rsx_log.todo("Vertex textures are currently not implemented for the shader interpreter.");
+		}
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING)
 		{
@@ -64,52 +129,34 @@ namespace vk
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
 		::glsl::insert_vertex_input_fetch(builder, ::glsl::glsl_rules::glsl_rules_vulkan);
+		comp.insertFSExport(builder);
 
 		builder << program_common::interpreter::get_vertex_interpreter();
 		const std::string s = builder.str();
 
-		auto vs = std::make_unique<glsl::shader>();
+		auto vs = &vk_prog->shader;
 		vs->create(::glsl::program_domain::glsl_vertex_program, s);
 		vs->compile();
 
-		// Prepare input table
-		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+		// Declare local inputs
+		auto vs_inputs = comp.get_inputs();
+
 		vk::glsl::program_input in;
-
-		in.location = binding_table.vertex_params_bind_slot;
+		in.set = 0;
 		in.domain = ::glsl::glsl_vertex_program;
-		in.name = "VertexContextBuffer";
-		in.type = vk::glsl::input_type_uniform_buffer;
-		m_vs_inputs.push_back(in);
+		in.location = vertex_instruction_start;
+		in.type = glsl::input_type_storage_buffer;
+		in.name = "VertexInstructionBlock";
+		vs_inputs.push_back(in);
 
-		in.location = binding_table.vertex_buffers_first_bind_slot;
-		in.name = "persistent_input_stream";
-		in.type = vk::glsl::input_type_texel_buffer;
-		m_vs_inputs.push_back(in);
+		vk_prog->SetInputs(vs_inputs);
 
-		in.location = binding_table.vertex_buffers_first_bind_slot + 1;
-		in.name = "volatile_input_stream";
-		in.type = vk::glsl::input_type_texel_buffer;
-		m_vs_inputs.push_back(in);
-
-		in.location = binding_table.vertex_buffers_first_bind_slot + 2;
-		in.name = "vertex_layout_stream";
-		in.type = vk::glsl::input_type_texel_buffer;
-		m_vs_inputs.push_back(in);
-
-		in.location = binding_table.vertex_constant_buffers_bind_slot;
-		in.name = "VertexConstantsBuffer";
-		in.type = vk::glsl::input_type_uniform_buffer;
-		m_vs_inputs.push_back(in);
-
-		// TODO: Bind textures if needed
-
-		auto ret = vs.get();
-		m_shader_cache[compiler_options].m_vs = std::move(vs);
+		auto ret = vk_prog.get();
+		m_shader_cache[compiler_options].m_vs = std::move(vk_prog);
 		return ret;
 	}
 
-	glsl::shader* shader_interpreter::build_fs(u64 compiler_options)
+	VKFragmentProgram* shader_interpreter::build_fs(u64 compiler_options)
 	{
 		[[maybe_unused]] ::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_fragment_program;
@@ -120,10 +167,15 @@ namespace vk
 		ParamArray arr;
 		std::string shader_str;
 		RSXFragmentProgram frag;
-		VKFragmentProgram vk_prog;
-		VKFragmentDecompilerThread comp(shader_str, arr, frag, len, vk_prog);
 
-		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+		frag.ctrl |= RSX_SHADER_CONTROL_INTERPRETER_MODEL;
+
+		auto vk_prog = std::make_unique<VKFragmentProgram>();
+		const u32 fragment_instruction_start = init(vk_prog.get(), compiler_options);
+		const u32 fragment_textures_start = fragment_instruction_start + 1;
+
+		VKFragmentDecompilerThread comp(shader_str, arr, frag, len, *vk_prog);
+
 		std::stringstream builder;
 		builder <<
 		"#version 450\n"
@@ -131,6 +183,15 @@ namespace vk
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
+
+		builder << "layout(location=16) in flat uvec4 draw_params_payload;\n\n";
+
+		builder <<
+		"#define fog_param0 fs_contexts[_fs_context_offset].fog_param0\n"
+		"#define fog_param1 fs_contexts[_fs_context_offset].fog_param1\n"
+		"#define fog_mode fs_contexts[_fs_context_offset].fog_mode\n"
+		"#define wpos_scale fs_contexts[_fs_context_offset].wpos_scale\n"
+		"#define wpos_bias fs_contexts[_fs_context_offset].wpos_bias\n\n";
 
 		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_ALPHA_TEST_GE)
 		{
@@ -197,9 +258,9 @@ namespace vk
 		{
 			builder << "#define WITH_TEXTURES\n\n";
 
-			for (int i = 0, bind_location = m_fragment_textures_start; i < 4; ++i)
+			for (int i = 0, bind_location = fragment_textures_start; i < 4; ++i)
 			{
-				builder << "layout(set=0, binding=" << bind_location++ << ") " << "uniform " << type_names[i] << " " << type_names[i] << "_array[16];\n";
+				builder << "layout(set=1, binding=" << bind_location++ << ") " << "uniform " << type_names[i] << " " << type_names[i] << "_array[16];\n";
 			}
 
 			builder << "\n"
@@ -207,11 +268,12 @@ namespace vk
 				"#define SAMPLER1D(index) sampler1D_array[index]\n"
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
 				"#define SAMPLER3D(index) sampler3D_array[index]\n"
-				"#define SAMPLERCUBE(index) samplerCube_array[index]\n\n";
+				"#define SAMPLERCUBE(index) samplerCube_array[index]\n"
+				"#define texture_base_index _fs_texture_base_index\n\n";
 		}
 
 		builder <<
-		"layout(std430, binding=" << m_fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
+		"layout(std430, set=1, binding=" << fragment_instruction_start << ") readonly restrict buffer FragmentInstructionBlock\n"
 		"{\n"
 		"	uint shader_control;\n"
 		"	uint texture_control;\n"
@@ -220,185 +282,62 @@ namespace vk
 		"	uvec4 fp_instructions[];\n"
 		"};\n\n";
 
+		builder <<
+			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
+			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
+
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
-		auto fs = std::make_unique<glsl::shader>();
+		auto fs = &vk_prog->shader;
 		fs->create(::glsl::program_domain::glsl_fragment_program, s);
 		fs->compile();
 
-		// Prepare input table
+		// Declare local inputs
+		auto inputs = comp.get_inputs();
+
 		vk::glsl::program_input in;
-		in.location = binding_table.fragment_constant_buffers_bind_slot;
+		in.set = 1;
 		in.domain = ::glsl::glsl_fragment_program;
-		in.name = "FragmentConstantsBuffer";
-		in.type = vk::glsl::input_type_uniform_buffer;
-		m_fs_inputs.push_back(in);
+		in.location = fragment_instruction_start;
+		in.type = glsl::input_type_storage_buffer;
+		in.name = "FragmentInstructionBlock";
+		inputs.push_back(in);
 
-		in.location = binding_table.fragment_state_bind_slot;
-		in.name = "FragmentStateBuffer";
-		m_fs_inputs.push_back(in);
-
-		in.location = binding_table.fragment_texture_params_bind_slot;
-		in.name = "TextureParametersBuffer";
-		m_fs_inputs.push_back(in);
-
-		for (int i = 0, location = m_fragment_textures_start; i < 4; ++i, ++location)
+		if (compiler_options & program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES)
 		{
-			in.location = location;
-			in.name = std::string(type_names[i]) + "_array[16]";
-			m_fs_inputs.push_back(in);
+			for (int i = 0, location = fragment_textures_start; i < 4; ++i, ++location)
+			{
+				in.location = location;
+				in.name = std::string(type_names[i]) + "_array[16]";
+				in.type = glsl::input_type_texture;
+				inputs.push_back(in);
+			}
 		}
 
-		auto ret = fs.get();
-		m_shader_cache[compiler_options].m_fs = std::move(fs);
+		vk_prog->SetInputs(inputs);
+
+		auto ret = vk_prog.get();
+		m_shader_cache[compiler_options].m_fs = std::move(vk_prog);
 		return ret;
-	}
-
-	std::pair<VkDescriptorSetLayout, VkPipelineLayout> shader_interpreter::create_layout(VkDevice dev)
-	{
-		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
-		auto bindings = get_common_binding_table();
-		u32 idx = ::size32(bindings);
-
-		bindings.resize(binding_table.total_descriptor_bindings);
-
-		// Texture 1D array
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bindings[idx].descriptorCount = 16;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		m_fragment_textures_start = bindings[idx].binding;
-		idx++;
-
-		// Texture 2D array
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bindings[idx].descriptorCount = 16;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 1;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		// Texture 3D array
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bindings[idx].descriptorCount = 16;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 2;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		// Texture CUBE array
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bindings[idx].descriptorCount = 16;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 3;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		// Vertex texture array (2D only)
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		bindings[idx].descriptorCount = 4;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 4;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		idx++;
-
-		// Vertex program ucode block
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 5;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		m_vertex_instruction_start = bindings[idx].binding;
-		idx++;
-
-		// Fragment program ucode block
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings[idx].binding = binding_table.textures_first_bind_slot + 6;
-		bindings[idx].pImmutableSamplers = nullptr;
-
-		m_fragment_instruction_start = bindings[idx].binding;
-		idx++;
-		bindings.resize(idx);
-
-		m_descriptor_pool_sizes = get_descriptor_pool_sizes(bindings);
-
-		std::array<VkPushConstantRange, 1> push_constants;
-		push_constants[0].offset = 0;
-		push_constants[0].size = 16;
-		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-		if (vk::emulate_conditional_rendering())
-		{
-			// Conditional render toggle
-			push_constants[0].size = 20;
-		}
-
-		const auto set_layout = vk::descriptors::create_layout(bindings);
-
-		VkPipelineLayoutCreateInfo layout_info = {};
-		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		layout_info.setLayoutCount = 1;
-		layout_info.pSetLayouts = &set_layout;
-		layout_info.pushConstantRangeCount = 1;
-		layout_info.pPushConstantRanges = push_constants.data();
-
-		VkPipelineLayout result;
-		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
-		return { set_layout, result };
-	}
-
-	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
-	{
-		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
-		m_descriptor_pool.create(dev, m_descriptor_pool_sizes, max_draw_calls);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
 	{
 		m_device = dev;
-		std::tie(m_shared_descriptor_layout, m_shared_pipeline_layout) = create_layout(dev);
-		create_descriptor_pools(dev);
 	}
 
 	void shader_interpreter::destroy()
 	{
 		m_program_cache.clear();
-		m_descriptor_pool.destroy();
-
-		for (auto &fs : m_shader_cache)
-		{
-			fs.second.m_vs->destroy();
-			fs.second.m_fs->destroy();
-		}
-
 		m_shader_cache.clear();
-
-		if (m_shared_pipeline_layout)
-		{
-			vkDestroyPipelineLayout(m_device, m_shared_pipeline_layout, nullptr);
-			m_shared_pipeline_layout = VK_NULL_HANDLE;
-		}
-
-		if (m_shared_descriptor_layout)
-		{
-			vkDestroyDescriptorSetLayout(m_device, m_shared_descriptor_layout, nullptr);
-			m_shared_descriptor_layout = VK_NULL_HANDLE;
-		}
 	}
 
 	glsl::program* shader_interpreter::link(const vk::pipeline_props& properties, u64 compiler_opt)
 	{
-		glsl::shader *fs, *vs;
+		VKVertexProgram* vs;
+		VKFragmentProgram* fs;
+
 		if (auto found = m_shader_cache.find(compiler_opt); found != m_shader_cache.end())
 		{
 			fs = found->second.m_fs.get();
@@ -413,12 +352,12 @@ namespace vk
 		VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 		shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-		shader_stages[0].module = vs->get_handle();
+		shader_stages[0].module = vs->shader.get_handle();
 		shader_stages[0].pName = "main";
 
 		shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		shader_stages[1].module = fs->get_handle();
+		shader_stages[1].module = fs->shader.get_handle();
 		shader_stages[1].pName = "main";
 
 		std::vector<VkDynamicState> dynamic_state_descriptors =
@@ -478,33 +417,42 @@ namespace vk
 		info.stageCount = 2;
 		info.pStages = shader_stages;
 		info.pDynamicState = &dynamic_state_info;
-		info.layout = m_shared_pipeline_layout;
+		info.layout = VK_NULL_HANDLE;
 		info.basePipelineIndex = -1;
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = vk::get_renderpass(m_device, properties.renderpass_key);
 
 		auto compiler = vk::get_pipe_compiler();
-		auto program = compiler->compile(info, m_shared_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, m_vs_inputs, m_fs_inputs);
+		auto program = compiler->compile(
+			info,
+			vk::pipe_compiler::COMPILE_INLINE | vk::pipe_compiler::SEPARATE_SHADER_OBJECTS,
+			{},
+			vs->uniforms,
+			fs->uniforms);
+
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images)
 	{
-		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
-		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
+		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
+		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "sampler1D_array[16]");
+		if (binding == umax)
 		{
-			set.push(texture_ptr, 16, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
+			return;
 		}
-	}
 
-	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
-	{
-		return m_descriptor_pool.allocate(m_shared_descriptor_layout);
+		const VkDescriptorImageInfoEx* texture_ptr = sampled_images.data();
+		for (u32 i = 0; i < 4; ++i, ++binding, texture_ptr += 16)
+		{
+			m_current_interpreter->bind_uniform_array({ texture_ptr, 16 }, set, binding);
+		}
 	}
 
 	glsl::program* shader_interpreter::get(
 		const vk::pipeline_props& properties,
-		const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata,
+		const program_hash_util::fragment_program_utils::fragment_program_metadata& fp_metadata,
+		const program_hash_util::vertex_program_utils::vertex_program_metadata& vp_metadata,
 		u32 vp_ctrl,
 		u32 fp_ctrl)
 	{
@@ -544,11 +492,12 @@ namespace vk
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
-		if (metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
-		if (metadata.has_branch_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
-		if (metadata.has_pack_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
+		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
+		if (fp_metadata.has_branch_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
+		if (fp_metadata.has_pack_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
 		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_INSTANCING;
+		if (vp_metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_VTX_TEXTURES;
 
 		if (m_current_key == key) [[likely]]
 		{
@@ -556,6 +505,7 @@ namespace vk
 		}
 		else
 		{
+			m_current_pipeline_info_ex = *get_pipeline_info_ex(key.compiler_opt);
 			m_current_key = key;
 		}
 
@@ -578,11 +528,46 @@ namespace vk
 
 	u32 shader_interpreter::get_vertex_instruction_location() const
 	{
-		return m_vertex_instruction_start;
+		return m_current_pipeline_info_ex.vertex_instruction_location;
 	}
 
 	u32 shader_interpreter::get_fragment_instruction_location() const
 	{
-		return m_fragment_instruction_start;
+		return m_current_pipeline_info_ex.fragment_instruction_location;
+	}
+
+	std::pair<VKVertexProgram*, VKFragmentProgram*> shader_interpreter::get_shaders() const
+	{
+		if (auto found = m_shader_cache.find(m_current_key.compiler_opt); found != m_shader_cache.end())
+		{
+			auto fs = found->second.m_fs.get();
+			auto vs = found->second.m_vs.get();
+			return { vs, fs };
+		}
+
+		return { nullptr, nullptr };
+	}
+
+	const shader_interpreter::pipeline_info_ex_t* shader_interpreter::get_pipeline_info_ex(u64 compiler_opt)
+	{
+		if (auto found = m_pipeline_info_cache.find(compiler_opt); found != m_pipeline_info_cache.end())
+		{
+			return &found->second;
+		}
+
+		VKVertexProgram vs_stub{};
+		VKFragmentProgram fs_stub{};
+		const auto vi_location = init(&vs_stub, compiler_opt);
+		const auto fi_location = init(&fs_stub, compiler_opt);
+
+		pipeline_info_ex_t result
+		{
+			.vertex_instruction_location = vi_location,
+			.fragment_instruction_location = fi_location,
+			.fragment_textures_location = fi_location + 1
+		};
+
+		auto it = m_pipeline_info_cache.insert_or_assign(compiler_opt, result);
+		return &it.first->second;
 	}
 };

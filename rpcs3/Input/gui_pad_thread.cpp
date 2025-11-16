@@ -169,7 +169,7 @@ bool gui_pad_thread::init()
 	usetup.id.bustype = BUS_USB;
 	usetup.id.vendor = 0x1234;
 	usetup.id.product = 0x1234;
-	std::strcpy(usetup.name, "RPCS3 GUI Input Device");
+	strcpy_trunc(usetup.name, "RPCS3 GUI Input Device"sv);
 
 	// The ioctls below will enable the device that is about to be created to pass events.
 	CHECK_IOCTRL_RET(ioctl(m_uinput_fd, UI_SET_EVBIT, EV_KEY));
@@ -234,14 +234,18 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 
 void gui_pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
+	// We need to restore the original defaults first.
+	cfg.restore_defaults();
+
 	if (!handler)
 	{
 		handler = GetHandler(type);
+	}
 
-		if (handler)
-		{
-			handler->init_config(&cfg);
-		}
+	if (handler)
+	{
+		// Set and apply actual defaults depending on pad handler
+		handler->init_config(&cfg);
 	}
 }
 
@@ -283,7 +287,7 @@ void gui_pad_thread::run()
 
 void gui_pad_thread::process_input()
 {
-	if (!m_pad || !(m_pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!m_pad || !m_pad->is_connected())
 	{
 		return;
 	}

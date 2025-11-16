@@ -434,7 +434,7 @@ struct llvm_value_t<T*> : llvm_value_t<T>
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
-		return llvm_value_t<T>::get_type(context)->getPointerTo();
+		return llvm::PointerType::getUnqual(context);
 	}
 };
 

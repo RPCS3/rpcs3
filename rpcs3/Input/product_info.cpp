@@ -261,6 +261,11 @@ namespace input
 
 	std::vector<product_info> get_products_by_class(int class_id)
 	{
+		if (class_id >= CELL_PAD_FAKE_TYPE_COPILOT_1 && class_id <= CELL_PAD_FAKE_TYPE_COPILOT_7)
+		{
+			class_id = CELL_PAD_PCLASS_TYPE_STANDARD;
+		}
+
 		std::vector<product_info> ret;
 		for (const auto& [type, product] : input_products)
 		{

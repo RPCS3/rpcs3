@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../rsx_utils.h"
+#include "simple_array.hpp"
 #include "TextureUtils.h"
 
 namespace rsx
@@ -69,9 +70,9 @@ namespace rsx
 		blit_op_result(bool success) : succeeded(success)
 		{}
 
-		inline address_range to_address_range() const
+		inline address_range32 to_address_range() const
 		{
-			return address_range::start_length(real_dst_address, real_dst_size);
+			return address_range32::start_length(real_dst_address, real_dst_size);
 		}
 	};
 
@@ -182,7 +183,7 @@ namespace rsx
 
 		static inline blit_target_properties get_optimal_blit_target_properties(
 			bool src_is_render_target,
-			address_range dst_range,
+			address_range32 dst_range,
 			u32 dst_pitch,
 			const sizeu src_dimensions,
 			const sizeu dst_dimensions)
@@ -209,7 +210,7 @@ namespace rsx
 						continue;
 					}
 
-					const auto buffer_range = address_range::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
+					const auto buffer_range = address_range32::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found
@@ -249,9 +250,9 @@ namespace rsx
 		template<typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
 		void gather_texture_slices(
 			commandbuffer_type& cmd,
-			std::vector<copy_region_type>& out,
+			rsx::simple_array<copy_region_type>& out,
 			const surface_store_list_type& fbos,
-			const std::vector<section_storage_type*>& local,
+			const rsx::simple_array<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
 			u16 count, bool /*is_depth*/)
 		{
@@ -261,32 +262,67 @@ namespace rsx
 				u64 tag;   // Timestamp
 				u32 list;  // List source, 0 = fbo, 1 = local
 				u32 index; // Index in list
+
+				utils::address_range32 bounds;
 			};
 
-			std::vector<sort_helper> sort_list;
+			const u32 available_slices = fbos.size() + local.size();
+			bool unordered_list = false;
+
+			rsx::simple_array<sort_helper> sort_list;
+			rsx::simple_array<utils::address_range32> sort_ranges;
+			sort_list.reserve(available_slices);
+			sort_ranges.reserve(available_slices);
+
+			// Generate sorting tree if both resources are available and overlapping
+			for (u32 index = 0; index < fbos.size(); ++index)
+			{
+				const auto range = fbos[index].surface->get_memory_range();
+				sort_ranges.push_back(range);
+				sort_list.push_back({
+					.tag = fbos[index].surface->last_use_tag,
+					.list = 0,
+					.index = index,
+					.bounds = range
+				});
+			}
+
+			for (u32 index = 0; index < local.size(); ++index)
+			{
+				if (local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
+					continue;
+
+				const auto range = local[index]->get_section_range();
+				sort_ranges.push_back(range);
+				sort_list.push_back({
+					.tag = local[index]->last_write_tag,
+					.list = 1,
+					.index = index,
+					.bounds = range
+				});
+			}
 
 			if (!fbos.empty() && !local.empty())
 			{
-				// Generate sorting tree if both resources are available and overlapping
-				sort_list.reserve(fbos.size() + local.size());
-
-				for (u32 index = 0; index < fbos.size(); ++index)
-				{
-					sort_list.push_back({ fbos[index].surface->last_use_tag, 0, index });
-				}
-
-				for (u32 index = 0; index < local.size(); ++index)
-				{
-					if (local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
-						continue;
-
-					sort_list.push_back({ local[index]->last_write_tag, 1, index });
-				}
-
-				std::sort(sort_list.begin(), sort_list.end(), FN(x.tag < y.tag));
+				sort_list.sort(FN(x.tag < y.tag));
 			}
 
-			auto add_rtt_resource = [&](auto& section, u16 slice)
+			// Check if ordered
+			for (u32 i = 0; i < sort_list.size(); ++i)
+			{
+				if (i == 0)
+				{
+					continue;
+				}
+
+				if (sort_ranges[i].start < sort_ranges[i - 1].end)
+				{
+					unordered_list = true;
+					break;
+				}
+			}
+
+			auto add_rtt_resource = [&](auto& section, u16 slice) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
 			{
 				const u32 slice_begin = (slice * attr.slice_h);
 				const u32 slice_end = (slice_begin + attr.height);
@@ -295,7 +331,7 @@ namespace rsx
 				if (section.dst_area.y >= slice_end || section_end <= slice_begin)
 				{
 					// Belongs to a different slice
-					return;
+					return { section_end <= slice_begin, false };
 				}
 
 				// How much of this slice to read?
@@ -345,9 +381,11 @@ namespace rsx
 					.dst_w = dst_width,
 					.dst_h = dst_height
 				});
+
+				return { section_end <= slice_end, section_end >= slice_end };
 			};
 
-			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
+			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
 			{
 				// Intersect this resource with the original one.
 				// Note that intersection takes place in a normalized coordinate space (bpp = 1)
@@ -363,7 +401,7 @@ namespace rsx
 				if (!dimensions.width || !dimensions.height)
 				{
 					// Out of bounds, invalid intersection
-					return;
+					return { false, false };
 				}
 
 				// The intersection takes place in a normalized coordinate space. Now we convert back to domain-specific
@@ -382,7 +420,7 @@ namespace rsx
 				if (dst_y >= dst_slice_end || write_section_end <= dst_slice_begin)
 				{
 					// Belongs to a different slice
-					return;
+					return { write_section_end <= dst_slice_begin, false };
 				}
 
 				const u16 dst_w = static_cast<u16>(dst_size.width);
@@ -410,25 +448,27 @@ namespace rsx
 						.dst_w = _dst_w,
 						.dst_h = _dst_h
 					});
+
+					return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
 				}
-				else
-				{
-					out.push_back
-					({
-						.src = section->get_raw_texture(),
-						.xform = surface_transform::identity,
-						.level = 0,
-						.src_x = static_cast<u16>(src_offset.x),         // src.x
-						.src_y = static_cast<u16>(src_offset.y),         // src.y
-						.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
-						.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
-						.dst_z = 0,
-						.src_w = src_w,
-						.src_h = height,
-						.dst_w = dst_w,
-						.dst_h = height
-					});
-				}
+
+				out.push_back
+				({
+					.src = section->get_raw_texture(),
+					.xform = surface_transform::identity,
+					.level = 0,
+					.src_x = static_cast<u16>(src_offset.x),         // src.x
+					.src_y = static_cast<u16>(src_offset.y),         // src.y
+					.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
+					.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
+					.dst_z = 0,
+					.src_w = src_w,
+					.src_h = height,
+					.dst_w = dst_w,
+					.dst_h = height
+				});
+
+				return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
 			};
 
 			u32 current_address = attr.address;
@@ -441,34 +481,36 @@ namespace rsx
 
 			for (u16 slice = 0; slice < count; ++slice)
 			{
-				auto num_surface = out.size();
+				const auto num_surface = out.size();
+				const auto slice_range = utils::address_range32::start_length(current_address, slice_size);
 
-				if (local.empty()) [[likely]]
+				for (auto& e : sort_list)
 				{
-					for (auto& section : fbos)
+					if (e.index == umax || !slice_range.overlaps(e.bounds))
 					{
-						add_rtt_resource(section, slice);
+						continue;
 					}
-				}
-				else if (fbos.empty())
-				{
-					for (auto& section : local)
+
+					bool remove = false, slice_complete = false;
+					if (e.list == 0)
 					{
-						add_local_resource(section, current_address, slice, false);
+						std::tie(remove, slice_complete) = add_rtt_resource(fbos[e.index], slice);
 					}
-				}
-				else
-				{
-					for (const auto& e : sort_list)
+					else
 					{
-						if (e.list == 0)
-						{
-							add_rtt_resource(fbos[e.index], slice);
-						}
-						else
-						{
-							add_local_resource(local[e.index], current_address, slice);
-						}
+						std::tie(remove, slice_complete) = add_local_resource(local[e.index], current_address, slice, !fbos.empty());
+					}
+
+					if (remove)
+					{
+						// If we got here, the section has been fully ingested by the current slice and will never match again.
+						e.index = umax;
+					}
+
+					if (slice_complete && !unordered_list)
+					{
+						// Reached the end of the current slice and we are guaranteed to not match any other section since they lie after this one in memory.
+						break;
 					}
 				}
 
@@ -737,7 +779,7 @@ namespace rsx
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename surface_store_list_type, typename section_storage_type>
 		sampled_image_descriptor merge_cache_resources(
 			commandbuffer_type& cmd,
-			const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
+			const surface_store_list_type& fbos, const rsx::simple_array<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
 			const size3f& scale,
 			texture_dimension_extended extended_dimension,
@@ -852,7 +894,7 @@ namespace rsx
 
 		template<typename sampled_image_descriptor, typename copy_region_descriptor_type>
 		bool append_mipmap_level(
-			std::vector<copy_region_descriptor_type>& sections,   // Destination list
+			rsx::simple_array<copy_region_descriptor_type>& sections,   // Destination list
 			const sampled_image_descriptor& level,                // Descriptor for the image level being checked
 			const image_section_attributes_t& attr,               // Attributes of image level
 			u8 mipmap_level,                                      // Level index

@@ -468,11 +468,11 @@ error_code sys_ppu_thread_restart(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 _stacksz, u64 flags, vm::cptr<char> threadname)
+error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u64 _stacksz, u64 flags, vm::cptr<char> threadname)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
+	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%llx, flags=0x%llx, threadname=*0x%x)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
 
 	// thread_id is checked for null in stub -> CELL_ENOMEM
@@ -497,7 +497,8 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	const u32 tls = param->tls;
 
 	// Compute actual stack size and allocate
-	const u32 stack_size = utils::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
+	// 0 and UINT64_MAX both convert to 4096
+	const u64 stack_size = FN(x ? x : 4096)(utils::align<u64>(_stacksz, 4096));
 
 	auto& dct = g_fxo->get<lv2_memory_container>();
 
@@ -507,7 +508,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	const vm::addr_t stack_base{vm::alloc(stack_size, vm::stack, 4096)};
+	const vm::addr_t stack_base{vm::alloc(static_cast<u32>(stack_size), vm::stack, 4096)};
 
 	if (!stack_base)
 	{
@@ -532,7 +533,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	{
 		ppu_thread_params p;
 		p.stack_addr = stack_base;
-		p.stack_size = stack_size;
+		p.stack_size = static_cast<u32>(stack_size);
 		p.tls_addr = tls;
 		p.entry = entry;
 		p.arg0 = arg;

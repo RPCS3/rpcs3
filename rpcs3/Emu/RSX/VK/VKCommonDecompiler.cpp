@@ -20,7 +20,8 @@ namespace vk
 		{ "spec_color", 12 },
 		{ "spec_color1", 13 },
 		{ "fog_c", 14 },
-		{ "fogc", 14 }
+		{ "fogc", 14 },
+		{ "usr", 15 }, // custom injected stuff
 	} };
 
 	int get_varying_register_location(std::string_view varying_register_name)
@@ -34,5 +35,32 @@ namespace vk
 		}
 
 		fmt::throw_exception("Unknown register name: %s", varying_register_name);
+	}
+
+	int get_texture_index(std::string_view name)
+	{
+		if (name.length() < 2)
+		{
+			fmt::throw_exception("Invalid texture name: '%s'", name);
+		}
+
+		constexpr int max_index_length = 2;
+		const int name_length = static_cast<int>(name.length());
+		std::string index;
+
+		for (int char_idx = name_length - max_index_length; char_idx < name_length; ++char_idx)
+		{
+			if (std::isdigit(name[char_idx]))
+			{
+				index += name[char_idx];
+			}
+		}
+
+		if (index.empty())
+		{
+			fmt::throw_exception("Invalid texture name: '%s'", name);
+		}
+
+		return std::atoi(index.c_str());
 	}
 }

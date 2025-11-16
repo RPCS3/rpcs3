@@ -76,14 +76,14 @@ namespace rsx
 		using texture_format       = typename traits::texture_format;
 		using section_storage_type = typename traits::section_storage_type;
 
-		address_range          cpu_range;
+		address_range32          cpu_range;
 		texture_format         format;
 		texture_upload_context context;
 
 		// Constructors
 		texture_cache_predictor_key() = default;
 
-		texture_cache_predictor_key(const address_range& _cpu_range, texture_format _format, texture_upload_context _context)
+		texture_cache_predictor_key(const address_range32& _cpu_range, texture_format _format, texture_upload_context _context)
 		    : cpu_range(_cpu_range)
 		    , format(_format)
 			, context(_context)
@@ -398,7 +398,7 @@ struct std::hash<rsx::texture_cache_predictor_key<Traits>>
 {
 	usz operator()(const rsx::texture_cache_predictor_key<Traits>& k) const
 	{
-		usz result = std::hash<utils::address_range>{}(k.cpu_range);
+		usz result = std::hash<utils::address_range32>{}(k.cpu_range);
 		result ^= static_cast<usz>(k.format);
 		result ^= (static_cast<usz>(k.context) << 16);
 		return result;

@@ -166,7 +166,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	const auto& pads   = handler->GetPads();
 	const auto& pad    = ::at32(pads, m_controller_index);
 
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	if (!pad->is_connected() || pad->is_copilot())
 		return;
 
 	const auto& cfg = ::at32(g_cfg_turntable.players, m_controller_index);

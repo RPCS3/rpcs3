@@ -90,14 +90,15 @@ namespace gl
 
 		void emit_geometry(gl::command_context& cmd) override;
 
-		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
+		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically);
 	};
 
 	struct video_out_calibration_pass final : public overlay_pass
 	{
 		video_out_calibration_pass();
 
-		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter);
+		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
+			bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter);
 	};
 
 	struct rp_ssbo_to_generic_texture final : public overlay_pass
