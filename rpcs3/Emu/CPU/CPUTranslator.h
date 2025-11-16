@@ -4007,7 +4007,7 @@ llvm::CallInst* llvm_asm(
 	const std::string& constraints,
 	llvm::LLVMContext& context)
 {
-	llvm::ArrayRef<llvm::Type*> types_ref = std::nullopt;
+	llvm::ArrayRef<llvm::Type*> types_ref {};
 	std::vector<llvm::Type*> types;
 	types.reserve(args.size());
 
