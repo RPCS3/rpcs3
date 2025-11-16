@@ -107,7 +107,12 @@ class FragmentProgramDecompiler
 	* Calculates the lane mask for a given input
 	* This is a temporary workaround until the decompiler is rewritten with some IR to allow granular split/gather passes
 	*/
-	u32 get_src_vector_mask(u32 opcode, u32 operand);
+	u32 get_src_vector_mask(u32 opcode, u32 operand) const;
+
+	/**
+	* Detects delay slots. These evaluate to a NOP so we don't actually need to emit them
+	*/
+	bool is_delay_slot() const;
 
 protected:
 	const RSXFragmentProgram &m_prog;

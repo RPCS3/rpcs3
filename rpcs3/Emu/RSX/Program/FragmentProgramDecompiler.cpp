@@ -32,7 +32,7 @@ enum VectorLane : u8
 	W = 3,
 };
 
-u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand)
+u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) const
 {
 	auto decode = [&](const std::string& expr) -> u32
 	{
@@ -198,6 +198,33 @@ u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand)
 	return 0;
 }
 
+bool FragmentProgramDecompiler::is_delay_slot() const
+{
+	if (dst.opcode != RSX_FP_OPCODE_MOV ||            // These slots are always populated with MOV
+		dst.no_dest ||                                // Must have a sink
+		src0.reg_type != RSX_FP_REGISTER_TYPE_TEMP || // Must read from reg
+		dst.fp16 ||                                   // Always full lane. We need to collect more data on this but it won't matter
+		dst.saturate ||                               // Precision modifier
+		(dst.prec != RSX_FP_PRECISION_REAL &&
+			dst.prec != RSX_FP_PRECISION_UNKNOWN))    // Cannot have precision modifiers
+	{
+		return false;
+	}
+
+	// Check if we have precision modifiers on the source
+	if (src0.abs || src0.neg || src1.scale)
+	{
+		return false;
+	}
+
+	if (dst.mask_x && src0.swizzle_x != 0) return false;
+	if (dst.mask_y && src0.swizzle_y != 1) return false;
+	if (dst.mask_z && src0.swizzle_z != 2) return false;
+	if (dst.mask_w && src0.swizzle_w != 3) return false;
+
+	return true;
+}
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
@@ -333,7 +360,10 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		}
 	}
 
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
+	if (!is_delay_slot())
+	{
+		temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
+	}
 }
 
 void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
@@ -707,7 +737,7 @@ std::string FragmentProgramDecompiler::GetSRC(T src)
 		{
 			// We need to determine if any vector lanes need a gather op
 			// In theory, splitting can also be required, but that is currently unsupported
-			u32 src_lane_mask = get_src_vector_mask(dst.opcode, operand_idx);
+			u32 src_lane_mask = is_delay_slot() ? 0u : get_src_vector_mask(dst.opcode, operand_idx);
 			std::unordered_set<u8> lanes_to_gather;
 
 			const bool apply_dst_mask = src_lane_mask & (1u << 31);
