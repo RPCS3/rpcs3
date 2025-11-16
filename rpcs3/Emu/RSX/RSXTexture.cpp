@@ -251,7 +251,7 @@ namespace rsx
 
 	u8 fragment_texture::convolution_filter() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0xf);
+		return ((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)] >> 13) & 0x7);
 	}
 
 	u8 fragment_texture::argb_signed() const
