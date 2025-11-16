@@ -64,9 +64,10 @@ namespace rsx
 			}
 			codepage_cache;
 
+			static char32_t get_page_id(char32_t c) { return c >> 8; }
 			static language_class classify(char32_t codepage_id);
 			glyph_load_setup get_glyph_files(language_class class_) const;
-			codepage* initialize_codepage(char32_t codepage_id);
+			codepage* initialize_codepage(char32_t c);
 		public:
 
 			font(std::string_view ttf_name, f32 size);

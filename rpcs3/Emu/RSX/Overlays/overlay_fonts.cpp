@@ -159,25 +159,57 @@ namespace rsx
 			return result;
 		}
 
-		codepage* font::initialize_codepage(char32_t codepage_id)
+		codepage* font::initialize_codepage(char32_t c)
 		{
 			// Init glyph
+			const auto codepage_id = get_page_id(c);
 			const auto class_ = classify(codepage_id);
 			const auto fs_settings = get_glyph_files(class_);
 
 			// Attemt to load requested font
 			std::vector<u8> bytes;
-			std::string file_path;
+			std::vector<u8> fallback_bytes;
+			std::string fallback_file;
 			bool font_found = false;
+
+			const auto get_font = [&](const std::string& file_path) -> bool
+			{
+				// Read font
+				fs::file f(file_path);
+				f.read(bytes, f.size());
+
+				// Check if the character exists in the font
+				stbtt_fontinfo info;
+				stbtt_InitFont(&info, bytes.data(), stbtt_GetFontOffsetForIndex(bytes.data(), 0));
+
+				font_found = stbtt_FindGlyphIndex(&info, c) != 0;
+
+				if (!font_found)
+				{
+					if (fallback_bytes.empty())
+					{
+						// Save this font as a fallback so we don't get a segfault or exception
+						fallback_bytes = std::move(bytes);
+						fallback_file = file_path;
+					}
+
+					bytes.clear();
+				}
+
+				return font_found;
+			};
 
 			for (const auto& font_file : fs_settings.font_names)
 			{
 				if (fs::is_file(font_file))
 				{
 					// Check for absolute paths or fonts 'installed' to executable folder
-					file_path = font_file;
-					font_found = true;
-					break;
+					if (get_font(font_file))
+					{
+						break;
+					}
+
+					continue;
 				}
 
 				std::string extension;
@@ -196,11 +228,13 @@ namespace rsx
 
 				for (const auto& font_dir : fs_settings.lookup_font_dirs)
 				{
-					file_path = font_dir + file_name;
+					const std::string file_path = font_dir + file_name;
 					if (fs::is_file(file_path))
 					{
-						font_found = true;
-						break;
+						if (get_font(file_path))
+						{
+							break;
+						}
 					}
 				}
 
@@ -210,16 +244,15 @@ namespace rsx
 				}
 			}
 
-			// Read font
-			if (font_found)
+			if (!font_found)
 			{
-				fs::file f(file_path);
-				f.read(bytes, f.size());
-			}
-			else
-			{
-				rsx_log.error("Failed to initialize font '%s.ttf' on codepage %d", font_name, static_cast<u32>(codepage_id));
-				return nullptr;
+				if (fallback_bytes.empty())
+				{
+					fmt::throw_exception("Failed to initialize font for character 0x%x on codepage %d.", static_cast<u32>(c), static_cast<u32>(codepage_id));
+				}
+
+				rsx_log.error("Failed to initialize font for character 0x%x on codepage %d. Falling back to font '%s'", static_cast<u32>(c), static_cast<u32>(codepage_id), fallback_file);
+				bytes = std::move(fallback_bytes);
 			}
 
 			codepage_cache.page = nullptr;
@@ -245,7 +278,8 @@ namespace rsx
 			if (!initialized)
 				return {};
 
-			const auto page_id = (c >> 8);
+			const auto page_id = get_page_id(c);
+
 			if (codepage_cache.codepage_id == page_id && codepage_cache.page) [[likely]]
 			{
 				return codepage_cache.page->get_char(c, x_advance, y_advance);
@@ -266,7 +300,7 @@ namespace rsx
 
 				if (!codepage_cache.page) [[unlikely]]
 				{
-					codepage_cache.page = initialize_codepage(page_id);
+					codepage_cache.page = initialize_codepage(c);
 				}
 
 				return codepage_cache.page->get_char(c, x_advance, y_advance);
