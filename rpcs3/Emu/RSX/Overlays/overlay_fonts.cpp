@@ -52,13 +52,13 @@ namespace rsx
 			return quad;
 		}
 
-		font::font(const char* ttf_name, f32 size)
+		font::font(std::string_view ttf_name, f32 size)
 		{
 			// Convert pt to px
 			size_px = ceilf(size * 96.f / 72.f);
 			size_pt = size;
 
-			font_name = ttf_name;
+			font_name = std::string(ttf_name);
 			initialized = true;
 		}
 
