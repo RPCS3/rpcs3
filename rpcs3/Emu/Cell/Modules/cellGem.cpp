@@ -2308,8 +2308,10 @@ error_code cellGemConvertVideoFinish(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
+error_code cellGemConvertVideoStart(ppu_thread& ppu, vm::cptr<void> video_frame)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
 
 	auto& gem = g_fxo->get<gem_config>();
@@ -2461,6 +2463,8 @@ error_code cellGemEnableMagnetometer2(u32 gem_num, u32 enable)
 
 error_code cellGemEnd(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemEnd()");
 
 	auto& gem = g_fxo->get<gem_config>();
@@ -3265,7 +3269,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 	extern error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2);
 	extern error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2);
-	extern error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info);
+	extern error_code cellCameraGetBufferInfoEx(ppu_thread&, s32 dev_num, vm::ptr<CellCameraInfoEx> info);
 
 	vm::var<CellCameraInfoEx> info = vm::make_var<CellCameraInfoEx>({});
 	vm::var<u32> arg1 = vm::make_var<u32>({});
@@ -3273,7 +3277,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 	cellCameraGetAttribute(0, 0x3e6, arg1, arg2);
 	cellCameraSetAttribute(0, 0x3e6, 0x3e, *arg2 | 0x80);
-	cellCameraGetBufferInfoEx(0, info);
+	cellCameraGetBufferInfoEx(*cpu_thread::get_current<ppu_thread>(), 0, info);
 
 	if (info->width == 640)
 	{
@@ -3605,6 +3609,8 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 error_code cellGemUpdateFinish(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGem.warning("cellGemUpdateFinish()");
 
 	auto& gem = g_fxo->get<gem_config>();

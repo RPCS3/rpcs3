@@ -96,7 +96,7 @@ namespace vm
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
 		writer_lock() noexcept;
-		writer_lock(u32 addr, atomic_t<u64, 64>* range_lock = nullptr, u32 size = 128, u64 flags = range_locked) noexcept;
+		writer_lock(u32 addr, atomic_t<u64, 64>* range_lock = nullptr, bool halt_ppus = true) noexcept;
 		~writer_lock() noexcept;
 	};
 } // namespace vm

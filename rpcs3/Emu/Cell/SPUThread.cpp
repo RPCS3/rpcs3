@@ -425,6 +425,28 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 #endif
 }
 
+static inline u32 cmp16_rdata(const decltype(spu_thread::rdata)& rdata, const decltype(spu_thread::rdata)& to_write)
+{
+	u32 diffcnt = 0;
+	u32 pos = 0;
+
+	for (u32 i = 0; i < 8; i++)
+	{
+		if (std::memcmp(rdata + (i * 16), to_write + (i * 16), 16))
+		{
+			diffcnt++;
+			pos = i;
+		}
+	};
+
+	if (diffcnt == 1)
+	{
+		return pos;
+	}
+
+	return -1;
+}
+
 #if defined(_MSC_VER)
 #define mwaitx_func
 #define waitpkg_func
@@ -3969,17 +3991,52 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
 		{
-			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr, range_lock);
-
-			if (cmp_rdata(rdata, super_data))
+			if (int pos = cmp16_rdata(rdata, to_write); addr != spurs_addr && pos != -1)
 			{
-				mov_rdata(super_data, to_write);
-				return true;
-			}
+				auto& bits = *utils::bless<atomic_t<u64>>(vm::g_reservations + ((addr & 0xff80) / 2 + 32));
+				const auto bits_val = +bits;
 
-			return false;
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				const bool halt_ppus = bits_val == umax || bits_val < 0x100000;
+
+				if (vm::writer_lock lock(addr, range_lock, halt_ppus); cmp_rdata(rdata, super_data))
+				{
+					auto cast_as = [](void* ptr, usz pos){ return reinterpret_cast<u128*>(ptr) + pos; };
+					auto cast_as_const = [](const void* ptr, usz pos){ return reinterpret_cast<const u128*>(ptr) + pos; };
+
+					if (halt_ppus)
+					{
+						*cast_as(super_data, pos) = *cast_as_const(to_write, pos);
+						bits.try_inc(u64{umax});
+						return true;
+					}
+					else if (atomic_storage<u128>::compare_exchange(*cast_as(super_data, pos), *cast_as(rdata, pos), *cast_as_const(to_write, pos)))
+					{
+						bits.try_inc(u64{umax});
+						*cast_as(rdata, pos) = *cast_as_const(to_write, pos);
+						ensure(cmp_rdata(rdata, super_data));
+						return true;
+					}
+				}
+
+				bits = u64{umax};
+				return false;
+			}
+			else
+			{
+				// Full lock (heavyweight)
+				// TODO: vm::check_addr
+				vm::writer_lock lock(addr, range_lock);
+
+				if (cmp_rdata(rdata, super_data))
+				{
+					mov_rdata(super_data, to_write);
+					return true;
+				}
+
+				return false;
+			}
 		}();
 
 		res += success ? 64 : 0 - 64;
@@ -4773,7 +4830,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr != addr)
 			{
 				// Last check for event before we replace the reservation with a new one
-				if (reservation_check(raddr, rdata))
+				if (~ch_events.load().events & SPU_EVENT_LR && reservation_check(raddr, rdata, addr))
 				{
 					set_events(SPU_EVENT_LR);
 				}
@@ -5483,7 +5540,7 @@ bool spu_thread::process_mfc_cmd()
 		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
-bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
+bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data, u32 current_eal) const
 {
 	if (!addr)
 	{
@@ -5502,9 +5559,24 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 		return !cmp_rdata(data, *vm::get_super_ptr<decltype(rdata)>(addr));
 	}
 
+	if ((addr >> 20) == (current_eal >> 20))
+	{
+		if (vm::check_addr(addr, vm::page_1m_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
+
+		if ((addr >> 16) == (current_eal >> 16) && vm::check_addr(addr, vm::page_64k_size))
+		{
+			// Same random-access-memory page as the current MFC command, assume allocated
+			return !cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+		}
+	}
+
 	// Ensure data is allocated (HACK: would raise LR event if not)
 	// Set range_lock first optimistically
-	range_lock->store(u64{128} << 32 | addr);
+	range_lock->store(u64{128} << 32 | addr | vm::range_readable);
 
 	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;
@@ -5580,12 +5652,12 @@ bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_
 	if ((addr >> 28) < 2 || (addr >> 28) == 0xd)
 	{
 		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
-		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) == hash;
+		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) != hash;
 	}
 
 	// Ensure data is allocated (HACK: would raise LR event if not)
 	// Set range_lock first optimistically
-	range_lock->store(u64{128} << 32 | addr);
+	range_lock->store(u64{128} << 32 | addr | vm::range_readable);
 
 	u64 lock_val = *std::prev(std::end(vm::g_range_lock_set));
 	u64 old_lock = 0;

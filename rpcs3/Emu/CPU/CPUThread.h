@@ -28,6 +28,7 @@ enum class cpu_flag : u32
 	notify, // Flag meant solely to allow atomic notification on state without changing other flags
 	yield, // Thread is being requested to yield its execution time if it's running
 	preempt, // Thread is being requested to preempt the execution of all CPU threads
+	measure, // Thread must remove the flag as soon as possible, no side effects
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
