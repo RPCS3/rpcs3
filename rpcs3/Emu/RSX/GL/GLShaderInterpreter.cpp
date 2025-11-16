@@ -387,7 +387,7 @@ namespace gl
 			allocator.pools[i].flags = 0;
 		}
 
-		rsx::simple_array<std::pair<int, int>> replacement_map;
+		rsx::simple_array<utils::pair<int, int>> replacement_map;
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (reference_mask & (1 << i))

@@ -11,10 +11,10 @@ SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::str
 	version_end   = ver_end;
 	revision      = rev;
 	self_type     = type;
-	hex_to_bytes(erk, e.c_str(), 0);
-	hex_to_bytes(riv, r.c_str(), 0);
-	hex_to_bytes(pub, pb.c_str(), 0);
-	hex_to_bytes(priv, pr.c_str(), 0);
+	hex_to_bytes(erk, e, 0);
+	hex_to_bytes(riv, r, 0);
+	hex_to_bytes(pub, pb, 0);
+	hex_to_bytes(priv, pr, 0);
 	curve_type = ct;
 }
 

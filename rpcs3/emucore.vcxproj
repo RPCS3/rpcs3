@@ -736,6 +736,8 @@
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
+    <ClInclude Include="util\pair.hpp" />
+    <ClInclude Include="util\tuple.hpp" />
     <ClInclude Include="util\video_sink.h" />
     <ClInclude Include="util\video_provider.h" />
     <ClInclude Include="util\media_utils.h" />

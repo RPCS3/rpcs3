@@ -6,7 +6,7 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-brew install -f --overwrite --quiet ccache pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+brew install -f --overwrite --quiet pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
@@ -26,6 +26,11 @@ export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=arm64'
 
 export WORKDIR;
 WORKDIR="$(pwd)"
+
+# Setup ccache
+if [ ! -d "$CCACHE_DIR" ]; then
+  mkdir -p "$CCACHE_DIR"
+fi
 
 # Get Qt
 if [ ! -d "/tmp/Qt/$QT_VER" ]; then

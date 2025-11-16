@@ -201,7 +201,7 @@ std::u32string utf16_to_u32string(const std::u16string& utf16_string)
 
 	for (const auto& code : utf16_string)
 	{
-		result.push_back(code);
+		result.push_back(static_cast<char32_t>(code));
 	}
 
 	return result;

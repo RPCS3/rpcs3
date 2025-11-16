@@ -9,6 +9,7 @@
 #include <list>
 
 #include "util/asm.hpp"
+#include "util/pair.hpp"
 
 namespace rsx
 {
@@ -244,10 +245,9 @@ namespace rsx
 		template <bool is_depth_surface>
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
-			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range,
-				surface_ranged_map& data) -> rsx::simple_array<std::pair<u32, surface_type>>
+			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range, surface_ranged_map& data)
 			{
-				rsx::simple_array<std::pair<u32, surface_type>> result;
+				rsx::simple_array<utils::pair<u32, surface_type>> result;
 				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
 					auto surface = Traits::get(it->second);
@@ -314,7 +314,7 @@ namespace rsx
 				}
 			}
 
-			rsx::simple_array<std::pair<u32, surface_type>> surface_info;
+			rsx::simple_array<utils::pair<u32, surface_type>> surface_info;
 			if (list1.empty())
 			{
 				surface_info = std::move(list2);
@@ -1091,7 +1091,7 @@ namespace rsx
 		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
 		{
 			rsx::simple_array<surface_overlap_info> result;
-			rsx::simple_array<std::pair<u32, bool>> dirty;
+			rsx::simple_array<utils::pair<u32, bool>> dirty;
 
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
