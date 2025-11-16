@@ -135,10 +135,15 @@ namespace rsx
 
 				// Attempt to load a font from dev_flash before any other source
 				result.font_names.emplace_back("SCE-PS3-SR-R-JPN.TTF");
+				result.font_names.emplace_back("SCE-PS3-SR-R-EXT.TTF");
 
 				// Known system font as last fallback
 				result.font_names.emplace_back("Yu Gothic.ttf");
 				result.font_names.emplace_back("YuGothR.ttc");
+				result.font_names.emplace_back("msyh.ttc");
+				result.font_names.emplace_back("simsunb.ttc");
+				result.font_names.emplace_back("simsun.ttc");
+				result.font_names.emplace_back("SimsunExtG.ttf");
 				break;
 			}
 			case language_class::hangul:
