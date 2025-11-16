@@ -988,14 +988,6 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case thread_scheduler_mode::os: return tr("Operating System", "Thread Scheduler Mode");
 		}
 		break;
-	case emu_settings_type::EnableTSX:
-		switch (static_cast<tsx_usage>(index))
-		{
-		case tsx_usage::disabled: return tr("Disabled", "Enable TSX");
-		case tsx_usage::enabled: return tr("Enabled", "Enable TSX");
-		case tsx_usage::forced: return tr("Forced", "Enable TSX");
-		}
-		break;
 	case emu_settings_type::Renderer:
 		switch (static_cast<video_renderer>(index))
 		{

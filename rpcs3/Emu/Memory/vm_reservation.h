@@ -6,9 +6,6 @@
 #include "util/tsc.hpp"
 #include <functional>
 
-extern bool g_use_rtm;
-extern u64 g_rtm_tx_limit2;
-
 #ifdef _MSC_VER
 extern "C"
 {
@@ -143,7 +140,7 @@ namespace vm
 	void reservation_op_internal(u32 addr, std::function<bool()> func);
 
 	template <bool Ack = false, typename CPU, typename T, typename AT = u32, typename F>
-	inline SAFE_BUFFERS(auto) reservation_op(CPU& cpu, _ptr_base<T, AT> ptr, F op)
+	inline SAFE_BUFFERS(auto) reservation_op(CPU& /*cpu*/, _ptr_base<T, AT> ptr, F op)
 	{
 		// Atomic operation will be performed on aligned 128 bytes of data, so the data size and alignment must comply
 		static_assert(sizeof(T) <= 128 && alignof(T) == sizeof(T), "vm::reservation_op: unsupported type");
@@ -161,188 +158,6 @@ namespace vm
 
 		auto& res = vm::reservation_acquire(addr);
 		//_m_prefetchw(&res);
-
-#if defined(ARCH_X64)
-		if (g_use_rtm)
-		{
-			// Stage 1: single optimistic transaction attempt
-			unsigned status = -1;
-			u64 _old = 0;
-
-			auto stamp0 = utils::get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
-
-#ifndef _MSC_VER
-			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
-#else
-			status = _xbegin();
-			if (status == umax)
-#endif
-			{
-				if (res & rsrv_unique_lock)
-				{
-#ifndef _MSC_VER
-					__asm__ volatile ("xend; mov $-1, %%eax;" ::: "memory");
-#else
-					_xend();
-#endif
-					goto stage2;
-				}
-
-				if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
-				{
-					std::invoke(op, *sptr);
-					const u64 old_time = res.fetch_add(128);
-#ifndef _MSC_VER
-					__asm__ volatile ("xend;" ::: "memory");
-#else
-					_xend();
-#endif
-					if constexpr (Ack)
-						reservation_notifier_notify(addr, old_time);
-					return;
-				}
-				else
-				{
-					if (auto result = std::invoke(op, *sptr))
-					{
-						const u64 old_time = res.fetch_add(128);
-#ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
-#else
-						_xend();
-#endif
-						if constexpr (Ack)
-							reservation_notifier_notify(addr, old_time);
-						return result;
-					}
-					else
-					{
-#ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
-#else
-						_xend();
-#endif
-						return result;
-					}
-				}
-			}
-
-			stage2:
-#ifndef _MSC_VER
-			__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
-#endif
-			stamp1 = utils::get_tsc();
-
-			// Stage 2: try to lock reservation first
-			_old = res.fetch_add(1);
-
-			// Compute stamps excluding memory touch
-			stamp2 = utils::get_tsc() - (stamp1 - stamp0);
-
-			// Start lightened transaction
-			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = utils::get_tsc())
-			{
-				if (cpu.has_pause_flag())
-				{
-					break;
-				}
-
-#ifndef _MSC_VER
-				__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
-#else
-				status = _xbegin();
-
-				if (status != umax) [[unlikely]]
-				{
-					goto retry;
-				}
-#endif
-				if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
-				{
-					std::invoke(op, *sptr);
-#ifndef _MSC_VER
-					__asm__ volatile ("xend;" ::: "memory");
-#else
-					_xend();
-#endif
-					res += 127;
-					if (Ack)
-						reservation_notifier_notify(addr, _old);
-					return;
-				}
-				else
-				{
-					if (auto result = std::invoke(op, *sptr))
-					{
-#ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
-#else
-						_xend();
-#endif
-						res += 127;
-						if (Ack)
-							reservation_notifier_notify(addr, _old);
-						return result;
-					}
-					else
-					{
-#ifndef _MSC_VER
-						__asm__ volatile ("xend;" ::: "memory");
-#else
-						_xend();
-#endif
-						return result;
-					}
-				}
-
-				retry:
-#ifndef _MSC_VER
-				__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
-#endif
-
-				if (!status)
-				{
-					break;
-				}
-			}
-
-			// Stage 3: all failed, heavyweight fallback (see comments at the bottom)
-			if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
-			{
-				vm::reservation_op_internal(addr, [&]
-				{
-					std::invoke(op, *sptr);
-					return true;
-				});
-
-				if constexpr (Ack)
-					reservation_notifier_notify(addr, _old);
-				return;
-			}
-			else
-			{
-				auto result = std::invoke_result_t<F, T&>();
-
-				vm::reservation_op_internal(addr, [&]
-				{
-					if ((result = std::invoke(op, *sptr)))
-					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
-				});
-
-				if (Ack && result)
-					reservation_notifier_notify(addr, _old);
-				return result;
-			}
-		}
-#else
-		static_cast<void>(cpu);
-#endif /* ARCH_X64 */
 
 		// Lock reservation and perform heavyweight lock
 		reservation_shared_lock_internal(res);

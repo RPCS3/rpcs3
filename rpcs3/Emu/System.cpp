@@ -68,10 +68,6 @@ LOG_CHANNEL(sys_log, "SYS");
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
-bool g_use_rtm = false;
-u64 g_rtm_tx_limit1 = 0;
-u64 g_rtm_tx_limit2 = 0;
-
 std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
@@ -1540,9 +1536,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		m_localized_title = std::string(psf::get_string(_psf, fmt::format("TITLE_%02d", static_cast<s32>(g_cfg.sys.language.get())), m_title));
 		sys_log.notice("Localized Title: %s", GetLocalizedTitle());
 
-		// Set RTM usage
-		g_use_rtm = utils::has_rtm() && (((utils::has_mpx() && !utils::has_tsx_force_abort()) && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
-
 		{
 			// Log some extra info in case of boot
 #if defined(HAVE_VULKAN)
@@ -1553,25 +1546,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 #endif
 			sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
 
-			if (g_use_rtm && (!utils::has_mpx() || utils::has_tsx_force_abort()))
-			{
-				sys_log.warning("TSX forced by User");
-			}
-
 			// Initialize patch engine
 			g_fxo->need<patch_engine>();
 
 			// Load patches from different locations
 			g_fxo->get<patch_engine>().append_global_patches();
 			g_fxo->get<patch_engine>().append_title_patches(m_title_id);
-		}
-
-		if (g_use_rtm)
-		{
-			// Update supplementary settings
-			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
-			g_rtm_tx_limit1 = static_cast<u64>(g_cfg.core.tx_limit1_ns * _1ns);
-			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
 
 		// Set bdvd_dir
