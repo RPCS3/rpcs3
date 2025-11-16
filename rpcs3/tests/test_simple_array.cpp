@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "util/pair.hpp"
+
 #define private public
 #include "Emu/RSX/Common/simple_array.hpp"
 #undef private
@@ -239,5 +241,30 @@ namespace rsx
 		}
 
 		EXPECT_EQ(sum, 15);
+	}
+
+	TEST(SimpleArray, SimplePair)
+	{
+		struct some_struct
+		{
+			u64 v {};
+			char s[12] = "Hello World";
+		};
+		some_struct s {};
+
+		rsx::simple_array<utils::pair<int, some_struct>> arr;
+		for (int i = 0; i < 5; ++i)
+		{
+			s.v = i;
+			arr.push_back(utils::pair(i, s));
+		}
+
+		EXPECT_EQ(arr.size(), 5);
+		for (int i = 0; i < 5; ++i)
+		{
+			EXPECT_EQ(arr[i].first, i);
+			EXPECT_EQ(arr[i].second.v, i);
+			EXPECT_EQ(std::memcmp(arr[i].second.s, "Hello World", sizeof(arr[i].second.s)), 0);
+		}
 	}
 }

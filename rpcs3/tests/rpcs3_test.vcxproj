@@ -90,6 +90,8 @@
     <ClCompile Include="test_fmt.cpp" />
     <ClCompile Include="test_simple_array.cpp" />
     <ClCompile Include="test_address_range.cpp" />
+    <ClCompile Include="test_tuple.cpp" />
+    <ClCompile Include="test_pair.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(GTestInstalled)' == 'true'">

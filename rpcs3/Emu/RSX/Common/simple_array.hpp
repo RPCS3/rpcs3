@@ -16,7 +16,7 @@ namespace rsx
 	};
 
 	template <typename Ty>
-		requires std::is_trivially_destructible_v<Ty>
+		requires std::is_trivially_destructible_v<Ty> && std::is_trivially_copyable_v<Ty>
 	struct simple_array
 	{
 	public:
@@ -196,7 +196,7 @@ namespace rsx
 			if (is_local_storage())
 			{
 				// Switch to heap storage
-				_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size));
+				ensure(_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size)));
 				std::memcpy(static_cast<void*>(_data), _local_storage, size_bytes());
 			}
 			else

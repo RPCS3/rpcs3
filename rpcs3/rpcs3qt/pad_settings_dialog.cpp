@@ -16,6 +16,7 @@
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Utilities/File.h"
 
 #include "Input/pad_thread.h"
 #include "Input/gui_pad_thread.h"
@@ -86,21 +87,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	if (m_title_id.empty())
 	{
-		const QString input_config_dir = QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id));
-		QStringList config_files = gui::utils::get_dir_entries(QDir(input_config_dir), QStringList() << "*.yml");
-		QString active_config_file = QString::fromStdString(g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key));
-
-		if (!config_files.contains(active_config_file))
-		{
-			const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
-
-			if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
-			{
-				config_files.prepend(default_config_file);
-			}
-
-			active_config_file = default_config_file;
-		}
+		const auto [config_files, active_config_file] = get_config_files();
 
 		for (const QString& profile : config_files)
 		{
@@ -144,6 +131,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	// Pushbutton: Add config file
 	connect(ui->b_addConfig, &QAbstractButton::clicked, this, &pad_settings_dialog::AddConfigFile);
+
+	// Pushbutton: Remove config file
+	connect(ui->b_remConfig, &QAbstractButton::clicked, this, &pad_settings_dialog::RemoveConfigFile);
 
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Filter Noise"));
 
@@ -272,6 +262,27 @@ void pad_settings_dialog::showEvent(QShowEvent* event)
 	QDialog::showEvent(event);
 }
 
+std::pair<QStringList, QString> pad_settings_dialog::get_config_files()
+{
+	const QString input_config_dir = QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id));
+	QStringList config_files = gui::utils::get_dir_entries(QDir(input_config_dir), QStringList() << "*.yml");
+	QString active_config_file = QString::fromStdString(g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key));
+
+	if (!config_files.contains(active_config_file))
+	{
+		const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
+
+		if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
+		{
+			config_files.prepend(default_config_file);
+		}
+
+		active_config_file = default_config_file;
+	}
+
+	return std::make_pair<QStringList, QString>(std::move(config_files), std::move(active_config_file));
+}
+
 void pad_settings_dialog::InitButtons()
 {
 	m_pad_buttons = new QButtonGroup(this);
@@ -321,6 +332,7 @@ void pad_settings_dialog::InitButtons()
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
+	m_pad_buttons->addButton(ui->b_remConfig, button_ids::id_remove_config_file);
 
 	connect(m_pad_buttons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
@@ -1320,6 +1332,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_pad_begin:
 	case button_ids::id_pad_end:
 	case button_ids::id_add_config_file:
+	case button_ids::id_remove_config_file:
 	case button_ids::id_refresh:
 		return;
 	case button_ids::id_reset_parameters:
@@ -1636,6 +1649,8 @@ void pad_settings_dialog::ChangeConfig(const QString& config_file)
 
 	m_config_file = config_file.toStdString();
 
+	ui->b_remConfig->setEnabled(m_title_id.empty() && m_config_file != g_cfg_input_configs.default_config);
+
 	// Load in order to get the pad handlers
 	if (!g_cfg_input.load(m_title_id, m_config_file, true))
 	{
@@ -1810,6 +1825,44 @@ void pad_settings_dialog::AddConfigFile()
 	}
 }
 
+void pad_settings_dialog::RemoveConfigFile()
+{
+	const std::string config_to_remove = m_config_file;
+	const QString q_config_to_remove = QString::fromStdString(config_to_remove);
+
+	if (config_to_remove == g_cfg_input_configs.default_config)
+	{
+		QMessageBox::warning(this, tr("Warning!"), tr("Can't remove default configuration '%0'.").arg(q_config_to_remove));
+		return;
+	}
+
+	if (QMessageBox::question(this, tr("Remove Configuration?"), tr("Do you really want to remove the configuration '%0'?").arg(q_config_to_remove)) != QMessageBox::StandardButton::Yes)
+	{
+		return;
+	}
+
+	const std::string filepath = fmt::format("%s%s.yml", rpcs3::utils::get_input_config_dir(m_title_id), config_to_remove);
+
+	if (!fs::remove_file(filepath))
+	{
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove '%0'.").arg(QString::fromStdString(filepath)));
+		return;
+	}
+
+	const auto [config_files, active_config_file] = get_config_files();
+
+	ui->chooseConfig->setCurrentText(active_config_file);
+	ui->chooseConfig->removeItem(ui->chooseConfig->findText(q_config_to_remove));
+
+	// Save new config if we removed the currently saved config
+	if (active_config_file == q_config_to_remove)
+	{
+		save(false);
+	}
+
+	QMessageBox::information(this, tr("Removed Configuration"), tr("Removed configuration '%0'.\nThe selected configuration is now '%1'.").arg(q_config_to_remove).arg(active_config_file));
+}
+
 void pad_settings_dialog::RefreshHandlers()
 {
 	const u32 player_id = GetPlayerIndex();
@@ -1949,27 +2002,30 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	cfg.product_id.set(info.product_id);
 }
 
-void pad_settings_dialog::SaveExit()
+void pad_settings_dialog::save(bool check_duplicates)
 {
 	ApplyCurrentPlayerConfig(m_last_player_id);
 
-	for (const auto& [player_id, key] : m_duplicate_buttons)
+	if (check_duplicates)
 	{
-		if (!key.empty())
+		for (const auto& [player_id, key] : m_duplicate_buttons)
 		{
-			int result = QMessageBox::Yes;
-			m_gui_settings->ShowConfirmationBox(
-				tr("Warning!"),
-				tr("The %0 button <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
-					.arg(QString::fromStdString(g_cfg_input.player[player_id]->handler.to_string()))
-					.arg(QString::fromStdString(key))
-					.arg(player_id + 1),
-				gui::ib_same_buttons, &result, this);
+			if (!key.empty())
+			{
+				int result = QMessageBox::Yes;
+				m_gui_settings->ShowConfirmationBox(
+					tr("Warning!"),
+					tr("The %0 button <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
+						.arg(QString::fromStdString(g_cfg_input.player[player_id]->handler.to_string()))
+						.arg(QString::fromStdString(key))
+						.arg(player_id + 1),
+					gui::ib_same_buttons, &result, this);
 
-			if (result == QMessageBox::No)
-				return;
+				if (result == QMessageBox::No)
+					return;
 
-			break;
+				break;
+			}
 		}
 	}
 
@@ -1979,6 +2035,11 @@ void pad_settings_dialog::SaveExit()
 	g_cfg_input_configs.save();
 
 	g_cfg_input.save(m_title_id, m_config_file);
+}
+
+void pad_settings_dialog::SaveExit()
+{
+	save(true);
 
 	QDialog::accept();
 }

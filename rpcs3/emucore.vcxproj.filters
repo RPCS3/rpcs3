@@ -2758,6 +2758,12 @@
     <ClInclude Include="..\Utilities\deferred_op.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="util\tuple.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\pair.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
