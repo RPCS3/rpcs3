@@ -248,13 +248,6 @@ enum class rsx_fifo_mode : unsigned
 	as_ps3,
 };
 
-enum class tsx_usage
-{
-	disabled,
-	enabled,
-	forced,
-};
-
 enum class enter_button_assign
 {
 	circle, // CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CIRCLE
