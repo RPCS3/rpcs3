@@ -4,6 +4,7 @@
 #include "ProgramStateCache.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace rsx
 {
@@ -527,20 +528,47 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 		if (!src.fp16)
 		{
+			// We may need to perform gather on all the f32 lanes.
+			// First, confirm that we're actually reading all the lanes
+			// TODO: GetSRC should take a lane count argument
+			std::unordered_set<u8> to_gather;
+
+			// Unpack instructions always read the whole vector
 			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
 				dst.opcode == RSX_FP_OPCODE_UP2 ||
 				dst.opcode == RSX_FP_OPCODE_UP4 ||
 				dst.opcode == RSX_FP_OPCODE_UPB ||
 				dst.opcode == RSX_FP_OPCODE_UPG)
 			{
-				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(src.swizzle_x))
+				to_gather.insert(src.swizzle_x);
+			}
+			else if (!dst.no_dest)
+			{
+				// FIXME: No_DST inputs also require lane gather. A regalloc pre-pass will solve this.
+				// We try to guess which channels will be read. Since there is no lane count, mask input on output mask
+				if (dst.mask_x) to_gather.insert(src.swizzle_x);
+				if (dst.mask_y) to_gather.insert(src.swizzle_y);
+				if (dst.mask_z) to_gather.insert(src.swizzle_z);
+				if (dst.mask_w) to_gather.insert(src.swizzle_w);
+			}
+
+			auto& reg = temp_registers[src.tmp_reg_index];
+			bool skip_reg_assign = false;
+			for (const auto& ch : to_gather)
+			{
+				if (reg.requires_gather(ch))
 				{
 					properties.has_gather_op = true;
 					AddReg(src.tmp_reg_index, src.fp16);
 					ret = getFloatTypeName(4) + reg.gather_r();
+					skip_reg_assign = true;
 					break;
 				}
+			}
+
+			if (skip_reg_assign)
+			{
+				break;
 			}
 		}
 		else if (precision_modifier == RSX_FP_PRECISION_HALF)
