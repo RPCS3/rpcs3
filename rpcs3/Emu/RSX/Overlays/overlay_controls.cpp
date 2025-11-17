@@ -607,7 +607,7 @@ namespace rsx
 					compiled_resources_temp.clear();
 					auto& cmd_text = compiled_resources_temp.append({});
 
-					cmd_text.config.set_font(font_ref ? font_ref : fontmgr::get("Arial", 12));
+					cmd_text.config.set_font(get_font());
 					cmd_text.config.color = fore_color;
 					cmd_text.verts = render_text(text.c_str(), static_cast<f32>(x), static_cast<f32>(y));
 
