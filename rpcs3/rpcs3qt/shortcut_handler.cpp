@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "shortcut_handler.h"
+#include "gui_settings.h"
 
 LOG_CHANNEL(shortcut_log, "Shortcuts");
 

@@ -1,13 +1,14 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "gui_settings.h"
 
 #include <QListWidget>
 #include <QLineEdit>
 #include <QDialog>
 
 #include <memory>
+
+class gui_settings;
 
 class elf_memory_dumping_dialog : public QDialog
 {

@@ -1,12 +1,13 @@
 #pragma once
 
-#include "gui_settings.h"
 #include "shortcut_settings.h"
 
 #include <QShortcut>
 #include <QWidget>
 
 #include <map>
+
+class gui_settings;
 
 class shortcut_handler : public QObject
 {
