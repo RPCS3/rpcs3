@@ -195,6 +195,7 @@ bool FragmentProgramDecompiler::is_delay_slot() const
 	if (dst.opcode != RSX_FP_OPCODE_MOV ||            // These slots are always populated with MOV
 		dst.no_dest ||                                // Must have a sink
 		src0.reg_type != RSX_FP_REGISTER_TYPE_TEMP || // Must read from reg
+		dst.dest_reg != src0.tmp_reg_index         || // Must be a write-to-self
 		dst.fp16 ||                                   // Always full lane. We need to collect more data on this but it won't matter
 		dst.saturate ||                               // Precision modifier
 		(dst.prec != RSX_FP_PRECISION_REAL &&
