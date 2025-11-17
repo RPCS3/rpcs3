@@ -2,6 +2,7 @@
 
 #include "FragmentProgramDecompiler.h"
 #include "ProgramStateCache.h"
+#include "Emu/RSX/Common/simple_array.hpp"
 
 #include <algorithm>
 #include <unordered_set>
@@ -34,30 +35,21 @@ enum VectorLane : u8
 
 u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) const
 {
-	auto decode = [&](const std::string& expr) -> u32
-	{
-		const auto ops = fmt::split(expr, { "," });
-		u32 ret = 0;
-
-		if (ops.size() <= operand)
-		{
-			return 0;
-		}
-
-		const auto& m = ops[operand];
-		if (m.find("x") != std::string::npos) ret &= 1;
-		if (m.find("y") != std::string::npos) ret &= (1 << 1);
-		if (m.find("z") != std::string::npos) ret &= (1 << 2);
-		if (m.find("w") != std::string::npos) ret &= (1 << 3);
-
-		return ret;
-	};
-
-	constexpr u32 x = 0b1;
-	constexpr u32 xy = 0b11;
-	constexpr u32 xyz = 0b111;
+	constexpr u32 x    = 0b0001;
+	constexpr u32 y    = 0b0010;
+	constexpr u32 z    = 0b0100;
+	constexpr u32 w    = 0b1000;
+	constexpr u32 xy   = 0b0011;
+	constexpr u32 xyz  = 0b0111;
 	constexpr u32 xyzw = 0b1111;
 	constexpr u32 use_dst_mask = 1u << 31;
+
+	const auto decode = [&](const rsx::simple_array<u32>& masks) -> u32
+	{
+		return operand < masks.size()
+			? masks[operand]
+			: 0u;
+	};
 
 	switch (opcode)
 	{
@@ -73,7 +65,7 @@ u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) cons
 		case RSX_FP_OPCODE_DP4:
 			return xyzw;
 		case RSX_FP_OPCODE_DST:
-			return decode("yz, yw");
+			return decode({ y|z, y|w });
 		case RSX_FP_OPCODE_MIN:
 		case RSX_FP_OPCODE_MAX:
 			return xyzw | use_dst_mask;
@@ -153,19 +145,19 @@ u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) cons
 		case RSX_FP_OPCODE_UP16:
 			return x;
 		case RSX_FP_OPCODE_BEM:
-			return decode("xy, xy, xyzw");
+			return decode({ xy, xy, xyzw });
 		case RSX_FP_OPCODE_PKG:
 			return xyzw;
 		case RSX_FP_OPCODE_UPG:
 			return x;
 		case RSX_FP_OPCODE_DP2A:
-			return decode("xy, xy, x");
+			return decode({ xy, xy, x });
 		case RSX_FP_OPCODE_TXL:
 		case RSX_FP_OPCODE_TXB:
-			return decode("xy, x");
+			return decode({ xy, x });
 		case RSX_FP_OPCODE_TEXBEM:
 		case RSX_FP_OPCODE_TXPBEM:
-			return decode("xy, xy, xyzw"); // Coordinate generated from BEM operation
+			return decode({ xy, xy, xyzw }); // Coordinate generated from BEM operation
 		case RSX_FP_OPCODE_BEMLUM:
 			fmt::throw_exception("Unimplemented BEMLUM instruction"); // Unused
 		case RSX_FP_OPCODE_REFL:
@@ -178,9 +170,9 @@ u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) cons
 			return xyz;
 		case RSX_FP_OPCODE_DIV:
 		case RSX_FP_OPCODE_DIVSQ:
-			return decode("xyzw, x");
+			return decode({ xyzw, x });
 		case RSX_FP_OPCODE_LIF:
-			return decode("yw");
+			return decode({ y|w });
 		case RSX_FP_OPCODE_FENCT:
 		case RSX_FP_OPCODE_FENCB:
 		case RSX_FP_OPCODE_BRK:
