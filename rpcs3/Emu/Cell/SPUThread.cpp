@@ -3874,7 +3874,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 						return is_range_limited;
 					}
 
-					if (type == spu_itype::BRSL)
+					if (type == spu_itype::BRSL && op.rt == 0)
 					{
 						// Insert a virtual return-to-next, because it is usually a call
 						results[1] = addr + 4;
