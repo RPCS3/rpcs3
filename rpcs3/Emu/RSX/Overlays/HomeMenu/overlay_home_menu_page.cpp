@@ -160,7 +160,7 @@ namespace rsx
 						// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 						if (!is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default)
 						{
-							Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+							play_sound(sound_effect::accept);
 						}
 						return func(button_press);
 					}
@@ -169,7 +169,7 @@ namespace rsx
 			}
 			case pad_button::circle:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				if (parent)
 				{
 					set_current_page(parent);
@@ -244,7 +244,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			if (!is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 			return page_navigation::stay;
 		}
