@@ -447,7 +447,7 @@ void gs_frame::toggle_recording()
 		// Play a sound
 		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
 		{
-			Emu.GetCallbacks().play_sound(sound_path);
+			Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
 		}
 		else
 		{
@@ -1070,7 +1070,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					Emu.GetCallbacks().play_sound(sound_path);
+					Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
 				}
 				else
 				{
