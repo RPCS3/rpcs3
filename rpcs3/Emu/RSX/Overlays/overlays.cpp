@@ -15,7 +15,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void play_sound(sound_effect sound)
+		std::string get_sound_filepath(sound_effect sound)
 		{
 			const auto get_sound_filename = [sound]()
 			{
@@ -34,7 +34,12 @@ namespace rsx
 				fmt::throw_exception("Unreachable (sound=%d)", static_cast<u32>(sound));
 			};
 
-			Emu.GetCallbacks().play_sound(fmt::format("%ssounds/%s.wav", fs::get_config_dir(), get_sound_filename()));
+			return fmt::format("%ssounds/%s.wav", fs::get_config_dir(), get_sound_filename());
+		}
+
+		void play_sound(sound_effect sound, std::optional<f32> volume)
+		{
+			Emu.GetCallbacks().play_sound(get_sound_filepath(sound), volume);
 		}
 
 		thread_local DECLARE(user_interface::g_thread_bit) = 0;

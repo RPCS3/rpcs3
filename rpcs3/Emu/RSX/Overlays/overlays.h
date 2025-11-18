@@ -29,7 +29,8 @@ namespace rsx
 			trophy,
 		};
 
-		void play_sound(sound_effect sound);
+		std::string get_sound_filepath(sound_effect sound);
+		void play_sound(sound_effect sound, std::optional<f32> volume = std::nullopt);
 
 		// Bitfield of UI signals to overlay manager
 		enum status_bits : u32
