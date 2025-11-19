@@ -1219,7 +1219,7 @@ namespace rsx
 
 			if (result.size() > 1)
 			{
-				std::sort(result.begin(), result.end(), [](const auto &a, const auto &b)
+				result.sort([](const auto &a, const auto &b)
 				{
 					if (a.surface->last_use_tag == b.surface->last_use_tag)
 					{
