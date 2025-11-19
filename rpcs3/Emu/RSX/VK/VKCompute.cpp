@@ -111,12 +111,6 @@ namespace vk
 			m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
 			auto handle = m_shader.compile();
 
-			VkPipelineShaderStageCreateInfo shader_stage{};
-			shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shader_stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-			shader_stage.module = handle;
-			shader_stage.pName = "main";
-
 			VkComputePipelineCreateInfo create_info
 			{
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,

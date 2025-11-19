@@ -278,7 +278,7 @@ if(USE_FAUDIO)
 			target_compile_definitions(FAudio-static INTERFACE -DHAVE_FAUDIO)
 			set(FAUDIO_TARGET FAudio-static)
 		else()
-			message(FATAL_ERROR
+			message(WARNING
 				"-- RPCS3: 3rdparty FAudio requires SDL 3.2.0 or newer. Since a valid SDL3"
 				">=3.2.0 version cannot be found, building with FAudio will be skipped.")
 			set(USE_FAUDIO OFF CACHE BOOL "Disabled FAudio with SDL < 3.2.0" FORCE)

@@ -267,24 +267,6 @@
           <item>
            <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
             <item>
-             <widget class="QGroupBox" name="gb_tsx">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>TSX Instructions</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_tsx_layout">
-               <item>
-                <widget class="QComboBox" name="enableTSX"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gb_spu_threads">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">

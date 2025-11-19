@@ -170,7 +170,17 @@
              <item>
               <widget class="QPushButton" name="b_addConfig">
                <property name="text">
-                <string>Add Configuration</string>
+                <string>Add New</string>
+               </property>
+               <property name="autoDefault">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="b_remConfig">
+               <property name="text">
+                <string>Remove</string>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>

@@ -197,22 +197,6 @@ void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](tsx_usage value)
-	{
-		switch (value)
-		{
-		case tsx_usage::disabled: return "Disabled";
-		case tsx_usage::enabled: return "Enabled";
-		case tsx_usage::forced: return "Forced";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<rsx_fifo_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](rsx_fifo_mode value)

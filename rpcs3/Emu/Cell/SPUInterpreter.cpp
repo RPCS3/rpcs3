@@ -291,7 +291,7 @@ bool ROT(spu_thread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 4; i++)
 	{
-		spu.gpr[op.rt]._u32[i] = utils::rol32(a._u32[i], b._u32[i]);
+		spu.gpr[op.rt]._u32[i] = std::rotl<u32>(a._u32[i], b._u32[i]);
 	}
 	return true;
 }
@@ -346,7 +346,7 @@ bool ROTH(spu_thread& spu, spu_opcode_t op)
 
 	for (u32 i = 0; i < 8; i++)
 	{
-		spu.gpr[op.rt]._u16[i] = utils::rol16(a._u16[i], b._u16[i]);
+		spu.gpr[op.rt]._u16[i] = std::rotl<u16>(a._u16[i], b._u16[i]);
 	}
 	return true;
 }

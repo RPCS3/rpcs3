@@ -38,26 +38,9 @@ constexpr u32 s_reg_max = spu_recompiler_base::s_reg_max;
 template<typename T>
 struct span_less
 {
-	static int compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
+	static auto compare(const std::span<T>& lhs, const std::span<T>& rhs) noexcept
 	{
-		// TODO: Replace with std::lexicographical_compare_three_way when it becomes available to all compilers
-		for (usz i = 0, last = std::min(lhs.size(), rhs.size()); i != last; i++)
-		{
-			const T vl = lhs[i];
-			const T vr = rhs[i];
-
-			if (vl != vr)
-			{
-				return vl < vr ? -1 : 1;
-			}
-		}
-
-		if (lhs.size() != rhs.size())
-		{
-			return lhs.size() < rhs.size() ? -1 : 1;
-		}
-
-		return 0;
+		return std::lexicographical_compare_three_way(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 	}
 
 	bool operator()(const std::span<T>& lhs, const std::span<T>& rhs) const noexcept
@@ -1309,7 +1292,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
 	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
 
-	const int cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
+	const auto cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp0 < 0)
 		return true;
@@ -1320,7 +1303,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	lhs_data = {data.data(), lhs_offs};
 	rhs_data = {rhs.data.data(), rhs_offs};
 
-	const int cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
+	const auto cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
 
 	if (cmp1 < 0)
 		return true;
@@ -2333,7 +2316,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 		// Search for BRSL LR and BRASL LR or BR
 		// TODO: BISL
 		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
-		const v128 cleared_i16 = gv_and32(inst, v128::from32p(utils::rol32(~0xffff, 7)));
+		const v128 cleared_i16 = gv_and32(inst, v128::from32p(std::rotl<u32>(~0xffff, 7)));
 		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
 		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
 		const v128 eq_br = gv_eq32(cleared_i16, v128::from32p(0x64u << 23));
@@ -5396,7 +5379,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 									const usz block_tail = duplicate_positions[it_begin - it_tail];
 
 									// Check if the distance is precisely two times from the end
-									if (reg_state_it.size() - block_start != utils::rol64(reg_state_it.size() - block_tail, 1))
+									if (reg_state_it.size() - block_start != std::rotl<u64>(reg_state_it.size() - block_tail, 1))
 									{
 										continue;
 									}
