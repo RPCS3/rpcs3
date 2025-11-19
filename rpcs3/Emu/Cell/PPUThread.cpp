@@ -827,6 +827,15 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 		return;
 	}
 
+	if (size % 4 != 0) {
+		if (g_cfg.core.ppu_debug)
+		{
+			ppu_log.error("ppu_register_function_at(0x%x): size not word aligned", addr);
+		}
+
+		return;
+	}
+
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
