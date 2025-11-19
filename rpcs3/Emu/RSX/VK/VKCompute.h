@@ -476,21 +476,8 @@ namespace vk
 			params.logd = rsx::ceil_log2(depth);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
-			u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
-
-			// Check if we need to do subaddressing and adjust invocation count accordingly
-			switch (sizeof(_BlockType))
-			{
-			case 1:
-				linear_invocations /= 4;
-				break;
-			case 2:
-				linear_invocations /= 2;
-				break;
-			default:
-				break;
-			}
-
+			const u32 texels_per_dword = std::max<u32>(4u / sizeof(_BlockType), 1u);      // For block sizes less than 4 bytes wide
+			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation) / texels_per_dword;
 			compute_task::run(cmd, linear_invocations);
 		}
 	};
