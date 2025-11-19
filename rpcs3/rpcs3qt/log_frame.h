@@ -38,6 +38,7 @@ protected:
 private Q_SLOTS:
 	void UpdateUI();
 private:
+	void show_disk_usage() const;
 	void SetLogLevel(logs::level lev) const;
 	void SetTTYLogging(bool val) const;
 
@@ -72,6 +73,7 @@ private:
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
+	QAction* m_show_disk_usage_act = nullptr;
 	QAction* m_perform_goto_on_debugger = nullptr;
 	QAction* m_perform_goto_thread_on_debugger = nullptr;
 	QAction* m_perform_show_in_mem_viewer = nullptr;

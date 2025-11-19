@@ -4,6 +4,7 @@
 #include "hex_validator.h"
 #include "memory_viewer_panel.h"
 
+#include "Emu/system_utils.hpp"
 #include "Utilities/lockless.h"
 #include "util/asm.hpp"
 
@@ -16,6 +17,8 @@
 
 #include <deque>
 #include <mutex>
+
+LOG_CHANNEL(sys_log, "SYS");
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;
@@ -165,6 +168,31 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
 }
 
+void log_frame::show_disk_usage() const
+{
+	QString text;
+	std::vector<std::pair<std::string, u64>> vfs_data_size = rpcs3::utils::get_vfs_disk_usage();
+
+	for (const auto& [key, value] : vfs_data_size)
+	{
+		if (!text.isEmpty())
+		{
+			text += tr(",    ");
+		}
+
+		text += tr("%0: %1").arg(key).arg(gui::utils::format_byte_size(value));
+	}
+
+	if (!text.isEmpty())
+	{
+		text = tr("VFS DISK USAGE:    %0    -    ").arg(text);
+	}
+
+	text += tr("CACHE DISK USAGE: %0").arg(gui::utils::format_byte_size(rpcs3::utils::get_cache_disk_usage()));
+
+	sys_log.success("%s", text);
+}
+
 void log_frame::SetLogLevel(logs::level lev) const
 {
 	switch (lev)
@@ -243,6 +271,12 @@ void log_frame::CreateAndConnectActions()
 	{
 		m_old_tty_text.clear();
 		m_tty->clear();
+	});
+
+	m_show_disk_usage_act = new QAction(tr("Show Disk Usage"), this);
+	connect(m_show_disk_usage_act, &QAction::triggered, [this]()
+	{
+		show_disk_usage();
 	});
 
 	m_perform_goto_on_debugger = new QAction(tr("Go-To On The Debugger"), this);
@@ -369,6 +403,9 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_log->createStandardContextMenu();
 		menu->addAction(m_clear_act);
+		menu->addSeparator();
+		menu->addAction(m_show_disk_usage_act);
+		menu->addSeparator();
 		menu->addAction(m_perform_goto_on_debugger);
 		menu->addAction(m_perform_goto_thread_on_debugger);
 		menu->addAction(m_perform_show_in_mem_viewer);
