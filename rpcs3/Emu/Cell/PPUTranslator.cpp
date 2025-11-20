@@ -593,6 +593,11 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			{
 				callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target_last - base), type);
 				cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
+
+				if (g_cfg.core.ppu_prof)
+				{
+					m_ir->CreateStore(m_ir->getInt32(target_last), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_cia - m_locals)));
+				}
 			}
 		}
 		else

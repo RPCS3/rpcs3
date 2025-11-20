@@ -5,9 +5,6 @@
 #include "util/atomic.hpp"
 #include <functional>
 
-extern bool g_use_rtm;
-extern u64 g_rtm_tx_limit1;
-
 #ifdef ARCH_X64
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -19,70 +16,6 @@ extern u64 g_rtm_tx_limit1;
 
 namespace utils
 {
-	// Transaction helper (result = pair of success and op result, or just bool)
-	template <typename F, typename R = std::invoke_result_t<F>>
-	inline auto tx_start(F op)
-	{
-#if defined(ARCH_X64)
-		uint status = -1;
-
-		for (auto stamp0 = get_tsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = get_tsc())
-		{
-#ifndef _MSC_VER
-			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
-#else
-			status = _xbegin();
-
-			if (status != _XBEGIN_STARTED) [[unlikely]]
-			{
-				goto retry;
-			}
-#endif
-
-			if constexpr (std::is_void_v<R>)
-			{
-				std::invoke(op);
-#ifndef _MSC_VER
-				__asm__ volatile ("xend;" ::: "memory");
-#else
-				_xend();
-#endif
-				return true;
-			}
-			else
-			{
-				auto result = std::invoke(op);
-#ifndef _MSC_VER
-				__asm__ volatile ("xend;" ::: "memory");
-#else
-				_xend();
-#endif
-				return std::make_pair(true, std::move(result));
-			}
-
-			retry:
-#ifndef _MSC_VER
-			__asm__ volatile ("movl %%eax, %0;" : "=r" (status) :: "memory");
-#endif
-			if (!status) [[unlikely]]
-			{
-				break;
-			}
-		}
-#else
-		static_cast<void>(op);
-#endif
-
-		if constexpr (std::is_void_v<R>)
-		{
-			return false;
-		}
-		else
-		{
-			return std::make_pair(false, R());
-		}
-	};
-
 	// Try to prefetch to Level 2 cache since it's not split to data/code on most processors
 	template <typename T>
 	constexpr void prefetch_exec(T func)
