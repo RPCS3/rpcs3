@@ -717,7 +717,7 @@ namespace gl
 				}
 
 				rsx::io_buffer io_buf = dst_buffer;
-				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 4096);
+				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 1024);
 				auto op = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 
 				// Define upload region
