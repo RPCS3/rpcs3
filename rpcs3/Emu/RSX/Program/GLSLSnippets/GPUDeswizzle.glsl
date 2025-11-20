@@ -110,7 +110,7 @@ void write16(inout uint accumulator, const in uint subword, const in uint src_id
 
 	if (subword == 1)
 	{
-		data_out[dst_id / 2] = accumulator;
+		data_out[dst_id / 2] = %f(accumulator);
 	}
 }
 
@@ -167,7 +167,7 @@ void main()
 #if USE_8BIT_ADDRESSING
 	for (uint subword = 0, accumulator = 0; subword < 4; ++subword, ++x) {
 #elif USE_16BIT_ADDRESSING
-	for (uint subword = 0, temp = 0; subword < 2; ++subword, ++x) {
+	for (uint subword = 0, accumulator = 0; subword < 2; ++subword, ++x) {
 #endif
 
 		uint src_texel_id = get_z_index(x, y, z);
