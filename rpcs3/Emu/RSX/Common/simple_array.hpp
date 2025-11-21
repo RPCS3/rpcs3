@@ -24,7 +24,7 @@ namespace rsx
 		template <size_t Align>
 		void* realloc(void* prev_ptr, [[maybe_unused]] size_t prev_size, size_t new_size)
 		{
-#ifdef _WIn32
+#ifdef _WIN32
 			return _aligned_realloc(prev_ptr, new_size, Align);
 #else
 			void* ret = std::aligned_alloc(Align, new_size);
