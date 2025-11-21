@@ -403,8 +403,6 @@ namespace vk
 
 		cs_deswizzle_3d()
 		{
-			ensure((sizeof(_BlockType) & 3) == 0); // "Unsupported block type"
-
 			ssbo_count = 2;
 			use_push_constants = true;
 			push_constants_size = 28;
@@ -438,8 +436,10 @@ namespace vk
 				{ "%set", "set = 0" },
 				{ "%push_block", "push_constant" },
 				{ "%ws", std::to_string(optimal_group_size) },
-				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
-				{ "%f", transform }
+				{ "%_wordcount", std::to_string(std::max<u32>(sizeof(_BlockType) / 4u, 1u)) },
+				{ "%f", transform },
+				{ "%_8bit", sizeof(_BlockType) == 1 ? "1" : "0" },
+				{ "%_16bit", sizeof(_BlockType) == 2 ? "1" : "0" },
 			};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
@@ -476,7 +476,8 @@ namespace vk
 			params.logd = rsx::ceil_log2(depth);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
-			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
+			const u32 texels_per_dword = std::max<u32>(4u / sizeof(_BlockType), 1u);      // For block sizes less than 4 bytes wide
+			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation) / texels_per_dword;
 			compute_task::run(cmd, linear_invocations);
 		}
 	};
