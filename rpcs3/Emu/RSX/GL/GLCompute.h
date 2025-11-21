@@ -338,10 +338,10 @@ namespace gl
 			params.logd = rsx::ceil_log2(depth);
 			set_parameters(cmd);
 
-			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
-			const u32 texels_per_dword = std::max<u32>(4u / sizeof(_BlockType), 1u);      // For block sizes less than 4 bytes wide
-			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation) / texels_per_dword;
-			compute_task::run(cmd, linear_invocations);
+			const u32 word_count_per_invocation = std::max<u32>(sizeof(_BlockType) / 4u, 1u);
+			const u32 num_bytes_per_invocation = (word_count_per_invocation * 4u * optimal_group_size);
+			const u32 workgroup_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
+			compute_task::run(cmd, workgroup_invocations);
 		}
 	};
 
