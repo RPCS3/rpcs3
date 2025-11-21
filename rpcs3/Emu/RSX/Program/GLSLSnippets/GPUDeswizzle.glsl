@@ -3,6 +3,9 @@ R"(
 
 #define SSBO_LOCATION(x) (x + %loc)
 
+#define USE_8BIT_ADDRESSING %_8bit
+#define USE_16BIT_ADDRESSING %_16bit
+
 layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 
 layout(%set, binding=SSBO_LOCATION(0), std430) buffer ssbo0{ uint data_in[]; };
@@ -98,11 +101,56 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 	return offset;
 }
 
+#if USE_16BIT_ADDRESSING
+
+void write16(inout uint accumulator, const in uint subword, const in uint src_id, const in uint dst_id)
+{
+	const uint masks[] = { 0x0000FFFF, 0xFFFF0000 };
+	accumulator |= data_in[src_id / 2] & masks[subword];
+
+	if (subword == 1)
+	{
+		data_out[dst_id / 2] = %f(accumulator);
+	}
+}
+
+#elif USE_8BIT_ADDRESSING
+
+void write8(inout uint accumulator, const in uint subword, const in uint src_id, const in uint dst_id)
+{
+	const uint masks[] = { 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000 };
+	accumulator |= data_in[src_id / 4] & masks[subword];
+
+	if (subword == 3)
+	{
+		data_out[dst_id / 4] = accumulator;
+	}
+}
+
+#else
+
+void write32(const in uint word_count, in uint src_id, in uint dst_id)
+{
+	for (uint i = 0; i < word_count; ++i)
+	{
+		uint value = data_in[src_id++];
+		data_out[dst_id++] = %f(value);
+	}
+}
+
+#endif
+
 void main()
 {
 	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);
 	uint texel_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;
 	uint word_count = %_wordcount;
+
+#if USE_8BIT_ADDRESSING
+	texel_id *= 4;        // Each invocation consumes 4 texels
+#elif USE_16BIT_ADDRESSING
+	texel_id *= 2;        // Each invocation consumes 2 texels
+#endif
 
 	if (!init_invocation_properties(texel_id))
 		return;
@@ -116,14 +164,25 @@ void main()
 	uint y = (slice_offset / row_length);
 	uint x = (slice_offset % row_length);
 
-	uint src_texel_id = get_z_index(x, y, z);
-	uint dst_id = (texel_id * word_count);
-	uint src_id = (src_texel_id + invocation.data_offset) * word_count;
+#if USE_8BIT_ADDRESSING
+	for (uint subword = 0, accumulator = 0; subword < 4; ++subword, ++x) {
+#elif USE_16BIT_ADDRESSING
+	for (uint subword = 0, accumulator = 0; subword < 2; ++subword, ++x) {
+#endif
 
-	for (uint i = 0; i < word_count; ++i)
-	{
-		uint value = data_in[src_id++];
-		data_out[dst_id++] = %f(value);
+		uint src_texel_id = get_z_index(x, y, z);
+		uint dst_id = (texel_id * word_count);
+		uint src_id = (src_texel_id + invocation.data_offset) * word_count;
+
+#if USE_8BIT_ADDRESSING
+		write8(accumulator, subword, src_id, dst_id);
 	}
+#elif USE_16BIT_ADDRESSING
+		write16(accumulator, subword, src_id, dst_id);
+	}
+#else
+	write32(word_count, src_id, dst_id);
+#endif
+
 }
 )"
