@@ -14,7 +14,7 @@ namespace rsx
 		template <size_t Align>
 		void* malloc(size_t size)
 		{
-#ifdef _MSC_VER
+#ifdef _WIN32
 			return _aligned_malloc(size, Align);
 #else
 			return std::aligned_alloc(Align, size);
@@ -24,7 +24,7 @@ namespace rsx
 		template <size_t Align>
 		void* realloc(void* prev_ptr, [[maybe_unused]] size_t prev_size, size_t new_size)
 		{
-#ifdef _MSC_VER
+#ifdef _WIn32
 			return _aligned_realloc(prev_ptr, new_size, Align);
 #else
 			void* ret = std::aligned_alloc(Align, new_size);
@@ -35,7 +35,7 @@ namespace rsx
 
 		static inline void free(void* ptr)
 		{
-#ifdef _MSC_VER
+#ifdef _WIN32
 			_aligned_free(ptr);
 #else
 			std::free(ptr);
