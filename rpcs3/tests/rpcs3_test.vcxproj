@@ -88,6 +88,7 @@
   <ItemGroup>
     <ClCompile Include="test.cpp" />
     <ClCompile Include="test_fmt.cpp" />
+    <ClCompile Include="test_rsx_cfg.cpp" />
     <ClCompile Include="test_simple_array.cpp" />
     <ClCompile Include="test_address_range.cpp" />
     <ClCompile Include="test_tuple.cpp" />

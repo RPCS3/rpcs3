@@ -3,6 +3,8 @@
 #include "FragmentProgramRegister.h"
 #include "RSXFragmentProgram.h"
 
+#include "Assembler/CFG.h"
+
 #include <sstream>
 #include <unordered_map>
 
