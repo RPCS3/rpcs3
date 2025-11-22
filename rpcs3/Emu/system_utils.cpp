@@ -101,6 +101,48 @@ namespace rpcs3::utils
 		return worker();
 	}
 
+	std::vector<std::pair<std::string, u64>> get_vfs_disk_usage()
+	{
+		std::vector<std::pair<std::string, u64>> disk_usage;
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_hdd0_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_hdd0", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_hdd1_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_hdd1", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_flash_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_flash", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_flash2_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_flash2", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_flash3_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_flash3", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_bdvd_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"dev_bdvd", data_size});
+		}
+
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_games_dir(), 1); data_size != umax)
+		{
+			disk_usage.push_back({"games", data_size});
+		}
+
+		return disk_usage;
+	}
+
 	std::string get_emu_dir()
 	{
 		const std::string& emu_dir_ = g_cfg_vfs.emulator_dir;
@@ -120,6 +162,36 @@ namespace rpcs3::utils
 	std::string get_hdd1_dir()
 	{
 		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, get_emu_dir());
+	}
+
+	std::string get_flash_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.dev_flash, get_emu_dir());
+	}
+
+	std::string get_flash2_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.dev_flash2, get_emu_dir());
+	}
+
+	std::string get_flash3_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.dev_flash3, get_emu_dir());
+	}
+
+	std::string get_bdvd_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, get_emu_dir());
+	}
+
+	u64 get_cache_disk_usage()
+	{
+		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_cache_dir(), 1); data_size != umax)
+		{
+			return data_size;
+		}
+
+		return 0;
 	}
 
 	std::string get_cache_dir()
