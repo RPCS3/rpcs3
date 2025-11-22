@@ -6,7 +6,7 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-brew install -f --overwrite --quiet pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+brew install -f --overwrite --quiet pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
@@ -66,8 +66,7 @@ export LD_LIBRARY_PATH="$BREW_PATH/lib"
 
 export VULKAN_SDK
 VULKAN_SDK="$BREW_PATH/opt/molten-vk"
-ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib" || true
-export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+ln -s "$BREW_PATH/opt/vulkan-loader/lib/libvulkan.dylib" "$VULKAN_SDK/lib/libvulkan.dylib" || true
 
 export LLVM_DIR
 LLVM_DIR="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER"
