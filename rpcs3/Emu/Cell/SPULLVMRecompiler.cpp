@@ -1284,7 +1284,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(m_lsptr, dest), llvm::MaybeAlign{16});
 		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(spu_ptr(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x70)), llvm::MaybeAlign{16});
 
-		const bool is_accurate_op = !!g_cfg.core.spu_accurate_reservations;
+		const bool is_accurate_op = true || !!g_cfg.core.spu_accurate_reservations;
 
 		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
 
