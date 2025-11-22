@@ -1115,7 +1115,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			bf_t<u32, 30, 2> type;
 			bf_t<u32, 29, 1> runtime16_select;
 			bf_t<u32, 28, 1> no_notify;
-			bf_t<u32, 18, 8> reg;
+			bf_t<u32, 18, 8> reg_or_alignment;
 			bf_t<u32, 0, 18> off18;
 			bf_t<u32, 0, 8> reg2;
 		} info = std::bit_cast<putllc16_info>(range.end);
@@ -1170,15 +1170,28 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 		else if (info.type == v_relative)
 		{
+			if (info.reg_or_alignment != 0xff)
+			{
+				const auto short_op = llvm::BasicBlock::Create(m_context, "__putllc16_short_op", m_function);
+				const auto heavy_op = llvm::BasicBlock::Create(m_context, "__putllc16_heavy_op", m_function);
+
+				m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->getInt32(info.reg_or_alignment), m_ir->CreateAnd(m_base_pc, 0x7f)), heavy_op, short_op);
+				m_ir->SetInsertPoint(heavy_op);
+				update_pc();
+				call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
+				m_ir->CreateBr(_final);
+				m_ir->SetInsertPoint(short_op);
+			}
+
 			dest = m_ir->CreateAnd(get_pc(spu_branch_target(info.off18 + m_base)), 0x3fff0);
 		}
 		else if (info.type == v_reg_offs)
 		{
-			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg), m_ir->getInt32(info.off18)), 0x3fff0);
+			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg_or_alignment), m_ir->getInt32(info.off18)), 0x3fff0);
 		}
 		else
 		{
-			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg), get_reg32(info.reg2)), 0x3fff0);
+			dest = m_ir->CreateAnd(m_ir->CreateAdd(get_reg32(info.reg_or_alignment), get_reg32(info.reg2)), 0x3fff0);
 		}
 
 		if (g_cfg.core.rsx_accurate_res_access)
@@ -1268,7 +1281,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(m_lsptr, dest), llvm::MaybeAlign{16});
 		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(spu_ptr(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x70)), llvm::MaybeAlign{16});
 
-		const bool is_accurate_op = !!g_cfg.core.spu_accurate_reservations;
+		const bool is_accurate_op = true || !!g_cfg.core.spu_accurate_reservations;
 
 		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
 
