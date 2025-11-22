@@ -4970,19 +4970,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		bool put_active = false; // PUTLLC happened
 		bool get_rdatomic = false; // True if MFC_RdAtomicStat was read after GETLLAR
 		u32 mem_count = 0;
+		u32 break_cause = 100;
+		u32 break_pc = SPU_LS_SIZE;
 
 		// Return old state for error reporting
 		atomic16_t discard()
 		{
 			const u32 pc = lsa_pc;
 			const u32 last_pc = lsa_last_pc;
+			const u32 cause = break_cause;
+			const u32 break_pos = break_pc;
 
 			const atomic16_t old = *this;
 			*this = atomic16_t{};
 
 			// Keep some members
-			lsa_pc = pc;
-			lsa_last_pc = last_pc;
+			this->lsa_pc = pc;
+			this->lsa_last_pc = last_pc;
+			this->break_cause = cause;
+			this->break_pc = break_pos;
 			return old;
 		}
 
@@ -5189,15 +5195,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			if (previous.active && likely_putllc_loop && getllar_starts.contains(previous.lsa_pc))
 			{
-				const bool is_first = !std::exchange(getllar_starts[previous.lsa_pc], true);
+				had_putllc_evaluation = true;
 
-				if (!is_first)
+				if (cause != 24)
 				{
+					atomic16->break_cause = cause; 
+					atomic16->break_pc = pos; 
 					return;
 				}
 
-				had_putllc_evaluation = true;
-
+				cause = atomic16->break_cause;
+				getllar_starts[previous.lsa_pc] = true;
 				g_fxo->get<putllc16_statistics_t>().breaking_reason[cause]++;
 
 				if (!spu_log.notice)
@@ -5205,7 +5213,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					return;
 				}
 
-				std::string break_error = fmt::format("PUTLLC pattern breakage [%x mem=%d lsa_const=%d cause=%u] (lsa_pc=0x%x)", pos, previous.mem_count, u32{!previous.ls_offs.is_const()} * 2 + previous.lsa.is_const(), cause, previous.lsa_pc);
+				std::string break_error = fmt::format("PUTLLC pattern breakage [%x mem=%d lsa_const=%d cause=%u] (lsa_pc=0x%x)", atomic16->break_pc, previous.mem_count, u32{!previous.ls_offs.is_const()} * 2 + previous.lsa.is_const(), cause, previous.lsa_pc);
 
 				const auto values = sort_breakig_reasons(g_fxo->get<putllc16_statistics_t>().breaking_reason);
 
@@ -6381,6 +6389,24 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						invalidate = false;
 					}
 				}
+				else if (atomic16->break_cause != 100 && atomic16->lsa_pc != SPU_LS_SIZE)
+				{
+					const auto it = atomic16_all.find(pos);
+
+					if (it == atomic16_all.end())
+					{
+						// Ensure future failure
+						atomic16_all.emplace(pos, *atomic16);
+						break_putllc16(24, FN(x.active = true, x)(as_rvalue(*atomic16)));
+					}
+					else if (it->second.active && atomic16->break_cause != 100)
+					{
+						it->second = *atomic16;
+						break_putllc16(24, FN(x.active = true, x)(as_rvalue(*atomic16)));
+					}
+
+					atomic16->break_cause = 100;
+				}
 
 				break;
 			}
@@ -7348,6 +7374,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
+	}
+
+	if (!m_patterns.empty())
+	{
+		std::string out_dump;
+		dump(result, out_dump);
+		spu_log.notice("Dump SPU Function with pattern(s):\n%s", out_dump);
 	}
 
 	for (u32 i = 0; i < result.data.size(); i++)
