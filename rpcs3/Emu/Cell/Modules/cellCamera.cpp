@@ -1139,8 +1139,10 @@ error_code cellCameraGetBufferInfo(s32 dev_num, vm::ptr<CellCameraInfo> info)
 	return CELL_OK;
 }
 
-error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
+error_code cellCameraGetBufferInfoEx(ppu_thread& ppu, s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellCamera.notice("cellCameraGetBufferInfoEx(dev_num=%d, info=0x%x)", dev_num, info);
 
 	// calls cellCameraGetBufferInfo
@@ -1151,10 +1153,16 @@ error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info
 	}
 
 	auto& g_camera = g_fxo->get<camera_thread>();
-	std::lock_guard lock(g_camera.mutex);
 
-	*info = g_camera.info;
+	CellCameraInfoEx info_out;
 
+	{
+		std::lock_guard lock(g_camera.mutex);
+
+		info_out = g_camera.info;
+	}
+
+	*info = info_out;
 	return CELL_OK;
 }
 

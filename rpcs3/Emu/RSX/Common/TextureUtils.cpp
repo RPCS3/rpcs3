@@ -1096,80 +1096,65 @@ namespace rsx
 			fmt::throw_exception("Wrong format 0x%x", format);
 		}
 
-		if (word_size)
+		if (!word_size)
 		{
-			if (word_size == 1)
+			return result;
+		}
+
+		result.element_size = word_size;
+		result.block_length = words_per_block;
+
+		bool require_cpu_swizzle = !caps.supports_hw_deswizzle && is_swizzled;
+		bool require_cpu_byteswap = word_size > 1 && !caps.supports_byteswap;
+
+		if (is_swizzled && caps.supports_hw_deswizzle)
+		{
+			result.require_deswizzle = true;
+		}
+
+		if (!require_cpu_byteswap && !require_cpu_swizzle)
+		{
+			result.require_swap = (word_size > 1);
+
+			if (caps.supports_zero_copy)
 			{
-				if (is_swizzled)
-				{
-					copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-				}
-				else if (caps.supports_zero_copy)
-				{
-					result.require_upload = true;
-					result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-				}
-				else
-				{
-					copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-				}
+				result.require_upload = true;
+				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), word_size * words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 			}
+			else if (word_size == 1)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 2)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const u16>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 4)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u32>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+
+			return result;
+		}
+
+		if (word_size == 1)
+		{
+			ensure(is_swizzled);
+			copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+		}
+		else if (word_size == 2)
+		{
+			if (is_swizzled)
+				copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 			else
-			{
-				result.element_size = word_size;
-				result.block_length = words_per_block;
-
-				bool require_cpu_swizzle = !caps.supports_hw_deswizzle && is_swizzled;
-				bool require_cpu_byteswap = !caps.supports_byteswap;
-
-				if (is_swizzled && caps.supports_hw_deswizzle)
-				{
-					if (word_size == 4 || (((word_size * words_per_block) & 3) == 0))
-					{
-						result.require_deswizzle = true;
-					}
-					else
-					{
-						require_cpu_swizzle = true;
-					}
-				}
-
-				if (!require_cpu_byteswap && !require_cpu_swizzle)
-				{
-					result.require_swap = true;
-
-					if (caps.supports_zero_copy)
-					{
-						result.require_upload = true;
-						result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), word_size * words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 2)
-					{
-						copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const u16>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 4)
-					{
-						copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u32>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-				}
-				else
-				{
-					if (word_size == 2)
-					{
-						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-						else
-							copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 4)
-					{
-						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-						else
-							copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-				}
-			}
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+		}
+		else if (word_size == 4)
+		{
+			if (is_swizzled)
+				copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+			else
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 		}
 
 		return result;

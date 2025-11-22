@@ -71,7 +71,14 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		// Flip image if necessary
 		if (flip_horizontally || flip_vertically)
 		{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+			Qt::Orientations orientation {};
+			orientation.setFlag(Qt::Orientation::Horizontal, flip_horizontally);
+			orientation.setFlag(Qt::Orientation::Vertical, flip_vertically);
+			image.flip(orientation);
+#else
 			image.mirror(flip_horizontally, flip_vertically);
+#endif
 		}
 
 		if (image.format() != QImage::Format_RGBA8888)

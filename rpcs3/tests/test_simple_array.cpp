@@ -267,4 +267,40 @@ namespace rsx
 			EXPECT_EQ(std::memcmp(arr[i].second.s, "Hello World", sizeof(arr[i].second.s)), 0);
 		}
 	}
+
+	TEST(SimpleArray, DataAlignment_SmallVector)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(2);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_HeapAlloc)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(128);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_Overrides)
+	{
+		rsx::simple_array<std::byte, 16> arr(4);
+		rsx::simple_array<std::byte, 128> arr2(4);
+
+		const auto data_ptr1 = reinterpret_cast<uintptr_t>(arr.data());
+		const auto data_ptr2 = reinterpret_cast<uintptr_t>(arr2.data());
+
+		EXPECT_EQ(data_ptr1 & 15, 0);
+		EXPECT_EQ(data_ptr2 & 127, 0);
+	}
 }

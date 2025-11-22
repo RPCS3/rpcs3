@@ -2856,7 +2856,7 @@ namespace rsx
 
 			for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 			{
-				const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
+				const u32 io = std::rotl<u32>(iomap_table.io[ea], 32 - 20);
 
 				if (io + 1)
 				{
@@ -2886,7 +2886,7 @@ namespace rsx
 
 						while (to_unmap)
 						{
-							bit = (std::countr_zero<u64>(utils::rol64(to_unmap, 0 - bit)) + bit);
+							bit = (std::countr_zero<u64>(std::rotl<u64>(to_unmap, 0 - bit)) + bit);
 							to_unmap &= ~(1ull << bit);
 
 							constexpr u16 null_entry = 0xFFFF;

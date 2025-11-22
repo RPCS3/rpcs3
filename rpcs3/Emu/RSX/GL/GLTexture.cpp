@@ -36,6 +36,16 @@ namespace gl
 	{
 		switch (block_size)
 		{
+		case 1:
+			gl::get_compute_task<gl::cs_deswizzle_3d<u8, WordType, SwapBytes>>()->run(
+				cmd, dst, dst_offset, src, src_offset,
+				data_length, width, height, depth, 1);
+			break;
+		case 2:
+			gl::get_compute_task<gl::cs_deswizzle_3d<u16, WordType, SwapBytes>>()->run(
+				cmd, dst, dst_offset, src, src_offset,
+				data_length, width, height, depth, 1);
+			break;
 		case 4:
 			gl::get_compute_task<gl::cs_deswizzle_3d<u32, WordType, SwapBytes>>()->run(
 				cmd, dst, dst_offset, src, src_offset,
@@ -580,7 +590,7 @@ namespace gl
 
 	void fill_texture(gl::command_context& cmd, texture* dst, int format,
 			const std::vector<rsx::subresource_layout> &input_layouts,
-			bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
+			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::span<std::byte> staging_buffer)
 	{
 		const auto& driver_caps = gl::get_driver_caps();
 		rsx::texture_uploader_capabilities caps
@@ -707,7 +717,7 @@ namespace gl
 				}
 
 				rsx::io_buffer io_buf = dst_buffer;
-				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 4096);
+				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 1024);
 				auto op = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 
 				// Define upload region
@@ -748,39 +758,54 @@ namespace gl
 						g_upload_transfer_buffer.copy_to(&g_deswizzle_scratch_buffer.get(), upload_scratch_mem.second, deswizzle_data_offset, static_cast<u32>(image_linear_size));
 
 						// 2.2 Apply compute transform to deswizzle input and dump it in compute_scratch_mem
-						ensure(op.element_size == 2 || op.element_size == 4);
 						const auto block_size = op.element_size * op.block_length;
 
 						if (op.require_swap)
 						{
 							mem_layout.swap_bytes = false;
 
-							if (op.element_size == 4) [[ likely ]]
+							switch (op.element_size)
 							{
-								do_deswizzle_transformation<u32, true>(cmd, block_size,
+							case 1:
+								do_deswizzle_transformation<u8, true>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
 									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-							}
-							else
-							{
+								break;
+							case 2:
 								do_deswizzle_transformation<u16, true>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
 									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+								break;
+							case 4:
+								do_deswizzle_transformation<u32, true>(cmd, block_size,
+									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+								break;
+							default:
+								fmt::throw_exception("Unimplemented element size deswizzle");
 							}
 						}
 						else
 						{
-							if (op.element_size == 4) [[ likely ]]
+							switch (op.element_size)
 							{
-								do_deswizzle_transformation<u32, false>(cmd, block_size,
+							case 1:
+								do_deswizzle_transformation<u8, false>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
 									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-							}
-							else
-							{
+								break;
+							case 2:
 								do_deswizzle_transformation<u16, false>(cmd, block_size,
 									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
 									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+								break;
+							case 4:
+								do_deswizzle_transformation<u32, false>(cmd, block_size,
+									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+								break;
+							default:
+								fmt::throw_exception("Unimplemented element size deswizzle");
 							}
 						}
 
@@ -816,7 +841,7 @@ namespace gl
 	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
-		rsx::simple_array<std::byte> data_upload_buf;
+		rsx::simple_array<std::byte, sizeof(u128)> data_upload_buf;
 
 		rsx::texture_uploader_capabilities caps { .supports_dxt = gl::get_driver_caps().EXT_texture_compression_s3tc_supported };
 		if (rsx::is_compressed_host_format(caps, gcm_format))

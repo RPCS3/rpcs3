@@ -1,11 +1,13 @@
 #pragma once
 
-#include "gui_settings.h"
+#include "gui_save.h"
 
 #include <QListWidget>
 #include <QLabel>
 
 #include <memory>
+
+class gui_settings;
 
 namespace cfg
 {

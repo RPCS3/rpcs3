@@ -69,8 +69,9 @@ namespace vk
 
 		void on_query_pool_released(std::unique_ptr<vk::query_pool>& pool);
 
-		template<template<class> class _List>
-		void free_queries(vk::command_buffer& cmd, _List<u32>& list)
+		template<typename T>
+			requires std::ranges::range<T> && std::same_as<std::ranges::range_value_t<T>, u32> // List of u32
+		void free_queries(vk::command_buffer& cmd, T& list)
 		{
 			for (const auto index : list)
 			{

@@ -1,4 +1,5 @@
 #include "shortcut_settings.h"
+#include "gui_settings.h"
 
 using namespace gui::shortcuts;
 

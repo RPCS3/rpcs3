@@ -35,37 +35,43 @@ void gl_gs_frame::reset()
 
 draw_context_t gl_gs_frame::make_context()
 {
+	// This whole function should run in the main GUI thread.
+	// This really matters on Windows where a lot of wgl internals are stashed in the TEB.
+
 	auto context = new GLContext();
 	context->handle = new QOpenGLContext();
+	bool success = true;
 
-	if (m_primary_context)
+	Emu.BlockingCallFromMainThread([&]()
 	{
-		QOffscreenSurface* surface = nullptr;
-
-		// Workaround for the Qt warning: "Attempting to create QWindow-based QOffscreenSurface outside the gui thread. Expect failures."
-		Emu.BlockingCallFromMainThread([&]()
+		if (m_primary_context)
 		{
-			surface = new QOffscreenSurface();
+			QOffscreenSurface* surface = new QOffscreenSurface();
 			surface->setFormat(m_format);
 			surface->create();
-		});
 
-		// Share resources with the first created context
-		context->handle->setShareContext(m_primary_context->handle);
-		context->surface = surface;
-		context->owner = true;
-	}
-	else
-	{
-		// This is the first created context, all others will share resources with this one
-		m_primary_context = context;
-		context->surface = this;
-		context->owner = false;
-	}
+			// Share resources with the first created context
+			context->handle->setShareContext(m_primary_context->handle);
+			context->surface = surface;
+			context->owner = true;
+		}
+		else
+		{
+			// This is the first created context, all others will share resources with this one
+			m_primary_context = context;
+			context->surface = this;
+			context->owner = false;
+		}
 
-	context->handle->setFormat(m_format);
+		context->handle->setFormat(m_format);
 
-	if (!context->handle->create())
+		if (!context->handle->create())
+		{
+			success = false;
+		}
+	});
+
+	if (!success)
 	{
 		fmt::throw_exception("Failed to create OpenGL context");
 	}
@@ -110,8 +116,8 @@ void gl_gs_frame::delete_context(draw_context_t ctx)
 	gl_ctx->handle->doneCurrent();
 
 #ifdef _MSC_VER
-	//AMD driver crashes when executing wglDeleteContext
-	//Catch with SEH
+	// AMD driver crashes when executing wglDeleteContext, probably because the current thread does not own the context.
+	// Catch with SEH
 	__try
 	{
 		delete gl_ctx->handle;

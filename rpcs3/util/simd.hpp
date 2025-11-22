@@ -2986,7 +2986,7 @@ inline v128 gv_rol16(const v128& a, const v128& b)
 #else
 	v128 r;
 	for (u32 i = 0; i < 8; i++)
-		r._u16[i] = utils::rol16(a._u16[i], b._u16[i]);
+		r._u16[i] = std::rotl<u16>(a._u16[i], b._u16[i]);
 	return r;
 #endif
 }
@@ -3020,7 +3020,7 @@ inline v128 gv_rol32(const v128& a, const v128& b)
 #else
 	v128 r;
 	for (u32 i = 0; i < 4; i++)
-		r._u32[i] = utils::rol32(a._u32[i], b._u32[i]);
+		r._u32[i] = std::rotl<u32>(a._u32[i], b._u32[i]);
 	return r;
 #endif
 }
@@ -3039,7 +3039,7 @@ inline v128 gv_rol32(const v128& a)
 #else
 	v128 r;
 	for (u32 i = 0; i < 4; i++)
-		r._u32[i] = utils::rol32(a._u32[i], count);
+		r._u32[i] = std::rotl<u32>(a._u32[i], count);
 	return r;
 #endif
 }

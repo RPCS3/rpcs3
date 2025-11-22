@@ -1,6 +1,7 @@
 #include "shortcut_dialog.h"
 #include "ui_shortcut_dialog.h"
 #include "shortcut_settings.h"
+#include "gui_settings.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
