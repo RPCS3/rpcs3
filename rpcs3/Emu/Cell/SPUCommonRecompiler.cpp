@@ -4969,6 +4969,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		bool select_16_or_0_at_runtime = false;
 		bool put_active = false; // PUTLLC happened
 		bool get_rdatomic = false; // True if MFC_RdAtomicStat was read after GETLLAR
+		u32 required_pc = SPU_LS_SIZE; // Require program to be location specific for this optimization (SPU_LS_SIZE - no requirement)
 		u32 mem_count = 0;
 		u32 break_cause = 100;
 		u32 break_pc = SPU_LS_SIZE;
@@ -6375,6 +6376,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							existing.ls_invalid |= atomic16->ls_invalid;
 							existing.ls_access |= atomic16->ls_access;
 							existing.mem_count = std::max<u32>(existing.mem_count, atomic16->mem_count);
+							existing.required_pc = std::min<u32>(existing.required_pc, atomic16->required_pc);
 							existing.select_16_or_0_at_runtime |= atomic16->select_16_or_0_at_runtime;
 						}
 
@@ -6477,6 +6479,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis
 				const u32 offs = spu_branch_target(pos - result.lower_bound, op.si16);
+				const u32 true_offs = spu_branch_target(pos, op.si16);
+
+				// Make this optimization depend on the location of the program
+				atomic16->required_pc = result.lower_bound;
 
 				if (atomic16->lsa.is_const() && [&]()
 				{
@@ -6500,6 +6506,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}())
 				{
 					// Ignore memory access in this case
+				}
+				else if (atomic16->lsa.is_const() && !atomic16->lsa.compare_with_mask_indifference(true_offs, SPU_LS_MASK_128))
+				{
+					// Same
 				}
 				else if (atomic16->ls_invalid && is_store)
 				{
@@ -7254,26 +7264,32 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			continue;
 		}
 
+		union putllc16_or_0_info
+		{
+			u64 data;
+			bf_t<u64, 32, 18> required_pc;
+			bf_t<u64, 30, 2> type;
+			bf_t<u64, 29, 1> runtime16_select;
+			bf_t<u64, 28, 1> no_notify;
+			bf_t<u64, 18, 8> reg;
+			bf_t<u64, 0, 18> off18;
+			bf_t<u64, 0, 8> reg2;
+		} value{};
+
 		auto& stats = g_fxo->get<putllc16_statistics_t>();
 		had_putllc_evaluation = true;
 
 		if (!pattern.ls_write)
 		{
+			if (pattern.required_pc != SPU_LS_SIZE)
+			{
+				value.required_pc = pattern.required_pc;
+			}
+
 			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
-			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa);
+			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa, value.data);
 			continue;
 		}
-
-		union putllc16_info
-		{
-			u32 data;
-			bf_t<u32, 30, 2> type;
-			bf_t<u32, 29, 1> runtime16_select;
-			bf_t<u32, 28, 1> no_notify;
-			bf_t<u32, 18, 8> reg;
-			bf_t<u32, 0, 18> off18;
-			bf_t<u32, 0, 8> reg2;
-		} value{};
 
 		enum : u32
 		{
@@ -7304,6 +7320,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		value.runtime16_select = pattern.select_16_or_0_at_runtime;
 		value.reg = s_reg_max;
+
+		if (pattern.required_pc != SPU_LS_SIZE)
+		{
+			value.required_pc = pattern.required_pc;
+		}
 
 		if (pattern.ls.is_const())
 		{
@@ -7360,7 +7381,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(read_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
-			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point);
+			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point, 0);
 
 			spu_log.error("Channel Loop Pattern Detected! Report to developers! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
 		}
@@ -8445,19 +8466,10 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 	return walkby_state;
 }
 
-void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u32 end)
+void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u64 info)
 {
-	if (end == umax)
-	{
-		end = start;
-	}
-
-	m_patterns[start] = pattern_info{utils::address_range32::start_end(start, end)};
-
-	for (u32 i = start; i <= (fill_all ? end : start); i += 4)
-	{
-		m_inst_attrs[i / 4] = attr;
-	}
+	m_patterns[start] = pattern_info{info};
+	m_inst_attrs[start / 4] = attr;
 }
 
 extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)
