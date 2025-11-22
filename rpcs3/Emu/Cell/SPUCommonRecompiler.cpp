@@ -3069,6 +3069,39 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				values[op.rt] = pos + 4;
 			}
 
+			const u32 pos_next = wa;
+
+			bool is_no_return = false;
+
+			if (pos_next >= lsa && pos_next < limit)
+			{
+				const u32 data_next = ls[pos_next / 4];
+				const auto type_next = g_spu_itype.decode(data_next);
+				const auto flag_next = g_spu_iflag.decode(data_next);
+				const auto op_next = spu_opcode_t{data_next};
+
+				if (!(type_next & spu_itype::zregmod) && !(type_next & spu_itype::branch))
+				{
+					if (auto iflags = g_spu_iflag.decode(data_next))
+					{
+						if (+flag_next & +spu_iflag::use_ra)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.ra < 10);
+						}
+
+						if (+flag_next & +spu_iflag::use_rb)
+						{
+							is_no_return = is_no_return || (op_next.rb >= 4 && op_next.rb < 10);
+						}
+
+						if (type_next & spu_itype::_quadrop && +iflags & +spu_iflag::use_rc)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.rb < 10);
+						}
+					}
+				}
+			}
+
 			if (af & vf::is_const)
 			{
 				const u32 target = spu_branch_target(av);
@@ -3105,7 +3138,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					limit = std::min<u32>(limit, target);
 				}
 
-				if (sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				if (!is_no_return && sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
 					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
@@ -3294,9 +3327,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				spu_log.notice("[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
 			}
 
-			if (type == spu_itype::BI || sl)
+			if (type == spu_itype::BI || sl || is_no_return)
 			{
-				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe)
+				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe || is_no_return)
 				{
 					m_targets[pos];
 				}
@@ -3333,9 +3366,42 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
+			const u32 pos_next = wa;
+
+			bool is_no_return = false;
+
+			if (pos_next >= lsa && pos_next < limit)
+			{
+				const u32 data_next = ls[pos_next / 4];
+				const auto type_next = g_spu_itype.decode(data_next);
+				const auto flag_next = g_spu_iflag.decode(data_next);
+				const auto op_next = spu_opcode_t{data_next};
+
+				if (!(type_next & spu_itype::zregmod) && !(type_next & spu_itype::branch))
+				{
+					if (auto iflags = g_spu_iflag.decode(data_next))
+					{
+						if (+flag_next & +spu_iflag::use_ra)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.ra < 10);
+						}
+
+						if (+flag_next & +spu_iflag::use_rb)
+						{
+							is_no_return = is_no_return || (op_next.rb >= 4 && op_next.rb < 10);
+						}
+
+						if (type_next & spu_itype::_quadrop && +iflags & +spu_iflag::use_rc)
+						{
+							is_no_return = is_no_return || (op_next.rc >= 4 && op_next.rc < 10);
+						}
+					}
+				}
+			}
+
 			m_targets[pos].push_back(target);
 
-			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+			if (!is_no_return && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
 				m_ret_info[pos / 4 + 1] = true;
 				m_entry_info[pos / 4 + 1] = true;
@@ -3343,7 +3409,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				add_block(pos + 4);
 			}
 
-			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
+			if (!is_no_return && g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
 				m_entry_info[target / 4] = true;
 				add_block(target);
