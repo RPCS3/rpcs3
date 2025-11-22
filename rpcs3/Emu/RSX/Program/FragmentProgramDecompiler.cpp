@@ -2,8 +2,10 @@
 
 #include "FragmentProgramDecompiler.h"
 #include "ProgramStateCache.h"
+#include "Emu/RSX/Common/simple_array.hpp"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace rsx
 {
@@ -30,6 +32,191 @@ enum VectorLane : u8
 	Z = 2,
 	W = 3,
 };
+
+u32 FragmentProgramDecompiler::get_src_vector_mask(u32 opcode, u32 operand) const
+{
+	constexpr u32 x    = 0b0001;
+	constexpr u32 y    = 0b0010;
+	constexpr u32 z    = 0b0100;
+	constexpr u32 w    = 0b1000;
+	constexpr u32 xy   = 0b0011;
+	constexpr u32 xyz  = 0b0111;
+	constexpr u32 xyzw = 0b1111;
+	constexpr u32 use_dst_mask = 1u << 31;
+
+	const auto decode = [&](const rsx::simple_array<u32>& masks) -> u32
+	{
+		return operand < masks.size()
+			? masks[operand]
+			: 0u;
+	};
+
+	switch (opcode)
+	{
+		case RSX_FP_OPCODE_NOP:
+			return 0;
+		case RSX_FP_OPCODE_MOV:
+		case RSX_FP_OPCODE_MUL:
+		case RSX_FP_OPCODE_ADD:
+		case RSX_FP_OPCODE_MAD:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_DP3:
+			return xyz;
+		case RSX_FP_OPCODE_DP4:
+			return xyzw;
+		case RSX_FP_OPCODE_DST:
+			return decode({ y|z, y|w });
+		case RSX_FP_OPCODE_MIN:
+		case RSX_FP_OPCODE_MAX:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_SLT:
+		case RSX_FP_OPCODE_SGE:
+		case RSX_FP_OPCODE_SLE:
+		case RSX_FP_OPCODE_SGT:
+		case RSX_FP_OPCODE_SNE:
+		case RSX_FP_OPCODE_SEQ:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_FRC:
+		case RSX_FP_OPCODE_FLR:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_KIL:
+			return 0;
+		case RSX_FP_OPCODE_PK4:
+			return xyzw;
+		case RSX_FP_OPCODE_UP4:
+			return x;
+		case RSX_FP_OPCODE_DDX:
+		case RSX_FP_OPCODE_DDY:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_TEX:
+		case RSX_FP_OPCODE_TXD:
+			switch (m_prog.get_texture_dimension(dst.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				return x;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				return xy;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				return xyz;
+			default:
+				return 0;
+			}
+		case RSX_FP_OPCODE_TXP:
+			switch (m_prog.get_texture_dimension(dst.tex_num))
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				return xy;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				return xyz;
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				return xyzw;
+			default:
+				return 0;
+			}
+		case RSX_FP_OPCODE_RCP:
+		case RSX_FP_OPCODE_RSQ:
+		case RSX_FP_OPCODE_EX2:
+		case RSX_FP_OPCODE_LG2:
+			return x;
+		case RSX_FP_OPCODE_LIT:
+			return xyzw;
+		case RSX_FP_OPCODE_LRP:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_STR:
+		case RSX_FP_OPCODE_SFL:
+			return xyzw | use_dst_mask;
+		case RSX_FP_OPCODE_COS:
+		case RSX_FP_OPCODE_SIN:
+			return x;
+		case RSX_FP_OPCODE_PK2:
+			return xy;
+		case RSX_FP_OPCODE_UP2:
+			return x;
+		case RSX_FP_OPCODE_POW:
+			fmt::throw_exception("Unimplemented POW instruction."); // Unused ??
+		case RSX_FP_OPCODE_PKB:
+			return xyzw;
+		case RSX_FP_OPCODE_UPB:
+			return x;
+		case RSX_FP_OPCODE_PK16:
+			return xy;
+		case RSX_FP_OPCODE_UP16:
+			return x;
+		case RSX_FP_OPCODE_BEM:
+			return decode({ xy, xy, xyzw });
+		case RSX_FP_OPCODE_PKG:
+			return xyzw;
+		case RSX_FP_OPCODE_UPG:
+			return x;
+		case RSX_FP_OPCODE_DP2A:
+			return decode({ xy, xy, x });
+		case RSX_FP_OPCODE_TXL:
+		case RSX_FP_OPCODE_TXB:
+			return decode({ xy, x });
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXPBEM:
+			return decode({ xy, xy, xyzw }); // Coordinate generated from BEM operation
+		case RSX_FP_OPCODE_BEMLUM:
+			fmt::throw_exception("Unimplemented BEMLUM instruction"); // Unused
+		case RSX_FP_OPCODE_REFL:
+			return xyzw;
+		case RSX_FP_OPCODE_TIMESWTEX:
+			fmt::throw_exception("Unimplemented TIMESWTEX instruction"); // Unused
+		case RSX_FP_OPCODE_DP2:
+			return xy;
+		case RSX_FP_OPCODE_NRM:
+			return xyz;
+		case RSX_FP_OPCODE_DIV:
+		case RSX_FP_OPCODE_DIVSQ:
+			return decode({ xyzw, x });
+		case RSX_FP_OPCODE_LIF:
+			return decode({ y|w });
+		case RSX_FP_OPCODE_FENCT:
+		case RSX_FP_OPCODE_FENCB:
+		case RSX_FP_OPCODE_BRK:
+		case RSX_FP_OPCODE_CAL:
+		case RSX_FP_OPCODE_IFE:
+		case RSX_FP_OPCODE_LOOP:
+		case RSX_FP_OPCODE_REP:
+		case RSX_FP_OPCODE_RET:
+			// Flow control. Special registers are provided for these outside the common file
+			return 0;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+bool FragmentProgramDecompiler::is_delay_slot() const
+{
+	if (dst.opcode != RSX_FP_OPCODE_MOV ||            // These slots are always populated with MOV
+		dst.no_dest ||                                // Must have a sink
+		src0.reg_type != RSX_FP_REGISTER_TYPE_TEMP || // Must read from reg
+		dst.dest_reg != src0.tmp_reg_index         || // Must be a write-to-self
+		dst.fp16 ||                                   // Always full lane. We need to collect more data on this but it won't matter
+		dst.saturate ||                               // Precision modifier
+		(dst.prec != RSX_FP_PRECISION_REAL &&
+			dst.prec != RSX_FP_PRECISION_UNKNOWN))    // Cannot have precision modifiers
+	{
+		return false;
+	}
+
+	// Check if we have precision modifiers on the source
+	if (src0.abs || src0.neg || src1.scale)
+	{
+		return false;
+	}
+
+	if (dst.mask_x && src0.swizzle_x != 0) return false;
+	if (dst.mask_y && src0.swizzle_y != 1) return false;
+	if (dst.mask_z && src0.swizzle_z != 2) return false;
+	if (dst.mask_w && src0.swizzle_w != 3) return false;
+
+	return true;
+}
 
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
@@ -166,7 +353,10 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		}
 	}
 
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
+	if (!is_delay_slot())
+	{
+		temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
+	}
 }
 
 void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
@@ -503,22 +693,33 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::s
 	AddCode(lhs + " = _select(" + lhs + ", " + src_prefix + rhs + ", " + cond + ");");
 }
 
-template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
+template<typename T>
+	requires std::is_same_v<T, SRC0> || std::is_same_v<T, SRC1> || std::is_same_v<T, SRC2>
+std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	u32 precision_modifier = 0;
+	u32 operand_idx = umax;
 
 	if constexpr (std::is_same_v<T, SRC0>)
 	{
 		precision_modifier = src1.src0_prec_mod;
+		operand_idx = 0;
 	}
 	else if constexpr (std::is_same_v<T, SRC1>)
 	{
 		precision_modifier = src1.src1_prec_mod;
+		operand_idx = 1;
 	}
 	else if constexpr (std::is_same_v<T, SRC2>)
 	{
 		precision_modifier = src1.src2_prec_mod;
+		operand_idx = 2;
+	}
+	else
+	{
+		// Unreachable unless we add another SRC type
+		fmt::throw_exception("Invalid SRC input");
 	}
 
 	switch (src.reg_type)
@@ -527,20 +728,44 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 		if (!src.fp16)
 		{
-			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
-				dst.opcode == RSX_FP_OPCODE_UP2 ||
-				dst.opcode == RSX_FP_OPCODE_UP4 ||
-				dst.opcode == RSX_FP_OPCODE_UPB ||
-				dst.opcode == RSX_FP_OPCODE_UPG)
+			// We need to determine if any vector lanes need a gather op
+			// In theory, splitting can also be required, but that is currently unsupported
+			u32 src_lane_mask = is_delay_slot() ? 0u : get_src_vector_mask(dst.opcode, operand_idx);
+			std::unordered_set<u8> lanes_to_gather;
+
+			const bool apply_dst_mask = src_lane_mask & (1u << 31);
+			src_lane_mask &= ~(1u << 31);
+
+			if (apply_dst_mask && !dst.no_dest)
 			{
-				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(src.swizzle_x))
+				if (!dst.mask_x) src_lane_mask &= ~(1u << 0);
+				if (!dst.mask_y) src_lane_mask &= ~(1u << 1);
+				if (!dst.mask_z) src_lane_mask &= ~(1u << 2);
+				if (!dst.mask_w) src_lane_mask &= ~(1u << 3);
+			}
+
+			if (src_lane_mask & (1u << 0)) lanes_to_gather.insert(src.swizzle_x);
+			if (src_lane_mask & (1u << 1)) lanes_to_gather.insert(src.swizzle_y);
+			if (src_lane_mask & (1u << 2)) lanes_to_gather.insert(src.swizzle_z);
+			if (src_lane_mask & (1u << 3)) lanes_to_gather.insert(src.swizzle_w);
+
+			auto& reg = temp_registers[src.tmp_reg_index];
+			bool skip_reg_assign = false;
+			for (const auto& ch : lanes_to_gather)
+			{
+				if (reg.requires_gather(ch))
 				{
 					properties.has_gather_op = true;
 					AddReg(src.tmp_reg_index, src.fp16);
 					ret = getFloatTypeName(4) + reg.gather_r();
+					skip_reg_assign = true;
 					break;
 				}
+			}
+
+			if (skip_reg_assign)
+			{
+				break;
 			}
 		}
 		else if (precision_modifier == RSX_FP_PRECISION_HALF)
