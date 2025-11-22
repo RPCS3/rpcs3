@@ -416,7 +416,6 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	assert(ptr_inst->getResultElementType() == m_ir->getPtrTy());
 
 	const auto faddr = m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst);
-	const auto faddr_int = m_ir->CreatePtrToInt(faddr, get_type<uptr>());
 	const auto pos_32 = m_reloc ? m_ir->CreateAdd(func_pc, m_seg0) : func_pc;
 	const auto pos = m_ir->CreateShl(pos_32, 1);
 	const auto ptr = m_ir->CreatePtrAdd(m_exec, pos);
@@ -427,7 +426,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto seg_val = m_ir->CreateTrunc(m_ir->CreateLShr(m_seg0, 13), get_type<u16>());
 
 	// Store to jumptable
-	m_ir->CreateStore(faddr_int, ptr);
+	m_ir->CreateStore(faddr, ptr);
 	m_ir->CreateStore(seg_val, seg_ptr);
 
 	// Increment index and branch back to loop

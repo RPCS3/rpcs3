@@ -157,7 +157,7 @@ std::array<u8, PASSPHRASE_KEY_LEN> sc_combine_laid_paid(s64 laid, s64 paid)
 {
 	const std::string paid_laid = fmt::format("%016llx%016llx", laid, paid);
 	std::array<u8, PASSPHRASE_KEY_LEN> out{};
-	hex_to_bytes(out.data(), paid_laid.c_str(), PASSPHRASE_KEY_LEN * 2);
+	hex_to_bytes(out.data(), paid_laid, PASSPHRASE_KEY_LEN * 2);
 	return out;
 }
 
