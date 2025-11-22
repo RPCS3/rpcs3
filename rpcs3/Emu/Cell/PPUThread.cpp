@@ -827,13 +827,13 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 		return;
 	}
 
-	size = utils::align<u32>(size + addr % 4, 4);
-	addr &= -4;
-
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
+
+	size = utils::align<u32>(size + addr % 4, 4);
+	addr &= -4;
 
 	// Initialize interpreter cache
 	while (size)

@@ -17,6 +17,21 @@ namespace rsx
 {
 	namespace overlays
 	{
+		enum class sound_effect
+		{
+			cursor,
+			accept,
+			cancel,
+			osk_accept,
+			osk_cancel,
+			dialog_ok,
+			dialog_error,
+			trophy,
+		};
+
+		std::string get_sound_filepath(sound_effect sound);
+		void play_sound(sound_effect sound, std::optional<f32> volume = std::nullopt);
+
 		// Bitfield of UI signals to overlay manager
 		enum status_bits : u32
 		{

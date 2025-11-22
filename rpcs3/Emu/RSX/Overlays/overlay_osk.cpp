@@ -823,7 +823,7 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskenter.wav");
+				play_sound(sound_effect::osk_accept);
 				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
 				play_cursor_sound = false;
 				break;
@@ -840,7 +840,7 @@ namespace rsx
 			}
 			case pad_button::cross:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskenter.wav");
+				play_sound(sound_effect::osk_accept);
 				on_accept();
 				m_reset_pulse = true;
 				play_cursor_sound = false;
@@ -848,7 +848,7 @@ namespace rsx
 			}
 			case pad_button::circle:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskcancel.wav");
+				play_sound(sound_effect::osk_cancel);
 				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 				play_cursor_sound = false;
 				break;
@@ -890,7 +890,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			if (play_cursor_sound && (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default))
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 
 			if (m_reset_pulse)
