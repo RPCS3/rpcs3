@@ -133,6 +133,9 @@
     <Filter Include="Emu\GPU\RSX\Program\MSAA">
       <UniqueIdentifier>{ce6d6b90-8313-4273-b46c-d92bd450c002}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Assembler">
+      <UniqueIdentifier>{d99df916-8a99-428b-869a-9f14ac0ab411}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1371,6 +1374,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
       <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2763,6 +2769,12 @@
     </ClInclude>
     <ClInclude Include="util\pair.hpp">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\CFG.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\IR.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
