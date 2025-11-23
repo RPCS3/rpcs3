@@ -9,6 +9,18 @@
 #include <util/v128.hpp>
 #include <span>
 
+#if defined(ARCH_ARM64)
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+#undef FORCE_INLINE
+#include "Emu/CPU/sse2neon.h"
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic pop
+#endif
+#endif
 
 namespace rsx::assembler
 {
