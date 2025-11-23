@@ -1,17 +1,14 @@
 #include "stdafx.h"
 
-#pragma optimize("", off)
-
 #include "CFG.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
-#include "Emu/RSX/Program/ProgramStateCache.h"
 
 #include <util/asm.hpp>
+#include <util/v128.hpp>
 #include <span>
 
-using namespace program_hash_util;
 
 namespace rsx::assembler
 {
@@ -75,6 +72,13 @@ namespace rsx::assembler
 			return graph.push(parent, id, edge_type);
 		};
 
+		auto includes_literal_constant = [&]()
+		{
+			return src0.reg_type == RSX_FP_REGISTER_TYPE_CONSTANT ||
+				src1.reg_type == RSX_FP_REGISTER_TYPE_CONSTANT ||
+				src2.reg_type == RSX_FP_REGISTER_TYPE_CONSTANT;
+		};
+
 		while (!end)
 		{
 			BasicBlock** found = end_blocks.find_if(FN(x->id == pc));
@@ -110,12 +114,20 @@ namespace rsx::assembler
 			bb->instructions.push_back({});
 			auto& ir_inst = bb->instructions.back();
 			std::memcpy(ir_inst.bytecode, &decoded._u32[0], 16);
+			ir_inst.length = 4;
+			ir_inst.addr = pc * 16;
 
 			switch (opcode)
 			{
+			case RSX_FP_OPCODE_BRK:
+				break;
 			case RSX_FP_OPCODE_CAL:
 				// Unimplemented. Also unused by the RSX compiler
 				fmt::throw_exception("Unimplemented FP CAL instruction.");
+				break;
+			case RSX_FP_OPCODE_FENCT:
+				break;
+			case RSX_FP_OPCODE_FENCB:
 				break;
 			case RSX_FP_OPCODE_RET:
 				// Outside a subroutine, this doesn't mean much. The main block can conditionally return to stop execution early.
@@ -143,8 +155,13 @@ namespace rsx::assembler
 				break;
 			}
 			default:
-				if (fragment_program_utils::is_any_src_constant(decoded))
+				if (includes_literal_constant())
 				{
+					const v128 constant_literal = v128::loadu(data, pc);
+					v128 decoded_literal = decode_instruction(constant_literal);
+
+					std::memcpy(ir_inst.bytecode + 4, &decoded_literal._u32[0], 16);
+					ir_inst.length += 4;
 					pc++;
 				}
 			}
@@ -152,6 +169,14 @@ namespace rsx::assembler
 			pc++;
 		}
 
+		// Sort edges for each block by distance
+		for (auto& block : graph.blocks)
+		{
+			std::sort(block.pred.begin(), block.pred.end(), FN(x.from->id > y.from->id));
+			std::sort(block.succ.begin(), block.succ.end(), FN(x.to->id < y.to->id));
+		}
+
+		// Sort block nodes by distance
 		graph.blocks.sort(FN(x.id < y.id));
 		return graph;
 	}

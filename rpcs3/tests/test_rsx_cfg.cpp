@@ -1,4 +1,3 @@
-#pragma optimize("", off)
 #include <gtest/gtest.h>
 
 #include "Emu/RSX/Common/simple_array.hpp"
@@ -72,6 +71,8 @@ namespace rsx::assembler
 
 		EXPECT_EQ(graph.blocks.size(), 1);
 		EXPECT_EQ(graph.blocks.front().instructions.size(), 2);
+		EXPECT_EQ(graph.blocks.front().instructions.front().length, 4);
+		EXPECT_NE(graph.blocks.front().instructions.front().addr, 0);
 	}
 
 	TEST(CFG, FpToCFG_IF)
@@ -184,6 +185,13 @@ namespace rsx::assembler
 			EXPECT_EQ(it->id, expected.first);
 			EXPECT_EQ(it->instructions.size(), expected.second);
 		}
+
+		// Predecessors must be ordered, closest first
+		ASSERT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred.size(), 2);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[0].type, EdgeType::ENDIF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[0].from->id, 3);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[1].type, EdgeType::ENDIF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[1].from->id, 0);
 	}
 
 	TEST(CFG, FpToCFG_IF_ELSE)
