@@ -104,6 +104,11 @@ namespace rsx::assembler
 			EXPECT_EQ(it->id, expected.first);
 			EXPECT_EQ(it->instructions.size(), expected.second);
 		}
+
+		// Check edges
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 3))->pred[0].type, EdgeType::IF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ[0].type, EdgeType::IF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 4))->pred[0].type, EdgeType::ENDIF);
 	}
 
 	TEST(CFG, FpToCFG_NestedIF)

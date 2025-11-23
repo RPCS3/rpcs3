@@ -13,7 +13,7 @@ namespace rsx::assembler
 	{
 		std::list<BasicBlock> blocks;
 
-		BasicBlock* push(BasicBlock* parent = nullptr, u32 pc = 0)
+		BasicBlock* push(BasicBlock* parent = nullptr, u32 pc = 0, EdgeType edge_type = EdgeType::NONE)
 		{
 			if (!parent && !blocks.empty())
 			{
@@ -25,8 +25,8 @@ namespace rsx::assembler
 
 			if (parent)
 			{
-				parent->insert_succ(new_block);
-				new_block->insert_pred(parent);
+				parent->insert_succ(new_block, edge_type);
+				new_block->insert_pred(parent, edge_type);
 			}
 
 			new_block->id = pc;
