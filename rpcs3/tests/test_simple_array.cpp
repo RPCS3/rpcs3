@@ -306,7 +306,7 @@ namespace rsx
 
 	TEST(SimpleArray, Find)
 	{
-		const rsx::simple_array<u32> arr{
+		const rsx::simple_array<int> arr{
 			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 		};
 
@@ -316,7 +316,7 @@ namespace rsx
 
 	TEST(SimpleArray, FindIf)
 	{
-		const rsx::simple_array<u32> arr{
+		const rsx::simple_array<int> arr{
 			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 		};
 
