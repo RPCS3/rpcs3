@@ -3122,7 +3122,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				u64 dabs = 0;
 				u64 drel = 0;
 
-				for (u32 i = start; i < limit; i += 4)
+				for (u32 i = start, abs_fail = 0, rel_fail = 0; i < limit; i += 4)
 				{
 					const u32 target = ls[i / 4];
 
@@ -3135,13 +3135,27 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					if (target >= lsa && target < SPU_LS_SIZE)
 					{
 						// Possible jump table entry (absolute)
-						jt_abs.push_back(target);
+						if (!abs_fail)
+						{
+							jt_abs.push_back(target);
+						}
+					}
+					else
+					{
+						abs_fail++;
 					}
 
 					if (target + start >= lsa && target + start < SPU_LS_SIZE)
 					{
 						// Possible jump table entry (relative)
-						jt_rel.push_back(target + start);
+						if (!rel_fail)
+						{
+							jt_rel.push_back(target + start);
+						}
+					}
+					else
+					{
+						rel_fail++;
 					}
 
 					if (std::max(jt_abs.size(), jt_rel.size()) * 4 + start <= i)
