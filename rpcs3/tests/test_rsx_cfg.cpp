@@ -45,7 +45,7 @@ namespace rsx::assembler
 	auto create_if(u32 end, u32 _else = 0)
 	{
 		OPDEST dst{};
-		dst.opcode = RSX_FP_OPCODE_IFE;
+		dst.opcode = RSX_FP_OPCODE_IFE & 0x3Fu;
 
 		SRC1 src1{};
 		src1.else_offset = (_else ? _else : end) << 2;
