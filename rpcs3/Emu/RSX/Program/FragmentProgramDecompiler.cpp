@@ -234,7 +234,8 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	const u32 constant_id = m_size + (4 * sizeof(u32));
+	ensure(m_instruction->length == 8);
+	const u32 constant_id = m_instruction->addr + 16;
 	u32 index = umax;
 
 	if (auto found = m_constant_offsets.find(constant_id);
@@ -248,9 +249,6 @@ std::string FragmentProgramDecompiler::AddConst()
 		properties.constant_offsets.push_back(constant_id);
 		m_constant_offsets[constant_id] = index;
 	}
-
-	// Skip next instruction, its just a literal
-	m_offset = 2 * 4 * sizeof(u32);
 
 	// Return the next offset index
 	return "_fetch_constant(" + std::to_string(index) + ")";
@@ -1317,37 +1315,52 @@ std::string FragmentProgramDecompiler::Decompile()
 	for (const auto &block : graph.blocks)
 	{
 		// TODO: Handle block prologue if any
+		if (!block.pred.empty())
+		{
+			// CFG guarantees predecessors are sorted, closest one first
+			for (const auto& pred : block.pred)
+			{
+				switch (pred.type)
+				{
+				case rsx::assembler::EdgeType::ENDLOOP:
+					m_loop_count--;
+					[[ fallthrough ]];
+				case rsx::assembler::EdgeType::ENDIF:
+					m_code_level--;
+					AddCode("}");
+					break;
+				case rsx::assembler::EdgeType::LOOP:
+					m_loop_count++;
+					[[ fallthrough ]];
+				case rsx::assembler::EdgeType::IF:
+					// Instruction will be inserted by the SIP decoder
+					AddCode("{");
+					m_code_level++;
+					break;
+				case rsx::assembler::EdgeType::ELSE:
+					// This one needs more testing
+					m_code_level--;
+					AddCode("}");
+					AddCode("else");
+					AddCode("{");
+					m_code_level++;
+					break;
+				default:
+					// Start a new block anyway
+					fmt::throw_exception("Unexpected block found");
+				}
+			}
+		}
 
 		for (const auto& inst : block.instructions)
 		{
-			for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-				found != m_end_offsets.end();
-				found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
-			{
-				m_end_offsets.erase(found);
-				m_code_level--;
-				AddCode("}");
-				m_loop_count--;
-			}
-
-			for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-				found != m_else_offsets.end();
-				found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
-			{
-				m_else_offsets.erase(found);
-				m_code_level--;
-				AddCode("}");
-				AddCode("else");
-				AddCode("{");
-				m_code_level++;
-			}
+			m_instruction = &inst;
 
 			dst.HEX = inst.bytecode[0];
 			src0.HEX = inst.bytecode[1];
 			src1.HEX = inst.bytecode[2];
 			src2.HEX = inst.bytecode[3];
 
-			m_offset = 4 * sizeof(u32);
 			opflags = 0;
 
 			const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
@@ -1373,43 +1386,14 @@ std::string FragmentProgramDecompiler::Decompile()
 					break;
 				case RSX_FP_OPCODE_IFE:
 					AddCode("if($cond)");
-					if (src2.end_offset != src1.else_offset)
-						m_else_offsets.push_back(src1.else_offset << 2);
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
 					break;
 				case RSX_FP_OPCODE_LOOP:
-					if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-					{
-						AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-					}
-					else
-					{
-						AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
+					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
 							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-						m_loop_count++;
-						m_end_offsets.push_back(src2.end_offset << 2);
-						AddCode("{");
-						m_code_level++;
-					}
 					break;
 				case RSX_FP_OPCODE_REP:
-					if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-					{
-						AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-					}
-					else
-					{
-						AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
+					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
 							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-						m_loop_count++;
-						m_end_offsets.push_back(src2.end_offset << 2);
-						AddCode("{");
-						m_code_level++;
-					}
 					break;
 				case RSX_FP_OPCODE_RET:
 					AddFlowOp("return");
@@ -1447,9 +1431,7 @@ std::string FragmentProgramDecompiler::Decompile()
 				break;
 			}
 
-			m_size += m_offset;
-			ensure((m_offset & 15) == 0); // Must be aligned to 16 bytes
-
+			m_size += m_instruction->length * 4;
 			if (dst.end) break;
 		}
 
