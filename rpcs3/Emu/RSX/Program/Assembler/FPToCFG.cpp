@@ -63,16 +63,16 @@ namespace rsx::assembler
 			return nullptr;
 		};
 
-		auto safe_insert_block = [&](BasicBlock* parent, u32 id) -> BasicBlock*
+		auto safe_insert_block = [&](BasicBlock* parent, u32 id, EdgeType edge_type) -> BasicBlock*
 		{
 			if (auto found = find_block_for_pc(id))
 			{
-				parent->insert_succ(found);
-				found->insert_pred(parent);
+				parent->insert_succ(found, edge_type);
+				found->insert_pred(parent, edge_type);
 				return found;
 			}
 
-			return graph.push(parent, id);
+			return graph.push(parent, id, edge_type);
 		};
 
 		while (!end)
@@ -125,12 +125,12 @@ namespace rsx::assembler
 			{
 				// Inserts if and else and end blocks
 				auto parent = bb;
-				bb = safe_insert_block(parent, pc + 1);
+				bb = safe_insert_block(parent, pc + 1, EdgeType::IF);
 				if (src2.end_offset != src1.else_offset)
 				{
-					else_blocks.push_back(safe_insert_block(parent, src1.else_offset >> 2));
+					else_blocks.push_back(safe_insert_block(parent, src1.else_offset >> 2, EdgeType::ELSE));
 				}
-				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2));
+				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2, EdgeType::ENDIF));
 				break;
 			}
 			case RSX_FP_OPCODE_LOOP:
@@ -138,8 +138,8 @@ namespace rsx::assembler
 			{
 				// Inserts for and end blocks
 				auto parent = bb;
-				bb = safe_insert_block(parent, pc + 1);
-				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2));
+				bb = safe_insert_block(parent, pc + 1, EdgeType::LOOP);
+				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2, EdgeType::ENDLOOP));
 				break;
 			}
 			default:

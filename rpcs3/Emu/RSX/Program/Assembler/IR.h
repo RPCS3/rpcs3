@@ -42,8 +42,19 @@ namespace rsx::assembler
 		std::vector<RegisterRef> dsts;
 	};
 
+	enum class EdgeType
+	{
+		NONE,
+		IF,
+		ELSE,
+		ENDIF,
+		LOOP,
+		ENDLOOP
+	};
+
 	struct FlowEdge
 	{
+		EdgeType type = EdgeType::NONE;
 		BasicBlock* from = nullptr;
 		BasicBlock* to = nullptr;
 	};
@@ -51,20 +62,25 @@ namespace rsx::assembler
 	struct BasicBlock
 	{
 		u32 id = 0;
-		std::vector<Instruction> instructions;
-		std::vector<FlowEdge> succ;          // [0] = if/loop, [1] = else
-		std::vector<FlowEdge> pred;          // Back edge.
+		std::vector<Instruction> instructions; // Program instructions for the RSX processor
+		std::vector<FlowEdge> succ;            // [0] = if/loop, [1] = else
+		std::vector<FlowEdge> pred;            // Back edge.
 
-		void insert_succ(BasicBlock* b)
+		std::vector<Instruction> prologue;     // Prologue, created by passes
+		std::vector<Instruction> epilogue;     // Epilogue, created by passes
+
+		FlowEdge* insert_succ(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
-			FlowEdge e{ .from = this, .to = b };
+			FlowEdge e{ .type = type, .from = this, .to = b };
 			succ.push_back(e);
+			return &succ.back();
 		}
 
-		void insert_pred(BasicBlock* b)
+		FlowEdge* insert_pred(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
-			FlowEdge e{ .from = this, .to = b };
+			FlowEdge e{ .type = type, .from = this, .to = b };
 			pred.push_back(e);
+			return &pred.back();
 		}
 	};
 }
