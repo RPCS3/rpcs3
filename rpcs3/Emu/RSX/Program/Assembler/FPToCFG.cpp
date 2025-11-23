@@ -20,9 +20,9 @@ namespace rsx::assembler
 		__m128i _mask1 = _mm_set1_epi32(0x00ff00ff);
 		__m128i a = _mm_slli_epi32(static_cast<__m128i>(raw_inst), 8);
 		__m128i b = _mm_srli_epi32(static_cast<__m128i>(raw_inst), 8);
-		__m128i ret = _mm_or_epi32(
-			_mm_and_epi32(_mask0, a),
-			_mm_and_epi32(_mask1, b)
+		__m128i ret = _mm_or_si128(
+			_mm_and_si128(_mask0, a),
+			_mm_and_si128(_mask1, b)
 		);
 		return v128::loadu(&ret);
 	}
@@ -36,7 +36,6 @@ namespace rsx::assembler
 		SRC2 src2{};
 
 		u32 pc = 0; // Program counter
-		u32 instruction_size = 0;
 		bool end = false;
 
 		// Flow control data
