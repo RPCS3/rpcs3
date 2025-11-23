@@ -3153,6 +3153,35 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				for (usz i = 0; i < jt_abs.size(); i++)
+				{
+					if (jt_abs[i] == start + jt_abs.size() * 4)
+					{
+						// If jumptable contains absolute address of code start after the jumptable itself
+						// It is likely an absolute-type jumptable
+
+						bool is_good_conclusion = true;
+
+						// For verification: make sure there is none like this in relative table
+
+						for (u32 target : jt_rel)
+						{
+							if (target == start + jt_rel.size() * 4)
+							{
+								is_good_conclusion = false;
+								break;
+							}
+						}
+						
+						if (is_good_conclusion)
+						{
+							jt_rel.clear();
+						}
+
+						break;
+					}
+				}
+
 				// Choose position after the jt as an anchor and compute the average distance
 				for (u32 target : jt_abs)
 				{
@@ -7239,6 +7268,19 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
+	}
+
+	for (u32 i = 0; i < result.data.size(); i++)
+	{
+		const be_t<u32> ls_val = ls[result.lower_bound / 4 + i];
+
+		if (result.data[i] && std::bit_cast<u32>(ls_val) != result.data[i])
+		{
+			std::string out_dump;
+			dump(result, out_dump);
+			spu_log.error("SPU Function Dump:\n%s", out_dump);
+			fmt::throw_exception("SPU Analyzer failed: Instruction mismatch at 0x%x [read: 0x%x vs LS: 0x%x] (i=0x%x)", result.lower_bound + i * 4, std::bit_cast<be_t<u32>>(result.data[i]), ls_val, i);
+		}
 	}
 
 	return result;
