@@ -72,7 +72,8 @@ namespace rsx::assembler
 		EXPECT_EQ(graph.blocks.size(), 1);
 		EXPECT_EQ(graph.blocks.front().instructions.size(), 2);
 		EXPECT_EQ(graph.blocks.front().instructions.front().length, 4);
-		EXPECT_NE(graph.blocks.front().instructions.front().addr, 0);
+		EXPECT_EQ(graph.blocks.front().instructions[0].addr, 0);
+		EXPECT_EQ(graph.blocks.front().instructions[1].addr, 16);
 	}
 
 	TEST(CFG, FpToCFG_IF)
@@ -192,6 +193,13 @@ namespace rsx::assembler
 		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[0].from->id, 3);
 		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[1].type, EdgeType::ENDIF);
 		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 6))->pred[1].from->id, 0);
+
+		// Successors must also be ordered, closest first
+		ASSERT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ.size(), 2);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ[0].type, EdgeType::IF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ[0].to->id, 3);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ[1].type, EdgeType::ENDIF);
+		EXPECT_EQ(std::find_if(graph.blocks.begin(), graph.blocks.end(), FN(x.id == 0))->succ[1].to->id, 6);
 	}
 
 	TEST(CFG, FpToCFG_IF_ELSE)

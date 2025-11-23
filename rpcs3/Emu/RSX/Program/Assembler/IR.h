@@ -72,8 +72,8 @@ namespace rsx::assembler
 	{
 		u32 id = 0;
 		std::vector<Instruction> instructions; // Program instructions for the RSX processor
-		std::vector<FlowEdge> succ;            // [0] = if/loop, [1] = else
-		std::vector<FlowEdge> pred;            // Back edge.
+		std::vector<FlowEdge> succ;            // Forward edges. Sorted closest first.
+		std::vector<FlowEdge> pred;            // Back edges. Sorted closest first.
 
 		std::vector<Instruction> prologue;     // Prologue, created by passes
 		std::vector<Instruction> epilogue;     // Epilogue, created by passes
