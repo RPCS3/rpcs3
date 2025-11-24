@@ -105,7 +105,6 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 
 void decode_16b(const in uint texel_id, in uint x, const in uint y, const in uint z)
 {
-	const uint masks[] = { 0x0000FFFF, 0xFFFF0000 };
 	uint accumulator = 0;
 
 	const uint subword_count = min(invocation.size.x, 2);
@@ -113,7 +112,9 @@ void decode_16b(const in uint texel_id, in uint x, const in uint y, const in uin
 	{
 		uint src_texel_id = get_z_index(x, y, z);
 		uint src_id = (src_texel_id + invocation.data_offset);
-		accumulator |= data_in[src_id / 2] & masks[subword];
+		int src_bit_offset = int(src_id % 2) << 4;
+		uint src_value = bitfieldExtract(data_in[src_id / 2], src_bit_offset, 16);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 4), 16);
 	}
 
 	data_out[texel_id / 2] = %f(accumulator);
@@ -123,7 +124,6 @@ void decode_16b(const in uint texel_id, in uint x, const in uint y, const in uin
 
 void decode_8b(const in uint texel_id, in uint x, const in uint y, const in uint z)
 {
-	const uint masks[] = { 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000 };
 	uint accumulator = 0;
 
 	const uint subword_count = min(invocation.size.x, 4);
@@ -131,7 +131,9 @@ void decode_8b(const in uint texel_id, in uint x, const in uint y, const in uint
 	{
 		uint src_texel_id = get_z_index(x, y, z);
 		uint src_id = (src_texel_id + invocation.data_offset);
-		accumulator |= data_in[src_id / 4] & masks[subword];
+		int src_bit_offset = int(src_id % 4) << 3;
+		uint src_value = bitfieldExtract(data_in[src_id / 4], src_bit_offset, 8);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 3), 8);
 	}
 
 	data_out[texel_id / 4] = accumulator;
