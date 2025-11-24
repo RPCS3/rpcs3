@@ -3,6 +3,9 @@
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
 #include <vulkan/vulkan_core.h>
+#ifdef __APPLE__
+#include <vulkan/vulkan_beta.h>
+#endif
 
 namespace vk
 {
@@ -555,6 +558,10 @@ namespace vk
 		{
 			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
 		}
+		
+#ifdef __APPLE__
+		requested_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+#endif
 
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;

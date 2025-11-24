@@ -623,6 +623,11 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKTextureCache.cpp
         RSX/VK/VulkanAPI.cpp
     )
+    if(APPLE)
+        target_sources(rpcs3_emu PRIVATE
+            RSX/VK/vkutils/metal_layer.mm
+        )
+    endif()
 endif()
 
 find_package(Threads REQUIRED)
