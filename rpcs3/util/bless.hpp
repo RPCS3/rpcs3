@@ -1,9 +1,11 @@
 #pragma once
 
+#include <type_traits>
+
 namespace utils
 {
 	// Hack. Pointer cast util to workaround UB. Use with extreme care.
-	template <typename T, typename U> requires requires () { +reinterpret_cast<T*>(static_cast<const U&>(nullptr)); }
+	template <typename T, typename U> requires (std::is_pointer_v<std::remove_reference_t<U>>)
 	[[nodiscard]] inline T* bless(const U& ptr)
 	{
 #ifdef _MSC_VER
@@ -21,3 +23,4 @@ namespace utils
 #endif
 	}
 }
+
