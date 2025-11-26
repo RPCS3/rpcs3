@@ -1000,7 +1000,7 @@ template <typename To, typename From> requires (std::is_integral_v<decltype(std:
 	constexpr bool is_to_signed = std::is_signed_v<CommonTo>;
 
 	// For unsigned/signed mismatch, create an "unsigned" compatible mask
-	constexpr auto from_mask = (is_from_signed && !is_to_signed) ? UnFrom{umax} >> 1 : UnFrom{umax};
+	constexpr auto from_mask = (is_from_signed && !is_to_signed && sizeof(CommonFrom) <= sizeof(CommonTo)) ? UnFrom{umax} >> 1 : UnFrom{umax};
 	constexpr auto to_mask = (is_to_signed && !is_from_signed) ? UnTo{umax} >> 1 : UnTo{umax};
 
 	constexpr auto mask = static_cast<UnFrom>(~(from_mask & to_mask));
@@ -1010,7 +1010,7 @@ template <typename To, typename From> requires (std::is_integral_v<decltype(std:
 	if constexpr (!!mask)
 	{
 		// Try to optimize test if both are of the same signedness
-		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<UnTo>(value) != static_cast<UnFrom>(value)) [[unlikely]]
+		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonFrom>(static_cast<CommonTo>(value)) != value) [[unlikely]]
 		{
 			fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
 		}
