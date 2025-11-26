@@ -178,7 +178,7 @@ void log_frame::show_disk_usage(const std::vector<std::pair<std::string, u64>>& 
 
 	for (const auto& [dev, data_size] : vfs_disk_usage)
 	{
-		text += tr("\n    %0: %1").arg(dev).arg(gui::utils::format_byte_size(data_size));
+		text += tr("\n    %0: %1").arg(QString::fromStdString(dev)).arg(gui::utils::format_byte_size(data_size));
 		tot_data_size += data_size;
 	}
 
