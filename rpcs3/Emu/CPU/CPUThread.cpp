@@ -190,7 +190,7 @@ struct cpu_prof
 			reservation_samples = 0;
 		}
 
-		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, bool extended_print = false)
+		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, u32 type_id, bool extended_print = false)
 		{
 			// Print results
 			std::string results;
@@ -204,11 +204,18 @@ struct cpu_prof
 				const f64 _frac = count / busy / samples;
 
 				// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
-				fmt::append(results, "\n\t[%s", fmt::base57(be_t<u64>{name}));
-				results.resize(results.size() - 4);
+				if (type_id == 2)
+				{
+					fmt::append(results, "\n\t[%s", fmt::base57(be_t<u64>{name}));
+					results.resize(results.size() - 4);
 
-				// Print chunk address from lowest 16 bits
-				fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
+					// Print chunk address from lowest 16 bits
+					fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
+				}
+				else
+				{
+					fmt::append(results, "\n\t[0x%07x]: %.4f%% (%u)", name, _frac * 100., count);
+				}
 
 				if (results.size() >= (extended_print ? 10000 : 5000))
 				{
@@ -257,27 +264,37 @@ struct cpu_prof
 			}
 
 			// Print results
-			const std::string results = format(chart, samples, idle);
+			const std::string results = format(chart, samples, idle, ptr->id_type());
 			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):\n%s", ptr->get_name(), ptr->id, samples, get_percent(idle, samples), new_samples, reservation_samples, get_percent(reservation_samples, samples - idle), results);
 
 			new_samples = 0;
 		}
 
-		static void print_all(std::unordered_map<shared_ptr<cpu_thread>, sample_info>& threads, sample_info& all_info)
+		static void print_all(std::unordered_map<shared_ptr<cpu_thread>, sample_info>& threads, sample_info& all_info, u32 type_id)
 		{
 			u64 new_samples = 0;
 
 			// Print all results and cleanup
 			for (auto& [ptr, info] : threads)
 			{
+				if (ptr->id_type() != type_id)
+				{
+					continue;
+				}
+
 				new_samples += info.new_samples;
 				info.print(ptr);
 			}
 
 			std::multimap<u64, u64, std::greater<u64>> chart;
 
-			for (auto& [_, info] : threads)
+			for (auto& [ptr, info] : threads)
 			{
+				if (ptr->id_type() != type_id)
+				{
+					continue;
+				}
+
 				// This function collects thread information regardless of 'new_samples' member state
 				for (auto& [name, count] : info.freq)
 				{
@@ -301,7 +318,7 @@ struct cpu_prof
 
 			if (new_samples < min_print_all_samples && thread_ctrl::state() != thread_state::aborting)
 			{
-				profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle));
+				profiler.notice("All %s Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%): Not enough new samples have been collected since the last print.", type_id == 1 ? "PPU" : "SPU", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle));
 				return;
 			}
 
@@ -310,12 +327,13 @@ struct cpu_prof
 				chart.emplace(count, name);
 			}
 
-			const std::string results = format(chart, samples, idle, true);
-			profiler.notice("All Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle), results);
+			const std::string results = format(chart, samples, idle, type_id, true);
+			profiler.notice("All %s Threads: %u samples (%.4f%% idle), %u new, %u reservation (%.4f%%):%s", type_id == 1 ? "PPU" : "SPU", samples, get_percent(idle, samples), new_samples, reservation, get_percent(reservation, samples - idle), results);
 		}
 	};
 
-	sample_info all_threads_info{};
+	sample_info all_spu_threads_info{};
+	sample_info all_ppu_threads_info{};
 
 	void operator()()
 	{
@@ -376,8 +394,11 @@ struct cpu_prof
 			{
 				if (auto state = +ptr->state; cpu_flag::exit - state)
 				{
+					const auto spu = ptr->try_get<spu_thread>();
+					const auto ppu = ptr->try_get<ppu_thread>();
+
 					// Get short function hash
-					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
+					const u64 name = ppu ? atomic_storage<u32>::load(ppu->cia) : atomic_storage<u64>::load(ptr->block_hash);
 
 					// Append occurrence
 					info.samples++;
@@ -387,17 +408,17 @@ struct cpu_prof
 						info.freq[name]++;
 						info.new_samples++;
 
-						if (auto spu = ptr->try_get<spu_thread>())
+						if (spu)
 						{
 							if (spu->raddr)
 							{
 								info.reservation_samples++;
 							}
-						}
 
-						// Append verification time to fixed common name 0000000...chunk-0x3fffc
-						if (name >> 16 && (name & 0xffff) == 0)
-							info.freq[0xffff]++;
+							// Append verification time to fixed common name 0000000...chunk-0x3fffc
+							if (name >> 16 && (name & 0xffff) == 0)
+								info.freq[0xffff]++;
+						}
 					}
 					else
 					{
@@ -420,8 +441,10 @@ struct cpu_prof
 			{
 				profiler.success("Flushing profiling results...");
 
-				all_threads_info = {};
-				sample_info::print_all(threads, all_threads_info);
+				all_ppu_threads_info = {};
+				all_spu_threads_info = {};
+				sample_info::print_all(threads, all_ppu_threads_info, 1);
+				sample_info::print_all(threads, all_spu_threads_info, 2);
 			}
 
 			if (Emu.IsPaused())
@@ -442,7 +465,8 @@ struct cpu_prof
 		}
 
 		// Print all remaining results
-		sample_info::print_all(threads, all_threads_info);
+		sample_info::print_all(threads, all_ppu_threads_info, 1);
+		sample_info::print_all(threads, all_spu_threads_info, 2);
 	}
 
 	static constexpr auto thread_name = "CPU Profiler"sv;
@@ -459,7 +483,7 @@ extern f64 get_cpu_program_usage_percent(u64 hash)
 		{
 			u64 total = 0;
 
-			for (auto [name, count] : prof->all_threads_info.freq)
+			for (auto [name, count] : prof->all_spu_threads_info.freq)
 			{
 				if ((name & -65536) == hash)
 				{
@@ -472,7 +496,7 @@ extern f64 get_cpu_program_usage_percent(u64 hash)
 				return 0;
 			}
 
-			return std::max<f64>(0.0001, static_cast<f64>(total) * 100 / (prof->all_threads_info.samples - prof->all_threads_info.idle));
+			return std::max<f64>(0.0001, static_cast<f64>(total) * 100 / (prof->all_spu_threads_info.samples - prof->all_spu_threads_info.idle));
 		}
 	}
 
@@ -639,22 +663,17 @@ void cpu_thread::operator()()
 		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(get_class()));
 	}
 
-	while (!g_fxo->is_init<cpu_profiler>())
-	{
-		if (Emu.IsStopped())
-		{
-			return;
-		}
-
-		// Can we have a little race, right? First thread is started concurrently with g_fxo->init()
-		thread_ctrl::wait_for(1000);
-	}
+	ensure(g_fxo->is_init<cpu_profiler>());
 
 	switch (get_class())
 	{
 	case thread_class::ppu:
 	{
-		//g_fxo->get<cpu_profiler>().registered.push(id);
+		if (g_cfg.core.ppu_prof)
+		{
+			g_fxo->get<cpu_profiler>().registered.push(id);
+		}
+
 		break;
 	}
 	case thread_class::spu:
@@ -1546,7 +1565,7 @@ void cpu_thread::flush_profilers() noexcept
 		return;
 	}
 
-	if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
+	if (g_cfg.core.spu_prof || g_cfg.core.spu_debug || g_cfg.core.ppu_prof)
 	{
 		g_fxo->get<cpu_profiler>().registered.push(0);
 	}

@@ -3,6 +3,9 @@ R"(
 
 #define SSBO_LOCATION(x) (x + %loc)
 
+#define USE_8BIT_ADDRESSING %_8bit
+#define USE_16BIT_ADDRESSING %_16bit
+
 layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 
 layout(%set, binding=SSBO_LOCATION(0), std430) buffer ssbo0{ uint data_in[]; };
@@ -98,11 +101,72 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 	return offset;
 }
 
+#if USE_16BIT_ADDRESSING
+
+void decode_16b(const in uint texel_id, in uint x, const in uint y, const in uint z)
+{
+	uint accumulator = 0;
+
+	const uint subword_count = min(invocation.size.x, 2);
+	for (uint subword = 0; subword < subword_count; ++subword, ++x)
+	{
+		uint src_texel_id = get_z_index(x, y, z);
+		uint src_id = (src_texel_id + invocation.data_offset);
+		int src_bit_offset = int(src_id % 2) << 4;
+		uint src_value = bitfieldExtract(data_in[src_id / 2], src_bit_offset, 16);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 4), 16);
+	}
+
+	data_out[texel_id / 2] = %f(accumulator);
+}
+
+#elif USE_8BIT_ADDRESSING
+
+void decode_8b(const in uint texel_id, in uint x, const in uint y, const in uint z)
+{
+	uint accumulator = 0;
+
+	const uint subword_count = min(invocation.size.x, 4);
+	for (uint subword = 0; subword < subword_count; ++subword, ++x)
+	{
+		uint src_texel_id = get_z_index(x, y, z);
+		uint src_id = (src_texel_id + invocation.data_offset);
+		int src_bit_offset = int(src_id % 4) << 3;
+		uint src_value = bitfieldExtract(data_in[src_id / 4], src_bit_offset, 8);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 3), 8);
+	}
+
+	data_out[texel_id / 4] = accumulator;
+}
+
+#else
+
+void decode_32b(const in uint texel_id, const in uint word_count, const in uint x, const in uint y, const in uint z)
+{
+	uint src_texel_id = get_z_index(x, y, z);
+	uint dst_id = (texel_id * word_count);
+	uint src_id = (src_texel_id + invocation.data_offset) * word_count;
+
+	for (uint i = 0; i < word_count; ++i)
+	{
+		uint value = data_in[src_id++];
+		data_out[dst_id++] = %f(value);
+	}
+}
+
+#endif
+
 void main()
 {
 	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);
 	uint texel_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;
 	uint word_count = %_wordcount;
+
+#if USE_8BIT_ADDRESSING
+	texel_id *= 4;        // Each invocation consumes 4 texels
+#elif USE_16BIT_ADDRESSING
+	texel_id *= 2;        // Each invocation consumes 2 texels
+#endif
 
 	if (!init_invocation_properties(texel_id))
 		return;
@@ -116,14 +180,13 @@ void main()
 	uint y = (slice_offset / row_length);
 	uint x = (slice_offset % row_length);
 
-	uint src_texel_id = get_z_index(x, y, z);
-	uint dst_id = (texel_id * word_count);
-	uint src_id = (src_texel_id + invocation.data_offset) * word_count;
+#if USE_8BIT_ADDRESSING
+	decode_8b(texel_id, x, y, z);
+#elif USE_16BIT_ADDRESSING
+	decode_16b(texel_id, x, y, z);
+#else
+	decode_32b(texel_id, word_count, x, y, z);
+#endif
 
-	for (uint i = 0; i < word_count; ++i)
-	{
-		uint value = data_in[src_id++];
-		data_out[dst_id++] = %f(value);
-	}
 }
 )"

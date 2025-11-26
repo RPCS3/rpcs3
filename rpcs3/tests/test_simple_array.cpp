@@ -267,4 +267,60 @@ namespace rsx
 			EXPECT_EQ(std::memcmp(arr[i].second.s, "Hello World", sizeof(arr[i].second.s)), 0);
 		}
 	}
+
+	TEST(SimpleArray, DataAlignment_SmallVector)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(2);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_HeapAlloc)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(128);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_Overrides)
+	{
+		rsx::simple_array<std::byte, 16> arr(4);
+		rsx::simple_array<std::byte, 128> arr2(4);
+
+		const auto data_ptr1 = reinterpret_cast<uintptr_t>(arr.data());
+		const auto data_ptr2 = reinterpret_cast<uintptr_t>(arr2.data());
+
+		EXPECT_EQ(data_ptr1 & 15, 0);
+		EXPECT_EQ(data_ptr2 & 127, 0);
+	}
+
+	TEST(SimpleArray, Find)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find(8), 8);
+		EXPECT_EQ(arr.find(99), nullptr);
+	}
+
+	TEST(SimpleArray, FindIf)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find_if(FN(x == 8)), 8);
+		EXPECT_EQ(arr.find_if(FN(x == 99)), nullptr);
+	}
 }

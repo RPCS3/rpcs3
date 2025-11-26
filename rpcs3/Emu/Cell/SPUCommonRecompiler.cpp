@@ -3122,7 +3122,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				u64 dabs = 0;
 				u64 drel = 0;
 
-				for (u32 i = start; i < limit; i += 4)
+				for (u32 i = start, abs_fail = 0, rel_fail = 0; i < limit; i += 4)
 				{
 					const u32 target = ls[i / 4];
 
@@ -3135,13 +3135,27 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					if (target >= lsa && target < SPU_LS_SIZE)
 					{
 						// Possible jump table entry (absolute)
-						jt_abs.push_back(target);
+						if (!abs_fail)
+						{
+							jt_abs.push_back(target);
+						}
+					}
+					else
+					{
+						abs_fail++;
 					}
 
 					if (target + start >= lsa && target + start < SPU_LS_SIZE)
 					{
 						// Possible jump table entry (relative)
-						jt_rel.push_back(target + start);
+						if (!rel_fail)
+						{
+							jt_rel.push_back(target + start);
+						}
+					}
+					else
+					{
+						rel_fail++;
 					}
 
 					if (std::max(jt_abs.size(), jt_rel.size()) * 4 + start <= i)
@@ -3149,6 +3163,35 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						// Neither type of jump table completes
 						jt_abs.clear();
 						jt_rel.clear();
+						break;
+					}
+				}
+
+				for (usz i = 0; i < jt_abs.size(); i++)
+				{
+					if (jt_abs[i] == start + jt_abs.size() * 4)
+					{
+						// If jumptable contains absolute address of code start after the jumptable itself
+						// It is likely an absolute-type jumptable
+
+						bool is_good_conclusion = true;
+
+						// For verification: make sure there is none like this in relative table
+
+						for (u32 target : jt_rel)
+						{
+							if (target == start + jt_rel.size() * 4)
+							{
+								is_good_conclusion = false;
+								break;
+							}
+						}
+						
+						if (is_good_conclusion)
+						{
+							jt_rel.clear();
+						}
+
 						break;
 					}
 				}
@@ -7239,6 +7282,19 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
+	}
+
+	for (u32 i = 0; i < result.data.size(); i++)
+	{
+		const be_t<u32> ls_val = ls[result.lower_bound / 4 + i];
+
+		if (result.data[i] && std::bit_cast<u32>(ls_val) != result.data[i])
+		{
+			std::string out_dump;
+			dump(result, out_dump);
+			spu_log.error("SPU Function Dump:\n%s", out_dump);
+			fmt::throw_exception("SPU Analyzer failed: Instruction mismatch at 0x%x [read: 0x%x vs LS: 0x%x] (i=0x%x)", result.lower_bound + i * 4, std::bit_cast<be_t<u32>>(result.data[i]), ls_val, i);
+		}
 	}
 
 	return result;
