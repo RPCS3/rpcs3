@@ -3,8 +3,8 @@
 namespace utils
 {
 	// Hack. Pointer cast util to workaround UB. Use with extreme care.
-	template <typename T, typename U>
-	[[nodiscard]] T* bless(U* ptr)
+	template <typename T, typename U> requires requires () { +reinterpret_cast<T*>(static_cast<const U&>(nullptr)); }
+	[[nodiscard]] inline T* bless(const U& ptr)
 	{
 #ifdef _MSC_VER
 		return (T*)ptr;
