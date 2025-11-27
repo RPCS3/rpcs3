@@ -246,7 +246,7 @@ namespace vk
 			VkDescriptorPool subpool = VK_NULL_HANDLE;
 			if (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
 			{
-				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
+				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT || result == VK_ERROR_OUT_OF_DEVICE_MEMORY || result == VK_ERROR_OUT_OF_HOST_MEMORY))
 				{
 					rsx_log.warning("Descriptor pool creation failed with fragmentation error. Will attempt to recover.");
 					vk::on_descriptor_pool_fragmentation(!retries);
