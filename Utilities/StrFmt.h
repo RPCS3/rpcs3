@@ -393,8 +393,8 @@ namespace fmt
 			raw_throw_exception(src_loc, reinterpret_cast<const char*>(fmt), type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 		}
 
-#if !defined(_MSC_VER) || defined(__clang__)
-		[[noreturn]] ~throw_exception() = default;
+#if defined(__FreeBSD__)
+		[[noreturn]] ~throw_exception();
 #endif
 	};
 

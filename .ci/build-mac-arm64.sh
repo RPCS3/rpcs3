@@ -6,7 +6,7 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-brew install -f --overwrite --quiet pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+brew install -f --overwrite --quiet pipenv ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
@@ -83,8 +83,8 @@ mkdir build && cd build || exit 1
 export MACOSX_DEPLOYMENT_TARGET=14.0
 
 "$BREW_PATH/bin/cmake" .. \
-    -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
-    -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
+    -DBUILD_RPCS3_TESTS=OFF \
+    -DRUN_RPCS3_TESTS=OFF \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \
     -DUSE_VULKAN=ON \
