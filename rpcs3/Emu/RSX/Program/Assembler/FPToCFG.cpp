@@ -112,6 +112,7 @@ namespace rsx::assembler
 			src1.HEX = decoded._u32[2];
 			src2.HEX = decoded._u32[3];
 
+			end = !!dst.end;
 			const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
 
 			if (opcode == RSX_FP_OPCODE_NOP)
@@ -119,8 +120,6 @@ namespace rsx::assembler
 				pc++;
 				continue;
 			}
-
-			end = !!dst.end;
 
 			bb->instructions.push_back({});
 			auto& ir_inst = bb->instructions.back();
