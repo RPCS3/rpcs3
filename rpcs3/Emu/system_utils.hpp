@@ -23,10 +23,19 @@ namespace rpcs3::utils
 
 	bool install_pkg(const std::string& path);
 
+	// VFS directories and disk usage
+	std::vector<std::pair<std::string, u64>> get_vfs_disk_usage();
 	std::string get_emu_dir();
 	std::string get_games_dir();
 	std::string get_hdd0_dir();
 	std::string get_hdd1_dir();
+	std::string get_flash_dir();
+	std::string get_flash2_dir();
+	std::string get_flash3_dir();
+	std::string get_bdvd_dir();
+
+	// Cache directories and disk usage
+	u64 get_cache_disk_usage();
 	std::string get_cache_dir();
 	std::string get_cache_dir(std::string_view module_path);
 

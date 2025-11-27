@@ -50,6 +50,12 @@ namespace rsx
 			{ c.size() } -> std::integral;
 	};
 
+	template <typename T, typename U>
+	concept is_trivially_comparable_v =
+		requires (T t1, U t2) {
+			{ t1 == t2 } -> std::same_as<bool>;
+	};
+
 	template <typename Ty, size_t Align=alignof(Ty)>
 		requires std::is_trivially_destructible_v<Ty> && std::is_trivially_copyable_v<Ty>
 	struct simple_array
@@ -490,6 +496,50 @@ namespace rsx
 				}
 			}
 			return false;
+		}
+
+		/**
+		 * Note that find and find_if return pointers to objects and not iterators for simplified usage.
+		 * It is functionally equivalent to retrieve a nullptr meaning empty object stored and nullptr meaning not found for all practical uses of this container.
+		 */
+		template <typename T = Ty>
+			requires is_trivially_comparable_v<Ty, T>
+		Ty* find(const T& value)
+		{
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (*it == value)
+				{
+					return &(*it);
+				}
+			}
+			return nullptr;
+		}
+
+		// Remove when we switch to C++23
+		template <typename T = Ty>
+			requires is_trivially_comparable_v<Ty, T>
+		const Ty* find(const T& value) const
+		{
+			return const_cast<simple_array<Ty, Align>*>(this)->find(value);
+		}
+
+		Ty* find_if(std::predicate<const Ty&> auto predicate)
+		{
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (std::invoke(predicate, *it))
+				{
+					return &(*it);
+				}
+			}
+			return nullptr;
+		}
+
+		// Remove with C++23
+		const Ty* find_if(std::predicate<const Ty&> auto predicate) const
+		{
+			return const_cast<simple_array<Ty, Align>*>(this)->find_if(predicate);
 		}
 
 		bool erase_if(std::predicate<const Ty&> auto predicate)

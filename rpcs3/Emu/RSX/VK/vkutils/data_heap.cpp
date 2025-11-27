@@ -47,9 +47,28 @@ namespace vk
 			usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			memory_index = memory_map.device_local;
+			m_prefer_writethrough = false;
 		}
 
-		heap = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
+		VkFlags create_flags = 0;
+		if (m_prefer_writethrough)
+		{
+			create_flags |= VK_BUFFER_CREATE_ALLOW_NULL_RPCS3;
+		}
+
+		heap = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, usage, create_flags, VMM_ALLOCATION_POOL_SYSTEM);
+
+		if (!heap->value)
+		{
+			rsx_log.warning("Could not place heap '%s' into Re-BAR memory. Will attempt to use regular host-visible memory.", m_name);
+			ensure(m_prefer_writethrough);
+
+			// We failed to place the buffer in rebar memory. Try again in host-visible.
+			m_prefer_writethrough = false;
+			auto gc = get_resource_manager();
+			gc->dispose(heap);
+			heap = std::make_unique<buffer>(*g_render_device, size, memory_map.host_visible_coherent, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
+		}
 
 		initial_size = size;
 		notify_on_grow = bool(notify);
@@ -112,6 +131,7 @@ namespace vk
 		auto gc = get_resource_manager();
 		if (shadow)
 		{
+			ensure(!m_prefer_writethrough);
 			rsx_log.warning("Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
 
 			gc->dispose(shadow);
@@ -122,7 +142,25 @@ namespace vk
 		}
 
 		gc->dispose(heap);
-		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
+
+		VkFlags create_flags = 0;
+		if (m_prefer_writethrough)
+		{
+			create_flags |= VK_BUFFER_CREATE_ALLOW_NULL_RPCS3;
+		}
+
+		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, create_flags, VMM_ALLOCATION_POOL_SYSTEM);
+
+		if (!heap->value)
+		{
+			rsx_log.warning("Could not place heap '%s' into Re-BAR memory. Will attempt to use regular host-visible memory.", m_name);
+			ensure(m_prefer_writethrough);
+
+			// We failed to place the buffer in rebar memory. Try again in host-visible.
+			m_prefer_writethrough = false;
+			gc->dispose(heap);
+			heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_map.host_visible_coherent, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
+		}
 
 		if (notify_on_grow)
 		{

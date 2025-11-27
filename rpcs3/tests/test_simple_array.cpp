@@ -303,4 +303,24 @@ namespace rsx
 		EXPECT_EQ(data_ptr1 & 15, 0);
 		EXPECT_EQ(data_ptr2 & 127, 0);
 	}
+
+	TEST(SimpleArray, Find)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find(8), 8);
+		EXPECT_EQ(arr.find(99), nullptr);
+	}
+
+	TEST(SimpleArray, FindIf)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find_if(FN(x == 8)), 8);
+		EXPECT_EQ(arr.find_if(FN(x == 99)), nullptr);
+	}
 }

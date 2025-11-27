@@ -60,7 +60,7 @@ namespace utils
 #if defined(ARCH_X64)
 		return _m_prefetchw(const_cast<void*>(ptr));
 #else
-		return __builtin_prefetch(ptr, 1, 0);
+		return __builtin_prefetch(ptr, 1, 3);
 #endif
 	}
 
