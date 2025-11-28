@@ -24,12 +24,12 @@ namespace rsx
 		template <size_t Align>
 		void* realloc(void* prev_ptr, [[maybe_unused]] size_t prev_size, size_t new_size)
 		{
-			ensure(reinterpret_cast<usz>(prev_ptr) % Align == 0,
-       			"Pointer not aligned to Align");
-			if (prev_size >= ((new_size + Align - 1) & (0 - Align))) 
+			if (prev_size >= new_size)
 			{
-			    return prev_ptr;
+				return prev_ptr;
 			}
+
+			ensure(reinterpret_cast<usz>(prev_ptr) % Align == 0, "Pointer not aligned to Align");
 #ifdef _WIN32
 			return _aligned_realloc(prev_ptr, new_size, Align);
 #else

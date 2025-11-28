@@ -323,4 +323,35 @@ namespace rsx
 		EXPECT_EQ(*arr.find_if(FN(x == 8)), 8);
 		EXPECT_EQ(arr.find_if(FN(x == 99)), nullptr);
 	}
+
+	TEST(AlignedAllocator, Alloc)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr);
+		rsx::aligned_allocator::free(ptr);
+
+		EXPECT_NE(ptr_value, 0);
+		EXPECT_EQ(ptr_value % 256, 0);
+	}
+
+	TEST(AlignedAllocator, Realloc)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		auto ptr2 = rsx::aligned_allocator::realloc<256>(ptr, 16, 32);
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr2);
+		rsx::aligned_allocator::free(ptr2);
+
+		EXPECT_NE(ptr, ptr2);
+		EXPECT_NE(ptr_value, 0);
+		EXPECT_EQ(ptr_value % 256, 0);
+	}
+
+	TEST(AlignedAllocator, Realloc_ReturnsPreviousPointerIfFits)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		auto ptr2 = rsx::aligned_allocator::realloc<256>(ptr, 16, 8);
+		rsx::aligned_allocator::free(ptr2);
+
+		EXPECT_EQ(ptr, ptr2);
+	}
 }
