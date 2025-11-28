@@ -29,6 +29,7 @@ namespace rsx
 #else
 			void* ret = std::aligned_alloc(Align, new_size);
 			std::memcpy(ret, prev_ptr, std::min(prev_size, new_size));
+			free(prev_ptr);
 			return ret;
 #endif
 		}
