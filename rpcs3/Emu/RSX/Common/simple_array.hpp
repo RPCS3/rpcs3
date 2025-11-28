@@ -24,6 +24,10 @@ namespace rsx
 		template <size_t Align>
 		void* realloc(void* prev_ptr, [[maybe_unused]] size_t prev_size, size_t new_size)
 		{
+			if (prev_size >= utils::align<usz>(new_size, Align) && reinterpret_cast<usz>(prev_ptr) % Align == 0)
+			{
+			    return prev_ptr;
+			}
 #ifdef _WIN32
 			return _aligned_realloc(prev_ptr, new_size, Align);
 #else
