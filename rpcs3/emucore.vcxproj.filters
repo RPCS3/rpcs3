@@ -136,6 +136,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Assembler">
       <UniqueIdentifier>{d99df916-8a99-428b-869a-9f14ac0ab411}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Assembler\Passes">
+      <UniqueIdentifier>{d13db076-47e4-45b9-bb8a-6b711ea40622}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1377,6 +1380,12 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2775,6 +2784,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\Assembler\IR.h">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

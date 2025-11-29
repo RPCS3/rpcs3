@@ -157,6 +157,8 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.cpp" />
     <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp" />
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
@@ -702,6 +704,8 @@
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\CFG.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\IR.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
