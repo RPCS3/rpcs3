@@ -205,6 +205,9 @@
     <Filter Include="Gui\widgets">
       <UniqueIdentifier>{149c596b-83e7-43f8-b5db-6108694434ef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\sound effect manager">
+      <UniqueIdentifier>{640b7d83-1522-4384-8bf7-a4fbd5873ae7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -736,6 +739,15 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\sound_effect_manager_dialog.cpp">
+      <Filter>Gui\sound effect manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_sound_effect_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_sound_effect_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\screenshot_preview.cpp">
@@ -1626,6 +1638,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\sound_effect_manager_dialog.h">
+      <Filter>Gui\sound effect manager</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\dimensions_dialog.h">
       <Filter>Gui\dimensions</Filter>

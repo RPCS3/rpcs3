@@ -44,6 +44,7 @@
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
+#include "sound_effect_manager_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -3051,6 +3052,12 @@ void main_window::CreateConnects()
 	{
 		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
 		screenshot_manager->show();
+	});
+
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	{
+		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
+		dlg->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]

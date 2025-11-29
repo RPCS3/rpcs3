@@ -155,7 +155,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_YES;
 				}
 
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 				break;
 			}
 			case pad_button::circle:
@@ -175,7 +175,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_NO;
 				}
 
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				break;
 			}
 			default: return;
@@ -238,10 +238,7 @@ namespace rsx
 
 			if (!type.se_mute_on)
 			{
-				if (type.se_normal)
-					Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
-				else
-					Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ng.wav");
+				play_sound(type.se_normal ? sound_effect::dialog_ok : sound_effect::dialog_error);
 			}
 
 			set_text(text);
