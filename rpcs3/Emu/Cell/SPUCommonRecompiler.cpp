@@ -3165,6 +3165,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						break;
 					}
 
+					if (target >= SPU_LS_SIZE && target <= 0u - SPU_LS_SIZE)
+					{
+						if (g_spu_itype.decode(target) != spu_itype::UNK)
+						{
+							// End of jumptable: valid instruction
+							break;
+						}
+					}
+
 					if (target >= lsa && target < SPU_LS_SIZE)
 					{
 						// Possible jump table entry (absolute)
