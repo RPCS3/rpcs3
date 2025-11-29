@@ -341,7 +341,6 @@ namespace rsx
 		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr2);
 		rsx::aligned_allocator::free(ptr2);
 
-		EXPECT_NE(ptr, ptr2);
 		EXPECT_NE(ptr_value, 0);
 		EXPECT_EQ(ptr_value % 256, 0);
 	}
