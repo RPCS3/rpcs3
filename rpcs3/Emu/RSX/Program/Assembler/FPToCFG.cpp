@@ -126,6 +126,7 @@ namespace rsx::assembler
 			std::memcpy(ir_inst.bytecode, &decoded._u32[0], 16);
 			ir_inst.length = 4;
 			ir_inst.addr = pc * 16;
+			ir_inst.opcode = opcode;
 
 			switch (opcode)
 			{

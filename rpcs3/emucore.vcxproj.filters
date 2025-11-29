@@ -139,6 +139,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Assembler\Passes">
       <UniqueIdentifier>{d13db076-47e4-45b9-bb8a-6b711ea40622}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Assembler\Passes\FP">
+      <UniqueIdentifier>{7fb59544-9761-4b4a-bb04-07deb43cf3c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1381,11 +1384,14 @@
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.cpp">
-      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes\FP</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.cpp">
-      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes\FP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\Assembler\FPOpcodes.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2785,11 +2791,14 @@
     <ClInclude Include="Emu\RSX\Program\Assembler\IR.h">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterAnnotationPass.h">
-      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    <ClInclude Include="Emu\RSX\Program\Assembler\FPOpcodes.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\RegisterDependencyPass.h">
-      <Filter>Emu\GPU\RSX\Program\Assembler\Passes</Filter>
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes\FP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler\Passes\FP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

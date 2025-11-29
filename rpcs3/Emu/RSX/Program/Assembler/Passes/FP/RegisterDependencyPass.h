@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../CFG.h"
+#include "../../CFG.h"
 
-namespace rsx::assembler
+namespace rsx::assembler::FP
 {
 	// The register dependency pass identifies data hazards for each basic block and injects barrier instructions.
 	// Real PS3 does not have explicit barriers, but does instead often use delay slots or fence instructions to stall until a specific hardware unit clears the fence to advance.
