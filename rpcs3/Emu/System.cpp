@@ -75,7 +75,7 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx);
+extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx, bool is_fast_compilation);
 extern bool ppu_initialize(const ppu_module<lv2_obj>&, bool check_only = false, u64 file_size = 0);
 extern void ppu_finalize(const ppu_module<lv2_obj>&);
 extern void ppu_unload_prx(const lv2_prx&);
@@ -1684,7 +1684,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 			}
 
-			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
+			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue, is_fast = m_precompilation_option.is_fast]() mutable
 			{
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
@@ -1705,7 +1705,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					return;
 				}
 
-				ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list);
+				ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list, is_fast);
 
 				if (Emu.IsStopped())
 				{
@@ -3230,6 +3230,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		read_used_savestate_versions();
 		m_savestate_extension_flags1 = {};
 		m_emu_state_close_pending = false;
+		m_precompilation_option = {};
 
 		// Enable logging
 		rpcs3::utils::configure_logs(true);
@@ -3824,6 +3825,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			read_used_savestate_versions();
 			m_savestate_extension_flags1 = {};
 			m_emu_state_close_pending = false;
+			m_precompilation_option = {};
 
 			initialize_timebased_time(0, true);
 
