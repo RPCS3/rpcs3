@@ -1393,6 +1393,9 @@
     <ClCompile Include="Emu\RSX\Program\Assembler\FPOpcodes.cpp">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\Assembler\FPASM.cpp">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2799,6 +2802,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.h">
       <Filter>Emu\GPU\RSX\Program\Assembler\Passes\FP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\Assembler\FPASM.h">
+      <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
