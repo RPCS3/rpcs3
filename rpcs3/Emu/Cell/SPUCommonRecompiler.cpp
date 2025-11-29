@@ -3069,6 +3069,39 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				values[op.rt] = pos + 4;
 			}
 
+			const u32 pos_next = wa;
+
+			bool is_no_return = false;
+
+			if (pos_next >= lsa && pos_next < limit)
+			{
+				const u32 data_next = ls[pos_next / 4];
+				const auto type_next = g_spu_itype.decode(data_next);
+				const auto flag_next = g_spu_iflag.decode(data_next);
+				const auto op_next = spu_opcode_t{data_next};
+
+				if (!(type_next & spu_itype::zregmod) && !(type_next & spu_itype::branch))
+				{
+					if (auto iflags = g_spu_iflag.decode(data_next))
+					{
+						if (+flag_next & +spu_iflag::use_ra)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.ra < 10);
+						}
+
+						if (+flag_next & +spu_iflag::use_rb)
+						{
+							is_no_return = is_no_return || (op_next.rb >= 4 && op_next.rb < 10);
+						}
+
+						if (type_next & spu_itype::_quadrop && +iflags & +spu_iflag::use_rc)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.rb < 10);
+						}
+					}
+				}
+			}
+
 			if (af & vf::is_const)
 			{
 				const u32 target = spu_branch_target(av);
@@ -3105,7 +3138,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					limit = std::min<u32>(limit, target);
 				}
 
-				if (sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				if (!is_no_return && sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
 					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
@@ -3294,9 +3327,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				spu_log.notice("[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
 			}
 
-			if (type == spu_itype::BI || sl)
+			if (type == spu_itype::BI || sl || is_no_return)
 			{
-				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe)
+				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe || is_no_return)
 				{
 					m_targets[pos];
 				}
@@ -3333,9 +3366,42 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 
+			const u32 pos_next = wa;
+
+			bool is_no_return = false;
+
+			if (pos_next >= lsa && pos_next < limit)
+			{
+				const u32 data_next = ls[pos_next / 4];
+				const auto type_next = g_spu_itype.decode(data_next);
+				const auto flag_next = g_spu_iflag.decode(data_next);
+				const auto op_next = spu_opcode_t{data_next};
+
+				if (!(type_next & spu_itype::zregmod) && !(type_next & spu_itype::branch))
+				{
+					if (auto iflags = g_spu_iflag.decode(data_next))
+					{
+						if (+flag_next & +spu_iflag::use_ra)
+						{
+							is_no_return = is_no_return || (op_next.ra >= 4 && op_next.ra < 10);
+						}
+
+						if (+flag_next & +spu_iflag::use_rb)
+						{
+							is_no_return = is_no_return || (op_next.rb >= 4 && op_next.rb < 10);
+						}
+
+						if (type_next & spu_itype::_quadrop && +iflags & +spu_iflag::use_rc)
+						{
+							is_no_return = is_no_return || (op_next.rc >= 4 && op_next.rc < 10);
+						}
+					}
+				}
+			}
+
 			m_targets[pos].push_back(target);
 
-			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
+			if (!is_no_return && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
 				m_ret_info[pos / 4 + 1] = true;
 				m_entry_info[pos / 4 + 1] = true;
@@ -3343,7 +3409,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				add_block(pos + 4);
 			}
 
-			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
+			if (!is_no_return && g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
 				m_entry_info[target / 4] = true;
 				add_block(target);
@@ -4903,20 +4969,27 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		bool select_16_or_0_at_runtime = false;
 		bool put_active = false; // PUTLLC happened
 		bool get_rdatomic = false; // True if MFC_RdAtomicStat was read after GETLLAR
+		u32 required_pc = SPU_LS_SIZE; // Require program to be location specific for this optimization (SPU_LS_SIZE - no requirement)
 		u32 mem_count = 0;
+		u32 break_cause = 100;
+		u32 break_pc = SPU_LS_SIZE;
 
 		// Return old state for error reporting
 		atomic16_t discard()
 		{
 			const u32 pc = lsa_pc;
 			const u32 last_pc = lsa_last_pc;
+			const u32 cause = break_cause;
+			const u32 break_pos = break_pc;
 
 			const atomic16_t old = *this;
 			*this = atomic16_t{};
 
 			// Keep some members
-			lsa_pc = pc;
-			lsa_last_pc = last_pc;
+			this->lsa_pc = pc;
+			this->lsa_last_pc = last_pc;
+			this->break_cause = cause;
+			this->break_pc = break_pos;
 			return old;
 		}
 
@@ -5123,15 +5196,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			if (previous.active && likely_putllc_loop && getllar_starts.contains(previous.lsa_pc))
 			{
-				const bool is_first = !std::exchange(getllar_starts[previous.lsa_pc], true);
+				had_putllc_evaluation = true;
 
-				if (!is_first)
+				if (cause != 24)
 				{
+					atomic16->break_cause = cause; 
+					atomic16->break_pc = pos; 
 					return;
 				}
 
-				had_putllc_evaluation = true;
-
+				cause = atomic16->break_cause;
+				getllar_starts[previous.lsa_pc] = true;
 				g_fxo->get<putllc16_statistics_t>().breaking_reason[cause]++;
 
 				if (!spu_log.notice)
@@ -5139,7 +5214,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					return;
 				}
 
-				std::string break_error = fmt::format("PUTLLC pattern breakage [%x mem=%d lsa_const=%d cause=%u] (lsa_pc=0x%x)", pos, previous.mem_count, u32{!previous.ls_offs.is_const()} * 2 + previous.lsa.is_const(), cause, previous.lsa_pc);
+				std::string break_error = fmt::format("PUTLLC pattern breakage [%x mem=%d lsa_const=%d cause=%u] (lsa_pc=0x%x)", atomic16->break_pc, previous.mem_count, u32{!previous.ls_offs.is_const()} * 2 + previous.lsa.is_const(), cause, previous.lsa_pc);
 
 				const auto values = sort_breakig_reasons(g_fxo->get<putllc16_statistics_t>().breaking_reason);
 
@@ -6301,6 +6376,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							existing.ls_invalid |= atomic16->ls_invalid;
 							existing.ls_access |= atomic16->ls_access;
 							existing.mem_count = std::max<u32>(existing.mem_count, atomic16->mem_count);
+							existing.required_pc = std::min<u32>(existing.required_pc, atomic16->required_pc);
 							existing.select_16_or_0_at_runtime |= atomic16->select_16_or_0_at_runtime;
 						}
 
@@ -6314,6 +6390,24 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						set_const_value(op.rt, MFC_GETLLAR_SUCCESS);
 						invalidate = false;
 					}
+				}
+				else if (atomic16->break_cause != 100 && atomic16->lsa_pc != SPU_LS_SIZE)
+				{
+					const auto it = atomic16_all.find(pos);
+
+					if (it == atomic16_all.end())
+					{
+						// Ensure future failure
+						atomic16_all.emplace(pos, *atomic16);
+						break_putllc16(24, FN(x.active = true, x)(as_rvalue(*atomic16)));
+					}
+					else if (it->second.active && atomic16->break_cause != 100)
+					{
+						it->second = *atomic16;
+						break_putllc16(24, FN(x.active = true, x)(as_rvalue(*atomic16)));
+					}
+
+					atomic16->break_cause = 100;
 				}
 
 				break;
@@ -6385,6 +6479,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				// Do not clear lower 16 bytes addressing because the program can move on 4-byte basis
 				const u32 offs = spu_branch_target(pos - result.lower_bound, op.si16);
+				const u32 true_offs = spu_branch_target(pos, op.si16);
+
+				// Make this optimization depend on the location of the program
+				atomic16->required_pc = result.lower_bound;
 
 				if (atomic16->lsa.is_const() && [&]()
 				{
@@ -6408,6 +6506,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}())
 				{
 					// Ignore memory access in this case
+				}
+				else if (atomic16->lsa.is_const() && !atomic16->lsa.compare_with_mask_indifference(true_offs, SPU_LS_MASK_128))
+				{
+					// Same
 				}
 				else if (atomic16->ls_invalid && is_store)
 				{
@@ -7162,26 +7264,32 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			continue;
 		}
 
+		union putllc16_or_0_info
+		{
+			u64 data;
+			bf_t<u64, 32, 18> required_pc;
+			bf_t<u64, 30, 2> type;
+			bf_t<u64, 29, 1> runtime16_select;
+			bf_t<u64, 28, 1> no_notify;
+			bf_t<u64, 18, 8> reg;
+			bf_t<u64, 0, 18> off18;
+			bf_t<u64, 0, 8> reg2;
+		} value{};
+
 		auto& stats = g_fxo->get<putllc16_statistics_t>();
 		had_putllc_evaluation = true;
 
 		if (!pattern.ls_write)
 		{
+			if (pattern.required_pc != SPU_LS_SIZE)
+			{
+				value.required_pc = pattern.required_pc;
+			}
+
 			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
-			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa);
+			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa, value.data);
 			continue;
 		}
-
-		union putllc16_info
-		{
-			u32 data;
-			bf_t<u32, 30, 2> type;
-			bf_t<u32, 29, 1> runtime16_select;
-			bf_t<u32, 28, 1> no_notify;
-			bf_t<u32, 18, 8> reg;
-			bf_t<u32, 0, 18> off18;
-			bf_t<u32, 0, 8> reg2;
-		} value{};
 
 		enum : u32
 		{
@@ -7212,6 +7320,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		value.runtime16_select = pattern.select_16_or_0_at_runtime;
 		value.reg = s_reg_max;
+
+		if (pattern.required_pc != SPU_LS_SIZE)
+		{
+			value.required_pc = pattern.required_pc;
+		}
 
 		if (pattern.ls.is_const())
 		{
@@ -7244,7 +7357,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (g_cfg.core.spu_accurate_reservations)
 		{
 			// Because enabling it is a hack, as it turns out
-			continue;
+			// continue;
 		}
 
 		add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
@@ -7268,7 +7381,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(read_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
-			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point);
+			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point, 0);
 
 			spu_log.error("Channel Loop Pattern Detected! Report to developers! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
 		}
@@ -7282,6 +7395,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
+	}
+
+	if (!m_patterns.empty())
+	{
+		std::string out_dump;
+		dump(result, out_dump);
+		spu_log.notice("Dump SPU Function with pattern(s):\n%s", out_dump);
 	}
 
 	for (u32 i = 0; i < result.data.size(); i++)
@@ -8346,19 +8466,10 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 	return walkby_state;
 }
 
-void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u32 end)
+void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u64 info)
 {
-	if (end == umax)
-	{
-		end = start;
-	}
-
-	m_patterns[start] = pattern_info{utils::address_range32::start_end(start, end)};
-
-	for (u32 i = start; i <= (fill_all ? end : start); i += 4)
-	{
-		m_inst_attrs[i / 4] = attr;
-	}
+	m_patterns[start] = pattern_info{info};
+	m_inst_attrs[start / 4] = attr;
 }
 
 extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)

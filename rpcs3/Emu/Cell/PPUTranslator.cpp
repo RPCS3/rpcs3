@@ -595,7 +595,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 				if (g_cfg.core.ppu_prof)
 				{
-					m_ir->CreateStore(m_ir->getInt32(target_last), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_cia - m_locals)));
+					m_ir->CreateStore(GetAddr(target_last - m_addr), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_cia - m_locals)));
 				}
 			}
 		}
