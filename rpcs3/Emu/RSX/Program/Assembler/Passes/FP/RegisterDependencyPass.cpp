@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "RegisterDependencyPass.h"
 
-namespace rsx::assembler
+namespace rsx::assembler::FP
 {
 	void RegisterDependencyPass::run(FlowGraph& graph)
 	{

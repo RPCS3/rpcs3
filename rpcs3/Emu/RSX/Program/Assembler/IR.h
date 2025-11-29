@@ -19,7 +19,7 @@ namespace rsx::assembler
 		// Vector information
 		union
 		{
-			u32 mask;
+			u32 mask = 0;
 
 			struct
 			{
@@ -29,6 +29,11 @@ namespace rsx::assembler
 				bool w : 1;
 			};
 		};
+
+		operator bool() const
+		{
+			return !!mask;
+		}
 	};
 
 	struct Instruction
@@ -77,6 +82,9 @@ namespace rsx::assembler
 
 		std::vector<Instruction> prologue;     // Prologue, created by passes
 		std::vector<Instruction> epilogue;     // Epilogue, created by passes
+
+		std::vector<RegisterRef> input_list;   // Register inputs.
+		std::vector<RegisterRef> clobber_list; // Clobbered outputs
 
 		FlowEdge* insert_succ(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
