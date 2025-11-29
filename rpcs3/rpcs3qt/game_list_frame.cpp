@@ -2011,10 +2011,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.exec(global_pos);
 }
 
-bool game_list_frame::CreateCPUCaches(const std::string& path, const std::string& serial)
+bool game_list_frame::CreateCPUCaches(const std::string& path, const std::string& serial, bool is_fast_compilation)
 {
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
+	Emu.SetPrecompileCacheOption(emu_precompilation_option_t{.is_fast = is_fast_compilation});
 
 	if (const auto error = Emu.BootGame(fs::is_file(path) ? fs::get_parent_dir(path) : path, serial, true); error != game_boot_result::no_errors)
 	{
@@ -2026,9 +2027,9 @@ bool game_list_frame::CreateCPUCaches(const std::string& path, const std::string
 	return true;
 }
 
-bool game_list_frame::CreateCPUCaches(const game_info& game)
+bool game_list_frame::CreateCPUCaches(const game_info& game, bool is_fast_compilation)
 {
-	return game && CreateCPUCaches(game->info.path, game->info.serial);
+	return game && CreateCPUCaches(game->info.path, game->info.serial, is_fast_compilation);
 }
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
@@ -2404,6 +2405,9 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 		connect(pdlg, &progress_dialog::canceled, this, [pdlg](){ pdlg->deleteLater(); });
 		QApplication::beep();
 
+		// Signal termination back to the callback
+		action("");
+
 		if (refresh_on_finish && index)
 		{
 			Refresh(true);
@@ -2414,7 +2418,7 @@ void game_list_frame::BatchActionBySerials(progress_dialog* pdlg, const std::set
 	QTimer::singleShot(1, this, *periodic_func);
 }
 
-void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_data)
+void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_data, bool is_fast_compilation)
 {
 	std::set<std::string> serials;
 
@@ -2433,11 +2437,13 @@ void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_da
 	if (total == 0)
 	{
 		QMessageBox::information(this, tr("LLVM Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
+		Q_EMIT NotifyBatchedGameActionFinished();
 		return;
 	}
 
 	if (!m_gui_settings->GetBootConfirmation(this))
 	{
+		Q_EMIT NotifyBatchedGameActionFinished();
 		return;
 	}
 
@@ -2459,13 +2465,19 @@ void game_list_frame::BatchCreateCPUCaches(const std::vector<game_info>& game_da
 	BatchActionBySerials(pdlg, serials, tr("%0\nProgress: %1/%2 caches compiled").arg(main_label),
 	[&, game_data](const std::string& serial)
 	{
+		if (serial.empty())
+		{
+			Q_EMIT NotifyBatchedGameActionFinished();
+			return false;
+		}
+
 		if (Emu.IsStopped(true))
 		{
 			const auto it = std::find_if(m_game_data.begin(), m_game_data.end(), FN(x->info.serial == serial));
 
 			if (it != m_game_data.end())
 			{
-				return CreateCPUCaches((*it)->info.path, serial);
+				return CreateCPUCaches((*it)->info.path, serial, is_fast_compilation);
 			}
 		}
 
@@ -2512,7 +2524,7 @@ void game_list_frame::BatchRemovePPUCaches()
 	BatchActionBySerials(pdlg, serials, tr("%0/%1 caches cleared"),
 	[this](const std::string& serial)
 	{
-		return Emu.IsStopped(true) && RemovePPUCache(GetCacheDirBySerial(serial));
+		return !serial.empty() &&Emu.IsStopped(true) && RemovePPUCache(GetCacheDirBySerial(serial));
 	},
 	[this](u32, u32)
 	{
@@ -2551,7 +2563,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 	BatchActionBySerials(pdlg, serials, tr("%0/%1 caches cleared"),
 	[this](const std::string& serial)
 	{
-		return Emu.IsStopped(true) && RemoveSPUCache(GetCacheDirBySerial(serial));
+		return !serial.empty() && Emu.IsStopped(true) && RemoveSPUCache(GetCacheDirBySerial(serial));
 	},
 	[this](u32 removed, u32 total)
 	{
@@ -2586,7 +2598,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom configurations cleared"),
 	[this](const std::string& serial)
 	{
-		return Emu.IsStopped(true) && RemoveCustomConfiguration(serial);
+		return !serial.empty() && Emu.IsStopped(true) && RemoveCustomConfiguration(serial);
 	},
 	[this](u32 removed, u32 total)
 	{
@@ -2620,7 +2632,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom pad configurations cleared"),
 	[this](const std::string& serial)
 	{
-		return Emu.IsStopped(true) && RemoveCustomPadConfiguration(serial);
+		return !serial.empty() && Emu.IsStopped(true) && RemoveCustomPadConfiguration(serial);
 	},
 	[this](u32 removed, u32 total)
 	{
@@ -2659,7 +2671,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 	BatchActionBySerials(pdlg, serials, tr("%0/%1 shader caches cleared"),
 	[this](const std::string& serial)
 	{
-		return Emu.IsStopped(true) && RemoveShadersCache(GetCacheDirBySerial(serial));
+		return !serial.empty() && Emu.IsStopped(true) && RemoveShadersCache(GetCacheDirBySerial(serial));
 	},
 	[this](u32 removed, u32 total)
 	{

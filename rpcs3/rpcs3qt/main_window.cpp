@@ -1187,7 +1187,13 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				// Executes after PrecompileCachesFromInstalledPackages
+				m_notify_batch_game_action_cb = [this, paths]() mutable
+				{
+					ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				};
+
+				PrecompileCachesFromInstalledPackages(paths);
 			});
 		}
 
@@ -2368,8 +2374,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 #else
 	QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-	QCheckBox* precompile_check = new QCheckBox(tr("Precompile caches"));
-	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software and precompile caches? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
+	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
 
 	vlayout->addWidget(label);
 	vlayout->addStretch(10);
@@ -2377,10 +2382,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 	vlayout->addStretch(3);
 	vlayout->addWidget(quick_check);
 	vlayout->addStretch(3);
-	vlayout->addWidget(precompile_check);
-	vlayout->addStretch(3);
-
-	precompile_check->setToolTip(tr("Spend time building data needed for game boot now instead of at launch."));
 
 	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
 
@@ -2391,7 +2392,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 	{
 		const bool create_desktop_shortcuts = desk_check->isChecked();
 		const bool create_app_shortcut = quick_check->isChecked();
-		const bool create_caches = precompile_check->isChecked();
 
 		dlg->hide();
 		dlg->accept();
@@ -2411,12 +2411,11 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			locations.insert(gui::utils::shortcut_location::applications);
 		}
 
-		if (locations.empty() && !create_caches)
+		if (locations.empty())
 		{
 			return;
 		}
 
-		std::vector<game_info> game_data;
 		std::vector<game_info> game_data_shortcuts;
 
 		for (const auto& [boot_path, title_id] : paths)
@@ -2431,11 +2430,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 						{
 							game_data_shortcuts.push_back(gameinfo);
 						}
-
-						if (create_caches)
-						{
-							game_data.push_back(gameinfo);
-						}
 					}
 
 					break;
@@ -2447,15 +2441,37 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 		{
 			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
 		}
-
-		if (!game_data.empty())
-		{
-			m_game_list_frame->BatchCreateCPUCaches(game_data);
-		}
 	});
 
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	dlg->open();
+}
+
+
+void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths)
+{
+	std::vector<game_info> game_data;
+
+	for (const auto& [boot_path, title_id] : bootable_paths)
+	{
+		for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+		{
+			if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+			{
+				if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+				{
+					game_data.push_back(gameinfo);
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (!game_data.empty())
+	{
+		m_game_list_frame->BatchCreateCPUCaches(game_data, true);
+	}
 }
 
 void main_window::CreateActions()
@@ -3401,6 +3417,15 @@ void main_window::CreateConnects()
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
 	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
 	connect(m_game_list_frame, &game_list_frame::FocusToSearchBar, this, [this]() { ui->mw_searchbar->setFocus(); });
+
+	connect(m_game_list_frame, &game_list_frame::NotifyBatchedGameActionFinished, this, [this]() mutable
+	{
+		if (m_notify_batch_game_action_cb)
+		{
+			m_notify_batch_game_action_cb();
+			m_notify_batch_game_action_cb = {};
+		}
+	});
 }
 
 void main_window::CreateDockWindows()
