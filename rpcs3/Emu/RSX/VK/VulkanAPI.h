@@ -4,7 +4,7 @@
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #elif defined(__APPLE__)
-#define VK_USE_PLATFORM_MACOS_MVK
+#define VK_USE_PLATFORM_METAL_EXT
 #elif defined(ANDROID)
 #define VK_USE_PLATFORM_ANDROID_KHR
 #else
@@ -29,7 +29,7 @@
 
 // Undefine header configuration variables
 #undef VK_USE_PLATFORM_WIN32_KHR
-#undef VK_USE_PLATFORM_MACOS_MVK
+#undef VK_USE_PLATFORM_METAL_EXT
 #undef VK_USE_PLATFORM_ANDROID_KHR
 #undef VK_USE_PLATFORM_XLIB_KHR
 #undef VK_USE_PLATFORM_WAYLAND_KHR
