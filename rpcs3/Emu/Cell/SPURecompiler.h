@@ -193,9 +193,7 @@ public:
 	// Value flags (TODO: only is_const is implemented)
 	enum class vf : u32
 	{
-		is_const,
 		is_mask,
-		is_rel,
 		is_null,
 
 		__bitset_enum_max
@@ -206,8 +204,8 @@ public:
 		bs_t<vf> flag{+vf::is_null};
 		u32 value{};
 		u32 tag = umax;
-		u32 known_ones{};
-		u32 known_zeroes{};
+		u32 value_range = 0;
+		u32 bit_range = umax;
 		u32 origin = SPU_LS_SIZE;
 		bool is_instruction = false;
 
