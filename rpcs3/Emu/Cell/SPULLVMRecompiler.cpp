@@ -1286,15 +1286,16 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const bool is_accurate_op = true || !!g_cfg.core.spu_accurate_reservations;
 
-		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
+		const auto compare_data_change_res = m_ir->CreateICmpNE(_new, _rdata);
+		const auto second_test_for_complete_op = is_accurate_op ? m_ir->getTrue() : compare_data_change_res;
 
 		if (info.runtime16_select)
 		{
-			m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), compare_data_change_res), _begin_op, _inc_res, m_md_likely);
+			m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), second_test_for_complete_op), _begin_op, _inc_res, m_md_likely);
 		}
 		else
 		{
-			m_ir->CreateCondBr(compare_data_change_res, _begin_op, _inc_res, m_md_unlikely);
+			m_ir->CreateCondBr(second_test_for_complete_op, _begin_op, _inc_res, m_md_unlikely);
 		}
 
 		m_ir->SetInsertPoint(_begin_op);
@@ -1339,7 +1340,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (!info.no_notify)
 		{
+			const auto notify_block = llvm::BasicBlock::Create(m_context, "__putllc16_block_notify", m_function);
+			const auto notify_next = llvm::BasicBlock::Create(m_context, "__putllc16_block_notify_next", m_function);
+
+			m_ir->CreateCondBr(compare_data_change_res, notify_block, notify_next);
+			m_ir->SetInsertPoint(notify_block);
 			call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+			m_ir->CreateBr(notify_next);
+			m_ir->SetInsertPoint(notify_next);
 		}
 
 		m_ir->CreateBr(_success);
