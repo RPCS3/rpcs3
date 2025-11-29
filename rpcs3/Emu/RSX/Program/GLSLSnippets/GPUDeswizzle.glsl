@@ -103,34 +103,50 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 
 #if USE_16BIT_ADDRESSING
 
-void write16(inout uint accumulator, const in uint subword, const in uint src_id, const in uint dst_id)
+void decode_16b(const in uint texel_id, in uint x, const in uint y, const in uint z)
 {
-	const uint masks[] = { 0x0000FFFF, 0xFFFF0000 };
-	accumulator |= data_in[src_id / 2] & masks[subword];
+	uint accumulator = 0;
 
-	if (subword == 1)
+	const uint subword_count = min(invocation.size.x, 2);
+	for (uint subword = 0; subword < subword_count; ++subword, ++x)
 	{
-		data_out[dst_id / 2] = %f(accumulator);
+		uint src_texel_id = get_z_index(x, y, z);
+		uint src_id = (src_texel_id + invocation.data_offset);
+		int src_bit_offset = int(src_id % 2) << 4;
+		uint src_value = bitfieldExtract(data_in[src_id / 2], src_bit_offset, 16);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 4), 16);
 	}
+
+	data_out[texel_id / 2] = %f(accumulator);
 }
 
 #elif USE_8BIT_ADDRESSING
 
-void write8(inout uint accumulator, const in uint subword, const in uint src_id, const in uint dst_id)
+void decode_8b(const in uint texel_id, in uint x, const in uint y, const in uint z)
 {
-	const uint masks[] = { 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000 };
-	accumulator |= data_in[src_id / 4] & masks[subword];
+	uint accumulator = 0;
 
-	if (subword == 3)
+	const uint subword_count = min(invocation.size.x, 4);
+	for (uint subword = 0; subword < subword_count; ++subword, ++x)
 	{
-		data_out[dst_id / 4] = accumulator;
+		uint src_texel_id = get_z_index(x, y, z);
+		uint src_id = (src_texel_id + invocation.data_offset);
+		int src_bit_offset = int(src_id % 4) << 3;
+		uint src_value = bitfieldExtract(data_in[src_id / 4], src_bit_offset, 8);
+		accumulator = bitfieldInsert(accumulator, src_value, int(subword << 3), 8);
 	}
+
+	data_out[texel_id / 4] = accumulator;
 }
 
 #else
 
-void write32(const in uint word_count, in uint src_id, in uint dst_id)
+void decode_32b(const in uint texel_id, const in uint word_count, const in uint x, const in uint y, const in uint z)
 {
+	uint src_texel_id = get_z_index(x, y, z);
+	uint dst_id = (texel_id * word_count);
+	uint src_id = (src_texel_id + invocation.data_offset) * word_count;
+
 	for (uint i = 0; i < word_count; ++i)
 	{
 		uint value = data_in[src_id++];
@@ -165,23 +181,11 @@ void main()
 	uint x = (slice_offset % row_length);
 
 #if USE_8BIT_ADDRESSING
-	for (uint subword = 0, accumulator = 0; subword < 4; ++subword, ++x) {
+	decode_8b(texel_id, x, y, z);
 #elif USE_16BIT_ADDRESSING
-	for (uint subword = 0, accumulator = 0; subword < 2; ++subword, ++x) {
-#endif
-
-		uint src_texel_id = get_z_index(x, y, z);
-		uint dst_id = (texel_id * word_count);
-		uint src_id = (src_texel_id + invocation.data_offset) * word_count;
-
-#if USE_8BIT_ADDRESSING
-		write8(accumulator, subword, src_id, dst_id);
-	}
-#elif USE_16BIT_ADDRESSING
-		write16(accumulator, subword, src_id, dst_id);
-	}
+	decode_16b(texel_id, x, y, z);
 #else
-	write32(word_count, src_id, dst_id);
+	decode_32b(texel_id, word_count, x, y, z);
 #endif
 
 }

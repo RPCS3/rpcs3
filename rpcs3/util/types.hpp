@@ -999,17 +999,18 @@ template <typename To, typename From> requires (std::is_integral_v<decltype(std:
 	constexpr bool is_from_signed = std::is_signed_v<CommonFrom>;
 	constexpr bool is_to_signed = std::is_signed_v<CommonTo>;
 
-	constexpr auto from_mask = (is_from_signed && !is_to_signed) ? UnFrom{umax} >> 1 : UnFrom{umax};
+	// For unsigned/signed mismatch, create an "unsigned" compatible mask
+	constexpr auto from_mask = (is_from_signed && !is_to_signed && sizeof(CommonFrom) <= sizeof(CommonTo)) ? UnFrom{umax} >> 1 : UnFrom{umax};
 	constexpr auto to_mask = (is_to_signed && !is_from_signed) ? UnTo{umax} >> 1 : UnTo{umax};
 
-	constexpr auto mask = ~(from_mask & to_mask);
+	constexpr auto mask = static_cast<UnFrom>(~(from_mask & to_mask));
 
-	// Signed to unsigned always require test
-	// Otherwise, this is bit-wise narrowing or conversion between types of different signedness of the same size
-	if constexpr ((is_from_signed && !is_to_signed) || to_mask < from_mask)
+	// If destination ("unsigned" compatible) mask is smaller than source ("unsigned" compatible) mask
+	// It requires narrowing.
+	if constexpr (!!mask)
 	{
 		// Try to optimize test if both are of the same signedness
-		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonTo>(value) != value) [[unlikely]]
+		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonFrom>(static_cast<CommonTo>(value)) != value) [[unlikely]]
 		{
 			fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
 		}

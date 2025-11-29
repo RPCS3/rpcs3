@@ -1080,7 +1080,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(_body);
 	}
 
-	void putllc16_pattern(const spu_program& /*prog*/, utils::address_range32 range)
+	void putllc16_pattern(const spu_program& /*prog*/, u64 pattern_info)
 	{
 		// Prevent store elimination
 		m_block->store_context_ctr[s_reg_mfc_eal]++;
@@ -1109,16 +1109,17 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			}
 		};
 
-		const union putllc16_info
+		const union putllc16_or_0_info
 		{
-			u32 data;
-			bf_t<u32, 30, 2> type;
-			bf_t<u32, 29, 1> runtime16_select;
-			bf_t<u32, 28, 1> no_notify;
-			bf_t<u32, 18, 8> reg;
-			bf_t<u32, 0, 18> off18;
-			bf_t<u32, 0, 8> reg2;
-		} info = std::bit_cast<putllc16_info>(range.end);
+			u64 data;
+			bf_t<u64, 32, 18> required_pc;
+			bf_t<u64, 30, 2> type;
+			bf_t<u64, 29, 1> runtime16_select;
+			bf_t<u64, 28, 1> no_notify;
+			bf_t<u64, 18, 8> reg;
+			bf_t<u64, 0, 18> off18;
+			bf_t<u64, 0, 8> reg2;
+		} info = std::bit_cast<putllc16_or_0_info>(pattern_info);
 
 		enum : u32
 		{
@@ -1150,8 +1151,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		value_t<u32> eal_val;
 		eal_val.value = _eal;
 
-		auto get_reg32 = [&](u32 reg)
+		auto get_reg32 = [&](u64 reg_)
 		{
+			const u32 reg = static_cast<u32>(reg_);
+
 			if (get_reg_type(reg) != get_type<u32[4]>())
 			{
 				return get_reg_fixed(reg, get_type<u32>());
@@ -1170,6 +1173,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 		else if (info.type == v_relative)
 		{
+			if (info.required_pc && info.required_pc != SPU_LS_SIZE)
+			{
+				const auto short_op = llvm::BasicBlock::Create(m_context, "__putllc16_short_op", m_function);
+				const auto heavy_op = llvm::BasicBlock::Create(m_context, "__putllc16_heavy_op", m_function);
+
+				m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->getInt32(info.required_pc), m_base_pc), heavy_op, short_op);
+				m_ir->SetInsertPoint(heavy_op);
+				update_pc();
+				call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
+				m_ir->CreateBr(_final);
+				m_ir->SetInsertPoint(short_op);
+			}
+
 			dest = m_ir->CreateAnd(get_pc(spu_branch_target(info.off18 + m_base)), 0x3fff0);
 		}
 		else if (info.type == v_reg_offs)
@@ -1268,17 +1284,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _new = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(m_lsptr, dest), llvm::MaybeAlign{16});
 		const auto _rdata = m_ir->CreateAlignedLoad(get_type<u128>(), _ptr(spu_ptr(&spu_thread::rdata), m_ir->CreateAnd(diff, 0x70)), llvm::MaybeAlign{16});
 
-		const bool is_accurate_op = !!g_cfg.core.spu_accurate_reservations;
+		const bool is_accurate_op = true || !!g_cfg.core.spu_accurate_reservations;
 
-		const auto compare_data_change_res = is_accurate_op ? m_ir->getTrue() : m_ir->CreateICmpNE(_new, _rdata);
+		const auto compare_data_change_res = m_ir->CreateICmpNE(_new, _rdata);
+		const auto second_test_for_complete_op = is_accurate_op ? m_ir->getTrue() : compare_data_change_res;
 
 		if (info.runtime16_select)
 		{
-			m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), compare_data_change_res), _begin_op, _inc_res, m_md_likely);
+			m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpULT(diff, m_ir->getInt64(128)), second_test_for_complete_op), _begin_op, _inc_res, m_md_likely);
 		}
 		else
 		{
-			m_ir->CreateCondBr(compare_data_change_res, _begin_op, _inc_res, m_md_unlikely);
+			m_ir->CreateCondBr(second_test_for_complete_op, _begin_op, _inc_res, m_md_unlikely);
 		}
 
 		m_ir->SetInsertPoint(_begin_op);
@@ -1323,7 +1340,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (!info.no_notify)
 		{
+			const auto notify_block = llvm::BasicBlock::Create(m_context, "__putllc16_block_notify", m_function);
+			const auto notify_next = llvm::BasicBlock::Create(m_context, "__putllc16_block_notify_next", m_function);
+
+			m_ir->CreateCondBr(compare_data_change_res, notify_block, notify_next);
+			m_ir->SetInsertPoint(notify_block);
 			call("atomic_wait_engine::notify_all", static_cast<void(*)(const void*)>(atomic_wait_engine::notify_all), rptr);
+			m_ir->CreateBr(notify_next);
+			m_ir->SetInsertPoint(notify_next);
 		}
 
 		m_ir->CreateBr(_success);
@@ -1373,7 +1397,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->SetInsertPoint(_final);
 	}
 
-	void putllc0_pattern(const spu_program& /*prog*/, utils::address_range32 /*range*/)
+	void putllc0_pattern(const spu_program& /*prog*/, u64 pattern_info)
 	{
 		// Prevent store elimination
 		m_block->store_context_ctr[s_reg_mfc_eal]++;
@@ -1401,6 +1425,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			}
 		};
 
+		const union putllc16_or_0_info
+		{
+			u64 data;
+			bf_t<u64, 32, 18> required_pc;
+			bf_t<u64, 30, 2> type;
+			bf_t<u64, 29, 1> runtime16_select;
+			bf_t<u64, 28, 1> no_notify;
+			bf_t<u64, 18, 8> reg;
+			bf_t<u64, 0, 18> off18;
+			bf_t<u64, 0, 8> reg2;
+		} info = std::bit_cast<putllc16_or_0_info>(pattern_info);
+
 		const auto _next = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto _next0 = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto _fail = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -1408,6 +1444,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const auto _eal = (get_reg_fixed<u32>(s_reg_mfc_eal) & -128).eval(m_ir);
 		const auto _raddr = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::raddr));
+
+		if (info.required_pc && info.required_pc != SPU_LS_SIZE)
+		{
+			const auto short_op = llvm::BasicBlock::Create(m_context, "__putllc0_short_op", m_function);
+			const auto heavy_op = llvm::BasicBlock::Create(m_context, "__putllc0_heavy_op", m_function);
+
+			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->getInt32(info.required_pc), m_base_pc), heavy_op, short_op);
+			m_ir->SetInsertPoint(heavy_op);
+			update_pc();
+			call("spu_exec_mfc_cmd", &exec_mfc_cmd<false>, m_thread);
+			m_ir->CreateBr(_final);
+			m_ir->SetInsertPoint(short_op);
+		}
 
 		m_ir->CreateCondBr(m_ir->CreateAnd(m_ir->CreateICmpEQ(_eal, _raddr), m_ir->CreateIsNotNull(_raddr)), _next, _fail, m_md_likely);
 		m_ir->SetInsertPoint(_next);
@@ -2143,12 +2192,12 @@ public:
 					{
 					case inst_attr::putllc0:
 					{
-						putllc0_pattern(func, m_patterns.at(m_pos - start).range);
+						putllc0_pattern(func, m_patterns.at(m_pos - start).info);
 						continue;
 					}
 					case inst_attr::putllc16:
 					{
-						putllc16_pattern(func, m_patterns.at(m_pos - start).range);
+						putllc16_pattern(func, m_patterns.at(m_pos - start).info);
 						continue;
 					}
 					case inst_attr::omit:

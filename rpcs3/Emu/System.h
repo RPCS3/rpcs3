@@ -120,6 +120,11 @@ namespace utils
 	struct serial;
 };
 
+struct emu_precompilation_option_t
+{
+	bool is_fast = false;
+};
+
 class Emulator final
 {
 	atomic_t<system_state> m_state{system_state::stopped};
@@ -188,6 +193,7 @@ class Emulator final
 	};
 
 	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
+	emu_precompilation_option_t m_precompilation_option{};
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
@@ -243,6 +249,11 @@ public:
 	void SetTestMode()
 	{
 		m_state = system_state::running;
+	}
+
+	void SetPrecompileCacheOption(emu_precompilation_option_t option)
+	{
+		m_precompilation_option = option;
 	}
 
 	void Init();

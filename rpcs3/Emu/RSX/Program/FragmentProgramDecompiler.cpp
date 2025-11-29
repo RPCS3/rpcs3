@@ -234,7 +234,8 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	const u32 constant_id = m_size + (4 * sizeof(u32));
+	ensure(m_instruction->length == 8);
+	const u32 constant_id = m_instruction->addr + 16;
 	u32 index = umax;
 
 	if (auto found = m_constant_offsets.find(constant_id);
@@ -248,9 +249,6 @@ std::string FragmentProgramDecompiler::AddConst()
 		properties.constant_offsets.push_back(constant_id);
 		m_constant_offsets[constant_id] = index;
 	}
-
-	// Skip next instruction, its just a literal
-	m_offset = 2 * 4 * sizeof(u32);
 
 	// Return the next offset index
 	return "_fetch_constant(" + std::to_string(index) + ")";
@@ -1297,7 +1295,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = static_cast<be_t<u32>*>(m_prog.get_data());
+	const auto graph = rsx::assembler::deconstruct_fragment_program(m_prog);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -1314,141 +1312,130 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	int forced_unit = FORCE_NONE;
 
-	while (true)
+	for (const auto &block : graph.blocks)
 	{
-		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-			found != m_end_offsets.end();
-			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
+		// TODO: Handle block prologue if any
+		if (!block.pred.empty())
 		{
-			m_end_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			m_loop_count--;
+			// CFG guarantees predecessors are sorted, closest one first
+			for (const auto& pred : block.pred)
+			{
+				switch (pred.type)
+				{
+				case rsx::assembler::EdgeType::ENDLOOP:
+					m_loop_count--;
+					[[ fallthrough ]];
+				case rsx::assembler::EdgeType::ENDIF:
+					m_code_level--;
+					AddCode("}");
+					break;
+				case rsx::assembler::EdgeType::LOOP:
+					m_loop_count++;
+					[[ fallthrough ]];
+				case rsx::assembler::EdgeType::IF:
+					// Instruction will be inserted by the SIP decoder
+					AddCode("{");
+					m_code_level++;
+					break;
+				case rsx::assembler::EdgeType::ELSE:
+					// This one needs more testing
+					m_code_level--;
+					AddCode("}");
+					AddCode("else");
+					AddCode("{");
+					m_code_level++;
+					break;
+				default:
+					// Start a new block anyway
+					fmt::throw_exception("Unexpected block found");
+				}
+			}
 		}
 
-		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-			found != m_else_offsets.end();
-			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
+		for (const auto& inst : block.instructions)
 		{
-			m_else_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			AddCode("else");
-			AddCode("{");
-			m_code_level++;
-		}
+			m_instruction = &inst;
 
-		dst.HEX = GetData(data[0]);
-		src0.HEX = GetData(data[1]);
-		src1.HEX = GetData(data[2]);
-		src2.HEX = GetData(data[3]);
+			dst.HEX = inst.bytecode[0];
+			src0.HEX = inst.bytecode[1];
+			src1.HEX = inst.bytecode[2];
+			src2.HEX = inst.bytecode[3];
 
-		m_offset = 4 * sizeof(u32);
-		opflags = 0;
+			opflags = 0;
 
-		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
+			const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
 
-		auto SIP = [&]()
-		{
+			auto SIP = [&]()
+			{
+				switch (opcode)
+				{
+				case RSX_FP_OPCODE_BRK:
+					if (m_loop_count) AddFlowOp("break");
+					else rsx_log.error("BRK opcode found outside of a loop");
+					break;
+				case RSX_FP_OPCODE_CAL:
+					rsx_log.error("Unimplemented SIP instruction: CAL");
+					break;
+				case RSX_FP_OPCODE_FENCT:
+					AddCode("//FENCT");
+					forced_unit = FORCE_SCT;
+					break;
+				case RSX_FP_OPCODE_FENCB:
+					AddCode("//FENCB");
+					forced_unit = FORCE_SCB;
+					break;
+				case RSX_FP_OPCODE_IFE:
+					AddCode("if($cond)");
+					break;
+				case RSX_FP_OPCODE_LOOP:
+					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
+							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
+					break;
+				case RSX_FP_OPCODE_REP:
+					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
+							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
+					break;
+				case RSX_FP_OPCODE_RET:
+					AddFlowOp("return");
+					break;
+
+				default:
+					return false;
+				}
+
+				return true;
+			};
+
 			switch (opcode)
 			{
-			case RSX_FP_OPCODE_BRK:
-				if (m_loop_count) AddFlowOp("break");
-				else rsx_log.error("BRK opcode found outside of a loop");
+			case RSX_FP_OPCODE_NOP:
 				break;
-			case RSX_FP_OPCODE_CAL:
-				rsx_log.error("Unimplemented SIP instruction: CAL");
+			case RSX_FP_OPCODE_KIL:
+				properties.has_discard_op = true;
+				AddFlowOp("_kill()");
 				break;
-			case RSX_FP_OPCODE_FENCT:
-				AddCode("//FENCT");
-				forced_unit = FORCE_SCT;
-				break;
-			case RSX_FP_OPCODE_FENCB:
-				AddCode("//FENCB");
-				forced_unit = FORCE_SCB;
-				break;
-			case RSX_FP_OPCODE_IFE:
-				AddCode("if($cond)");
-				if (src2.end_offset != src1.else_offset)
-					m_else_offsets.push_back(src1.else_offset << 2);
-				m_end_offsets.push_back(src2.end_offset << 2);
-				AddCode("{");
-				m_code_level++;
-				break;
-			case RSX_FP_OPCODE_LOOP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
-				break;
-			case RSX_FP_OPCODE_REP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
-				break;
-			case RSX_FP_OPCODE_RET:
-				AddFlowOp("return");
-				break;
-
 			default:
-				return false;
+				int prev_force_unit = forced_unit;
+
+				// Some instructions do not respect forced unit
+				// Tested with Tales of Vesperia
+				if (SIP()) break;
+				if (handle_tex_srb(opcode)) break;
+
+				// FENCT/FENCB do not actually reject instructions if they dont match the forced unit
+				// Looks like they are optimization hints and not hard-coded forced paths
+				if (handle_sct_scb(opcode)) break;
+				forced_unit = FORCE_NONE;
+
+				rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
+				break;
 			}
 
-			return true;
-		};
-
-		switch (opcode)
-		{
-		case RSX_FP_OPCODE_NOP:
-			break;
-		case RSX_FP_OPCODE_KIL:
-			properties.has_discard_op = true;
-			AddFlowOp("_kill()");
-			break;
-		default:
-			int prev_force_unit = forced_unit;
-
-			// Some instructions do not respect forced unit
-			// Tested with Tales of Vesperia
-			if (SIP()) break;
-			if (handle_tex_srb(opcode)) break;
-
-			// FENCT/FENCB do not actually reject instructions if they dont match the forced unit
-			// Looks like they are optimization hints and not hard-coded forced paths
-			if (handle_sct_scb(opcode)) break;
-			forced_unit = FORCE_NONE;
-
-			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
-			break;
+			m_size += m_instruction->length * 4;
+			if (dst.end) break;
 		}
 
-		m_size += m_offset;
-
-		if (dst.end) break;
-
-		ensure(m_offset % sizeof(u32) == 0);
-		data += m_offset / sizeof(u32);
+		// TODO: Handle block epilogue if needed
 	}
 
 	while (m_code_level > 1)

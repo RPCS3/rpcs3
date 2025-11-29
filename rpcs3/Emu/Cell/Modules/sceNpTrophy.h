@@ -3,7 +3,6 @@
 #include "util/types.hpp"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include <mutex>
 #include <vector>
 #include <mutex>
 
