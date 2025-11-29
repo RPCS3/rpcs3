@@ -12,5 +12,6 @@ set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
 set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
 set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
 add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
+target_compile_options(yaml-cpp PRIVATE -Wno-ignored-attributes -Wno-unused-value)
 
 set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX_OLD})
