@@ -8435,8 +8435,9 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 				{
 					// TODO: The true maximum occurence count need to depend on the amount of branching-outs passed through
 					// Currently allow 2 for short-term code and 1 for long-term code
+					// Ignore large jumptables as well
 					const bool loop_terminator_detected = std::count(been_there.begin(), been_there.end(), prev_pc) >= (qi < 20 ? 2u : 1u);
-					const bool avoid_extensive_analysis = qi >= (extensive_evaluation ? 22 : 16);
+					const bool avoid_extensive_analysis = qi >= (extensive_evaluation ? 22 : 16) || it->state_prev.size() >= 8;
 
 					if (!loop_terminator_detected && !avoid_extensive_analysis)
 					{
