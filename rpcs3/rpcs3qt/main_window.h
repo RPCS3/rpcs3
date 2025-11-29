@@ -48,6 +48,7 @@ class main_window : public QMainWindow
 	bool m_save_slider_pos = false;
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
+	std::function<void()> m_notify_batch_game_action_cb;
 
 	QIcon m_app_icon;
 	QIcon m_icon_play;
@@ -141,6 +142,7 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled) const;
 	void ShowTitleBars(bool show) const;
+	void PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths);
 	void ShowOptionalGamePreparations(const QString& title, const QString& message, std::map<std::string, QString> game_path);
 
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);

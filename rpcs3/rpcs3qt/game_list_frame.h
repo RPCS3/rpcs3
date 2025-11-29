@@ -64,7 +64,7 @@ public:
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
-	void BatchCreateCPUCaches(const std::vector<game_info>& game_data = {});
+	void BatchCreateCPUCaches(const std::vector<game_info>& game_data = {}, bool is_fast_compilation = false);
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
@@ -96,6 +96,7 @@ Q_SIGNALS:
 	void FocusToSearchBar();
 	void Refreshed();
 	void RequestSaveStateManager(const game_info& game);
+	void NotifyBatchedGameActionFinished();
 
 public:
 	template <typename KeyType>
@@ -135,8 +136,8 @@ private:
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void RemoveHDD1Cache(const std::string& base_dir, const std::string& title_id, bool is_interactive = false);
-	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {});
-	static bool CreateCPUCaches(const game_info& game);
+	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {}, bool is_fast_compilation = false);
+	static bool CreateCPUCaches(const game_info& game, bool is_fast_compilation = false);
 
 	static bool RemoveContentPath(const std::string& path, const std::string& desc);
 	static u32 RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc);
