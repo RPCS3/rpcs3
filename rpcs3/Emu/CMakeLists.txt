@@ -516,9 +516,11 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_video.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
+    RSX/Program/Assembler/FPASM.cpp
+    RSX/Program/Assembler/FPOpcodes.cpp
     RSX/Program/Assembler/FPToCFG.cpp
-    RSX/Program/Assembler/Passes/RegisterAnnotationPass.cpp
-    RSX/Program/Assembler/Passes/RegisterDependencyPass.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterAnnotationPass.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterDependencyPass.cpp
     RSX/Program/CgBinaryProgram.cpp
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
