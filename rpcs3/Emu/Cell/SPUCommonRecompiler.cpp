@@ -720,9 +720,19 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = ppu_cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
+	const std::string filename = "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
+	const std::string loc = ppu_cache + filename;
+	const std::string loc_debug = fs::get_cache_dir() + "DEBUG/" + filename;
 
-	spu_cache cache(loc);
+	bool is_debug = false;
+
+	if (fs::is_file(loc_debug))
+	{
+		spu_log.success("SPU Cache override applied!");
+		is_debug = true;
+	}
+
+	spu_cache cache(is_debug ? loc_debug : loc);
 
 	if (!cache)
 	{
