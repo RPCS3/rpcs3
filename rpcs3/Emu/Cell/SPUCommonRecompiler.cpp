@@ -5018,7 +5018,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			ls_invalid = true;
 			ls_write |= write;
 
-			if (write)
+			if (ls_write)
 			{
 				return discard();
 			}
