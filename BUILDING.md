@@ -8,11 +8,12 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 ### Windows 10 or later
 
 The following tools are required to build RPCS3 on Windows 10 or later:
-- [Visual Studio 2022](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
+- [Visual Studio 2022/2026](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
 - **Optional** - [CMake 3.28.0+](https://www.cmake.org/download/) (add to PATH)
 
   **NOTES:**
-  - **Visual Studio 2022** integrates **CMake 3.29+** and it also supports both the `sln` solution (`.sln`, `.vcxproj`) and `CMake` solution (`CMakeLists.txt`, `CMakePresets.json`).
+  - **Visual Studio 2026** needs at least **CMake 4.2.0+**.
+  - **Visual Studio 2022/2026** integrates **CMake 3.29+** and it also supports both the `sln` solution (`.sln`, `.vcxproj`) and `CMake` solution (`CMakeLists.txt`, `CMakePresets.json`).
     See sections [Building with Visual Studio sln solution](#building-with-visual-studio-sln-solution) and [Building with Visual Studio CMake solution](#building-with-visual-studio-cmake-solution)
     on how to build the project with **Visual Studio**.
   - Install and use this standalone **CMake** tool just in case of your preference. See section [Building with standalone CMake tool](#building-with-standalone-cmake-tool) on how to build the project
