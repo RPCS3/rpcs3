@@ -4973,6 +4973,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		u32 lsa_last_pc = SPU_LS_SIZE; // PC of first LSA write
 		u32 get_pc = SPU_LS_SIZE; // PC of GETLLAR
 		u32 put_pc = SPU_LS_SIZE; // PC of PUTLLC
+		u32 rdatomic_pc = SPU_LS_SIZE; // PC of last RdAtomcStat read
 		reg_state_t ls{}; // state of LS load/store address register
 		reg_state_t ls_offs = reg_state_t::from_value(0); // Added value to ls
 		reg_state_t lsa{}; // state of LSA register on GETLLAR
@@ -6333,6 +6334,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break;
 						}
 
+						atomic16->rdatomic_pc = pos;
+
 						const auto it = atomic16_all.find(pos);
 
 						if (it == atomic16_all.end())
@@ -7273,7 +7276,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	for (const auto& [pc_commited, pattern] : atomic16_all)
 	{
-		if (!pattern.active)
+		if (!pattern.active || pattern.lsa_pc >= pattern.rdatomic_pc)
 		{
 			continue;
 		}
@@ -7281,6 +7284,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (getllar_starts.contains(pattern.lsa_pc) && getllar_starts[pattern.lsa_pc])
 		{
 			continue;
+		}
+
+		std::string pattern_hash;
+		{
+			sha1_context ctx;
+			u8 output[20]{};
+
+			sha1_starts(&ctx);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()) + (pattern.lsa_pc - result.lower_bound), pattern.rdatomic_pc - pattern.lsa_pc);
+			sha1_finish(&ctx, output);
+			fmt::append(pattern_hash, "%s", fmt::base57(output));
 		}
 
 		union putllc16_or_0_info
@@ -7373,16 +7387,35 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			value.reg2 = pattern.reg2;
 		}
 
+		bool allow_pattern = true;
+
 		if (g_cfg.core.spu_accurate_reservations)
 		{
-			// Because enabling it is a hack, as it turns out
-			// continue;
+			// The problem with PUTLLC16 optimization, that it is in theory correct at the bounds of the spu function.
+			// But if the SPU code reuses the cache line data observed, it is not truly atomic.
+			// So we may enable it only for known cases where SPU atomic data is not used after the function leaves.
+
+			// So the two options are:
+
+			// 1. Atomic compare exchange 16 bytes operation. (rest of data is not read) -> good for RPCS3 to optimize.
+			// 2. Fetch 128 bytes (read them later), modify only 16 bytes. -> Bad for RPCS3 to optimize.
+
+			// This difference cannot be known at analyzer time but from observing callers.
+			static constexpr std::initializer_list<std::string_view> allowed_patterns =
+			{
+				"620oYSe8uQqq9eTkhWfMqoEXX0us"sv, // CellSpurs JobChain acquire pattern
+			};
+
+			allow_pattern = std::any_of(allowed_patterns.begin(), allowed_patterns.end(), FN(pattern_hash == x));
 		}
 
-		add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
+		if (allow_pattern)
+		{
+			add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
+		}
 
-		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s) (putllc0=%d, putllc16+0=%d, all=%d)"
-			, pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, +stats.nowrite, ++stats.single, +stats.all);
+		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s, pattern-hash=%s) (putllc0=%d, putllc16+0=%d, all=%d)"
+			, pattern.mem_count, pattern.put_pc, value.type == v_relative, value.off18, value.type == v_const, value.type == v_reg2, value.reg, value.runtime16_select, entry_point, func_hash, pattern_hash, +stats.nowrite, ++stats.single, +stats.all);
 	}
 
 	for (const auto& [read_pc, pattern] : rchcnt_loop_all)
