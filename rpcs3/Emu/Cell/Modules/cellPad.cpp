@@ -1051,7 +1051,15 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	config.port_setting[port_no] = port_setting;
+	if (port_setting & CELL_PAD_SETTING_PRESS_ON)
+		config.port_setting[port_no] |= CELL_PAD_SETTING_PRESS_ON;
+	else
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_PRESS_ON;
+
+	if (port_setting & CELL_PAD_SETTING_SENSOR_ON)
+		config.port_setting[port_no] |= CELL_PAD_SETTING_SENSOR_ON;
+	else
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_SENSOR_ON;
 
 	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD <- Update: seems to be just internal and ignored
 
@@ -1123,7 +1131,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	if (port_no >= CELL_PAD_MAX_PORT_NUM)
+	if (port_no >= CELL_MAX_PADS || mode > 1)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.
@@ -1157,7 +1165,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	if (port_no >= CELL_MAX_PADS)
+	if (port_no >= CELL_MAX_PADS || mode > 1)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.
