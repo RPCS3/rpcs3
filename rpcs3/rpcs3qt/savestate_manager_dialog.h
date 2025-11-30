@@ -64,6 +64,12 @@ private:
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 
+	QString get_savestate_header_text(int col) const;
+	QString get_savestate_action_text(int col) const;
+
+	QString get_gamelist_header_text(int col) const;
+	QString get_gamelist_action_text(int col) const;
+
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<game_info> m_game_info;
@@ -74,8 +80,8 @@ private:
 	game_list* m_savestate_table; //! UI element to display savestate stuff.
 	game_list* m_game_table; //! UI element to display games.
 
-	QList<QAction*> m_savestate_column_acts;
-	QList<QAction*> m_game_column_acts;
+	std::map<int, QAction*> m_savestate_column_acts;
+	std::map<int, QAction*> m_game_column_acts;
 
 	int m_game_icon_size_index = 25;
 	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
