@@ -9,7 +9,7 @@ if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE))
 	set(WARNINGS_AS_ERRORS FALSE CACHE BOOL "When enabled, compiles with `-Werror` (on *nix platforms).")
 
 	add_subdirectory(discord-rpc EXCLUDE_FROM_ALL)
-	target_include_directories(3rdparty_discordRPC INTERFACE discord-rpc/include)
+	target_include_directories(3rdparty_discordRPC SYSTEM INTERFACE discord-rpc/include)
 	target_compile_definitions(3rdparty_discordRPC INTERFACE -DWITH_DISCORD_RPC)
 	target_link_libraries(3rdparty_discordRPC INTERFACE discord-rpc)
 endif()
