@@ -9,7 +9,7 @@ namespace rsx::assembler::FP
 {
 	static constexpr u32 register_file_length = 48 * 8; // 24 F32 or 48 F16 registers
 	static constexpr char content_unknown = 0;
-	static constexpr char content_float32 = 'F';
+	static constexpr char content_float32 = 'R';
 	static constexpr char content_float16 = 'H';
 	static constexpr char content_dual    = 'D';
 
@@ -125,7 +125,7 @@ namespace rsx::assembler::FP
 			for (const auto& src : instruction.srcs)
 			{
 				const auto read_bytes = get_register_file_range(src);
-				const char expected_type = src.reg.f16 ? content_float16 : content_float16;
+				const char expected_type = src.reg.f16 ? content_float16 : content_float32;
 				for (const auto& index : read_bytes)
 				{
 					if (output_register_file[index] != content_unknown)
@@ -156,7 +156,7 @@ namespace rsx::assembler::FP
 			{
 				const auto& dst = instruction.dsts.front();
 				const auto write_bytes = get_register_file_range(dst);
-				const char expected_type = dst.reg.f16 ? content_float16 : content_float16;
+				const char expected_type = dst.reg.f16 ? content_float16 : content_float32;
 
 				for (const auto& index : write_bytes)
 				{

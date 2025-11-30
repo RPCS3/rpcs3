@@ -15,6 +15,7 @@ namespace rsx::assembler::FP
 		case RSX_FP_OPCODE_NOP:
 			return 0;
 		case RSX_FP_OPCODE_MOV:
+			return 1;
 		case RSX_FP_OPCODE_MUL:
 		case RSX_FP_OPCODE_ADD:
 			return 2;
@@ -290,8 +291,8 @@ namespace rsx::assembler::FP
 	u32 get_src_vector_lane_mask_shuffled(const RSXFragmentProgram& prog, const Instruction* instruction, u32 operand)
 	{
 		// Brute-force this. There's only 16 permutations.
-		constexpr u32 x = 0b0000;
-		constexpr u32 y = 0b0000;
+		constexpr u32 x = 0b0001;
+		constexpr u32 y = 0b0010;
 		constexpr u32 z = 0b0100;
 		constexpr u32 w = 0b1000;
 

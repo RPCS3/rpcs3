@@ -10,6 +10,16 @@ namespace rsx::assembler
 	{
 		int id = 0;
 		bool f16 = false;
+
+		bool operator == (const Register& other) const
+		{
+			return id == other.id && f16 == other.f16;
+		}
+
+		std::string to_string() const
+		{
+			return std::string(f16 ? "H" : "R") + std::to_string(id);
+		}
 	};
 
 	struct RegisterRef
@@ -33,6 +43,11 @@ namespace rsx::assembler
 		operator bool() const
 		{
 			return !!mask;
+		}
+
+		bool operator == (const RegisterRef& other) const
+		{
+			return reg == other.reg && mask == other.mask;
 		}
 	};
 
