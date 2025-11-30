@@ -74,7 +74,7 @@ namespace rsx::assembler
 
 	TEST(TestFPIR, RegisterAnnotationPass)
 	{
-		// Code snippet reads from R0 and R2, clobbers R0, R1, H0
+		// Code snippet reads from R0, R1 and H4, clobbers R1, H0
 		auto graph = CFG_from_source(R"(
 			ADD R1, R0, R1;
 			MOV H0, H4;
@@ -98,5 +98,35 @@ namespace rsx::assembler
 		EXPECT_EQ(block.input_list[0].reg, H4);
 		EXPECT_EQ(block.input_list[1].reg, R0);
 		EXPECT_EQ(block.input_list[2].reg, R1);
+	}
+
+	TEST(TestFPIR, RegisterAnnotationPass_MixedIO)
+	{
+		// Code snippet reads from R0, R1, clobbers R0, R1, H0.
+		// The H2 read does not count because R1 is clobbered.
+		auto graph = CFG_from_source(R"(
+			ADD  R1, R0, R1;
+			PK8U R0, R1;
+			MOV  H0, H2;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+		FP::RegisterAnnotationPass annotation_pass(prog);
+
+		annotation_pass.run(graph);
+
+		ASSERT_EQ(block.clobber_list.size(), 3);
+		ASSERT_EQ(block.input_list.size(), 2);
+
+		EXPECT_EQ(block.clobber_list[0].reg, H0);
+		EXPECT_EQ(block.clobber_list[1].reg, R0);
+		EXPECT_EQ(block.clobber_list[2].reg, R1);
+
+		EXPECT_EQ(block.input_list[0].reg, R0);
+		EXPECT_EQ(block.input_list[1].reg, R1);
 	}
 }

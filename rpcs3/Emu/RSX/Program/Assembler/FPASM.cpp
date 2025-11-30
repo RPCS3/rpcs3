@@ -8,6 +8,32 @@
 
 namespace rsx::assembler
 {
+	static std::unordered_map<std::string, FP_opcode> s_opcode_lookup
+	{
+		// Arithmetic
+		{ "NOP", RSX_FP_OPCODE_NOP },
+		{ "MOV", RSX_FP_OPCODE_MOV },
+		{ "ADD", RSX_FP_OPCODE_ADD },
+		{ "MAD", RSX_FP_OPCODE_MAD },
+		{ "FMA", RSX_FP_OPCODE_MAD },
+		{ "DP3", RSX_FP_OPCODE_DP3 },
+		{ "DP4", RSX_FP_OPCODE_DP4 },
+
+		// Pack-unpack operations are great for testing dependencies
+		{ "PKH", RSX_FP_OPCODE_PK2 },
+		{ "UPH", RSX_FP_OPCODE_UP2 },
+		{ "PK16U", RSX_FP_OPCODE_PK16 },
+		{ "UP16U", RSX_FP_OPCODE_UP16 },
+		{ "PK8U", RSX_FP_OPCODE_PKB },
+		{ "UP8U", RSX_FP_OPCODE_UPB },
+		{ "PK8G", RSX_FP_OPCODE_PKG },
+		{ "UP8G", RSX_FP_OPCODE_UPG },
+		{ "PK8S", RSX_FP_OPCODE_PK4 },
+		{ "UP8S", RSX_FP_OPCODE_UP4 },
+		// TODO: Add more
+
+	};
+
 	Instruction* FPIR::load(const RegisterRef& ref, int operand, Instruction* prev)
 	{
 		Instruction* target = prev;
@@ -233,39 +259,15 @@ namespace rsx::assembler
 				inst->bytecode[1] = s0.HEX; \
 			} while (0)
 
-			if (op == "MOV")
+			const auto found = s_opcode_lookup.find(op);
+			if (found == s_opcode_lookup.end())
 			{
-				SET_OPCODE(RSX_FP_OPCODE_MOV);
-				return;
+				fmt::throw_exception("Unhandled instruction '%s'", op);
 			}
 
-			if (op == "ADD")
-			{
-				SET_OPCODE(RSX_FP_OPCODE_ADD);
-				return;
-			}
-
-			if (op == "MAD" || op == "FMA")
-			{
-				SET_OPCODE(RSX_FP_OPCODE_MAD);
-				return;
-			}
-
-			if (op == "UP4S")
-			{
-				SET_OPCODE(RSX_FP_OPCODE_UP4);
-				return;
-			}
-
-			if (op == "PK4S")
-			{
-				SET_OPCODE(RSX_FP_OPCODE_PK4);
-				return;
-			}
+			SET_OPCODE(found->second);
 
 #undef SET_OPCODE
-
-			fmt::throw_exception("Unhandled instruction '%s'", op);
 		};
 
 		std::string op, dst;
