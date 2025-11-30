@@ -24,7 +24,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	setItemDelegate(new game_list_delegate(this));
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setSelectionBehavior(QAbstractItemView::SelectRows);
-	setSelectionMode(QAbstractItemView::SingleSelection);
+	setSelectionMode(QAbstractItemView::ExtendedSelection);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 	verticalScrollBar()->setSingleStep(20);
