@@ -2617,7 +2617,7 @@ public:
 						{
 							if (b2 != bqbi)
 							{
-								auto ins = b2->block->getFirstNonPHI();
+								auto ins = b2->block->getFirstNonPHIIt();
 
 								if (b2->bb->preds.size() == 1)
 								{
