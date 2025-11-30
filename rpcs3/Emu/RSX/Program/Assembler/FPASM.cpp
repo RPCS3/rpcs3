@@ -223,20 +223,47 @@ namespace rsx::assembler
 		auto encode_opcode = [](const std::string& op, Instruction* inst)
 		{
 			OPDEST d0 { .HEX = inst->bytecode[0] };
+			SRC0 s0 { .HEX = inst->bytecode[1] };
+
+#define SET_OPCODE(code) \
+			do { \
+				inst->opcode = d0.opcode = code; \
+				s0.exec_if_eq = s0.exec_if_gr = s0.exec_if_lt = 1; \
+				inst->bytecode[0] = d0.HEX; \
+				inst->bytecode[1] = s0.HEX; \
+			} while (0)
 
 			if (op == "MOV")
 			{
-				inst->opcode = d0.opcode = RSX_FP_OPCODE_MOV;
-				inst->bytecode[0] = d0.HEX;
+				SET_OPCODE(RSX_FP_OPCODE_MOV);
 				return;
 			}
 
 			if (op == "ADD")
 			{
-				inst->opcode = d0.opcode = RSX_FP_OPCODE_ADD;
-				inst->bytecode[0] = d0.HEX;
+				SET_OPCODE(RSX_FP_OPCODE_ADD);
 				return;
 			}
+
+			if (op == "MAD" || op == "FMA")
+			{
+				SET_OPCODE(RSX_FP_OPCODE_MAD);
+				return;
+			}
+
+			if (op == "UP4S")
+			{
+				SET_OPCODE(RSX_FP_OPCODE_UP4);
+				return;
+			}
+
+			if (op == "PK4S")
+			{
+				SET_OPCODE(RSX_FP_OPCODE_PK4);
+				return;
+			}
+
+#undef SET_OPCODE
 
 			fmt::throw_exception("Unhandled instruction '%s'", op);
 		};
@@ -262,6 +289,7 @@ namespace rsx::assembler
 			Instruction* target = &ir.m_instructions.back();
 
 			encode_opcode(op, target);
+			ensure(sources.size() == FP::get_operand_count(static_cast<FP_opcode>(target->opcode)), "Invalid operand count for opcode");
 
 			if (dst.empty())
 			{
