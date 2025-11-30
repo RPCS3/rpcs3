@@ -7319,8 +7319,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				value.required_pc = pattern.required_pc;
 			}
 
-			spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
-			add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa, value.data);
+			// spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
+			// add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa, value.data);
 			continue;
 		}
 
