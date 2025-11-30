@@ -2765,42 +2765,42 @@ void main_window::CreateConnects()
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
-	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchCreateCPUCaches({}, false, true);
+		m_game_list_frame->BatchCreateCPUCaches({}, false, true);
 	});
-	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveCustomConfigurations({}, true);
+		m_game_list_frame->BatchRemoveCustomConfigurations({}, true);
 	});
-	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveCustomPadConfigurations({}, true);
+		m_game_list_frame->BatchRemoveCustomPadConfigurations({}, true);
 	});
-	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveShaderCaches({}, true);
+		m_game_list_frame->BatchRemoveShaderCaches({}, true);
 	});
-	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemovePPUCaches({}, true);
+		m_game_list_frame->BatchRemovePPUCaches({}, true);
 	});
-	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveSPUCaches({}, true);
+		m_game_list_frame->BatchRemoveSPUCaches({}, true);
 	});
-	connect(ui->removeHDD1CachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveHDD1Caches({}, true);
+		m_game_list_frame->BatchRemoveHDD1Caches({}, true);
 	});
-	connect(ui->removeAllCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->removeAllCachesAct, &QAction::triggered, this, [this]()
 	{
-		list->BatchRemoveAllCaches({}, true);
+		m_game_list_frame->BatchRemoveAllCaches({}, true);
 	});
-	connect(ui->removeSavestatesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]()
+	connect(ui->removeSavestatesAct, &QAction::triggered, this, [this]()
 	{
-		list->SetContentList(game_list_frame::ContentType::SAVESTATES, {});
-		list->BatchRemoveContentLists({}, true);
+		m_game_list_frame->SetContentList(game_list_frame::content_type::SAVESTATES, {});
+		m_game_list_frame->BatchRemoveContentLists({}, true);
 	});
 	connect(ui->cleanUpGameListAct, &QAction::triggered, this, &main_window::CleanUpGameList);
 

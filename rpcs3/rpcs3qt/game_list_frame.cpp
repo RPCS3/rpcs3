@@ -1420,13 +1420,13 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 				switch (type)
 				{
 				case icon_type::game_list:
-					msg = tr("Remove Custom Icon of %0?").arg(serial);
+					msg = tr("Remove Custom Icon of %0?").arg(QString::fromStdString(serial));
 					break;
 				case icon_type::hover_gif:
-					msg = tr("Remove Custom Hover Gif of %0?").arg(serial);
+					msg = tr("Remove Custom Hover Gif of %0?").arg(QString::fromStdString(serial));
 					break;
 				case icon_type::shader_load:
-					msg = tr("Remove Custom Shader Loading Background of %0?").arg(serial);
+					msg = tr("Remove Custom Shader Loading Background of %0?").arg(QString::fromStdString(serial));
 					break;
 				}
 
@@ -1995,12 +1995,12 @@ void game_list_frame::ShowContextMenu(const QPoint& pos)
 	}
 }
 
-void game_list_frame::SetContentList(u16 contentTypes, const ContentInfo& contentInfo)
+void game_list_frame::SetContentList(u16 content_types, const content_info& content_info)
 {
-	this->contentInfo = contentInfo;
+	m_content_info = content_info;
 
-	this->contentInfo.contentTypes = contentTypes;
-	this->contentInfo.clearOnFinish = true; // Always overridden by BatchRemoveContentLists()
+	m_content_info.content_types = content_types;
+	m_content_info.clear_on_finish = true; // Always overridden by BatchRemoveContentLists()
 }
 
 void game_list_frame::ClearContentList(bool refresh)
@@ -2010,7 +2010,7 @@ void game_list_frame::ClearContentList(bool refresh)
 		std::vector<std::string> serials_to_remove_from_yml;
 
 		// Prepare the list of serials (title id) to remove in "games.yml" file (if any)
-		for (auto& removedDisc : contentInfo.removedDiscList)
+		for (const auto& removedDisc : m_content_info.removed_disc_list)
 		{
 			serials_to_remove_from_yml.push_back(removedDisc);
 		}
@@ -2020,24 +2020,24 @@ void game_list_frame::ClearContentList(bool refresh)
 		Refresh(true, serials_to_remove_from_yml);
 	}
 
-	contentInfo = {NO_CONTENT};
+	m_content_info = {NO_CONTENT};
 }
 
-game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<game_info>& games)
+game_list_frame::content_info game_list_frame::GetContentInfo(const std::vector<game_info>& games)
 {
-	ContentInfo contentInfo = {NO_CONTENT};
+	content_info content_info = {NO_CONTENT};
 
-	if (games.size() == 0)
-		return contentInfo;
+	if (games.empty())
+		return content_info;
 
 	bool is_disc_game = false;
 	u64 total_disc_size = 0;
 	u64 total_data_size = 0;
 	QString text;
 
-	// Fill in contentInfo
+	// Fill in content_info
 
-	contentInfo.isSingleSelection = games.size() == 1;
+	content_info.is_single_selection = games.size() == 1;
 
 	for (const auto& game : games)
 	{
@@ -2046,10 +2046,10 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 		is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
 
 		// +1 if it's a disc game's path and it's present in the shared games folder
-		contentInfo.inGamesDirCount += (is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir())) ? 1 : 0;
+		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir())) ? 1 : 0;
 
 		// Add the name to the content's name list for the related serial
-		contentInfo.nameList[current_game.serial].insert(current_game.name);
+		content_info.name_list[current_game.serial].insert(current_game.name);
 
 		if (is_disc_game)
 		{
@@ -2057,7 +2057,7 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 				total_disc_size += current_game.size_on_disk;
 
 			// Add the serial to the disc list
-			contentInfo.discList.insert(current_game.serial);
+			content_info.disc_list.insert(current_game.serial);
 
 			// It could be an empty list for a disc game
 			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), current_game.serial);
@@ -2065,19 +2065,19 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 			// Add the path list to the content's path list for the related serial
 			for (const auto& data_dir : data_dir_list)
 			{
-				contentInfo.pathList[current_game.serial].insert(data_dir);
+				content_info.path_list[current_game.serial].insert(data_dir);
 			}
 		}
 		else
 		{
 			// Add the path to the content's path list for the related serial
-			contentInfo.pathList[current_game.serial].insert(current_game.path);
+			content_info.path_list[current_game.serial].insert(current_game.path);
 		}
 	}
 
-	// Fill in text based on filled in contentInfo
+	// Fill in text based on filled in content_info
 
-	if (contentInfo.isSingleSelection) // Single selection
+	if (content_info.is_single_selection) // Single selection
 	{
 		GameInfo& current_game = games[0]->info;
 
@@ -2092,7 +2092,7 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 		}
 
 		// if a path is present (it could be an empty list for a disc game)
-		if (const auto& it = contentInfo.pathList.find(current_game.serial); it != contentInfo.pathList.end())
+		if (const auto& it = content_info.path_list.find(current_game.serial); it != content_info.path_list.end())
 		{
 			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : games[0]->localized_category);
 
@@ -2113,7 +2113,7 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 	}
 	else // Multi selection
 	{
-		for (const auto& [serial, data_dir_list] : contentInfo.pathList)
+		for (const auto& [serial, data_dir_list] : content_info.path_list)
 		{
 			for (const auto& data_dir : data_dir_list)
 			{
@@ -2123,23 +2123,23 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 		}
 
 		text = tr("%0 selected games: %1 Disc Game - %2 not Disc Game\n").arg(games.size())
-				.arg(contentInfo.discList.size()).arg(games.size() - contentInfo.discList.size());
+				.arg(content_info.disc_list.size()).arg(games.size() - content_info.disc_list.size());
 
 		text += tr("\nDisc Game Info:\n");
 
-		if (contentInfo.discList.size() != contentInfo.inGamesDirCount)
-			text += tr("VFS unhosted: %0\n").arg(contentInfo.discList.size() - contentInfo.inGamesDirCount);
+		if (content_info.disc_list.size() != content_info.in_games_dir_count)
+			text += tr("VFS unhosted: %0\n").arg(content_info.disc_list.size() - content_info.in_games_dir_count);
 
-		if (contentInfo.inGamesDirCount)
-			text += tr("VFS hosted: %0\n").arg(contentInfo.inGamesDirCount);
+		if (content_info.in_games_dir_count)
+			text += tr("VFS hosted: %0\n").arg(content_info.in_games_dir_count);
 
-		if (contentInfo.discList.size() != contentInfo.inGamesDirCount && contentInfo.inGamesDirCount)
-			text += tr("Total games: %0\n").arg((contentInfo.discList.size() - contentInfo.inGamesDirCount) + contentInfo.inGamesDirCount);
+		if (content_info.disc_list.size() != content_info.in_games_dir_count && content_info.in_games_dir_count)
+			text += tr("Total games: %0\n").arg((content_info.disc_list.size() - content_info.in_games_dir_count) + content_info.in_games_dir_count);
 
 		if (total_disc_size)
 			text += tr("Total size: %0\n").arg(gui::utils::format_byte_size(total_disc_size));
 
-		if (contentInfo.pathList.size())
+		if (content_info.path_list.size())
 			text += tr("\nGame Data Info:\nTotal size: %0\n").arg(gui::utils::format_byte_size(total_data_size));
 	}
 
@@ -2150,7 +2150,7 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 	u64 recordings_size = 0;
 	u64 screenshots_size = 0;
 
-	for (const auto& [serial, name_list] : contentInfo.nameList)
+	for (const auto& [serial, name_list] : content_info.name_list)
 	{
 		// Main cache
 		if (const u64 size = fs::get_dir_size(rpcs3::utils::get_cache_dir_by_serial(serial), 1); size != umax)
@@ -2193,18 +2193,18 @@ game_list_frame::ContentInfo game_list_frame::GetContentInfo(const std::vector<g
 	if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat))
 		text += tr("\nCurrent free disk space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 
-	contentInfo.info = text;
+	content_info.info = text;
 
-	return contentInfo;
+	return content_info;
 }
 
 void game_list_frame::DialogRemoveGame(const std::vector<game_info>& games)
 {
-	if (games.size() == 0)
+	if (games.empty())
 		return;
 
-	ContentInfo contentInfo = GetContentInfo(games);
-	QString text = contentInfo.info;
+	content_info content_info = GetContentInfo(games);
+	QString text = content_info.info;
 
 	QCheckBox* disc = new QCheckBox(tr("Remove title from game list (Disc Game path is not removed!)"));
 	QCheckBox* caches = new QCheckBox(tr("Remove caches and custom configs"));
@@ -2214,16 +2214,16 @@ void game_list_frame::DialogRemoveGame(const std::vector<game_info>& games)
 	QCheckBox* recordings = new QCheckBox(tr("Remove recordings"));
 	QCheckBox* screenshots = new QCheckBox(tr("Remove screenshots"));
 
-	if (contentInfo.discList.size())
+	if (content_info.disc_list.size())
 	{
-		if (contentInfo.inGamesDirCount == contentInfo.discList.size())
+		if (content_info.in_games_dir_count == content_info.disc_list.size())
 		{
 			disc->setToolTip(tr("Title located under auto-detection VFS \"games\" folder cannot be removed"));
 			disc->setDisabled(true);
 		}
 		else
 		{
-			if (!contentInfo.isSingleSelection) // Multi selection
+			if (!content_info.is_single_selection) // Multi selection
 				disc->setToolTip(tr("Title located under auto-detection VFS \"games\" folder cannot be removed"));
 
 			disc->setChecked(true);
@@ -2235,10 +2235,10 @@ void game_list_frame::DialogRemoveGame(const std::vector<game_info>& games)
 		disc->setVisible(false);
 	}
 
-	if (contentInfo.pathList.size()) // If a path is present
+	if (content_info.path_list.size()) // If a path is present
 	{
 		text += tr("\nPermanently remove %0 and selected (optional) contents from drive?\n")
-	            .arg((contentInfo.discList.size() || !contentInfo.isSingleSelection)
+	            .arg((content_info.disc_list.size() || !content_info.is_single_selection)
 				? tr("Game Data") : games[0]->localized_category);
 	}
 	else
@@ -2267,36 +2267,36 @@ void game_list_frame::DialogRemoveGame(const std::vector<game_info>& games)
 		return;
 
 	// Remove data path in "dev_hdd0/game" folder (if any) and lock file in "dev_hdd0/game/＄locks" folder (if any)
-	u16 contentTypes = DATA | LOCKS;
+	u16 content_types = DATA | LOCKS;
 
 	// Remove serials (title id) in "games.yml" file (if any)
 	if (disc->isChecked())
-		contentTypes |= DISC;
+		content_types |= DISC;
 
 	// Remove caches in "cache" and "dev_hdd1/caches" folders (if any) and custom configs in "config/custom_config" folder (if any)
 	if (caches->isChecked())
-		contentTypes |= CACHES | CUSTOM_CONFIG;
+		content_types |= CACHES | CUSTOM_CONFIG;
 
 	// Remove icons in "Icons/game_icons" folder (if any) and
 	// shortcuts in "games/shortcuts" folder and from desktop / start menu (if any)
 	if (icons->isChecked())
-		contentTypes |= ICONS | SHORTCUTS;
+		content_types |= ICONS | SHORTCUTS;
 
 	if (savestate->isChecked())
-		contentTypes |= SAVESTATES;
+		content_types |= SAVESTATES;
 
 	if (captures->isChecked())
-		contentTypes |= CAPTURES;
+		content_types |= CAPTURES;
 
 	if (recordings->isChecked())
-		contentTypes |= RECORDINGS;
+		content_types |= RECORDINGS;
 
 	if (screenshots->isChecked())
-		contentTypes |= SCREENSHOTS;
+		content_types |= SCREENSHOTS;
 
-	SetContentList(contentTypes, contentInfo);
+	SetContentList(content_types, content_info);
 
-	if (contentInfo.isSingleSelection) // Single selection
+	if (content_info.is_single_selection) // Single selection
 	{
 		if (!RemoveContentList(games[0]->info.serial, true))
 		{
@@ -2315,7 +2315,7 @@ void game_list_frame::DialogRemoveGame(const std::vector<game_info>& games)
 
 void game_list_frame::DialogGameInfo(const std::vector<game_info>& games)
 {
-	if (games.size() == 0)
+	if (games.empty())
 		return;
 
 	QMessageBox::information(this, tr("Game Info"), GetContentInfo(games).info);
@@ -2324,11 +2324,6 @@ void game_list_frame::DialogGameInfo(const std::vector<game_info>& games)
 bool game_list_frame::IsGameRunning(const std::string& serial)
 {
 	return !Emu.IsStopped(true) && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
-}
-
-bool game_list_frame::IsEmulatorRunning()
-{
-	return Emu.GetStatus(false) != system_state::stopped;
 }
 
 bool game_list_frame::ValidateRemoval(const std::string& serial, const std::string& path, const std::string& desc, bool is_interactive)
@@ -2358,7 +2353,7 @@ bool game_list_frame::ValidateRemoval(const std::string& serial, const std::stri
 			return false;
 		}
 
-		if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove %0?").arg(desc)) != QMessageBox::Yes)
+		if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove %0?").arg(QString::fromStdString(desc))) != QMessageBox::Yes)
 			return false;
 	}
 
@@ -2367,7 +2362,7 @@ bool game_list_frame::ValidateRemoval(const std::string& serial, const std::stri
 
 bool game_list_frame::ValidateBatchRemoval(const std::string& desc, bool is_interactive)
 {
-	if (IsEmulatorRunning())
+	if (!Emu.IsStopped(true))
 	{
 		game_list_log.error("Removal of %s not allowed due to emulator is running!", desc);
 
@@ -2382,7 +2377,7 @@ bool game_list_frame::ValidateBatchRemoval(const std::string& desc, bool is_inte
 
 	if (is_interactive)
 	{
-		if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove %0?").arg(desc)) != QMessageBox::Yes)
+		if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove %0?").arg(QString::fromStdString(desc))) != QMessageBox::Yes)
 			return false;
 	}
 
@@ -2711,22 +2706,22 @@ bool game_list_frame::RemoveContentList(const std::string& serial, bool is_inter
 	// Just used for confirmation, if requested. Folder returned by fs::get_config_dir() is always present!
 	if (!ValidateRemoval(serial, fs::get_config_dir(), "selected content", is_interactive))
 	{
-		if (contentInfo.clearOnFinish)
+		if (m_content_info.clear_on_finish)
 			ClearContentList(); // Clear only the content's info
 
 		return true;
 	}
 
-	u16 contentTypes = contentInfo.contentTypes;
+	u16 content_types = m_content_info.content_types;
 
 	// Remove data path in "dev_hdd0/game" folder (if any)
-	if (contentTypes & DATA)
+	if (content_types & DATA)
 	{
-		if (const auto it = contentInfo.pathList.find(serial); it != contentInfo.pathList.cend())
+		if (const auto it = m_content_info.path_list.find(serial); it != m_content_info.path_list.cend())
 		{
 			if (RemoveContentPathList(it->second, "data") != it->second.size())
 			{
-				if (contentInfo.clearOnFinish)
+				if (m_content_info.clear_on_finish)
 					ClearContentList(); // Clear only the content's info
 
 				// Skip the removal of the remaining selected contents in case some data paths could not be removed
@@ -2736,28 +2731,28 @@ bool game_list_frame::RemoveContentList(const std::string& serial, bool is_inter
 	}
 
 	// Add serial (title id) to the list of serials to be removed in "games.yml" file (if any)
-	if (contentTypes & DISC)
+	if (content_types & DISC)
 	{
-		if (const auto it = contentInfo.discList.find(serial); it != contentInfo.discList.cend())
-			contentInfo.removedDiscList.insert(serial);
+		if (const auto it = m_content_info.disc_list.find(serial); it != m_content_info.disc_list.cend())
+			m_content_info.removed_disc_list.insert(serial);
 	}
 
 	// Remove lock file in "dev_hdd0/game/＄locks" folder (if any)
-	if (contentTypes & LOCKS)
+	if (content_types & LOCKS)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_hdd0_locks_dir(), "lock"))
 			RemoveContentBySerial(rpcs3::utils::get_hdd0_locks_dir(), serial, "lock");
 	}
 
 	// Remove caches in "cache" and "dev_hdd1/caches" folders (if any)
-	if (contentTypes & CACHES)
+	if (content_types & CACHES)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_cache_dir_by_serial(serial), "all caches"))
 			RemoveAllCaches(serial);
 	}
 
 	// Remove custom configs in "config/custom_config" folder (if any)
-	if (contentTypes & CUSTOM_CONFIG)
+	if (content_types & CUSTOM_CONFIG)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_custom_config_path(serial), "custom configuration"))
 			RemoveCustomConfiguration(serial);
@@ -2767,16 +2762,16 @@ bool game_list_frame::RemoveContentList(const std::string& serial, bool is_inter
 	}
 
 	// Remove icons in "Icons/game_icons" folder (if any)
-	if (contentTypes & ICONS)
+	if (content_types & ICONS)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_icons_dir(serial), "icons"))
 			RemoveContentBySerial(rpcs3::utils::get_icons_dir(), serial, "icons");
 	}
 
 	// Remove shortcuts in "games/shortcuts" folder and from desktop / start menu (if any)
-	if (contentTypes & SHORTCUTS)
+	if (content_types & SHORTCUTS)
 	{
-		if (const auto it = contentInfo.nameList.find(serial); it != contentInfo.nameList.cend())
+		if (const auto it = m_content_info.name_list.find(serial); it != m_content_info.name_list.cend())
 		{
 			const bool remove_rpcs3_links = ValidateRemoval(serial, rpcs3::utils::get_games_shortcuts_dir(), "link");
 
@@ -2794,31 +2789,31 @@ bool game_list_frame::RemoveContentList(const std::string& serial, bool is_inter
 		}
 	}
 
-	if (contentTypes & SAVESTATES)
+	if (content_types & SAVESTATES)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_savestates_dir(serial), "savestates"))
 			RemoveContentBySerial(rpcs3::utils::get_savestates_dir(), serial, "savestates");
 	}
 
-	if (contentTypes & CAPTURES)
+	if (content_types & CAPTURES)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_captures_dir(), "captures"))
 			RemoveContentBySerial(rpcs3::utils::get_captures_dir(), serial, "captures");
 	}
 
-	if (contentTypes & RECORDINGS)
+	if (content_types & RECORDINGS)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_recordings_dir(serial), "recordings"))
 			RemoveContentBySerial(rpcs3::utils::get_recordings_dir(), serial, "recordings");
 	}
 
-	if (contentTypes & SCREENSHOTS)
+	if (content_types & SCREENSHOTS)
 	{
 		if (ValidateRemoval(serial, rpcs3::utils::get_screenshots_dir(serial), "screenshots"))
 			RemoveContentBySerial(rpcs3::utils::get_screenshots_dir(), serial, "screenshots");
 	}
 
-	if (contentInfo.clearOnFinish)
+	if (m_content_info.clear_on_finish)
 		ClearContentList(true); // Update the game list and clear the content's info once removed
 
 	return true;
@@ -3203,7 +3198,7 @@ void game_list_frame::BatchRemoveAllCaches(const std::vector<game_info>& games, 
 void game_list_frame::BatchRemoveContentLists(const std::vector<game_info>& games, bool is_interactive)
 {
 	// Let the batch process (not RemoveContentList()) make cleanup when terminated
-	contentInfo.clearOnFinish = false;
+	m_content_info.clear_on_finish = false;
 
 	if (!ValidateBatchRemoval("selected content", is_interactive))
 	{

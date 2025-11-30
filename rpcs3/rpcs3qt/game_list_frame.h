@@ -63,7 +63,7 @@ public:
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
-	enum ContentType
+	enum content_type
 	{
 		NO_CONTENT    = 0,
 		DISC          = (1 << 0),
@@ -79,18 +79,18 @@ public:
 		SCREENSHOTS   = (1 << 10)
 	};
 
-	struct ContentInfo
+	struct content_info
 	{
-		u16 contentTypes = NO_CONTENT; // Always set by SetContentList()
-		bool clearOnFinish = true;     // Always overridden by BatchRemoveContentLists()
+		u16 content_types = NO_CONTENT; // Always set by SetContentList()
+		bool clear_on_finish = true;    // Always overridden by BatchRemoveContentLists()
 
-		bool isSingleSelection = false;
-		u16 inGamesDirCount = 0;
+		bool is_single_selection = false;
+		u16 in_games_dir_count = 0;
 		QString info;
-		std::map<std::string, std::set<std::string>> nameList;
-		std::map<std::string, std::set<std::string>> pathList;
-		std::set<std::string> discList;
-		std::set<std::string> removedDiscList; // Filled in by RemoveContentList()
+		std::map<std::string, std::set<std::string>> name_list;
+		std::map<std::string, std::set<std::string>> path_list;
+		std::set<std::string> disc_list;
+		std::set<std::string> removed_disc_list; // Filled in by RemoveContentList()
 	};
 
 public Q_SLOTS:
@@ -108,7 +108,7 @@ public Q_SLOTS:
 	//     - RemoveContentList()
 	//     - BatchRemoveContentLists()
 	//
-	void SetContentList(u16 contentTypes, const ContentInfo& contentInfo);
+	void SetContentList(u16 content_types, const content_info& content_info);
 	void BatchRemoveContentLists(const std::vector<game_info>& games = {}, bool is_interactive = false);
 	
 	void SetListMode(const bool& is_list);
@@ -175,23 +175,22 @@ private:
 	void ShowMultiSelectionContextMenu(const std::vector<game_info>& games, QPoint& global_pos);
 
 	// NOTE:
-	//   contentInfo is used by:
+	//   m_content_info is used by:
 	//   - SetContentList()
 	//   - ClearContentList()
 	//   - GetContentInfo()
 	//   - RemoveContentList()
 	//   - BatchRemoveContentLists()
 	//
-	ContentInfo contentInfo;
+	content_info m_content_info;
 
 	void ClearContentList(bool refresh = false);
-	ContentInfo GetContentInfo(const std::vector<game_info>& games);
+	content_info GetContentInfo(const std::vector<game_info>& games);
 
 	void DialogRemoveGame(const std::vector<game_info>& games);
 	void DialogGameInfo(const std::vector<game_info>& games);
 
 	static bool IsGameRunning(const std::string& serial);
-	static bool IsEmulatorRunning();
 	bool ValidateRemoval(const std::string& serial, const std::string& path, const std::string& desc, bool is_interactive = false);
 	bool ValidateBatchRemoval(const std::string& desc, bool is_interactive = false);
 
