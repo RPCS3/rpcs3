@@ -124,7 +124,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeHandler);
 
 	// Combobox: Devices
-	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_settings_dialog::ChangeDevice);
+	connect(ui->chooseDevice, &QComboBox::currentIndexChanged, this, &pad_settings_dialog::ChangeDevice);
 
 	// Combobox: Configs
 	connect(ui->chooseConfig, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeConfig);
@@ -179,7 +179,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->chooseClass->addItem(tr("Copilot for Player 6"), u32{CELL_PAD_FAKE_TYPE_COPILOT_6});
 	ui->chooseClass->addItem(tr("Copilot for Player 7"), u32{CELL_PAD_FAKE_TYPE_COPILOT_7});
 
-	connect(ui->chooseClass, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(ui->chooseClass, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		if (index < 0) return;
 		HandleDeviceClassChange(ui->chooseClass->currentData().toUInt());
@@ -2196,7 +2196,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
 	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
 	SubscribeTooltip(ui->gb_mouse_movement, tooltips.gamepad_settings.mouse_movement);
-	
+
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
 		SubscribeTooltip(m_pad_buttons->button(i), tooltips.gamepad_settings.button_assignment);
