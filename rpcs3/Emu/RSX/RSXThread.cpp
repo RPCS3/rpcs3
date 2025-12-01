@@ -3073,7 +3073,7 @@ namespace rsx
 		{
 			capture_current_frame = false;
 
-			std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc.gz";
+			const std::string file_path = fs::get_config_dir() + "captures/" + (Emu.GetTitleID().empty() ? Emu.GetTitle() : Emu.GetTitleID()) + "_" + date_time::current_time_narrow() + "_capture.rrc.gz";
 
 			fs::pending_file temp(file_path);
 
