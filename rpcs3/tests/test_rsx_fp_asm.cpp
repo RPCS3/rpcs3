@@ -3,6 +3,7 @@
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Program/Assembler/FPASM.h"
 #include "Emu/RSX/Program/Assembler/Passes/FP/RegisterAnnotationPass.h"
+#include "Emu/RSX/Program/Assembler/Passes/FP/RegisterDependencyPass.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
 
 namespace rsx::assembler
@@ -85,7 +86,7 @@ namespace rsx::assembler
 
 		auto& block = graph.blocks.front();
 		RSXFragmentProgram prog{};
-		FP::RegisterAnnotationPass annotation_pass(prog);
+		FP::RegisterAnnotationPass annotation_pass{ prog };
 
 		annotation_pass.run(graph);
 
@@ -115,7 +116,7 @@ namespace rsx::assembler
 
 		auto& block = graph.blocks.front();
 		RSXFragmentProgram prog{};
-		FP::RegisterAnnotationPass annotation_pass(prog);
+		FP::RegisterAnnotationPass annotation_pass{ prog };
 
 		annotation_pass.run(graph);
 
@@ -128,5 +129,111 @@ namespace rsx::assembler
 
 		EXPECT_EQ(block.input_list[0].reg, R0);
 		EXPECT_EQ(block.input_list[1].reg, R1);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Simple16)
+	{
+		// Instruction 2 clobers R0 which in turn clobbers H0.
+		// Instruction 3 reads from H0 so a barrier16 is needed between them.
+		auto graph = CFG_from_source(R"(
+			ADD  R1, R0, R1;
+			PK8U R0, R1;
+			MOV  H2, H0;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		ASSERT_EQ(block.instructions.size(), 5);
+
+		// H0.xy = unpackHalf2(r0.x);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.opcode, RSX_FP_OPCODE_UP2);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.fp16, 1);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_x, true);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_y, true);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.tmp_reg_index, 0);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.fp16, 0);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.swizzle_x, 0);
+
+		// H0.zw = unpackHalf2(r0.y);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.opcode, RSX_FP_OPCODE_UP2);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_x, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_y, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_z, true);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_w, true);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.tmp_reg_index, 0);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.fp16, 0);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.swizzle_x, 1);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Simple32)
+	{
+		// Instruction 2 clobers H1 which in turn clobbers R0.
+		// Instruction 3 reads from R0 so a barrier32 is needed between them.
+		auto graph = CFG_from_source(R"(
+			ADD R1, R0, R1;
+			MOV H1, R1
+			MOV R2, R0;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		ASSERT_EQ(block.instructions.size(), 5);
+
+		// R0.z = packHalf2(H1.xy);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.dest_reg, 0);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_x, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_y, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_z, true);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[2].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.tmp_reg_index, 1);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.swizzle_x, 0);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[2].bytecode[1] }.swizzle_y, 1);
+
+		// R0.w = packHalf2(H1.zw);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.dest_reg, 0);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_x, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_y, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = block.instructions[3].bytecode[0] }.mask_w, true);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.tmp_reg_index, 1);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.swizzle_x, 2);
+		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.swizzle_y, 3);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Complex)
+	{
+		// TODO: Multi-level block structure with nested IFs/LOOPs
 	}
 }
