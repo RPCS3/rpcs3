@@ -110,8 +110,8 @@ public Q_SLOTS:
 	//
 	void SetContentList(u16 content_types, const content_info& content_info);
 	void BatchRemoveContentLists(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	
-	void SetListMode(const bool& is_list);
+
+	void SetListMode(bool is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 	void SetPreferGameDataIcons(bool enabled);

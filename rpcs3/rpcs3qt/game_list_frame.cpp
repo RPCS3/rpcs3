@@ -1373,7 +1373,7 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 	// Manage Game menu
 	QMenu* manage_game_menu = menu.addMenu(tr("&Manage Game"));
 
-	// Create game shortcut
+	// Create game shortcuts
 	QAction* create_desktop_shortcut = manage_game_menu->addAction(tr("&Create Desktop Shortcut"));
 	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo]()
 	{
@@ -1918,7 +1918,7 @@ void game_list_frame::ShowMultiSelectionContextMenu(const std::vector<game_info>
 	// Manage Game menu
 	QMenu* manage_game_menu = menu.addMenu(tr("&Manage Game"));
 
-	// Create game shortcut
+	// Create game shortcuts
 	QAction* create_desktop_shortcut = manage_game_menu->addAction(tr("&Create Desktop Shortcut"));
 	connect(create_desktop_shortcut, &QAction::triggered, this, [this, games]()
 	{
@@ -2079,8 +2079,7 @@ void game_list_frame::ClearContentList(bool refresh)
 			serials_to_remove_from_yml.push_back(removedDisc);
 		}
 
-		// Finally, refresh the game list.
-		// Hidden list in "GuiConfigs/CurrentSettings.ini" file is also properly updated (title removed) if needed
+		// Finally, refresh the game list
 		Refresh(true, serials_to_remove_from_yml);
 	}
 
