@@ -840,6 +840,19 @@ bool Emulator::BootRsxCapture(const std::string& path)
 		return false;
 	}
 
+	m_path.clear();
+	m_path_old.clear();
+	m_path_original.clear();
+	m_title_id.clear();
+	m_title.clear();
+	m_localized_title.clear();
+	m_app_version.clear();
+	m_hash.clear();
+	m_cat.clear();
+	m_dir.clear();
+	m_sfo_dir.clear();
+	m_ar.reset();
+
 	Init();
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
