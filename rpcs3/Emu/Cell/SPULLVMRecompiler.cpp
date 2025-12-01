@@ -1577,11 +1577,9 @@ public:
 			return add_loc->compiled;
 		}
 
-		bool add_to_file = false;
-
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
-			add_to_file = true;
+			cache.add(func);
 		}
 
 		{
@@ -2813,14 +2811,6 @@ public:
 			if (g_cfg.core.spu_debug)
 			{
 				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append, llvm_log);
-			}
-
-			if (auto& cache = g_fxo->get<spu_cache>())
-			{
-				if (add_to_file)
-				{
-					cache.add(func);
-				}
 			}
 
 			fmt::throw_exception("Compilation failed");
