@@ -83,6 +83,12 @@ private:
 	static QDateTime TickToDateTime(u64 tick);
 	static u64 DateTimeToTick(QDateTime date_time);
 
+	QString get_trophy_header_text(int col) const;
+	QString get_trophy_action_text(int col) const;
+
+	QString get_gamelist_header_text(int col) const;
+	QString get_gamelist_action_text(int col) const;
+
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
@@ -93,8 +99,8 @@ private:
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
 
-	QList<QAction*> m_trophy_column_acts;
-	QList<QAction*> m_game_column_acts;
+	std::map<int, QAction*> m_trophy_column_acts;
+	std::map<int, QAction*> m_game_column_acts;
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;

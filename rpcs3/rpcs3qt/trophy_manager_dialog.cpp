@@ -100,16 +100,17 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->setAlternatingRowColors(true);
 	m_game_table->installEventFilter(this);
 
-	auto add_game_column = [this](gui::trophy_game_list_columns col, const QString& header_text, const QString& action_text)
+	const auto add_game_column = [this](gui::trophy_game_list_columns col)
 	{
-		m_game_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
-		m_game_column_acts.append(new QAction(action_text, this));
+		const int column = static_cast<int>(col);
+		m_game_table->setHorizontalHeaderItem(column, new QTableWidgetItem(get_gamelist_header_text(column)));
+		m_game_column_acts[column] = new QAction(get_gamelist_action_text(column), this);
 	};
 
-	add_game_column(gui::trophy_game_list_columns::icon,     tr("Icon"),     tr("Show Icons"));
-	add_game_column(gui::trophy_game_list_columns::name,     tr("Game"),     tr("Show Games"));
-	add_game_column(gui::trophy_game_list_columns::progress, tr("Progress"), tr("Show Progress"));
-	add_game_column(gui::trophy_game_list_columns::trophies, tr("Trophies"), tr("Show Trophies"));
+	add_game_column(gui::trophy_game_list_columns::icon);
+	add_game_column(gui::trophy_game_list_columns::name);
+	add_game_column(gui::trophy_game_list_columns::progress);
+	add_game_column(gui::trophy_game_list_columns::trophies);
 
 	// Trophy Table
 	m_trophy_table = new game_list();
@@ -133,20 +134,21 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->setAlternatingRowColors(true);
 	m_trophy_table->installEventFilter(this);
 
-	auto add_trophy_column = [this](gui::trophy_list_columns col, const QString& header_text, const QString& action_text)
+	const auto add_trophy_column = [this](gui::trophy_list_columns col)
 	{
-		m_trophy_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
-		m_trophy_column_acts.append(new QAction(action_text, this));
+		const int column = static_cast<int>(col);
+		m_trophy_table->setHorizontalHeaderItem(column, new QTableWidgetItem(get_trophy_header_text(column)));
+		m_trophy_column_acts[column] = new QAction(get_trophy_action_text(column), this);
 	};
 
-	add_trophy_column(gui::trophy_list_columns::icon,          tr("Icon"),              tr("Show Icons"));
-	add_trophy_column(gui::trophy_list_columns::name,          tr("Name"),              tr("Show Names"));
-	add_trophy_column(gui::trophy_list_columns::description,   tr("Description"),       tr("Show Descriptions"));
-	add_trophy_column(gui::trophy_list_columns::type,          tr("Type"),              tr("Show Types"));
-	add_trophy_column(gui::trophy_list_columns::is_unlocked,   tr("Status"),            tr("Show Status"));
-	add_trophy_column(gui::trophy_list_columns::id,            tr("ID"),                tr("Show IDs"));
-	add_trophy_column(gui::trophy_list_columns::platinum_link, tr("Platinum Relevant"), tr("Show Platinum Relevant"));
-	add_trophy_column(gui::trophy_list_columns::time_unlocked, tr("Time Unlocked"),     tr("Show Time Unlocked"));
+	add_trophy_column(gui::trophy_list_columns::icon);
+	add_trophy_column(gui::trophy_list_columns::name);
+	add_trophy_column(gui::trophy_list_columns::description);
+	add_trophy_column(gui::trophy_list_columns::type);
+	add_trophy_column(gui::trophy_list_columns::is_unlocked);
+	add_trophy_column(gui::trophy_list_columns::id);
+	add_trophy_column(gui::trophy_list_columns::platinum_link);
+	add_trophy_column(gui::trophy_list_columns::time_unlocked);
 
 	m_splitter = new QSplitter();
 	m_splitter->addWidget(m_game_table);
@@ -404,6 +406,66 @@ trophy_manager_dialog::~trophy_manager_dialog()
 {
 	WaitAndAbortGameRepaintThreads();
 	WaitAndAbortTrophyRepaintThreads();
+}
+
+QString trophy_manager_dialog::get_trophy_header_text(int col) const
+{
+	switch (static_cast<gui::trophy_list_columns>(col))
+	{
+	case gui::trophy_list_columns::icon:          return tr("Icon");
+	case gui::trophy_list_columns::name:          return tr("Name");
+	case gui::trophy_list_columns::description:   return tr("Description");
+	case gui::trophy_list_columns::type:          return tr("Type");
+	case gui::trophy_list_columns::is_unlocked:   return tr("Status");
+	case gui::trophy_list_columns::id:            return tr("ID");
+	case gui::trophy_list_columns::platinum_link: return tr("Platinum Relevant");
+	case gui::trophy_list_columns::time_unlocked: return tr("Time Unlocked");
+	case gui::trophy_list_columns::count:         break;
+	}
+	return {};
+}
+
+QString trophy_manager_dialog::get_trophy_action_text(int col) const
+{
+	switch (static_cast<gui::trophy_list_columns>(col))
+	{
+	case gui::trophy_list_columns::icon:          return tr("Show Icons");
+	case gui::trophy_list_columns::name:          return tr("Show Names");
+	case gui::trophy_list_columns::description:   return tr("Show Descriptions");
+	case gui::trophy_list_columns::type:          return tr("Show Types");
+	case gui::trophy_list_columns::is_unlocked:   return tr("Show Status");
+	case gui::trophy_list_columns::id:            return tr("Show IDs");
+	case gui::trophy_list_columns::platinum_link: return tr("Show Platinum Relevant");
+	case gui::trophy_list_columns::time_unlocked: return tr("Show Time Unlocked");
+	case gui::trophy_list_columns::count:         break;
+	}
+	return {};
+}
+
+QString trophy_manager_dialog::get_gamelist_header_text(int col) const
+{
+	switch (static_cast<gui::trophy_game_list_columns>(col))
+	{
+	case gui::trophy_game_list_columns::icon:       return tr("Icon");
+	case gui::trophy_game_list_columns::name:       return tr("Game");
+	case gui::trophy_game_list_columns::progress:   return tr("Progress");
+	case gui::trophy_game_list_columns::trophies:   return tr("Trophies");
+	case gui::trophy_game_list_columns::count:      break;
+	}
+	return {};
+}
+
+QString trophy_manager_dialog::get_gamelist_action_text(int col) const
+{
+	switch (static_cast<gui::trophy_game_list_columns>(col))
+	{
+	case gui::trophy_game_list_columns::icon:       return tr("Show Icons");
+	case gui::trophy_game_list_columns::name:       return tr("Show Games");
+	case gui::trophy_game_list_columns::progress:   return tr("Show Progress");
+	case gui::trophy_game_list_columns::trophies:   return tr("Show Trophies");
+	case gui::trophy_game_list_columns::count:      break;
+	}
+	return {};
 }
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
@@ -1062,6 +1124,21 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_table->clearContents();
 	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
+	// Update headers
+	for (int col = 0; col < m_game_table->horizontalHeader()->count(); col++)
+	{
+		if (auto item = m_game_table->horizontalHeaderItem(col))
+		{
+			item->setText(get_gamelist_header_text(col));
+		}
+	}
+
+	// Update actions
+	for (auto& [col, action] : m_game_column_acts)
+	{
+		action->setText(get_gamelist_action_text(col));
+	}
+
 	m_game_combo->clear();
 	m_game_combo->blockSignals(true);
 
@@ -1125,6 +1202,21 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	m_trophy_table->clear_list();
 	m_trophy_table->setRowCount(all_trophies);
 	m_trophy_table->setSortingEnabled(false); // Disable sorting before using setItem calls
+
+	// Update headers
+	for (int col = 0; col < m_trophy_table->horizontalHeader()->count(); col++)
+	{
+		if (auto item = m_trophy_table->horizontalHeaderItem(col))
+		{
+			item->setText(get_trophy_header_text(col));
+		}
+	}
+
+	// Update actions
+	for (auto& [col, action] : m_trophy_column_acts)
+	{
+		action->setText(get_trophy_action_text(col));
+	}
 
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
