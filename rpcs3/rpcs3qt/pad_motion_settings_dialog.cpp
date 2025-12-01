@@ -70,7 +70,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 			}
 		}
 
-		connect(ui->cb_choose_device, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &pad_motion_settings_dialog::change_device);
+		connect(ui->cb_choose_device, &QComboBox::currentIndexChanged, this, &pad_motion_settings_dialog::change_device);
 
 		// Combobox: Configure Axis
 		m_motion_axis_list = m_handler->get_motion_axis_list();
@@ -111,7 +111,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 				m_config_entries[i]->shift.set(value);
 			});
 
-			connect(m_axis_names[i], QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, i](int index)
+			connect(m_axis_names[i], &QComboBox::currentIndexChanged, this, [this, i](int index)
 			{
 				std::lock_guard lock(m_config_mutex);
 				if (!m_config_entries[i]->axis.from_string(m_axis_names[i]->itemText(index).toStdString()))

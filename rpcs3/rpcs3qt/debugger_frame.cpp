@@ -126,7 +126,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	m_regs->setLineWrapMode(QPlainTextEdit::NoWrap);
 	m_regs->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_regs->setContextMenuPolicy(Qt::CustomContextMenu);
-	
+
 	m_debugger_list->setFont(m_mono);
 	m_misc_state->setFont(m_mono);
 	m_regs->setFont(m_mono);
@@ -180,7 +180,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 		m_choice_units->clearFocus();
 	});
 
-	connect(m_choice_units, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
+	connect(m_choice_units, &QComboBox::currentIndexChanged, this, [&](){ m_is_spu_disasm_mode = false; OnSelectUnit(); });
 	connect(this, &QDockWidget::visibilityChanged, this, &debugger_frame::EnableUpdateTimer);
 
 	connect(m_debugger_list, &debugger_list::BreakpointRequested, m_breakpoint_list, &breakpoint_list::HandleBreakpointRequest);
@@ -1082,7 +1082,7 @@ void debugger_frame::UpdateUnitList()
 
 		if (reselected_index != umax)
 		{
-			// Include no-thread at index 0 
+			// Include no-thread at index 0
 			m_choice_units->setCurrentIndex(::narrow<s32>(reselected_index + 1));
 		}
 	}
