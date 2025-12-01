@@ -44,6 +44,7 @@
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
+#include "sound_effect_manager_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -2343,6 +2344,8 @@ void main_window::RetranslateUI(const QStringList& language_codes, const QString
 	{
 		m_game_list_frame->Refresh(true);
 	}
+
+	Q_EMIT RequestDialogRepaint();
 }
 
 void main_window::ShowTitleBars(bool show) const
@@ -3053,6 +3056,12 @@ void main_window::CreateConnects()
 		screenshot_manager->show();
 	});
 
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	{
+		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
+		dlg->show();
+	});
+
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
 	{
 		cg_disasm_window* cgdw = new cg_disasm_window(m_gui_settings);
@@ -3336,7 +3345,7 @@ void main_window::CreateConnects()
 	connect(ui->showCustomIconsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetShowCustomIcons);
 	connect(ui->playHoverGifsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverGifs);
 
-	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](const int& val)
+	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](int val)
 	{
 		const int idx = ui->sizeSlider->value() + val;
 		m_save_slider_pos = true;

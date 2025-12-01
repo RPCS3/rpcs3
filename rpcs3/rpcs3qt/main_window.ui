@@ -306,6 +306,7 @@
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
+    <addaction name="actionManage_SoundEffects"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -1440,6 +1441,11 @@
   <action name="actionMusic_Player">
    <property name="text">
     <string>Music Player</string>
+   </property>
+  </action>
+  <action name="actionManage_SoundEffects">
+   <property name="text">
+    <string>Sound Effects</string>
    </property>
   </action>
  </widget>

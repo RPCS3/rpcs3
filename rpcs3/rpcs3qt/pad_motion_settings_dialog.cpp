@@ -105,7 +105,7 @@ pad_motion_settings_dialog::pad_motion_settings_dialog(QDialog* parent, std::sha
 				m_config_entries[i]->mirrored.set(state != Qt::Unchecked);
 			});
 
-			connect(m_shifts[i], QOverload<int>::of(&QSpinBox::valueChanged), this, [this, i](int value)
+			connect(m_shifts[i], &QSpinBox::valueChanged, this, [this, i](int value)
 			{
 				std::lock_guard lock(m_config_mutex);
 				m_config_entries[i]->shift.set(value);

@@ -100,27 +100,28 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_dock->setCentralWidget(m_central_widget);
 
 	// Actions regarding showing/hiding columns
-	auto add_column = [this](gui::game_list_columns col, const QString& header_text, const QString& action_text)
+	const auto add_column = [this](gui::game_list_columns col)
 	{
-		m_game_list->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
-		m_columnActs.append(new QAction(action_text, this));
+		const int column = static_cast<int>(col);
+		m_game_list->setHorizontalHeaderItem(column, new QTableWidgetItem(get_header_text(column)));
+		m_column_acts[column] = new QAction(get_action_text(column), this);
 	};
 
-	add_column(gui::game_list_columns::icon,       tr("Icon"),                  tr("Show Icons"));
-	add_column(gui::game_list_columns::name,       tr("Name"),                  tr("Show Names"));
-	add_column(gui::game_list_columns::serial,     tr("Serial"),                tr("Show Serials"));
-	add_column(gui::game_list_columns::firmware,   tr("Firmware"),              tr("Show Firmwares"));
-	add_column(gui::game_list_columns::version,    tr("Version"),               tr("Show Versions"));
-	add_column(gui::game_list_columns::category,   tr("Category"),              tr("Show Categories"));
-	add_column(gui::game_list_columns::path,       tr("Path"),                  tr("Show Paths"));
-	add_column(gui::game_list_columns::move,       tr("PlayStation Move"),      tr("Show PlayStation Move"));
-	add_column(gui::game_list_columns::resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
-	add_column(gui::game_list_columns::sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
-	add_column(gui::game_list_columns::parental,   tr("Parental Level"),        tr("Show Parental Levels"));
-	add_column(gui::game_list_columns::last_play,  tr("Last Played"),           tr("Show Last Played"));
-	add_column(gui::game_list_columns::playtime,   tr("Time Played"),           tr("Show Time Played"));
-	add_column(gui::game_list_columns::compat,     tr("Compatibility"),         tr("Show Compatibility"));
-	add_column(gui::game_list_columns::dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
+	add_column(gui::game_list_columns::icon);
+	add_column(gui::game_list_columns::name);
+	add_column(gui::game_list_columns::serial);
+	add_column(gui::game_list_columns::firmware);
+	add_column(gui::game_list_columns::version);
+	add_column(gui::game_list_columns::category);
+	add_column(gui::game_list_columns::path);
+	add_column(gui::game_list_columns::move);
+	add_column(gui::game_list_columns::resolution);
+	add_column(gui::game_list_columns::sound);
+	add_column(gui::game_list_columns::parental);
+	add_column(gui::game_list_columns::last_play);
+	add_column(gui::game_list_columns::playtime);
+	add_column(gui::game_list_columns::compat);
+	add_column(gui::game_list_columns::dir_size);
 
 	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
@@ -211,7 +212,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 	connect(m_game_grid, &game_list_grid::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 
-	m_game_list->create_header_actions(m_columnActs,
+	m_game_list->create_header_actions(m_column_acts,
 		[this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), visible); });
 }
@@ -227,7 +228,7 @@ void game_list_frame::LoadSettings()
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
 
-	m_game_list->sync_header_actions(m_columnActs, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
+	m_game_list->sync_header_actions(m_column_acts, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
 }
 
 game_list_frame::~game_list_frame()
@@ -236,6 +237,54 @@ game_list_frame::~game_list_frame()
 	WaitAndAbortRepaintThreads();
 	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 	gui::utils::stop_future_watcher(m_refresh_watcher, true);
+}
+
+QString game_list_frame::get_header_text(int col) const
+{
+	switch (static_cast<gui::game_list_columns>(col))
+	{
+	case gui::game_list_columns::icon:       return tr("Icon");
+	case gui::game_list_columns::name:       return tr("Name");
+	case gui::game_list_columns::serial:     return tr("Serial");
+	case gui::game_list_columns::firmware:   return tr("Firmware");
+	case gui::game_list_columns::version:    return tr("Version");
+	case gui::game_list_columns::category:   return tr("Category");
+	case gui::game_list_columns::path:       return tr("Path");
+	case gui::game_list_columns::move:       return tr("PlayStation Move");
+	case gui::game_list_columns::resolution: return tr("Supported Resolutions");
+	case gui::game_list_columns::sound:      return tr("Sound Formats");
+	case gui::game_list_columns::parental:   return tr("Parental Level");
+	case gui::game_list_columns::last_play:  return tr("Last Played");
+	case gui::game_list_columns::playtime:   return tr("Time Played");
+	case gui::game_list_columns::compat:     return tr("Compatibility");
+	case gui::game_list_columns::dir_size:   return tr("Space On Disk");
+	case gui::game_list_columns::count:      break;
+	}
+	return {};
+}
+
+QString game_list_frame::get_action_text(int col) const
+{
+	switch (static_cast<gui::game_list_columns>(col))
+	{
+	case gui::game_list_columns::icon:       return tr("Show Icons");
+	case gui::game_list_columns::name:       return tr("Show Names");
+	case gui::game_list_columns::serial:     return tr("Show Serials");
+	case gui::game_list_columns::firmware:   return tr("Show Firmwares");
+	case gui::game_list_columns::version:    return tr("Show Versions");
+	case gui::game_list_columns::category:   return tr("Show Categories");
+	case gui::game_list_columns::path:       return tr("Show Paths");
+	case gui::game_list_columns::move:       return tr("Show PlayStation Move");
+	case gui::game_list_columns::resolution: return tr("Show Supported Resolutions");
+	case gui::game_list_columns::sound:      return tr("Show Sound Formats");
+	case gui::game_list_columns::parental:   return tr("Show Parental Levels");
+	case gui::game_list_columns::last_play:  return tr("Show Last Played");
+	case gui::game_list_columns::playtime:   return tr("Show Time Played");
+	case gui::game_list_columns::compat:     return tr("Show Compatibility");
+	case gui::game_list_columns::dir_size:   return tr("Show Space On Disk");
+	case gui::game_list_columns::count:      break;
+	}
+	return {};
 }
 
 void game_list_frame::OnColClicked(int col)
@@ -415,6 +464,21 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		if (m_progress_dialog)
 		{
 			m_progress_dialog->SetValue(0);
+		}
+
+		// Update headers
+		for (int col = 0; col < m_game_list->horizontalHeader()->count(); col++)
+		{
+			if (auto item = m_game_list->horizontalHeaderItem(col))
+			{
+				item->setText(get_header_text(col));
+			}
+		}
+
+		// Update actions
+		for (auto& [col, action] : m_column_acts)
+		{
+			action->setText(get_action_text(col));
 		}
 
 		const std::string games_dir = rpcs3::utils::get_games_dir();
@@ -920,7 +984,7 @@ void game_list_frame::OnRefreshFinished()
 	if (!std::exchange(m_initial_refresh_done, true))
 	{
 		m_game_list->restore_layout(m_gui_settings->GetValue(gui::gl_state).toByteArray());
-		m_game_list->sync_header_actions(m_columnActs, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
+		m_game_list->sync_header_actions(m_column_acts, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
 	}
 
 	// Emit signal and remove slots
@@ -959,9 +1023,9 @@ void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool s
 
 void game_list_frame::SaveSettings()
 {
-	for (int col = 0; col < m_columnActs.count(); ++col)
+	for (const auto& [col, action] : m_column_acts)
 	{
-		m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), m_columnActs[col]->isChecked());
+		m_gui_settings->SetGamelistColVisibility(static_cast<gui::game_list_columns>(col), action->isChecked());
 	}
 	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column, false);
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder, false);
@@ -1121,7 +1185,7 @@ void game_list_frame::CreateShortcuts(const std::vector<game_info>& games, const
 	}
 }
 
-void game_list_frame::ShowContextMenu(const QPoint &pos)
+void game_list_frame::ShowContextMenu(const QPoint& pos)
 {
 	QPoint global_pos;
 	game_info gameinfo;
@@ -2704,7 +2768,7 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 	RepaintIcons();
 }
 
-void game_list_frame::ResizeIcons(const int& slider_pos)
+void game_list_frame::ResizeIcons(int slider_pos)
 {
 	m_icon_size_index = slider_pos;
 	m_icon_size = gui_settings::SizeFromSlider(slider_pos);
@@ -2712,7 +2776,7 @@ void game_list_frame::ResizeIcons(const int& slider_pos)
 	RepaintIcons();
 }
 
-void game_list_frame::RepaintIcons(const bool& from_settings)
+void game_list_frame::RepaintIcons(bool from_settings)
 {
 	gui::utils::stop_future_watcher(m_parsing_watcher, false);
 	gui::utils::stop_future_watcher(m_refresh_watcher, false);
@@ -2746,7 +2810,7 @@ void game_list_frame::SetShowHidden(bool show)
 	m_show_hidden = show;
 }
 
-void game_list_frame::SetListMode(const bool& is_list)
+void game_list_frame::SetListMode(bool is_list)
 {
 	m_old_layout_is_list = m_is_list_layout;
 	m_is_list_layout = is_list;

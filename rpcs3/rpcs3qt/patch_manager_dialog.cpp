@@ -123,8 +123,8 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 			handle_config_value_changed(ui->configurable_combo_box->itemData(index).toDouble());
 		}
 	});
-	connect(ui->configurable_spin_box, QOverload<int>::of(&QSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
-	connect(ui->configurable_double_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
+	connect(ui->configurable_spin_box, &QSpinBox::valueChanged, this, &patch_manager_dialog::handle_config_value_changed);
+	connect(ui->configurable_double_spin_box, &QDoubleSpinBox::valueChanged, this, &patch_manager_dialog::handle_config_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{

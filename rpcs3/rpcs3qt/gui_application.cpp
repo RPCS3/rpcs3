@@ -743,9 +743,9 @@ void gui_application::InitializeCallbacks()
 		return m_emu_settings->GetLocalizedSetting(node, enum_index);
 	};
 
-	callbacks.play_sound = [this](const std::string& path)
+	callbacks.play_sound = [this](const std::string& path, std::optional<f32> volume)
 	{
-		Emu.CallFromMainThread([this, path]()
+		Emu.CallFromMainThread([this, path, volume]()
 		{
 			if (fs::is_file(path))
 			{
@@ -758,12 +758,12 @@ void gui_application::InitializeCallbacks()
 				// Create a new sound effect. Re-using the same object seems to be broken for some users starting with Qt 6.6.3.
 				std::unique_ptr<QSoundEffect> sound_effect = std::make_unique<QSoundEffect>();
 				sound_effect->setSource(QUrl::fromLocalFile(QString::fromStdString(path)));
-				sound_effect->setVolume(audio::get_volume());
+				sound_effect->setVolume(volume ? *volume : audio::get_volume());
 				sound_effect->play();
 
 				m_sound_effects.push_back(std::move(sound_effect));
 			}
-		});
+		}, nullptr, false);
 	};
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.

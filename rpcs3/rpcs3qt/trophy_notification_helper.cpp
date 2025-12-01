@@ -31,7 +31,7 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 		trophy_notification->move(m_game_window->mapToGlobal(QPoint(0, 0)));
 		trophy_notification->show();
 
-		Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav");
+		Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav", std::nullopt);
 	});
 
 	return 0;
