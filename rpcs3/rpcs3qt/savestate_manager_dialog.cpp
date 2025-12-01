@@ -85,6 +85,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->horizontalScrollBar()->setSingleStep(20);
 	m_savestate_table->setItemDelegate(new table_item_delegate(m_savestate_table, false));
 	m_savestate_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_savestate_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_savestate_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_savestate_table->setColumnCount(static_cast<int>(gui::savestate_list_columns::count));
 	m_savestate_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
