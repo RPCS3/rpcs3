@@ -432,9 +432,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 		scroll(0); // Refresh
 	});
-	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), this, [=, this]()
+	connect(sb_words, &QSpinBox::valueChanged, this, [this](int value)
 	{
-		m_colcount = 1 << sb_words->value();
+		m_colcount = 1 << value;
 		ShowMemory();
 	});
 

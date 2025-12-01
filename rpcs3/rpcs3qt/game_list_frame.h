@@ -48,10 +48,10 @@ public:
 	void SaveSettings();
 
 	/** Resize Gamelist Icons to size given by slider position */
-	void ResizeIcons(const int& slider_pos);
+	void ResizeIcons(int slider_pos);
 
 	/** Repaint Gamelist Icons with new background color */
-	void RepaintIcons(const bool& from_settings = false);
+	void RepaintIcons(bool from_settings = false);
 
 	void SetShowHidden(bool show);
 
@@ -70,7 +70,7 @@ public Q_SLOTS:
 	void BatchRemoveCustomConfigurations();
 	void BatchRemoveCustomPadConfigurations();
 	void BatchRemoveShaderCaches();
-	void SetListMode(const bool& is_list);
+	void SetListMode(bool is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 	void SetPreferGameDataIcons(bool enabled);
@@ -83,7 +83,7 @@ private Q_SLOTS:
 	void OnRefreshFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 	void doubleClickedSlot(QTableWidgetItem* item);
 	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
@@ -91,7 +91,7 @@ Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
-	void RequestIconSizeChange(const int& val);
+	void RequestIconSizeChange(int val);
 	void NotifyEmuSettingsChange();
 	void FocusToSearchBar();
 	void Refreshed();
@@ -126,6 +126,9 @@ protected:
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
+
+	QString get_header_text(int col) const;
+	QString get_action_text(int col) const;
 
 	void ShowCustomConfigIcon(const game_info& game);
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
@@ -165,7 +168,7 @@ private:
 	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
-	QList<QAction*> m_columnActs;
+	std::map<int, QAction*> m_column_acts;
 	Qt::SortOrder m_col_sort_order{};
 	int m_sort_column{};
 	bool m_initial_refresh_done = false;

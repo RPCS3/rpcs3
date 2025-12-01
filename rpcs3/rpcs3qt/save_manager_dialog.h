@@ -39,7 +39,6 @@ Q_SIGNALS:
 	void IconReady(int index, const QPixmap& new_icon);
 
 private:
-	void Init();
 	void UpdateList();
 	void UpdateIcons();
 	void ShowContextMenu(const QPoint& pos);
@@ -48,6 +47,8 @@ private:
 	void closeEvent(QCloseEvent* event) override;
 
 	std::vector<SaveDataEntry> GetSaveEntries(const std::string& base_dir);
+
+	QString get_header_text(int col) const;
 
 	game_list* m_list = nullptr;
 	std::string m_dir;
