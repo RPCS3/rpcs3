@@ -2842,14 +2842,6 @@ public:
 		// Rebuild trampoline if necessary
 		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
-			if (auto& cache = g_fxo->get<spu_cache>())
-			{
-				if (add_to_file)
-				{
-					cache.add(func);
-				}
-			}
-
 			return nullptr;
 		}
 
