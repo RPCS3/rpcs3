@@ -56,8 +56,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 {
 	update_log.notice("Checking for updates: automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
-	m_update_message.clear();
-	m_changelog.clear();
+	m_update_info = {};
 
 	if (automatic)
 	{
@@ -103,7 +102,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 			}
 		}
 
-		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
+		Q_EMIT signal_update_available(result_json && m_update_info.update_found);
 	});
 
 	const utils::OS_version os = utils::get_OS_version();
@@ -121,7 +120,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
-	bool hash_found = true;
+	m_update_info.hash_found = true;
 
 	if (return_code < 0)
 	{
@@ -143,7 +142,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
 		if (!automatic && return_code == -1)
 		{
-			hash_found = false;
+			m_update_info.hash_found = false;
 		}
 		else
 		{
@@ -187,7 +186,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	      check_json(latest["version"].isString(), "Node 'latest_build: version' not found or not a string") &&
 	      check_json(latest["datetime"].isString(), "Node 'latest_build: datetime' not found or not a string")
 	     ) ||
-	     (hash_found && !(
+	     (m_update_info.hash_found && !(
 	      check_json(current.isObject(), "JSON doesn't contain current_build section") &&
 	      check_json(current["version"].isString(), "Node 'current_build: datetime' not found or not a string") &&
 	      check_json(current["datetime"].isString(), "Node 'current_build: version' not found or not a string")
@@ -196,7 +195,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		return false;
 	}
 
-	if (hash_found && return_code == 0)
+	if (m_update_info.hash_found && return_code == 0)
 	{
 		update_log.success("RPCS3 is up to date!");
 		m_downloader->close_progress_dialog();
@@ -210,58 +209,25 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	// Calculate how old the build is
 	const QString date_fmt = QStringLiteral("yyyy-MM-dd hh:mm:ss");
 
-	const QDateTime cur_date = hash_found ? QDateTime::fromString(current["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
+	const QDateTime cur_date = m_update_info.hash_found ? QDateTime::fromString(current["datetime"].toString(), date_fmt) : QDateTime::currentDateTimeUtc();
 	const QDateTime lts_date = QDateTime::fromString(latest["datetime"].toString(), date_fmt);
 
-	const QString cur_str = cur_date.toString(date_fmt);
-	const QString lts_str = lts_date.toString(date_fmt);
+	m_update_info.update_found = true;
+	m_update_info.cur_date = cur_date.toString(date_fmt);
+	m_update_info.lts_date = lts_date.toString(date_fmt);
+	m_update_info.diff_msec = cur_date.msecsTo(lts_date);
+	m_update_info.new_version = latest["version"].toString();
 
-	const qint64 diff_msec = cur_date.msecsTo(lts_date);
-
-	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str, lts_str, diff_msec);
-
-	const Localized localized;
-
-	const QString new_version = latest["version"].toString();
-	m_new_version = new_version.toStdString();
-	const QString support_message = tr("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
-
-	if (hash_found)
+	if (m_update_info.hash_found)
 	{
-		const QString old_version = current["version"].toString();
-		m_old_version = old_version.toStdString();
-
-		if (diff_msec < 0)
-		{
-			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
-			m_update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
-				.arg(old_version)
-				.arg(cur_str)
-				.arg(new_version)
-				.arg(lts_str)
-				.arg(support_message);
-		}
-		else
-		{
-			m_update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
-				.arg(old_version)
-				.arg(cur_str)
-				.arg(new_version)
-				.arg(lts_str)
-				.arg(localized.GetVerboseTimeByMs(diff_msec, true))
-				.arg(support_message);
-		}
+		m_update_info.old_version = current["version"].toString();
 	}
 	else
 	{
-		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
-
-		m_update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
-			.arg(new_version)
-			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(std::abs(diff_msec), true))
-			.arg(support_message);
+		m_update_info.old_version = QString::fromStdString(fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string()));
 	}
+
+	update_log.notice("Current: %s, latest: %s, difference: %lld ms", m_update_info.cur_date, m_update_info.lts_date, m_update_info.diff_msec);
 
 	m_request_url   = latest[os]["download"].toString().toStdString();
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
@@ -277,9 +243,9 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	if (!auto_accept)
 	{
-		if (automatic && m_gui_settings->GetValue(gui::ib_skip_version).toString() == new_version)
+		if (automatic && m_gui_settings->GetValue(gui::ib_skip_version).toString() == m_update_info.new_version)
 		{
-			update_log.notice("Skipping automatic update notification for version '%s' due to user preference", new_version);
+			update_log.notice("Skipping automatic update notification for version '%s' due to user preference", m_update_info.new_version);
 			m_downloader->close_progress_dialog();
 			return true;
 		}
@@ -300,7 +266,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 					}
 					else
 					{
-						entry.version = tr("N/A");
 						update_log.notice("JSON changelog entry does not contain a version string.");
 					}
 
@@ -310,11 +275,10 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 					}
 					else
 					{
-						entry.title = tr("N/A");
 						update_log.notice("JSON changelog entry does not contain a title string.");
 					}
 
-					m_changelog.push_back(entry);
+					m_update_info.changelog.push_back(std::move(entry));
 				}
 				else
 				{
@@ -351,25 +315,61 @@ void update_manager::update(bool auto_accept)
 
 	if (!auto_accept)
 	{
-		if (m_update_message.isEmpty())
+		if (!m_update_info.update_found)
 		{
 			// This can happen if we abort the check_for_updates download. Just check again in this case.
-			update_log.notice("Aborting update: Update message is empty. Trying again...");
+			update_log.notice("Aborting update: Update not found. Trying again...");
 			m_downloader->close_progress_dialog();
 			check_for_updates(false, false, false, m_parent);
 			return;
 		}
 
+		const Localized localized;
+		const QString support_message = tr("<br>You can empower our project at <a href=\"https://rpcs3.net/patreon\">RPCS3 Patreon</a>.<br>");
+		QString update_message;
+
+		if (m_update_info.hash_found)
+		{
+			if (m_update_info.diff_msec < 0)
+			{
+				// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
+				update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
+					.arg(m_update_info.old_version)
+					.arg(m_update_info.cur_date)
+					.arg(m_update_info.new_version)
+					.arg(m_update_info.lts_date)
+					.arg(support_message);
+			}
+			else
+			{
+				update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
+					.arg(m_update_info.old_version)
+					.arg(m_update_info.cur_date)
+					.arg(m_update_info.new_version)
+					.arg(m_update_info.lts_date)
+					.arg(localized.GetVerboseTimeByMs(m_update_info.diff_msec, true))
+					.arg(support_message);
+			}
+		}
+		else
+		{
+			update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
+				.arg(m_update_info.new_version)
+				.arg(m_update_info.lts_date)
+				.arg(localized.GetVerboseTimeByMs(std::abs(m_update_info.diff_msec), true))
+				.arg(support_message);
+		}
+
 		QString changelog_content;
 
-		for (const changelog_data& entry : m_changelog)
+		for (const changelog_data& entry : m_update_info.changelog)
 		{
 			if (!changelog_content.isEmpty())
 				changelog_content.append('\n');
-			changelog_content.append(tr("• %0: %1").arg(entry.version, entry.title));
+			changelog_content.append(tr("• %0: %1").arg(entry.version.isEmpty() ? tr("N/A") : entry.version, entry.title.isEmpty() ? tr("N/A") : entry.title));
 		}
 
-		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 		mb.setTextFormat(Qt::RichText);
 		mb.setCheckBox(new QCheckBox(tr("Don't show again for this version")));
 
@@ -380,16 +380,16 @@ void update_manager::update(bool auto_accept)
 
 			// Smartass hack to make the unresizeable message box wide enough for the changelog
 			const int changelog_width = QLabel(changelog_content).sizeHint().width();
-			if (QLabel(m_update_message).sizeHint().width() < changelog_width)
+			if (QLabel(update_message).sizeHint().width() < changelog_width)
 			{
-				m_update_message += " &nbsp;";
-				while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+				update_message += " &nbsp;";
+				while (QLabel(update_message).sizeHint().width() < changelog_width)
 				{
-					m_update_message += "&nbsp;";
+					update_message += "&nbsp;";
 				}
 			}
 
-			mb.setText(m_update_message);
+			mb.setText(update_message);
 		}
 
 		update_log.notice("Asking user for permission to update...");
@@ -400,8 +400,8 @@ void update_manager::update(bool auto_accept)
 
 			if (mb.checkBox()->isChecked())
 			{
-				update_log.notice("User requested to skip further automatic update notifications for version '%s'", m_new_version);
-				m_gui_settings->SetValue(gui::ib_skip_version, QString::fromStdString(m_new_version));
+				update_log.notice("User requested to skip further automatic update notifications for version '%s'", m_update_info.new_version);
+				m_gui_settings->SetValue(gui::ib_skip_version, m_update_info.new_version);
 			}
 
 			m_downloader->close_progress_dialog();
@@ -751,7 +751,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	if (fs::file update_file{fs::get_config_dir() + "update_history.log", fs::create + fs::write + fs::append})
 	{
 		const std::string update_time = QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss").toStdString();
-		const std::string entry = fmt::format("%s: Updated from \"%s\" to \"%s\"", update_time, m_old_version, m_new_version);
+		const std::string entry = fmt::format("%s: Updated from \"%s\" to \"%s\"", update_time, m_update_info.old_version, m_update_info.new_version);
 		update_file.write(fmt::format("%s\n", entry));
 		update_log.notice("Added entry '%s' to update_history.log", entry);
 	}
