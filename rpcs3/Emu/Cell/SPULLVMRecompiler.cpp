@@ -1580,6 +1580,7 @@ public:
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
 			cache.add(func);
+			spu_log.success("New SPU block detected (size=%u)", func_size);
 		}
 
 		{
@@ -2868,16 +2869,6 @@ public:
 		asm("ISB");
 		asm("DSB ISH");
 #endif
-
-		if (auto& cache = g_fxo->get<spu_cache>())
-		{
-			if (add_to_file)
-			{
-				cache.add(func);
-			}
-
-			spu_log.success("New SPU block compiled successfully (size=%u)", func_size);
-		}
 
 		return fn;
 	}
