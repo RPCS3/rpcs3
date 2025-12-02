@@ -3378,7 +3378,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (raddr)
 		{
 			// Last check for event before we clear the reservation
-			if (~ch_events.load().events & SPU_EVENT_LR)
+			if (!ch_events.load().count || ~ch_events.load().events & SPU_EVENT_LR)
 			{
 				if (raddr == addr)
 				{
@@ -3551,7 +3551,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		// Try to process PUTLLUC using PUTLLC when a reservation is active:
 		// If it fails the reservation is cleared, LR event is set and we fallback to the main implementation
 		// All of this is done atomically in PUTLLC
-		if (!(ch_events.load().events & SPU_EVENT_LR) && do_putllc(args))
+		if ((!ch_events.load().count || !(ch_events.load().events & SPU_EVENT_LR)) && do_putllc(args))
 		{
 			// Success, return as our job was done here
 			return;
@@ -4125,7 +4125,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr != addr)
 			{
 				// Last check for event before we replace the reservation with a new one
-				if (~ch_events.load().events & SPU_EVENT_LR && reservation_check(raddr, rdata, addr))
+				if ((!ch_events.load().count || ~ch_events.load().events & SPU_EVENT_LR) && reservation_check(raddr, rdata, addr))
 				{
 					set_events(SPU_EVENT_LR);
 				}
@@ -6241,24 +6241,21 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrEventAck:
 	{
+		if (!value)
+		{
+			return true;
+		}
+
 		// "Collect" events before final acknowledgment
 		get_events(value | static_cast<u32>(ch_events.load().mask));
 
 		bool freeze_dec = false;
 
-		const bool check_intr = ch_events.atomic_op([&](ch_events_t& events)
+		ch_events.atomic_op([&](ch_events_t& events)
 		{
 			events.events &= ~value;
 
 			freeze_dec = !!((value & SPU_EVENT_TM) & ~events.mask);
-
-			if (events.events & events.mask)
-			{
-				events.count = true;
-				return true;
-			}
-
-			return !!events.count;
 		});
 
 		if (!is_dec_frozen && freeze_dec)
@@ -6266,15 +6263,6 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			// Save current time, this will be the reported value until the decrementer resumes
 			ch_dec_value = read_dec().first;
 			is_dec_frozen = true;
-		}
-
-		if (check_intr)
-		{
-			// Check interrupts in case count is 1
-			if (check_mfc_interrupts(pc + 4))
-			{
-				spu_runtime::g_escape(this);
-			}
 		}
 
 		return true;
