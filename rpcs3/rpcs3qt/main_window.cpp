@@ -230,36 +230,28 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	// RPCS3 Updater
 
-	QMenu* download_menu = new QMenu(tr("Update Available!"));
-
-	QAction* download_action = new QAction(tr("Download Update"), download_menu);
-	connect(download_action, &QAction::triggered, this, [this]
+	connect(ui->actionDownload_Update, &QAction::triggered, this, [this]
 	{
 		m_updater.update(false);
 	});
 
-	download_menu->addAction(download_action);
-
 #ifdef _WIN32
 	// Use a menu at the top right corner to indicate the new version.
-	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
-	m_download_menu_action = corner_bar->addMenu(download_menu);
+	// Some distros just can't handle corner widgets at the moment.
+	QMenuBar* corner_bar = new QMenuBar(ui->menuBar);
+	corner_bar->addMenu(ui->menuUpdate_Available);
 	ui->menuBar->setCornerWidget(corner_bar);
 	ui->menuBar->cornerWidget()->setVisible(false);
-#else
-	// Append a menu to the right of the regular menus to indicate the new version.
-	// Some distros just can't handle corner widgets at the moment.
-	m_download_menu_action = ui->menuBar->addMenu(download_menu);
+	ui->menuBar->removeAction(ui->menuUpdate_Available->menuAction());
 #endif
 
-	ensure(m_download_menu_action);
-	m_download_menu_action->setVisible(false);
+	ui->menuUpdate_Available->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
 	{
-		if (m_download_menu_action)
+		if (ui->menuUpdate_Available)
 		{
-			m_download_menu_action->setVisible(update_available);
+			ui->menuUpdate_Available->setVisible(update_available);
 		}
 		if (ui->menuBar && ui->menuBar->cornerWidget())
 		{
@@ -1933,9 +1925,11 @@ void main_window::OnEmuRun(bool /*start_playtime*/)
 	EnableMenus(true);
 
 	update_gui_pad_thread();
+
+	m_system_state = system_state::running;
 }
 
-void main_window::OnEmuResume() const
+void main_window::OnEmuResume()
 {
 	const QString title = GetCurrentTitle();
 	const QString restart_tooltip = tr("Restart %0").arg(title);
@@ -1948,9 +1942,11 @@ void main_window::OnEmuResume() const
 	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(pause_tooltip);
 	ui->toolbar_stop->setToolTip(stop_tooltip);
+
+	m_system_state = system_state::starting; // Let's just use this state to distinguish between resumed and running
 }
 
-void main_window::OnEmuPause() const
+void main_window::OnEmuPause()
 {
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
@@ -1966,6 +1962,8 @@ void main_window::OnEmuPause() const
 	{
 		m_game_list_frame->Refresh();
 	}
+
+	m_system_state = system_state::paused;
 }
 
 void main_window::OnEmuStop()
@@ -2026,9 +2024,11 @@ void main_window::OnEmuStop()
 	}
 
 	update_gui_pad_thread();
+
+	m_system_state = system_state::stopped;
 }
 
-void main_window::OnEmuReady() const
+void main_window::OnEmuReady()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = tr("Play %0").arg(title);
@@ -2054,6 +2054,8 @@ void main_window::OnEmuReady() const
 	ui->removeAllCachesAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
 	ui->cleanUpGameListAct->setEnabled(false);
+
+	m_system_state = system_state::ready;
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2339,6 +2341,20 @@ void main_window::RetranslateUI(const QStringList& language_codes, const QString
 	UpdateLanguageActions(language_codes, language_code);
 
 	ui->retranslateUi(this);
+
+	// Update menu bar size (needed if the corner widget changes its size)
+	ui->menuBar->adjustSize();
+
+	// Update toolbar elements
+	switch (m_system_state)
+	{
+	case system_state::running:  OnEmuRun(false); break;
+	case system_state::stopped:  OnEmuStop(); break;
+	case system_state::paused:   OnEmuPause(); break;
+	case system_state::starting: OnEmuResume(); break;
+	case system_state::ready:    OnEmuReady(); break;
+	default: break;
+	}
 
 	if (m_game_list_frame)
 	{
