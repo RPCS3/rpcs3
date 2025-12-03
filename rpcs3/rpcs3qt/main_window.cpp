@@ -2340,6 +2340,12 @@ void main_window::RetranslateUI(const QStringList& language_codes, const QString
 
 	ui->retranslateUi(this);
 
+	// Refresh game list first to prevent localization mismatches in further Refresh calls
+	if (m_game_list_frame)
+	{
+		m_game_list_frame->Refresh(true);
+	}
+
 	// Update menu bar size (needed if the corner widget changes its size)
 	ui->menuBar->adjustSize();
 
@@ -2352,11 +2358,6 @@ void main_window::RetranslateUI(const QStringList& language_codes, const QString
 	case system_state::starting: OnEmuResume(); break;
 	case system_state::ready:    OnEmuReady(); break;
 	default: break;
-	}
-
-	if (m_game_list_frame)
-	{
-		m_game_list_frame->Refresh(true);
 	}
 
 	Q_EMIT RequestDialogRepaint();
