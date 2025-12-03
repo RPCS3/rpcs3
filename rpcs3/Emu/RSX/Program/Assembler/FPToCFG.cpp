@@ -101,6 +101,28 @@ namespace rsx::assembler
 
 			if (found)
 			{
+				if (!bb->pred.empty())
+				{
+					switch (bb->pred.back().type)
+					{
+					case EdgeType::IF:
+					case EdgeType::ELSE:
+						bb->insert_succ(*found, EdgeType::ENDIF);
+						break;
+					case EdgeType::LOOP:
+						bb->insert_succ(*found, EdgeType::ENDLOOP);
+						break;
+					default:
+						// Missing an edge type?
+						rsx_log.error("CFG: Unexpected block exit. Report to developers.");
+					}
+				}
+				else
+				{
+					// Impossible situation.
+					rsx_log.error("CFG: Child block has no parent but has successor! Report to developers.");
+				}
+
 				bb = *found;
 			}
 
