@@ -1180,7 +1180,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 		{
 			m_game_list_frame->AddRefreshedSlot([this, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 			{
-				// Try to claim operaions on ID
+				// Try to claim operations on ID
 				for (auto it = paths.begin(); it != paths.end();)
 				{
 					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
@@ -1196,13 +1196,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				// Executes after PrecompileCachesFromInstalledPackages
-				m_notify_batch_game_action_cb = [this, paths]() mutable
-				{
-					ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
-				};
-
-				PrecompileCachesFromInstalledPackages(paths);
+				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
 			});
 		}
 
@@ -2402,6 +2396,8 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 
 	QVBoxLayout* vlayout = new QVBoxLayout(dlg);
 
+	QCheckBox* precompile_check = new QCheckBox(tr("Precompile caches"));
+	precompile_check->setChecked(true);
 	QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
 #ifdef _WIN32
 	QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
@@ -2410,10 +2406,12 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 #else
 	QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
+	QLabel* label = new QLabel(tr("%1\nWould you like to precompile caches and install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
 
 	vlayout->addWidget(label);
 	vlayout->addStretch(10);
+	vlayout->addWidget(precompile_check);
+	vlayout->addStretch(3);
 	vlayout->addWidget(desk_check);
 	vlayout->addStretch(3);
 	vlayout->addWidget(quick_check);
@@ -2426,6 +2424,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [=, this, paths = std::move(bootable_paths)]()
 	{
+		const bool precompile_caches = precompile_check->isChecked();
 		const bool create_desktop_shortcuts = desk_check->isChecked();
 		const bool create_app_shortcut = quick_check->isChecked();
 
@@ -2447,42 +2446,44 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			locations.insert(gui::utils::shortcut_location::applications);
 		}
 
-		if (locations.empty())
+		if (!locations.empty())
 		{
-			return;
-		}
+			std::vector<game_info> game_data_shortcuts;
 
-		std::vector<game_info> game_data_shortcuts;
-
-		for (const auto& [boot_path, title_id] : paths)
-		{
-			for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+			for (const auto& [boot_path, title_id] : paths)
 			{
-				if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+				for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
 				{
-					if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+					if (gameinfo && gameinfo->info.serial == title_id.toStdString())
 					{
-						if (!locations.empty())
+						if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
 						{
-							game_data_shortcuts.push_back(gameinfo);
+							if (!locations.empty())
+							{
+								game_data_shortcuts.push_back(gameinfo);
+							}
 						}
-					}
 
-					break;
+						break;
+					}
 				}
+			}
+
+			if (!game_data_shortcuts.empty() && !locations.empty())
+			{
+				m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
 			}
 		}
 
-		if (!game_data_shortcuts.empty() && !locations.empty())
+		if (precompile_caches)
 		{
-			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
+			PrecompileCachesFromInstalledPackages(paths);
 		}
 	});
 
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	dlg->open();
 }
-
 
 void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths)
 {
