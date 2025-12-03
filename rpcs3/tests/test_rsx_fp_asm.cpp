@@ -48,6 +48,15 @@ namespace rsx::assembler
 		bb.instructions = ir.build();
 		return graph;
 	}
+
+	static BasicBlock* BB_from_source(FlowGraph* graph, const std::string& asm_)
+	{
+		auto ir = FPIR::from_source(asm_);
+		graph->blocks.push_back({});
+		BasicBlock& bb = graph->blocks.back();
+		bb.instructions = ir.build();
+		return &bb;
+	}
 	TEST(TestFPIR, FromSource)
 	{
 		auto ir = FPIR::from_source(R"(
@@ -232,8 +241,83 @@ namespace rsx::assembler
 		EXPECT_EQ(SRC0{ .HEX = block.instructions[3].bytecode[1] }.swizzle_y, 3);
 	}
 
-	TEST(TestFPIR, RegisterDependencyPass_Complex)
+	TEST(TestFPIR, RegisterDependencyPass_Complex_IF_BothPredecessorsClobber)
 	{
-		// TODO: Multi-level block structure with nested IFs/LOOPs
+		// Multi-level but only single IF
+		// Mockup of a simple lighting function, R0 = Light vector, R1 = Decompressed normal. DP4 used for simplicity.
+		// Data hazards sprinkled in for testing. R3 is clobbered in the ancestor and the IF branch.
+		// Barrier should go in the IF branch here.
+		FlowGraph graph;
+		BasicBlock* bb0 = BB_from_source(&graph, R"(
+			DP4   R2, R0, R1
+			SFL   R3
+			SGT   R3, R2, R0
+			IF.GE
+		)");
+
+		BasicBlock* bb1 = BB_from_source(&graph, R"(
+			ADD R0, R0, R2
+			MOV H6, #{ 0.25 }
+		)");
+
+		BasicBlock* bb2 = BB_from_source(&graph, R"(
+			ADD R0, R0, R3
+			MOV R1, R0
+		)");
+
+		// Front edges
+		bb0->insert_succ(bb1, EdgeType::IF);
+		bb0->insert_succ(bb2, EdgeType::ENDIF);
+		bb1->insert_succ(bb2, EdgeType::ENDIF);
+
+		// Back edges
+		bb2->insert_pred(bb1, EdgeType::ENDIF);
+		bb2->insert_pred(bb0, EdgeType::ENDIF);
+		bb1->insert_pred(bb0, EdgeType::IF);
+
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		ASSERT_EQ(bb0->instructions.size(), 4);
+		ASSERT_EQ(bb1->instructions.size(), 2);
+		ASSERT_EQ(bb2->instructions.size(), 2);
+
+		// bb1 has a epilogue
+		ASSERT_EQ(bb1->epilogue.size(), 2);
+
+		// bb1 epilogue updates R3.xy
+
+		// R3.x = packHalf2(H6.xy)
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.dest_reg, 3);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_x, true);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_y, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.tmp_reg_index, 6);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.swizzle_x, 0);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.swizzle_y, 1);
+
+		// R3.y = packHalf2(H6.zw)
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.dest_reg, 3);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_x, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_y, true);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.tmp_reg_index, 6);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_x, 2);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_y, 3);
 	}
 }
