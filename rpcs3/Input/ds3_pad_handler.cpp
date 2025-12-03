@@ -266,14 +266,6 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	}
 
 	device->report_id = buf[0];
-#elif defined (__APPLE__)
-	int res = hid_init_sixaxis_usb(hidDevice);
-	if (res < 0)
-	{
-		ds3_log.error("check_add_device: hid_init_sixaxis_usb failed! (result=%d, error=%s)", res, hid_error(hidDevice));
-		HidDevice::close(hidDevice);
-		return;
-	}
 #endif
 
 	for (wchar_t ch : wide_serial)
