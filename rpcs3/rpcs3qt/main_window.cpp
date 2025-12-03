@@ -243,21 +243,19 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	ui->menuBar->setCornerWidget(corner_bar);
 	ui->menuBar->cornerWidget()->setVisible(false);
 	ui->menuBar->removeAction(ui->menuUpdate_Available->menuAction());
-#endif
-
-	ui->menuUpdate_Available->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
 	{
-		if (ui->menuUpdate_Available)
-		{
-			ui->menuUpdate_Available->setVisible(update_available);
-		}
-		if (ui->menuBar && ui->menuBar->cornerWidget())
-		{
-			ui->menuBar->cornerWidget()->setVisible(update_available);
-		}
+		ui->menuBar->cornerWidget()->setVisible(update_available);
 	});
+#else
+	ui->menuUpdate_Available->menuAction()->setVisible(false);
+
+	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
+	{
+		ui->menuUpdate_Available->menuAction()->setVisible(update_available);
+	});
+#endif
 
 #ifdef RPCS3_UPDATE_SUPPORTED
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
