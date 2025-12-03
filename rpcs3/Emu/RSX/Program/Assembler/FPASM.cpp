@@ -8,28 +8,53 @@
 
 namespace rsx::assembler
 {
-	static std::unordered_map<std::string, FP_opcode> s_opcode_lookup
+	struct FP_opcode_encoding_t
+	{
+		FP_opcode op;
+		bool exec_if_lt;
+		bool exec_if_eq;
+		bool exec_if_gt;
+		bool set_cond;
+	};
+
+	static std::unordered_map<std::string, FP_opcode_encoding_t> s_opcode_lookup
 	{
 		// Arithmetic
-		{ "NOP", RSX_FP_OPCODE_NOP },
-		{ "MOV", RSX_FP_OPCODE_MOV },
-		{ "ADD", RSX_FP_OPCODE_ADD },
-		{ "MAD", RSX_FP_OPCODE_MAD },
-		{ "FMA", RSX_FP_OPCODE_MAD },
-		{ "DP3", RSX_FP_OPCODE_DP3 },
-		{ "DP4", RSX_FP_OPCODE_DP4 },
+		{ "NOP", { .op = RSX_FP_OPCODE_NOP, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "MOV", { .op = RSX_FP_OPCODE_MOV, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "ADD", { .op = RSX_FP_OPCODE_ADD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "MAD", { .op = RSX_FP_OPCODE_MAD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "FMA", { .op = RSX_FP_OPCODE_MAD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "DP3", { .op = RSX_FP_OPCODE_DP3, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "DP4", { .op = RSX_FP_OPCODE_DP4, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+
+		// Constant load
+		{ "SFL", {.op = RSX_FP_OPCODE_SFL, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "STR", {.op = RSX_FP_OPCODE_STR, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
 
 		// Pack-unpack operations are great for testing dependencies
-		{ "PKH", RSX_FP_OPCODE_PK2 },
-		{ "UPH", RSX_FP_OPCODE_UP2 },
-		{ "PK16U", RSX_FP_OPCODE_PK16 },
-		{ "UP16U", RSX_FP_OPCODE_UP16 },
-		{ "PK8U", RSX_FP_OPCODE_PKB },
-		{ "UP8U", RSX_FP_OPCODE_UPB },
-		{ "PK8G", RSX_FP_OPCODE_PKG },
-		{ "UP8G", RSX_FP_OPCODE_UPG },
-		{ "PK8S", RSX_FP_OPCODE_PK4 },
-		{ "UP8S", RSX_FP_OPCODE_UP4 },
+		{ "PKH", { .op = RSX_FP_OPCODE_PK2, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "UPH", { .op = RSX_FP_OPCODE_UP2, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "PK16U", { .op = RSX_FP_OPCODE_PK16, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "UP16U", { .op = RSX_FP_OPCODE_UP16, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "PK8U", { .op = RSX_FP_OPCODE_PKB, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "UP8U", { .op = RSX_FP_OPCODE_UPB, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "PK8G", { .op = RSX_FP_OPCODE_PKG, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "UP8G", { .op = RSX_FP_OPCODE_UPG, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "PK8S", { .op = RSX_FP_OPCODE_PK4, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "UP8S", { .op = RSX_FP_OPCODE_UP4, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+
+		// Basic conditionals
+		{ "IF.LT", { .op = RSX_FP_OPCODE_IFE, .exec_if_lt = true,  .exec_if_eq = false, .exec_if_gt = false, .set_cond = false } },
+		{ "IF.LE", { .op = RSX_FP_OPCODE_IFE, .exec_if_lt = true,  .exec_if_eq = true,  .exec_if_gt = false, .set_cond = false } },
+		{ "IF.EQ", { .op = RSX_FP_OPCODE_IFE, .exec_if_lt = false, .exec_if_eq = true,  .exec_if_gt = false, .set_cond = false } },
+		{ "IF.GE", { .op = RSX_FP_OPCODE_IFE, .exec_if_lt = false, .exec_if_eq = true,  .exec_if_gt = true, .set_cond = false } },
+		{ "IF.GT", { .op = RSX_FP_OPCODE_IFE, .exec_if_lt = false, .exec_if_eq = false, .exec_if_gt = true, .set_cond = false } },
+
+		{ "SLT", { .op = RSX_FP_OPCODE_SLT, .exec_if_lt = false, .exec_if_eq = false, .exec_if_gt = false, .set_cond = true } },
+		{ "SEQ", { .op = RSX_FP_OPCODE_SEQ, .exec_if_lt = false, .exec_if_eq = false, .exec_if_gt = false, .set_cond = true } },
+		{ "SGT", { .op = RSX_FP_OPCODE_SGT, .exec_if_lt = false, .exec_if_eq = false, .exec_if_gt = false, .set_cond = true } },
+
 		// TODO: Add more
 
 	};
@@ -250,13 +275,20 @@ namespace rsx::assembler
 		{
 			OPDEST d0 { .HEX = inst->bytecode[0] };
 			SRC0 s0 { .HEX = inst->bytecode[1] };
+			SRC1 s1 { .HEX = inst->bytecode[2] };
 
-#define SET_OPCODE(code) \
+#define SET_OPCODE(encoding) \
 			do { \
-				inst->opcode = d0.opcode = code; \
-				s0.exec_if_eq = s0.exec_if_gr = s0.exec_if_lt = 1; \
+				inst->opcode = encoding.op; \
+				d0.opcode = encoding.op; \
+				s1.opcode_is_branch = (encoding.op > 0x3F)? 1 : 0; \
+				s0.exec_if_eq = encoding.exec_if_eq ? 1 : 0; \
+				s0.exec_if_gr = encoding.exec_if_gt ? 1 : 0; \
+				s0.exec_if_lt = encoding.exec_if_lt ? 1 : 0; \
+				d0.set_cond = encoding.set_cond ? 1 : 0; \
 				inst->bytecode[0] = d0.HEX; \
 				inst->bytecode[1] = s0.HEX; \
+				inst->bytecode[2] = s1.HEX; \
 			} while (0)
 
 			const auto found = s_opcode_lookup.find(op);
