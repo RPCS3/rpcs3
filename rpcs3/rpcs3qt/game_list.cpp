@@ -117,7 +117,8 @@ void game_list::fix_narrow_columns()
 
 void game_list::mousePressEvent(QMouseEvent* event)
 {
-	if (QTableWidgetItem* item = itemAt(event->pos()); !item || !item->data(Qt::UserRole).isValid())
+	// Handle deselction when clicking on empty space in the table
+	if (!itemAt(event->pos()))
 	{
 		clearSelection();
 		setCurrentItem(nullptr); // Needed for currentItemChanged
