@@ -3,6 +3,7 @@
 #include "Emu/RSX/Program/Assembler/FPOpcodes.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
 
+#include <unordered_map>
 #include <unordered_set>
 
 namespace rsx::assembler::FP
@@ -12,6 +13,14 @@ namespace rsx::assembler::FP
 	static constexpr char content_float32 = 'R';
 	static constexpr char content_float16 = 'H';
 	static constexpr char content_dual = 'D';
+
+	using register_file_t = std::array<char, register_file_length>;
+
+	struct DependencyPassContext
+	{
+		std::unordered_map<BasicBlock*, register_file_t> exec_register_map;
+		std::unordered_map<BasicBlock*, register_file_t> sync_register_map;
+	};
 
 	std::vector<RegisterRef> decode_lanes16(const std::unordered_set<u32>& lanes)
 	{
@@ -193,9 +202,23 @@ namespace rsx::assembler::FP
 		return result;
 	}
 
-	void insert_dependency_barriers(BasicBlock* block)
+	std::vector<Instruction> resolve_dependencies(const std::unordered_set<u32>& lanes, bool f16)
 	{
-		std::array<char, register_file_length> register_file;
+		std::vector<Instruction> result;
+
+		const auto regs = (f16 ? decode_lanes16 : decode_lanes32)(lanes);
+		for (const auto& ref : regs)
+		{
+			auto instructions = (f16 ? build_barrier16 : build_barrier32)(ref);
+			result.insert(result.end(), instructions.begin(), instructions.end());
+		}
+
+		return result;
+	}
+
+	void insert_dependency_barriers(DependencyPassContext& ctx, BasicBlock* block)
+	{
+		register_file_t& register_file = ctx.exec_register_map[block];
 		std::memset(register_file.data(), content_unknown, register_file_length);
 
 		std::unordered_set<u32> barrier16;
@@ -275,14 +298,109 @@ namespace rsx::assembler::FP
 		}
 	}
 
+	void insert_block_register_dependency(DependencyPassContext& ctx, BasicBlock* block, const std::unordered_set<u32>& lanes, bool f16)
+	{
+		if (block->pred.empty())
+		{
+			return;
+		}
+
+		std::unordered_set<u32> clobbered_lanes;
+		std::unordered_set<u32> lanes_to_search;
+
+		for (auto& back_edge : block->pred)
+		{
+			auto target = back_edge.from;
+
+			// Did this target even clobber our register?
+			ensure(ctx.exec_register_map.find(target) != ctx.exec_register_map.end(), "Block has not been pre-processed");
+
+			if (ctx.sync_register_map.find(target) == ctx.sync_register_map.end())
+			{
+				auto& blob = ctx.sync_register_map[target];
+				std::memset(blob.data(), content_unknown, register_file_length);
+			}
+
+			auto& sync_register_file = ctx.sync_register_map[target];
+			const auto& exec_register_file = ctx.exec_register_map[target];
+			const auto clobber_type = f16 ? content_float32 : content_float16;
+
+			lanes_to_search.clear();
+			clobbered_lanes.clear();
+
+			for (auto& lane : lanes)
+			{
+				if (exec_register_file[lane] == clobber_type &&
+					sync_register_file[lane] == content_unknown)
+				{
+					clobbered_lanes.insert(lane);
+					sync_register_file[lane] = content_dual;
+					continue;
+				}
+
+				if (exec_register_file[lane] == content_unknown)
+				{
+					lanes_to_search.insert(lane);
+				}
+			}
+
+			if (!clobbered_lanes.empty())
+			{
+				const auto instructions = resolve_dependencies(clobbered_lanes, f16);
+				target->epilogue.insert(target->epilogue.end(), instructions.begin(), instructions.end());
+			}
+
+			if (lanes_to_search.empty())
+			{
+				break;
+			}
+
+			// We have some missing lanes. Search upwards
+			if (!target->pred.empty())
+			{
+				// We only need to search the last predecessor which is the true "root" of the branch
+				auto parent = target->pred.back().from;
+				insert_block_register_dependency(ctx, parent, lanes_to_search, f16);
+			}
+		}
+	}
+
+	void insert_block_dependencies(DependencyPassContext& ctx, BasicBlock* block)
+	{
+		auto range_from_ref = [](const RegisterRef& ref)
+		{
+			const auto range = get_register_file_range(ref);
+
+			std::unordered_set<u32> result;
+			for (const auto& value : range)
+			{
+				result.insert(value);
+			}
+			return result;
+		};
+
+		for (auto& ref : block->input_list)
+		{
+			const auto range = range_from_ref(ref);
+			insert_block_register_dependency(ctx, block, range, ref.reg.f16);
+		}
+	}
+
 	void RegisterDependencyPass::run(FlowGraph& graph)
 	{
+		DependencyPassContext ctx{};
+
 		// First, run intra-block dependency
 		for (auto& block : graph.blocks)
 		{
-			insert_dependency_barriers(&block);
+			insert_dependency_barriers(ctx, &block);
 		}
 
-		// TODO: Create prologue/epilogue instructions
+		// Then, create prologue/epilogue instructions
+		// Traverse the list in reverse order to bubble up dependencies correctly.
+		for (auto it = graph.blocks.rbegin(); it != graph.blocks.rend(); ++it)
+		{
+			insert_block_dependencies(ctx, &(*it));
+		}
 	}
 }
