@@ -98,7 +98,11 @@ namespace rsx::assembler::FP
 			for (u32 i = 0; i < operand_count; i++)
 			{
 				RegisterRef reg = get_src_register(prog, &instruction, i);
-				ensure(reg.mask, "Invalid register read");
+				if (!reg.mask)
+				{
+					// Likely a literal constant
+					continue;
+				}
 
 				instruction.srcs.push_back(reg);
 			}
