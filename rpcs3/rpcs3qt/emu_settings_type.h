@@ -235,7 +235,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
 	{ emu_settings_type::AccurateClineStores,      { "Core", "Accurate Cache Line Stores"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
-	{ emu_settings_type::FIFOAccuracy,             { "Core", "RSX FIFO Accuracy"}},
+	{ emu_settings_type::FIFOAccuracy,             { "Core", "RSX FIFO Fetch Accuracy"}},
 	{ emu_settings_type::XFloatAccuracy,           { "Core", "XFloat Accuracy"}},
 	{ emu_settings_type::MFCCommandsShuffling,     { "Core", "MFC Commands Shuffling Limit"}},
 	{ emu_settings_type::SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
