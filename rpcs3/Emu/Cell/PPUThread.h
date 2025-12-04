@@ -257,6 +257,9 @@ public:
 	// Sticky saturation bit
 	v128 sat{};
 
+	// Hypervisor context data
+	rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
+
 	// Optimization: precomputed java-mode mask for handling denormals
 	u32 jm_mask = 0x7f80'0000;
 
@@ -306,9 +309,6 @@ public:
 
 	// Thread name
 	atomic_ptr<std::string> ppu_tname;
-
-	// Hypervisor context data
-	rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;
