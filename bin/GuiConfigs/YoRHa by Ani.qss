@@ -201,7 +201,7 @@ QPushButton::disabled {
 /* QSpinBox (Settings -> Emulator -> width/height) */
 /* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */
 QSpinBox, QDoubleSpinBox {
-	height: 0.1em;
+	height: 1.50em;
 	background-color: #b3ac98;
 }
 QSpinBox::disabled, QDoubleSpinBox::disabled {
