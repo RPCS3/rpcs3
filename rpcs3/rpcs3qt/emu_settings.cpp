@@ -1198,10 +1198,10 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::FIFOAccuracy:
 		switch (static_cast<rsx_fifo_mode>(index))
 		{
-		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Fetch Accuracy");
 		}
 		break;
 	case emu_settings_type::PerfOverlayDetailLevel:
