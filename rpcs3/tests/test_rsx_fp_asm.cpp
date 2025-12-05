@@ -45,7 +45,7 @@ namespace rsx::assembler
 		graph.blocks.push_back({});
 
 		auto& bb = graph.blocks.back();
-		bb.instructions = ir.build();
+		bb.instructions = ir.instructions();
 		return graph;
 	}
 
@@ -54,7 +54,7 @@ namespace rsx::assembler
 		auto ir = FPIR::from_source(asm_);
 		graph->blocks.push_back({});
 		BasicBlock& bb = graph->blocks.back();
-		bb.instructions = ir.build();
+		bb.instructions = ir.instructions();
 		return &bb;
 	}
 	TEST(TestFPIR, FromSource)
@@ -64,7 +64,7 @@ namespace rsx::assembler
 			ADD R1, R0, R0;
 		)");
 
-		const auto instructions = ir.build();
+		const auto instructions = ir.instructions();
 
 		ASSERT_EQ(instructions.size(), 2);
 
@@ -289,6 +289,98 @@ namespace rsx::assembler
 
 		// bb1 has a epilogue
 		ASSERT_EQ(bb1->epilogue.size(), 2);
+
+		// bb1 epilogue updates R3.xy
+
+		// R3.x = packHalf2(H6.xy)
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.dest_reg, 3);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_x, true);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_y, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[0].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.tmp_reg_index, 6);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.swizzle_x, 0);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[0].bytecode[1] }.swizzle_y, 1);
+
+		// R3.y = packHalf2(H6.zw)
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.opcode, RSX_FP_OPCODE_PK2);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.fp16, 0);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.dest_reg, 3);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_x, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_y, true);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_z, false);
+		EXPECT_EQ(OPDEST{ .HEX = bb1->epilogue[1].bytecode[0] }.mask_w, false);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.tmp_reg_index, 6);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.fp16, 1);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_x, 2);
+		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_y, 3);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Complex_IF_ELSE_OneBranchClobbers)
+	{
+		// Single IF-ELSE, if clobbers, ELSE does not
+		auto ir = FPIR::from_source(R"(
+			DP4 R2, R0, R1
+			SFL R3
+			SGT R3, R2, R0
+			IF.GE
+				ADD R0, R0, R2
+				MOV H6, #{ 0.25 }
+			ELSE
+				ADD R0, R0, R1
+			ENDIF
+			ADD R0, R0, R3
+			MOV R1, R0
+		)");
+
+		auto bytecode = ir.compile();
+
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		ASSERT_EQ(graph.blocks.size(), 4);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		auto get_block = [&](u32 index) -> BasicBlock*
+		{
+			ensure(index < graph.blocks.size());
+			for (auto it = graph.blocks.begin(); it != graph.blocks.end(); ++it)
+			{
+				if (!index)
+				{
+					return &(*it);
+				}
+				index--;
+			}
+			return nullptr;
+		};
+
+		BasicBlock
+			*bb0 = get_block(0),
+			*bb1 = get_block(1),
+			*bb2 = get_block(2),
+			*bb3 = get_block(3);
+
+		ASSERT_EQ(bb0->instructions.size(), 4);
+		ASSERT_EQ(bb1->instructions.size(), 2);
+		ASSERT_EQ(bb2->instructions.size(), 1);
+		ASSERT_EQ(bb3->instructions.size(), 2);
+
+		// bb1 has a epilogue
+		ASSERT_EQ(bb0->epilogue.size(), 0);
+		ASSERT_EQ(bb1->epilogue.size(), 2);
+		ASSERT_EQ(bb2->epilogue.size(), 0);
 
 		// bb1 epilogue updates R3.xy
 
