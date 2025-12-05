@@ -2,6 +2,8 @@
 #include "FPASM.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
 
+#include <stack>
+
 #ifndef _WIN32
 #define sscanf_s sscanf
 #endif
@@ -156,9 +158,30 @@ namespace rsx::assembler
 		inst->opcode = RSX_FP_OPCODE_ADD;
 	}
 
-	std::vector<Instruction> FPIR::build()
+	const std::vector<Instruction>& FPIR::instructions() const
 	{
 		return m_instructions;
+	}
+
+	std::vector<u32> FPIR::compile() const
+	{
+		std::vector<u32> result;
+		result.reserve(m_instructions.size() * 4);
+
+		for (u32 i = 0; i < m_instructions.size(); ++i)
+		{
+			const auto& inst = m_instructions[i];
+			auto src = reinterpret_cast<const be_t<u16>*>(inst.bytecode);
+			for (u32 j = 0; j < inst.length; ++j)
+			{
+				const u16 low = src[j * 2];
+				const u16 hi = src[j * 2 + 1];
+				const u32 word = static_cast<u16>(low) | (static_cast<u32>(hi) << 16u);
+				result.push_back(word);
+			}
+		}
+
+		return result;
 	}
 
 	FPIR FPIR::from_source(const std::string& asm_)
@@ -271,6 +294,20 @@ namespace rsx::assembler
 			fmt::throw_exception("Invalid constant literal");
 		};
 
+		auto encode_branch_end = [](Instruction *inst, u32 end)
+		{
+			SRC2 src2 { .HEX = inst->bytecode[3] };
+			src2.end_offset = static_cast<u32>(end);
+			inst->bytecode[3] = src2.HEX;
+		};
+
+		auto encode_branch_else = [](Instruction* inst, u32 end)
+		{
+			SRC1 src1{ .HEX = inst->bytecode[2] };
+			src1.else_offset = static_cast<u32>(end);
+			inst->bytecode[2] = src1.HEX;
+		};
+
 		auto encode_opcode = [](const std::string& op, Instruction* inst)
 		{
 			OPDEST d0 { .HEX = inst->bytecode[0] };
@@ -280,7 +317,7 @@ namespace rsx::assembler
 #define SET_OPCODE(encoding) \
 			do { \
 				inst->opcode = encoding.op; \
-				d0.opcode = encoding.op; \
+				d0.opcode = encoding.op & 0x3F; \
 				s1.opcode_is_branch = (encoding.op > 0x3F)? 1 : 0; \
 				s0.exec_if_eq = encoding.exec_if_eq ? 1 : 0; \
 				s0.exec_if_gr = encoding.exec_if_gt ? 1 : 0; \
@@ -305,6 +342,10 @@ namespace rsx::assembler
 		std::string op, dst;
 		std::vector<std::string> sources;
 
+		std::stack<size_t> if_ops;
+		std::stack<size_t> loop_ops;
+		u32 pc = 0;
+
 		FPIR ir{};
 
 		for (const auto& instruction : instructions)
@@ -319,15 +360,45 @@ namespace rsx::assembler
 				continue;
 			}
 
+			if (op.starts_with("IF."))
+			{
+				if_ops.push(ir.m_instructions.size());
+			}
+			else if (op == "LOOP")
+			{
+				loop_ops.push(ir.m_instructions.size());
+			}
+			else if (op == "ELSE")
+			{
+				ensure(!if_ops.empty());
+				encode_branch_else(&ir.m_instructions[if_ops.top()], pc);
+				continue;
+			}
+			else if (op == "ENDIF")
+			{
+				ensure(!if_ops.empty());
+				encode_branch_end(&ir.m_instructions[if_ops.top()], pc);
+				if_ops.pop();
+				continue;
+			}
+			else if (op == "ENDLOOP")
+			{
+				ensure(!loop_ops.empty());
+				encode_branch_end(&ir.m_instructions[loop_ops.top()], pc);
+				loop_ops.pop();
+				continue;
+			}
+
 			ir.m_instructions.push_back({});
 			Instruction* target = &ir.m_instructions.back();
+			pc += 4;
 
 			encode_opcode(op, target);
 			ensure(sources.size() == FP::get_operand_count(static_cast<FP_opcode>(target->opcode)), "Invalid operand count for opcode");
 
 			if (dst.empty())
 			{
-				OPDEST dst{};
+				OPDEST dst{ .HEX = target->bytecode[0] };
 				dst.no_dest = 1;
 				target->bytecode[0] = dst.HEX;
 			}
@@ -337,16 +408,23 @@ namespace rsx::assembler
 			}
 
 			int operand = 0;
+			bool has_literal = false;
 			for (const auto& source : sources)
 			{
 				if (source.front() == '#')
 				{
 					const auto literal = get_constants(source);
 					ir.load(literal, operand++, target);
+					has_literal = true;
 					continue;
 				}
 
 				ir.load(get_ref(source), operand++, target);
+			}
+
+			if (has_literal)
+			{
+				pc += 4;
 			}
 		}
 

@@ -13,7 +13,8 @@ namespace rsx::assembler
 		void add(const RegisterRef& dst, const std::array<f32, 4>& constants);
 		void add(const RegisterRef& dst, const RegisterRef& src);
 
-		std::vector<Instruction> build();
+		const std::vector<Instruction>& instructions() const;
+		std::vector<u32> compile() const;
 
 		static FPIR from_source(const std::string& asm_);
 
