@@ -4,6 +4,7 @@ by FlexBy - 2025-12-01
 */
 QWidget {
     background-color: #2a3126;
+    alternate-background-color: #23262d;
     color: #e6f7ea;
     font-family: "Segoe UI";
 }
