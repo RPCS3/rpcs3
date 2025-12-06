@@ -375,7 +375,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	combobox->setCurrentIndex(index);
 
-	connect(combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), combobox, [this, is_ranged, combobox, type](int index)
+	connect(combobox, &QComboBox::currentIndexChanged, combobox, [this, is_ranged, combobox, type](int index)
 	{
 		if (index < 0) return;
 

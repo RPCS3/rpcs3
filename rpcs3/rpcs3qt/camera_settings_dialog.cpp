@@ -70,8 +70,8 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 		camera_log.notice("Found camera: '%s'", camera_info.description());
 	}
 
-	connect(ui->combo_camera, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &camera_settings_dialog::handle_camera_change);
-	connect(ui->combo_settings, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &camera_settings_dialog::handle_settings_change);
+	connect(ui->combo_camera, &QComboBox::currentIndexChanged, this, &camera_settings_dialog::handle_camera_change);
+	connect(ui->combo_settings, &QComboBox::currentIndexChanged, this, &camera_settings_dialog::handle_settings_change);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
 		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
