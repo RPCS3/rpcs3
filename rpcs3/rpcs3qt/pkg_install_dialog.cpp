@@ -4,8 +4,8 @@
 #include "richtext_item_delegate.h"
 #include "qt_utils.h"
 
-#include "Crypto/unpkg.h"
-#include "EMU/system_utils.hpp"
+#include "Emu/system_utils.hpp"
+#include "Utilities/File.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -38,10 +38,6 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			continue;
 		}
 
-		// Technically, there is no specific package's header info providing its installation size on disk.
-		// We use "data_size" header as an approximation (a bit larger) for this purpose
-		package_reader pkg_reader(path.toStdString());
-		const u64 data_size = pkg_reader.is_valid() ? pkg_reader.get_header().data_size.value() : 0;
 		const QFileInfo file_info(path);
 
 		// We have to build our complicated localized string in some annoying manner
@@ -98,8 +94,8 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		append_comma();
 		accumulated_info += file_info.fileName();
 
-		const QString text = tr("<b>%0</b> (%1), %2", "Package text").arg(info.title.simplified())
-			.arg(accumulated_info).arg(gui::utils::format_byte_size(data_size));
+		const QString text = tr("<b>%0</b> (%1) - %2", "Package text").arg(info.title.simplified())
+			.arg(accumulated_info).arg(gui::utils::format_byte_size(info.data_size));
 
 		QListWidgetItem* item = new numbered_widget_item(text, m_dir_list);
 		item->setData(Roles::FullPathRole, info.path);
@@ -107,7 +103,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		item->setData(Roles::TitleRole, info.title);
 		item->setData(Roles::TitleIdRole, info.title_id);
 		item->setData(Roles::VersionRole, info.version);
-		item->setData(Roles::DataSizeRole, data_size);
+		item->setData(Roles::DataSizeRole, info.data_size);
 		item->setToolTip(tooltip);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 		item->setCheckState(Qt::Checked);
@@ -118,7 +114,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	m_dir_list->setMinimumWidth((m_dir_list->sizeHintForColumn(0) * 125) / 100);
 
 	// Create contextual label (updated in connect(m_dir_list, &QListWidget::itemChanged ...))
-	QLabel* installation_info = new QLabel(tr(""));
+	QLabel* installation_info = new QLabel();
 	installation_info->setTextFormat(Qt::RichText); // Support HTML tags
 
 	// Create buttons
@@ -161,7 +157,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
 			.arg(rpcs3::utils::get_hdd0_game_dir())
 			.arg(gui::utils::format_byte_size(free_space))
-			.arg(data_size <= free_space ? tr("") : tr(" - <b>NOT ENOUGH SPACE</b>"))
+			.arg(data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
 			.arg(gui::utils::format_byte_size(data_size))));
 		buttons->button(QDialogButtonBox::Ok)->setEnabled(data_size && (data_size <= free_space));
 	});
@@ -193,7 +189,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	setLayout(vbox);
 	setWindowTitle(tr("Batch PKG Installation"));
 	setObjectName("pkg_install_dialog");
-	m_dir_list->itemChanged(nullptr); // Just to update installation_info label
+	m_dir_list->itemChanged(nullptr); // Just to show and check available and required size
 }
 
 void pkg_install_dialog::MoveItem(int offset) const

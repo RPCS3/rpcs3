@@ -199,16 +199,6 @@ bool package_reader::read_header()
 	return true;
 }
 
-PKGHeader package_reader::get_header()
-{
-	if (!m_is_valid)
-	{
-		return {};
-	}
-
-	return m_header;
-}
-
 bool package_reader::read_metadata()
 {
 	// Read title ID and use it as an installation directory

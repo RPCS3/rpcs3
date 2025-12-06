@@ -109,6 +109,7 @@ namespace compat
 		QString category;    // HG, DG, GD etc.
 		QString local_cat;   // Localized category
 
+		unsigned long long data_size = 0; // Installation size
 		package_type type = package_type::other; // The type of package (Update, DLC or other)
 	};
 }
