@@ -1005,10 +1005,6 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	}
 	gui_log.notice("About to install packages:\n%s", fmt::merge(path_vec, "\n"));
 
-	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
-	pdlg.setAutoClose(false);
-	pdlg.show();
-
 	package_install_result result = {};
 
 	auto get_app_info = [](compat::package_info& package)
@@ -1046,6 +1042,42 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	{
 		readers.emplace_back(info.path.toStdString());
 	}
+
+	std::string missing_licenses;
+	std::string missing_licenses_short;
+
+	for (const auto& reader : readers)
+	{
+		if (std::string filepath = reader.gep_needed_rap_file_path(); !filepath.empty() && fs::is_file(filepath))
+		{
+			missing_licenses += filepath;
+			missing_licenses += "\n";
+
+			if (std::count(missing_licenses_short.begin(), missing_licenses_short.end(), '\n') < 5)
+			{
+				missing_licenses_short += std::string_view(filepath).substr(filepath.find_last_of(fs::delim) + 1);
+				missing_licenses_short += "\n";
+			}
+		}
+	}
+
+	if (!missing_licenses.empty())
+	{
+		gui_log.fatal("Failed to locate the game license file(s):\n%s"
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", missing_licenses, Emu.GetUsr());
+
+		QString error = tr("Failed to locate the game license file(s):\n\n%1\nEnsure the .rap license file(s) are placed in the dev_hdd0 folder with a lowercase file extension.").arg(QString::fromStdString(missing_licenses_short));
+
+		QMessageBox* mb = new QMessageBox(QMessageBox::Warning, tr("PKG Installer: Missing License(s) For PKG(s)"), error, QMessageBox::Ok, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+		mb->setAttribute(Qt::WA_DeleteOnClose);
+		mb->open();
+		return false;
+	}
+
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
+	pdlg.setAutoClose(false);
+	pdlg.show();
 
 	std::deque<std::string> bootable_paths;
 
