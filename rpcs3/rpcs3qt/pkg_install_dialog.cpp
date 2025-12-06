@@ -2,9 +2,10 @@
 #include "game_compatibility.h"
 #include "numbered_widget_item.h"
 #include "richtext_item_delegate.h"
+#include "qt_utils.h"
+
 #include "Crypto/unpkg.h"
 #include "EMU/system_utils.hpp"
-#include "qt_utils.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
