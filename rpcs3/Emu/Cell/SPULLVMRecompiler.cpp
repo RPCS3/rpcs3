@@ -2617,7 +2617,11 @@ public:
 						{
 							if (b2 != bqbi)
 							{
+#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
+								auto ins = &*b2->block->getFirstNonPHIIt();
+#else
 								auto ins = b2->block->getFirstNonPHI();
+#endif
 
 								if (b2->bb->preds.size() == 1)
 								{

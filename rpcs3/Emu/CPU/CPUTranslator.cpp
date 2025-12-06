@@ -71,7 +71,11 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 			result = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
 			v->addIncoming(result, loop);
 			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
+#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
+			m_ir->SetInsertPoint(next->getFirstNonPHIIt());
+#else
 			m_ir->SetInsertPoint(next->getFirstNonPHI());
+#endif
 			result = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result);
 
 			return result;
