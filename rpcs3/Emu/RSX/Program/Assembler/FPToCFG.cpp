@@ -1,5 +1,4 @@
 #include "stdafx.h"
-
 #include "CFG.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
@@ -107,11 +106,25 @@ namespace rsx::assembler
 					{
 					case EdgeType::IF:
 					case EdgeType::ELSE:
-						bb->insert_succ(*found, EdgeType::ENDIF);
+					{
+						// Find the merge node from the parent
+						auto parent = bb->pred.back().from;
+						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDIF));
+						ensure(succ != parent->succ.end(), "CFG: Broken IF linkage. Please report to developers.");
+						bb->insert_succ(succ->to, EdgeType::ENDIF);
+						succ->to->insert_pred(bb, EdgeType::ENDIF);
 						break;
+					}
 					case EdgeType::LOOP:
-						bb->insert_succ(*found, EdgeType::ENDLOOP);
+					{
+						// Find the merge node from the parent
+						auto parent = bb->pred.back().from;
+						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDLOOP));
+						ensure(succ != parent->succ.end(), "CFG: Broken LOOP linkage. Please report to developers.");
+						bb->insert_succ(succ->to, EdgeType::ENDLOOP);
+						succ->to->insert_pred(bb, EdgeType::ENDLOOP);
 						break;
+					}
 					default:
 						// Missing an edge type?
 						rsx_log.error("CFG: Unexpected block exit. Report to developers.");
