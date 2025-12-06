@@ -668,10 +668,9 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QSpinBox::textChanged, this, [type, spinbox, this](const QString& /* text*/)
+	connect(spinbox, &QSpinBox::valueChanged, this, [type, this](int value)
 	{
-		if (!spinbox) return;
-		SetSetting(type, spinbox->cleanText().toStdString());
+		SetSetting(type, fmt::format("%d", value));
 	});
 
 	connect(this, &emu_settings::RestoreDefaultsSignal, spinbox, [def, spinbox]()
@@ -724,10 +723,9 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QDoubleSpinBox::textChanged, this, [type, spinbox, this](const QString& /* text*/)
+	connect(spinbox, &QDoubleSpinBox::valueChanged, this, [type, this](double value)
 	{
-		if (!spinbox) return;
-		SetSetting(type, spinbox->cleanText().toStdString());
+		SetSetting(type, fmt::format("%f", value));
 	});
 
 	connect(this, &emu_settings::RestoreDefaultsSignal, spinbox, [def, spinbox]()
@@ -975,9 +973,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::SPUBlockSize:
 		switch (static_cast<spu_block_size_type>(index))
 		{
-		case spu_block_size_type::safe: return tr("Safe", "SPU block size");
-		case spu_block_size_type::mega: return tr("Mega", "SPU block size");
-		case spu_block_size_type::giga: return tr("Giga", "SPU block size");
+		case spu_block_size_type::safe: return tr("Safe", "SPU Analyzer Block Size");
+		case spu_block_size_type::mega: return tr("Mega", "SPU Analyzer Block Size");
+		case spu_block_size_type::giga: return tr("Giga", "SPU Analyzer Block Size");
 		}
 		break;
 	case emu_settings_type::ThreadSchedulerMode:
@@ -1200,10 +1198,10 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::FIFOAccuracy:
 		switch (static_cast<rsx_fifo_mode>(index))
 		{
-		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Accuracy");
-		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Fetch Accuracy");
+		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Fetch Accuracy");
 		}
 		break;
 	case emu_settings_type::PerfOverlayDetailLevel:

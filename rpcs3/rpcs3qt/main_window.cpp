@@ -44,6 +44,7 @@
 #include "vfs_tool_dialog.h"
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
+#include "sound_effect_manager_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -229,42 +230,32 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	// RPCS3 Updater
 
-	QMenu* download_menu = new QMenu(tr("Update Available!"));
-
-	QAction* download_action = new QAction(tr("Download Update"), download_menu);
-	connect(download_action, &QAction::triggered, this, [this]
+	connect(ui->actionDownload_Update, &QAction::triggered, this, [this]
 	{
 		m_updater.update(false);
 	});
 
-	download_menu->addAction(download_action);
-
 #ifdef _WIN32
 	// Use a menu at the top right corner to indicate the new version.
-	QMenuBar *corner_bar = new QMenuBar(ui->menuBar);
-	m_download_menu_action = corner_bar->addMenu(download_menu);
+	// Some distros just can't handle corner widgets at the moment.
+	QMenuBar* corner_bar = new QMenuBar(ui->menuBar);
+	corner_bar->addMenu(ui->menuUpdate_Available);
 	ui->menuBar->setCornerWidget(corner_bar);
 	ui->menuBar->cornerWidget()->setVisible(false);
-#else
-	// Append a menu to the right of the regular menus to indicate the new version.
-	// Some distros just can't handle corner widgets at the moment.
-	m_download_menu_action = ui->menuBar->addMenu(download_menu);
-#endif
-
-	ensure(m_download_menu_action);
-	m_download_menu_action->setVisible(false);
+	ui->menuBar->removeAction(ui->menuUpdate_Available->menuAction());
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
 	{
-		if (m_download_menu_action)
-		{
-			m_download_menu_action->setVisible(update_available);
-		}
-		if (ui->menuBar && ui->menuBar->cornerWidget())
-		{
-			ui->menuBar->cornerWidget()->setVisible(update_available);
-		}
+		ui->menuBar->cornerWidget()->setVisible(update_available);
 	});
+#else
+	ui->menuUpdate_Available->menuAction()->setVisible(false);
+
+	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
+	{
+		ui->menuUpdate_Available->menuAction()->setVisible(update_available);
+	});
+#endif
 
 #ifdef RPCS3_UPDATE_SUPPORTED
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
@@ -1187,7 +1178,13 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				// Executes after PrecompileCachesFromInstalledPackages
+				m_notify_batch_game_action_cb = [this, paths]() mutable
+				{
+					ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				};
+
+				PrecompileCachesFromInstalledPackages(paths);
 			});
 		}
 
@@ -1926,9 +1923,11 @@ void main_window::OnEmuRun(bool /*start_playtime*/)
 	EnableMenus(true);
 
 	update_gui_pad_thread();
+
+	m_system_state = system_state::running;
 }
 
-void main_window::OnEmuResume() const
+void main_window::OnEmuResume()
 {
 	const QString title = GetCurrentTitle();
 	const QString restart_tooltip = tr("Restart %0").arg(title);
@@ -1941,9 +1940,11 @@ void main_window::OnEmuResume() const
 	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(pause_tooltip);
 	ui->toolbar_stop->setToolTip(stop_tooltip);
+
+	m_system_state = system_state::starting; // Let's just use this state to distinguish between resumed and running
 }
 
-void main_window::OnEmuPause() const
+void main_window::OnEmuPause()
 {
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
@@ -1959,6 +1960,8 @@ void main_window::OnEmuPause() const
 	{
 		m_game_list_frame->Refresh();
 	}
+
+	m_system_state = system_state::paused;
 }
 
 void main_window::OnEmuStop()
@@ -2019,9 +2022,11 @@ void main_window::OnEmuStop()
 	}
 
 	update_gui_pad_thread();
+
+	m_system_state = system_state::stopped;
 }
 
-void main_window::OnEmuReady() const
+void main_window::OnEmuReady()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = tr("Play %0").arg(title);
@@ -2047,6 +2052,8 @@ void main_window::OnEmuReady() const
 	ui->removeAllCachesAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
 	ui->cleanUpGameListAct->setEnabled(false);
+
+	m_system_state = system_state::ready;
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2333,10 +2340,27 @@ void main_window::RetranslateUI(const QStringList& language_codes, const QString
 
 	ui->retranslateUi(this);
 
+	// Refresh game list first to prevent localization mismatches in further Refresh calls
 	if (m_game_list_frame)
 	{
 		m_game_list_frame->Refresh(true);
 	}
+
+	// Update menu bar size (needed if the corner widget changes its size)
+	ui->menuBar->adjustSize();
+
+	// Update toolbar elements
+	switch (m_system_state)
+	{
+	case system_state::running:  OnEmuRun(false); break;
+	case system_state::stopped:  OnEmuStop(); break;
+	case system_state::paused:   OnEmuPause(); break;
+	case system_state::starting: OnEmuResume(); break;
+	case system_state::ready:    OnEmuReady(); break;
+	default: break;
+	}
+
+	Q_EMIT RequestDialogRepaint();
 }
 
 void main_window::ShowTitleBars(bool show) const
@@ -2368,8 +2392,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 #else
 	QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-	QCheckBox* precompile_check = new QCheckBox(tr("Precompile caches"));
-	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software and precompile caches? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
+	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
 
 	vlayout->addWidget(label);
 	vlayout->addStretch(10);
@@ -2377,10 +2400,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 	vlayout->addStretch(3);
 	vlayout->addWidget(quick_check);
 	vlayout->addStretch(3);
-	vlayout->addWidget(precompile_check);
-	vlayout->addStretch(3);
-
-	precompile_check->setToolTip(tr("Spend time building data needed for game boot now instead of at launch."));
 
 	QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
 
@@ -2391,7 +2410,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 	{
 		const bool create_desktop_shortcuts = desk_check->isChecked();
 		const bool create_app_shortcut = quick_check->isChecked();
-		const bool create_caches = precompile_check->isChecked();
 
 		dlg->hide();
 		dlg->accept();
@@ -2411,12 +2429,11 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 			locations.insert(gui::utils::shortcut_location::applications);
 		}
 
-		if (locations.empty() && !create_caches)
+		if (locations.empty())
 		{
 			return;
 		}
 
-		std::vector<game_info> game_data;
 		std::vector<game_info> game_data_shortcuts;
 
 		for (const auto& [boot_path, title_id] : paths)
@@ -2431,11 +2448,6 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 						{
 							game_data_shortcuts.push_back(gameinfo);
 						}
-
-						if (create_caches)
-						{
-							game_data.push_back(gameinfo);
-						}
 					}
 
 					break;
@@ -2447,15 +2459,37 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 		{
 			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
 		}
-
-		if (!game_data.empty())
-		{
-			m_game_list_frame->BatchCreateCPUCaches(game_data);
-		}
 	});
 
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	dlg->open();
+}
+
+
+void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths)
+{
+	std::vector<game_info> game_data;
+
+	for (const auto& [boot_path, title_id] : bootable_paths)
+	{
+		for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+		{
+			if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+			{
+				if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+				{
+					game_data.push_back(gameinfo);
+				}
+
+				break;
+			}
+		}
+	}
+
+	if (!game_data.empty())
+	{
+		m_game_list_frame->BatchCreateCPUCaches(game_data, true);
+	}
 }
 
 void main_window::CreateActions()
@@ -3037,6 +3071,12 @@ void main_window::CreateConnects()
 		screenshot_manager->show();
 	});
 
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	{
+		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
+		dlg->show();
+	});
+
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
 	{
 		cg_disasm_window* cgdw = new cg_disasm_window(m_gui_settings);
@@ -3320,7 +3360,7 @@ void main_window::CreateConnects()
 	connect(ui->showCustomIconsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetShowCustomIcons);
 	connect(ui->playHoverGifsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverGifs);
 
-	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](const int& val)
+	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](int val)
 	{
 		const int idx = ui->sizeSlider->value() + val;
 		m_save_slider_pos = true;
@@ -3401,6 +3441,15 @@ void main_window::CreateConnects()
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
 	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
 	connect(m_game_list_frame, &game_list_frame::FocusToSearchBar, this, [this]() { ui->mw_searchbar->setFocus(); });
+
+	connect(m_game_list_frame, &game_list_frame::NotifyBatchedGameActionFinished, this, [this]() mutable
+	{
+		if (m_notify_batch_game_action_cb)
+		{
+			m_notify_batch_game_action_cb();
+			m_notify_batch_game_action_cb = {};
+		}
+	});
 }
 
 void main_window::CreateDockWindows()

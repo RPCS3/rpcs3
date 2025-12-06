@@ -4,7 +4,6 @@
 #include "overlay_media_list_dialog.h"
 
 #include "Emu/Cell/Modules/cellMusic.h"
-#include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
@@ -154,13 +153,13 @@ namespace rsx
 				return_code = m_list->get_selected_index();
 				m_stop_input_loop = true;
 				play_cursor_sound = false;
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 				break;
 			case pad_button::circle:
 				return_code = selection_code::canceled;
 				m_stop_input_loop = true;
 				play_cursor_sound = false;
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				break;
 			case pad_button::dpad_up:
 				m_list->select_previous();
@@ -182,7 +181,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			if (play_cursor_sound && (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default))
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 		}
 

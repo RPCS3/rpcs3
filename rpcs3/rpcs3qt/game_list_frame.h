@@ -48,10 +48,10 @@ public:
 	void SaveSettings();
 
 	/** Resize Gamelist Icons to size given by slider position */
-	void ResizeIcons(const int& slider_pos);
+	void ResizeIcons(int slider_pos);
 
 	/** Repaint Gamelist Icons with new background color */
-	void RepaintIcons(const bool& from_settings = false);
+	void RepaintIcons(bool from_settings = false);
 
 	void SetShowHidden(bool show);
 
@@ -64,13 +64,13 @@ public:
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 public Q_SLOTS:
-	void BatchCreateCPUCaches(const std::vector<game_info>& game_data = {});
+	void BatchCreateCPUCaches(const std::vector<game_info>& game_data = {}, bool is_fast_compilation = false);
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
 	void BatchRemoveCustomPadConfigurations();
 	void BatchRemoveShaderCaches();
-	void SetListMode(const bool& is_list);
+	void SetListMode(bool is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 	void SetPreferGameDataIcons(bool enabled);
@@ -83,7 +83,7 @@ private Q_SLOTS:
 	void OnRefreshFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
-	void ShowContextMenu(const QPoint &pos);
+	void ShowContextMenu(const QPoint& pos);
 	void doubleClickedSlot(QTableWidgetItem* item);
 	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
@@ -91,11 +91,12 @@ Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
-	void RequestIconSizeChange(const int& val);
+	void RequestIconSizeChange(int val);
 	void NotifyEmuSettingsChange();
 	void FocusToSearchBar();
 	void Refreshed();
 	void RequestSaveStateManager(const game_info& game);
+	void NotifyBatchedGameActionFinished();
 
 public:
 	template <typename KeyType>
@@ -126,6 +127,9 @@ protected:
 private:
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 
+	QString get_header_text(int col) const;
+	QString get_action_text(int col) const;
+
 	void ShowCustomConfigIcon(const game_info& game);
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
@@ -135,8 +139,8 @@ private:
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void RemoveHDD1Cache(const std::string& base_dir, const std::string& title_id, bool is_interactive = false);
-	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {});
-	static bool CreateCPUCaches(const game_info& game);
+	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {}, bool is_fast_compilation = false);
+	static bool CreateCPUCaches(const game_info& game, bool is_fast_compilation = false);
 
 	static bool RemoveContentPath(const std::string& path, const std::string& desc);
 	static u32 RemoveContentPathList(const std::vector<std::string>& path_list, const std::string& desc);
@@ -164,7 +168,7 @@ private:
 	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
-	QList<QAction*> m_columnActs;
+	std::map<int, QAction*> m_column_acts;
 	Qt::SortOrder m_col_sort_order{};
 	int m_sort_column{};
 	bool m_initial_refresh_done = false;

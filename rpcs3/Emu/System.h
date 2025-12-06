@@ -101,7 +101,7 @@ struct EmuCallbacks
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<std::string(const cfg::_base*, u32)> get_localized_setting;
-	std::function<void(const std::string&)> play_sound;
+	std::function<void(const std::string&, std::optional<f32>)> play_sound;
 	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
 	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
@@ -118,6 +118,11 @@ struct EmuCallbacks
 namespace utils
 {
 	struct serial;
+};
+
+struct emu_precompilation_option_t
+{
+	bool is_fast = false;
 };
 
 class Emulator final
@@ -188,6 +193,7 @@ class Emulator final
 	};
 
 	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
+	emu_precompilation_option_t m_precompilation_option{};
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
@@ -243,6 +249,11 @@ public:
 	void SetTestMode()
 	{
 		m_state = system_state::running;
+	}
+
+	void SetPrecompileCacheOption(emu_precompilation_option_t option)
+	{
+		m_precompilation_option = option;
 	}
 
 	void Init();

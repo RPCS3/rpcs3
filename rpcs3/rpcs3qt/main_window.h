@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "shortcut_handler.h"
 #include "Emu/config_mode.h"
+#include "Emu/System.h"
 
 #include <memory>
 
@@ -48,6 +49,7 @@ class main_window : public QMainWindow
 	bool m_save_slider_pos = false;
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
+	std::function<void()> m_notify_batch_game_action_cb;
 
 	QIcon m_app_icon;
 	QIcon m_icon_play;
@@ -87,9 +89,9 @@ Q_SIGNALS:
 public Q_SLOTS:
 	void OnEmuStop();
 	void OnEmuRun(bool start_playtime);
-	void OnEmuResume() const;
-	void OnEmuPause() const;
-	void OnEmuReady() const;
+	void OnEmuResume();
+	void OnEmuPause();
+	void OnEmuReady();
 	void OnEnableDiscEject(bool enabled) const;
 	void OnEnableDiscInsert(bool enabled) const;
 	void OnAddBreakpoint(u32 addr) const;
@@ -141,6 +143,7 @@ private:
 	void CreateDockWindows();
 	void EnableMenus(bool enabled) const;
 	void ShowTitleBars(bool show) const;
+	void PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths);
 	void ShowOptionalGamePreparations(const QString& title, const QString& message, std::map<std::string, QString> game_path);
 
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
@@ -194,9 +197,10 @@ private:
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
-	QAction* m_download_menu_action = nullptr;
 
 	shortcut_handler* m_shortcut_handler = nullptr;
 
 	std::unique_ptr<gui_pad_thread> m_gui_pad_thread;
+
+	system_state m_system_state = system_state::stopped;
 };

@@ -827,13 +827,13 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 		return;
 	}
 
-	size = utils::align<u32>(size + addr % 4, 4);
-	addr &= -4;
-
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return;
 	}
+
+	size = utils::align<u32>(size + addr % 4, 4);
+	addr &= -4;
 
 	// Initialize interpreter cache
 	while (size)
@@ -3718,7 +3718,7 @@ extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release
 #endif
 }
 
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_modules)
+extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_modules, bool is_fast_compilation)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
@@ -4166,6 +4166,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						break;
 					}
 
+					if (is_fast_compilation)
+					{
+						// Skip overlays in fast mode
+						break;
+					}
+
 					if (!wait_for_memory())
 					{
 						// Emulation stopped
@@ -4460,7 +4466,7 @@ extern void ppu_initialize()
 
 	progress_dialog.reset();
 
-	ppu_precompile(dir_queue, &module_list);
+	ppu_precompile(dir_queue, &module_list, false);
 
 	if (Emu.IsStopped())
 	{
