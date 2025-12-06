@@ -6,7 +6,9 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-brew install -f --overwrite --quiet pipenv googletest ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
+brew install -f --overwrite --quiet pipenv googletest opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
+brew unlink --quiet ffmpeg qtbase qtsvg qtdeclarative
+
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
