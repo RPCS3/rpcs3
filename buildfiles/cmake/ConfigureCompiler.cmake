@@ -1,7 +1,18 @@
 # Check and configure compiler options for RPCS3
 
 if(MSVC)
-	add_compile_options(/Zc:throwingNew- /constexpr:steps16777216)
+	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
+		check_cxx_compiler_flag("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+		if (COMPILER_X86)
+			add_compile_options(-msse -msse2 -mcx16)
+		endif()
+		if(COMPILER_SUPPORTS_MARCH_NATIVE)
+			add_compile_options(-march=native)
+		endif()
+	else()
+		add_compile_options(/Zc:throwingNew- /constexpr:steps16777216)
+	endif()
 	add_compile_definitions(
 		_CRT_SECURE_NO_DEPRECATE=1 _CRT_NON_CONFORMING_SWPRINTFS=1 _SCL_SECURE_NO_WARNINGS=1
 		NOMINMAX _ENABLE_EXTENDED_ALIGNED_STORAGE=1 _HAS_EXCEPTIONS=0)
