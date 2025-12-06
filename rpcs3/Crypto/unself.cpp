@@ -1068,6 +1068,37 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	return true;
 }
 
+std::string SELFDecrypter::GetRapFilePath()
+{
+	// Check if we have a valid NPDRM control info structure.
+	// If not, the data has no NPDRM layer.
+	const NPD_HEADER* npd = GetNPDHeader();
+	if (!npd)
+	{
+		self_log.trace("No NPDRM control info found!");
+		return {};
+	}
+
+	if (npd->license == 1)  // Network license.
+	{
+		return rpcs3::utils::get_rap_file_path(npd->content_id);
+	}
+	else if (npd->license == 2)  // Local license.
+	{
+		return rpcs3::utils::get_rap_file_path(npd->content_id);
+	}
+	else if (npd->license == 3)  // Free license.
+	{
+		//
+	}
+	else
+	{
+		self_log.error("Invalid NPDRM license type!");
+	}
+
+	return {};
+}
+
 const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
 {
 	// Parse the control info structures to find the NPDRM control info.
@@ -1081,6 +1112,7 @@ const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
 
 	return nullptr;
 }
+
 
 bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 {
@@ -1430,6 +1462,46 @@ fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAddit
 		}
 
 		return e;
+	}
+
+	return {};
+}
+
+std::string get_rap_file_path_of_self(const fs::file& elf_or_self)
+{
+	if (!elf_or_self)
+	{
+		return {};
+	}
+
+	elf_or_self.seek(0);
+
+	// Check SELF header first. Check for a debug SELF.
+	u32 file_type = umax;
+	elf_or_self.read_at(0, &file_type, sizeof(file_type));
+
+	if (file_type == "SCE\0"_u32)
+	{
+		if (fs::file res = CheckDebugSelf(elf_or_self))
+		{
+			return {};
+		}
+
+		// Check the ELF file class (32 or 64 bit).
+		const bool isElf32 = IsSelfElf32(elf_or_self);
+
+		// Start the decrypter on this SELF file.
+		SELFDecrypter self_dec(elf_or_self);
+
+		// Load the SELF file headers.
+		if (!self_dec.LoadHeaders(isElf32, nullptr))
+		{
+			self_log.error("Failed to load SELF file headers!");
+			return {};
+		}
+
+		// Load and decrypt the SELF file metadata.
+		return self_dec.GetRapFilePath();
 	}
 
 	return {};
