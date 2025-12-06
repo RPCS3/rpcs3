@@ -1040,7 +1040,9 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 				}
 
-				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
+				const QDate date = date_time.date();
+				const QTime time = date_time.time();
+				const std::string cell_sshot_filename = manager.get_screenshot_path(date.year(), date.month(), date.day(), time.hour(), time.minute(), time.second());
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
