@@ -9,6 +9,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "unpkg.h"
+#include "unself.h"
 #include "util/sysinfo.hpp"
 #include "Loader/PSF.h"
 
@@ -47,11 +48,22 @@ package_reader::package_reader(const std::string& path, fs::file file)
 		return;
 	}
 
-	const bool param_sfo_found = read_param_sfo();
+	m_psf = psf::load_object(read_file("PARAM.SFO"), path + ":PARAM.SFO");
 
-	if (!param_sfo_found)
+	if (m_psf.empty())
 	{
 		pkg_log.notice("PKG does not contain a PARAM.SFO");
+	}
+
+	m_rap_file_path = get_rap_file_path_of_self(read_file("USRDIR/EBOOT.BIN"));
+
+	if (m_rap_file_path.empty())
+	{
+		pkg_log.notice("PKG needs a RAP file: %s", m_rap_file_path);
+	}
+	else
+	{
+		pkg_log.notice("PKG does not need a license file.");
 	}
 }
 
@@ -577,13 +589,14 @@ bool package_reader::read_entries(std::vector<PKGEntry>& entries)
 	return true;
 }
 
-bool package_reader::read_param_sfo()
+fs::file package_reader::read_file(std::string_view relative_path)
 {
 	std::vector<PKGEntry> entries;
+	fs::file tmp;
 
 	if (!read_entries(entries))
 	{
-		return false;
+		return tmp;
 	}
 
 	std::vector<u8> data_buf;
@@ -609,13 +622,13 @@ bool package_reader::read_param_sfo()
 		fmt::trim_back(name, "\0"sv);
 
 		// We're looking for the PARAM.SFO file, if there is any
-		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != "PARAM.SFO")
+		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != relative_path)
 		{
 			continue;
 		}
 
 		// Read the package's PARAM.SFO
-		fs::file tmp = fs::make_stream<std::vector<uchar>>();
+		tmp = fs::make_stream<std::vector<uchar>>();
 		{
 			for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 			{
@@ -625,32 +638,21 @@ bool package_reader::read_param_sfo()
 
 				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), data_buf.data()) != block_size)
 				{
-					pkg_log.error("Failed to decrypt PARAM.SFO file");
-					return false;
+					pkg_log.error("Failed to decrypt %s file", relative_path);
+					tmp.close();
+					return tmp;
 				}
 
-				if (tmp.write(data_buf.data(), block_size) != block_size)
-				{
-					pkg_log.error("Failed to write to temporary PARAM.SFO file");
-					return false;
-				}
+				ensure(tmp.write(data_buf.data(), block_size) == block_size);
 			}
 
 			tmp.seek(0);
-
-			m_psf = psf::load_object(tmp, name);
-
-			if (m_psf.empty())
-			{
-				// Invalid
-				continue;
-			}
-
-			return true;
+			return tmp;
 		}
 	}
 
-	return false;
+	tmp.close();
+	return tmp;
 }
 
 // TODO: maybe also check if VERSION matches

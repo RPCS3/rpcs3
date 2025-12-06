@@ -892,7 +892,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 	// Install rap files if available
 	int installed_rap_and_edat_count = 0;
 
-	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
+	const auto install_filetype = [this, &installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
 		for (const QString& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
@@ -902,6 +902,13 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 			if (InstallFileInExData(extension, file, filename))
 			{
+				if (filename == last_rap_file_needed_for_pkg)
+				{
+					file_paths.append(last_pkg_path_postponed_due_to_missing_rap);
+					last_rap_file_needed_for_pkg = {};
+					last_pkg_path_postponed_due_to_missing_rap = {};
+				}
+
 				gui_log.success("Successfully copied %s file: %s", extension, filename);
 				installed_rap_and_edat_count++;
 			}
@@ -1005,10 +1012,6 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	}
 	gui_log.notice("About to install packages:\n%s", fmt::merge(path_vec, "\n"));
 
-	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
-	pdlg.setAutoClose(false);
-	pdlg.show();
-
 	package_install_result result = {};
 
 	auto get_app_info = [](compat::package_info& package)
@@ -1046,6 +1049,53 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	{
 		readers.emplace_back(info.path.toStdString());
 	}
+
+	std::string missing_licenses;
+	std::string missing_licenses_short;
+
+	for (const auto& reader : readers)
+	{
+		if (std::string filepath = reader.gep_needed_rap_file_path(); !filepath.empty() && fs::is_file(filepath))
+		{
+			missing_licenses += filepath;
+			missing_licenses += "\n";
+
+			if (std::count(missing_licenses_short.begin(), missing_licenses_short.end(), '\n') < 5)
+			{
+				missing_licenses_short += std::string_view(filepath).substr(filepath.find_last_of(fs::delim) + 1);
+				missing_licenses_short += "\n";
+			}
+		}
+	}
+
+	if (!missing_licenses.empty())
+	{
+		gui_log.fatal("Failed to locate the game license file(s):\n%s"
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", missing_licenses, Emu.GetUsr());
+
+		QString error = tr("Failed to locate the game license file(s):\n\n%1\nEnsure the .rap license file(s) are placed in the dev_hdd0 folder with a lowercase file extension.").arg(QString::fromStdString(missing_licenses_short));
+
+		QMessageBox* mb = new QMessageBox(QMessageBox::Warning, tr("PKG Installer: Missing License(s) For PKG(s)"), error, QMessageBox::Ok, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+		mb->setAttribute(Qt::WA_DeleteOnClose);
+		mb->open();
+
+		if (readers.size() == 1)
+		{
+			last_pkg_path_postponed_due_to_missing_rap = packages[0].path;
+			missing_licenses_short.pop_back(); // Remove newline
+			last_rap_file_needed_for_pkg = QString::fromStdString(missing_licenses_short);
+		}
+
+		return false;
+	}
+
+	last_pkg_path_postponed_due_to_missing_rap = {};
+	last_rap_file_needed_for_pkg = {};
+
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
+	pdlg.setAutoClose(false);
+	pdlg.show();
 
 	std::deque<std::string> bootable_paths;
 

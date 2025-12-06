@@ -361,10 +361,15 @@ public:
 		return m_file;
 	}
 
+	const std::string& gep_needed_rap_file_path() const
+	{
+		return m_rap_file_path;
+	}
+
 private:
 	bool read_header();
 	bool read_metadata();
-	bool read_param_sfo();
+	fs::file read_file(std::string_view relative_path);
 	bool set_decryption_key();
 	bool read_entries(std::vector<PKGEntry>& entries);
 	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
@@ -400,4 +405,5 @@ private:
 
 	// Expose bootable file installed (if installed such)
 	std::string m_bootable_file_path;
+	std::string m_rap_file_path;
 };
