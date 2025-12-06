@@ -3,6 +3,11 @@
 #include "FragmentProgramDecompiler.h"
 #include "ProgramStateCache.h"
 
+#include "Assembler/Passes/FP/RegisterAnnotationPass.h"
+#include "Assembler/Passes/FP/RegisterDependencyPass.h"
+
+#include "Emu/system_config.h"
+
 #include <algorithm>
 
 namespace rsx
@@ -1296,7 +1301,17 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	const auto graph = deconstruct_fragment_program(m_prog);
+	auto graph = deconstruct_fragment_program(m_prog);
+
+	if (g_cfg.video.shader_precision != gpu_preset_level::low)
+	{
+		FP::RegisterAnnotationPass annotation_pass{ m_prog };
+		FP::RegisterDependencyPass dependency_pass{};
+
+		annotation_pass.run(graph);
+		dependency_pass.run(graph);
+	}
+
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -1455,7 +1470,23 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (dst.end) break;
 		}
 
-		// TODO: Handle block epilogue if needed
+		if (block.epilogue.empty())
+		{
+			continue;
+		}
+
+		AddCode("// Epilogue");
+
+		for (auto& inst : block.epilogue)
+		{
+			m_instruction = &inst;
+			dst.HEX = inst.bytecode[0];
+			src0.HEX = inst.bytecode[1];
+			src1.HEX = inst.bytecode[2];
+			src2.HEX = inst.bytecode[3];
+
+			ensure(handle_tex_srb(inst.opcode) || handle_sct_scb(inst.opcode), "Unsupported operation");
+		}
 	}
 
 	while (m_code_level > 1)

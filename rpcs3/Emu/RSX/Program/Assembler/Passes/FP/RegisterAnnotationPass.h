@@ -14,7 +14,7 @@ namespace rsx::assembler::FP
 	class RegisterAnnotationPass : public CFGPass
 	{
 	public:
-		RegisterAnnotationPass(RSXFragmentProgram& prog)
+		RegisterAnnotationPass(const RSXFragmentProgram& prog)
 			: m_prog(prog)
 		{}
 
