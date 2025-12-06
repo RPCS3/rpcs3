@@ -206,7 +206,7 @@ table SetRoomDataInternalRequest {
 	flagAttr:uint32;
 	roomBinAttrInternal:[BinAttr];
 	passwordConfig:[RoomGroupPasswordConfig];
-	passwordSlotMask:uint64;
+	passwordSlotMask:[uint64];
 	ownerPrivilegeRank:[uint16];
 }
 
