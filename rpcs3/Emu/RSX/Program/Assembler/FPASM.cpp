@@ -294,18 +294,25 @@ namespace rsx::assembler
 			fmt::throw_exception("Invalid constant literal");
 		};
 
-		auto encode_branch_end = [](Instruction *inst, u32 end)
-		{
-			SRC2 src2 { .HEX = inst->bytecode[3] };
-			src2.end_offset = static_cast<u32>(end);
-			inst->bytecode[3] = src2.HEX;
-		};
-
 		auto encode_branch_else = [](Instruction* inst, u32 end)
 		{
 			SRC1 src1{ .HEX = inst->bytecode[2] };
 			src1.else_offset = static_cast<u32>(end);
 			inst->bytecode[2] = src1.HEX;
+		};
+
+		auto encode_branch_end = [](Instruction *inst, u32 end)
+		{
+			SRC2 src2 { .HEX = inst->bytecode[3] };
+			src2.end_offset = static_cast<u32>(end);
+			inst->bytecode[3] = src2.HEX;
+
+			SRC1 src1{ .HEX = inst->bytecode[2] };
+			if (!src1.else_offset)
+			{
+				src1.else_offset = static_cast<u32>(end);
+				inst->bytecode[2] = src1.HEX;
+			}
 		};
 
 		auto encode_opcode = [](const std::string& op, Instruction* inst)
