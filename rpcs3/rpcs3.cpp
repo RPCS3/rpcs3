@@ -435,6 +435,12 @@ QCoreApplication* create_application(std::span<char* const> qt_argv)
 	{
 		qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "0");
 	}
+#elif __APPLE__
+	// set the QT_MTL_NO_TRANSACTION variable in order to prevent Qt GUI freeze
+	qputenv("QT_MTL_NO_TRANSACTION", "1");
+
+	// set the QT_MAC_NO_CONTAINER_LAYER variable in order to prevent swapchain crash
+	qputenv("QT_MAC_NO_CONTAINER_LAYER", "1");
 #endif
 
 	bool use_high_dpi = true;

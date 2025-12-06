@@ -15,6 +15,33 @@ namespace rsx
 {
 	namespace overlays
 	{
+		std::string get_sound_filepath(sound_effect sound)
+		{
+			const auto get_sound_filename = [sound]()
+			{
+				switch (sound)
+				{
+				case sound_effect::cursor:       return "snd_cursor"sv;
+				case sound_effect::accept:       return "snd_decide"sv;
+				case sound_effect::cancel:       return "snd_cancel"sv;
+				case sound_effect::osk_accept:   return "snd_oskenter"sv;
+				case sound_effect::osk_cancel:   return "snd_oskcancel"sv;
+				case sound_effect::dialog_ok:    return "snd_system_ok"sv;
+				case sound_effect::dialog_error: return "snd_system_ng"sv;
+				case sound_effect::trophy:       return "snd_trophy"sv;
+				}
+
+				fmt::throw_exception("Unreachable (sound=%d)", static_cast<u32>(sound));
+			};
+
+			return fmt::format("%ssounds/%s.wav", fs::get_config_dir(), get_sound_filename());
+		}
+
+		void play_sound(sound_effect sound, std::optional<f32> volume)
+		{
+			Emu.GetCallbacks().play_sound(get_sound_filepath(sound), volume);
+		}
+
 		thread_local DECLARE(user_interface::g_thread_bit) = 0;
 
 		u32 user_interface::alloc_thread_bit()

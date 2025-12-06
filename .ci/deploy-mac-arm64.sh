@@ -17,6 +17,7 @@ cd bin
 mkdir "rpcs3.app/Contents/lib/" || true
 
 cp "$(realpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
+cp "$(realpath /opt/homebrew/opt/gcc/lib/gcc/current/libgcc_s.1.1.dylib)" "rpcs3.app/Contents/Frameworks/libgcc_s.1.1.dylib"
 cp "$(realpath /opt/homebrew/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /opt/homebrew/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 

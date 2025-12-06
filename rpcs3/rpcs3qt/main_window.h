@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "shortcut_handler.h"
 #include "Emu/config_mode.h"
+#include "Emu/System.h"
 
 #include <memory>
 
@@ -88,9 +89,9 @@ Q_SIGNALS:
 public Q_SLOTS:
 	void OnEmuStop();
 	void OnEmuRun(bool start_playtime);
-	void OnEmuResume() const;
-	void OnEmuPause() const;
-	void OnEmuReady() const;
+	void OnEmuResume();
+	void OnEmuPause();
+	void OnEmuReady();
 	void OnEnableDiscEject(bool enabled) const;
 	void OnEnableDiscInsert(bool enabled) const;
 	void OnAddBreakpoint(u32 addr) const;
@@ -196,9 +197,10 @@ private:
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
-	QAction* m_download_menu_action = nullptr;
 
 	shortcut_handler* m_shortcut_handler = nullptr;
 
 	std::unique_ptr<gui_pad_thread> m_gui_pad_thread;
+
+	system_state m_system_state = system_state::stopped;
 };

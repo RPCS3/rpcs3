@@ -12,7 +12,8 @@ brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 rm /usr/local/bin/{idle3.14,pip3.14,pydoc3.14,python3.14,python3.14-config} && \
 rm /usr/local/bin/{idle3,pip3,pydoc3,python3,python3-config}
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+arch -x86_64 /usr/local/bin/brew unlink  --quiet ffmpeg qtbase qtsvg qtdeclarative
 arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
@@ -38,16 +39,13 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   git clone https://github.com/engnr/qt-downloader.git
   cd qt-downloader
   git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
-  # nested Qt 6.10.0 URL workaround
-  # sed -i '' "s/'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/'qt{0}_{0}{1}{2}'.format(major, minor, patch), 'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/g" qt-downloader
-  # sed -i '' "s/'{}\/{}\/qt{}_{}\/'/'{0}\/{1}\/qt{2}_{3}\/qt{2}_{3}\/'/g" qt-downloader
-  # archived Qt 6.7.3 URL workaround
-  sed -i '' "s/official_releases/archive/g" qt-downloader
+  sed -i '' "s/'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/'qt{0}_{0}{1}{2}'.format(major, minor, patch), 'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/g" qt-downloader
+  sed -i '' "s/'{}\/{}\/qt{}_{}\/'/'{0}\/{1}\/qt{2}_{3}\/qt{2}_{3}\/'/g" qt-downloader
   cd "/tmp/Qt"
   "/opt/homebrew/bin/pipenv" --python "/opt/homebrew/bin/python3" run pip3 install py7zr requests semantic_version lxml
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
-  # sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader" # Qt 6.10.0 workaround
-  "/opt/homebrew/bin/pipenv"  --python "/opt/homebrew/bin/python3" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats # -o "$QT_VER/clang_64"
+  sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader"
+  "/opt/homebrew/bin/pipenv"  --python "/opt/homebrew/bin/python3" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats -o "$QT_VER/clang_64"
 fi
 
 cd "$WORKDIR"

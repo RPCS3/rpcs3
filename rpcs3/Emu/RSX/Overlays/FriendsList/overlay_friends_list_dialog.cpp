@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
-#include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/vfs_config.h"
 
@@ -306,11 +305,11 @@ namespace rsx
 				}
 				}
 
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 				return;
 			}
 			case pad_button::circle:
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				close_dialog = true;
 				break;
 			case pad_button::square:
@@ -359,7 +358,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 		}
 
