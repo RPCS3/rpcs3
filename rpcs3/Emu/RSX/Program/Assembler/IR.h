@@ -114,5 +114,25 @@ namespace rsx::assembler
 			pred.push_back(e);
 			return &pred.back();
 		}
+
+		bool is_of_type(EdgeType type) const
+		{
+			return pred.size() == 1 &&
+				pred.front().type == type;
+		}
+
+		bool has_sibling_of_type(EdgeType type) const
+		{
+			if (pred.size() != 1)
+			{
+				return false;
+			}
+
+			auto source_node = pred.front().from;
+			return std::find_if(
+				source_node->succ.begin(),
+				source_node->succ.end(),
+				FN(x.type == type)) != source_node->succ.end();
+		}
 	};
 }

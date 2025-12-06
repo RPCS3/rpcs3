@@ -21,6 +21,7 @@ namespace rsx
 }
 
 using namespace rsx::fragment_program;
+using namespace rsx::assembler;
 
 // SIMD vector lanes
 enum VectorLane : u8
@@ -1295,7 +1296,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	const auto graph = rsx::assembler::deconstruct_fragment_program(m_prog);
+	const auto graph = deconstruct_fragment_program(m_prog);
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -1322,22 +1323,41 @@ std::string FragmentProgramDecompiler::Decompile()
 			{
 				switch (pred.type)
 				{
-				case rsx::assembler::EdgeType::ENDLOOP:
-					m_loop_count--;
-					[[ fallthrough ]];
-				case rsx::assembler::EdgeType::ENDIF:
-					m_code_level--;
-					AddCode("}");
+				case EdgeType::ENDLOOP:
+					// Because of succession rules, endloop is seen twice.
+					// Once from the the for statement at the end of the parent
+					// and again at the end of the child block.
+					if (pred.from->is_of_type(EdgeType::LOOP))
+					{
+						m_loop_count--;
+						m_code_level--;
+						AddCode("}");
+					}
 					break;
-				case rsx::assembler::EdgeType::LOOP:
+				case EdgeType::ENDIF:
+				{
+					// Same thing happens with ENDIF
+					// Once for the IF statement itself
+					// And again for the child blocks with code for the IF and ELSE paths.
+					const bool is_else_end = pred.from->is_of_type(EdgeType::ELSE);
+					const bool is_if_end = pred.from->is_of_type(EdgeType::IF) &&
+						!pred.from->has_sibling_of_type(EdgeType::ELSE); // Avoid double-counting if the IF has an ELSE sibling
+					if (is_else_end || is_if_end)
+					{
+						m_code_level--;
+						AddCode("}");
+					}
+					break;
+				}
+				case EdgeType::LOOP:
 					m_loop_count++;
 					[[ fallthrough ]];
-				case rsx::assembler::EdgeType::IF:
+				case EdgeType::IF:
 					// Instruction will be inserted by the SIP decoder
 					AddCode("{");
 					m_code_level++;
 					break;
-				case rsx::assembler::EdgeType::ELSE:
+				case EdgeType::ELSE:
 					// This one needs more testing
 					m_code_level--;
 					AddCode("}");
@@ -1440,8 +1460,8 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	while (m_code_level > 1)
 	{
-		rsx_log.error("Hanging block found at end of shader. Malformed shader?");
-
+		// Happens if the last block was hanging (no merge)
+		// FIXME: We must always have a merge block on exit to resolve dependencies on outputs
 		m_code_level--;
 		AddCode("}");
 	}

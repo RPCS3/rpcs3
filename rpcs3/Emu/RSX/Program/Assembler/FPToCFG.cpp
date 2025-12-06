@@ -100,15 +100,16 @@ namespace rsx::assembler
 
 			if (found)
 			{
-				if (!bb->pred.empty())
+				auto front_edge = std::find_if(bb->pred.begin(), bb->pred.end(), FN(x.type != EdgeType::ENDIF && x.type != EdgeType::ENDLOOP));
+				if (front_edge != bb->pred.end())
 				{
-					switch (bb->pred.back().type)
+					auto parent = ensure(front_edge->from);
+					switch (front_edge->type)
 					{
 					case EdgeType::IF:
 					case EdgeType::ELSE:
 					{
 						// Find the merge node from the parent
-						auto parent = bb->pred.back().from;
 						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDIF));
 						ensure(succ != parent->succ.end(), "CFG: Broken IF linkage. Please report to developers.");
 						bb->insert_succ(succ->to, EdgeType::ENDIF);
@@ -118,7 +119,6 @@ namespace rsx::assembler
 					case EdgeType::LOOP:
 					{
 						// Find the merge node from the parent
-						auto parent = bb->pred.back().from;
 						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDLOOP));
 						ensure(succ != parent->succ.end(), "CFG: Broken LOOP linkage. Please report to developers.");
 						bb->insert_succ(succ->to, EdgeType::ENDLOOP);
@@ -130,7 +130,7 @@ namespace rsx::assembler
 						rsx_log.error("CFG: Unexpected block exit. Report to developers.");
 					}
 				}
-				else
+				else if (bb->pred.empty())
 				{
 					// Impossible situation.
 					rsx_log.error("CFG: Child block has no parent but has successor! Report to developers.");
