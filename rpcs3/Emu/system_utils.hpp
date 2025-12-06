@@ -34,6 +34,8 @@ namespace rpcs3::utils
 	std::string get_flash3_dir();
 	std::string get_bdvd_dir();
 
+	std::string get_hdd0_game_dir();
+
 	// Cache directories and disk usage
 	u64 get_cache_disk_usage();
 	std::string get_cache_dir();
