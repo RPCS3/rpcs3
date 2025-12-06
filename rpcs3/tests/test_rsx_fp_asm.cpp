@@ -37,6 +37,20 @@ namespace rsx::assembler
 #undef DECLARE_REG32
 #undef DECLARE_REG16
 
+	static const BasicBlock* get_graph_block(const FlowGraph& graph, u32 index)
+	{
+		ensure(index < graph.blocks.size());
+		for (auto it = graph.blocks.begin(); it != graph.blocks.end(); ++it)
+		{
+			if (!index)
+			{
+				return &(*it);
+			}
+			index--;
+		}
+		return nullptr;
+	};
+
 	static FlowGraph CFG_from_source(const std::string& asm_)
 	{
 		auto ir = FPIR::from_source(asm_);
@@ -247,35 +261,27 @@ namespace rsx::assembler
 		// Mockup of a simple lighting function, R0 = Light vector, R1 = Decompressed normal. DP4 used for simplicity.
 		// Data hazards sprinkled in for testing. R3 is clobbered in the ancestor and the IF branch.
 		// Barrier should go in the IF branch here.
-		FlowGraph graph;
-		BasicBlock* bb0 = BB_from_source(&graph, R"(
+		auto ir = FPIR::from_source(R"(
 			DP4   R2, R0, R1
 			SFL   R3
 			SGT   R3, R2, R0
 			IF.GE
-		)");
-
-		BasicBlock* bb1 = BB_from_source(&graph, R"(
-			ADD R0, R0, R2
-			MOV H6, #{ 0.25 }
-		)");
-
-		BasicBlock* bb2 = BB_from_source(&graph, R"(
+				ADD R0, R0, R2
+				MOV H6, #{ 0.25 }
+			ENDIF
 			ADD R0, R0, R3
 			MOV R1, R0
 		)");
 
-		// Front edges
-		bb0->insert_succ(bb1, EdgeType::IF);
-		bb0->insert_succ(bb2, EdgeType::ENDIF);
-		bb1->insert_succ(bb2, EdgeType::ENDIF);
-
-		// Back edges
-		bb2->insert_pred(bb1, EdgeType::ENDIF);
-		bb2->insert_pred(bb0, EdgeType::ENDIF);
-		bb1->insert_pred(bb0, EdgeType::IF);
+		auto bytecode = ir.compile();
 
 		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+
+		auto graph = deconstruct_fragment_program(prog);
+		auto bb0 = get_graph_block(graph, 0);
+		auto bb1 = get_graph_block(graph, 1);
+		auto bb2 = get_graph_block(graph, 2);
 
 		FP::RegisterAnnotationPass annotation_pass{ prog };
 		FP::RegisterDependencyPass deps_pass{};
@@ -352,25 +358,11 @@ namespace rsx::assembler
 		annotation_pass.run(graph);
 		deps_pass.run(graph);
 
-		auto get_block = [&](u32 index) -> BasicBlock*
-		{
-			ensure(index < graph.blocks.size());
-			for (auto it = graph.blocks.begin(); it != graph.blocks.end(); ++it)
-			{
-				if (!index)
-				{
-					return &(*it);
-				}
-				index--;
-			}
-			return nullptr;
-		};
-
-		BasicBlock
-			*bb0 = get_block(0),
-			*bb1 = get_block(1),
-			*bb2 = get_block(2),
-			*bb3 = get_block(3);
+		const BasicBlock
+			*bb0 = get_graph_block(graph, 0),
+			*bb1 = get_graph_block(graph, 1),
+			*bb2 = get_graph_block(graph, 2),
+			*bb3 = get_graph_block(graph, 3);
 
 		ASSERT_EQ(bb0->instructions.size(), 4);
 		ASSERT_EQ(bb1->instructions.size(), 2);
