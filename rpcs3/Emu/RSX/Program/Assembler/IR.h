@@ -91,6 +91,7 @@ namespace rsx::assembler
 	struct BasicBlock
 	{
 		u32 id = 0;
+
 		std::vector<Instruction> instructions; // Program instructions for the RSX processor
 		std::vector<FlowEdge> succ;            // Forward edges. Sorted closest first.
 		std::vector<FlowEdge> pred;            // Back edges. Sorted closest first.
