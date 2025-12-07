@@ -789,7 +789,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
 	const std::string init_value = float4_type + "(0.)";
 	std::array<std::string, 4> output_register_names;
-	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 
 	// Holder for any "cleanup" before exiting main
 	std::stringstream main_epilogue;
