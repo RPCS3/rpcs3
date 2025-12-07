@@ -263,12 +263,25 @@ namespace rsx::assembler
 		{
 			ensure(reg.length() > 1, "Invalid register specifier");
 
-			const auto index = std::stoi(reg.substr(1));
+			const auto parts = fmt::split(reg, { "." });
+			ensure(parts.size() > 0 && parts.size() <= 2);
+
+			const auto index = std::stoi(parts[0].substr(1));
 			RegisterRef ref
 			{
 				.reg { .id = index, .f16 = false },
 				.mask = 0x0F
 			};
+
+			if (parts.size() > 1 && parts[1].length() > 0)
+			{
+				// FIXME: No swizzles for now, just lane masking
+				ref.mask = 0;
+				if (parts[1].find("x") != std::string::npos) ref.mask |= (1u << 0);
+				if (parts[1].find("y") != std::string::npos) ref.mask |= (1u << 1);
+				if (parts[1].find("z") != std::string::npos) ref.mask |= (1u << 2);
+				if (parts[1].find("w") != std::string::npos) ref.mask |= (1u << 3);
+			}
 
 			if (reg[0] == 'H' || reg[0] == 'h')
 			{
@@ -325,7 +338,7 @@ namespace rsx::assembler
 			do { \
 				inst->opcode = encoding.op; \
 				d0.opcode = encoding.op & 0x3F; \
-				s1.opcode_is_branch = (encoding.op > 0x3F)? 1 : 0; \
+				s1.opcode_hi = (encoding.op > 0x3F)? 1 : 0; \
 				s0.exec_if_eq = encoding.exec_if_eq ? 1 : 0; \
 				s0.exec_if_gr = encoding.exec_if_gt ? 1 : 0; \
 				s0.exec_if_lt = encoding.exec_if_lt ? 1 : 0; \

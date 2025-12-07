@@ -22,6 +22,20 @@ namespace rsx::assembler::FP
 		std::unordered_map<BasicBlock*, register_file_t> sync_register_map;
 	};
 
+	enum Register32BarrierFlags
+	{
+		NONE = 0,
+		OR_WORD0 = 1,
+		OR_WORD1 = 2,
+		DEFAULT = OR_WORD0 | OR_WORD1
+	};
+
+	struct RegisterBarrier32
+	{
+		RegisterRef ref;
+		u32 flags[4];
+	};
+
 	std::vector<RegisterRef> decode_lanes16(const std::unordered_set<u32>& lanes)
 	{
 		std::vector<RegisterRef> result;
@@ -47,34 +61,45 @@ namespace rsx::assembler::FP
 		return result;
 	}
 
-	std::vector<RegisterRef> decode_lanes32(const std::unordered_set<u32>& lanes)
+	std::vector<RegisterBarrier32> decode_lanes32(const std::unordered_set<u32>& lanes)
 	{
-		std::vector<RegisterRef> result;
+		std::vector<RegisterBarrier32> result;
 
 		for (u32 index = 0, file_offset = 0; index < 48; ++index, file_offset += 16)
 		{
 			// Each register has 8 16-bit lanes
+			RegisterBarrier32 barrier{};
+			auto& ref = barrier.ref;
 
-			u32 mask = 0;
-			if (lanes.contains(file_offset + 0)  || lanes.contains(file_offset + 2))  mask |= (1u << 0);
-			if (lanes.contains(file_offset + 4)  || lanes.contains(file_offset + 6))  mask |= (1u << 1);
-			if (lanes.contains(file_offset + 8)  || lanes.contains(file_offset + 10)) mask |= (1u << 2);
-			if (lanes.contains(file_offset + 12) || lanes.contains(file_offset + 14)) mask |= (1u << 3);
+			for (u32 lane = 0; lane < 16; lane += 2)
+			{
+				if (!lanes.contains(file_offset + lane))
+				{
+					continue;
+				}
 
-			if (mask == 0)
+				const u32 ch = (lane / 4);
+				const u32 flags = (lane & 3)
+					? Register32BarrierFlags::OR_WORD1
+					: Register32BarrierFlags::OR_WORD0;
+
+				ref.mask |= (1u << ch);
+				barrier.flags[ch] |= flags;
+			}
+
+			if (ref.mask == 0)
 			{
 				continue;
 			}
 
-			RegisterRef ref{ .reg{.id = static_cast<int>(index), .f16 = false } };
-			ref.mask = mask;
-			result.push_back(ref);
+			ref.reg = {.id = static_cast<int>(index), .f16 = false };
+			result.push_back(barrier);
 		}
 
 		return result;
 	}
 
-	std::vector<Instruction> build_barrier32(const RegisterRef& reg)
+	std::vector<Instruction> build_barrier32(const RegisterBarrier32& barrier)
 	{
 		// Upto 4 instructions are needed per 32-bit register
 		// R0.x = packHalf2x16(H0.xy)
@@ -84,28 +109,27 @@ namespace rsx::assembler::FP
 
 		std::vector<Instruction> result;
 
-		for (u32 mask = reg.mask, ch = 0; mask > 0; mask >>= 1, ++ch)
+		for (u32 mask = barrier.ref.mask, ch = 0; mask > 0; mask >>= 1, ++ch)
 		{
 			if (!(mask & 1))
 			{
 				continue;
 			}
 
+			const auto& reg = barrier.ref.reg;
+			const auto reg_id = reg.id;
+
 			Instruction instruction{};
 			OPDEST dst{};
-			dst.opcode = RSX_FP_OPCODE_PK2;
 			dst.prec = RSX_FP_PRECISION_REAL;
 			dst.fp16 = 0;
-			dst.dest_reg = reg.reg.id;
+			dst.dest_reg = reg_id;
 			dst.write_mask = (1u << ch);
 
-			const u32 src_reg_id = (ch / 2) + (reg.reg.id * 2);
+			const u32 src_reg_id = (ch / 2) + (reg_id * 2);
 			const bool is_word0 = !(ch & 1); // Only even
 
 			SRC0 src0{};
-			src0.exec_if_eq = src0.exec_if_gr = src0.exec_if_lt = 1;
-			src0.fp16 = 1;
-
 			if (is_word0)
 			{
 				src0.swizzle_x = 0;
@@ -121,14 +145,50 @@ namespace rsx::assembler::FP
 			src0.swizzle_w = 3;
 			src0.reg_type = RSX_FP_REGISTER_TYPE_TEMP;
 			src0.tmp_reg_index = src_reg_id;
+			src0.fp16 = 1;
 
-			instruction.opcode = dst.opcode;
+			// Prepare source 1 to match the output in case we need to encode an OR
+			SRC1 src1{};
+			src1.reg_type = RSX_FP_REGISTER_TYPE_TEMP;
+			src1.tmp_reg_index = reg_id;
+			src1.swizzle_x = ch;
+			src1.swizzle_y = ch;
+			src1.swizzle_z = ch;
+			src1.swizzle_w = ch;
+
+			u32 opcode = 0;
+			switch (barrier.flags[ch])
+			{
+			case Register32BarrierFlags::DEFAULT:
+				opcode = RSX_FP_OPCODE_PK2;
+				break;
+			case Register32BarrierFlags::OR_WORD0:
+				opcode = RSX_FP_OPCODE_OR16_LO;
+				// Swap inputs
+				std::swap(src0.HEX, src1.HEX);
+				break;
+			case Register32BarrierFlags::OR_WORD1:
+				opcode = RSX_FP_OPCODE_OR16_HI;
+				src0.swizzle_x = src0.swizzle_y;
+				std::swap(src0.HEX, src1.HEX);
+				break;
+			case Register32BarrierFlags::NONE:
+			default:
+				fmt::throw_exception("Unexpected lane barrier with no mask.");
+			}
+
+			dst.opcode = opcode & 0x3F;
+			src1.opcode_hi = (opcode > 0x3F) ? 1 : 0;
+			src0.exec_if_eq = src0.exec_if_gr = src0.exec_if_lt = 1;
+
+			instruction.opcode = opcode;
 			instruction.bytecode[0] = dst.HEX;
 			instruction.bytecode[1] = src0.HEX;
+			instruction.bytecode[2] = src1.HEX;
 
 			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
-			instruction.srcs.push_back({ .reg=src_reg, .mask=0xF });
-			instruction.dsts.push_back({ .reg{ .id = reg.reg.id, .f16 = false }, .mask = (1u << ch) });
+			instruction.srcs.push_back({ .reg = src_reg, .mask = 0xF });
+			instruction.dsts.push_back({ .reg{ .id = reg_id, .f16 = false }, .mask = (1u << ch) });
 			result.push_back(instruction);
 		}
 
@@ -207,10 +267,22 @@ namespace rsx::assembler::FP
 	{
 		std::vector<Instruction> result;
 
-		const auto regs = (f16 ? decode_lanes16 : decode_lanes32)(lanes);
-		for (const auto& ref : regs)
+		if (f16)
 		{
-			auto instructions = (f16 ? build_barrier16 : build_barrier32)(ref);
+			const auto regs = decode_lanes16(lanes);
+			for (const auto& ref : regs)
+			{
+				auto instructions = build_barrier16(ref);
+				result.insert(result.end(), instructions.begin(), instructions.end());
+			}
+
+			return result;
+		}
+
+		const auto barriers = decode_lanes32(lanes);
+		for (const auto& barrier : barriers)
+		{
+			auto instructions = build_barrier32(barrier);
 			result.insert(result.end(), instructions.begin(), instructions.end());
 		}
 

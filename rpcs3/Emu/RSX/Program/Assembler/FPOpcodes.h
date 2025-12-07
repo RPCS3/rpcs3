@@ -75,7 +75,12 @@ namespace rsx::assembler
 		RSX_FP_OPCODE_IFE = 0x42, // If
 		RSX_FP_OPCODE_LOOP = 0x43, // Loop
 		RSX_FP_OPCODE_REP = 0x44, // Repeat
-		RSX_FP_OPCODE_RET = 0x45  // Return
+		RSX_FP_OPCODE_RET = 0x45,  // Return
+
+
+		// Custom opcodes for dependency injection
+		RSX_FP_OPCODE_OR16_LO = 0x46,  // Performs a 16-bit OR, taking one register channel as input and overwriting low 16 bits of the output
+		RSX_FP_OPCODE_OR16_HI = 0x47,  // Same as the lo variant but now overwrites the high 16-bit block
 	};
 
 	namespace FP

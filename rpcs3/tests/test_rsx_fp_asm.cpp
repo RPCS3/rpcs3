@@ -472,4 +472,100 @@ namespace rsx::assembler
 		EXPECT_EQ(bb4->epilogue.size(), 0);
 		EXPECT_EQ(bb5->epilogue.size(), 0);
 	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Partial32_0)
+	{
+		// Instruction 2 partially clobers H1 which in turn clobbers R0.
+		// Instruction 3 reads from R0 so a partial barrier32 is needed between them.
+		auto graph = CFG_from_source(R"(
+			ADD R1,   R0, R1;
+			MOV H1.x, R1.x;
+			MOV R2,   R0;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		ASSERT_EQ(block.instructions.size(), 4);
+
+		OPDEST dst{ .HEX = block.instructions[2].bytecode[0] };
+		SRC0 src0{ .HEX = block.instructions[2].bytecode[1] };
+		SRC1 src1{ .HEX = block.instructions[2].bytecode[2] };
+
+		const u32 opcode = dst.opcode | (src1.opcode_hi << 6);
+
+		// R0.z = packHalf2(H1.xy);
+		EXPECT_EQ(opcode, RSX_FP_OPCODE_OR16_LO);
+		EXPECT_EQ(dst.fp16, 0);
+		EXPECT_EQ(dst.dest_reg, 0);
+		EXPECT_EQ(dst.mask_x, false);
+		EXPECT_EQ(dst.mask_y, false);
+		EXPECT_EQ(dst.mask_z, true);
+		EXPECT_EQ(dst.mask_w, false);
+		EXPECT_EQ(src0.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(src0.tmp_reg_index, 0);
+		EXPECT_EQ(src0.fp16, 0);
+		EXPECT_EQ(src0.swizzle_x, 2);
+		EXPECT_EQ(src1.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(src1.tmp_reg_index, 1);
+		EXPECT_EQ(src1.fp16, 1);
+		EXPECT_EQ(src1.swizzle_x, 0);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Partial32_1)
+	{
+		// Instruction 2 partially clobers H1 which in turn clobbers R0.
+		// Instruction 3 reads from R0 so a partial barrier32 is needed between them.
+		auto graph = CFG_from_source(R"(
+			ADD R1,   R0, R1;
+			MOV H1.y, R1.y;
+			MOV R2,   R0;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		ASSERT_EQ(block.instructions.size(), 4);
+
+		OPDEST dst{ .HEX = block.instructions[2].bytecode[0] };
+		SRC0 src0{ .HEX = block.instructions[2].bytecode[1] };
+		SRC1 src1{ .HEX = block.instructions[2].bytecode[2] };
+
+		const u32 opcode = dst.opcode | (src1.opcode_hi << 6);
+
+		// R0.z = packHalf2(H1.xy);
+		EXPECT_EQ(opcode, RSX_FP_OPCODE_OR16_HI);
+		EXPECT_EQ(dst.fp16, 0);
+		EXPECT_EQ(dst.dest_reg, 0);
+		EXPECT_EQ(dst.mask_x, false);
+		EXPECT_EQ(dst.mask_y, false);
+		EXPECT_EQ(dst.mask_z, true);
+		EXPECT_EQ(dst.mask_w, false);
+		EXPECT_EQ(src0.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(src0.tmp_reg_index, 0);
+		EXPECT_EQ(src0.fp16, 0);
+		EXPECT_EQ(src0.swizzle_x, 2);
+		EXPECT_EQ(src1.reg_type, RSX_FP_REGISTER_TYPE_TEMP);
+		EXPECT_EQ(src1.tmp_reg_index, 1);
+		EXPECT_EQ(src1.fp16, 1);
+		EXPECT_EQ(src1.swizzle_x, 1);
+	}
 }
