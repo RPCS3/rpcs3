@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stdafx.h"
+
 #include <memory>
 
 #include <QJsonObject>
@@ -108,8 +110,8 @@ namespace compat
 		QString version;     // May be empty
 		QString category;    // HG, DG, GD etc.
 		QString local_cat;   // Localized category
+		u64 data_size = 0;   // Installation size
 
-		unsigned long long data_size = 0; // Installation size
 		package_type type = package_type::other; // The type of package (Update, DLC or other)
 	};
 }
