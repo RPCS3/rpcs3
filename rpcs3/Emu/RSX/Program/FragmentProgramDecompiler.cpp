@@ -1294,7 +1294,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		const auto rop_inputs = get_fragment_program_output_set(m_prog.ctrl, m_prog.mrt_buffers_count);
 		rop_block->input_list.insert(rop_block->input_list.end(), rop_inputs.begin(), rop_inputs.end());
 
-		FP::RegisterAnnotationPass annotation_pass{ m_prog };
+		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
 		FP::RegisterDependencyPass dependency_pass{};
 
 		annotation_pass.run(graph);
