@@ -404,4 +404,72 @@ namespace rsx::assembler
 		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_x, 2);
 		EXPECT_EQ(SRC0{ .HEX = bb1->epilogue[1].bytecode[1] }.swizzle_y, 3);
 	}
+
+
+	TEST(TestFPIR, RegisterDependencyPass_Complex_IF_ELSE_Simpsons)
+	{
+		// Complex IF-ELSE nest observed in Simpson's game. Rewritten for simplicity.
+		// There is no tail block. No epilogues should be injected in this scenario since H4 (the trigger) is defined on all branches.
+		// R2 is indeed clobbered but the outer ELSE branch should not be able to see the inner IF-ELSE blocks as predecessors.
+		auto ir = FPIR::from_source(R"(
+			MOV R2, #{ 0.25 };
+			IF.GT;
+				SLT R4, H2, #{ 0.125 };
+				IF.GT;
+					ADD H2, H0, H3;
+					FMA H4, R2, H2, H3;
+				ELSE;
+					MOV H2, #{ 0.125 };
+					ADD H0, H0, H2;
+					FMA H4, R2, H2, H3;
+				ENDIF;
+			ELSE;
+				FMA H4, R2, H2, H3;
+				MOV H0, H4;
+			ENDIF;
+		)");
+
+		auto bytecode = ir.compile();
+
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		ASSERT_EQ(graph.blocks.size(), 6);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		const BasicBlock
+			*bb0 = get_graph_block(graph, 0),
+			*bb1 = get_graph_block(graph, 1),
+			*bb2 = get_graph_block(graph, 2),
+			*bb3 = get_graph_block(graph, 3),
+			*bb4 = get_graph_block(graph, 4),
+			*bb5 = get_graph_block(graph, 5);
+
+		// Sanity
+		EXPECT_EQ(bb0->instructions.size(), 2);
+		EXPECT_EQ(bb1->instructions.size(), 2);
+		EXPECT_EQ(bb2->instructions.size(), 2);
+		EXPECT_EQ(bb3->instructions.size(), 3);
+		EXPECT_EQ(bb4->instructions.size(), 2);
+		EXPECT_EQ(bb5->instructions.size(), 0);  // Phi/Merge only.
+
+		// Nested children must recursively fall out to the closest ENDIF
+		ASSERT_EQ(bb4->pred.size(), 1);
+		EXPECT_EQ(bb4->pred.front().type, EdgeType::ELSE);
+		EXPECT_EQ(bb5->pred.size(), 4); // 2 IF and 2 ELSE paths exist
+
+		// Check that we get no epilogues
+		EXPECT_EQ(bb0->epilogue.size(), 0);
+		EXPECT_EQ(bb1->epilogue.size(), 0);
+		EXPECT_EQ(bb2->epilogue.size(), 0);
+		EXPECT_EQ(bb3->epilogue.size(), 0);
+		EXPECT_EQ(bb4->epilogue.size(), 0);
+		EXPECT_EQ(bb5->epilogue.size(), 0);
+	}
 }
