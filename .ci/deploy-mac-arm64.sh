@@ -15,8 +15,13 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 
 cd bin
 mkdir "rpcs3.app/Contents/lib/" || true
+mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
+cp "$(realpath /opt/homebrew/lib/libMoltenVK.dylib)" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
+cp "$(realpath /opt/homebrew/etc/vulkan/icd.d/MoltenVK_icd.json)" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+sed -i '' "s/lib\//Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 
 cp "$(realpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
+cp "$(realpath /opt/homebrew/opt/gcc/lib/gcc/current/libgcc_s.1.1.dylib)" "rpcs3.app/Contents/Frameworks/libgcc_s.1.1.dylib"
 cp "$(realpath /opt/homebrew/lib/libsharpyuv.0.dylib)" "rpcs3.app/Contents/lib/libsharpyuv.0.dylib"
 cp "$(realpath /opt/homebrew/lib/libintl.8.dylib)" "rpcs3.app/Contents/lib/libintl.8.dylib"
 

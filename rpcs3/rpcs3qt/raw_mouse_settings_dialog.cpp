@@ -225,7 +225,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		update_combo_box(player);
 
-		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
+		connect(combo, &QComboBox::currentIndexChanged, this, [this, player, combo](int index)
 		{
 			if (index < 0 || !combo)
 				return;

@@ -586,7 +586,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 
 	setLayout(vbox_panel);
 
-	connect(combo_skylist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
+	connect(combo_skylist, &QComboBox::currentIndexChanged, [=](int index)
 	{
 		const u32 sky_info = combo_skylist->itemData(index).toUInt();
 		if (sky_info != 0xFFFFFFFF)
@@ -663,7 +663,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 
 	connect(btn_cancel, &QAbstractButton::clicked, this, &QDialog::reject);
 
-	connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated),[=](const QString& text)
+	connect(co_compl, qOverload<const QString&>(&QCompleter::activated), [=](const QString& text)
 	{
 		combo_skylist->setCurrentText(text);
 		combo_skylist->setCurrentIndex(combo_skylist->findText(text));

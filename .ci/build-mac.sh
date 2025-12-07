@@ -12,7 +12,8 @@ brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 rm /usr/local/bin/{idle3.14,pip3.14,pydoc3.14,python3.14,python3.14-config} && \
 rm /usr/local/bin/{idle3,pip3,pydoc3,python3,python3-config}
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers
+arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
+arch -x86_64 /usr/local/bin/brew unlink  --quiet ffmpeg qtbase qtsvg qtdeclarative
 arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
 
 # moltenvk based on commit for 1.4.0 release
@@ -63,8 +64,7 @@ export LD_LIBRARY_PATH="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER/lib:$BREW_X64
 
 export VULKAN_SDK
 VULKAN_SDK="$BREW_X64_PATH/opt/molten-vk"
-ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
-export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
+ln -s "$BREW_X64_PATH/opt/vulkan-loader/lib/libvulkan.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
 
 export LLVM_DIR
 LLVM_DIR="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER"

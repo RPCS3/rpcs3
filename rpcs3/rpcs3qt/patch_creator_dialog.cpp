@@ -72,7 +72,7 @@ patch_creator_dialog::patch_creator_dialog(QWidget* parent)
 	connect(ui->addPatchButton, &QAbstractButton::clicked, this, [this]() { add_instruction(ui->instructionTable->rowCount()); });
 
 	init_patch_type_bombo_box(ui->addPatchTypeComboBox, patch_type::be32, false);
-	connect(ui->addPatchTypeComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index){ update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit); });
+	connect(ui->addPatchTypeComboBox, &QComboBox::currentIndexChanged, this, [this](int index){ update_validator(index, ui->addPatchTypeComboBox, ui->addPatchOffsetEdit); });
 	update_validator(ui->addPatchTypeComboBox->currentIndex(), ui->addPatchTypeComboBox, ui->addPatchOffsetEdit);
 
 	generate_yml();
