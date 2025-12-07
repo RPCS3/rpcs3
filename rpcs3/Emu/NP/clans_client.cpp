@@ -180,7 +180,8 @@ namespace clan
 		}
 
 		std::string host = g_cfg_clans.get_host();
-		std::string url = std::format("https://{}/clan_manager_{}/{}/{}", host, opType, reqType, action);
+		std::string protocol = g_cfg_clans.get_use_https() ? "https" : "http";
+		std::string url = std::format("{}://{}/clan_manager_{}/{}/{}", protocol, host, opType, reqType, action);
 
 		std::ostringstream oss;
 		xmlBody->save(oss, "\t", 8U);
@@ -969,8 +970,8 @@ namespace clan
 			};
 
 
-			strncpy(entry.message.subject, subject_str.c_str(), subject_str.size());
-			strncpy(entry.message.body, msg_str.c_str(), msg_str.size());
+			snprintf(entry.message.subject, sizeof(entry.message.subject), "%s", subject_str.c_str());
+			snprintf(entry.message.body, sizeof(entry.message.body), "%s", msg_str.c_str());
 
 			announcements[i] = entry;
 			i++;

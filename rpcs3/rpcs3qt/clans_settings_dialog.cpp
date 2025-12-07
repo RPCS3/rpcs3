@@ -25,11 +25,17 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 	QHBoxLayout* hbox_lbl_combo = new QHBoxLayout();
 	QLabel* lbl_server          = new QLabel(tr("Server:"));
 	cbx_servers                 = new QComboBox();
+	cbx_protocol                = new QComboBox();
+
+	cbx_protocol->addItem("HTTPS");
+	cbx_protocol->addItem("HTTP");
+	cbx_protocol->setCurrentIndex(g_cfg_clans.get_use_https() ? 0 : 1);
 
 	refresh_combobox();
 
 	hbox_lbl_combo->addWidget(lbl_server);
 	hbox_lbl_combo->addWidget(cbx_servers);
+	hbox_lbl_combo->addWidget(cbx_protocol);
 
 	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
 	QPushButton* btn_add_server = new QPushButton(tr("Add"));
@@ -57,6 +63,15 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 				return;
 
 			g_cfg_clans.set_host(host.toString().toStdString());
+			g_cfg_clans.save();
+		});
+
+	connect(cbx_protocol, &QComboBox::currentIndexChanged, this, [this](int index)
+		{
+			if (index < 0)
+				return;
+
+			g_cfg_clans.set_use_https(index == 0);
 			g_cfg_clans.save();
 		});
 

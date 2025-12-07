@@ -15,6 +15,7 @@ private:
 
 private:
 	QComboBox* cbx_servers = nullptr;
+	QComboBox* cbx_protocol = nullptr;
 };
 
 class clans_add_server_dialog : public QDialog

@@ -51,6 +51,11 @@ std::string cfg_clans::get_host() const
 	return host.to_string();
 }
 
+bool cfg_clans::get_use_https() const
+{
+	return use_https.get();
+}
+
 std::vector<std::pair<std::string, std::string>> cfg_clans::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
@@ -80,6 +85,11 @@ std::vector<std::pair<std::string, std::string>> cfg_clans::get_hosts()
 void cfg_clans::set_host(std::string_view host)
 {
 	this->host.from_string(host);
+}
+
+void cfg_clans::set_use_https(bool use_https)
+{
+	this->use_https.set(use_https);
 }
 
 void cfg_clans::set_hosts(const std::vector<std::pair<std::string, std::string>>& vec_hosts)
