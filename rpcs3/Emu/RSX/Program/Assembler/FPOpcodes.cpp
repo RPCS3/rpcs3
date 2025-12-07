@@ -257,7 +257,7 @@ namespace rsx::assembler::FP
 			return xyz;
 		case RSX_FP_OPCODE_DIV:
 		case RSX_FP_OPCODE_DIVSQ:
-			return decode({ xyzw, x });
+			return decode({ xyzw, x }) & dst_write_mask;
 		case RSX_FP_OPCODE_LIF:
 			return decode({ y | w });
 		case RSX_FP_OPCODE_FENCT:
