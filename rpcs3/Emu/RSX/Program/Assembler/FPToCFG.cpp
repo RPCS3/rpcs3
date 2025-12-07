@@ -159,7 +159,7 @@ namespace rsx::assembler
 			src2.HEX = decoded._u32[3];
 
 			end = !!dst.end;
-			const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
+			const u32 opcode = dst.opcode | (src1.opcode_hi << 6);
 
 			if (opcode == RSX_FP_OPCODE_NOP)
 			{

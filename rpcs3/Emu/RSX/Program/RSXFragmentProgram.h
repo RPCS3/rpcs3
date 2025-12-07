@@ -102,7 +102,7 @@ union SRC1
 		u32 src1_prec_mod    : 3; // Precision modifier for src1 (CoD:MW series)
 		u32 src2_prec_mod    : 3; // Precision modifier for src2 (unproven, should affect MAD instruction)
 		u32 scale            : 3;
-		u32 opcode_is_branch : 1;
+		u32 opcode_hi        : 1; // Opcode high bit
 	};
 
 	struct
