@@ -3,13 +3,13 @@
 
 #include <Crypto/utils.h>
 #include <Emu/NP/clans_client.h>
+#include <Emu/NP/clans_config.h>
 #include <format>
 #include <wolfssl/wolfcrypt/coding.h>
 
 LOG_CHANNEL(clan_log, "clans");
 
-const char* HOST_VIEW = "clans-view01.ww.np.community.playstation.net";
-const char* HOST_UPDATE = "clans-rec01.ww.np.community.playstation.net";
+
 
 const char* REQ_TYPE_FUNC = "func";
 const char* REQ_TYPE_SEC = "sec";
@@ -179,7 +179,7 @@ namespace clan
 			reqType = ClanRequestType::SEC;
 		}
 
-		std::string host = opType == ClanManagerOperationType::VIEW ? HOST_VIEW : HOST_UPDATE;
+		std::string host = g_cfg_clans.get_host();
 		std::string url = std::format("https://{}/clan_manager_{}/{}/{}", host, opType, reqType, action);
 
 		std::ostringstream oss;
@@ -193,8 +193,6 @@ namespace clan
 		std::vector<char> response_buffer;
 
 		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteCallback);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, err_buf);
