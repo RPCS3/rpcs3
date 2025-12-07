@@ -59,7 +59,7 @@ namespace clan
 		DeleteAnnouncement
 	};
 
-	class clan_client
+	class clans_client
 	{
 	private:
 		CURL* curl = nullptr;
@@ -72,8 +72,8 @@ namespace clan
 		std::string getClanTicket(np::np_handler& nph);
 
 	public:
-		clan_client();
-		~clan_client();
+		clans_client();
+		~clans_client();
 
 		SceNpClansError createRequest();
 		SceNpClansError destroyRequest();
@@ -116,5 +116,5 @@ namespace clan
 struct sce_np_clans_manager
 {
 	atomic_t<bool> is_initialized = false;
-	clan::clan_client* client;
+	clan::clans_client* client;
 };

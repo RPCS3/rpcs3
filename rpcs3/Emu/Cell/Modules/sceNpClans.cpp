@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/NP/np_handler.h"
-#include "Emu/NP/clan_client.h"
+#include "Emu/NP/clans_client.h"
 
 #include "sceNp.h"
 #include "sceNpClans.h"
@@ -97,7 +97,7 @@ error_code sceNpClansInit(vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpC
 	}
 
 	// Allocate space for a client somewhere
-	clan::clan_client* client = new clan::clan_client();
+	clan::clans_client* client = new clan::clans_client();
 	clans_manager.client = client;
 	clans_manager.is_initialized = true;
 
