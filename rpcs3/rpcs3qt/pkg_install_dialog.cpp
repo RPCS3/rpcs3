@@ -103,7 +103,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		item->setData(Roles::TitleRole, info.title);
 		item->setData(Roles::TitleIdRole, info.title_id);
 		item->setData(Roles::VersionRole, info.version);
-		item->setData(Roles::DataSizeRole, info.data_size);
+		item->setData(Roles::DataSizeRole, static_cast<qulonglong>(info.data_size));
 		item->setToolTip(tooltip);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 		item->setCheckState(Qt::Checked);
