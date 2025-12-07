@@ -161,10 +161,11 @@ namespace rsx::assembler::FP
 
 			const u32 src_reg_id = reg.reg.id / 2;
 			const bool is_odd_reg = !!(reg.reg.id & 1);
+			const bool is_odd_ch = !!(ch & 1);
 			const bool is_word0 = ch < 2;
 
-			// If we're a non-odd register, we should also write the next channel (y/w)
-			if (!is_odd_reg && (mask & 2))
+			// If we're an even channel, we should also write the next channel (y/w)
+			if (!is_odd_ch && (mask & 2))
 			{
 				mask >>= 1;
 				++ch;
