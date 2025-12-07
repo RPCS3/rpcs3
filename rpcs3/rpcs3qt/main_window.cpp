@@ -801,7 +801,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 	if (file_paths.count() == 1)
 	{
-		const QString file_path = file_paths.front();
+		const QString& file_path = file_paths.front();
 		const QFileInfo file_info(file_path);
 
 		if (file_info.isDir())
@@ -818,92 +818,6 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 			}
 
 			return InstallPackages(dir_file_paths, from_boot);
-		}
-
-		if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
-		{
-			compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
-
-			if (!info.is_valid)
-			{
-				QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
-				return false;
-			}
-
-			if (info.type != compat::package_type::other)
-			{
-				if (info.type == compat::package_type::dlc)
-				{
-					info.local_cat = tr("\nDLC", "Block for package type (DLC)");
-				}
-				else
-				{
-					info.local_cat = tr("\nUpdate", "Block for package type (Update)");
-				}
-			}
-			else if (!info.local_cat.isEmpty())
-			{
-				info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
-			}
-
-			if (!info.title_id.isEmpty())
-			{
-				info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
-			}
-
-			if (!info.version.isEmpty())
-			{
-				info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
-			}
-
-			if (!info.changelog.isEmpty())
-			{
-				info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
-			}
-
-			u64 free_space = 0;
-
-			// Retrieve disk space info on data path's drive
-			if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat))
-			{
-				free_space = stat.avail_free;
-			}
-
-			const QString installation_info =
-				tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-				.arg(QString::fromStdString(rpcs3::utils::get_hdd0_game_dir()))
-				.arg(gui::utils::format_byte_size(free_space))
-				.arg(info.data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
-				.arg(gui::utils::format_byte_size(info.data_size));
-
-			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
-			QString message = tr("Do you want to install this package?\n\n%0\n\n%1").arg(info_string).arg(installation_info);
-
-			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), gui::utils::make_paragraph(message), QMessageBox::Yes | QMessageBox::No, this);
-			mb.setDefaultButton(QMessageBox::No);
-			mb.setTextFormat(Qt::RichText); // Support HTML tags
-			mb.button(QMessageBox::Yes)->setEnabled(info.data_size <= free_space);
-
-			if (!info.changelog.isEmpty())
-			{
-				mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-				mb.setDetailedText(info.changelog);
-
-				// Smartass hack to make the unresizeable message box wide enough for the changelog
-				const int log_width = QLabel(info.changelog).sizeHint().width();
-				while (QLabel(message).sizeHint().width() < log_width)
-				{
-					message += "          ";
-				}
-
-				mb.setText(message);
-			}
-
-			if (mb.exec() != QMessageBox::Yes)
-			{
-				gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
-				return true;
-			}
 		}
 	}
 
@@ -983,28 +897,22 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	}
 
 	std::vector<compat::package_info> packages;
+	bool precompile_caches = false;
+	bool create_desktop_shortcuts = false;
+	bool create_app_shortcut = false;
 
 	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
-	if (file_paths.size() > 1)
+	// Let the user choose the packages to install and select the order in which they shall be installed.
+	pkg_install_dialog dlg(file_paths, compat, this);
+	connect(&dlg, &QDialog::accepted, this, [&]()
 	{
-		// Let the user choose the packages to install and select the order in which they shall be installed.
-		pkg_install_dialog dlg(file_paths, compat, this);
-		connect(&dlg, &QDialog::accepted, this, [&packages, &dlg]()
-		{
-			packages = dlg.GetPathsToInstall();
-		});
-		dlg.exec();
-	}
-	else
-	{
-		packages.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
-	}
-
-	if (packages.empty())
-	{
-		return true;
-	}
+		packages = dlg.get_paths_to_install();
+		precompile_caches = dlg.precompile_caches();
+		create_desktop_shortcuts = dlg.create_desktop_shortcuts();
+		create_app_shortcut = dlg.create_app_shortcut();
+	});
+	dlg.exec();
 
 	if (!from_boot)
 	{
@@ -1178,7 +1086,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 		if (!bootable_paths_installed.empty())
 		{
-			m_game_list_frame->AddRefreshedSlot([this, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
+			m_game_list_frame->AddRefreshedSlot([this, create_desktop_shortcuts, precompile_caches, create_app_shortcut, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 			{
 				// Try to claim operations on ID
 				for (auto it = paths.begin(); it != paths.end();)
@@ -1196,7 +1104,12 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
+				CreateShortCuts(paths, create_desktop_shortcuts, create_app_shortcut);
+
+				if (precompile_caches)
+				{
+					PrecompileCachesFromInstalledPackages(paths);
+				}
 			});
 		}
 
@@ -2431,49 +2344,7 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 		dlg->hide();
 		dlg->accept();
 
-		std::set<gui::utils::shortcut_location> locations;
-
-#ifdef _WIN32
-		locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
-#endif
-		if (create_desktop_shortcuts)
-		{
-			locations.insert(gui::utils::shortcut_location::desktop);
-		}
-
-		if (create_app_shortcut)
-		{
-			locations.insert(gui::utils::shortcut_location::applications);
-		}
-
-		if (!locations.empty())
-		{
-			std::vector<game_info> game_data_shortcuts;
-
-			for (const auto& [boot_path, title_id] : paths)
-			{
-				for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
-				{
-					if (gameinfo && gameinfo->info.serial == title_id.toStdString())
-					{
-						if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
-						{
-							if (!locations.empty())
-							{
-								game_data_shortcuts.push_back(gameinfo);
-							}
-						}
-
-						break;
-					}
-				}
-			}
-
-			if (!game_data_shortcuts.empty() && !locations.empty())
-			{
-				m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
-			}
-		}
+		CreateShortCuts(paths, create_desktop_shortcuts, create_app_shortcut);
 
 		if (precompile_caches)
 		{
@@ -2483,6 +2354,55 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 
 	dlg->setAttribute(Qt::WA_DeleteOnClose);
 	dlg->open();
+}
+
+void main_window::CreateShortCuts(const std::map<std::string, QString>& paths, bool create_desktop_shortcuts, bool create_app_shortcut)
+{
+	if (paths.empty()) return;
+
+	std::set<gui::utils::shortcut_location> locations;
+
+#ifdef _WIN32
+	locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+#endif
+	if (create_desktop_shortcuts)
+	{
+		locations.insert(gui::utils::shortcut_location::desktop);
+	}
+
+	if (create_app_shortcut)
+	{
+		locations.insert(gui::utils::shortcut_location::applications);
+	}
+
+	if (!locations.empty())
+	{
+		std::vector<game_info> game_data_shortcuts;
+
+		for (const auto& [boot_path, title_id] : paths)
+		{
+			for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+			{
+				if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+				{
+					if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+					{
+						if (!locations.empty())
+						{
+							game_data_shortcuts.push_back(gameinfo);
+						}
+					}
+
+					break;
+				}
+			}
+		}
+
+		if (!game_data_shortcuts.empty() && !locations.empty())
+		{
+			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
+		}
+	}
 }
 
 void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths)
