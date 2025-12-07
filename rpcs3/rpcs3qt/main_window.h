@@ -149,6 +149,7 @@ private:
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
+	void CreateShortCuts(const std::map<std::string, QString>& paths, bool create_desktop_shortcuts, bool create_app_shortcut);
 
 	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
 	void ExtractPup();
