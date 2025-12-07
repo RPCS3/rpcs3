@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "RegisterAnnotationPass.h"
 #include "Emu/RSX/Program/Assembler/FPOpcodes.h"
+#include "Emu/RSX/Program/RSXFragmentProgram.h"
 
 #include <span>
 #include <unordered_map>
@@ -12,6 +13,38 @@ namespace rsx::assembler::FP
 	static constexpr char content_float32 = 'R';
 	static constexpr char content_float16 = 'H';
 	static constexpr char content_dual    = 'D';
+
+	bool is_delay_slot(const Instruction& instruction)
+	{
+		OPDEST dst{ .HEX = instruction.bytecode[0] };
+		SRC0 src0{ .HEX = instruction.bytecode[1] };
+		SRC1 src1{ .HEX = instruction.bytecode[2] };
+
+		if (dst.opcode != RSX_FP_OPCODE_MOV ||            // These slots are always populated with MOV
+			dst.no_dest ||                                // Must have a sink
+			src0.reg_type != RSX_FP_REGISTER_TYPE_TEMP || // Must read from reg
+			dst.dest_reg != src0.tmp_reg_index ||         // Must be a write-to-self
+			dst.fp16 ||                                   // Always full lane. We need to collect more data on this but it won't matter
+			dst.saturate ||                               // Precision modifier
+			(dst.prec != RSX_FP_PRECISION_REAL &&
+				dst.prec != RSX_FP_PRECISION_UNKNOWN))    // Cannot have precision modifiers
+		{
+			return false;
+		}
+
+		// Check if we have precision modifiers on the source
+		if (src0.abs || src0.neg || src1.scale)
+		{
+			return false;
+		}
+
+		if (dst.mask_x && src0.swizzle_x != 0) return false;
+		if (dst.mask_y && src0.swizzle_y != 1) return false;
+		if (dst.mask_z && src0.swizzle_z != 2) return false;
+		if (dst.mask_w && src0.swizzle_w != 3) return false;
+
+		return true;
+	}
 
 	std::vector<RegisterRef> compile_register_file(const std::array<char, 48 * 8>& file)
 	{
@@ -90,10 +123,15 @@ namespace rsx::assembler::FP
 	}
 
 	// Decay instructions into register references
-	void annotate_instructions(BasicBlock* block, const RSXFragmentProgram& prog)
+	void annotate_instructions(BasicBlock* block, const RSXFragmentProgram& prog, bool skip_delay_slots)
 	{
 		for (auto& instruction : block->instructions)
 		{
+			if (skip_delay_slots && is_delay_slot(instruction))
+			{
+				continue;
+			}
+
 			const u32 operand_count = get_operand_count(static_cast<FP_opcode>(instruction.opcode));
 			for (u32 i = 0; i < operand_count; i++)
 			{
@@ -178,7 +216,7 @@ namespace rsx::assembler::FP
 	{
 		for (auto& block : graph.blocks)
 		{
-			annotate_instructions(&block, m_prog);
+			annotate_instructions(&block, m_prog, m_config.skip_delay_slots);
 			annotate_block_io(&block);
 		}
 	}

@@ -568,4 +568,30 @@ namespace rsx::assembler
 		EXPECT_EQ(src1.fp16, 1);
 		EXPECT_EQ(src1.swizzle_x, 1);
 	}
+
+	TEST(TestFPIR, RegisterDependencyPass_SkipDelaySlots)
+	{
+		// Instruction 2 clobers H1 which in turn clobbers R0.
+		// Instruction 3 reads from R0 but is a delay slot that does nothing and can be NOPed.
+		auto graph = CFG_from_source(R"(
+			ADD R1, R0, R1;
+			MOV H1, R1
+			MOV R0, R0;
+		)");
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 3);
+
+		auto& block = graph.blocks.front();
+		RSXFragmentProgram prog{};
+
+		FP::RegisterAnnotationPass annotation_pass{ prog, { .skip_delay_slots = true } };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		// Delay slot detection will cause no dependency injection
+		ASSERT_EQ(block.instructions.size(), 3);
+	}
 }
