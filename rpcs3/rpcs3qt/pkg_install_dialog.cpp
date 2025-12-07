@@ -136,30 +136,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 
 	connect(m_dir_list, &QListWidget::itemChanged, this, [this, installation_info, buttons](QListWidgetItem*)
 	{
-		u64 data_size = 0;
-		u64 free_space = 0;
-
-		// Retrieve disk space info on data path's drive
-		if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_game_dir(), stat))
-		{
-			free_space = stat.avail_free;
-		}
-
-		for (int i = 0; i < m_dir_list->count(); i++)
-		{
-			if (m_dir_list->item(i)->checkState() == Qt::Checked)
-			{
-				data_size += m_dir_list->item(i)->data(Roles::DataSizeRole).toULongLong();
-			}
-		}
-
-		installation_info->setText(gui::utils::make_paragraph(
-			tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-			.arg(rpcs3::utils::get_hdd0_game_dir())
-			.arg(gui::utils::format_byte_size(free_space))
-			.arg(data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
-			.arg(gui::utils::format_byte_size(data_size))));
-		buttons->button(QDialogButtonBox::Ok)->setEnabled(data_size && (data_size <= free_space));
+		UpdateInfo(installation_info, buttons);
 	});
 
 	QToolButton* move_up = new QToolButton;
@@ -189,7 +166,35 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	setLayout(vbox);
 	setWindowTitle(tr("Batch PKG Installation"));
 	setObjectName("pkg_install_dialog");
-	m_dir_list->itemChanged(nullptr); // Just to show and check available and required size
+	UpdateInfo(installation_info, buttons); // Just to show and check available and required size
+}
+
+void pkg_install_dialog::UpdateInfo(QLabel* installation_info, QDialogButtonBox* buttons) const
+{
+	u64 data_size = 0;
+	u64 free_space = 0;
+
+	// Retrieve disk space info on data path's drive
+	if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_game_dir(), stat))
+	{
+		free_space = stat.avail_free;
+	}
+
+	for (int i = 0; i < m_dir_list->count(); i++)
+	{
+		if (m_dir_list->item(i)->checkState() == Qt::Checked)
+		{
+			data_size += m_dir_list->item(i)->data(Roles::DataSizeRole).toULongLong();
+		}
+	}
+
+	installation_info->setText(gui::utils::make_paragraph(
+		tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
+		.arg(rpcs3::utils::get_hdd0_game_dir())
+		.arg(gui::utils::format_byte_size(free_space))
+		.arg(data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
+		.arg(gui::utils::format_byte_size(data_size))));
+	buttons->button(QDialogButtonBox::Ok)->setEnabled(data_size && (data_size <= free_space));
 }
 
 void pkg_install_dialog::MoveItem(int offset) const
