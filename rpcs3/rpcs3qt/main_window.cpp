@@ -860,11 +860,28 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 				info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
 			}
 
-			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
-			QString message = tr("Do you want to install this package?\n\n%0").arg(info_string);
+			u64 free_space = 0;
 
-			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), message, QMessageBox::Yes | QMessageBox::No, this);
+			// Retrieve disk space info on data path's drive
+			if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat))
+			{
+				free_space = stat.avail_free;
+			}
+
+			const QString installation_info =
+				tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
+				.arg(rpcs3::utils::get_hdd0_game_dir())
+				.arg(gui::utils::format_byte_size(free_space))
+				.arg(info.data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
+				.arg(gui::utils::format_byte_size(info.data_size));
+
+			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
+			QString message = tr("Do you want to install this package?\n\n%0\n\n%1").arg(info_string).arg(installation_info);
+
+			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), gui::utils::make_paragraph(message), QMessageBox::Yes | QMessageBox::No, this);
 			mb.setDefaultButton(QMessageBox::No);
+			mb.setTextFormat(Qt::RichText); // Support HTML tags
+			mb.button(QMessageBox::Yes)->setEnabled(info.data_size <= free_space);
 
 			if (!info.changelog.isEmpty())
 			{

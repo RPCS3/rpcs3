@@ -2,6 +2,8 @@
 
 #include <QDialog>
 #include <QListWidget>
+#include <QLabel>
+#include <QDialogButtonBox>
 
 namespace compat
 {
@@ -19,6 +21,7 @@ public:
 	std::vector<compat::package_info> GetPathsToInstall() const;
 
 private:
+	void UpdateInfo(QLabel* installation_info, QDialogButtonBox* buttons) const;
 	void MoveItem(int offset) const;
 
 	QListWidget* m_dir_list;
