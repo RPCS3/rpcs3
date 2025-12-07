@@ -1116,6 +1116,14 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		return true;
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
+
+	// Custom ISA extensions for 16-bit OR
+	case RSX_FP_OPCODE_OR16_HI:
+		SetDst("$float4(uintBitsToFloat((floatBitsToUint($0.x) & 0x0000ffff) | (packHalf2x16($1.xx) & 0xffff0000)))");
+		return true;
+	case RSX_FP_OPCODE_OR16_LO:
+		SetDst("$float4(uintBitsToFloat((floatBitsToUint($0.x) & 0xffff0000) | (packHalf2x16($1.xx) & 0x0000ffff)))");
+		return true;
 	}
 	return false;
 }
