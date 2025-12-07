@@ -3392,15 +3392,6 @@ void main_window::CreateConnects()
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
 	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
 	connect(m_game_list_frame, &game_list_frame::FocusToSearchBar, this, [this]() { ui->mw_searchbar->setFocus(); });
-
-	connect(m_game_list_frame, &game_list_frame::NotifyBatchedGameActionFinished, this, [this]() mutable
-	{
-		if (m_notify_batch_game_action_cb)
-		{
-			m_notify_batch_game_action_cb();
-			m_notify_batch_game_action_cb = {};
-		}
-	});
 }
 
 void main_window::CreateDockWindows()

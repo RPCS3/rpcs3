@@ -27,7 +27,7 @@ private:
 	void update_info(QLabel* installation_info, QDialogButtonBox* buttons) const;
 	void move_item(int offset) const;
 
-	QListWidget* m_dir_list;
+	QListWidget* m_dir_list = nullptr;
 	bool m_precompile_caches = false;
 	bool m_create_desktop_shortcuts = false;
 	bool m_create_app_shortcut = false;
