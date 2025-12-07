@@ -1276,7 +1276,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		// The RSX CFG is missing the output block. We inject a fake tail block that ingests the ROP outputs.
 		BasicBlock* rop_block = nullptr;
 		BasicBlock* tail_block = &graph.blocks.back();
-		if (tail_block->instructions.size() == 0)
+		if (tail_block->instructions.empty())
 		{
 			// Merge block. Use this directly
 			rop_block = tail_block;
@@ -1324,6 +1324,20 @@ std::string FragmentProgramDecompiler::Decompile()
 		}
 
 		block_data[block] = { level, loop };
+	};
+
+	auto emit_block = [&](const std::vector<Instruction>& instructions)
+	{
+		for (auto& inst : instructions)
+		{
+			m_instruction = &inst;
+			dst.HEX = inst.bytecode[0];
+			src0.HEX = inst.bytecode[1];
+			src1.HEX = inst.bytecode[2];
+			src2.HEX = inst.bytecode[3];
+
+			ensure(handle_tex_srb(inst.opcode) || handle_sct_scb(inst.opcode), "Unsupported operation");
+		}
 	};
 
 	for (const auto &block : graph.blocks)
@@ -1376,21 +1390,22 @@ std::string FragmentProgramDecompiler::Decompile()
 		if (!block.prologue.empty())
 		{
 			AddCode("// Prologue");
-
-			for (auto& inst : block.prologue)
-			{
-				m_instruction = &inst;
-				dst.HEX = inst.bytecode[0];
-				src0.HEX = inst.bytecode[1];
-				src1.HEX = inst.bytecode[2];
-				src2.HEX = inst.bytecode[3];
-
-				ensure(handle_tex_srb(inst.opcode) || handle_sct_scb(inst.opcode), "Unsupported operation");
-			}
+			emit_block(block.prologue);
 		}
+
+		const bool early_epilogue =
+			!block.epilogue.empty() &&
+			!block.succ.empty() &&
+			(block.succ.front().type == EdgeType::IF || block.succ.front().type == EdgeType::LOOP);
 
 		for (const auto& inst : block.instructions)
 		{
+			if (early_epilogue && &inst == &block.instructions.back())
+			{
+				AddCode("// Epilogue");
+				emit_block(block.epilogue);
+			}
+
 			m_instruction = &inst;
 
 			dst.HEX = inst.bytecode[0];
@@ -1459,20 +1474,10 @@ std::string FragmentProgramDecompiler::Decompile()
 			if (dst.end) break;
 		}
 
-		if (!block.epilogue.empty())
+		if (!early_epilogue && !block.epilogue.empty())
 		{
 			AddCode("// Epilogue");
-
-			for (auto& inst : block.epilogue)
-			{
-				m_instruction = &inst;
-				dst.HEX = inst.bytecode[0];
-				src0.HEX = inst.bytecode[1];
-				src1.HEX = inst.bytecode[2];
-				src2.HEX = inst.bytecode[3];
-
-				ensure(handle_tex_srb(inst.opcode) || handle_sct_scb(inst.opcode), "Unsupported operation");
-			}
+			emit_block(block.epilogue);
 		}
 
 		for (auto& succ : block.succ)
