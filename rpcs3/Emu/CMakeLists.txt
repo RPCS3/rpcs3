@@ -441,6 +441,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_requests.cpp
     NP/signaling_handler.cpp
     NP/np_structs_extra.cpp
+    NP/clan_client.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
     NP/rpcn_countries.cpp

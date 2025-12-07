@@ -5,6 +5,8 @@
 // Return codes
 enum SceNpClansError : u32
 {
+	SCE_NP_CLANS_SUCCESS 								 	= CELL_OK,
+
 	SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED                  = 0x80022701,
 	SCE_NP_CLANS_ERROR_NOT_INITIALIZED                      = 0x80022702,
 	SCE_NP_CLANS_ERROR_NOT_SUPPORTED                        = 0x80022703,
@@ -97,7 +99,7 @@ enum
 	SCE_NP_CLANS_ANNOUNCEMENT_MESSAGE_BODY_MAX_LENGTH = 1536,
 	SCE_NP_CLANS_CLAN_BINARY_ATTRIBUTE1_MAX_SIZE      = 190,
 	SCE_NP_CLANS_CLAN_BINARY_DATA_MAX_SIZE            = 10240,
-	SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE    = 16,
+	SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE    = 15,
 	SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH        = 255,
 	SCE_NP_CLANS_MEMBER_BINARY_DATA_MAX_SIZE          = 1024,
 	SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH              = 1536,
@@ -138,7 +140,8 @@ enum
 };
 
 // Request handle for clan API
-using SceNpClansRequestHandle = vm::ptr<struct SceNpClansRequest>;
+struct SceNpClansRequest {};
+using SceNpClansRequestHandle = vm::ptr<SceNpClansRequest>;
 
 // Paging request structure
 struct SceNpClansPagingRequest
@@ -159,8 +162,8 @@ struct SceNpClansClanBasicInfo
 {
 	be_t<u32> clanId;
 	be_t<u32> numMembers;
-	s8 name[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
-	s8 tag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
+	char name[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
+	char tag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
 	u8 reserved[2];
 };
 
@@ -197,7 +200,7 @@ struct SceNpClansSearchableProfile
 	be_t<s32> intAttr2SearchOp;
 	be_t<s32> intAttr3SearchOp;
 	be_t<s32> binAttr1SearchOp;
-	s8 tag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
+	char tag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
 	u8 reserved[3];
 };
 
@@ -205,7 +208,7 @@ struct SceNpClansSearchableProfile
 struct SceNpClansSearchableName
 {
 	be_t<s32> nameSearchOp;
-	s8 name[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
+	char name[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
 	u8 reserved[3];
 };
 
@@ -213,7 +216,7 @@ struct SceNpClansSearchableName
 struct SceNpClansUpdatableClanInfo
 {
 	be_t<u32> fields;
-	s8 description[SCE_NP_CLANS_CLAN_DESCRIPTION_MAX_LENGTH + 1];
+	char description[SCE_NP_CLANS_CLAN_DESCRIPTION_MAX_LENGTH + 1];
 	SceNpClansSearchableAttr attr;
 	u8 binData1;
 	be_t<u32> binData1Size;
@@ -233,8 +236,8 @@ struct SceNpClansUpdatableMemberInfo
 	be_t<u32> fields;
 	u8 binData1;
 	be_t<u32> binData1Size;
-	u8 binAttr1[SCE_NP_CLANS_CLAN_BINARY_ATTRIBUTE1_MAX_SIZE + 1];
-	s8 description[SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH + 1];
+	u8 binAttr1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE + 1];
+	char description[SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH + 1];
 	b8 allowMsg;
 	u8 reserved[3];
 };
@@ -271,7 +274,7 @@ struct SceNpClansMessageEntry
 	SceNpClansMessage message;
 	SceNpClansMessageData data;
 	SceNpId npid;
-	u8 reserved[4];
+	SceNpClanId postedBy;
 };
 
 // Blacklist entry structure
@@ -279,11 +282,4 @@ struct SceNpClansBlacklistEntry
 {
 	SceNpId entry;
 	SceNpId registeredBy;
-};
-
-// fxm objects
-
-struct sce_np_clans_manager
-{
-	atomic_t<bool> is_initialized = false;
 };
