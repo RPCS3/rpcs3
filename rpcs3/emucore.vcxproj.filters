@@ -1360,9 +1360,6 @@
     <ClCompile Include="Emu\Cell\ErrorCodes.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp">
-      <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClCompile>
     <ClCompile Include="util\emu_utils.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -2763,9 +2760,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_utils.h">
       <Filter>Emu\Audio</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h">
-      <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
     <ClInclude Include="util\video_source.h">
       <Filter>Utilities</Filter>

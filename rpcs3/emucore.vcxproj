@@ -161,7 +161,6 @@
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp" />
     <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.cpp" />
     <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.cpp" />
-    <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp" />
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
     <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp" />
@@ -710,7 +709,6 @@
     <ClInclude Include="Emu\RSX\Program\Assembler\IR.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.h" />
-    <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Program\program_util.h" />

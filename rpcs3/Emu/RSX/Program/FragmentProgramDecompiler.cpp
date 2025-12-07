@@ -14,6 +14,8 @@ namespace rsx
 {
 	namespace fragment_program
 	{
+		using namespace rsx::assembler;
+
 		static const std::string reg_table[] =
 		{
 			"wpos",
@@ -21,6 +23,28 @@ namespace rsx
 			"fogc",
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
 			"ssa"
+		};
+
+		static const std::vector<RegisterRef> s_fp32_output_set =
+		{
+			{.reg {.id = 0, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 2, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 3, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 4, .f16 = false }, .mask = 0xf },
+		};
+
+		static const std::vector<RegisterRef> s_fp16_output_set =
+		{
+			{.reg {.id = 0, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 4, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 6, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 8, .f16 = true }, .mask = 0xf },
+		};
+
+		static const RegisterRef s_z_export_reg =
+		{
+			.reg {.id = 1, .f16 = false },
+			.mask = (1u << 2)
 		};
 	}
 }
@@ -36,6 +60,26 @@ enum VectorLane : u8
 	Z = 2,
 	W = 3,
 };
+
+std::vector<RegisterRef> get_fragment_program_output_set(u32 ctrl, u32 mrt_count)
+{
+	std::vector<RegisterRef> result;
+	if (mrt_count > 0)
+	{
+		result = (ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+			? s_fp32_output_set
+			: s_fp16_output_set;
+
+		result.resize(mrt_count);
+	}
+
+	if (ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		result.push_back(s_z_export_reg);
+	}
+
+	return result;
+}
 
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
@@ -157,8 +201,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	}
 
 	const u32 reg_index = dst.fp16 ? (dst.dest_reg >> 1) : dst.dest_reg;
-	ensure(reg_index < temp_registers.size());
-
 	if (dst.opcode == RSX_FP_OPCODE_MOV &&
 		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
 		src0.tmp_reg_index == reg_index)
@@ -171,8 +213,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 			return;
 		}
 	}
-
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
@@ -528,26 +568,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	switch (src.reg_type)
 	{
 	case RSX_FP_REGISTER_TYPE_TEMP:
-
-		if (!src.fp16)
-		{
-			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
-				dst.opcode == RSX_FP_OPCODE_UP2 ||
-				dst.opcode == RSX_FP_OPCODE_UP4 ||
-				dst.opcode == RSX_FP_OPCODE_UPB ||
-				dst.opcode == RSX_FP_OPCODE_UPG)
-			{
-				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(src.swizzle_x))
-				{
-					properties.has_gather_op = true;
-					AddReg(src.tmp_reg_index, src.fp16);
-					ret = getFloatTypeName(4) + reg.gather_r();
-					break;
-				}
-			}
-		}
-		else if (precision_modifier == RSX_FP_PRECISION_HALF)
+		if (src.fp16 && precision_modifier == RSX_FP_PRECISION_HALF)
 		{
 			// clamp16() is not a cheap operation when emulated; avoid at all costs
 			precision_modifier = RSX_FP_PRECISION_REAL;
@@ -778,17 +799,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
 		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
-
-		auto& r1 = temp_registers[1];
-		if (r1.requires_gather(VectorLane::Z))
-		{
-			// r1.zw was not written to
-			properties.has_gather_op = true;
-			main_epilogue << "	r1.z = " << float4_type << r1.gather_r() << ".z;\n";
-
-			// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
-			rsx_log.warning("ROP reads from shader depth without writing to it. Final value will be gathered.");
-		}
 	}
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
@@ -815,33 +825,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 			// Skip gather
 			continue;
 		}
-
-		const auto block_index = ouput_register_indices[n];
-		auto& r = temp_registers[block_index];
-
-		if (fp16_out)
-		{
-			// Check if we need a split/extract op
-			if (r.requires_split(0))
-			{
-				main_epilogue << "	" << reg_name << " = " << float4_type << r.split_h0() << ";\n";
-
-				// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
-				rsx_log.warning("ROP reads from %s without writing to it. Final value will be extracted from the 32-bit register.", reg_name);
-			}
-
-			continue;
-		}
-
-		if (!r.requires_gather128())
-		{
-			// Nothing to do
-			continue;
-		}
-
-		// We need to gather the data from existing registers
-		main_epilogue << "	" << reg_name << " = " << float4_type << r.gather_r() << ";\n";
-		properties.has_gather_op = true;
 
 		// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
 		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", reg_name);
@@ -1028,28 +1011,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 			"}\n\n";
 
 		OS << Format(divsq_func);
-	}
-
-	// Declare register gather/merge if needed
-	if (properties.has_gather_op)
-	{
-		std::string float2 = getFloatTypeName(2);
-
-		OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
-		OS << "{\n";
-		OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
-		OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
-		OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
-		OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
-		OS << "	return " << float4 << "(x, y, z, w);\n";
-		OS << "}\n\n";
-
-		OS << float2 << " gather(" << float4 << " _h)\n";
-		OS << "{\n";
-		OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
-		OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
-		OS << "	return " << float2 << "(x, y);\n";
-		OS << "}\n\n";
 	}
 
 	if (properties.has_dynamic_register_load)
@@ -1303,8 +1264,28 @@ std::string FragmentProgramDecompiler::Decompile()
 {
 	auto graph = deconstruct_fragment_program(m_prog);
 
-	if (g_cfg.video.shader_precision != gpu_preset_level::low)
+	if (!graph.blocks.empty())
 	{
+		// The RSX CFG is missing the output block. We inject a fake tail block that ingests the ROP outputs.
+		BasicBlock* rop_block = nullptr;
+		BasicBlock* tail_block = &graph.blocks.back();
+		if (tail_block->instructions.size() == 0)
+		{
+			// Merge block. Use this directly
+			rop_block = tail_block;
+		}
+		else
+		{
+			graph.blocks.push_back({});
+			rop_block = &graph.blocks.back();
+
+			tail_block->insert_succ(rop_block);
+			rop_block->insert_pred(tail_block);
+		}
+
+		const auto rop_inputs = get_fragment_program_output_set(m_prog.ctrl, m_prog.mrt_buffers_count);
+		rop_block->input_list.insert(rop_block->input_list.end(), rop_inputs.begin(), rop_inputs.end());
+
 		FP::RegisterAnnotationPass annotation_pass{ m_prog };
 		FP::RegisterDependencyPass dependency_pass{};
 
@@ -1375,6 +1356,9 @@ std::string FragmentProgramDecompiler::Decompile()
 			case EdgeType::ENDIF:
 			case EdgeType::ENDLOOP:
 				// Pure merge block?
+				break;
+			case EdgeType::NONE:
+				ensure(block.instructions.empty());
 				break;
 			default:
 				fmt::throw_exception("Unhandled edge type %d", static_cast<int>(pred.type));
