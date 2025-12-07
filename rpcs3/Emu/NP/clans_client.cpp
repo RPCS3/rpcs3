@@ -132,6 +132,8 @@ namespace clan
 
 	clans_client::clans_client()
 	{
+		g_cfg_clans.load();
+
 		createRequest();
 	}
 
