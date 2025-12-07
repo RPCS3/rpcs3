@@ -298,7 +298,7 @@ namespace rsx::assembler::FP
 		std::unordered_set<u32> barrier32;
 
 		// This subpass does not care about the prologue and epilogue and assumes each block is unique.
-		for (auto it = block->instructions.begin(); it != block->instructions.end();)
+		for (auto it = block->instructions.begin(); it != block->instructions.end(); ++it)
 		{
 			auto& inst = *it;
 
@@ -340,33 +340,37 @@ namespace rsx::assembler::FP
 				}
 			}
 
-			if (barrier16.empty() && barrier32.empty())
-			{
-				++it;
-				continue;
-			}
-
 			// We need to inject some barrier instructions
 			if (!barrier16.empty())
 			{
 				auto barrier16_in = decode_lanes16(barrier16);
+				std::vector<Instruction> instructions;
+				instructions.reserve(barrier16_in.size());
+
 				for (const auto& reg : barrier16_in)
 				{
-					auto instructions = build_barrier16(reg);
-					it = block->instructions.insert(it, instructions.begin(), instructions.end());
-					std::advance(it, instructions.size() + 1);
+					auto barrier = build_barrier16(reg);
+					instructions.insert(instructions.end(), barrier.begin(), barrier.end());
 				}
+
+				it = block->instructions.insert(it, instructions.begin(), instructions.end());
+				std::advance(it, instructions.size());
 			}
 
 			if (!barrier32.empty())
 			{
 				auto barrier32_in = decode_lanes32(barrier32);
+				std::vector<Instruction> instructions;
+				instructions.reserve(barrier32_in.size());
+
 				for (const auto& reg : barrier32_in)
 				{
-					auto instructions = build_barrier32(reg);
-					it = block->instructions.insert(it, instructions.begin(), instructions.end());
-					std::advance(it, instructions.size() + 1);
+					auto barrier = build_barrier32(reg);
+					instructions.insert(instructions.end(), barrier.begin(), barrier.end());
 				}
+
+				it = block->instructions.insert(it, instructions.begin(), instructions.end());
+				std::advance(it, instructions.size());
 			}
 		}
 	}
