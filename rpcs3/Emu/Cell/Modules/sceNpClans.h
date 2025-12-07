@@ -236,7 +236,7 @@ struct SceNpClansUpdatableMemberInfo
 	be_t<u32> fields;
 	u8 binData1;
 	be_t<u32> binData1Size;
-	u8 binAttr1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE + 1];
+	u8 binAttr1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE];
 	char description[SCE_NP_CLANS_MEMBER_DESCRIPTION_MAX_LENGTH + 1];
 	b8 allowMsg;
 	u8 reserved[3];
