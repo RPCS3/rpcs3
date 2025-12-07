@@ -143,7 +143,7 @@ namespace clan
 	SceNpClansError clans_client::createRequest()
 	{
 		if (curl)
-			return SceNpClansError::SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED;
+			return SceNpClansError::SCE_NP_CLANS_SUCCESS;
 
 		curl = curl_easy_init();
 		if (!curl)

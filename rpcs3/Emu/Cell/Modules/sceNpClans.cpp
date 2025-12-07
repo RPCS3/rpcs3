@@ -1063,6 +1063,9 @@ error_code sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, SceN
 		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
 	}
 
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
+
 	return CELL_OK;
 }
 
@@ -1088,6 +1091,9 @@ error_code sceNpClansRetrievePostedChallenges(vm::ptr<SceNpClansRequestHandle> h
 		}
 	}
 
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
+
 	return CELL_OK;
 }
 
@@ -1099,6 +1105,9 @@ error_code sceNpClansRemovePostedChallenge(vm::ptr<SceNpClansRequestHandle> hand
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 	}
+
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
 
 	return CELL_OK;
 }
@@ -1125,6 +1134,9 @@ error_code sceNpClansRetrieveChallenges(vm::ptr<SceNpClansRequestHandle> handle,
 		}
 	}
 
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
+
 	return CELL_OK;
 }
 
@@ -1136,6 +1148,9 @@ error_code sceNpClansRemoveChallenge(SceNpClansRequestHandle handle, SceNpClanId
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 	}
+
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
 
 	return CELL_OK;
 }
