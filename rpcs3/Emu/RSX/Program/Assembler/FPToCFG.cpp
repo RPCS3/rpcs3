@@ -139,6 +139,7 @@ namespace rsx::assembler
 					default:
 						// Missing an edge type?
 						rsx_log.error("CFG: Unexpected block exit. Report to developers.");
+						break;
 					}
 				}
 				else if (bb->pred.empty())
@@ -221,6 +222,7 @@ namespace rsx::assembler
 					ir_inst.length += 4;
 					pc++;
 				}
+				break;
 			}
 
 			pc++;
