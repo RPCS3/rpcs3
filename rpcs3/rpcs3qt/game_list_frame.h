@@ -96,7 +96,6 @@ Q_SIGNALS:
 	void FocusToSearchBar();
 	void Refreshed();
 	void RequestSaveStateManager(const game_info& game);
-	void NotifyBatchedGameActionFinished();
 
 public:
 	template <typename KeyType>

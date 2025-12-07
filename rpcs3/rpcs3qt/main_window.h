@@ -49,7 +49,6 @@ class main_window : public QMainWindow
 	bool m_save_slider_pos = false;
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
-	std::function<void()> m_notify_batch_game_action_cb;
 
 	QIcon m_app_icon;
 	QIcon m_icon_play;
