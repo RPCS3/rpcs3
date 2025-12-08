@@ -1063,9 +1063,6 @@ error_code sceNpClansPostChallenge(vm::ptr<SceNpClansRequestHandle> handle, SceN
 		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
 	}
 
-	vm::var<struct SceNpClansRequest> req;
-	vm::write32(handle.addr(), req.addr());
-
 	return CELL_OK;
 }
 

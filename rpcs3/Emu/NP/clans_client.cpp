@@ -1,3 +1,4 @@
+#include "Utilities/StrUtil.h"
 #include "stdafx.h"
 #include "util/types.hpp"
 
@@ -348,8 +349,8 @@ namespace clan
 				.role = static_cast<SceNpClansMemberRole>(role_int),
 				.status = static_cast<SceNpClansMemberStatus>(status_int)};
 
-            snprintf(entry.info.name, sizeof(entry.info.name), "%s", name_str.c_str());
-            snprintf(entry.info.tag, sizeof(entry.info.tag), "%s", tag_str.c_str());
+            strcpy_trunc(entry.info.name, name_str.c_str());
+            strcpy_trunc(entry.info.tag, tag_str.c_str());
 
 			clanList[i] = entry;
 			i++;
@@ -394,9 +395,9 @@ namespace clan
 				.description = "",
 			}};
 
-		snprintf(clanInfo->info.name, sizeof(clanInfo->info.name), "%s", name_str.c_str());
-		snprintf(clanInfo->info.tag, sizeof(clanInfo->info.tag), "%s", tag_str.c_str());
-		snprintf(clanInfo->updatable.description, sizeof(clanInfo->updatable.description), "%s", description_str.c_str());
+		strcpy_trunc(clanInfo->info.name, name_str.c_str());
+		strcpy_trunc(clanInfo->info.tag, tag_str.c_str());
+		strcpy_trunc(clanInfo->updatable.description, description_str.c_str());
 
 		return SCE_NP_CLANS_SUCCESS;
 	}
@@ -451,7 +452,7 @@ namespace clan
 		std::string description_str = description.text().as_string();
 
 		char description_char[256] = {0};
-		snprintf(description_char, sizeof(description_char), "%s", description_str.c_str());
+		strcpy_trunc(description_char, description_str.c_str());
 
 		*memInfo = SceNpClansMemberEntry
 		{
@@ -463,8 +464,8 @@ namespace clan
 			}
 		};
 
-		snprintf(memInfo->npid.handle.data, sizeof(memInfo->npid.handle.data), "%s", username);
-		snprintf(memInfo->updatable.description, sizeof(memInfo->updatable.description), "%s", description_char);
+		strcpy_trunc(memInfo->npid.handle.data, username);
+		strcpy_trunc(memInfo->updatable.description, description_char);
 
 		return SCE_NP_CLANS_SUCCESS;
 	}
@@ -521,7 +522,7 @@ namespace clan
             std::string description_str = info.child("description").text().as_string();
 
             char description_char[256] = {0};
-            snprintf(description_char, sizeof(description_char), "%s", description_str.c_str());
+            strcpy_trunc(description_char, description_str.c_str());
 
             SceNpClansMemberEntry entry = SceNpClansMemberEntry
             {
@@ -530,7 +531,7 @@ namespace clan
                 .status = static_cast<SceNpClansMemberStatus>(status_int),
             };
 
-			snprintf(entry.updatable.description, sizeof(entry.updatable.description), "%s", description_char);
+			strcpy_trunc(entry.updatable.description, description_char);
             
 			memList[i] = entry;
             i++;
@@ -589,7 +590,7 @@ namespace clan
                 }
             };
 
-			snprintf(npid.handle.data, sizeof(npid.handle.data), "%s", username);
+			strcpy_trunc(npid.handle.data, username);
 
             SceNpClansBlacklistEntry entry = SceNpClansBlacklistEntry
             {
@@ -687,8 +688,8 @@ namespace clan
 				.reserved = {0, 0},
 			};
 
-			snprintf(entry.name, sizeof(entry.name), "%s", name_str.c_str());
-			snprintf(entry.tag, sizeof(entry.tag), "%s", tag_str.c_str());
+			strcpy_trunc(entry.name, name_str.c_str());
+			strcpy_trunc(entry.tag, tag_str.c_str());
 
             clanList[i] = entry;
             i++;
@@ -971,9 +972,8 @@ namespace clan
 				.postedBy = clanId,
 			};
 
-
-			snprintf(entry.message.subject, sizeof(entry.message.subject), "%s", subject_str.c_str());
-			snprintf(entry.message.body, sizeof(entry.message.body), "%s", msg_str.c_str());
+			strcpy_trunc(entry.message.subject, subject_str.c_str());
+			strcpy_trunc(entry.message.body, msg_str.c_str());
 
 			announcements[i] = entry;
 			i++;
