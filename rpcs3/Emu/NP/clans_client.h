@@ -6,6 +6,9 @@
 #include <Emu/IdManager.h>
 #include <pugixml.hpp>
 
+inline const char* CLANS_ENTITLEMENT_ID = "NPWR00432_00";
+inline const char* CLANS_SERVICE_ID = "IV0001-NPXS01001_00";
+
 namespace clan
 {
 	enum class ClanManagerOperationType

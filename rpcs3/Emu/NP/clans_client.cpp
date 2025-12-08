@@ -19,9 +19,6 @@ const char* REQ_TYPE_SEC = "sec";
 
 constexpr const char JID_FORMAT[] = "%s@un.br.np.playstation.net";
 
-const char* CLANS_SERVICE_ID = "IV0001-NPXS01001_00";
-const char* CLANS_ENTITLEMENT_ID = "NPWR00432_00";
-
 template <>
 void fmt_class_string<clan::ClanRequestType>::format(std::string& out, u64 arg)
 {
@@ -274,39 +271,18 @@ namespace clan
 	}
 
 	std::string clans_client::getClanTicket(np::np_handler& nph)
-    {
-		if (nph.get_ticket().size() > 0)
-		{
-			std::vector<byte> ticket_bytes(1024);
-			uint32_t ticket_size = UINT32_MAX;
-
-			Base64_Encode_NoNl(nph.get_ticket().data(), nph.get_ticket().size(), ticket_bytes.data(), &ticket_size);
-			return std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
-		}
-
+	{
 		const auto& npid = nph.get_npid();
 
-        const char* service_id = CLANS_SERVICE_ID;
-        const unsigned char* cookie = nullptr;
-        const u32 cookie_size = 0;
-        const char* entitlement_id = CLANS_ENTITLEMENT_ID;
-        const u32 consumed_count = 0;
+		const char* service_id = CLANS_SERVICE_ID;
+		const unsigned char* cookie = nullptr;
+		const u32 cookie_size = 0;
+		const char* entitlement_id = CLANS_ENTITLEMENT_ID;
+		const u32 consumed_count = 0;
 
-        nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
+		nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
 
-        np::ticket ticket;
-
-		// TODO: convert this to use events?
-		int retries = 0;
-		while (ticket.empty() && retries < 100) 
-		{
-			ticket = nph.get_ticket();
-			if (ticket.empty())
-			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(10));
-				retries++;
-			}
-		}
+		np::ticket ticket = nph.get_clan_ticket();
 
 		if (ticket.empty())
 		{
@@ -314,14 +290,14 @@ namespace clan
 			return "";
 		}
 
-        std::vector<byte> ticket_bytes(1024);
-        uint32_t ticket_size = UINT32_MAX;
+		std::vector<byte> ticket_bytes(1024);
+		uint32_t ticket_size = UINT32_MAX;
 
-        Base64_Encode_NoNl(ticket.data(), ticket.size(), ticket_bytes.data(), &ticket_size);
-        std::string ticket_str = std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
+		Base64_Encode_NoNl(ticket.data(), ticket.size(), ticket_bytes.data(), &ticket_size);
+		std::string ticket_str = std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
 
-        return ticket_str;
-    }
+		return ticket_str;
+	}
 
 #pragma region Outgoing API Requests
 	SceNpClansError clans_client::getClanList(np::np_handler& nph, s32 reqId, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult)

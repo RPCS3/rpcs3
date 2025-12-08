@@ -1,5 +1,6 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
+#include "Emu/NP/clans_client.h"
 #include "Emu/NP/rpcn_types.h"
 #include "Utilities/StrFmt.h"
 #include "stdafx.h"
@@ -865,6 +866,17 @@ namespace np
 
 		current_ticket = ticket(std::move(ticket_raw));
 		auto ticket_size = static_cast<s32>(current_ticket.size());
+
+
+		// Clans: check if ticket belongs to the clan service. If so, store it.
+		if (current_ticket.get_service_id() == CLANS_SERVICE_ID)
+		{
+			std::lock_guard lock(mutex_clan_ticket);
+			clan_ticket = current_ticket;
+			clan_ticket_ready = true;
+			cv_clan_ticket.notify_all();
+			return;
+		}
 
 		if (manager_cb)
 		{

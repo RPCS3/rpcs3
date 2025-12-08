@@ -239,6 +239,25 @@ namespace np
 		return true;
 	}
 
+	std::string ticket::get_service_id() const
+	{
+		if (!parse_success)
+		{
+			return "";
+		}
+
+		const auto& node = nodes[0].data.data_nodes[8];
+		if (node.len != SCE_NP_SERVICE_ID_SIZE)
+		{
+			return "";
+		}
+
+		// Trim null characters
+		const auto& vec = node.data.data_vec;
+		auto it = std::find(vec.begin(), vec.end(), 0);
+		return std::string(vec.begin(), it);
+	}
+
 	std::optional<ticket_data> ticket::parse_node(std::size_t index) const
 	{
 		if ((index + MIN_TICKET_DATA_SIZE) > size())
@@ -1343,6 +1362,13 @@ namespace np
 		auto& history = ::at32(players_history, npid_str);
 		history.timestamp = timestamp;
 		return history;
+	}
+
+	ticket np_handler::get_clan_ticket()
+	{
+		std::unique_lock lock(mutex_clan_ticket);
+		cv_clan_ticket.wait(lock, [this] { return clan_ticket_ready.load(); });
+		return clan_ticket;
 	}
 
 	constexpr usz MAX_HISTORY_ENTRIES = 200;
