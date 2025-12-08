@@ -34,6 +34,7 @@
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
+#include "Loader/ISO.h"
 #include "Loader/ELF.h"
 #include "Loader/disc.h"
 
@@ -1078,6 +1079,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 	sys_log.notice("Path: %s", m_path);
 
 	std::string inherited_ps3_game_path;
+	bool launching_from_disc_archive = false;
 
 	{
 		Init();
@@ -1421,6 +1423,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+		if (is_file_iso(m_path))
+		{
+			load_iso(m_path);
+
+			std::string path = iso_device::virtual_device_name + "/";
+
+			vfs::mount("/dev_bdvd/"sv, path);
+
+			// ISOs that are install discs will error if set to EBOOT.BIN
+			// so this should cover both of them
+			if (fs::exists(path + "PS3_GAME/USRDIR/EBOOT.BIN"))
+			{
+				path = path + "PS3_GAME/USRDIR/EBOOT.BIN";
+			}
+
+			m_path = path;
+
+			m_dir = "/dev_bdvd/PS3_GAME/";
+			m_cat = "DG"sv;
+
+			launching_from_disc_archive = true;
+		}
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
@@ -1595,8 +1619,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 		}
 
+		// ISO PKG INSTALL HACK!
+		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		{
+			bdvd_dir = m_path;
+		}
+
 		// Special boot mode (directory scan)
-		if (fs::is_dir(m_path))
+		if (fs::is_dir(m_path) && !launching_from_disc_archive)
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
@@ -2074,6 +2104,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Do it after installation to prevent false positives when RPCS3 closed in the middle of the operation
 				lock_file.open(lock_file_path, fs::read + fs::create + fs::excl);
 			}
+		}
+
+		// ISO has no USRDIR/EBOOT.BIN, and we've examined its PKGDIR and extras.
+		// time to wrap up
+		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		{
+			return game_boot_result::nothing_to_boot;
 		}
 
 		// Check firmware version
