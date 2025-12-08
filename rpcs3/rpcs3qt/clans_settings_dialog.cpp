@@ -31,18 +31,18 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 
 	QHBoxLayout* hbox_lbl_combo = new QHBoxLayout();
 	QLabel* lbl_server          = new QLabel(tr("Server:"));
-	cbx_servers                 = new QComboBox();
-	cbx_protocol                = new QComboBox();
+	m_cbx_servers                 = new QComboBox();
+	m_cbx_protocol                = new QComboBox();
 
-	cbx_protocol->addItem("HTTPS");
-	cbx_protocol->addItem("HTTP");
-	cbx_protocol->setCurrentIndex(g_cfg_clans.get_use_https() ? 0 : 1);
+	m_cbx_protocol->addItem("HTTPS");
+	m_cbx_protocol->addItem("HTTP");
+	m_cbx_protocol->setCurrentIndex(g_cfg_clans.get_use_https() ? 0 : 1);
 
 	refresh_combobox();
 
 	hbox_lbl_combo->addWidget(lbl_server);
-	hbox_lbl_combo->addWidget(cbx_servers);
-	hbox_lbl_combo->addWidget(cbx_protocol);
+	hbox_lbl_combo->addWidget(m_cbx_servers);
+	hbox_lbl_combo->addWidget(m_cbx_protocol);
 
 	QHBoxLayout* hbox_buttons   = new QHBoxLayout();
 	QPushButton* btn_add_server = new QPushButton(tr("Add"));
@@ -59,12 +59,12 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 
 	setLayout(vbox_global);
 
-	connect(cbx_servers, &QComboBox::currentIndexChanged, this, [this](int index)
+	connect(m_cbx_servers, &QComboBox::currentIndexChanged, this, [this](int index)
 		{
 			if (index < 0)
 				return;
 
-			QVariant host = cbx_servers->itemData(index);
+			QVariant host = m_cbx_servers->itemData(index);
 
 			if (!host.isValid() || !host.canConvert<QString>())
 				return;
@@ -73,7 +73,7 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 			g_cfg_clans.save();
 		});
 
-	connect(cbx_protocol, &QComboBox::currentIndexChanged, this, [this](int index)
+	connect(m_cbx_protocol, &QComboBox::currentIndexChanged, this, [this](int index)
 		{
 			if (index < 0)
 				return;
@@ -102,13 +102,13 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 
 	connect(btn_del_server, &QAbstractButton::clicked, this, [this]()
 		{
-			const int index = cbx_servers->currentIndex();
+			const int index = m_cbx_servers->currentIndex();
 
 			if (index < 0)
 				return;
 
-			const std::string desc = cbx_servers->itemText(index).toStdString();
-			const std::string host = cbx_servers->itemData(index).toString().toStdString();
+			const std::string desc = m_cbx_servers->itemText(index).toStdString();
+			const std::string host = m_cbx_servers->itemData(index).toString().toStdString();
 
 			if (g_cfg_clans.del_host(desc, host))
 			{
@@ -129,18 +129,18 @@ void clans_settings_dialog::refresh_combobox()
 	const auto cur_host  = g_cfg_clans.get_host();
 	int i = 0, index = 0;
 
-	cbx_servers->clear();
+	m_cbx_servers->clear();
 
 	for (const auto& [desc, host] : vec_hosts)
 	{
-		cbx_servers->addItem(QString::fromStdString(desc), QString::fromStdString(host));
+		m_cbx_servers->addItem(QString::fromStdString(desc), QString::fromStdString(host));
 		if (cur_host == host)
 			index = i;
 
 		i++;
 	}
 
-	cbx_servers->setCurrentIndex(index);
+	m_cbx_servers->setCurrentIndex(index);
 }
 
 clans_add_server_dialog::clans_add_server_dialog(QWidget* parent)

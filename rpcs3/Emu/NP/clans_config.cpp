@@ -59,11 +59,11 @@ bool cfg_clans::get_use_https() const
 std::vector<std::pair<std::string, std::string>> cfg_clans::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
-	auto hosts_list = fmt::split(hosts.to_string(), {"|||"});
+	const auto hosts_list = fmt::split(hosts.to_string(), {"|||"});
 
 	for (const auto& cur_host : hosts_list)
 	{
-		auto desc_and_host = fmt::split(cur_host, {"|"});
+		const auto desc_and_host = fmt::split(cur_host, {"|"});
 		if (desc_and_host.size() != 2)
 		{
 			clans_config_log.error("Invalid host in the list of hosts: %s", cur_host);
@@ -129,7 +129,9 @@ bool cfg_clans::add_host(std::string_view new_description, std::string_view new_
 bool cfg_clans::del_host(std::string_view del_description, std::string_view del_host)
 {
 	// Do not delete default servers
-	if (del_description == "Official Clans Server" && del_host == "clans.rpcs3.net")
+	const auto def_desc_and_host = fmt::split(hosts.def, {"|"});
+	ensure(def_desc_and_host.size() == 2);
+	if (del_description == def_desc_and_host[0] && del_host == def_desc_and_host[1])
 	{
 		return true;
 	}

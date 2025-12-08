@@ -14,8 +14,8 @@ private:
 	void refresh_combobox();
 
 private:
-	QComboBox* cbx_servers = nullptr;
-	QComboBox* cbx_protocol = nullptr;
+	QComboBox* m_cbx_servers = nullptr;
+	QComboBox* m_cbx_protocol = nullptr;
 };
 
 class clans_add_server_dialog : public QDialog

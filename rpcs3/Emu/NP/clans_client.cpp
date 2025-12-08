@@ -1,114 +1,112 @@
-#include "Utilities/StrUtil.h"
 #include "stdafx.h"
-#include "util/types.hpp"
 
-#include <Crypto/utils.h>
-#include <Emu/NP/clans_client.h>
-#include <Emu/NP/clans_config.h>
-#include <format>
+#include <util/types.hpp>
 #include <wolfssl/wolfcrypt/coding.h>
 
-LOG_CHANNEL(clan_log, "clans");
+#include <Crypto/utils.h>
+#include <Utilities/StrUtil.h>
+#include <Utilities/StrFmt.h>
 
+#include <Emu/NP/clans_client.h>
+#include <Emu/NP/clans_config.h>
+
+LOG_CHANNEL(clan_log, "clans");
 
 
 const char* REQ_TYPE_FUNC = "func";
 const char* REQ_TYPE_SEC = "sec";
 
-constexpr const char* JID_FORMAT = "%s@un.br.np.playstation.net";
+constexpr const char JID_FORMAT[] = "%s@un.br.np.playstation.net";
 
 const char* CLANS_SERVICE_ID = "IV0001-NPXS01001_00";
 const char* CLANS_ENTITLEMENT_ID = "NPWR00432_00";
 
-namespace std
+template <>
+void fmt_class_string<clan::ClanRequestType>::format(std::string& out, u64 arg)
 {
-	template <>
-	struct formatter<clan::ClanRequestType> : formatter<string>
-	{
-		auto format(clan::ClanRequestType value, format_context& ctx) const
+	format_enum(out, arg, [](auto value)
 		{
-			string_view name = "unknown";
 			switch (value)
 			{
-				case clan::ClanRequestType::FUNC: name = "func"; break;
-				case clan::ClanRequestType::SEC:  name = "sec"; break;
+			case clan::ClanRequestType::FUNC: return "func";
+			case clan::ClanRequestType::SEC:  return "sec";
 			}
-			return formatter<string>::format(string(name), ctx);
-		}
-	};
 
-	template <>
-	struct formatter<clan::ClanManagerOperationType> : formatter<string>
-	{
-		auto format(clan::ClanManagerOperationType value, format_context& ctx) const
-		{
-			string_view name = "unknown";
-			switch (value)
-			{
-				case clan::ClanManagerOperationType::VIEW:   name = "view"; break;
-				case clan::ClanManagerOperationType::UPDATE: name = "update"; break;
-			}
-			return formatter<string>::format(string(name), ctx);
-		}
-	};
+			return unknown;
+		});
+}
 
-	template <>
-	struct formatter<clan::ClanSearchFilterOperator> : formatter<string>
-	{
-		auto format(clan::ClanSearchFilterOperator value, format_context& ctx) const
+template <>
+void fmt_class_string<clan::ClanManagerOperationType>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
 		{
-			string_view name = "unknown";
 			switch (value)
 			{
-				case clan::ClanSearchFilterOperator::Equal:              name = "eq"; break;
-				case clan::ClanSearchFilterOperator::NotEqual:           name = "ne"; break;
-				case clan::ClanSearchFilterOperator::GreaterThan:        name = "gt"; break;
-				case clan::ClanSearchFilterOperator::GreaterThanOrEqual: name = "ge"; break;
-				case clan::ClanSearchFilterOperator::LessThan:           name = "lt"; break;
-				case clan::ClanSearchFilterOperator::LessThanOrEqual:    name = "le"; break;
-				case clan::ClanSearchFilterOperator::Like:               name = "lk"; break;
+			case clan::ClanManagerOperationType::VIEW:   return "view";
+			case clan::ClanManagerOperationType::UPDATE: return "update";
 			}
-			return formatter<string>::format(string(name), ctx);
-		}
-	};
 
-	template <>
-	struct formatter<clan::ClanRequestAction> : formatter<string>
-	{
-		auto format(clan::ClanRequestAction value, format_context& ctx) const
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<clan::ClanSearchFilterOperator>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
 		{
-			string_view name = "unknown";
 			switch (value)
 			{
-				case clan::ClanRequestAction::GetClanList:              name = "get_clan_list"; break;
-				case clan::ClanRequestAction::GetClanInfo:              name = "get_clan_info"; break;
-				case clan::ClanRequestAction::GetMemberInfo:            name = "get_member_info"; break;
-				case clan::ClanRequestAction::GetMemberList:            name = "get_member_list"; break;
-				case clan::ClanRequestAction::GetBlacklist:             name = "get_blacklist"; break;
-				case clan::ClanRequestAction::RecordBlacklistEntry:     name = "record_blacklist_entry"; break;
-				case clan::ClanRequestAction::DeleteBlacklistEntry:     name = "delete_blacklist_entry"; break;
-				case clan::ClanRequestAction::ClanSearch:               name = "clan_search"; break;
-				case clan::ClanRequestAction::RequestMembership:        name = "request_membership"; break;
-				case clan::ClanRequestAction::CancelRequestMembership:  name = "cancel_request_membership"; break;
-				case clan::ClanRequestAction::AcceptMembershipRequest:  name = "accept_membership_request"; break;
-				case clan::ClanRequestAction::DeclineMembershipRequest: name = "decline_membership_request"; break;
-				case clan::ClanRequestAction::SendInvitation:           name = "send_invitation"; break;
-				case clan::ClanRequestAction::CancelInvitation:         name = "cancel_invitation"; break;
-				case clan::ClanRequestAction::AcceptInvitation:         name = "accept_invitation"; break;
-				case clan::ClanRequestAction::DeclineInvitation:        name = "decline_invitation"; break;
-				case clan::ClanRequestAction::UpdateMemberInfo:         name = "update_member_info"; break;
-				case clan::ClanRequestAction::UpdateClanInfo:           name = "update_clan_info"; break;
-				case clan::ClanRequestAction::JoinClan:                 name = "join_clan"; break;
-				case clan::ClanRequestAction::LeaveClan:                name = "leave_clan"; break;
-				case clan::ClanRequestAction::KickMember:               name = "kick_member"; break;
-				case clan::ClanRequestAction::ChangeMemberRole:         name = "change_member_role"; break;
-				case clan::ClanRequestAction::RetrieveAnnouncements:    name = "retrieve_announcements"; break;
-				case clan::ClanRequestAction::PostAnnouncement:         name = "post_announcement"; break;
-				case clan::ClanRequestAction::DeleteAnnouncement:       name = "delete_announcement"; break;
+			case clan::ClanSearchFilterOperator::Equal:              return "eq";
+			case clan::ClanSearchFilterOperator::NotEqual:           return "ne";
+			case clan::ClanSearchFilterOperator::GreaterThan:        return "gt";
+			case clan::ClanSearchFilterOperator::GreaterThanOrEqual: return "ge";
+			case clan::ClanSearchFilterOperator::LessThan:           return "lt";
+			case clan::ClanSearchFilterOperator::LessThanOrEqual:    return "le";
+			case clan::ClanSearchFilterOperator::Like:               return "lk";
 			}
-			return formatter<string>::format(string(name), ctx);
-		}
-	};
+
+			return unknown;
+		});
+}
+
+template <>
+void fmt_class_string<clan::ClanRequestAction>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case clan::ClanRequestAction::GetClanList:              return "get_clan_list";
+			case clan::ClanRequestAction::GetClanInfo:              return "get_clan_info";
+			case clan::ClanRequestAction::GetMemberInfo:            return "get_member_info";
+			case clan::ClanRequestAction::GetMemberList:            return "get_member_list";
+			case clan::ClanRequestAction::GetBlacklist:             return "get_blacklist";
+			case clan::ClanRequestAction::RecordBlacklistEntry:     return "record_blacklist_entry";
+			case clan::ClanRequestAction::DeleteBlacklistEntry:     return "delete_blacklist_entry";
+			case clan::ClanRequestAction::ClanSearch:               return "clan_search";
+			case clan::ClanRequestAction::RequestMembership:        return "request_membership";
+			case clan::ClanRequestAction::CancelRequestMembership:  return "cancel_request_membership";
+			case clan::ClanRequestAction::AcceptMembershipRequest:  return "accept_membership_request";
+			case clan::ClanRequestAction::DeclineMembershipRequest: return "decline_membership_request";
+			case clan::ClanRequestAction::SendInvitation:           return "send_invitation";
+			case clan::ClanRequestAction::CancelInvitation:         return "cancel_invitation";
+			case clan::ClanRequestAction::AcceptInvitation:         return "accept_invitation";
+			case clan::ClanRequestAction::DeclineInvitation:        return "decline_invitation";
+			case clan::ClanRequestAction::UpdateMemberInfo:         return "update_member_info";
+			case clan::ClanRequestAction::UpdateClanInfo:           return "update_clan_info";
+			case clan::ClanRequestAction::JoinClan:                 return "join_clan";
+			case clan::ClanRequestAction::LeaveClan:                return "leave_clan";
+			case clan::ClanRequestAction::KickMember:               return "kick_member";
+			case clan::ClanRequestAction::ChangeMemberRole:         return "change_member_role";
+			case clan::ClanRequestAction::RetrieveAnnouncements:    return "retrieve_announcements";
+			case clan::ClanRequestAction::PostAnnouncement:         return "post_announcement";
+			case clan::ClanRequestAction::DeleteAnnouncement:       return "delete_announcement";
+			}
+
+			return unknown;
+		});
 }
 
 namespace clan
@@ -184,7 +182,7 @@ namespace clan
 
 		std::string host = g_cfg_clans.get_host();
 		std::string protocol = g_cfg_clans.get_use_https() ? "https" : "http";
-		std::string url = std::format("{}://{}/clan_manager_{}/{}/{}", protocol, host, opType, reqType, action);
+		std::string url = fmt::format("%s://%s/clan_manager_%s/%s/%s", protocol, host, opType, reqType, action);
 
 		std::ostringstream oss;
 		xmlBody->save(oss, "\t", 8U);
@@ -412,7 +410,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -620,7 +618,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 
-		std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+		std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -636,7 +634,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -653,7 +651,7 @@ namespace clan
 		pugi::xml_node filter = clan.append_child("filter");
 		pugi::xml_node name = filter.append_child("name");
 		
-		std::string op_name = std::format("{}", static_cast<ClanSearchFilterOperator>(static_cast<s32>(search->nameSearchOp)));
+		std::string op_name = fmt::format("%s", static_cast<ClanSearchFilterOperator>(static_cast<s32>(search->nameSearchOp)));
 		name.append_attribute("op").set_value(op_name.c_str());
 		name.append_attribute("value").set_value(search->name);
 
@@ -740,7 +738,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -756,7 +754,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -772,7 +770,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -882,7 +880,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -898,7 +896,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clanId);
 		
-        std::string jid_str = std::format(JID_FORMAT, npId.handle.data);
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_node roleNode = clan.append_child("role");
