@@ -111,6 +111,7 @@
     <ClCompile Include="Emu\IPC_config.cpp" />
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
+    <ClCompile Include="Emu\NP\clans_config.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
     <ClCompile Include="Emu\NP\rpcn_countries.cpp" />
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
@@ -184,6 +185,7 @@
     <ClCompile Include="Emu\NP\np_requests.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
     <ClCompile Include="Emu\NP\np_structs_extra.cpp" />
+    <ClCompile Include="Emu\NP\clans_client.cpp" />
     <ClCompile Include="Emu\NP\rpcn_client.cpp" />
     <ClCompile Include="Emu\NP\ip_address.cpp" />
     <ClCompile Include="Emu\vfs_config.cpp" />

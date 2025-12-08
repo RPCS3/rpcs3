@@ -30,8 +30,8 @@ namespace std
 			string_view name = "unknown";
 			switch (value)
 			{
-			case clan::ClanRequestType::FUNC: name = "func"; break;
-			case clan::ClanRequestType::SEC:  name = "sec"; break;
+				case clan::ClanRequestType::FUNC: name = "func"; break;
+				case clan::ClanRequestType::SEC:  name = "sec"; break;
 			}
 			return formatter<string>::format(string(name), ctx);
 		}
@@ -45,8 +45,8 @@ namespace std
 			string_view name = "unknown";
 			switch (value)
 			{
-			case clan::ClanManagerOperationType::VIEW:   name = "view"; break;
-			case clan::ClanManagerOperationType::UPDATE: name = "update"; break;
+				case clan::ClanManagerOperationType::VIEW:   name = "view"; break;
+				case clan::ClanManagerOperationType::UPDATE: name = "update"; break;
 			}
 			return formatter<string>::format(string(name), ctx);
 		}
@@ -60,13 +60,13 @@ namespace std
 			string_view name = "unknown";
 			switch (value)
 			{
-			case clan::ClanSearchFilterOperator::Equal:              name = "eq"; break;
-			case clan::ClanSearchFilterOperator::NotEqual:           name = "ne"; break;
-			case clan::ClanSearchFilterOperator::GreaterThan:        name = "gt"; break;
-			case clan::ClanSearchFilterOperator::GreaterThanOrEqual: name = "ge"; break;
-			case clan::ClanSearchFilterOperator::LessThan:           name = "lt"; break;
-			case clan::ClanSearchFilterOperator::LessThanOrEqual:    name = "le"; break;
-			case clan::ClanSearchFilterOperator::Like:               name = "lk"; break;
+				case clan::ClanSearchFilterOperator::Equal:              name = "eq"; break;
+				case clan::ClanSearchFilterOperator::NotEqual:           name = "ne"; break;
+				case clan::ClanSearchFilterOperator::GreaterThan:        name = "gt"; break;
+				case clan::ClanSearchFilterOperator::GreaterThanOrEqual: name = "ge"; break;
+				case clan::ClanSearchFilterOperator::LessThan:           name = "lt"; break;
+				case clan::ClanSearchFilterOperator::LessThanOrEqual:    name = "le"; break;
+				case clan::ClanSearchFilterOperator::Like:               name = "lk"; break;
 			}
 			return formatter<string>::format(string(name), ctx);
 		}
@@ -80,31 +80,31 @@ namespace std
 			string_view name = "unknown";
 			switch (value)
 			{
-			case clan::ClanRequestAction::GetClanList:              name = "get_clan_list"; break;
-			case clan::ClanRequestAction::GetClanInfo:              name = "get_clan_info"; break;
-			case clan::ClanRequestAction::GetMemberInfo:            name = "get_member_info"; break;
-			case clan::ClanRequestAction::GetMemberList:            name = "get_member_list"; break;
-			case clan::ClanRequestAction::GetBlacklist:             name = "get_blacklist"; break;
-			case clan::ClanRequestAction::RecordBlacklistEntry:     name = "record_blacklist_entry"; break;
-			case clan::ClanRequestAction::DeleteBlacklistEntry:     name = "delete_blacklist_entry"; break;
-			case clan::ClanRequestAction::ClanSearch:               name = "clan_search"; break;
-			case clan::ClanRequestAction::RequestMembership:        name = "request_membership"; break;
-			case clan::ClanRequestAction::CancelRequestMembership:  name = "cancel_request_membership"; break;
-			case clan::ClanRequestAction::AcceptMembershipRequest:  name = "accept_membership_request"; break;
-			case clan::ClanRequestAction::DeclineMembershipRequest: name = "decline_membership_request"; break;
-			case clan::ClanRequestAction::SendInvitation:           name = "send_invitation"; break;
-			case clan::ClanRequestAction::CancelInvitation:         name = "cancel_invitation"; break;
-			case clan::ClanRequestAction::AcceptInvitation:         name = "accept_invitation"; break;
-			case clan::ClanRequestAction::DeclineInvitation:        name = "decline_invitation"; break;
-			case clan::ClanRequestAction::UpdateMemberInfo:         name = "update_member_info"; break;
-			case clan::ClanRequestAction::UpdateClanInfo:           name = "update_clan_info"; break;
-			case clan::ClanRequestAction::JoinClan:                 name = "join_clan"; break;
-			case clan::ClanRequestAction::LeaveClan:                name = "leave_clan"; break;
-			case clan::ClanRequestAction::KickMember:               name = "kick_member"; break;
-			case clan::ClanRequestAction::ChangeMemberRole:         name = "change_member_role"; break;
-			case clan::ClanRequestAction::RetrieveAnnouncements:    name = "retrieve_announcements"; break;
-			case clan::ClanRequestAction::PostAnnouncement:         name = "post_announcement"; break;
-			case clan::ClanRequestAction::DeleteAnnouncement:       name = "delete_announcement"; break;
+				case clan::ClanRequestAction::GetClanList:              name = "get_clan_list"; break;
+				case clan::ClanRequestAction::GetClanInfo:              name = "get_clan_info"; break;
+				case clan::ClanRequestAction::GetMemberInfo:            name = "get_member_info"; break;
+				case clan::ClanRequestAction::GetMemberList:            name = "get_member_list"; break;
+				case clan::ClanRequestAction::GetBlacklist:             name = "get_blacklist"; break;
+				case clan::ClanRequestAction::RecordBlacklistEntry:     name = "record_blacklist_entry"; break;
+				case clan::ClanRequestAction::DeleteBlacklistEntry:     name = "delete_blacklist_entry"; break;
+				case clan::ClanRequestAction::ClanSearch:               name = "clan_search"; break;
+				case clan::ClanRequestAction::RequestMembership:        name = "request_membership"; break;
+				case clan::ClanRequestAction::CancelRequestMembership:  name = "cancel_request_membership"; break;
+				case clan::ClanRequestAction::AcceptMembershipRequest:  name = "accept_membership_request"; break;
+				case clan::ClanRequestAction::DeclineMembershipRequest: name = "decline_membership_request"; break;
+				case clan::ClanRequestAction::SendInvitation:           name = "send_invitation"; break;
+				case clan::ClanRequestAction::CancelInvitation:         name = "cancel_invitation"; break;
+				case clan::ClanRequestAction::AcceptInvitation:         name = "accept_invitation"; break;
+				case clan::ClanRequestAction::DeclineInvitation:        name = "decline_invitation"; break;
+				case clan::ClanRequestAction::UpdateMemberInfo:         name = "update_member_info"; break;
+				case clan::ClanRequestAction::UpdateClanInfo:           name = "update_clan_info"; break;
+				case clan::ClanRequestAction::JoinClan:                 name = "join_clan"; break;
+				case clan::ClanRequestAction::LeaveClan:                name = "leave_clan"; break;
+				case clan::ClanRequestAction::KickMember:               name = "kick_member"; break;
+				case clan::ClanRequestAction::ChangeMemberRole:         name = "change_member_role"; break;
+				case clan::ClanRequestAction::RetrieveAnnouncements:    name = "retrieve_announcements"; break;
+				case clan::ClanRequestAction::PostAnnouncement:         name = "post_announcement"; break;
+				case clan::ClanRequestAction::DeleteAnnouncement:       name = "delete_announcement"; break;
 			}
 			return formatter<string>::format(string(name), ctx);
 		}
@@ -115,8 +115,8 @@ namespace clan
 {
     struct curl_memory
     {
-	char* response;
-	size_t size;
+		char* response;
+		size_t size;
     };
 
 	size_t clans_client::curlWriteCallback(void* data, size_t size, size_t nmemb, void* clientp)
@@ -241,7 +241,8 @@ namespace clan
 
 	std::string clans_client::getClanTicket(np::np_handler& nph)
     {
-		if (nph.get_ticket().size() > 0) {
+		if (nph.get_ticket().size() > 0)
+		{
 			std::vector<byte> ticket_bytes(1024);
 			uint32_t ticket_size = UINT32_MAX;
 
@@ -249,7 +250,7 @@ namespace clan
 			return std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
 		}
 
-        const auto& npid = nph.get_npid();
+		const auto& npid = nph.get_npid();
 
         const char* service_id = CLANS_SERVICE_ID;
         const unsigned char* cookie = nullptr;
@@ -345,11 +346,11 @@ namespace clan
 					.name = "",
 					.tag = "",
 					.reserved = {0, 0},
-                },
+				},
 				.role = static_cast<SceNpClansMemberRole>(role_int),
 				.status = static_cast<SceNpClansMemberStatus>(status_int)};
 
-            strcpy_trunc(entry.info.name, name_str.c_str());
+			strcpy_trunc(entry.info.name, name_str.c_str());
             strcpy_trunc(entry.info.tag, tag_str.c_str());
 
 			clanList[i] = entry;

@@ -406,6 +406,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_clans_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcn_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -697,6 +700,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_clans_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_rpcn_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -807,6 +813,7 @@
     <ClCompile Include="rpcs3qt\permissions.cpp" />
     <ClCompile Include="rpcs3qt\ps_move_tracker_dialog.cpp" />
     <ClCompile Include="rpcs3qt\cheat_manager.cpp" />
+    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\config_adapter.cpp" />
     <ClCompile Include="rpcs3qt\config_checker.cpp" />
     <ClCompile Include="rpcs3qt\curl_handle.cpp" />
