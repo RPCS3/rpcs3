@@ -9,7 +9,7 @@ struct cfg_rpcn : cfg::node
 	cfg::string npid{this, "NPID", ""};
 	cfg::string password{this, "Password", ""};
 	cfg::string token{this, "Token", ""};
-	cfg::string hosts{this, "Hosts", "Official RPCN Server|np.rpcs3.net|||RPCN Test Server|test-np.rpcs3.net"};
+	cfg::string hosts{this, "Hosts", "Official RPCN Server|np.rpcs3.net"};
 	cfg::_bool ipv6_support{this, "IPv6 support", true};
 
 	void load();

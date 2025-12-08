@@ -8,9 +8,9 @@
 
 // Ensure the included flatbuffers.h is the same version as when this file was
 // generated, otherwise it may not be compatible.
-static_assert(FLATBUFFERS_VERSION_MAJOR == 24 &&
-              FLATBUFFERS_VERSION_MINOR == 3 &&
-              FLATBUFFERS_VERSION_REVISION == 25,
+static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
+              FLATBUFFERS_VERSION_MINOR == 9 &&
+              FLATBUFFERS_VERSION_REVISION == 23,
              "Non-compatible flatbuffers version included");
 
 struct SignalingAddr;
@@ -2762,8 +2762,8 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffer
   const ::flatbuffers::Vector<::flatbuffers::Offset<RoomGroupPasswordConfig>> *passwordConfig() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<RoomGroupPasswordConfig>> *>(VT_PASSWORDCONFIG);
   }
-  uint64_t passwordSlotMask() const {
-    return GetField<uint64_t>(VT_PASSWORDSLOTMASK, 0);
+  const ::flatbuffers::Vector<uint64_t> *passwordSlotMask() const {
+    return GetPointer<const ::flatbuffers::Vector<uint64_t> *>(VT_PASSWORDSLOTMASK);
   }
   const ::flatbuffers::Vector<uint16_t> *ownerPrivilegeRank() const {
     return GetPointer<const ::flatbuffers::Vector<uint16_t> *>(VT_OWNERPRIVILEGERANK);
@@ -2779,7 +2779,8 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private ::flatbuffer
            VerifyOffset(verifier, VT_PASSWORDCONFIG) &&
            verifier.VerifyVector(passwordConfig()) &&
            verifier.VerifyVectorOfTables(passwordConfig()) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK, 8) &&
+           VerifyOffset(verifier, VT_PASSWORDSLOTMASK) &&
+           verifier.VerifyVector(passwordSlotMask()) &&
            VerifyOffset(verifier, VT_OWNERPRIVILEGERANK) &&
            verifier.VerifyVector(ownerPrivilegeRank()) &&
            verifier.EndTable();
@@ -2805,8 +2806,8 @@ struct SetRoomDataInternalRequestBuilder {
   void add_passwordConfig(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<RoomGroupPasswordConfig>>> passwordConfig) {
     fbb_.AddOffset(SetRoomDataInternalRequest::VT_PASSWORDCONFIG, passwordConfig);
   }
-  void add_passwordSlotMask(uint64_t passwordSlotMask) {
-    fbb_.AddElement<uint64_t>(SetRoomDataInternalRequest::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
+  void add_passwordSlotMask(::flatbuffers::Offset<::flatbuffers::Vector<uint64_t>> passwordSlotMask) {
+    fbb_.AddOffset(SetRoomDataInternalRequest::VT_PASSWORDSLOTMASK, passwordSlotMask);
   }
   void add_ownerPrivilegeRank(::flatbuffers::Offset<::flatbuffers::Vector<uint16_t>> ownerPrivilegeRank) {
     fbb_.AddOffset(SetRoomDataInternalRequest::VT_OWNERPRIVILEGERANK, ownerPrivilegeRank);
@@ -2829,12 +2830,12 @@ inline ::flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataIntern
     uint32_t flagAttr = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<BinAttr>>> roomBinAttrInternal = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<RoomGroupPasswordConfig>>> passwordConfig = 0,
-    uint64_t passwordSlotMask = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<uint64_t>> passwordSlotMask = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<uint16_t>> ownerPrivilegeRank = 0) {
   SetRoomDataInternalRequestBuilder builder_(_fbb);
-  builder_.add_passwordSlotMask(passwordSlotMask);
   builder_.add_roomId(roomId);
   builder_.add_ownerPrivilegeRank(ownerPrivilegeRank);
+  builder_.add_passwordSlotMask(passwordSlotMask);
   builder_.add_passwordConfig(passwordConfig);
   builder_.add_roomBinAttrInternal(roomBinAttrInternal);
   builder_.add_flagAttr(flagAttr);
@@ -2849,10 +2850,11 @@ inline ::flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataIntern
     uint32_t flagAttr = 0,
     const std::vector<::flatbuffers::Offset<BinAttr>> *roomBinAttrInternal = nullptr,
     const std::vector<::flatbuffers::Offset<RoomGroupPasswordConfig>> *passwordConfig = nullptr,
-    uint64_t passwordSlotMask = 0,
+    const std::vector<uint64_t> *passwordSlotMask = nullptr,
     const std::vector<uint16_t> *ownerPrivilegeRank = nullptr) {
   auto roomBinAttrInternal__ = roomBinAttrInternal ? _fbb.CreateVector<::flatbuffers::Offset<BinAttr>>(*roomBinAttrInternal) : 0;
   auto passwordConfig__ = passwordConfig ? _fbb.CreateVector<::flatbuffers::Offset<RoomGroupPasswordConfig>>(*passwordConfig) : 0;
+  auto passwordSlotMask__ = passwordSlotMask ? _fbb.CreateVector<uint64_t>(*passwordSlotMask) : 0;
   auto ownerPrivilegeRank__ = ownerPrivilegeRank ? _fbb.CreateVector<uint16_t>(*ownerPrivilegeRank) : 0;
   return CreateSetRoomDataInternalRequest(
       _fbb,
@@ -2861,7 +2863,7 @@ inline ::flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataIntern
       flagAttr,
       roomBinAttrInternal__,
       passwordConfig__,
-      passwordSlotMask,
+      passwordSlotMask__,
       ownerPrivilegeRank__);
 }
 
