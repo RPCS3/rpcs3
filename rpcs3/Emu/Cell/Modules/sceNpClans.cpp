@@ -5,6 +5,7 @@
 #include "Emu/NP/clans_client.h"
 
 #include "sceNp.h"
+#include <memory>
 #include "sceNpClans.h"
 
 
@@ -97,7 +98,7 @@ error_code sceNpClansInit(vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpC
 	}
 
 	// Allocate space for a client somewhere
-	clan::clans_client* client = new clan::clans_client();
+	std::shared_ptr<clan::clans_client> client = std::make_shared<clan::clans_client>();
 	clans_manager.client = client;
 	clans_manager.is_initialized = true;
 
@@ -113,7 +114,7 @@ error_code sceNpClansTerm()
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 	}
 
-	delete clans_manager.client;
+	clans_manager.client.reset();
 	clans_manager.is_initialized = false;
 
 	return CELL_OK;

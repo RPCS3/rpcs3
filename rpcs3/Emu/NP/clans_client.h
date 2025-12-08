@@ -116,5 +116,5 @@ namespace clan
 struct sce_np_clans_manager
 {
 	atomic_t<bool> is_initialized = false;
-	clan::clans_client* client;
+	std::shared_ptr<clan::clans_client> client;
 };

@@ -350,8 +350,8 @@ namespace clan
 				.role = static_cast<SceNpClansMemberRole>(role_int),
 				.status = static_cast<SceNpClansMemberStatus>(status_int)};
 
-			strcpy_trunc(entry.info.name, name_str.c_str());
-            strcpy_trunc(entry.info.tag, tag_str.c_str());
+			strcpy_trunc(entry.info.name, name_str);
+            strcpy_trunc(entry.info.tag, tag_str);
 
 			clanList[i] = entry;
 			i++;
@@ -396,9 +396,9 @@ namespace clan
 				.description = "",
 			}};
 
-		strcpy_trunc(clanInfo->info.name, name_str.c_str());
-		strcpy_trunc(clanInfo->info.tag, tag_str.c_str());
-		strcpy_trunc(clanInfo->updatable.description, description_str.c_str());
+		strcpy_trunc(clanInfo->info.name, name_str);
+		strcpy_trunc(clanInfo->info.tag, tag_str);
+		strcpy_trunc(clanInfo->updatable.description, description_str);
 
 		return SCE_NP_CLANS_SUCCESS;
 	}
@@ -453,7 +453,7 @@ namespace clan
 		std::string description_str = description.text().as_string();
 
 		char description_char[256] = {0};
-		strcpy_trunc(description_char, description_str.c_str());
+		strcpy_trunc(description_char, description_str);
 
 		*memInfo = SceNpClansMemberEntry
 		{
@@ -523,7 +523,7 @@ namespace clan
             std::string description_str = info.child("description").text().as_string();
 
             char description_char[256] = {0};
-            strcpy_trunc(description_char, description_str.c_str());
+            strcpy_trunc(description_char, description_str);
 
             SceNpClansMemberEntry entry = SceNpClansMemberEntry
             {
@@ -689,8 +689,8 @@ namespace clan
 				.reserved = {0, 0},
 			};
 
-			strcpy_trunc(entry.name, name_str.c_str());
-			strcpy_trunc(entry.tag, tag_str.c_str());
+			strcpy_trunc(entry.name, name_str);
+			strcpy_trunc(entry.tag, tag_str);
 
             clanList[i] = entry;
             i++;
@@ -973,8 +973,8 @@ namespace clan
 				.postedBy = clanId,
 			};
 
-			strcpy_trunc(entry.message.subject, subject_str.c_str());
-			strcpy_trunc(entry.message.body, msg_str.c_str());
+			strcpy_trunc(entry.message.subject, subject_str);
+			strcpy_trunc(entry.message.body, msg_str);
 
 			announcements[i] = entry;
 			i++;
