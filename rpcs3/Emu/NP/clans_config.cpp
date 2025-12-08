@@ -60,7 +60,8 @@ bool cfg_clans::get_use_https() const
 std::vector<std::pair<std::string, std::string>> cfg_clans::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
-	const auto hosts_list = fmt::split_sv(hosts.to_string(), {"|||"});
+	const std::string host_str = hosts.to_string();
+	const auto hosts_list = fmt::split_sv(host_str, {"|||"});
 
 	for (const auto& cur_host : hosts_list)
 	{
