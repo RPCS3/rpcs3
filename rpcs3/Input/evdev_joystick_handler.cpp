@@ -1346,7 +1346,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_buttons = [&](const cfg::string& name) -> std::set<u32>
 	{
-		const std::vector<std::string> names = cfg_pad::get_buttons(name);
+		const std::vector<std::string> names = cfg_pad::get_buttons(name.to_string());
 
 		// In evdev we store indices to an EvdevButton vector in our pad objects instead of the usual key codes.
 		std::set<u32> indices;
