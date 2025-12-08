@@ -208,7 +208,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->create_header_actions(m_savestate_column_acts,
 		[this](int col) { return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col), visible); });
-	
+
 	m_game_table->create_header_actions(m_game_column_acts,
 		[this](int col) { return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col), visible); });
@@ -442,6 +442,18 @@ void savestate_manager_dialog::ResizeGameIcons()
 					else
 					{
 						icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
+					}
+				}
+
+				if (icon.isNull())
+				{
+					for (const game_info& gameinfo : m_game_info)
+					{
+						if (gameinfo && gameinfo->info.serial == m_savestate_db[savestate_index]->title_id)
+						{
+							icon = gameinfo->icon;
+							break;
+						}
 					}
 				}
 
