@@ -144,6 +144,11 @@ error_code sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 
 		return res;
 	}
 
+	// TODO: replace this mock request with an actual 
+			//  generator that yields an actual request.
+	vm::var<struct SceNpClansRequest> req;
+	vm::write32(handle.addr(), req.addr());
+
 	return CELL_OK;
 }
 
@@ -241,7 +246,15 @@ error_code sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cp
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	SceNpClansPagingRequest host_paging = {};
-	std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	if (paging)
+	{
+		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	}
+	else
+	{
+		host_paging.startPos = 0;
+		host_paging.max = 0;
+	}
 
 	SceNpClansEntry host_clanList[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
@@ -252,7 +265,10 @@ error_code sceNpClansGetClanList(vm::ptr<SceNpClansRequestHandle> handle, vm::cp
 		return ret;
 	}
 
-	std::memcpy(clanList.get_ptr(), host_clanList, sizeof(SceNpClansEntry) * host_pageResult.count);
+	if (clanList && host_pageResult.count > 0)
+	{
+		std::memcpy(clanList.get_ptr(), host_clanList, sizeof(SceNpClansEntry) * host_pageResult.count);
+	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
 	return CELL_OK;
@@ -333,7 +349,15 @@ error_code sceNpClansSearchByName(vm::ptr<SceNpClansRequestHandle> handle, vm::c
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	SceNpClansPagingRequest host_paging = {};
-	std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	if (paging)
+	{
+		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	}
+	else
+	{
+		host_paging.startPos = 0;
+		host_paging.max = 0;
+	}
 
 	SceNpClansSearchableName host_search = {};
 	std::memcpy(&host_search, search.get_ptr(), sizeof(SceNpClansSearchableName));
@@ -347,7 +371,10 @@ error_code sceNpClansSearchByName(vm::ptr<SceNpClansRequestHandle> handle, vm::c
 		return ret;
 	}
 
-	std::memcpy(results.get_ptr(), host_results, sizeof(SceNpClansClanBasicInfo) * host_pageResult.count);
+	if (results && host_pageResult.count > 0)
+	{
+		std::memcpy(results.get_ptr(), host_results, sizeof(SceNpClansClanBasicInfo) * host_pageResult.count);
+	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
 	return CELL_OK;
@@ -433,7 +460,15 @@ error_code sceNpClansGetMemberList(vm::ptr<SceNpClansRequestHandle> handle, SceN
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	SceNpClansPagingRequest host_paging = {};
-	std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	if (paging)
+	{
+		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	}
+	else
+	{
+		host_paging.startPos = 0;
+		host_paging.max = 0;
+	}
 
 	SceNpClansMemberEntry* host_memList_addr = new SceNpClansMemberEntry[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX];
 	SceNpClansPagingResult host_pageResult = {};
@@ -441,12 +476,17 @@ error_code sceNpClansGetMemberList(vm::ptr<SceNpClansRequestHandle> handle, SceN
 	SceNpClansError ret = clans_manager.client->getMemberList(nph, clanId, &host_paging, status, host_memList_addr, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
+		delete[] host_memList_addr;
 		return ret;
 	}
 
-	std::memcpy(memList.get_ptr(), host_memList_addr, sizeof(SceNpClansMemberEntry) * host_pageResult.count);
+	if (memList && host_pageResult.count > 0)
+	{
+		std::memcpy(memList.get_ptr(), host_memList_addr, sizeof(SceNpClansMemberEntry) * host_pageResult.count);
+	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
+	delete[] host_memList_addr;
 	return CELL_OK;
 }
 
@@ -864,7 +904,15 @@ error_code sceNpClansGetBlacklist(vm::ptr<SceNpClansRequestHandle> handle, SceNp
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	SceNpClansPagingRequest host_paging = {};
-	std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	if (paging)
+	{
+		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	}
+	else
+	{
+		host_paging.startPos = 0;
+		host_paging.max = 0;
+	}
 
 	SceNpClansBlacklistEntry host_bl[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
@@ -875,7 +923,10 @@ error_code sceNpClansGetBlacklist(vm::ptr<SceNpClansRequestHandle> handle, SceNp
 		return ret;
 	}
 
-	std::memcpy(bl.get_ptr(), host_bl, sizeof(SceNpClansBlacklistEntry) * host_pageResult.count);
+	if (bl && host_pageResult.count > 0)
+	{
+		std::memcpy(bl.get_ptr(), host_bl, sizeof(SceNpClansBlacklistEntry) * host_pageResult.count);
+	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
 	return CELL_OK;
@@ -959,7 +1010,15 @@ error_code sceNpClansRetrieveAnnouncements(vm::ptr<SceNpClansRequestHandle> hand
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	SceNpClansPagingRequest host_paging = {};
-	std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	if (paging)
+	{
+		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
+	}
+	else
+	{
+		host_paging.startPos = 0;
+		host_paging.max = 0;
+	}
 
 	SceNpClansMessageEntry host_mlist[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
@@ -970,7 +1029,10 @@ error_code sceNpClansRetrieveAnnouncements(vm::ptr<SceNpClansRequestHandle> hand
 		return ret;
 	}
 
-	std::memcpy(mlist.get_ptr(), host_mlist, sizeof(SceNpClansMessageEntry) * host_pageResult.count);
+	if (mlist && host_pageResult.count > 0)
+	{
+		std::memcpy(mlist.get_ptr(), host_mlist, sizeof(SceNpClansMessageEntry) * host_pageResult.count);
+	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
 	return CELL_OK;
