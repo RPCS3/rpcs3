@@ -272,6 +272,10 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 	info.category = QString::fromStdString(std::string(psf::get_string(psf, "CATEGORY")));
 	info.version  = QString::fromStdString(std::string(psf::get_string(psf, "APP_VER")));
 
+	// Technically, there is no specific package's header info providing its installation size on disk.
+	// We use "data_size" header as an approximation (a bit larger) for this purpose
+	info.data_size = reader.get_header().data_size.value();
+
 	if (!info.category.isEmpty())
 	{
 		const Localized localized;
