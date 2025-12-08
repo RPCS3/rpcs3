@@ -1,3 +1,4 @@
+#include "Emu/Cell/Modules/sceNpClans.h"
 #include "stdafx.h"
 
 #include <util/types.hpp>
@@ -129,49 +130,84 @@ namespace clan
 		return realsize;
 	}
 
+	struct clan_request_ctx
+	{
+		clan_request_ctx()
+		{
+			curl = curl_easy_init();
+			if (curl)
+			{
+				curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+			}
+		}
+
+		~clan_request_ctx()
+		{
+			if (curl)
+			{
+				curl_easy_cleanup(curl);
+				curl = nullptr;
+			}
+		}
+
+		CURL* curl = nullptr;
+
+		// TODO: this was arbitrarily chosen -- see if there's a real amount
+		static const u32 SCE_NP_CLANS_MAX_CTX_NUM = 16;
+		
+		static const u32 id_base = 0xA001;
+		static const u32 id_step = 1;
+		static const u32 id_count = SCE_NP_CLANS_MAX_CTX_NUM;
+		SAVESTATE_INIT_POS(55);
+	};
+
 	clans_client::clans_client()
 	{
 		g_cfg_clans.load();
-
-		createRequest();
 	}
 
 	clans_client::~clans_client()
 	{
-		destroyRequest();
+		idm::clear<clan_request_ctx>();
 	}
 
-	SceNpClansError clans_client::createRequest()
+	SceNpClansError clans_client::createRequest(s32* reqId)
 	{
-		if (curl)
-			return SceNpClansError::SCE_NP_CLANS_SUCCESS;
+		const s32 id = idm::make<clan_request_ctx>();
 
-		curl = curl_easy_init();
-		if (!curl)
+		if (id == id_manager::id_traits<clan_request_ctx>::invalid)
 		{
+			return SceNpClansError::SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
+		}
+
+		auto ctx = idm::get_unlocked<clan_request_ctx>(id);
+		if (!ctx || !ctx->curl)
+		{
+			idm::remove<clan_request_ctx>(id);
 			return SceNpClansError::SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 		}
 
-		curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+		*reqId = id;
 
 		return SceNpClansError::SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::destroyRequest()
+	SceNpClansError clans_client::destroyRequest(s32 reqId)
 	{
-		if (curl)
-		{
-			curl_easy_cleanup(curl);
-			curl = nullptr;
-		}
+		if (idm::remove<clan_request_ctx>(reqId))
+			return SceNpClansError::SCE_NP_CLANS_SUCCESS;
 
-		return SceNpClansError::SCE_NP_CLANS_SUCCESS;
+		return SceNpClansError::SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 	}
 
-	SceNpClansError clans_client::sendRequest(ClanRequestAction action, ClanManagerOperationType opType, pugi::xml_document* xmlBody, pugi::xml_document* outResponse)
+	SceNpClansError clans_client::sendRequest(s32 reqId, ClanRequestAction action, ClanManagerOperationType opType, pugi::xml_document* xmlBody, pugi::xml_document* outResponse)
 	{
-		if (!curl)
+		auto ctx = idm::get_unlocked<clan_request_ctx>(reqId);
+
+		if (!ctx || !ctx->curl)
 			return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
+
+		CURL* curl = ctx->curl;
 
 		ClanRequestType reqType = ClanRequestType::FUNC;
 		pugi::xml_node clan = xmlBody->child("clan");
@@ -203,7 +239,7 @@ namespace clan
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, xml.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, xml.size());
 
-		res = curl_easy_perform(curl);
+		CURLcode res = curl_easy_perform(curl);
 
 		if (res != CURLE_OK)
 		{
@@ -215,10 +251,10 @@ namespace clan
 
 		response_buffer.push_back('\0');
 
-		pugi::xml_parse_result res = outResponse->load_string(response_buffer.data());
-		if (!res)
+		pugi::xml_parse_result xml_res = outResponse->load_string(response_buffer.data());
+		if (!xml_res)
 		{
-			clan_log.error("XML parsing failed: %s", res.description());
+			clan_log.error("XML parsing failed: %s", xml_res.description());
 			return SCE_NP_CLANS_ERROR_BAD_RESPONSE;
 		}
 
@@ -288,7 +324,7 @@ namespace clan
     }
 
 #pragma region Outgoing API Requests
-	SceNpClansError clans_client::getClanList(np::np_handler& nph, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::getClanList(np::np_handler& nph, s32 reqId, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult)
 	{
 		pugi::xml_document doc = pugi::xml_document();
 		pugi::xml_node clan = doc.append_child("clan");
@@ -299,7 +335,7 @@ namespace clan
 		clan.append_child("max").text().set(paging->max);
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::GetClanList, ClanManagerOperationType::VIEW, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::GetClanList, ClanManagerOperationType::VIEW, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -362,14 +398,14 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getClanInfo(SceNpClanId clanId, SceNpClansClanInfo* clanInfo)
+	SceNpClansError clans_client::getClanInfo(s32 reqId, SceNpClanId clanId, SceNpClansClanInfo* clanInfo)
 	{
 		pugi::xml_document doc = pugi::xml_document();
 		pugi::xml_node clan = doc.append_child("clan");
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::GetClanInfo, ClanManagerOperationType::VIEW, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::GetClanInfo, ClanManagerOperationType::VIEW, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -401,7 +437,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getMemberInfo(np::np_handler& nph, SceNpClanId clanId, SceNpId npId, SceNpClansMemberEntry* memInfo)
+	SceNpClansError clans_client::getMemberInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberEntry* memInfo)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -414,7 +450,7 @@ namespace clan
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::GetMemberInfo, ClanManagerOperationType::VIEW, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::GetMemberInfo, ClanManagerOperationType::VIEW, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -469,7 +505,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getMemberList(np::np_handler& nph, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMemberStatus /*status*/, SceNpClansMemberEntry* memList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::getMemberList(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMemberStatus /*status*/, SceNpClansMemberEntry* memList, SceNpClansPagingResult* pageResult)
 	{	
 		std::string ticket = getClanTicket(nph);
 
@@ -481,7 +517,7 @@ namespace clan
         clan.append_child("max").text().set(paging->max);
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::GetMemberList, ClanManagerOperationType::VIEW, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::GetMemberList, ClanManagerOperationType::VIEW, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -545,7 +581,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-    SceNpClansError clans_client::getBlacklist(np::np_handler& nph, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansBlacklistEntry* bl, SceNpClansPagingResult* pageResult)
+    SceNpClansError clans_client::getBlacklist(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansBlacklistEntry* bl, SceNpClansPagingResult* pageResult)
     {
         std::string ticket = getClanTicket(nph);
 
@@ -557,7 +593,7 @@ namespace clan
         clan.append_child("max").text().set(paging->max);
 
         pugi::xml_document response = pugi::xml_document();
-        SceNpClansError clanRes = sendRequest(ClanRequestAction::GetBlacklist, ClanManagerOperationType::VIEW, &doc, &response);
+        SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::GetBlacklist, ClanManagerOperationType::VIEW, &doc, &response);
 
         if (clanRes != SCE_NP_CLANS_SUCCESS)
             return clanRes;
@@ -609,7 +645,7 @@ namespace clan
         return SCE_NP_CLANS_SUCCESS;
     }
 
-	SceNpClansError clans_client::addBlacklistEntry(np::np_handler& nph, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::addBlacklistEntry(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -622,10 +658,10 @@ namespace clan
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::RecordBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::RecordBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::removeBlacklistEntry(np::np_handler& nph, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::removeBlacklistEntry(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -638,10 +674,10 @@ namespace clan
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::DeleteBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::DeleteBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::clanSearch(SceNpClansPagingRequest* paging, SceNpClansSearchableName* search, SceNpClansClanBasicInfo* clanList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::clanSearch(s32 reqId, SceNpClansPagingRequest* paging, SceNpClansSearchableName* search, SceNpClansClanBasicInfo* clanList, SceNpClansPagingResult* pageResult)
 	{
 		pugi::xml_document doc = pugi::xml_document();
         pugi::xml_node clan = doc.append_child("clan");
@@ -656,7 +692,7 @@ namespace clan
 		name.append_attribute("value").set_value(search->name);
 
         pugi::xml_document response = pugi::xml_document();
-        SceNpClansError clanRes = sendRequest(ClanRequestAction::ClanSearch, ClanManagerOperationType::VIEW, &doc, &response);
+        SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::ClanSearch, ClanManagerOperationType::VIEW, &doc, &response);
 
         if (clanRes != SCE_NP_CLANS_SUCCESS)
             return clanRes;
@@ -703,7 +739,7 @@ namespace clan
         return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::requestMembership(np::np_handler& nph, SceNpClanId clanId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::requestMembership(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -713,10 +749,10 @@ namespace clan
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::RequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::RequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::cancelRequestMembership(np::np_handler& nph, SceNpClanId clanId)
+	SceNpClansError clans_client::cancelRequestMembership(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -726,26 +762,10 @@ namespace clan
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::CancelRequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::CancelRequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::sendMembershipResponse(np::np_handler& nph, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/, b8 allow)
-	{
-		std::string ticket = getClanTicket(nph);
-
-		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clanId);
-		
-        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
-        clan.append_child("jid").text().set(jid_str.c_str());
-
-		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(allow ? ClanRequestAction::AcceptMembershipRequest : ClanRequestAction::DeclineMembershipRequest, ClanManagerOperationType::UPDATE, &doc, &response);
-	}
-
-	SceNpClansError clans_client::sendInvitation(np::np_handler& nph, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::sendMembershipResponse(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/, b8 allow)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -758,10 +778,10 @@ namespace clan
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::SendInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, allow ? ClanRequestAction::AcceptMembershipRequest : ClanRequestAction::DeclineMembershipRequest, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::cancelInvitation(np::np_handler& nph, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::sendInvitation(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -774,10 +794,26 @@ namespace clan
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::CancelInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::SendInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::sendInvitationResponse(np::np_handler& nph, SceNpClanId clanId, SceNpClansMessage* /*message*/, b8 accept)
+	SceNpClansError clans_client::cancelInvitation(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
+	{
+		std::string ticket = getClanTicket(nph);
+
+		pugi::xml_document doc = pugi::xml_document();
+		pugi::xml_node clan = doc.append_child("clan");
+		clan.append_child("ticket").text().set(ticket.c_str());
+		clan.append_child("id").text().set(clanId);
+		
+        std::string jid_str = fmt::format(JID_FORMAT, npId.handle.data);
+        clan.append_child("jid").text().set(jid_str.c_str());
+
+		pugi::xml_document response = pugi::xml_document();
+		return sendRequest(reqId, ClanRequestAction::CancelInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
+	}
+
+	SceNpClansError clans_client::sendInvitationResponse(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/, b8 accept)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -787,10 +823,10 @@ namespace clan
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(accept ? ClanRequestAction::AcceptInvitation : ClanRequestAction::DeclineInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, accept ? ClanRequestAction::AcceptInvitation : ClanRequestAction::DeclineInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::updateMemberInfo(np::np_handler& nph, SceNpClanId clanId, SceNpClansUpdatableMemberInfo* info)
+	SceNpClansError clans_client::updateMemberInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansUpdatableMemberInfo* info)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -824,10 +860,10 @@ namespace clan
 		size.text().set(info->binData1Size);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::UpdateMemberInfo, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::UpdateMemberInfo, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::updateClanInfo(np::np_handler& nph, SceNpClanId clanId, SceNpClansUpdatableClanInfo* info)
+	SceNpClansError clans_client::updateClanInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansUpdatableClanInfo* info)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -842,10 +878,10 @@ namespace clan
 		description.text().set(info->description);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::UpdateClanInfo, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::UpdateClanInfo, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::joinClan(np::np_handler& nph, SceNpClanId clanId)
+	SceNpClansError clans_client::joinClan(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -855,10 +891,10 @@ namespace clan
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::JoinClan, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::JoinClan, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::leaveClan(np::np_handler& nph, SceNpClanId clanId)
+	SceNpClansError clans_client::leaveClan(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -868,10 +904,10 @@ namespace clan
 		clan.append_child("id").text().set(clanId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::LeaveClan, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::LeaveClan, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::kickMember(np::np_handler& nph, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::kickMember(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -884,10 +920,10 @@ namespace clan
         clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::KickMember, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::KickMember, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::changeMemberRole(np::np_handler& nph, SceNpClanId clanId, SceNpId npId, SceNpClansMemberRole role)
+	SceNpClansError clans_client::changeMemberRole(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberRole role)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -903,10 +939,10 @@ namespace clan
 		roleNode.text().set(static_cast<uint32_t>(role));
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::ChangeMemberRole, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::ChangeMemberRole, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::retrieveAnnouncements(np::np_handler& nph, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMessageEntry* announcements, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::retrieveAnnouncements(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMessageEntry* announcements, SceNpClansPagingResult* pageResult)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -918,7 +954,7 @@ namespace clan
 		clan.append_child("max").text().set(paging->max);
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::RetrieveAnnouncements, ClanManagerOperationType::VIEW, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::RetrieveAnnouncements, ClanManagerOperationType::VIEW, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -987,7 +1023,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::postAnnouncement(np::np_handler& nph, SceNpClanId clanId, SceNpClansMessage* announcement, SceNpClansMessageData* /*data*/, u32 duration, SceNpClansMessageId* msgId)
+	SceNpClansError clans_client::postAnnouncement(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* announcement, SceNpClansMessageData* /*data*/, u32 duration, SceNpClansMessageId* msgId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -1006,7 +1042,7 @@ namespace clan
 		expireDate.text().set(duration);
 
 		pugi::xml_document response = pugi::xml_document();
-		SceNpClansError clanRes = sendRequest(ClanRequestAction::PostAnnouncement, ClanManagerOperationType::UPDATE, &doc, &response);
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::PostAnnouncement, ClanManagerOperationType::UPDATE, &doc, &response);
 
 		if (clanRes != SCE_NP_CLANS_SUCCESS)
 			return clanRes;
@@ -1018,7 +1054,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::deleteAnnouncement(np::np_handler& nph, SceNpClanId clanId, SceNpClansMessageId announcementId)
+	SceNpClansError clans_client::deleteAnnouncement(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessageId announcementId)
 	{
 		std::string ticket = getClanTicket(nph);
 
@@ -1029,7 +1065,7 @@ namespace clan
 		clan.append_child("msg-id").text().set(announcementId);
 
 		pugi::xml_document response = pugi::xml_document();
-		return sendRequest(ClanRequestAction::DeleteAnnouncement, ClanManagerOperationType::UPDATE, &doc, &response);
+		return sendRequest(reqId, ClanRequestAction::DeleteAnnouncement, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 }
 #pragma endregion
