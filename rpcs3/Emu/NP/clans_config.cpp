@@ -129,7 +129,7 @@ bool cfg_clans::add_host(std::string_view new_description, std::string_view new_
 bool cfg_clans::del_host(std::string_view del_description, std::string_view del_host)
 {
 	// Do not delete default servers
-	const auto def_desc_and_host = fmt::split(hosts.def, {"|"});
+	const auto def_desc_and_host = fmt::split_sv(hosts.def, {"|"});
 	ensure(def_desc_and_host.size() == 2);
 	if (del_description == def_desc_and_host[0] && del_host == def_desc_and_host[1])
 	{
