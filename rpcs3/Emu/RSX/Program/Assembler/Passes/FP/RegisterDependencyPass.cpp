@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "RegisterDependencyPass.h"
 #include "Emu/RSX/Program/Assembler/FPOpcodes.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
@@ -377,17 +378,24 @@ namespace rsx::assembler::FP
 
 	void insert_block_register_dependency(DependencyPassContext& ctx, BasicBlock* block, const std::unordered_set<u32>& lanes, bool f16)
 	{
-		if (block->pred.empty())
-		{
-			return;
-		}
-
 		std::unordered_set<u32> clobbered_lanes;
 		std::unordered_set<u32> lanes_to_search;
 
 		for (auto& back_edge : block->pred)
 		{
 			auto target = back_edge.from;
+
+			// Quick check - if we've reached an IF-ELSE anchor, don't traverse upwards.
+			// The IF and ELSE edges are already a complete set and will bre processed before this node.
+			if (back_edge.type == EdgeType::ENDIF &&
+				&back_edge == &block->pred.back() &&
+				target->succ.size() == 3 &&
+				target->succ[1].type == EdgeType::ELSE &&
+				target->succ[2].type == EdgeType::ENDIF &&
+				target->succ[2].to == block)
+			{
+				return;
+			}
 
 			// Did this target even clobber our register?
 			ensure(ctx.exec_register_map.find(target) != ctx.exec_register_map.end(), "Block has not been pre-processed");
@@ -429,15 +437,14 @@ namespace rsx::assembler::FP
 
 			if (lanes_to_search.empty())
 			{
-				break;
+				continue;
 			}
 
 			// We have some missing lanes. Search upwards
 			if (!target->pred.empty())
 			{
 				// We only need to search the last predecessor which is the true "root" of the branch
-				auto parent = target->pred.back().from;
-				insert_block_register_dependency(ctx, parent, lanes_to_search, f16);
+				insert_block_register_dependency(ctx, target, lanes_to_search, f16);
 			}
 		}
 	}
