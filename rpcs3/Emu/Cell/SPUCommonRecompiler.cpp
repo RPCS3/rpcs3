@@ -7320,7 +7320,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 
 			// spu_log.success("PUTLLC0 Pattern Detected! (put_pc=0x%x, %s) (putllc0=%d, putllc16+0=%d, all=%d)", pattern.put_pc, func_hash, ++stats.nowrite, ++stats.single, +stats.all);
-			// add_pattern(false, inst_attr::putllc0, pattern.put_pc - lsa, value.data);
+			// add_pattern(inst_attr::putllc0, pattern.put_pc - lsa, value.data);
 			continue;
 		}
 
@@ -7411,7 +7411,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (allow_pattern)
 		{
-			add_pattern(false, inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
+			add_pattern(inst_attr::putllc16, pattern.put_pc - result.entry_point, value.data);
 		}
 
 		spu_log.success("PUTLLC16 Pattern Detected! (mem_count=%d, put_pc=0x%x, pc_rel=%d, offset=0x%x, const=%u, two_regs=%d, reg=%u, runtime=%d, 0x%x-%s, pattern-hash=%s) (putllc0=%d, putllc16+0=%d, all=%d)"
@@ -7433,7 +7433,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(read_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
-			add_pattern(false, inst_attr::rchcnt_loop, read_pc - result.entry_point, 0);
+			add_pattern(inst_attr::rchcnt_loop, read_pc - result.entry_point, 0);
 
 			spu_log.error("Channel Loop Pattern Detected! Report to developers! (read_pc=0x%x, branch_pc=0x%x, branch_target=0x%x, 0x%x-%s)", read_pc, pattern.branch_pc, pattern.branch_target, entry_point, func_hash);
 		}
@@ -8519,7 +8519,7 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 	return walkby_state;
 }
 
-void spu_recompiler_base::add_pattern(bool fill_all, inst_attr attr, u32 start, u64 info)
+void spu_recompiler_base::add_pattern(inst_attr attr, u32 start, u64 info)
 {
 	m_patterns[start] = pattern_info{info};
 	m_inst_attrs[start / 4] = attr;
