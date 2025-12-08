@@ -15,6 +15,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/sysinfo.hpp"
@@ -522,13 +523,46 @@ void game_list_frame::OnParsingFinished()
 
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
+		const auto load_game_psf = [&dir_or_elf](const std::string& sfo_path, const std::unique_ptr<iso_archive>& archive)
+		{
+			if (!archive) return psf::load_object(sfo_path);
+
+			// HACK: psf does not accept a file_base argument,
+			// so we are creating a dummy fs:file and replacing the internal file_base handle with an iso_file
+			// instead.
+			fs::file psf_file(sfo_path);
+			psf_file.reset(std::make_unique<iso_file>(fs::file(dir_or_elf), *archive->retrieve(sfo_path)));
+
+			return psf::load_object(psf_file, sfo_path);
+		};
+
+		std::unique_ptr<iso_archive> archive;
+		if (is_file_iso(dir_or_elf))
+		{
+			archive = std::make_unique<iso_archive>(dir_or_elf);
+		}
+
+		const auto file_exists = [&archive](const std::string& path)
+		{
+			if (!archive) return fs::is_file(path);
+			return archive->is_file(path);
+		};
+
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
 
+		if (archive)
+		{
+			fs::stat_t iso_stat;
+			fs::get_stat(game.info.path, iso_stat);
+
+			game.info.size_on_disk = iso_stat.size;
+		}
+
 		const Localized thread_localized;
 
-		const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
-		const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
+		const std::string sfo_dir =  !archive ? rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf) : "PS3_GAME";
+		const psf::registry psf = load_game_psf(sfo_dir + "/PARAM.SFO", archive);
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
@@ -596,7 +630,7 @@ void game_list_frame::OnParsingFinished()
 
 		if (game.info.icon_path.empty())
 		{
-			if (std::string icon_path = sfo_dir + "/" + localized_icon; fs::is_file(icon_path))
+			if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
 			{
 				game.info.icon_path = std::move(icon_path);
 			}
@@ -604,19 +638,35 @@ void game_list_frame::OnParsingFinished()
 			{
 				game.info.icon_path = sfo_dir + "/ICON0.PNG";
 			}
+
+			if (!game.info.icon_path.empty() && archive)
+			{
+				if (!archive->exists(game.info.icon_path)) return;
+
+				auto icon_file = archive->open(game.info.icon_path);
+				auto icon_size = icon_file.size();
+				QByteArray data(icon_size, 0);
+				icon_file.read(data.data(), icon_size);
+				QImage iconImage;
+				if (iconImage.loadFromData(data))
+				{
+					game.icon = QPixmap::fromImage(iconImage);
+				}
+				game.info.icon_path.clear();
+			}
 		}
 
-		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; fs::is_file(movie_path))
+		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_gif = true;
 		}
-		else if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
+		else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_pam = true;
 		}
-		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
+		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_pam = true;
@@ -740,6 +790,10 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				add_disc_dir(entry.path, legit_paths);
+			}
+			else if (is_file_iso(entry.path))
+			{
+				push_path(entry.path, legit_paths);
 			}
 			else
 			{
