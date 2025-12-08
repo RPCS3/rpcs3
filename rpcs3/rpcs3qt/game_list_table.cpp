@@ -11,6 +11,8 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
+#include "Loader/ISO.h"
+
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QStringBuilder>
@@ -241,6 +243,12 @@ void game_list_table::populate(
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		game->item = icon_item;
+
+		if (is_file_iso(game->info.path) && !game->info.movie_path.empty()
+				&& !fs::exists(game->info.movie_path))
+		{
+			icon_item->set_source_path(game->info.path);
+		}
 
 		icon_item->set_image_change_callback([this, icon_item, game](const QVideoFrame& frame)
 		{
