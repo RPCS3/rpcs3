@@ -1,3 +1,4 @@
+#include "Utilities/StrUtil.h"
 #include "stdafx.h"
 #include "clans_config.h"
 #include "Utilities/File.h"
@@ -59,7 +60,7 @@ bool cfg_clans::get_use_https() const
 std::vector<std::pair<std::string, std::string>> cfg_clans::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
-	const auto hosts_list = fmt::split(hosts.to_string(), {"|||"});
+	const auto hosts_list = fmt::split_sv(hosts.to_string(), {"|||"});
 
 	for (const auto& cur_host : hosts_list)
 	{
