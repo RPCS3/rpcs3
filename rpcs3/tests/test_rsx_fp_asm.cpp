@@ -594,4 +594,141 @@ namespace rsx::assembler
 		// Delay slot detection will cause no dependency injection
 		ASSERT_EQ(block.instructions.size(), 3);
 	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Skip_IF_ELSE_Ancestors)
+	{
+		// R4/H8 is clobbered but an IF-ELSE chain follows it.
+		// Merge block reads H8, but since both IF-ELSE legs resolve the dependency, we do not need a barrier for H8.
+		// H6 is included as a control.
+		auto ir = FPIR::from_source(R"(
+			MOV R4, #{ 0.25 }
+			MOV H6.x, #{ 0.125 }
+			IF.LT
+				MOV H8, #{ 0.0 }
+			ELSE
+				MOV H8, #{ 0.25 }
+			ENDIF
+			ADD R0, R3, H8
+		)");
+
+		auto bytecode = ir.compile();
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		// Verify state before
+		ASSERT_EQ(graph.blocks.size(), 4);
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 3);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 3)->instructions.size(), 1);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog, {.skip_delay_slots = true } };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		// We get one barrier on R3 (H6) but nont for R4 (H8)
+		EXPECT_EQ(get_graph_block(graph, 0)->epilogue.size(), 1);
+
+		// No intra-block barriers
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 3);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 3)->instructions.size(), 1);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Process_IF_Ancestors)
+	{
+		// H8.x is clobbered but only an IF sequence follows with no ELSE.
+		// Merge block reads r4.x, but since both IF-ELSE legs resolve the dependency, we do not need a barrier.
+		auto ir = FPIR::from_source(R"(
+			MOV H8.x, #{ 0.25 }
+			IF.LT
+				MOV R4.x, #{ 0.0 }
+			ENDIF
+			MOV R0, R4
+		)");
+
+		auto bytecode = ir.compile();
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		// Verify state before
+		ASSERT_EQ(graph.blocks.size(), 3);
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 1);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog, {.skip_delay_slots = true } };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		// A barrier will be inserted into block 0 epilogue
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 1);
+
+		EXPECT_EQ(get_graph_block(graph, 0)->epilogue.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 1)->epilogue.size(), 0);
+		EXPECT_EQ(get_graph_block(graph, 2)->epilogue.size(), 0);
+	}
+
+	TEST(TestFPIR, RegisterDependencyPass_Complex_IF_ELSE_Ancestor_Clobber)
+	{
+		// 2 clobbered registers up the chain.
+		// 1 full barrier is needed for R4 (4 instructions)
+		auto ir = FPIR::from_source(R"(
+			MOV R4, #{ 0.0 }
+			IF.LT
+				MOV H9, #{ 0.25 }
+			ENDIF
+			MOV H8, #{ 0.25 }
+			IF.LT
+				IF.GT
+					ADD R0, R0, R0
+				ELSE
+					ADD R0, R1, R0
+				ENDIF
+			ENDIF
+			ADD R0, R0, R4
+		)");
+
+		auto bytecode = ir.compile();
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		// Verify state before
+		ASSERT_EQ(graph.blocks.size(), 7);
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 3)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 4)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 5)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 6)->instructions.size(), 1);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog, {.skip_delay_slots = true } };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		// Full-lane barrier on writing blocks
+		EXPECT_EQ(get_graph_block(graph, 1)->epilogue.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 2)->epilogue.size(), 2);
+
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 1)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 2)->instructions.size(), 2);
+		EXPECT_EQ(get_graph_block(graph, 3)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 4)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 5)->instructions.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 6)->instructions.size(), 1);
+	}
 }
