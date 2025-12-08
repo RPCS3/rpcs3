@@ -321,7 +321,7 @@ static void LIBUSB_CALL log_cb(libusb_context* /*ctx*/, enum libusb_log_level le
 	if (!str)
 		return;
 
-	const std::string msg = fmt::trim(str, " \t\n");
+	const std::string_view msg = fmt::trim_sv(str, " \t\n");
 
 	switch (level)
 	{
@@ -555,7 +555,8 @@ usb_handler_thread::usb_handler_thread()
 			usb_devices.push_back(std::make_shared<usb_device_vfs>(usb_info, get_new_location()));
 	}
 
-	const std::vector<std::string> devices_list = fmt::split(g_cfg.io.midi_devices.to_string(), { "@@@" });
+	const std::string midi_devices = g_cfg.io.midi_devices.to_string();
+	const std::vector<std::string_view> devices_list = fmt::split_sv(midi_devices, { "@@@" });
 	for (usz index = 0; index < std::min(max_midi_devices, devices_list.size()); index++)
 	{
 		const midi_device device = midi_device::from_string(::at32(devices_list, index));

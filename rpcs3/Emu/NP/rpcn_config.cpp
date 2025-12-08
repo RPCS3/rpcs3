@@ -79,7 +79,8 @@ std::string cfg_rpcn::get_host() const
 std::vector<std::pair<std::string, std::string>> cfg_rpcn::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
-	auto hosts_list = fmt::split(hosts.to_string(), {"|||"});
+	const std::string host_str = hosts.to_string();
+	const auto hosts_list = fmt::split_sv(host_str, {"|||"});
 
 	for (const auto& cur_host : hosts_list)
 	{
