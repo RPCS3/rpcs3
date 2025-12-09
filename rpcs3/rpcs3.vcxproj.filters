@@ -1708,6 +1708,9 @@
     <CustomBuild Include="rpcs3qt\rpcn_settings_dialog.h">
       <Filter>Gui\rpcn</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\clans_settings_dialog.h">
+      <Filter>Gui\rpcn</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
     </CustomBuild>
