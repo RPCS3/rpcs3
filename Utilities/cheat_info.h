@@ -28,6 +28,6 @@ struct cheat_info
 	u32 offset{};
 	std::string red_script{};
 
-	bool from_str(const std::string& cheat_line);
+	bool from_str(std::string_view cheat_line);
 	std::string to_str() const;
 };

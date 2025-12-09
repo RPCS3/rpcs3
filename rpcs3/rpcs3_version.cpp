@@ -17,11 +17,11 @@ namespace rpcs3
 
 	std::pair<std::string, std::string> get_commit_and_hash()
 	{
-		const auto commit_and_hash = fmt::split(RPCS3_GIT_VERSION, {"-"});
+		auto commit_and_hash = fmt::split(RPCS3_GIT_VERSION, {"-"});
 		if (commit_and_hash.size() != 2)
 			return std::make_pair("0", "00000000");
 
-		return std::make_pair(commit_and_hash[0], commit_and_hash[1]);
+		return std::make_pair(std::move(commit_and_hash[0]), std::move(commit_and_hash[1]));
 	}
 
 	// TODO: Make this accessible from cmake and keep in sync with MACOSX_BUNDLE_BUNDLE_VERSION.

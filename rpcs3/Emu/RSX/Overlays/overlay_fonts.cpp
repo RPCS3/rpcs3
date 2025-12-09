@@ -120,9 +120,15 @@ namespace rsx
 			{
 				result.font_names.emplace_back("Arial.ttf");
 				result.font_names.emplace_back("arial.ttf");
-#ifndef _WIN32
-				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
-				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+#ifdef __APPLE__
+				result.font_names.emplace_back("DejaVuSans.ttf");
+				result.font_names.emplace_back("NotoSans-Regular.ttf");
+				result.font_names.emplace_back("Roboto-Regular.ttf");
+				result.font_names.emplace_back("OpenSans-Regular.ttf");
+				result.font_names.emplace_back("FreeSans.ttf");
+#elifndef _WIN32
+				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
+				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
 #endif
 				// Attempt to load a font from dev_flash as a last resort
 				result.font_names.emplace_back("SCE-PS3-VR-R-LATIN.TTF");

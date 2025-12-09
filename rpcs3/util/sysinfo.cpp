@@ -850,7 +850,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		printf("[TSC calibration] Available clock sources: '%s'\n", clock_sources.c_str());
 
 		// Check if the Kernel has blacklisted the TSC
-		const auto available_clocks = fmt::split(clock_sources, { " " });
+		const auto available_clocks = fmt::split_sv(clock_sources, { " " });
 		const bool tsc_reliable = std::find(available_clocks.begin(), available_clocks.end(), "tsc") != available_clocks.end();
 
 		if (!tsc_reliable)

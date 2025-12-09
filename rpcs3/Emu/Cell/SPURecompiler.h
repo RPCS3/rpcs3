@@ -402,7 +402,7 @@ protected:
 
 	std::unordered_map<u32, pattern_info> m_patterns;
 
-	void add_pattern(bool fill_all, inst_attr attr, u32 start, u64 info);
+	void add_pattern(inst_attr attr, u32 start, u64 info);
 
 private:
 	// For private use

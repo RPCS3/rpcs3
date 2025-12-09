@@ -129,11 +129,11 @@ void cheat_engine::save() const
 	cheat_file.write(out.c_str(), out.size());
 }
 
-void cheat_engine::import_cheats_from_str(const std::string& str_cheats)
+void cheat_engine::import_cheats_from_str(std::string_view str_cheats)
 {
-	auto cheats_vec = fmt::split(str_cheats, {"^^^"});
+	const auto cheats_vec = fmt::split_sv(str_cheats, {"^^^"});
 
-	for (auto& cheat_line : cheats_vec)
+	for (const auto& cheat_line : cheats_vec)
 	{
 		cheat_info new_cheat;
 		if (new_cheat.from_str(cheat_line))

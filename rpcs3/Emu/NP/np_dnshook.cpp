@@ -28,7 +28,8 @@ namespace np
 	dnshook::dnshook()
 	{
 		// Init switch map for dns
-		auto swaps = fmt::split(g_cfg.net.swap_list.to_string(), {"&&"});
+		const std::string swap_list = g_cfg.net.swap_list.to_string();
+		const auto swaps = fmt::split_sv(swap_list, {"&&"});
 		for (usz i = 0; i < swaps.size(); i++)
 		{
 			auto host_and_ip = fmt::split(swaps[i], {"="});

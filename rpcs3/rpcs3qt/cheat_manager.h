@@ -25,7 +25,7 @@ public:
 	cheat_info* get(const std::string& game, const u32 offset);
 	bool erase(const std::string& game, const u32 offset);
 
-	void import_cheats_from_str(const std::string& str_cheats);
+	void import_cheats_from_str(std::string_view str_cheats);
 	std::string export_cheats_to_str() const;
 	void save() const;
 
