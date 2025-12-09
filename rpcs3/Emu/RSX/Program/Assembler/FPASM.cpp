@@ -24,6 +24,7 @@ namespace rsx::assembler
 		// Arithmetic
 		{ "NOP", { .op = RSX_FP_OPCODE_NOP, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
 		{ "MOV", { .op = RSX_FP_OPCODE_MOV, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
+		{ "MUL", { .op = RSX_FP_OPCODE_MUL, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
 		{ "ADD", { .op = RSX_FP_OPCODE_ADD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
 		{ "MAD", { .op = RSX_FP_OPCODE_MAD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
 		{ "FMA", { .op = RSX_FP_OPCODE_MAD, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
