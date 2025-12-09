@@ -1,7 +1,20 @@
 #include "stdafx.h"
 
 #include <util/types.hpp>
+
+// wolfssl uses old-style casts which break clang builds
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic ignored "-Wextern-c-compat"
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
+
 #include <wolfssl/wolfcrypt/coding.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include <Crypto/utils.h>
 #include <Utilities/StrUtil.h>
