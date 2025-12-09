@@ -57,7 +57,7 @@ namespace rsx::assembler::FP
 
 			RegisterRef ref{ .reg{.id = static_cast<int>(index), .f16 = true } };
 			ref.mask = mask;
-			result.push_back(ref);
+			result.push_back(std::move(ref));
 		}
 		return result;
 	}
@@ -94,7 +94,7 @@ namespace rsx::assembler::FP
 			}
 
 			ref.reg = {.id = static_cast<int>(index), .f16 = false };
-			result.push_back(barrier);
+			result.push_back(std::move(barrier));
 		}
 
 		return result;
@@ -190,7 +190,7 @@ namespace rsx::assembler::FP
 			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
 			instruction.srcs.push_back({ .reg = src_reg, .mask = 0xF });
 			instruction.dsts.push_back({ .reg{ .id = reg_id, .f16 = false }, .mask = (1u << ch) });
-			result.push_back(instruction);
+			result.push_back(std::move(instruction));
 		}
 
 		return result;
@@ -258,7 +258,7 @@ namespace rsx::assembler::FP
 			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
 			instruction.srcs.push_back({ .reg = src_reg, .mask = 0xF });
 			instruction.dsts.push_back({ .reg{.id = reg.reg.id, .f16 = false }, .mask = dst.write_mask });
-			result.push_back(instruction);
+			result.push_back(std::move(instruction));
 		}
 
 		return result;
@@ -284,7 +284,7 @@ namespace rsx::assembler::FP
 		for (const auto& barrier : barriers)
 		{
 			auto instructions = build_barrier32(barrier);
-			result.insert(result.end(), instructions.begin(), instructions.end());
+			result.insert(result.end(), std::make_move_iterator(instructions.begin()), std::make_move_iterator(instructions.end()));
 		}
 
 		return result;
@@ -351,10 +351,10 @@ namespace rsx::assembler::FP
 				for (const auto& reg : barrier16_in)
 				{
 					auto barrier = build_barrier16(reg);
-					instructions.insert(instructions.end(), barrier.begin(), barrier.end());
+					instructions.insert(instructions.end(), std::make_move_iterator(barrier.begin()), std::make_move_iterator(barrier.end()));
 				}
 
-				it = block->instructions.insert(it, instructions.begin(), instructions.end());
+				it = block->instructions.insert(it, std::make_move_iterator(instructions.begin()), std::make_move_iterator(instructions.end()));
 				std::advance(it, instructions.size());
 			}
 
@@ -367,10 +367,10 @@ namespace rsx::assembler::FP
 				for (const auto& reg : barrier32_in)
 				{
 					auto barrier = build_barrier32(reg);
-					instructions.insert(instructions.end(), barrier.begin(), barrier.end());
+					instructions.insert(instructions.end(), std::make_move_iterator(barrier.begin()), std::make_move_iterator(barrier.end()));
 				}
 
-				it = block->instructions.insert(it, instructions.begin(), instructions.end());
+				it = block->instructions.insert(it, std::make_move_iterator(instructions.begin()), std::make_move_iterator(instructions.end()));
 				std::advance(it, instructions.size());
 			}
 		}
@@ -431,8 +431,8 @@ namespace rsx::assembler::FP
 
 			if (!clobbered_lanes.empty())
 			{
-				const auto instructions = resolve_dependencies(clobbered_lanes, f16);
-				target->epilogue.insert(target->epilogue.end(), instructions.begin(), instructions.end());
+				auto instructions = resolve_dependencies(clobbered_lanes, f16);
+				target->epilogue.insert(target->epilogue.end(), std::make_move_iterator(instructions.begin()), std::make_move_iterator(instructions.end()));
 			}
 
 			if (lanes_to_search.empty())

@@ -19,7 +19,7 @@ namespace rsx::assembler
 		bool set_cond;
 	};
 
-	static std::unordered_map<std::string, FP_opcode_encoding_t> s_opcode_lookup
+	static std::unordered_map<std::string_view, FP_opcode_encoding_t> s_opcode_lookup
 	{
 		// Arithmetic
 		{ "NOP", { .op = RSX_FP_OPCODE_NOP, .exec_if_lt = true, .exec_if_eq = true, .exec_if_gt = true, .set_cond = false } },
@@ -168,10 +168,9 @@ namespace rsx::assembler
 		std::vector<u32> result;
 		result.reserve(m_instructions.size() * 4);
 
-		for (u32 i = 0; i < m_instructions.size(); ++i)
+		for (const auto& inst : m_instructions)
 		{
-			const auto& inst = m_instructions[i];
-			auto src = reinterpret_cast<const be_t<u16>*>(inst.bytecode);
+			const auto src = reinterpret_cast<const be_t<u16>*>(inst.bytecode);
 			for (u32 j = 0; j < inst.length; ++j)
 			{
 				const u16 low = src[j * 2];
@@ -184,7 +183,7 @@ namespace rsx::assembler
 		return result;
 	}
 
-	FPIR FPIR::from_source(const std::string& asm_)
+	FPIR FPIR::from_source(std::string_view asm_)
 	{
 		std::vector<std::string> instructions = fmt::split(asm_, { "\n", ";" });
 		if (instructions.empty())
@@ -192,13 +191,13 @@ namespace rsx::assembler
 			return {};
 		}
 
-		auto transform_inst = [](const std::string& s)
+		auto transform_inst = [](std::string_view s)
 		{
 			std::string result;
 			result.reserve(s.size());
 
 			bool literal = false;
-			for (auto& c : s)
+			for (const auto& c : s)
 			{
 				if (c == ' ')
 				{
@@ -235,7 +234,7 @@ namespace rsx::assembler
 			return result;
 		};
 
-		auto decode_instruction = [&](const std::string& inst, std::string& op, std::string& dst, std::vector<std::string>& sources)
+		auto decode_instruction = [&](std::string_view inst, std::string& op, std::string& dst, std::vector<std::string>& sources)
 		{
 			const auto i = transform_inst(inst);
 			if (i.empty())
@@ -259,7 +258,7 @@ namespace rsx::assembler
 			}
 		};
 
-		auto get_ref = [](const std::string& reg)
+		auto get_ref = [](std::string_view reg)
 		{
 			ensure(reg.length() > 1, "Invalid register specifier");
 
@@ -291,15 +290,15 @@ namespace rsx::assembler
 			return ref;
 		};
 
-		auto get_constants = [](const std::string& reg) -> std::array<f32, 4>
+		auto get_constants = [](std::string_view reg) -> std::array<f32, 4>
 		{
 			float x, y, z, w;
-			if (sscanf_s(reg.c_str(), "#{%f|%f|%f|%f}", &x, &y, &z, &w) == 4)
+			if (sscanf_s(reg.data(), "#{%f|%f|%f|%f}", &x, &y, &z, &w) == 4)
 			{
 				return { x, y, z, w };
 			}
 
-			if (sscanf_s(reg.c_str(), "#{%f}", &x) == 1)
+			if (sscanf_s(reg.data(), "#{%f}", &x) == 1)
 			{
 				return { x, x, x, x };
 			}
@@ -328,35 +327,29 @@ namespace rsx::assembler
 			}
 		};
 
-		auto encode_opcode = [](const std::string& op, Instruction* inst)
+		auto encode_opcode = [](std::string_view op, Instruction* inst)
 		{
 			OPDEST d0 { .HEX = inst->bytecode[0] };
 			SRC0 s0 { .HEX = inst->bytecode[1] };
 			SRC1 s1 { .HEX = inst->bytecode[2] };
-
-#define SET_OPCODE(encoding) \
-			do { \
-				inst->opcode = encoding.op; \
-				d0.opcode = encoding.op & 0x3F; \
-				s1.opcode_hi = (encoding.op > 0x3F)? 1 : 0; \
-				s0.exec_if_eq = encoding.exec_if_eq ? 1 : 0; \
-				s0.exec_if_gr = encoding.exec_if_gt ? 1 : 0; \
-				s0.exec_if_lt = encoding.exec_if_lt ? 1 : 0; \
-				d0.set_cond = encoding.set_cond ? 1 : 0; \
-				inst->bytecode[0] = d0.HEX; \
-				inst->bytecode[1] = s0.HEX; \
-				inst->bytecode[2] = s1.HEX; \
-			} while (0)
 
 			const auto found = s_opcode_lookup.find(op);
 			if (found == s_opcode_lookup.end())
 			{
 				fmt::throw_exception("Unhandled instruction '%s'", op);
 			}
+			const auto& encoding = found->second;
 
-			SET_OPCODE(found->second);
-
-#undef SET_OPCODE
+			inst->opcode = encoding.op;
+			d0.opcode = encoding.op & 0x3F;
+			s1.opcode_hi = (encoding.op > 0x3F)? 1 : 0;
+			s0.exec_if_eq = encoding.exec_if_eq ? 1 : 0;
+			s0.exec_if_gr = encoding.exec_if_gt ? 1 : 0;
+			s0.exec_if_lt = encoding.exec_if_lt ? 1 : 0;
+			d0.set_cond = encoding.set_cond ? 1 : 0;
+			inst->bytecode[0] = d0.HEX;
+			inst->bytecode[1] = s0.HEX;
+			inst->bytecode[2] = s1.HEX;
 		};
 
 		std::string op, dst;
