@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "RegisterAnnotationPass.h"
 #include "Emu/RSX/Program/Assembler/FPOpcodes.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
@@ -24,11 +25,24 @@ namespace rsx::assembler::FP
 			dst.no_dest ||                                // Must have a sink
 			src0.reg_type != RSX_FP_REGISTER_TYPE_TEMP || // Must read from reg
 			dst.dest_reg != src0.tmp_reg_index ||         // Must be a write-to-self
-			dst.fp16 ||                                   // Always full lane. We need to collect more data on this but it won't matter
-			dst.saturate ||                               // Precision modifier
-			(dst.prec != RSX_FP_PRECISION_REAL &&
-				dst.prec != RSX_FP_PRECISION_UNKNOWN))    // Cannot have precision modifiers
+			dst.fp16 != src0.fp16 ||                      // Must really be the same register
+			src0.abs || src0.neg ||
+			dst.saturate)                                 // Precision modifier
 		{
+			return false;
+		}
+
+		switch (dst.prec)
+		{
+		case RSX_FP_PRECISION_REAL:
+		case RSX_FP_PRECISION_UNKNOWN:
+			break;
+		case RSX_FP_PRECISION_HALF:
+			if (!src0.fp16) return false;
+			break;
+		case RSX_FP_PRECISION_FIXED12:
+		case RSX_FP_PRECISION_FIXED9:
+		case RSX_FP_PRECISION_SATURATE:
 			return false;
 		}
 

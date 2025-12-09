@@ -731,4 +731,39 @@ namespace rsx::assembler
 		EXPECT_EQ(get_graph_block(graph, 5)->instructions.size(), 1);
 		EXPECT_EQ(get_graph_block(graph, 6)->instructions.size(), 1);
 	}
+
+	TEST(TestFPIR, RegisterDependencyPass_SplinterCell_DelaySlot)
+	{
+		// Real shader pattern found in splinter cell blacklist.
+		// TEX instructions replaced with MOV for simplicity.
+		// There are no dependent reads here, no barriers are expected.
+		// In the game, instruction 4 was misclassified as a delay slot, causing a skipped clobber.
+		auto ir = FPIR::from_source(R"(
+			MOV R0.w, #{ 0.25 }
+			MOV H0, H8
+			MUL R0.w, H0.w, R0.w
+			MOV R0.xyz, H0.xyz
+			MOV R1, #{ 0.25 }
+			FMA H0, R0, #{ 0.125 }, R1
+		)");
+
+		auto bytecode = ir.compile();
+		RSXFragmentProgram prog{};
+		prog.data = bytecode.data();
+		auto graph = deconstruct_fragment_program(prog);
+
+		// Verify state before
+		ASSERT_EQ(graph.blocks.size(), 1);
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 6);
+
+		FP::RegisterAnnotationPass annotation_pass{ prog, {.skip_delay_slots = true } };
+		FP::RegisterDependencyPass deps_pass{};
+
+		annotation_pass.run(graph);
+		deps_pass.run(graph);
+
+		// Verify state after
+		EXPECT_EQ(get_graph_block(graph, 0)->instructions.size(), 6);
+		EXPECT_EQ(get_graph_block(graph, 0)->epilogue.size(), 0);
+	}
 }
