@@ -1,10 +1,11 @@
 #pragma once
 
-#include <3rdparty/curl/curl/include/curl/curl.h>
+#include <curl/curl.h>
+#include <pugixml.hpp>
+
 #include <Emu/Cell/Modules/sceNpClans.h>
 #include <Emu/NP/np_handler.h>
 #include <Emu/IdManager.h>
-#include <pugixml.hpp>
 
 inline const char* CLANS_ENTITLEMENT_ID = "NPWR00432_00";
 inline const char* CLANS_SERVICE_ID = "IV0001-NPXS01001_00";

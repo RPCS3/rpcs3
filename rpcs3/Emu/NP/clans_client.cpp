@@ -1,4 +1,3 @@
-#include "Emu/Cell/Modules/sceNpClans.h"
 #include "stdafx.h"
 
 #include <util/types.hpp>
@@ -8,8 +7,9 @@
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
-#include <Emu/NP/clans_client.h>
-#include <Emu/NP/clans_config.h>
+#include "Emu/Cell/Modules/sceNpClans.h"
+#include "Emu/NP/clans_client.h"
+#include "Emu/NP/clans_config.h"
 
 LOG_CHANNEL(clan_log, "clans");
 
