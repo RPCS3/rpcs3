@@ -7,7 +7,6 @@
 #include <cmath>
 #include <filesystem>
 
-// TODO: replace with file check for iso!
 bool is_file_iso(const std::string& path)
 {
 	if (fs::is_dir(path)) return false;
@@ -355,7 +354,7 @@ std::pair<u64, iso_extent_info> iso_file::get_extent_pos(u64 pos) const
 {
 	auto it = m_meta.extents.begin();
 
-	while(pos >= it->size && it < m_meta.extents.end() - 1)
+	while(pos >= it->size && it != m_meta.extents.end() - 1)
 	{
 		pos -= it->size;
 
@@ -405,7 +404,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	if (size > total_read && (offset + total_read) < total_size)
 	{
 		u64 second_total_read = read_at(offset + total_read,
-			static_cast<char*>(buffer) + total_read,
+			reinterpret_cast<u8*>(buffer) + total_read,
 			size - total_read
 		);
 
@@ -580,6 +579,7 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 		// pointing to a file instead of a folder, which translates to error::unknown.
 		// doing the same here.
 		fs::g_tls_error = fs::error::unknown;
+		return nullptr;
 	}
 
 	return std::make_unique<iso_dir>(*node);
