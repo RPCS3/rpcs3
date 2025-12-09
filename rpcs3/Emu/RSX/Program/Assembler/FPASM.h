@@ -16,7 +16,7 @@ namespace rsx::assembler
 		const std::vector<Instruction>& instructions() const;
 		std::vector<u32> compile() const;
 
-		static FPIR from_source(const std::string& asm_);
+		static FPIR from_source(std::string_view asm_);
 
 	private:
 		Instruction* load(const RegisterRef& reg, int operand, Instruction* target = nullptr);

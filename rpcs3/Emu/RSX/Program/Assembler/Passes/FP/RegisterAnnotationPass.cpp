@@ -16,9 +16,9 @@ namespace rsx::assembler::FP
 
 	bool is_delay_slot(const Instruction& instruction)
 	{
-		OPDEST dst{ .HEX = instruction.bytecode[0] };
-		SRC0 src0{ .HEX = instruction.bytecode[1] };
-		SRC1 src1{ .HEX = instruction.bytecode[2] };
+		const OPDEST dst{ .HEX = instruction.bytecode[0] };
+		const SRC0 src0{ .HEX = instruction.bytecode[1] };
+		const SRC1 src1{ .HEX = instruction.bytecode[2] };
 
 		if (dst.opcode != RSX_FP_OPCODE_MOV ||            // These slots are always populated with MOV
 			dst.no_dest ||                                // Must have a sink
@@ -70,21 +70,14 @@ namespace rsx::assembler::FP
 
 			if (ref)
 			{
-				results.push_back(ref);
+				results.push_back(std::move(ref));
 			}
 		}
 
 		// Helper to check a span for 32-bit access
 		auto match_any_32 = [](const std::span<const char> lanes)
 		{
-			for (const auto& c : lanes)
-			{
-				if (c == content_dual || c == content_float32)
-				{
-					return true;
-				}
-			}
-			return false;
+			return std::any_of(lanes.begin(), lanes.end(), FN(x == content_dual || x == content_float32));
 		};
 
 		// F32 register processing
@@ -115,7 +108,7 @@ namespace rsx::assembler::FP
 
 			if (ref)
 			{
-				results.push_back(ref);
+				results.push_back(std::move(ref));
 			}
 		}
 
@@ -142,13 +135,13 @@ namespace rsx::assembler::FP
 					continue;
 				}
 
-				instruction.srcs.push_back(reg);
+				instruction.srcs.push_back(std::move(reg));
 			}
 
 			RegisterRef dst = get_dst_register(&instruction);
 			if (dst)
 			{
-				instruction.dsts.push_back(dst);
+				instruction.dsts.push_back(std::move(dst));
 			}
 		}
 	}
