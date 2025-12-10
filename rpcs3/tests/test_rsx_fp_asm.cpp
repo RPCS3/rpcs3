@@ -63,14 +63,6 @@ namespace rsx::assembler
 		return graph;
 	}
 
-	static BasicBlock* BB_from_source(FlowGraph* graph, const std::string& asm_)
-	{
-		auto ir = FPIR::from_source(asm_);
-		graph->blocks.push_back({});
-		BasicBlock& bb = graph->blocks.back();
-		bb.instructions = ir.instructions();
-		return &bb;
-	}
 	TEST(TestFPIR, FromSource)
 	{
 		auto ir = FPIR::from_source(R"(
