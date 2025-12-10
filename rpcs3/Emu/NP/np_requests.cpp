@@ -871,10 +871,10 @@ namespace np
 		// Clans: check if ticket belongs to the clan service. If so, store it.
 		if (current_ticket.get_service_id() == CLANS_SERVICE_ID)
 		{
-			std::lock_guard lock(mutex_clan_ticket);
 			clan_ticket = current_ticket;
-			clan_ticket_ready = true;
-			cv_clan_ticket.notify_all();
+			clan_ticket_ready.store(true);
+			clan_ticket_ready.notify_all();
+			
 			return;
 		}
 

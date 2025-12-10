@@ -202,7 +202,7 @@ namespace clan
 		return SceNpClansError::SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::destroyRequest(s32 reqId)
+	SceNpClansError clans_client::destroyRequest(u32 reqId)
 	{
 		if (idm::remove<clan_request_ctx>(reqId))
 			return SceNpClansError::SCE_NP_CLANS_SUCCESS;
@@ -210,7 +210,7 @@ namespace clan
 		return SceNpClansError::SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 	}
 
-	SceNpClansError clans_client::sendRequest(s32 reqId, ClanRequestAction action, ClanManagerOperationType opType, pugi::xml_document* xmlBody, pugi::xml_document* outResponse)
+	SceNpClansError clans_client::sendRequest(u32 reqId, ClanRequestAction action, ClanManagerOperationType opType, pugi::xml_document* xmlBody, pugi::xml_document* outResponse)
 	{
 		auto ctx = idm::get_unlocked<clan_request_ctx>(reqId);
 
@@ -296,7 +296,6 @@ namespace clan
 		nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
 
 		np::ticket ticket = nph.get_clan_ticket();
-
 		if (ticket.empty())
 		{
 			clan_log.error("Failed to get clan ticket");
@@ -313,7 +312,7 @@ namespace clan
 	}
 
 #pragma region Outgoing API Requests
-	SceNpClansError clans_client::getClanList(np::np_handler& nph, s32 reqId, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::getClanList(np::np_handler& nph, u32 reqId, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -390,7 +389,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getClanInfo(s32 reqId, SceNpClanId clanId, SceNpClansClanInfo* clanInfo)
+	SceNpClansError clans_client::getClanInfo(u32 reqId, SceNpClanId clanId, SceNpClansClanInfo* clanInfo)
 	{
 		pugi::xml_document doc = pugi::xml_document();
 		pugi::xml_node clan = doc.append_child("clan");
@@ -429,7 +428,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getMemberInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberEntry* memInfo)
+	SceNpClansError clans_client::getMemberInfo(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberEntry* memInfo)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -499,7 +498,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::getMemberList(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMemberStatus /*status*/, SceNpClansMemberEntry* memList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::getMemberList(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMemberStatus /*status*/, SceNpClansMemberEntry* memList, SceNpClansPagingResult* pageResult)
 	{	
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -577,7 +576,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-    SceNpClansError clans_client::getBlacklist(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansBlacklistEntry* bl, SceNpClansPagingResult* pageResult)
+    SceNpClansError clans_client::getBlacklist(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansBlacklistEntry* bl, SceNpClansPagingResult* pageResult)
     {
         std::string ticket = getClanTicket(nph);
 
@@ -641,7 +640,7 @@ namespace clan
         return SCE_NP_CLANS_SUCCESS;
     }
 
-	SceNpClansError clans_client::addBlacklistEntry(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::addBlacklistEntry(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -659,7 +658,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::RecordBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::removeBlacklistEntry(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::removeBlacklistEntry(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -677,7 +676,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::DeleteBlacklistEntry, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::clanSearch(s32 reqId, SceNpClansPagingRequest* paging, SceNpClansSearchableName* search, SceNpClansClanBasicInfo* clanList, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::clanSearch(u32 reqId, SceNpClansPagingRequest* paging, SceNpClansSearchableName* search, SceNpClansClanBasicInfo* clanList, SceNpClansPagingResult* pageResult)
 	{
 		pugi::xml_document doc = pugi::xml_document();
         pugi::xml_node clan = doc.append_child("clan");
@@ -739,7 +738,7 @@ namespace clan
         return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::requestMembership(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::requestMembership(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -754,7 +753,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::RequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::cancelRequestMembership(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
+	SceNpClansError clans_client::cancelRequestMembership(np::np_handler& nph, u32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -769,7 +768,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::CancelRequestMembership, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::sendMembershipResponse(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/, b8 allow)
+	SceNpClansError clans_client::sendMembershipResponse(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/, b8 allow)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -787,7 +786,7 @@ namespace clan
 		return sendRequest(reqId, allow ? ClanRequestAction::AcceptMembershipRequest : ClanRequestAction::DeclineMembershipRequest, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::sendInvitation(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::sendInvitation(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -805,7 +804,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::SendInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::cancelInvitation(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId)
+	SceNpClansError clans_client::cancelInvitation(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -823,7 +822,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::CancelInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::sendInvitationResponse(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/, b8 accept)
+	SceNpClansError clans_client::sendInvitationResponse(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/, b8 accept)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -838,7 +837,7 @@ namespace clan
 		return sendRequest(reqId, accept ? ClanRequestAction::AcceptInvitation : ClanRequestAction::DeclineInvitation, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::updateMemberInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansUpdatableMemberInfo* info)
+	SceNpClansError clans_client::updateMemberInfo(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansUpdatableMemberInfo* info)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -877,7 +876,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::UpdateMemberInfo, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::updateClanInfo(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansUpdatableClanInfo* info)
+	SceNpClansError clans_client::updateClanInfo(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansUpdatableClanInfo* info)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -897,7 +896,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::UpdateClanInfo, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::joinClan(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
+	SceNpClansError clans_client::joinClan(np::np_handler& nph, u32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -912,7 +911,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::JoinClan, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::leaveClan(np::np_handler& nph, s32 reqId, SceNpClanId clanId)
+	SceNpClansError clans_client::leaveClan(np::np_handler& nph, u32 reqId, SceNpClanId clanId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -927,7 +926,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::LeaveClan, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::kickMember(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
+	SceNpClansError clans_client::kickMember(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMessage* /*message*/)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -945,7 +944,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::KickMember, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::changeMemberRole(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberRole role)
+	SceNpClansError clans_client::changeMemberRole(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpId npId, SceNpClansMemberRole role)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -966,7 +965,7 @@ namespace clan
 		return sendRequest(reqId, ClanRequestAction::ChangeMemberRole, ClanManagerOperationType::UPDATE, &doc, &response);
 	}
 
-	SceNpClansError clans_client::retrieveAnnouncements(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMessageEntry* announcements, SceNpClansPagingResult* pageResult)
+	SceNpClansError clans_client::retrieveAnnouncements(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansPagingRequest* paging, SceNpClansMessageEntry* announcements, SceNpClansPagingResult* pageResult)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -1049,7 +1048,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::postAnnouncement(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessage* announcement, SceNpClansMessageData* /*data*/, u32 duration, SceNpClansMessageId* msgId)
+	SceNpClansError clans_client::postAnnouncement(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansMessage* announcement, SceNpClansMessageData* /*data*/, u32 duration, SceNpClansMessageId* msgId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())
@@ -1082,7 +1081,7 @@ namespace clan
 		return SCE_NP_CLANS_SUCCESS;
 	}
 
-	SceNpClansError clans_client::deleteAnnouncement(np::np_handler& nph, s32 reqId, SceNpClanId clanId, SceNpClansMessageId announcementId)
+	SceNpClansError clans_client::deleteAnnouncement(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansMessageId announcementId)
 	{
 		std::string ticket = getClanTicket(nph);
 		if (ticket.empty())

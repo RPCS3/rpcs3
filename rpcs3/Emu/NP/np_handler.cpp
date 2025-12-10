@@ -1366,8 +1366,14 @@ namespace np
 
 	ticket np_handler::get_clan_ticket()
 	{
-		std::unique_lock lock(mutex_clan_ticket);
-		cv_clan_ticket.wait(lock, [this] { return clan_ticket_ready.load(); });
+		clan_ticket_ready.wait(false, atomic_wait_timeout{60'000'000'000}); // 60 seconds
+
+		if (!clan_ticket_ready.load())
+		{
+			rpcn_log.error("Failed to get clan ticket within timeout.");
+			return ticket{};
+		}
+
 		return clan_ticket;
 	}
 

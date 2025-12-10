@@ -419,9 +419,7 @@ namespace np
 		ticket current_ticket;
 
 		// Clan ticket
-		std::mutex mutex_clan_ticket;
-		std::condition_variable_any cv_clan_ticket;
-		atomic_t<bool> clan_ticket_ready = false;
+		atomic_t<u32> clan_ticket_ready = 0;
 		ticket clan_ticket;
 
 		// IP & DNS info
