@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
 #include "overlay_debug_overlay.h"
+#include "Debug/overlay_ps_move_debug.h"
 #include "Emu/system_config.h"
 
 namespace rsx
@@ -41,7 +42,7 @@ namespace rsx
 			visible = true;
 		}
 
-		extern void reset_debug_overlay()
+		extern void reset_debug_overlays()
 		{
 			if (!g_cfg.misc.use_native_interface)
 				return;
@@ -49,6 +50,7 @@ namespace rsx
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
 				auto overlay = manager->get<rsx::overlays::debug_overlay>();
+				auto ps_move_overlay = manager->get<rsx::overlays::ps_move_debug_overlay>();
 
 				if (g_cfg.video.debug_overlay || g_cfg.io.pad_debug_overlay || g_cfg.io.mouse_debug_overlay)
 				{
@@ -60,6 +62,18 @@ namespace rsx
 				else if (overlay)
 				{
 					manager->remove<rsx::overlays::debug_overlay>();
+				}
+
+				if (g_cfg.io.ps_move_debug_overlay)
+				{
+					if (!ps_move_overlay)
+					{
+						ps_move_overlay = manager->create<rsx::overlays::ps_move_debug_overlay>();
+					}
+				}
+				else if (ps_move_overlay)
+				{
+					manager->remove<rsx::overlays::ps_move_debug_overlay>();
 				}
 			}
 		}

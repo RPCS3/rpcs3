@@ -181,6 +181,7 @@ enum class emu_settings_type
 	MouseBasedGyro,
 	IoDebugOverlay,
 	MouseDebugOverlay,
+	MoveDebugOverlay,
 
 	// Misc
 	ExitRPCS3OnFinish,

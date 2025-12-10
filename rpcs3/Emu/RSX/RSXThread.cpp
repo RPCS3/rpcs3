@@ -937,7 +937,7 @@ namespace rsx
 		if (!serialized) method_registers.init();
 
 		rsx::overlays::reset_performance_overlay();
-		rsx::overlays::reset_debug_overlay();
+		rsx::overlays::reset_debug_overlays();
 
 		if (!is_initialized)
 		{
