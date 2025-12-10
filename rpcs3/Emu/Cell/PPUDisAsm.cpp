@@ -330,7 +330,7 @@ void comment_constant(std::string& last_opcode, u64 value, bool print_float = fa
 	// Comment constant formation
 	fmt::append(last_opcode, " #0x%xh", value);
 
-	if (print_float && ((value >> 31) <= 1u || (value >> 31) == 0x1'ffff'ffffu))
+	if (print_float && ((value >> 31) <= 1u || (value >> 31) == 0x1'ffff'ffffu) && (value > 0x3fffff && (value << 32 >> 32) < 0xffc00000))
 	{
 		const f32 float_val = std::bit_cast<f32>(static_cast<u32>(value));
 
