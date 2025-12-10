@@ -2480,6 +2480,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->debugOverlayMouse, emu_settings_type::MouseDebugOverlay);
 	SubscribeTooltip(ui->debugOverlayMouse, tooltips.settings.debug_overlay_mouse);
 
+	m_emu_settings->EnhanceCheckBox(ui->debugOverlayPsMove, emu_settings_type::MoveDebugOverlay);
+	SubscribeTooltip(ui->debugOverlayPsMove, tooltips.settings.debug_overlay_ps_move);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->combo_accurate_ppu_128, emu_settings_type::AccuratePPU128Loop, true);

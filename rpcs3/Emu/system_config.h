@@ -284,6 +284,7 @@ struct cfg_root : cfg::node
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 		cfg::_bool pad_debug_overlay{ this, "IO Debug overlay", false, true };
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
+		cfg::_bool ps_move_debug_overlay{ this, "PS Move Debug overlay", false, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_v{ this, "Fake Move Rotation Cone (Vertical)", 10, true };
 

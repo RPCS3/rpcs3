@@ -288,6 +288,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY: return tr("Mouse Debug Overlay", "Debug");
+		case localized_string_id::HOME_MENU_SETTINGS_PS_MOVE_DEBUG_INPUT_OVERLAY: return tr("PSMove Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");

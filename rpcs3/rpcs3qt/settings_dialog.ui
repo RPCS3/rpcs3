@@ -265,7 +265,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
+           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0">
             <item>
              <widget class="QGroupBox" name="gb_spu_threads">
               <property name="sizePolicy">
@@ -4555,6 +4555,13 @@
                  <widget class="QCheckBox" name="debugOverlayMouse">
                   <property name="text">
                    <string>Debug Overlay For Mouse Input</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="debugOverlayPsMove">
+                  <property name="text">
+                   <string>Debug Overlay For PSMove Input</string>
                   </property>
                  </widget>
                 </item>

@@ -171,6 +171,7 @@ enum class emu_settings_type
 	SDLMappings,
 	IoDebugOverlay,
 	MouseDebugOverlay,
+	MoveDebugOverlay,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -382,6 +383,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::SDLMappings,       { "Input/Output", "Load SDL GameController Mappings" }},
 	{ emu_settings_type::IoDebugOverlay,    { "Input/Output", "IO Debug overlay" }},
 	{ emu_settings_type::MouseDebugOverlay, { "Input/Output", "Mouse Debug overlay" }},
+	{ emu_settings_type::MoveDebugOverlay,  { "Input/Output", "PS Move Debug overlay" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,               { "Miscellaneous", "Exit RPCS3 when process finishes" }},
