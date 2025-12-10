@@ -485,7 +485,7 @@ namespace clan
 			}
 		};
 
-		strcpy_trunc(memInfo->updatable.description, description_str.c_str());
+		strcpy_trunc(memInfo->updatable.description, description_str);
 
 		return SCE_NP_CLANS_SUCCESS;
 	}
@@ -538,9 +538,6 @@ namespace clan
             uint32_t status_int = info.child("status").text().as_uint();
             std::string description_str = info.child("description").text().as_string();
 
-            char description_char[256] = {0};
-            strcpy_trunc(description_char, description_str);
-
             SceNpClansMemberEntry entry = SceNpClansMemberEntry
             {
                 .npid = npid,
@@ -548,7 +545,7 @@ namespace clan
                 .status = static_cast<SceNpClansMemberStatus>(status_int),
             };
 
-			strcpy_trunc(entry.updatable.description, description_char);
+			strcpy_trunc(entry.updatable.description, description_str);
             
 			memList[i] = entry;
             i++;
