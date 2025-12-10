@@ -149,6 +149,7 @@ namespace rsx
 			add_checkbox(&g_cfg.video.debug_overlay, localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY);
 			add_checkbox(&g_cfg.io.pad_debug_overlay, localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY);
 			add_checkbox(&g_cfg.io.mouse_debug_overlay, localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY);
+			add_checkbox(&g_cfg.io.ps_move_debug_overlay, localized_string_id::HOME_MENU_SETTINGS_PS_MOVE_DEBUG_INPUT_OVERLAY);
 			add_checkbox(&g_cfg.video.disable_video_output, localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT);
 			add_float_slider(&g_cfg.video.texture_lod_bias, localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS, "", 0.25f);
 

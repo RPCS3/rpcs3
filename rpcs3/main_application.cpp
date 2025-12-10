@@ -54,7 +54,7 @@ namespace audio
 namespace rsx::overlays
 {
 	extern void reset_performance_overlay();
-	extern void reset_debug_overlay();
+	extern void reset_debug_overlays();
 }
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
@@ -91,7 +91,7 @@ void main_application::OnEmuSettingsChange()
 	audio::configure_audio();
 	audio::configure_rsxaudio();
 	rsx::overlays::reset_performance_overlay();
-	rsx::overlays::reset_debug_overlay();
+	rsx::overlays::reset_debug_overlays();
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
