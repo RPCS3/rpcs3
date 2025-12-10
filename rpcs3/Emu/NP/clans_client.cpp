@@ -23,6 +23,7 @@
 #include "Emu/Cell/Modules/sceNpClans.h"
 #include "Emu/NP/clans_client.h"
 #include "Emu/NP/clans_config.h"
+#include "Emu/NP/np_helpers.h"
 
 LOG_CHANNEL(clan_log, "clans");
 
@@ -453,21 +454,16 @@ namespace clan
 
 		pugi::xml_attribute jid = info.attribute("jid");
 		std::string npid_str = jid.as_string();
-
-		char username[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1] = {0};
-
-		sscanf(npid_str.c_str(), "%16[^@]", username);
+		std::string username = fmt::split(npid_str, {std::string("@")})[0];
 
 		SceNpId npid;
-
-		if (!strcmp(username, nph.get_npid().handle.data))
+		if (!strcmp(username.c_str(), nph.get_npid().handle.data))
 		{
 			npid = nph.get_npid();
 		}
 		else
 		{
-			npid = SceNpId {};
-			std::strncpy(npid.handle.data, username, SCE_NET_NP_ONLINEID_MAX_LENGTH + 1);
+			np::string_to_npid(npid_str, npid);
 		}
 
 		pugi::xml_node role = info.child("role");
@@ -479,9 +475,6 @@ namespace clan
 		pugi::xml_node description = info.child("description");
 		std::string description_str = description.text().as_string();
 
-		char description_char[256] = {0};
-		strcpy_trunc(description_char, description_str);
-
 		*memInfo = SceNpClansMemberEntry
 		{
 			.npid = npid,
@@ -492,8 +485,7 @@ namespace clan
 			}
 		};
 
-		strcpy_trunc(memInfo->npid.handle.data, username);
-		strcpy_trunc(memInfo->updatable.description, description_char);
+		strcpy_trunc(memInfo->updatable.description, description_str.c_str());
 
 		return SCE_NP_CLANS_SUCCESS;
 	}
@@ -530,21 +522,16 @@ namespace clan
         for (pugi::xml_node info = list.child("info"); info; info = info.next_sibling("info"))
         {
             std::string npid_str = info.attribute("jid").as_string();
-
-			char username[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1] = {0};
-
-			sscanf(npid_str.c_str(), "%16[^@]", username);
+			std::string username = fmt::split(npid_str, {std::string("@")})[0];
 
 			SceNpId npid;
-
-			if (!strcmp(username, nph.get_npid().handle.data))
+			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
 			{
 				npid = nph.get_npid();
 			}
 			else
 			{
-				npid = SceNpId {};
-				std::strncpy(npid.handle.data, username, SCE_NET_NP_ONLINEID_MAX_LENGTH + 1);
+				np::string_to_npid(npid_str, npid);
 			}
 
             uint32_t role_int = info.child("role").text().as_uint();
@@ -608,19 +595,8 @@ namespace clan
             pugi::xml_node id = node.child("jid");
             std::string npid_str = id.text().as_string();
 
-            char username[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1] = {0};
-
-            sscanf(npid_str.c_str(), "%16[^@]", username);
-
-            SceNpId npid = SceNpId
-            {
-                .handle = SceNpOnlineId
-                {
-                    .data = ""
-                }
-            };
-
-			strcpy_trunc(npid.handle.data, username);
+			SceNpId npid = {};
+            np::string_to_npid(npid_str.c_str(), npid);
 
             SceNpClansBlacklistEntry entry = SceNpClansBlacklistEntry
             {
@@ -1004,19 +980,16 @@ namespace clan
 			std::string npid_str = node.child("jid").text().as_string();
 			std::string msg_date = node.child("msg-date").text().as_string();
 
-			char username[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1] = {0};
-			sscanf(npid_str.c_str(), "%16[^@]", username);
-
 			SceNpId npid;
+			std::string username = fmt::split(npid_str, {std::string("@")})[0];
 
-			if (!strcmp(username, nph.get_npid().handle.data))
+			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
 			{
 				npid = nph.get_npid();
 			}
 			else
 			{
-				npid = SceNpId {};
-				std::strncpy(npid.handle.data, username, SCE_NET_NP_ONLINEID_MAX_LENGTH + 1);
+				np::string_to_npid(npid_str, npid);
 			}
 
 			// TODO: implement `binData` and `fromId`

@@ -80,6 +80,8 @@ void fmt_class_string<SceNpClansError>::format(std::string& out, u64 arg)
 
 error_code sceNpClansInit(vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passphrase, vm::ptr<void> pool, vm::ptr<u32> poolSize, u32 flags)
 {
+	sceNpClans.warning("sceNpClansInit(commId=*0x%x, passphrase=*0x%x, pool=*0x%x, poolSize=*0x%x, flags=0x%x)", commId, passphrase, pool, poolSize, flags);
+
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	if (clans_manager.is_initialized)
@@ -107,6 +109,8 @@ error_code sceNpClansInit(vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpC
 
 error_code sceNpClansTerm()
 {
+	sceNpClans.warning("sceNpClansTerm()");
+
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
 	if (!clans_manager.is_initialized)
@@ -122,6 +126,8 @@ error_code sceNpClansTerm()
 
 error_code sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 flags)
 {
+	sceNpClans.warning("sceNpClansCreateRequest(handle=*0x%x, flags=0x%x)", handle, flags);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -146,13 +152,15 @@ error_code sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 
 		return res;
 	}
 
-	vm::write32(handle.addr(), static_cast<u32>(reqId));
+	*handle = reqId;
 
 	return CELL_OK;
 }
 
 error_code sceNpClansDestroyRequest(SceNpClansRequestHandle handle)
 {
+	sceNpClans.warning("sceNpClansDestroyRequest(handle=*0x%x)", handle);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -171,6 +179,8 @@ error_code sceNpClansDestroyRequest(SceNpClansRequestHandle handle)
 
 error_code sceNpClansAbortRequest(SceNpClansRequestHandle handle)
 {
+	sceNpClans.warning("sceNpClansAbortRequest(handle=*0x%x)", handle);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -224,6 +234,8 @@ error_code sceNpClansDisbandClan(SceNpClansRequestHandle handle, SceNpClanId cla
 
 error_code sceNpClansGetClanList(SceNpClansRequestHandle handle, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)
 {
+	sceNpClans.warning("sceNpClansGetClanList(handle=*0x%x, paging=*0x%x, clanList=*0x%x, pageResult=*0x%x)", handle, paging, clanList, pageResult);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -249,11 +261,6 @@ error_code sceNpClansGetClanList(SceNpClansRequestHandle handle, vm::cptr<SceNpC
 	if (paging)
 	{
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
-	}
-	else
-	{
-		host_paging.startPos = 0;
-		host_paging.max = 0;
 	}
 
 	SceNpClansEntry host_clanList[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
@@ -328,6 +335,8 @@ error_code sceNpClansSearchByProfile(SceNpClansRequestHandle handle, vm::cptr<Sc
 
 error_code sceNpClansSearchByName(SceNpClansRequestHandle handle, vm::cptr<SceNpClansPagingRequest> paging, vm::cptr<SceNpClansSearchableName> search, vm::ptr<SceNpClansClanBasicInfo> results, vm::ptr<SceNpClansPagingResult> pageResult)
 {
+	sceNpClans.warning("sceNpClansSearchByName(handle=*0x%x, paging=*0x%x, search=*0x%x, results=*0x%x, pageResult=*0x%x)", handle, paging, search, results, pageResult);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -353,11 +362,6 @@ error_code sceNpClansSearchByName(SceNpClansRequestHandle handle, vm::cptr<SceNp
 	{
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
 	}
-	else
-	{
-		host_paging.startPos = 0;
-		host_paging.max = 0;
-	}
 
 	SceNpClansSearchableName host_search = {};
 	std::memcpy(&host_search, search.get_ptr(), sizeof(SceNpClansSearchableName));
@@ -382,6 +386,8 @@ error_code sceNpClansSearchByName(SceNpClansRequestHandle handle, vm::cptr<SceNp
 
 error_code sceNpClansGetClanInfo(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::ptr<SceNpClansClanInfo> info)
 {
+	sceNpClans.warning("sceNpClansGetClanInfo(handle=*0x%x, clanId=*0x%x, info=*0x%x)", handle, clanId, info);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -410,6 +416,8 @@ error_code sceNpClansGetClanInfo(SceNpClansRequestHandle handle, SceNpClanId cla
 
 error_code sceNpClansUpdateClanInfo(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansUpdatableClanInfo> info)
 {
+	sceNpClans.warning("sceNpClansUpdateClanInfo(handle=*0x%x, clanId=*0x%x, info=*0x%x)", handle, clanId, info);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -438,6 +446,8 @@ error_code sceNpClansUpdateClanInfo(SceNpClansRequestHandle handle, SceNpClanId 
 
 error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansPagingRequest> paging, SceNpClansMemberStatus status, vm::ptr<SceNpClansMemberEntry> memList, vm::ptr<SceNpClansPagingResult> pageResult)
 {
+	sceNpClans.warning("sceNpClansGetMemberList(handle=*0x%x, clanId=*0x%x, paging=*0x%x, status=0x%x, memList=*0x%x, pageResult=*0x%x)", handle, clanId, paging, status, memList, pageResult);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -464,11 +474,6 @@ error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId c
 	{
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
 	}
-	else
-	{
-		host_paging.startPos = 0;
-		host_paging.max = 0;
-	}
 
 	SceNpClansMemberEntry* host_memList_addr = new SceNpClansMemberEntry[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX];
 	SceNpClansPagingResult host_pageResult = {};
@@ -492,6 +497,8 @@ error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId c
 
 error_code sceNpClansGetMemberInfo(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid, vm::ptr<SceNpClansMemberEntry> memInfo)
 {
+	sceNpClans.warning("sceNpClansGetMemberInfo(handle=*0x%x, clanId=*0x%x, npid=*0x%x, memInfo=*0x%x)", handle, clanId, npid, memInfo);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -523,6 +530,8 @@ error_code sceNpClansGetMemberInfo(SceNpClansRequestHandle handle, SceNpClanId c
 
 error_code sceNpClansUpdateMemberInfo(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansUpdatableMemberInfo> info)
 {
+	sceNpClans.warning("sceNpClansUpdateMemberInfo(handle=*0x%x, clanId=*0x%x, info=*0x%x)", handle, clanId, info);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -550,6 +559,8 @@ error_code sceNpClansUpdateMemberInfo(SceNpClansRequestHandle handle, SceNpClanI
 
 error_code sceNpClansChangeMemberRole(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid, u32 role)
 {
+	sceNpClans.warning("sceNpClansChangeMemberRole(handle=*0x%x, clanId=*0x%x, npid=*0x%x, role=0x%x)", handle, clanId, npid, role);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -608,6 +619,8 @@ error_code sceNpClansUpdateAutoAcceptStatus(SceNpClansRequestHandle handle, SceN
 
 error_code sceNpClansJoinClan(SceNpClansRequestHandle handle, SceNpClanId clanId)
 {
+	sceNpClans.warning("sceNpClansJoinClan(handle=*0x%x, clanId=*0x%x)", handle, clanId);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -627,6 +640,8 @@ error_code sceNpClansJoinClan(SceNpClansRequestHandle handle, SceNpClanId clanId
 
 error_code sceNpClansLeaveClan(SceNpClansRequestHandle handle, SceNpClanId clanId)
 {
+	sceNpClans.warning("sceNpClansLeaveClan(handle=*0x%x, clanId=*0x%x)", handle, clanId);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -646,6 +661,8 @@ error_code sceNpClansLeaveClan(SceNpClansRequestHandle handle, SceNpClanId clanI
 
 error_code sceNpClansKickMember(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid, vm::cptr<SceNpClansMessage> message)
 {
+	sceNpClans.warning("sceNpClansKickMember(handle=*0x%x, clanId=*0x%x, npid=*0x%x, message=*0x%x)", handle, clanId, npid, message);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -687,6 +704,8 @@ error_code sceNpClansKickMember(SceNpClansRequestHandle handle, SceNpClanId clan
 
 error_code sceNpClansSendInvitation(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid, vm::cptr<SceNpClansMessage> message)
 {
+	sceNpClans.warning("sceNpClansSendInvitation(handle=*0x%x, clanId=*0x%x, npid=*0x%x, message=*0x%x)", handle, clanId, npid, message);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -728,6 +747,8 @@ error_code sceNpClansSendInvitation(SceNpClansRequestHandle handle, SceNpClanId 
 
 error_code sceNpClansCancelInvitation(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid)
 {
+	sceNpClans.warning("sceNpClansCancelInvitation(handle=*0x%x, clanId=*0x%x, npid=*0x%x)", handle, clanId, npid);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -755,6 +776,8 @@ error_code sceNpClansCancelInvitation(SceNpClansRequestHandle handle, SceNpClanI
 
 error_code sceNpClansSendInvitationResponse(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansMessage> message, b8 accept)
 {
+	sceNpClans.warning("sceNpClansSendInvitationResponse(handle=*0x%x, clanId=*0x%x, message=*0x%x, accept=%d)", handle, clanId, message, accept);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -793,6 +816,8 @@ error_code sceNpClansSendInvitationResponse(SceNpClansRequestHandle handle, SceN
 
 error_code sceNpClansSendMembershipRequest(SceNpClansRequestHandle handle, u32 clanId, vm::cptr<SceNpClansMessage> message)
 {
+	sceNpClans.warning("sceNpClansSendMembershipRequest(handle=*0x%x, clanId=*0x%x, message=*0x%x)", handle, clanId, message);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -826,6 +851,8 @@ error_code sceNpClansSendMembershipRequest(SceNpClansRequestHandle handle, u32 c
 
 error_code sceNpClansCancelMembershipRequest(SceNpClansRequestHandle handle, SceNpClanId clanId)
 {
+	sceNpClans.warning("sceNpClansCancelMembershipRequest(handle=*0x%x, clanId=*0x%x)", handle, clanId);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -846,6 +873,8 @@ error_code sceNpClansCancelMembershipRequest(SceNpClansRequestHandle handle, Sce
 
 error_code sceNpClansSendMembershipResponse(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> npid, vm::cptr<SceNpClansMessage> message, b8 allow)
 {
+	sceNpClans.warning("sceNpClansSendMembershipResponse(handle=*0x%x, clanId=*0x%x, npid=*0x%x, message=*0x%x, allow=%d)", handle, clanId, npid, message, allow);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -887,6 +916,8 @@ error_code sceNpClansSendMembershipResponse(SceNpClansRequestHandle handle, SceN
 
 error_code sceNpClansGetBlacklist(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansBlacklistEntry> bl, vm::ptr<SceNpClansPagingResult> pageResult)
 {
+	sceNpClans.warning("sceNpClansGetBlacklist(handle=*0x%x, clanId=*0x%x, paging=*0x%x, bl=*0x%x, pageResult=*0x%x)", handle, clanId, paging, bl, pageResult);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -913,11 +944,6 @@ error_code sceNpClansGetBlacklist(SceNpClansRequestHandle handle, SceNpClanId cl
 	{
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
 	}
-	else
-	{
-		host_paging.startPos = 0;
-		host_paging.max = 0;
-	}
 
 	SceNpClansBlacklistEntry host_blacklist[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
@@ -939,6 +965,8 @@ error_code sceNpClansGetBlacklist(SceNpClansRequestHandle handle, SceNpClanId cl
 
 error_code sceNpClansAddBlacklistEntry(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> member)
 {
+	sceNpClans.warning("sceNpClansAddBlacklistEntry(handle=*0x%x, clanId=*0x%x, member=*0x%x)", handle, clanId, member);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -966,6 +994,8 @@ error_code sceNpClansAddBlacklistEntry(SceNpClansRequestHandle handle, SceNpClan
 
 error_code sceNpClansRemoveBlacklistEntry(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpId> member)
 {
+	sceNpClans.warning("sceNpClansRemoveBlacklistEntry(handle=*0x%x, clanId=*0x%x, member=*0x%x)", handle, clanId, member);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -993,6 +1023,8 @@ error_code sceNpClansRemoveBlacklistEntry(SceNpClansRequestHandle handle, SceNpC
 
 error_code sceNpClansRetrieveAnnouncements(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansMessageEntry> mlist, vm::ptr<SceNpClansPagingResult> pageResult)
 {
+	sceNpClans.warning("sceNpClansRetrieveAnnouncements(handle=*0x%x, clanId=*0x%x, paging=*0x%x, mlist=*0x%x, pageResult=*0x%x)", handle, clanId, paging, mlist, pageResult);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -1019,11 +1051,6 @@ error_code sceNpClansRetrieveAnnouncements(SceNpClansRequestHandle handle, SceNp
 	{
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
 	}
-	else
-	{
-		host_paging.startPos = 0;
-		host_paging.max = 0;
-	}
 
 	SceNpClansMessageEntry host_announcements[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
@@ -1045,6 +1072,8 @@ error_code sceNpClansRetrieveAnnouncements(SceNpClansRequestHandle handle, SceNp
 
 error_code sceNpClansPostAnnouncement(SceNpClansRequestHandle handle, SceNpClanId clanId, vm::cptr<SceNpClansMessage> message, vm::cptr<SceNpClansMessageData> data, u32 duration, vm::ptr<SceNpClansMessageId> mId)
 {
+	sceNpClans.warning("sceNpClansPostAnnouncement(handle=*0x%x, clanId=*0x%x, message=*0x%x, data=*0x%x, duration=*0x%x, mId=*0x%x)", handle, clanId, message, data, duration, mId);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
@@ -1086,6 +1115,8 @@ error_code sceNpClansPostAnnouncement(SceNpClansRequestHandle handle, SceNpClanI
 
 error_code sceNpClansRemoveAnnouncement(SceNpClansRequestHandle handle, SceNpClanId clanId, SceNpClansMessageId mId)
 {
+	sceNpClans.warning("sceNpClansRemoveAnnouncement(handle=*0x%x, clanId=*0x%x, mId=*0x%x)", handle, clanId, mId);
+
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
