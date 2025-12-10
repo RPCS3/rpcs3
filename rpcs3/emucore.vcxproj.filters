@@ -142,6 +142,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Assembler\Passes\FP">
       <UniqueIdentifier>{7fb59544-9761-4b4a-bb04-07deb43cf3c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\Debug">
+      <UniqueIdentifier>{0421cba0-f378-4c28-bd91-c82557a0d5b7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -903,9 +906,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -1252,9 +1252,6 @@
     <ClCompile Include="Crypto\unzip.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClCompile>
@@ -1401,6 +1398,15 @@
     </ClCompile>
     <ClCompile Include="Emu\NP\clans_client.cpp">
       <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\Debug\overlay_ps_move_debug.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\Debug</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2187,9 +2193,6 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_compile_notification.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -2608,9 +2611,6 @@
     <ClInclude Include="util\serialization_ext.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
     </ClInclude>
@@ -2817,6 +2817,15 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\clans_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\Debug\overlay_ps_move_debug.h">
+      <Filter>Emu\GPU\RSX\Overlays\Debug</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h">
+      <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h">
+      <Filter>Emu\GPU\RSX\Overlays\Debug</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
