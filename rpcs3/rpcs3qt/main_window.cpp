@@ -2994,6 +2994,12 @@ void main_window::CreateConnects()
 
 	connect(ui->confClansAct, &QAction::triggered, this, [this]()
 	{
+		if (!Emu.IsStopped())
+		{
+			QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
+			return;
+		}
+		
 		clans_settings_dialog dlg(this);
 		dlg.exec();
 	});

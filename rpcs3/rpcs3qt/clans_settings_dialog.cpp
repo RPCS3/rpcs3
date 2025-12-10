@@ -13,12 +13,6 @@
 clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
-	if (!Emu.IsStopped())
-	{
-		QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
-		return;
-	}
-
 	g_cfg_clans.load();
 
 	setWindowTitle(tr("Clans Configuration"));
