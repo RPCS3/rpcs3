@@ -454,7 +454,7 @@ namespace clan
 
 		pugi::xml_attribute jid = info.attribute("jid");
 		std::string npid_str = jid.as_string();
-		std::string username = fmt::split(npid_str, {std::string("@")})[0];
+		std::string username = fmt::split(npid_str, {"@"})[0];
 
 		SceNpId npid;
 		if (!strcmp(username.c_str(), nph.get_npid().handle.data))
@@ -522,7 +522,7 @@ namespace clan
         for (pugi::xml_node info = list.child("info"); info; info = info.next_sibling("info"))
         {
             std::string npid_str = info.attribute("jid").as_string();
-			std::string username = fmt::split(npid_str, {std::string("@")})[0];
+			std::string username = fmt::split(npid_str, {"@"})[0];
 
 			SceNpId npid;
 			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
@@ -978,7 +978,7 @@ namespace clan
 			std::string msg_date = node.child("msg-date").text().as_string();
 
 			SceNpId npid;
-			std::string username = fmt::split(npid_str, {std::string("@")})[0];
+			std::string username = fmt::split(npid_str, {"@"})[0];
 
 			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
 			{
