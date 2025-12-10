@@ -8,7 +8,6 @@
 
 #include "clans_settings_dialog.h"
 #include "Emu/NP/clans_config.h"
-#include "Emu/System.h"
 
 clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 	: QDialog(parent)
