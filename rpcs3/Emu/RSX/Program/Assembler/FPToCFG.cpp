@@ -1,5 +1,4 @@
 #include "stdafx.h"
-
 #include "CFG.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
@@ -75,8 +74,19 @@ namespace rsx::assembler
 		{
 			if (auto found = find_block_for_pc(id))
 			{
-				parent->insert_succ(found, edge_type);
-				found->insert_pred(parent, edge_type);
+				auto succ = found;
+				if (found->is_of_type(EdgeType::ELSE) &&
+					(edge_type == EdgeType::ENDIF || edge_type == EdgeType::ENDLOOP))
+				{
+					// If we landed on an "ELSE" node, link to its "ENDIF" counterpart
+					auto if_parent = found->pred.front().from;
+					auto endif_edge = std::find_if(if_parent->succ.begin(), if_parent->succ.end(), FN(x.type == EdgeType::ENDIF));
+					ensure(endif_edge != if_parent->succ.end(), "CFG: Invalid ELSE node");
+					succ = endif_edge->to;
+				}
+
+				parent->insert_succ(succ, edge_type);
+				succ->insert_pred(parent, edge_type);
 				return found;
 			}
 
@@ -101,6 +111,43 @@ namespace rsx::assembler
 
 			if (found)
 			{
+				auto front_edge = std::find_if(bb->pred.begin(), bb->pred.end(), FN(x.type != EdgeType::ENDIF && x.type != EdgeType::ENDLOOP));
+				if (front_edge != bb->pred.end())
+				{
+					auto parent = ensure(front_edge->from);
+					switch (front_edge->type)
+					{
+					case EdgeType::IF:
+					case EdgeType::ELSE:
+					{
+						// Find the merge node from the parent.
+						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDIF));
+						ensure(succ != parent->succ.end(), "CFG: Broken IF linkage. Please report to developers.");
+						bb->insert_succ(succ->to, EdgeType::ENDIF);
+						succ->to->insert_pred(bb, EdgeType::ENDIF);
+						break;
+					}
+					case EdgeType::LOOP:
+					{
+						// Find the merge node from the parent
+						auto succ = std::find_if(parent->succ.begin(), parent->succ.end(), FN(x.type == EdgeType::ENDLOOP));
+						ensure(succ != parent->succ.end(), "CFG: Broken LOOP linkage. Please report to developers.");
+						bb->insert_succ(succ->to, EdgeType::ENDLOOP);
+						succ->to->insert_pred(bb, EdgeType::ENDLOOP);
+						break;
+					}
+					default:
+						// Missing an edge type?
+						rsx_log.error("CFG: Unexpected block exit. Report to developers.");
+						break;
+					}
+				}
+				else if (bb->pred.empty())
+				{
+					// Impossible situation.
+					rsx_log.error("CFG: Child block has no parent but has successor! Report to developers.");
+				}
+
 				bb = *found;
 			}
 
@@ -113,7 +160,7 @@ namespace rsx::assembler
 			src2.HEX = decoded._u32[3];
 
 			end = !!dst.end;
-			const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
+			const u32 opcode = dst.opcode | (src1.opcode_hi << 6);
 
 			if (opcode == RSX_FP_OPCODE_NOP)
 			{
@@ -126,6 +173,7 @@ namespace rsx::assembler
 			std::memcpy(ir_inst.bytecode, &decoded._u32[0], 16);
 			ir_inst.length = 4;
 			ir_inst.addr = pc * 16;
+			ir_inst.opcode = opcode;
 
 			switch (opcode)
 			{
@@ -174,6 +222,7 @@ namespace rsx::assembler
 					ir_inst.length += 4;
 					pc++;
 				}
+				break;
 			}
 
 			pc++;
