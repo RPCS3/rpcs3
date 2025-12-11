@@ -711,21 +711,21 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 			gyro_z /= MOVE_ONE_G;
 		}
 
-		pad->move_data.accelerometer_x = accel_x;
-		pad->move_data.accelerometer_y = accel_y;
-		pad->move_data.accelerometer_z = accel_z;
-		pad->move_data.gyro_x = gyro_x;
-		pad->move_data.gyro_y = gyro_y;
-		pad->move_data.gyro_z = gyro_z;
+		pad->move_data.accelerometer.x() = accel_x;
+		pad->move_data.accelerometer.y() = accel_y;
+		pad->move_data.accelerometer.z() = accel_z;
+		pad->move_data.gyro.x() = gyro_x;
+		pad->move_data.gyro.y() = gyro_y;
+		pad->move_data.gyro.z() = gyro_z;
 
 		if (dev->model == ps_move_model::ZCM1)
 		{
 			const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
 
 			#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
-			pad->move_data.magnetometer_x = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
-			pad->move_data.magnetometer_y = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
-			pad->move_data.magnetometer_z = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
+			pad->move_data.magnetometer.x() = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
+			pad->move_data.magnetometer.y() = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
+			pad->move_data.magnetometer.z() = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
 		}
 	}
 
