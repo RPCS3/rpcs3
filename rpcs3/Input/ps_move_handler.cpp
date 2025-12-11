@@ -608,7 +608,17 @@ std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::share
 	const u16 extra_buttons = input.sequence_number << 8 | input.buttons_3;
 	key_buf[ps_move_key_codes::ps]   = (extra_buttons & button_flags::ps)   ? 255 : 0;
 	key_buf[ps_move_key_codes::move] = (extra_buttons & button_flags::move) ? 255 : 0;
-	key_buf[ps_move_key_codes::t]    = (extra_buttons & button_flags::t)    ? input.trigger_2 : 0;
+
+	u16 trigger = 0;
+	if (extra_buttons & button_flags::t)
+	{
+		switch (dev->model)
+		{
+		case ps_move_model::ZCM1: trigger = (input.trigger_1 + input.trigger_2) / 2; break;
+		case ps_move_model::ZCM2: trigger = input.trigger_1; break;
+		}
+	}
+	key_buf[ps_move_key_codes::t] = trigger;
 
 	dev->battery_level = input.battery_level;
 
