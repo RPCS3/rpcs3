@@ -276,7 +276,7 @@ public:
 
 	u64 start_timestamp_us = 0;
 
-	std::array<ps_move_data, CELL_GEM_MAX_NUM> mouse_move_data {}; // No need to be in savestate
+	std::array<ps_move_data, CELL_GEM_MAX_NUM> fake_move_data {}; // No need to be in savestate
 
 	atomic_t<u32> m_wake_up = 0;
 	atomic_t<u32> m_done = 0;
@@ -2168,7 +2168,7 @@ static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& con
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().mouse_move_data, mouse_no);
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, mouse_no);
 		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
@@ -2237,7 +2237,8 @@ static void gun_pos_to_gem_state(u32 gem_no, gem_config::gem_controller& control
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, gem_no);
+		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
