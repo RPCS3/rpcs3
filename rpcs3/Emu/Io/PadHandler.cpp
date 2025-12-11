@@ -950,7 +950,7 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	// Get elapsed time since last update
 	const u64 now_us = get_system_time();
-	const float elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
+	const f32 elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
 	last_ahrs_update_time_us = now_us;
 
 	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
