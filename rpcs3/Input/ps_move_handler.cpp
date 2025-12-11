@@ -685,12 +685,19 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->model == ps_move_model::ZCM1)
 	{
-		accel_x -= static_cast<f32>(zero_shift);
-		accel_y -= static_cast<f32>(zero_shift);
-		accel_z -= static_cast<f32>(zero_shift);
-		gyro_x -= static_cast<f32>(zero_shift);
-		gyro_y -= static_cast<f32>(zero_shift);
-		gyro_z -= static_cast<f32>(zero_shift);
+		const auto decode_16bit = [](s16 val)
+		{
+			const u8* data = reinterpret_cast<const u8*>(&val);
+			const u8 low = data[0] & 0xFF;
+			const u8 high = data[1] & 0xFF;
+			return (low | (high << 8)) - zero_shift;
+		};
+		accel_x = decode_16bit(input.accel_x_1);
+		accel_y = decode_16bit(input.accel_y_1);
+		accel_z = decode_16bit(input.accel_z_1);
+		gyro_x  = decode_16bit(input.gyro_x_1);
+		gyro_y  = decode_16bit(input.gyro_y_1);
+		gyro_z  = decode_16bit(input.gyro_z_1);
 	}
 
 	if (!device->config || !device->config->orientation_enabled)
