@@ -176,6 +176,9 @@ void ps_move_handler::init_config(cfg_pad* cfg)
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 
+	// We have to enable orientation by default
+	cfg->orientation_enabled.def = true;
+
 	// apply defaults
 	cfg->from_default();
 }
