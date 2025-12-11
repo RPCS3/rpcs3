@@ -1617,7 +1617,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
@@ -1670,7 +1670,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
