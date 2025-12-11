@@ -2769,7 +2769,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		inertial_state->counter = gem.inertial_counter++;
-		inertial_state->accelerometer[0] = 10; // Current gravity in m/s²
+		inertial_state->accelerometer[2] = 1.0f; // Current gravity in G units (9.81 == 1 unit)
 
 		switch (g_cfg.io.move)
 		{
