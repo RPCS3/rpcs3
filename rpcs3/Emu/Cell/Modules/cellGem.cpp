@@ -276,6 +276,8 @@ public:
 
 	u64 start_timestamp_us = 0;
 
+	std::array<ps_move_data, CELL_GEM_MAX_NUM> mouse_move_data {}; // No need to be in savestate
+
 	atomic_t<u32> m_wake_up = 0;
 	atomic_t<u32> m_done = 0;
 
@@ -1657,7 +1659,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	}
 }
 
-static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
+static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -1731,6 +1733,17 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[1] = q_y;
 		gem_state->quat[2] = q_z;
 		gem_state->quat[3] = q_w;
+	}
+
+	if constexpr (!ps_move_data::use_imu_for_velocity)
+	{
+		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			gem_state->vel[i] = move_data.vel_world[i];
+			gem_state->accel[i] = move_data.accel_world[i];
+		}
 	}
 
 	// Update visibility for fake handlers
@@ -1906,9 +1919,17 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		gem_state->temperature = pad->move_data.temperature;
-		gem_state->accel[0] = pad->move_data.accelerometer_x * 1000; // linear velocity in mm/s²
-		gem_state->accel[1] = pad->move_data.accelerometer_y * 1000; // linear velocity in mm/s²
-		gem_state->accel[2] = pad->move_data.accelerometer_z * 1000; // linear velocity in mm/s²
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			if constexpr (ps_move_data::use_imu_for_velocity)
+			{
+				gem_state->vel[i] = pad->move_data.vel_world[i];
+				gem_state->accel[i] = pad->move_data.accel_world[i];
+			}
+			gem_state->angvel[i] = pad->move_data.angvel_world[i];
+			gem_state->angaccel[i] = pad->move_data.angaccel_world[i];
+		}
 
 		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max, pad->move_data);
 	}
@@ -2147,7 +2168,8 @@ static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& con
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().mouse_move_data, mouse_no);
+		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2786,12 +2808,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				if (pad && pad->is_connected() && !pad->is_copilot())
 				{
 					inertial_state->temperature = pad->move_data.temperature;
-					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
-					inertial_state->accelerometer[1] = pad->move_data.accelerometer_y;
-					inertial_state->accelerometer[2] = pad->move_data.accelerometer_z;
-					inertial_state->gyro[0] = pad->move_data.gyro_x;
-					inertial_state->gyro[1] = pad->move_data.gyro_y;
-					inertial_state->gyro[2] = pad->move_data.gyro_z;
+
+					for (u32 i = 0; i < 3; i++)
+					{
+						inertial_state->accelerometer[i] = pad->move_data.accelerometer[i];
+						inertial_state->gyro[i] = pad->move_data.gyro[i];
+					}
 				}
 			}
 
