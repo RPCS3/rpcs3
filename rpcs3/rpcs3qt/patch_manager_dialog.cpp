@@ -107,7 +107,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::checkStateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
-	connect(ui->configurable_selector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(ui->configurable_selector, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		if (index >= 0)
 		{
@@ -116,15 +116,15 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 			handle_item_selected(item, item);
 		}
 	});
-	connect(ui->configurable_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(ui->configurable_combo_box, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		if (index >= 0)
 		{
 			handle_config_value_changed(ui->configurable_combo_box->itemData(index).toDouble());
 		}
 	});
-	connect(ui->configurable_spin_box, QOverload<int>::of(&QSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
-	connect(ui->configurable_double_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_config_value_changed);
+	connect(ui->configurable_spin_box, &QSpinBox::valueChanged, this, &patch_manager_dialog::handle_config_value_changed);
+	connect(ui->configurable_double_spin_box, &QDoubleSpinBox::valueChanged, this, &patch_manager_dialog::handle_config_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{

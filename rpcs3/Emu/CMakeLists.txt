@@ -516,12 +516,15 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_video.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
+    RSX/Program/Assembler/FPASM.cpp
+    RSX/Program/Assembler/FPOpcodes.cpp
     RSX/Program/Assembler/FPToCFG.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterAnnotationPass.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterDependencyPass.cpp
     RSX/Program/CgBinaryProgram.cpp
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
     RSX/Program/FragmentProgramDecompiler.cpp
-    RSX/Program/FragmentProgramRegister.cpp
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
@@ -623,6 +626,11 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKTextureCache.cpp
         RSX/VK/VulkanAPI.cpp
     )
+    if(APPLE)
+        target_sources(rpcs3_emu PRIVATE
+            RSX/VK/vkutils/metal_layer.mm
+        )
+    endif()
 endif()
 
 find_package(Threads REQUIRED)

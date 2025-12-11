@@ -598,15 +598,15 @@ bool package_reader::read_param_sfo()
 
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
-		std::string name(entry.name_size + BUF_PADDING, '\0');
+		std::string name_buf(entry.name_size + BUF_PADDING, '\0');
 
-		if (usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name.data()); read_size < entry.name_size)
+		if (usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name_buf.data()); read_size < entry.name_size)
 		{
 			pkg_log.error("PKG name could not be read (size=0x%x, offset=0x%x)", entry.name_size, entry.name_offset);
 			continue;
 		}
 
-		fmt::trim_back(name, "\0"sv);
+		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
 		// We're looking for the PARAM.SFO file, if there is any
 		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != "PARAM.SFO")
@@ -854,18 +854,18 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 			break;
 		}
 
-		std::string name(entry.name_size + BUF_PADDING, '\0');
+		std::string name_buf(entry.name_size + BUF_PADDING, '\0');
 
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
-		if (const usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name.data()); read_size < entry.name_size)
+		if (const usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name_buf.data()); read_size < entry.name_size)
 		{
 			num_failures++;
 			pkg_log.error("PKG name could not be read (size=0x%x, offset=0x%x)", entry.name_size, entry.name_offset);
 			break;
 		}
 
-		fmt::trim_back(name, "\0"sv);
+		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
 		std::string path = m_install_path + vfs::escape(name);
 

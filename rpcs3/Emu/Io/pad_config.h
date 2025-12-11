@@ -25,7 +25,7 @@ struct cfg_pad final : cfg::node
 	cfg_pad() {};
 	cfg_pad(node* owner, const std::string& name) : cfg::node(owner, name) {}
 
-	static std::vector<std::string> get_buttons(const std::string& str);
+	static std::vector<std::string> get_buttons(std::string_view str);
 	static std::string get_buttons(std::vector<std::string> vec);
 
 	u8 get_motor_speed(VibrateMotor& motor, f32 multiplier) const;

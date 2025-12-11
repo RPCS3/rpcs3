@@ -63,15 +63,16 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_game_table->setAlternatingRowColors(true);
 	m_game_table->installEventFilter(this);
 
-	auto add_game_column = [this](gui::savestate_game_list_columns col, const QString& header_text, const QString& action_text)
+	const auto add_game_column = [this](gui::savestate_game_list_columns col)
 	{
-		m_game_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
-		m_game_column_acts.append(new QAction(action_text, this));
+		const int column = static_cast<int>(col);
+		m_game_table->setHorizontalHeaderItem(column, new QTableWidgetItem(get_gamelist_header_text(column)));
+		m_game_column_acts[column] = new QAction(get_gamelist_action_text(column), this);
 	};
 
-	add_game_column(gui::savestate_game_list_columns::icon,       tr("Icon"),       tr("Show Icons"));
-	add_game_column(gui::savestate_game_list_columns::name,       tr("Game"),       tr("Show Games"));
-	add_game_column(gui::savestate_game_list_columns::savestates, tr("Savestates"), tr("Show Savestates"));
+	add_game_column(gui::savestate_game_list_columns::icon);
+	add_game_column(gui::savestate_game_list_columns::name);
+	add_game_column(gui::savestate_game_list_columns::savestates);
 
 	// Savestate Table
 	m_savestate_table = new game_list();
@@ -84,6 +85,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->horizontalScrollBar()->setSingleStep(20);
 	m_savestate_table->setItemDelegate(new table_item_delegate(m_savestate_table, false));
 	m_savestate_table->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_savestate_table->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_savestate_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_savestate_table->setColumnCount(static_cast<int>(gui::savestate_list_columns::count));
 	m_savestate_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
@@ -94,16 +96,17 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->setAlternatingRowColors(true);
 	m_savestate_table->installEventFilter(this);
 
-	auto add_savestate_column = [this](gui::savestate_list_columns col, const QString& header_text, const QString& action_text)
+	const auto add_savestate_column = [this](gui::savestate_list_columns col)
 	{
-		m_savestate_table->setHorizontalHeaderItem(static_cast<int>(col), new QTableWidgetItem(header_text));
-		m_savestate_column_acts.append(new QAction(action_text, this));
+		const int column = static_cast<int>(col);
+		m_savestate_table->setHorizontalHeaderItem(column, new QTableWidgetItem(get_savestate_header_text(column)));
+		m_savestate_column_acts[column] = new QAction(get_savestate_action_text(column), this);
 	};
 
-	add_savestate_column(gui::savestate_list_columns::name, tr("Name"), tr("Show Names"));
-	add_savestate_column(gui::savestate_list_columns::compatible, tr("Compatible"), tr("Show Compatible"));
-	add_savestate_column(gui::savestate_list_columns::date, tr("Created"), tr("Show Created"));
-	add_savestate_column(gui::savestate_list_columns::path, tr("Path"), tr("Show Paths"));
+	add_savestate_column(gui::savestate_list_columns::name);
+	add_savestate_column(gui::savestate_list_columns::compatible);
+	add_savestate_column(gui::savestate_list_columns::date);
+	add_savestate_column(gui::savestate_list_columns::path);
 
 	m_splitter = new QSplitter();
 	m_splitter->addWidget(m_game_table);
@@ -218,6 +221,56 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 savestate_manager_dialog::~savestate_manager_dialog()
 {
 	WaitAndAbortGameRepaintThreads();
+}
+
+QString savestate_manager_dialog::get_savestate_header_text(int col) const
+{
+	switch (static_cast<gui::savestate_list_columns>(col))
+	{
+	case gui::savestate_list_columns::name:       return tr("Name");
+	case gui::savestate_list_columns::compatible: return tr("Compatible");
+	case gui::savestate_list_columns::date:       return tr("Created");
+	case gui::savestate_list_columns::path:       return tr("Path");
+	case gui::savestate_list_columns::count:      break;
+	}
+	return {};
+}
+
+QString savestate_manager_dialog::get_savestate_action_text(int col) const
+{
+	switch (static_cast<gui::savestate_list_columns>(col))
+	{
+	case gui::savestate_list_columns::name:       return tr("Show Names");
+	case gui::savestate_list_columns::compatible: return tr("Show Compatible");
+	case gui::savestate_list_columns::date:       return tr("Show Created");
+	case gui::savestate_list_columns::path:       return tr("Show Paths");
+	case gui::savestate_list_columns::count:      break;
+	}
+	return {};
+}
+
+QString savestate_manager_dialog::get_gamelist_header_text(int col) const
+{
+	switch (static_cast<gui::savestate_game_list_columns>(col))
+	{
+	case gui::savestate_game_list_columns::icon:       return tr("Icon");
+	case gui::savestate_game_list_columns::name:       return tr("Game");
+	case gui::savestate_game_list_columns::savestates: return tr("Savestates");
+	case gui::savestate_game_list_columns::count:      break;
+	}
+	return {};
+}
+
+QString savestate_manager_dialog::get_gamelist_action_text(int col) const
+{
+	switch (static_cast<gui::savestate_game_list_columns>(col))
+	{
+	case gui::savestate_game_list_columns::icon:       return tr("Show Icons");
+	case gui::savestate_game_list_columns::name:       return tr("Show Games");
+	case gui::savestate_game_list_columns::savestates: return tr("Show Savestates");
+	case gui::savestate_game_list_columns::count:      break;
+	}
+	return {};
 }
 
 bool savestate_manager_dialog::LoadSavestateFolderToDB(std::unique_ptr<game_savestates_data>&& game_savestates)
@@ -625,6 +678,21 @@ void savestate_manager_dialog::PopulateGameTable()
 	m_game_table->clearContents();
 	m_game_table->setRowCount(static_cast<int>(m_savestate_db.size()));
 
+	// Update headers
+	for (int col = 0; col < m_game_table->horizontalHeader()->count(); col++)
+	{
+		if (auto item = m_game_table->horizontalHeaderItem(col))
+		{
+			item->setText(get_gamelist_header_text(col));
+		}
+	}
+
+	// Update actions
+	for (auto& [col, action] : m_game_column_acts)
+	{
+		action->setText(get_gamelist_action_text(col));
+	}
+
 	m_game_combo->clear();
 	m_game_combo->blockSignals(true);
 
@@ -680,6 +748,21 @@ void savestate_manager_dialog::PopulateSavestateTable()
 	m_savestate_table->clear_list();
 	m_savestate_table->setRowCount(static_cast<int>(savestates.size()));
 	m_savestate_table->setSortingEnabled(false); // Disable sorting before using setItem calls
+
+	// Update headers
+	for (int col = 0; col < m_savestate_table->horizontalHeader()->count(); col++)
+	{
+		if (auto item = m_savestate_table->horizontalHeaderItem(col))
+		{
+			item->setText(get_savestate_header_text(col));
+		}
+	}
+
+	// Update actions
+	for (auto& [col, action] : m_savestate_column_acts)
+	{
+		action->setText(get_savestate_action_text(col));
+	}
 
 	for (int i = 0; i < static_cast<int>(savestates.size()); i++)
 	{

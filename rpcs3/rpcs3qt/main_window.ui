@@ -306,6 +306,7 @@
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
+    <addaction name="actionManage_SoundEffects"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -411,6 +412,12 @@
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
    </widget>
+   <widget class="QMenu" name="menuUpdate_Available">
+    <property name="title">
+     <string>Update Available!</string>
+    </property>
+    <addaction name="actionDownload_Update"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEmulation"/>
    <addaction name="menuConfiguration"/>
@@ -418,6 +425,7 @@
    <addaction name="menuUtilities"/>
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
+   <addaction name="menuUpdate_Available"/>
   </widget>
   <widget class="QToolBar" name="toolBar">
    <property name="sizePolicy">
@@ -1440,6 +1448,16 @@
   <action name="actionMusic_Player">
    <property name="text">
     <string>Music Player</string>
+   </property>
+  </action>
+  <action name="actionManage_SoundEffects">
+   <property name="text">
+    <string>Sound Effects</string>
+   </property>
+  </action>
+  <action name="actionDownload_Update">
+   <property name="text">
+    <string>Download Update</string>
    </property>
   </action>
  </widget>

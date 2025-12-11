@@ -36,7 +36,7 @@ void cfg_camera::save() const
 	}
 }
 
-cfg_camera::camera_setting cfg_camera::get_camera_setting(const std::string& camera, bool& success)
+cfg_camera::camera_setting cfg_camera::get_camera_setting(std::string_view camera, bool& success)
 {
 	camera_setting setting;
 	const std::string value = cameras.get_value(camera);
@@ -64,7 +64,7 @@ std::string cfg_camera::camera_setting::to_string() const
 	return fmt::format("%d,%d,%f,%f,%d", width, height, min_fps, max_fps, format);
 }
 
-void cfg_camera::camera_setting::from_string(const std::string& text)
+void cfg_camera::camera_setting::from_string(std::string_view text)
 {
 	if (text.empty())
 	{

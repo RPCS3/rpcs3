@@ -225,7 +225,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		update_combo_box(player);
 
-		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
+		connect(combo, &QComboBox::currentIndexChanged, this, [this, player, combo](int index)
 		{
 			if (index < 0 || !combo)
 				return;
@@ -281,7 +281,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		m_accel_spin_boxes.push_back(mouse_acceleration_spin_box);
 		mouse_acceleration_spin_box->setRange(0.1, 10.0);
 		mouse_acceleration_spin_box->setValue(config->mouse_acceleration.get() / 100.0);
-		connect(mouse_acceleration_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [player](double value)
+		connect(mouse_acceleration_spin_box, &QDoubleSpinBox::valueChanged, this, [player](double value)
 		{
 			auto& config = ::at32(g_cfg_raw_mouse.players, player)->mouse_acceleration;
 			config.set(std::clamp(value * 100.0, config.min, config.max));

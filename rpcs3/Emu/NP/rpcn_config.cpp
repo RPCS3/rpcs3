@@ -79,7 +79,8 @@ std::string cfg_rpcn::get_host() const
 std::vector<std::pair<std::string, std::string>> cfg_rpcn::get_hosts()
 {
 	std::vector<std::pair<std::string, std::string>> vec_hosts;
-	auto hosts_list = fmt::split(hosts.to_string(), {"|||"});
+	const std::string host_str = hosts.to_string();
+	const auto hosts_list = fmt::split_sv(host_str, {"|||"});
 
 	for (const auto& cur_host : hosts_list)
 	{
@@ -190,9 +191,8 @@ bool cfg_rpcn::add_host(std::string_view new_description, std::string_view new_h
 
 bool cfg_rpcn::del_host(std::string_view del_description, std::string_view del_host)
 {
-	// Do not delete default servers
-	if ((del_description == "Official RPCN Server" && del_host == "np.rpcs3.net") ||
-		(del_description == "RPCN Test Server" && del_host == "test-np.rpcs3.net"))
+	// Do not delete default server
+	if (del_description == "Official RPCN Server" && del_host == "np.rpcs3.net")
 	{
 		return true;
 	}

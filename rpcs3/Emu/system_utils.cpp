@@ -184,6 +184,11 @@ namespace rpcs3::utils
 		return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, get_emu_dir());
 	}
 
+	std::string get_hdd0_game_dir()
+	{
+		return get_hdd0_dir() + "game/";
+	}
+
 	u64 get_cache_disk_usage()
 	{
 		if (const u64 data_size = fs::get_dir_size(rpcs3::utils::get_cache_dir(), 1); data_size != umax)
