@@ -1189,9 +1189,50 @@ namespace gem
 		}
 		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
 		{
-			cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-			std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
-			return false;
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				const u32 dst_w = std::min(320u, width / 2);
+				const u32 dst_h = std::min(240u, height / 2);
+				const u32 in_pitch = width;
+				constexpr u32 out_plane = 320 * 240;
+				constexpr u32 out_pitch = 320;
+
+				u8* dst_plane_r = video_data_out;
+				u8* dst_plane_g1 = video_data_out + out_plane;
+				u8* dst_plane_g2 = video_data_out + out_plane * 2;
+				u8* dst_plane_b = video_data_out + out_plane * 3;
+
+				for (u32 y = 0; y < dst_h; y++)
+				{
+					const u8* src0 = &video_data_in[y * 2 * in_pitch];
+					const u8* src1 = src0 + in_pitch;
+
+					u8* dst_r = dst_plane_r + y * out_pitch;
+					u8* dst_g1 = dst_plane_g1 + y * out_pitch;
+					u8* dst_g2 = dst_plane_g2 + y * out_pitch;
+					u8* dst_b = dst_plane_b + y * out_pitch;
+
+					for (u32 x = 0; x < dst_w; x++, src0 += 2, src1 += 2)
+					{
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
+
+						dst_r[x] = r;
+						dst_g1[x] = g0;
+						dst_g2[x] = g1;
+						dst_b[x] = b;
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			break;
 		}
 		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
 		{
