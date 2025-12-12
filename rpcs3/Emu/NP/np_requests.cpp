@@ -864,19 +864,21 @@ namespace np
 		auto ticket_raw = reply.get_rawdata();
 		ensure(!reply.is_error(), "Malformed reply to RequestTicket command");
 
-		current_ticket = ticket(std::move(ticket_raw));
-		auto ticket_size = static_cast<s32>(current_ticket.size());
-
-
-		// Clans: check if ticket belongs to the clan service. If so, store it.
-		if (current_ticket.get_service_id() == CLANS_SERVICE_ID)
+		auto incoming_ticket = ticket(std::move(ticket_raw));
+		
+		// Clans: check if ticket belongs to the clan service.
+		//        If so, hijack the ticket and cache it for future use.
+		if (incoming_ticket.get_service_id() == CLANS_SERVICE_ID)
 		{
-			clan_ticket = current_ticket;
+			clan_ticket = incoming_ticket;
 			clan_ticket_ready.store(true);
 			clan_ticket_ready.notify_all();
 			
 			return;
 		}
+
+		current_ticket = incoming_ticket;
+		auto ticket_size = static_cast<s32>(current_ticket.size());
 
 		if (manager_cb)
 		{

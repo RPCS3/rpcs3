@@ -475,13 +475,12 @@ error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId c
 		std::memcpy(&host_paging, paging.get_ptr(), sizeof(SceNpClansPagingRequest));
 	}
 
-	SceNpClansMemberEntry* host_memList_addr = new SceNpClansMemberEntry[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX];
+	SceNpClansMemberEntry host_memList_addr[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
 	SceNpClansError ret = clans_manager.client->getMemberList(nph, handle, clanId, &host_paging, status, host_memList_addr, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
-		delete[] host_memList_addr;
 		return ret;
 	}
 
@@ -491,7 +490,6 @@ error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId c
 	}
 	std::memcpy(pageResult.get_ptr(), &host_pageResult, sizeof(SceNpClansPagingResult));
 
-	delete[] host_memList_addr;
 	return CELL_OK;
 }
 

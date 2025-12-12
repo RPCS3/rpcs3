@@ -1,3 +1,4 @@
+#include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
 
 #include <util/types.hpp>
@@ -286,6 +287,11 @@ namespace clan
 
 	std::string clans_client::getClanTicket(np::np_handler& nph)
 	{
+		// Pretend we failed to get a ticket if the emulator isn't
+		// connected to RPCN.
+		if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+			return "";
+
 		const auto& npid = nph.get_npid();
 
 		const char* service_id = CLANS_SERVICE_ID;
@@ -294,13 +300,20 @@ namespace clan
 		const char* entitlement_id = CLANS_ENTITLEMENT_ID;
 		const u32 consumed_count = 0;
 
-		nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
-
+		// Use the cached ticket if available
 		np::ticket ticket = nph.get_clan_ticket();
 		if (ticket.empty())
 		{
-			clan_log.error("Failed to get clan ticket");
-			return "";
+			// If not cached, request a new ticket
+			nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
+			ticket = nph.get_clan_ticket();
+
+			// If still empty, return error
+			if (ticket.empty())
+			{
+				clan_log.error("Failed to get clan ticket");
+				return "";
+			}
 		}
 
 		std::vector<byte> ticket_bytes(1024);
