@@ -194,22 +194,45 @@ namespace rsx::assembler
 			case RSX_FP_OPCODE_IFE:
 			{
 				// Inserts if and else and end blocks
-				auto parent = bb;
-				bb = safe_insert_block(parent, pc + 1, EdgeType::IF);
-				if (src2.end_offset != src1.else_offset)
+				const u32 end_addr = src2.end_offset >> 2u;
+				const u32 else_addr = src1.else_offset >> 2u;
+				if (end_addr == pc + 1u)
 				{
-					else_blocks.push_back(safe_insert_block(parent, src1.else_offset >> 2, EdgeType::ELSE));
+					// NOP. Empty IF block
+					bb->instructions.pop_back();
+					break;
 				}
-				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2, EdgeType::ENDIF));
+
+				if (else_addr > end_addr)
+				{
+					// Our systems support this, but it is not verified on real hardware.
+					rsx_log.error("CFG: Non-contiguous branch detected. Report to developers.");
+				}
+
+				auto parent = bb;
+				bb = safe_insert_block(parent, pc + 1u, EdgeType::IF);
+				if (end_addr != else_addr)
+				{
+					else_blocks.push_back(safe_insert_block(parent, else_addr, EdgeType::ELSE));
+				}
+				end_blocks.push_back(safe_insert_block(parent, end_addr, EdgeType::ENDIF));
 				break;
 			}
 			case RSX_FP_OPCODE_LOOP:
 			case RSX_FP_OPCODE_REP:
 			{
 				// Inserts for and end blocks
+				const u32 end_addr = src2.end_offset >> 2u;
+				if (end_addr == pc + 1u)
+				{
+					// NOP. Empty LOOP block
+					bb->instructions.pop_back();
+					break;
+				}
+
 				auto parent = bb;
-				bb = safe_insert_block(parent, pc + 1, EdgeType::LOOP);
-				end_blocks.push_back(safe_insert_block(parent, src2.end_offset >> 2, EdgeType::ENDLOOP));
+				bb = safe_insert_block(parent, pc + 1u, EdgeType::LOOP);
+				end_blocks.push_back(safe_insert_block(parent, end_addr, EdgeType::ENDLOOP));
 				break;
 			}
 			default:
