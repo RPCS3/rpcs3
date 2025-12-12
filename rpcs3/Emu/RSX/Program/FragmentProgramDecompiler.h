@@ -1,6 +1,5 @@
 #pragma once
 #include "ShaderParam.h"
-#include "FragmentProgramRegister.h"
 #include "RSXFragmentProgram.h"
 
 #include "Assembler/CFG.h"
@@ -52,8 +51,6 @@ class FragmentProgramDecompiler
 	u32 m_loop_count;
 	int m_code_level;
 	std::unordered_map<u32, u32> m_constant_offsets;
-
-	std::array<rsx::MixedPrecisionRegister, 64> temp_registers;
 
 	std::string GetMask() const;
 
@@ -175,7 +172,6 @@ public:
 
 		// Decoded properties (out)
 		bool has_lit_op = false;
-		bool has_gather_op = false;
 		bool has_no_output = false;
 		bool has_discard_op = false;
 		bool has_tex_op = false;

@@ -276,6 +276,8 @@ public:
 
 	u64 start_timestamp_us = 0;
 
+	std::array<ps_move_data, CELL_GEM_MAX_NUM> fake_move_data {}; // No need to be in savestate
+
 	atomic_t<u32> m_wake_up = 0;
 	atomic_t<u32> m_done = 0;
 
@@ -1148,11 +1150,89 @@ namespace gem
 			break;
 		}
 		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+		{
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				const u32 dst_w = std::min(320u, width / 2);
+				const u32 dst_h = std::min(240u, height / 2);
+				const u32 in_pitch = width;
+				constexpr u32 out_pitch = 320 * 4;
+
+				for (u32 y = 0; y < dst_h; y++)
+				{
+					const u8* src0 = &video_data_in[y * 2 * in_pitch];
+					const u8* src1 = src0 + in_pitch;
+
+					u8* dst = video_data_out + y * out_pitch;
+
+					for (u32 x = 0; x < dst_w; x++, src0 += 2, src1 += 2, dst += 4)
+					{
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
+
+						dst[0] = r;
+						dst[1] = g0;
+						dst[2] = g1;
+						dst[3] = b;
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			break;
+		}
 		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
 		{
-			cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-			std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
-			return false;
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				const u32 dst_w = std::min(320u, width / 2);
+				const u32 dst_h = std::min(240u, height / 2);
+				const u32 in_pitch = width;
+				constexpr u32 out_plane = 320 * 240;
+				constexpr u32 out_pitch = 320;
+
+				u8* dst_plane_r = video_data_out;
+				u8* dst_plane_g1 = video_data_out + out_plane;
+				u8* dst_plane_g2 = video_data_out + out_plane * 2;
+				u8* dst_plane_b = video_data_out + out_plane * 3;
+
+				for (u32 y = 0; y < dst_h; y++)
+				{
+					const u8* src0 = &video_data_in[y * 2 * in_pitch];
+					const u8* src1 = src0 + in_pitch;
+
+					u8* dst_r = dst_plane_r + y * out_pitch;
+					u8* dst_g1 = dst_plane_g1 + y * out_pitch;
+					u8* dst_g2 = dst_plane_g2 + y * out_pitch;
+					u8* dst_b = dst_plane_b + y * out_pitch;
+
+					for (u32 x = 0; x < dst_w; x++, src0 += 2, src1 += 2)
+					{
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
+
+						dst_r[x] = r;
+						dst_g1[x] = g0;
+						dst_g2[x] = g1;
+						dst_b[x] = b;
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
+				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			break;
 		}
 		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
 		{
@@ -1617,7 +1697,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
@@ -1657,7 +1737,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	}
 }
 
-static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
+static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -1670,7 +1750,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
@@ -1703,10 +1783,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	// Calculate orientation
 	if (g_cfg.io.move == move_handler::real || (g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
 	{
-		gem_state->quat[0] = move_data.quaternion[0]; // x
-		gem_state->quat[1] = move_data.quaternion[1]; // y
-		gem_state->quat[2] = move_data.quaternion[2]; // z
-		gem_state->quat[3] = move_data.quaternion[3]; // w
+		gem_state->quat[0] = move_data.quaternion.x();
+		gem_state->quat[1] = move_data.quaternion.y();
+		gem_state->quat[2] = move_data.quaternion.z();
+		gem_state->quat[3] = move_data.quaternion.w();
 	}
 	else
 	{
@@ -1731,6 +1811,17 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[1] = q_y;
 		gem_state->quat[2] = q_z;
 		gem_state->quat[3] = q_w;
+	}
+
+	if constexpr (!ps_move_data::use_imu_for_velocity)
+	{
+		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			gem_state->vel[i] = move_data.vel_world[i];
+			gem_state->accel[i] = move_data.accel_world[i];
+		}
 	}
 
 	// Update visibility for fake handlers
@@ -1906,9 +1997,17 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		gem_state->temperature = pad->move_data.temperature;
-		gem_state->accel[0] = pad->move_data.accelerometer_x * 1000; // linear velocity in mm/s²
-		gem_state->accel[1] = pad->move_data.accelerometer_y * 1000; // linear velocity in mm/s²
-		gem_state->accel[2] = pad->move_data.accelerometer_z * 1000; // linear velocity in mm/s²
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			if constexpr (ps_move_data::use_imu_for_velocity)
+			{
+				gem_state->vel[i] = pad->move_data.vel_world[i];
+				gem_state->accel[i] = pad->move_data.accel_world[i];
+			}
+			gem_state->angvel[i] = pad->move_data.angvel_world[i];
+			gem_state->angaccel[i] = pad->move_data.angaccel_world[i];
+		}
 
 		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max, pad->move_data);
 	}
@@ -2147,7 +2246,8 @@ static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& con
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, mouse_no);
+		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2215,7 +2315,8 @@ static void gun_pos_to_gem_state(u32 gem_no, gem_config::gem_controller& control
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, gem_no);
+		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2769,7 +2870,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		inertial_state->counter = gem.inertial_counter++;
-		inertial_state->accelerometer[0] = 10; // Current gravity in m/s²
+		inertial_state->accelerometer[2] = 1.0f; // Current gravity in G units (9.81 == 1 unit)
 
 		switch (g_cfg.io.move)
 		{
@@ -2786,12 +2887,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				if (pad && pad->is_connected() && !pad->is_copilot())
 				{
 					inertial_state->temperature = pad->move_data.temperature;
-					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
-					inertial_state->accelerometer[1] = pad->move_data.accelerometer_y;
-					inertial_state->accelerometer[2] = pad->move_data.accelerometer_z;
-					inertial_state->gyro[0] = pad->move_data.gyro_x;
-					inertial_state->gyro[1] = pad->move_data.gyro_y;
-					inertial_state->gyro[2] = pad->move_data.gyro_z;
+
+					for (u32 i = 0; i < 3; i++)
+					{
+						inertial_state->accelerometer[i] = pad->move_data.accelerometer[i];
+						inertial_state->gyro[i] = pad->move_data.gyro[i];
+					}
 				}
 			}
 
