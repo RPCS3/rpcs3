@@ -693,7 +693,8 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 			const u8* data = reinterpret_cast<const u8*>(&val);
 			const u8 low = data[0] & 0xFF;
 			const u8 high = data[1] & 0xFF;
-			return (low | (high << 8)) - zero_shift;
+			const s32 res = (low | (high << 8)) - zero_shift;
+			return static_cast<f32>(res);
 		};
 		accel_x = decode_16bit(input.accel_x_1);
 		accel_y = decode_16bit(input.accel_y_1);
