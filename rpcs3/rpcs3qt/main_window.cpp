@@ -12,6 +12,7 @@
 #include "log_frame.h"
 #include "settings_dialog.h"
 #include "rpcn_settings_dialog.h"
+#include "clans_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
 #include "log_viewer.h"
@@ -2988,6 +2989,18 @@ void main_window::CreateConnects()
 	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
 	{
 		rpcn_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confClansAct, &QAction::triggered, this, [this]()
+	{
+		if (!Emu.IsStopped())
+		{
+			QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
+			return;
+		}
+		
+		clans_settings_dialog dlg(this);
 		dlg.exec();
 	});
 
