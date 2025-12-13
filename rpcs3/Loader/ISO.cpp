@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <stack>
 
 bool is_file_iso(const std::string& path)
 {
@@ -166,9 +167,7 @@ void iso_form_hierarchy(fs::file& file, iso_fs_node& node,
 		auto entry = iso_read_directory_entry(file, use_ucs2_decoding);
 		if (!entry)
 		{
-			float block_size = ISO_BLOCK_SIZE;
-			float t = std::floor(file.pos() / block_size);
-			u64 new_sector = t+1;
+			u64 new_sector = (file.pos() / ISO_BLOCK_SIZE) + 1;
 			file.seek(new_sector * ISO_BLOCK_SIZE);
 			continue;
 		}
@@ -253,8 +252,6 @@ iso_archive::iso_archive(const std::string& path)
 			{
 				.metadata = iso_read_directory_entry(m_file, use_ucs2_decoding).value(),
 			};
-
-			m_file.seek(descriptor_start);
 		}
 
 		m_file.seek(descriptor_start + ISO_BLOCK_SIZE);
@@ -266,15 +263,19 @@ iso_archive::iso_archive(const std::string& path)
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
-	std::string path = std::filesystem::path(passed_path).lexically_normal().string();
+	std::string path = std::filesystem::path(passed_path).string();
 
 	size_t start = 0;
 	size_t end = path.find_first_of(fs::delim);
 
-	auto dir_entry = &m_root;
+	std::stack<iso_fs_node*> search_stack;
+	search_stack.push(&m_root);
 
 	do
 	{
+		if (search_stack.empty()) return nullptr;
+		auto* top_entry = search_stack.top();
+
 		if (end == std::string::npos)
 		{
 			end = path.size();
@@ -283,27 +284,40 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		auto path_component = path.substr(start, end-start);
 
 		bool found = false;
-		for (const auto& entry : dir_entry->children)
-		{
-			if (entry->metadata.name.compare(path_component) == 0)
-			{
-				dir_entry = entry.get();
 
-				start = end + 1;
-				end = path.find_first_of(fs::delim, start);
-				found = true;
-				break;
+		if (path_component == ".")
+		{
+			found = true;
+		}
+		else if (path_component == "..")
+		{
+			search_stack.pop();
+			found = true;
+		}
+		else
+		{
+			for (const auto& entry : top_entry->children)
+			{
+				if (entry->metadata.name.compare(path_component) == 0)
+				{
+					search_stack.push(entry.get());
+
+					found = true;
+					break;
+				}
 			}
 		}
 
-		if (!found)
-		{
-			return nullptr;
-		}
+		if (!found) return nullptr;
+
+		start = end + 1;
+		end = path.find_first_of(fs::delim, start);
 	}
 	while(start < path.size());
 
-	return dir_entry;
+	if (search_stack.empty()) return nullptr;
+
+	return search_stack.top();
 }
 
 bool iso_archive::exists(const std::string& path)
@@ -393,11 +407,9 @@ u64 iso_file::read(void* buffer, u64 size)
 
 u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 {
-	const u64 bad_res = -1;
 	u64 local_remaining = local_extent_remaining(offset);
 
 	u64 total_read = m_file.read_at(file_offset(offset), buffer, std::min(size, local_remaining));
-	if (total_read == bad_res) return -1;
 
 	auto total_size = this->size();
 
@@ -407,8 +419,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			reinterpret_cast<u8*>(buffer) + total_read,
 			size - total_read
 		);
-
-		if (second_total_read == bad_res) return -1;
 
 		return total_read + second_total_read;
 	}
