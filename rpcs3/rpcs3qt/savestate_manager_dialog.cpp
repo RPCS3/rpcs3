@@ -7,6 +7,8 @@
 #include "gui_settings.h"
 #include "progress_dialog.h"
 
+#include "Loader/ISO.h"
+
 #include <QApplication>
 #include <QClipboard>
 #include <QScrollBar>
@@ -417,8 +419,9 @@ void savestate_manager_dialog::ResizeGameIcons()
 			const qreal dpr = devicePixelRatioF();
 			const int savestate_index = item->data(GameUserRole::GameIndex).toInt();
 			const std::string icon_path = m_savestate_db[savestate_index]->game_icon_path;
+			const std::string archive_path = m_savestate_db[savestate_index]->archive_path;
 
-			item->set_icon_load_func([this, icon_path, savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			item->set_icon_load_func([this, icon_path, archive_path, savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -445,15 +448,17 @@ void savestate_manager_dialog::ResizeGameIcons()
 					}
 				}
 
-				if (icon.isNull())
+				if (!archive_path.empty())
 				{
-					for (const game_info& gameinfo : m_game_info)
+					iso_archive archive(archive_path);
+					auto icon_file = archive.open(icon_path);
+					auto icon_size = icon_file.size();
+					QByteArray data(icon_size, 0);
+					icon_file.read(data.data(), icon_size);
+					QImage iconImage;
+					if (iconImage.loadFromData(data))
 					{
-						if (gameinfo && gameinfo->info.serial == m_savestate_db[savestate_index]->title_id)
-						{
-							icon = gameinfo->icon;
-							break;
-						}
+						icon = QPixmap::fromImage(iconImage);
 					}
 				}
 
@@ -629,6 +634,11 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 			{
 				game_data_ptr->game_name = gameinfo->info.name;
 				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
+				if (gameinfo->icon_in_archive)
+				{
+					game_data_ptr->archive_path = gameinfo->info.path;
+				}
+
 				break;
 			}
 		}
