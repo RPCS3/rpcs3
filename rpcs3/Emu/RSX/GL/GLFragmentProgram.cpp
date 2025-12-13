@@ -103,8 +103,19 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (uint i = 0; i < std::size(table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
-			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
+		if (!m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
+		{
+			continue;
+		}
+
+		if (i >= m_prog.mrt_buffers_count)
+		{
+			// Dead writes. Declare as temp variables for DCE to clean up.
+			OS << "vec4 " << table[i].first << "; // Unused\n";
+			continue;
+		}
+
+		OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
 	}
 }
 

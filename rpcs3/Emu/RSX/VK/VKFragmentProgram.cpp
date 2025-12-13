@@ -150,17 +150,27 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
+	// NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
 	u8 output_index = 0;
 	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (uint i = 0; i < std::size(table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
+		if (!m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 		{
-			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
-			vk_prog->output_color_masks[i] = -1;
+			continue;
 		}
+
+		if (i >= m_prog.mrt_buffers_count)
+		{
+			// Dead writes. Declare as temp variables for DCE to clean up.
+			OS << "vec4 " << table[i].first << "; // Unused\n";
+			vk_prog->output_color_masks[i] = 0;
+			continue;
+		}
+
+		OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
+		vk_prog->output_color_masks[i] = -1;
 	}
 }
 
