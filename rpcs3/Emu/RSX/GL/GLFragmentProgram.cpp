@@ -201,7 +201,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	"	uvec4 stipple_pattern[8];\n"
 	"};\n\n"
 
-	"#define texture_base_index 0\n\n";
+	"#define texture_base_index 0\n"
+	"#define TEX_PARAM(index) texture_parameters[index]\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
