@@ -3886,6 +3886,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			disc.clear();
 			klic.clear();
 			hdd1.clear();
+			unload_iso();
 			init_mem_containers = nullptr;
 			m_config_path.clear();
 			m_config_mode = cfg_mode::custom;

@@ -603,8 +603,11 @@ void iso_dir::rewind()
 void load_iso(const std::string& path)
 {
 	fs::set_virtual_device("iso_overlay_fs_dev",
-		stx::shared_ptr<iso_device>());
-
-	fs::set_virtual_device("iso_overlay_fs_dev",
 		stx::make_shared<iso_device>(path));
+}
+
+void unload_iso()
+{
+	fs::set_virtual_device("iso_overlay_fs_dev",
+		stx::shared_ptr<iso_device>());
 }

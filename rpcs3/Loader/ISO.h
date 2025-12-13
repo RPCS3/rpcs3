@@ -7,6 +7,7 @@ bool is_file_iso(const std::string& path);
 bool is_file_iso(const fs::file& path);
 
 void load_iso(const std::string& path);
+void unload_iso();
 
 struct iso_extent_info
 {
