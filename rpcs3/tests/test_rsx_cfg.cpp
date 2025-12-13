@@ -210,4 +210,22 @@ namespace rsx::assembler
 		EXPECT_EQ(bb6->pred[1].from, bb3);
 		EXPECT_EQ(bb6->pred[2].from, bb0);
 	}
+
+	TEST(CFG, FpToCFG_EmptyIF)
+	{
+		auto ir = FPIR::from_source(
+			"IF.LT;"                // Empty branch
+			"ENDIF;"
+			"MOV R0, R1;"           // False merge block.
+		);
+
+		RSXFragmentProgram program{};
+		auto bytecode = ir.compile();
+		program.data = bytecode.data();
+
+		FlowGraph graph = deconstruct_fragment_program(program);
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		EXPECT_EQ(graph.blocks.front().instructions.size(), 1);
+	}
 }
