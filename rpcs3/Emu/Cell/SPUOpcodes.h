@@ -24,6 +24,20 @@ union spu_opcode_t
 	bf_t<u32, 7, 16> i16; // 9..24
 	bf_t<s32, 7, 16> si16; // 9..24, signed
 	bf_t<u32, 7, 18> i18; // 7..24
+
+	// For 16-bit instructions in the context of 32-bits
+	u32 duplicate_si10() const
+	{
+		const u32 _16 = static_cast<u16>(static_cast<s16>(si10));
+		return (_16 << 16) | _16;
+	}
+
+	// For 8-bit instructions in the context of 32-bits
+	u32 duplicate_duplicate_si10() const
+	{
+		const u32 _8 = static_cast<u8>(si10 & 0xff);
+		return (_8 << 24) | (_8 << 16) | (_8 << 8) | _8;
+	}
 };
 
 constexpr u32 spu_branch_target(u32 pc, u32 imm = 0)
