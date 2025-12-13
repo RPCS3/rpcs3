@@ -34,7 +34,7 @@ namespace vm
 	void reservation_update(u32 addr);
 	std::pair<bool, u64> try_reservation_update(u32 addr);
 
-	struct reservation_waiter_t
+	struct alignas(8) reservation_waiter_t
 	{
 		u32 wait_flag = 0;
 		u32 waiters_count = 0;
