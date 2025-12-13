@@ -347,7 +347,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 
 	OS <<
 		"#define texture_base_index _fs_texture_base_index\n"
-		"#define TEX_PARAM(index) texture_parameters[index + texture_base_index]\n\n";
+		"#define TEX_PARAM(index) texture_parameters_##index\n\n";
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -432,6 +432,16 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 		if (properties.in_register_mask & in_spec_color)
 			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
+	}
+
+	for (u16 i = 0, mask = (properties.common_access_sampler_mask | properties.shadow_sampler_mask); mask != 0; ++i, mask >>= 1)
+	{
+		if (!(mask & 1))
+		{
+			continue;
+		}
+
+		OS << "	const sampler_info texture_parameters_" << i << " = texture_parameters[texture_base_index + " << i << "];\n";
 	}
 }
 
