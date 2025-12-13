@@ -551,18 +551,22 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	u32 precision_modifier = 0;
+	u32 register_index = umax;
 
 	if constexpr (std::is_same_v<T, SRC0>)
 	{
 		precision_modifier = src1.src0_prec_mod;
+		register_index = 0;
 	}
 	else if constexpr (std::is_same_v<T, SRC1>)
 	{
 		precision_modifier = src1.src1_prec_mod;
+		register_index = 1;
 	}
 	else if constexpr (std::is_same_v<T, SRC2>)
 	{
 		precision_modifier = src1.src2_prec_mod;
+		register_index = 2;
 	}
 
 	switch (src.reg_type)
@@ -645,18 +649,29 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		{
 			// TEX0 - TEX9
 			// Texcoord 2d mask seems to reset the last 2 arguments to 0 and w if set
+
+			// Opt: Skip emitting w dependency unless w coord is actually being sampled
+			ensure(register_index != umax);
+			const auto lane_mask = FP::get_src_vector_lane_mask_shuffled(m_prog, m_instruction, register_index);
+			const auto touches_z = !!(lane_mask & (1u << 2));
+			const bool touches_w = !!(lane_mask & (1u << 3));
+
 			const u8 texcoord = u8(register_id) - 4;
 			if (m_prog.texcoord_is_point_coord(texcoord))
 			{
 				// Point sprite coord generation. Stacks with the 2D override mask.
-				if (m_prog.texcoord_is_2d(texcoord))
+				if (!m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
-					properties.has_w_access = true;
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+				}
+				else if (!touches_w)
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					properties.has_w_access = true;
 				}
 			}
 			else if (src2.perspective_corr)
@@ -673,14 +688,19 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			}
 			else
 			{
-				if (m_prog.texcoord_is_2d(texcoord))
+				const bool skip_zw_load = !touches_z && !touches_w;
+				if (!m_prog.texcoord_is_2d(texcoord) || skip_zw_load)
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
-					properties.has_w_access = true;
+					ret += reg_var;
+				}
+				else if (!touches_w)
+				{
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., 0.)";
 				}
 				else
 				{
-					ret += reg_var;
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
+					properties.has_w_access = true;
 				}
 			}
 			break;
