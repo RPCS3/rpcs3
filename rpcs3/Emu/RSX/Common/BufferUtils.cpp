@@ -19,7 +19,7 @@
 #include "Emu/CPU/sse2neon.h"
 #endif
 
-#if defined(_MSC_VER) || !defined(__SSE2__)
+#if defined(_MSC_VER) && !defined(__clang__) || !defined(__SSE2__)
 #define SSE4_1_FUNC
 #define AVX2_FUNC
 #define AVX3_FUNC
