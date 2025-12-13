@@ -51,6 +51,9 @@ class main_window : public QMainWindow
 	int m_other_slider_pos = 0;
 	std::function<void()> m_notify_batch_game_action_cb;
 
+	QString last_pkg_path_postponed_due_to_missing_rap;
+	QString last_rap_file_needed_for_pkg;
+
 	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
