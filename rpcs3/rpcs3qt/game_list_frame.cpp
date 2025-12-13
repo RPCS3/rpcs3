@@ -643,16 +643,7 @@ void game_list_frame::OnParsingFinished()
 			{
 				if (!archive->exists(game.info.icon_path)) return;
 
-				auto icon_file = archive->open(game.info.icon_path);
-				auto icon_size = icon_file.size();
-				QByteArray data(icon_size, 0);
-				icon_file.read(data.data(), icon_size);
-				QImage iconImage;
-				if (iconImage.loadFromData(data))
-				{
-					game.icon = QPixmap::fromImage(iconImage);
-				}
-				game.info.icon_path.clear();
+				game.icon_in_archive = true;
 			}
 		}
 
