@@ -2057,26 +2057,26 @@ namespace rsx
 		current_fragment_program.two_sided_lighting = m_ctx->register_state->two_side_light_en();
 		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(m_ctx->register_state->surface_color_target());
 
-		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
+		if (m_ctx->register_state->current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
 			if (!backend_config.supports_normalized_barycentrics)
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
-			if (method_registers.alpha_test_enabled())
+			if (m_ctx->register_state->alpha_test_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
 			}
 
-			if (method_registers.polygon_stipple_enabled())
+			if (m_ctx->register_state->polygon_stipple_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
 			}
 
-			if (method_registers.msaa_alpha_to_coverage_enabled())
+			if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
 			{
-				const bool is_multiple_samples = method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+				const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
 				if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
 				{
 					// Emulation required
@@ -2084,15 +2084,15 @@ namespace rsx
 				}
 			}
 		}
-		else if (method_registers.point_sprite_enabled() &&
-			method_registers.current_draw_clause.primitive == primitive_type::points)
+		else if (m_ctx->register_state->point_sprite_enabled() &&
+			m_ctx->register_state->current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
-			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
+			current_fragment_program.texcoord_control_mask |= u32(m_ctx->register_state->point_sprite_control_mask()) << 16;
 		}
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
-		switch (method_registers.surface_color())
+		switch (m_ctx->register_state->surface_color())
 		{
 		case rsx::surface_color_format::w16z16y16x16:
 		case rsx::surface_color_format::w32z32y32x32:
@@ -2102,7 +2102,8 @@ namespace rsx
 		default:
 			// Integer framebuffer formats. These can support sRGB output as well as some special rules for output quantization.
 			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER;
-			if (method_registers.framebuffer_srgb_enabled())
+			if (!(current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) && // Cannot output sRGB from 32-bit registers
+				m_ctx->register_state->framebuffer_srgb_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
 			}
@@ -2113,7 +2114,7 @@ namespace rsx
 		{
 			if (!(textures_ref & 1)) continue;
 
-			auto &tex = rsx::method_registers.fragment_textures[i];
+			auto &tex = m_ctx->register_state->fragment_textures[i];
 			current_fp_texture_state.clear(i);
 
 			if (!tex.enabled() || sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -2121,7 +2122,11 @@ namespace rsx
 				continue;
 			}
 
-			std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(f32));
+			std::memcpy(
+				current_fragment_program.texture_params[i].scale,
+				sampler_descriptors[i]->texcoord_xform.scale,
+				sizeof(sampler_descriptors[i]->texcoord_xform.scale));
+
 			current_fragment_program.texture_params[i].remap = tex.remap();
 
 			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -2131,7 +2136,11 @@ namespace rsx
 
 			if (sampler_descriptors[i]->texcoord_xform.clamp)
 			{
-				std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(f32));
+				std::memcpy(
+					current_fragment_program.texture_params[i].clamp_min,
+					sampler_descriptors[i]->texcoord_xform.clamp_min,
+					sizeof(sampler_descriptors[i]->texcoord_xform.clamp_min));
+
 				texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
 			}
 
@@ -2316,7 +2325,7 @@ namespace rsx
 		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
 			//Check that the depth stage is not disabled
-			if (!rsx::method_registers.depth_test_enabled())
+			if (!m_ctx->register_state->depth_test_enabled())
 			{
 				rsx_log.trace("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
