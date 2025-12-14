@@ -2052,7 +2052,7 @@ namespace rsx
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
 		current_fragment_program.texcoord_control_mask = m_ctx->register_state->texcoord_control_mask();
 		current_fragment_program.two_sided_lighting = m_ctx->register_state->two_side_light_en();
 		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(m_ctx->register_state->surface_color_target());
@@ -2116,195 +2116,197 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			current_fp_texture_state.clear(i);
 
-			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
+			if (!tex.enabled() || sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_UNDEFINED)
 			{
-				std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(f32));
-				current_fragment_program.texture_params[i].remap = tex.remap();
-
-				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
-
-				u32 texture_control = 0;
-				current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
-
-				if (sampler_descriptors[i]->texcoord_xform.clamp)
-				{
-					std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(f32));
-					texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
-				}
-
-				if (tex.alpha_kill_enabled())
-				{
-					//alphakill can be ignored unless a valid comparison function is set
-					texture_control |= (1 << texture_control_bits::ALPHAKILL);
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL;
-				}
-
-				//const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-				const u32 raw_format = tex.format();
-				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-
-				if (raw_format & CELL_GCM_TEXTURE_UN)
-				{
-					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
-						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
-					{
-						// Subpixel offset so that (X + bias) * scale will round correctly.
-						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
-						// We apply the simplification where (x + bias) * z = xz + zbias here.
-						constexpr auto subpixel_bias = 0.01f;
-						current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
-						current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
-						current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);
-					}
-				}
-
-				if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
-				{
-					current_fp_texture_state.multisampled_textures |= (1 << i);
-					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
-					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
-					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
-					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
-
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
-					{
-						texture_control |= (1 << texture_control_bits::WRAP_S);
-					}
-
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
-					{
-						texture_control |= (1 << texture_control_bits::WRAP_T);
-					}
-
-					if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
-					{
-						texture_control |= (1 << texture_control_bits::WRAP_R);
-					}
-				}
-
-				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
-				{
-					switch (sampler_descriptors[i]->format_class)
-					{
-					case RSX_FORMAT_CLASS_DEPTH16_FLOAT:
-					case RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32:
-						texture_control |= (1 << texture_control_bits::DEPTH_FLOAT);
-						break;
-					default:
-						break;
-					}
-
-					switch (format)
-					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-					{
-						// Emulate bitcast in shader
-						current_fp_texture_state.redirected_textures |= (1 << i);
-						const auto float_en = (sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)? 1 : 0;
-						texture_control |= (float_en << texture_control_bits::DEPTH_FLOAT);
-						break;
-					}
-					case CELL_GCM_TEXTURE_X16:
-					{
-						// A simple way to quickly read DEPTH16 data without shadow comparison
-						break;
-					}
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					{
-						// Natively supported Z formats with shadow comparison feature
-						const auto compare_mode = tex.zfunc();
-						if (!tex.alpha_kill_enabled() &&
-							compare_mode < rsx::comparison_function::always &&
-							compare_mode > rsx::comparison_function::never)
-						{
-							current_fp_texture_state.shadow_textures |= (1 << i);
-						}
-						break;
-					}
-					default:
-						rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
-					}
-				}
-				else if (!backend_config.supports_hw_renormalization /* &&
-					tex.min_filter() == rsx::texture_minify_filter::nearest &&
-					tex.mag_filter() == rsx::texture_magnify_filter::nearest*/)
-				{
-					// FIXME: This check should only apply to point-sampled textures. However, it severely regresses some games (id tech 5).
-					// This is because even when filtering is active, the error from the PS3 texture expansion still applies.
-					// A proper fix is to expand these formats into BGRA8 when high texture precision is required. That requires different GUI settings and inflation shaders, so it will be handled separately.
-
-					switch (format)
-					{
-					case CELL_GCM_TEXTURE_A1R5G5B5:
-					case CELL_GCM_TEXTURE_A4R4G4B4:
-					case CELL_GCM_TEXTURE_D1R5G5B5:
-					case CELL_GCM_TEXTURE_R5G5B5A1:
-					case CELL_GCM_TEXTURE_R5G6B5:
-					case CELL_GCM_TEXTURE_R6G5B5:
-						texture_control |= (1 << texture_control_bits::RENORMALIZE);
-						break;
-					default:
-						break;
-					}
-				}
-
-				if (rsx::is_int8_remapped_format(format))
-				{
-					// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-					// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
-					// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
-					// This is a separate method of setting the format to signed mode without doing so per-channel
-					// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
-
-					const u32 argb8_signed = tex.argb_signed(); // _SNROM
-					const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
-					const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
-					u32 argb8_convert = gamma;
-
-					// The options are mutually exclusive
-					ensure((argb8_signed & gamma) == 0);
-					ensure((argb8_signed & unsigned_remap) == 0);
-					ensure((gamma & unsigned_remap) == 0);
-
-					// Helper function to apply a per-channel mask based on an input mask
-					const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
-					{
-						// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
-						// TODO: Replace this clusterfuck of texture control with matrix transformation
-						const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
-						if (remap_ctrl == 0xAA)
-						{
-							argb8_convert |= (mask & 0xFu) << bit_offset;
-							return;
-						}
-
-						if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
-						if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
-						if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
-						if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
-					};
-
-					if (argb8_signed)
-					{
-						// Apply integer sign extension from uint8 to sint8 and renormalize
-						apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
-					}
-
-					if (unsigned_remap)
-					{
-						// Apply sign expansion, compressed normal-map style (2n - 1)
-						apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
-					}
-
-					texture_control |= argb8_convert;
-				}
-
-				current_fragment_program.texture_params[i].control = texture_control;
+				continue;
 			}
+
+			std::memcpy(current_fragment_program.texture_params[i].scale, sampler_descriptors[i]->texcoord_xform.scale, 6 * sizeof(f32));
+			current_fragment_program.texture_params[i].remap = tex.remap();
+
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+
+			u32 texture_control = 0;
+			current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+
+			if (sampler_descriptors[i]->texcoord_xform.clamp)
+			{
+				std::memcpy(current_fragment_program.texture_params[i].clamp_min, sampler_descriptors[i]->texcoord_xform.clamp_min, 4 * sizeof(f32));
+				texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
+			}
+
+			if (tex.alpha_kill_enabled())
+			{
+				//alphakill can be ignored unless a valid comparison function is set
+				texture_control |= (1 << texture_control_bits::ALPHAKILL);
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL;
+			}
+
+			//const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+			const u32 raw_format = tex.format();
+			const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+
+			if (raw_format & CELL_GCM_TEXTURE_UN)
+			{
+				if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
+					tex.mag_filter() == rsx::texture_magnify_filter::nearest)
+				{
+					// Subpixel offset so that (X + bias) * scale will round correctly.
+					// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
+					// We apply the simplification where (x + bias) * z = xz + zbias here.
+					constexpr auto subpixel_bias = 0.01f;
+					current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
+					current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
+					current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);
+				}
+			}
+
+			if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
+			{
+				current_fp_texture_state.multisampled_textures |= (1 << i);
+				texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
+				texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
+				texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
+				texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
+
+				if (rsx::is_texcoord_wrapping_mode(tex.wrap_s()))
+				{
+					texture_control |= (1 << texture_control_bits::WRAP_S);
+				}
+
+				if (rsx::is_texcoord_wrapping_mode(tex.wrap_t()))
+				{
+					texture_control |= (1 << texture_control_bits::WRAP_T);
+				}
+
+				if (rsx::is_texcoord_wrapping_mode(tex.wrap_r()))
+				{
+					texture_control |= (1 << texture_control_bits::WRAP_R);
+				}
+			}
+
+			if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
+			{
+				switch (sampler_descriptors[i]->format_class)
+				{
+				case RSX_FORMAT_CLASS_DEPTH16_FLOAT:
+				case RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32:
+					texture_control |= (1 << texture_control_bits::DEPTH_FLOAT);
+					break;
+				default:
+					break;
+				}
+
+				switch (format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_D8R8G8B8:
+				{
+					// Emulate bitcast in shader
+					current_fp_texture_state.redirected_textures |= (1 << i);
+					const auto float_en = (sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)? 1 : 0;
+					texture_control |= (float_en << texture_control_bits::DEPTH_FLOAT);
+					break;
+				}
+				case CELL_GCM_TEXTURE_X16:
+				{
+					// A simple way to quickly read DEPTH16 data without shadow comparison
+					break;
+				}
+				case CELL_GCM_TEXTURE_DEPTH16:
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+				case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+				case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+				{
+					// Natively supported Z formats with shadow comparison feature
+					const auto compare_mode = tex.zfunc();
+					if (!tex.alpha_kill_enabled() &&
+						compare_mode < rsx::comparison_function::always &&
+						compare_mode > rsx::comparison_function::never)
+					{
+						current_fp_texture_state.shadow_textures |= (1 << i);
+					}
+					break;
+				}
+				default:
+					rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
+				}
+			}
+			else if (!backend_config.supports_hw_renormalization /* &&
+				tex.min_filter() == rsx::texture_minify_filter::nearest &&
+				tex.mag_filter() == rsx::texture_magnify_filter::nearest*/)
+			{
+				// FIXME: This check should only apply to point-sampled textures. However, it severely regresses some games (id tech 5).
+				// This is because even when filtering is active, the error from the PS3 texture expansion still applies.
+				// A proper fix is to expand these formats into BGRA8 when high texture precision is required. That requires different GUI settings and inflation shaders, so it will be handled separately.
+
+				switch (format)
+				{
+				case CELL_GCM_TEXTURE_A1R5G5B5:
+				case CELL_GCM_TEXTURE_A4R4G4B4:
+				case CELL_GCM_TEXTURE_D1R5G5B5:
+				case CELL_GCM_TEXTURE_R5G5B5A1:
+				case CELL_GCM_TEXTURE_R5G6B5:
+				case CELL_GCM_TEXTURE_R6G5B5:
+					texture_control |= (1 << texture_control_bits::RENORMALIZE);
+					break;
+				default:
+					break;
+				}
+			}
+
+			if (rsx::is_int8_remapped_format(format))
+			{
+				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
+				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
+				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
+				// This is a separate method of setting the format to signed mode without doing so per-channel
+				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
+
+				const u32 argb8_signed = tex.argb_signed(); // _SNROM
+				const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
+				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+				u32 argb8_convert = gamma;
+
+				// The options are mutually exclusive
+				ensure((argb8_signed & gamma) == 0);
+				ensure((argb8_signed & unsigned_remap) == 0);
+				ensure((gamma & unsigned_remap) == 0);
+
+				// Helper function to apply a per-channel mask based on an input mask
+				const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
+				{
+					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
+					// TODO: Replace this clusterfuck of texture control with matrix transformation
+					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
+					if (remap_ctrl == 0xAA)
+					{
+						argb8_convert |= (mask & 0xFu) << bit_offset;
+						return;
+					}
+
+					if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
+					if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
+					if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
+					if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
+				};
+
+				if (argb8_signed)
+				{
+					// Apply integer sign extension from uint8 to sint8 and renormalize
+					apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
+				}
+
+				if (unsigned_remap)
+				{
+					// Apply sign expansion, compressed normal-map style (2n - 1)
+					apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
+				}
+
+				texture_control |= argb8_convert;
+			}
+
+			current_fragment_program.texture_params[i].control = texture_control;
 		}
 
 		// Update texture configuration
