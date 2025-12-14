@@ -250,8 +250,12 @@ namespace rsx
 			const auto current = REGS(ctx)->decode<NV4097_SET_SURFACE_FORMAT>(arg);
 			const auto previous = REGS(ctx)->decode<NV4097_SET_SURFACE_FORMAT>(REGS(ctx)->latch);
 
-			if (*current.antialias() != *previous.antialias() ||                         // Antialias control has changed, update ROP parameters
-				current.is_integer_color_format() != previous.is_integer_color_format()) // The type of color format also requires ROP control update
+			if (current.is_integer_color_format() != previous.is_integer_color_format()) // Different ROP emulation
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+			}
+
+			if (*current.antialias() != *previous.antialias()) // Antialias control has changed, update ROP parameters
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
 			}
