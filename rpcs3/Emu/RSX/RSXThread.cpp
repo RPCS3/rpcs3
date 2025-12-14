@@ -2063,12 +2063,50 @@ namespace rsx
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
+
+			if (method_registers.alpha_test_enabled())
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
+			}
+
+			if (method_registers.polygon_stipple_enabled())
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
+			}
+
+			if (method_registers.msaa_alpha_to_coverage_enabled())
+			{
+				const bool is_multiple_samples = method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+				if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
+				{
+					// Emulation required
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
+				}
+			}
 		}
 		else if (method_registers.point_sprite_enabled() &&
 			method_registers.current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
+		}
+
+		// Check if framebuffer is actually an XRGB format and not a WZYX format
+		switch (method_registers.surface_color())
+		{
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		case rsx::surface_color_format::x32:
+			// These behave very differently from "normal" formats.
+			break;
+		default:
+			// Integer framebuffer formats. These can support sRGB output as well as some special rules for output quantization.
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER;
+			if (method_registers.framebuffer_srgb_enabled())
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
+			}
+			break;
 		}
 
 		for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -2098,6 +2136,7 @@ namespace rsx
 				{
 					//alphakill can be ignored unless a valid comparison function is set
 					texture_control |= (1 << texture_control_bits::ALPHAKILL);
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL;
 				}
 
 				//const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
