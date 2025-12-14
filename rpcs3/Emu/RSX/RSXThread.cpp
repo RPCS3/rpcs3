@@ -2125,7 +2125,7 @@ namespace rsx
 			std::memcpy(
 				current_fragment_program.texture_params[i].scale,
 				sampler_descriptors[i]->texcoord_xform.scale,
-				sizeof(sampler_descriptors[i]->texcoord_xform.scale));
+				sizeof(sampler_descriptors[i]->texcoord_xform.scale) * 2); // Copy scale and bias together
 
 			current_fragment_program.texture_params[i].remap = tex.remap();
 
@@ -2139,7 +2139,7 @@ namespace rsx
 				std::memcpy(
 					current_fragment_program.texture_params[i].clamp_min,
 					sampler_descriptors[i]->texcoord_xform.clamp_min,
-					sizeof(sampler_descriptors[i]->texcoord_xform.clamp_min));
+					sizeof(sampler_descriptors[i]->texcoord_xform.clamp_min) * 2); // Copy clamp_min and clamp_max together
 
 				texture_control |= (1 << rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT);
 			}
