@@ -32,7 +32,7 @@ R"(
 #endif
 
 #ifdef _ENABLE_ALPHA_TO_COVERAGE_TEST
-	if (!_test_bit(rop_control, MSAA_WRITE_ENABLE_BIT) || !coverage_test_passes(col0))
+	if (!coverage_test_passes(col0))
 	{
 		discard;
 	}
