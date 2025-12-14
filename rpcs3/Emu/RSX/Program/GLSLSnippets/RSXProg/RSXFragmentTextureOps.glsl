@@ -188,6 +188,7 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 		return rgba;
 	}
 
+#ifdef _ENABLE_TEXTURE_ALPHA_KILL
 	if (_test_bit(control_bits, ALPHAKILL))
 	{
 		// Alphakill
@@ -197,6 +198,7 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 			return rgba;
 		}
 	}
+#endif
 
 	if (_test_bit(control_bits, RENORMALIZE))
 	{
