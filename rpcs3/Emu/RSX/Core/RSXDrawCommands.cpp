@@ -680,12 +680,9 @@ namespace rsx
 		ROP_control_t rop_control{};
 		alignas(16) fragment_context_t payload{};
 
-		if (REGS(m_ctx)->alpha_test_enabled())
-		{
-			const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
-			rop_control.set_alpha_test_func(alpha_func);
-			rop_control.enable_alpha_test();
-		}
+		// Always encode the alpha function. Toggling alpha-test is not guaranteed to trigger context param reload anymore.
+		const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
+		rop_control.set_alpha_test_func(alpha_func);
 
 		// Generate wpos coefficients
 		// wpos equation is now as follows (ignoring pixel center offset):
