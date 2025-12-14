@@ -4387,7 +4387,7 @@ const std::string& Emulator::GetFakeCat() const
 	{
 		const std::string mount_point = vfs::get("/dev_bdvd");
 
-		if (mount_point.empty() || !IsPathInsideDir(m_path, mount_point))
+		if (mount_point.empty() || (!IsPathInsideDir(m_path, mount_point) && !m_path.starts_with(iso_device::virtual_device_name)))
 		{
 			static const std::string s_hg = "HG";
 			return s_hg;
