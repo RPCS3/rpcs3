@@ -2228,11 +2228,8 @@ void lv2_obj::notify_all() noexcept
 			break;
 		}
 
-		if (cpu != &g_to_notify)
-		{
-			// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
-			atomic_wait_engine::notify_all(cpu);
-		}
+		// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+		atomic_wait_engine::notify_all(cpu);
 	}
 
 	g_to_notify[0] = nullptr;
