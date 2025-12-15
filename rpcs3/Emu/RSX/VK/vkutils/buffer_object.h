@@ -9,9 +9,10 @@ namespace vk
 {
 	enum : u32
 	{
-		VK_BUFFER_CREATE_ALLOW_NULL_RPCS3 = 0x80000000,
+		VK_BUFFER_CREATE_ALLOW_NULL_RPCS3           = 0x10000000,   // If we cannot allocate memory for the buffer, just return an empty but valid object with a null handle.
+		VK_BUFFER_CREATE_IGNORE_VMEM_PRESSURE_RPCS3 = 0x20000000,   // If we cannot allocate memory for the buffer, do not run recovery routine to recover VRAM. Crash or return empty handle immediately instead.
 
-		VK_BUFFER_CREATE_SPECIAL_FLAGS_RPCS3 = (VK_BUFFER_CREATE_ALLOW_NULL_RPCS3)
+		VK_BUFFER_CREATE_SPECIAL_FLAGS_RPCS3 = (VK_BUFFER_CREATE_ALLOW_NULL_RPCS3 | VK_BUFFER_CREATE_IGNORE_VMEM_PRESSURE_RPCS3)
 	};
 
 	struct buffer_view : public unique_resource

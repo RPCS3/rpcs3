@@ -50,6 +50,7 @@ namespace vk
 		: m_device(dev)
 	{
 		const bool nullable = !!(flags & VK_BUFFER_CREATE_ALLOW_NULL_RPCS3);
+		const bool no_vmem_recovery = !!(flags & VK_BUFFER_CREATE_IGNORE_VMEM_PRESSURE_RPCS3);
 
 		info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		info.flags = flags & ~VK_BUFFER_CREATE_SPECIAL_FLAGS_RPCS3;
@@ -69,18 +70,27 @@ namespace vk
 			fmt::throw_exception("No compatible memory type was found!");
 		}
 
-		memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, allocation_type_info, allocation_pool, nullable);
+		memory_allocation_request request
+		{
+			.size = memory_reqs.size,
+			.alignment = memory_reqs.alignment,
+			.memory_type = &allocation_type_info,
+			.pool = allocation_pool,
+			.throw_on_fail = !nullable,
+			.recover_vmem_on_fail = !no_vmem_recovery
+		};
+		memory = std::make_unique<memory_block>(m_device, request);
+
 		if (auto device_memory = memory->get_vk_device_memory();
 			device_memory != VK_NULL_HANDLE)
 		{
 			vkBindBufferMemory(dev, value, device_memory, memory->get_vk_device_memory_offset());
+			return;
 		}
-		else
-		{
-			ensure(nullable);
-			vkDestroyBuffer(m_device, value, nullptr);
-			value = VK_NULL_HANDLE;
-		}
+
+		ensure(nullable);
+		vkDestroyBuffer(m_device, value, nullptr);
+		value = VK_NULL_HANDLE;
 	}
 
 	buffer::buffer(const vk::render_device& dev, VkBufferUsageFlags usage, void* host_pointer, u64 size)
