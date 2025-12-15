@@ -2260,7 +2260,7 @@ void lv2_obj::notify_all() noexcept
 	// There may be 6 waiters, but checking them all may be performance expensive 
 	// Instead, check 2 at max, but use the CPU ID index to tell which index to start checking so the work would be distributed across all threads
 
-	atomic_t<u64, 64>* range_lock = nullptr;
+	atomic_t<u64, 128>* range_lock = nullptr;
 
 	if (cpu->get_class() == thread_class::spu)
 	{
