@@ -719,43 +719,120 @@ namespace gem
 		constexpr u32 in_pitch = 640;
 		constexpr u32 out_pitch = 640 * 4;
 
-		for (u32 y = 0; y < 480 - 1; y += 2)
+		// Hamilton–Adams demosaicing
+		for (s32 y = 0; y < 480; y++)
 		{
-			const u8* src0 = src + y * in_pitch;
-			const u8* src1 = src0 + in_pitch;
+			const bool is_even_y = (y % 2) == 0;
+			const u8* srcc = src + y * in_pitch;
+			const u8* srcu = src + std::max(0, y - 1) * in_pitch;
+			const u8* srcd = src + std::min(480 - 1, y + 1) * in_pitch;
 
 			u8* dst0 = dst + y * out_pitch;
-			u8* dst1 = dst0 + out_pitch;
 
-			for (u32 x = 0; x < 640 - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
+			// Split loops (roughly twice the performance by removing one condition)
+			if (is_even_y)
 			{
-				u8 b  = src0[0];
-				u8 g0 = src0[1];
-				u8 g1 = src1[0];
-				u8 r  = src1[1];
-
-				if constexpr (use_gain)
+				for (s32 x = 0; x < 640; x++, dst0 += 4)
 				{
-					b  = static_cast<u8>(std::clamp(b  * gain_b, 0.0f, 255.0f));
-					g0 = static_cast<u8>(std::clamp(g0 * gain_g, 0.0f, 255.0f));
-					g1 = static_cast<u8>(std::clamp(g1 * gain_g, 0.0f, 255.0f));
-					r  = static_cast<u8>(std::clamp(r  * gain_r, 0.0f, 255.0f));
+					const bool is_even_x = (x % 2) == 0;
+					const int xl = std::max(0, x - 1);
+					const int xr = std::min(640 - 1, x + 1);
+
+					u8 r, b, g;
+
+					if (is_even_x)
+					{
+						// Blue pixel
+						const u8 up = srcu[x];
+						const u8 down = srcd[x];
+						const u8 left = srcc[xl];
+						const u8 right = srcc[xr];
+						const int dh = std::abs(int(left) - int(right));
+						const int dv = std::abs(int(up)   - int(down));
+
+						r = (srcu[xl] + srcu[xr] + srcd[xl] + srcd[xr]) / 4;
+						if (dh < dv)
+							g = (left + right) / 2;
+						else if (dv < dh)
+							g = (up + down) / 2;
+						else
+							g = (up + down + left + right) / 4;
+						b = srcc[x];
+					}
+					else
+					{
+						// Green (on blue row)
+						r = (srcu[x] + srcd[x]) / 2;
+						g = srcc[x];
+						b = (srcc[xl] + srcc[xr]) / 2;
+					}
+
+					if constexpr (use_gain)
+					{
+						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					}
+					else
+					{
+						dst0[0] = r;
+						dst0[1] = g;
+						dst0[2] = b;
+					}
+					dst0[3] = alpha;
 				}
+			}
+			else
+			{
+				for (s32 x = 0; x < 640; x++, dst0 += 4)
+				{
+					const bool is_even_x = (x % 2) == 0;
+					const int xl = std::max(0, x - 1);
+					const int xr = std::min(640 - 1, x + 1);
 
-				const u8 top[4] = { r, g0, b, alpha };
-				const u8 bottom[4] = { r, g1, b, alpha };
+					u8 r, b, g;
 
-				// Top-Left
-				std::memcpy(dst0, top, 4);
+					if (is_even_x)
+					{
+						// Green (on red row)
+						r = (srcc[xl] + srcc[xr]) / 2;
+						g = srcc[x];
+						b = (srcu[x] + srcd[x]) / 2;
+					}
+					else
+					{
+						// Red pixel
+						const u8 up = srcu[x];
+						const u8 down = srcd[x];
+						const u8 left = srcc[xl];
+						const u8 right = srcc[xr];
+						const int dh = std::abs(int(left) - int(right));
+						const int dv = std::abs(int(up)   - int(down));
 
-				// Top-Right Pixel
-				std::memcpy(dst0 + 4, top, 4);
+						r = srcc[x];
+						if (dh < dv)
+							g = (left + right) / 2;
+						else if (dv < dh)
+							g = (up + down) / 2;
+						else
+							g = (up + down + left + right) / 4;
+						b = (srcu[xl] + srcu[xr] + srcd[xl] + srcd[xr]) / 4;
+					}
 
-				// Bottom-Left Pixel
-				std::memcpy(dst1, bottom, 4);
-
-				// Bottom-Right Pixel
-				std::memcpy(dst1 + 4, bottom, 4);
+					if constexpr (use_gain)
+					{
+						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					}
+					else
+					{
+						dst0[0] = r;
+						dst0[1] = g;
+						dst0[2] = b;
+					}
+					dst0[3] = alpha;
+				}
 			}
 		}
 	}
