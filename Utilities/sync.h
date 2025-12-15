@@ -81,9 +81,9 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 	{
 		struct waiter
 		{
-			 uint val;
-			 uint mask;
-			 std::condition_variable cv;
+			uint val;
+			uint mask;
+			std::condition_variable cv;
 		};
 
 		std::mutex mutex;
@@ -111,7 +111,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 				waiter rec;
 				rec.val = val;
 				rec.mask = mask;
-				const auto& ref = *map.emplace(uaddr, &rec);
+				const auto itr = map.emplace(uaddr, &rec);
 
 				int res = 0;
 
@@ -134,7 +134,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 					// TODO: absolute timeout
 				}
 
-				map.erase(std::find(map.find(uaddr), map.end(), ref));
+				map.erase(itr);
 				return res;
 			}
 
