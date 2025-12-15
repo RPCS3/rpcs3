@@ -626,9 +626,9 @@ public:
 			cellGem.notice("Could not load mouse gem config. Using defaults.");
 		}
 
-		cellGem.notice("Real gem config=\n", g_cfg_gem_real.to_string());
-		cellGem.notice("Fake gem config=\n", g_cfg_gem_fake.to_string());
-		cellGem.notice("Mouse gem config=\n", g_cfg_gem_mouse.to_string());
+		cellGem.notice("Real gem config=%s", g_cfg_gem_real.to_string());
+		cellGem.notice("Fake gem config=%s", g_cfg_gem_fake.to_string());
+		cellGem.notice("Mouse gem config=%s", g_cfg_gem_mouse.to_string());
 	}
 };
 
