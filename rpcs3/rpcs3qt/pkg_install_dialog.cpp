@@ -190,7 +190,7 @@ void pkg_install_dialog::UpdateInfo(QLabel* installation_info, QDialogButtonBox*
 
 	installation_info->setText(gui::utils::make_paragraph(
 		tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-		.arg(rpcs3::utils::get_hdd0_game_dir())
+		.arg(QString::fromStdString(rpcs3::utils::get_hdd0_game_dir()))
 		.arg(gui::utils::format_byte_size(free_space))
 		.arg(data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
 		.arg(gui::utils::format_byte_size(data_size))));
