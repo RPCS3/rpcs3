@@ -9,11 +9,7 @@
 
 namespace rsx::assembler::FP
 {
-	static constexpr u32 register_file_length = 48 * 8; // 24 F32 or 48 F16 registers
-	static constexpr char content_unknown = 0;
-	static constexpr char content_float32 = 'R';
-	static constexpr char content_float16 = 'H';
-	static constexpr char content_dual    = 'D';
+	using namespace constants;
 
 	bool is_delay_slot(const Instruction& instruction)
 	{
@@ -60,7 +56,7 @@ namespace rsx::assembler::FP
 		return true;
 	}
 
-	std::vector<RegisterRef> compile_register_file(const std::array<char, 48 * 8>& file)
+	std::vector<RegisterRef> compile_register_file(const register_file_t& file)
 	{
 		std::vector<RegisterRef> results;
 
@@ -163,11 +159,11 @@ namespace rsx::assembler::FP
 	// Annotate each block with input and output lanes (read and clobber list)
 	void annotate_block_io(BasicBlock* block)
 	{
-		alignas(16) std::array<char, register_file_length> output_register_file;
-		alignas(16) std::array<char, register_file_length> input_register_file;      // We'll eventually replace with a bitfield mask, but for ease of debugging, we use char for now
+		alignas(16) register_file_t output_register_file;
+		alignas(16) register_file_t input_register_file;      // We'll eventually replace with a bitfield mask, but for ease of debugging, we use char for now
 
-		std::memset(output_register_file.data(), content_unknown, register_file_length);
-		std::memset(input_register_file.data(), content_unknown, register_file_length);
+		std::memset(output_register_file.data(), content_unknown, register_file_max_len);
+		std::memset(input_register_file.data(), content_unknown, register_file_max_len);
 
 		for (const auto& instruction : block->instructions)
 		{
