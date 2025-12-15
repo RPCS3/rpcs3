@@ -56,7 +56,8 @@ namespace vm
 	// Returns waiter count
 	static inline u32 reservation_notifier_count(u32 raddr, u64 rtime)
 	{
-		return reservation_notifier(raddr, rtime)->load().waiters_count;
+		reservation_waiter_t v = reservation_notifier(raddr, rtime)->load();
+		return v.wait_flag % 2 == 1 ? v.waiters_count : 0;
 	}
 
 	static inline void reservation_notifier_end_wait(atomic_t<reservation_waiter_t, 128>& waiter)
