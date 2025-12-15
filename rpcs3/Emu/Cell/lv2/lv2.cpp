@@ -1336,16 +1336,13 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 
 	if (cpu.get_class() == thread_class::ppu)
 	{
-		ppu_thread& ppu = static_cast<ppu_thread&>(cpu);
-
-		if (u32 addr = ppu.res_notify)
+		if (u32 addr = static_cast<ppu_thread&>(cpu).res_notify)
 		{
-			ppu.res_notify = 0;
-			ppu.res_notify_postpone_streak = 0;
+			static_cast<ppu_thread&>(cpu).res_notify = 0;
 
 			if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
-				if ((*it++ = vm::reservation_notifier_notify(addr, ppu.res_notify_time, true)))
+				if ((*it++ = vm::reservation_notifier_notify(addr, static_cast<ppu_thread&>(cpu).res_notify_time, true)))
 				{
 					if (it < std::end(g_to_notify))
 					{
@@ -1356,7 +1353,7 @@ bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 			}
 			else
 			{
-				vm::reservation_notifier_notify(addr, ppu.res_notify_time);
+				vm::reservation_notifier_notify(addr, static_cast<ppu_thread&>(cpu).res_notify_time);
 			}
 		}
 	}
@@ -1392,7 +1389,6 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 		if (u32 addr = ppu->res_notify)
 		{
 			ppu->res_notify = 0;
-			ppu->res_notify_postpone_streak = 0;
 
 			if (auto it = std::find(g_to_notify, std::end(g_to_notify), std::add_pointer_t<const void>{}); it != std::end(g_to_notify))
 			{
@@ -2262,9 +2258,12 @@ void lv2_obj::notify_all() noexcept
 
 	atomic_t<u64, 64>* range_lock = nullptr;
 
+	u32 current_raddr = 0;
+
 	if (cpu->get_class() == thread_class::spu)
 	{
 		range_lock = static_cast<spu_thread*>(cpu)->range_lock;
+		current_raddr = static_cast<spu_thread*>(cpu)->raddr;
 	}
 
 	for (usz i = 0, checked = 0; checked < 4 && i < total_waiters; i++)
@@ -2273,7 +2272,7 @@ void lv2_obj::notify_all() noexcept
 		const u64 value = waiter.load();
 		u32 raddr = static_cast<u32>(value) & -128;
 
-		if (vm::check_addr(raddr))
+		if (vm::check_addr(raddr) && (raddr != current_raddr || (value % 128) > 1))
 		{
 			if (((raddr >> 28) < 2 || (raddr >> 28) == 0xd))
 			{
@@ -2338,9 +2337,8 @@ void lv2_obj::notify_all() noexcept
 	{
 		if (notifies[i])
 		{
-			// Cover all waiters for an address
+			vm::reservation_update(notifies[i]);
 			vm::reservation_notifier_notify(notifies[i], notifies_time[i]);
-			vm::reservation_notifier_notify(notifies[i], notifies_time[i] - 128);
 		}
 	}
 }

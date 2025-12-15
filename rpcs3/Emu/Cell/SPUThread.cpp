@@ -3563,10 +3563,9 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
 
-	// Cover all waiters (TODO: Get reservation time atomically)
-	const u64 rtime = vm::reservation_acquire(addr);
-	vm::reservation_notifier_notify(addr, rtime - 128);
-	vm::reservation_notifier_notify(addr, rtime - 256);
+	// TODO: Implement properly (notifying previous two times)
+	vm::reservation_notifier_notify(addr, vm::reservation_acquire(addr) - 128);
+	vm::reservation_notifier_notify(addr, vm::reservation_acquire(addr) - 256);
 }
 
 bool spu_thread::do_mfc(bool can_escape, bool must_finish)
@@ -5497,8 +5496,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 					eventstat_spin_count = 0;
 				}
 			}
-
-			lv2_obj::notify_all();
 		}
 		else
 		{

@@ -113,10 +113,7 @@ namespace vm
 
 			if (ok)
 			{
-				// Notify all waiters for an address
-				// This is because reservation_update is often brought after the actual reservation update and not by a fused operation
 				reservation_notifier_notify(addr, rtime);
-				reservation_notifier_notify(addr, rtime - 128);
 
 				if (cpu && !had_wait && cpu->test_stopped())
 				{

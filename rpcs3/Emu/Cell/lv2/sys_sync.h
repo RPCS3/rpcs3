@@ -485,6 +485,7 @@ public:
 
 		static void enqueue_on_top(const void* waiter)
 		{
+			return;
 			g_to_notify[0] = waiter;
 			g_to_notify[1] = nullptr;
 		}
