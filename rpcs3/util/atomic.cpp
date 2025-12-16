@@ -1,6 +1,6 @@
 #include "atomic.hpp"
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 #define USE_FUTEX
 #elif !defined(_WIN32)
 #define USE_STD
