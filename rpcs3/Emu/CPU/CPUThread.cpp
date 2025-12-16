@@ -506,7 +506,7 @@ extern f64 get_cpu_program_usage_percent(u64 hash)
 thread_local DECLARE(cpu_thread::g_tls_this_thread) = nullptr;
 
 // Total number of CPU threads
-static atomic_t<u64, 64> s_cpu_counter{0};
+static atomic_t<u64, 128> s_cpu_counter{0};
 
 // List of posted tasks for suspend_all
 //static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};

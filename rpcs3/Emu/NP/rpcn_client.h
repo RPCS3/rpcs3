@@ -314,7 +314,7 @@ namespace rpcn
 		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_npid(const std::string& npid);
 
 		std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> get_notifications();
-		std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> get_replies();
+		std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> get_replies();
 		std::unordered_map<std::string, friend_online_data> get_presence_updates();
 		std::map<std::string, friend_online_data> get_presence_states();
 
@@ -428,8 +428,8 @@ namespace rpcn
 
 		shared_mutex mutex_notifs, mutex_replies, mutex_replies_sync, mutex_presence_updates;
 		std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> notifications;       // notif type / data
-		std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> replies;      // req id / (command / data)
-		std::unordered_map<u64, std::pair<rpcn::CommandType, std::vector<u8>>> replies_sync; // same but for sync replies(see handle_input())
+		std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> replies;      // req id / (command / data)
+		std::map<u64, std::pair<rpcn::CommandType, std::vector<u8>>> replies_sync; // same but for sync replies(see handle_input())
 		std::unordered_map<std::string, friend_online_data> presence_updates;                // npid / presence data
 
 		// Messages
