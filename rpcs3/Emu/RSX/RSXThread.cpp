@@ -2240,6 +2240,12 @@ namespace rsx
 				default:
 					rsx_log.error("Depth texture bound to pipeline with unexpected format 0x%X", format);
 				}
+
+				if (sampler_descriptors[i]->is_cyclic_reference &&
+					g_cfg.video.shader_precision != gpu_preset_level::low)
+				{
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_DISABLE_EARLY_Z;
+				}
 			}
 			else if (!backend_config.supports_hw_renormalization /* &&
 				tex.min_filter() == rsx::texture_minify_filter::nearest &&
