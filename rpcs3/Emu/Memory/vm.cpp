@@ -74,7 +74,7 @@ namespace vm
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
 
 	// Range lock slot allocation bits
-	atomic_t<u64, 64> g_range_lock_bits[2]{};
+	atomic_t<u64, 128> g_range_lock_bits[2]{};
 
 	auto& get_range_lock_bits(bool is_exclusive_range)
 	{
@@ -82,7 +82,7 @@ namespace vm
 	}
 
 	// Memory range lock slots (sparse atomics)
-	atomic_t<u64, 64> g_range_lock_set[64]{};
+	atomic_t<u64, 128> g_range_lock_set[64]{};
 
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages;
@@ -142,7 +142,7 @@ namespace vm
 		}
 	}
 
-	atomic_t<u64, 64>* alloc_range_lock()
+	atomic_t<u64, 128>* alloc_range_lock()
 	{
 		const auto [bits, ok] = get_range_lock_bits(false).fetch_op([](u64& bits)
 		{
@@ -167,7 +167,7 @@ namespace vm
 	template <typename F>
 	static u64 for_all_range_locks(u64 input, F func);
 
-	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
+	void range_lock_internal(atomic_t<u64, 128>* range_lock, u32 begin, u32 size)
 	{
 		perf_meter<"RHW_LOCK"_u64> perf0(0);
 
@@ -275,7 +275,7 @@ namespace vm
 		}
 	}
 
-	void free_range_lock(atomic_t<u64, 64>* range_lock) noexcept
+	void free_range_lock(atomic_t<u64, 128>* range_lock) noexcept
 	{
 		if (range_lock < g_range_lock_set || range_lock >= std::end(g_range_lock_set))
 		{
@@ -316,7 +316,7 @@ namespace vm
 		return result;
 	}
 
-	static atomic_t<u64, 64>* _lock_main_range_lock(u64 flags, u32 addr, u32 size)
+	static atomic_t<u64, 128>* _lock_main_range_lock(u64 flags, u32 addr, u32 size)
 	{
 		// Shouldn't really happen
 		if (size == 0)
@@ -460,7 +460,7 @@ namespace vm
 	{
 	}
 
-	writer_lock::writer_lock(u32 const addr, atomic_t<u64, 64>* range_lock, u32 const size, u64 const flags) noexcept
+	writer_lock::writer_lock(u32 const addr, atomic_t<u64, 128>* range_lock, u32 const size, u64 const flags) noexcept
 		: range_lock(range_lock)
 	{
 		cpu_thread* cpu{};
