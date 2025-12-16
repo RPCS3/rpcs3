@@ -673,9 +673,6 @@ public:
 	std::array<v128, 128> gpr{};
 	SPU_FPSCR fpscr{};
 
-	// Hypervisor context data
-	rpcs3::hypervisor_context_t hv_ctx; // NOTE: The offset within the class must be within the first 1MiB (10 bits max)
-
 	// MFC command data
 	spu_mfc_cmd ch_mfc_cmd{};
 
@@ -790,6 +787,8 @@ public:
 	u64 block_counter = 0;
 	u64 block_recover = 0;
 	u64 block_failure = 0;
+
+	rpcs3::hypervisor_context_t hv_ctx; // NOTE: The offset within the class must be within the first 1MiB
 
 	u64 ftx = 0; // Failed transactions
 	u64 stx = 0; // Succeeded transactions (pure counters)
