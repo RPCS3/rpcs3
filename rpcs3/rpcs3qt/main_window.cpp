@@ -546,9 +546,9 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		std::string game_path = Emu.GetBoot();
 		if (game_path.starts_with(iso_device::virtual_device_name))
 		{
-			auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
-			auto iso_device = dynamic_cast<class iso_device*>(device.get());
-			game_path = iso_device->get_loaded_iso();
+			const auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+			const auto iso_dev = ensure(dynamic_cast<const iso_device*>(device.get()));
+			game_path = iso_dev->get_loaded_iso();
 		}
 
 		gui_log.success("Boot successful.");

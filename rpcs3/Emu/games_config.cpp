@@ -48,11 +48,11 @@ games_config::result games_config::add_game(const std::string& key, const std::s
 {
 	if (path == iso_device::virtual_device_name + "/")
 	{
-		auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+		const auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
 		if (!device) return result::failure;
 
-		auto iso_device = dynamic_cast<class iso_device*>(device.get());
-		return add_game(key, iso_device->get_loaded_iso());
+		const auto iso_dev = dynamic_cast<const iso_device*>(device.get());
+		return add_game(key, iso_dev->get_loaded_iso());
 	}
 
 	std::lock_guard lock(m_mutex);

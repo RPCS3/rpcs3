@@ -1296,6 +1296,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			m_path_old = m_path;
 			resolve_path_as_vfs_path = true;
+
 			if (launching_from_disc_archive)
 			{
 				load_iso(disc_info);
@@ -1636,13 +1637,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		// ISO PKG INSTALL HACK!
-		if (fs::is_dir(m_path) && launching_from_disc_archive)
+		if (launching_from_disc_archive && fs::is_dir(m_path))
 		{
 			bdvd_dir = m_path;
 		}
 
 		// Special boot mode (directory scan)
-		if (fs::is_dir(m_path) && !launching_from_disc_archive)
+		if (!launching_from_disc_archive && fs::is_dir(m_path))
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
@@ -2142,7 +2143,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		// ISO has no USRDIR/EBOOT.BIN, and we've examined its PKGDIR and extras.
 		// time to wrap up
-		if (fs::is_dir(m_path) && launching_from_disc_archive)
+		if (launching_from_disc_archive && fs::is_dir(m_path))
 		{
 			return game_boot_result::nothing_to_boot;
 		}
@@ -2255,8 +2256,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Check game updates
 		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
 				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
-				&& (resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
-					|| launching_from_disc_archive)
+				&& (launching_from_disc_archive ||
+					resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN")))
 				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot)
 				&& ppu_exec == elf_error::ok)
 		{
@@ -2367,7 +2368,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					std::string disc_path = !launching_from_disc_archive ? resolved_path : m_path;
+					const std::string& disc_path = !launching_from_disc_archive ? resolved_path : m_path;
 					const usz pos = disc_path.rfind(m_game_dir);
 					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(disc_path.substr(pos + m_game_dir.size() + 1));
 					m_dir = "/dev_bdvd/PS3_GAME/";
@@ -3622,13 +3623,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				// Game mounted from archive
 				if (m_path.starts_with(iso_device::virtual_device_name + "/"))
 				{
-					auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+					const auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
 					ensure(device);
 
-					auto iso_device = dynamic_cast<class iso_device*>(device.get());
+					const auto iso_dev = dynamic_cast<const iso_device*>(device.get());
 
 					ar(m_path.substr(iso_device::virtual_device_name.size() + 1));
-					ar(iso_device->get_loaded_iso());
+					ar(iso_dev->get_loaded_iso());
 				}
 				else if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
 				{
@@ -4245,9 +4246,9 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 
 	// Load PARAM.SFO
 	const std::string elf_dir = fs::get_parent_dir(path);
-	std::string sfo_dir = !archive ? rpcs3::utils::get_sfo_dir_from_game_path(fs::get_parent_dir(elf_dir)) : "PS3_GAME";
+	std::string sfo_dir = archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(fs::get_parent_dir(elf_dir));
 	const std::string sfo_path = sfo_dir + "/PARAM.SFO";
-	const psf::registry _psf = !archive ? psf::load_object(sfo_path) : archive->open_psf(sfo_path);
+	const psf::registry _psf = archive ? archive->open_psf(sfo_path) : psf::load_object(sfo_path);
 
 	const std::string title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
 	const std::string cat = std::string(psf::get_string(_psf, "CATEGORY"));
