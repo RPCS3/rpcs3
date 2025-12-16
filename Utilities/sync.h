@@ -86,11 +86,21 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 			std::condition_variable cv;
 		};
 
-		std::mutex mutex;
-		std::unordered_multimap<volatile void*, waiter*> map;
+		struct bucket_t
+		{
+			std::mutex mutex;
+			std::unordered_multimap<volatile void*, waiter*> map;
+		};
+
+		// Not a power of 2 on purpose (for alignment optimiations)
+		bucket_t bucks[63];
 
 		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{
+			auto& bucket = bucks[(reinterpret_cast<u64>(uaddr) / 8) % std::size(bucks)];
+			auto& mutex = bucket.mutex;
+			auto& map = bucket.map;
+
 			std::unique_lock lock(mutex);
 
 			switch (futex_op)
@@ -111,7 +121,9 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 				waiter rec;
 				rec.val = val;
 				rec.mask = mask;
-				const auto itr = map.emplace(uaddr, &rec);
+
+				// Announce the waiter
+				map.emplace(uaddr, &rec);
 
 				int res = 0;
 
@@ -127,6 +139,16 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 					{
 						res = -1;
 						errno = ETIMEDOUT;
+
+						// Cleanup
+						for (auto range = map.equal_range(uaddr); range.first != range.second; range.first++)
+						{
+							if (range.first->second == &rec)
+							{
+								map.erase(range.first);
+								break;
+							}
+						}
 					}
 				}
 				else
@@ -134,7 +156,6 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 					// TODO: absolute timeout
 				}
 
-				map.erase(itr);
 				return res;
 			}
 
@@ -153,10 +174,26 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 
 					if (entry.mask & mask)
 					{
-						entry.cv.notify_one();
 						entry.mask = 0;
+						entry.cv.notify_one();
 						res++;
 						val--;
+					}
+				}
+
+				if (res)
+				{
+					// Cleanup
+					for (auto range = map.equal_range(uaddr); range.first != range.second;)
+					{
+						if (range.first->second->mask == 0)
+						{
+							map.erase(range.first);
+							range = map.equal_range(uaddr);
+							continue;
+						}
+
+						range.first++;
 					}
 				}
 
