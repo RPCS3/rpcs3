@@ -11,6 +11,7 @@
 
 bool is_file_iso(const std::string& path)
 {
+	if (path.empty()) return false;
 	if (fs::is_dir(path)) return false;
 
 	return is_file_iso(fs::file(path));
@@ -55,14 +56,14 @@ inline T read_both_endian_int(fs::file& file)
 // assumed that directory_entry is at file head
 std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool names_in_ucs2 = false)
 {
-	auto start_pos = file.pos();
-	u8 entry_length = file.read<u8>();
+	const auto start_pos = file.pos();
+	const u8 entry_length = file.read<u8>();
 
 	if (entry_length == 0) return std::nullopt;
 
 	file.seek(1, fs::seek_cur);
-	u32 start_sector = read_both_endian_int<u32>(file);
-	u32 file_size = read_both_endian_int<u32>(file);
+	const u32 start_sector = read_both_endian_int<u32>(file);
+	const u32 file_size = read_both_endian_int<u32>(file);
 
 	std::tm file_date = {};
 	file_date.tm_year = file.read<u8>();
@@ -71,20 +72,20 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	file_date.tm_hour = file.read<u8>();
 	file_date.tm_min = file.read<u8>();
 	file_date.tm_sec = file.read<u8>();
-	s16 timezone_value = file.read<u8>();
-	s16 timezone_offset = (timezone_value - 50) * 15 * 60;
+	const s16 timezone_value = file.read<u8>();
+	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
 
-	std::time_t date_time = std::mktime(&file_date) + timezone_offset;
+	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
 
-	u8 flags = file.read<u8>();
+	const u8 flags = file.read<u8>();
 
 	// 2nd flag bit indicates whether a given fs node is a directory
-	bool is_directory = flags & 0b00000010;
-	bool has_more_extents = flags & 0b10000000;
+	const bool is_directory = flags & 0b00000010;
+	const bool has_more_extents = flags & 0b10000000;
 
 	file.seek(6, fs::seek_cur);
 
-	u8 file_name_length = file.read<u8>();
+	const u8 file_name_length = file.read<u8>();
 
 	std::string file_name;
 	file.read(file_name, file_name_length);
@@ -99,10 +100,10 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	}
 	else if (names_in_ucs2) // for strings in joliet descriptor
 	{
-		std::string new_file_name = "";
+		std::string new_file_name;
 		int read = 0;
 		const u8* raw_str = reinterpret_cast<const u8*>(file_name.c_str());
-		while(read < file_name_length)
+		while (read < file_name_length)
 		{
 			// characters are stored in big endian format.
 			const u16 upper = raw_str[read];
@@ -134,7 +135,7 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 
 	return iso_fs_metadata
 	{
-		.name = file_name,
+		.name = std::move(file_name),
 		.time = date_time,
 		.is_directory = is_directory,
 		.has_multiple_extents = has_more_extents,
@@ -149,26 +150,25 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	};
 }
 
-void iso_form_hierarchy(fs::file& file, iso_fs_node& node,
-	bool use_ucs2_decoding = false, std::string parent_path = "")
+void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
 {
 	if (!node.metadata.is_directory) return;
 
-	std::vector<int> multi_extent_node_indices;
+	std::vector<usz> multi_extent_node_indices;
 
 	// assuming the directory spans a single extent
 	const auto& directory_extent = node.metadata.extents[0];
 
 	file.seek(directory_extent.start * ISO_BLOCK_SIZE);
 
-	u64 end_pos = directory_extent.size + (directory_extent.start * ISO_BLOCK_SIZE);
+	const u64 end_pos = directory_extent.size + (directory_extent.start * ISO_BLOCK_SIZE);
 
 	while(file.pos() < end_pos)
 	{
 		auto entry = iso_read_directory_entry(file, use_ucs2_decoding);
 		if (!entry)
 		{
-			u64 new_sector = (file.pos() / ISO_BLOCK_SIZE) + 1;
+			const u64 new_sector = (file.pos() / ISO_BLOCK_SIZE) + 1;
 			file.seek(new_sector * ISO_BLOCK_SIZE);
 			continue;
 		}
@@ -176,10 +176,10 @@ void iso_form_hierarchy(fs::file& file, iso_fs_node& node,
 		bool extent_added = false;
 
 		// find previous extent and merge into it, otherwise we push this node's index
-		for (int index : multi_extent_node_indices)
+		for (usz index : multi_extent_node_indices)
 		{
-			auto& selected_node = node.children.at(index);
-			if (selected_node->metadata.name.compare(entry->name) == 0)
+			auto& selected_node = ::at32(node.children, index);
+			if (selected_node->metadata.name == entry->name)
 			{
 				// merge into selected_node
 				selected_node->metadata.extents.push_back(entry->extents[0]);
@@ -197,7 +197,7 @@ void iso_form_hierarchy(fs::file& file, iso_fs_node& node,
 		}
 
 		node.children.push_back(std::make_unique<iso_fs_node>(iso_fs_node{
-			.metadata = *entry
+			.metadata = std::move(*entry)
 		}));
 	}
 
@@ -237,7 +237,7 @@ iso_archive::iso_archive(const std::string& path)
 
 	do
 	{
-		auto descriptor_start = m_file.pos();
+		const auto descriptor_start = m_file.pos();
 
 		descriptor_type = m_file.read<u8>();
 
@@ -257,7 +257,7 @@ iso_archive::iso_archive(const std::string& path)
 
 		m_file.seek(descriptor_start + ISO_BLOCK_SIZE);
 	}
-	while(descriptor_type != 255);
+	while (descriptor_type != 255);
 
 	iso_form_hierarchy(m_file, m_root, use_ucs2_decoding);
 }
@@ -266,7 +266,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
 	if (passed_path.empty()) return nullptr;
 
-	std::string path = std::filesystem::path(passed_path).string();
+	const std::string path = std::filesystem::path(passed_path).string();
 
 	size_t start = 0;
 	size_t end = path.find_first_of(fs::delim);
@@ -277,14 +277,14 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	do
 	{
 		if (search_stack.empty()) return nullptr;
-		auto* top_entry = search_stack.top();
+		const auto* top_entry = search_stack.top();
 
-		if (end == std::string::npos)
+		if (end == umax)
 		{
 			end = path.size();
 		}
 
-		auto path_component = path.substr(start, end-start);
+		const auto path_component = path.substr(start, end-start);
 
 		bool found = false;
 
@@ -301,7 +301,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		{
 			for (const auto& entry : top_entry->children)
 			{
-				if (entry->metadata.name.compare(path_component) == 0)
+				if (entry->metadata.name == path_component)
 				{
 					search_stack.push(entry.get());
 
@@ -316,7 +316,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		start = end + 1;
 		end = path.find_first_of(fs::delim, start);
 	}
-	while(start < path.size());
+	while (start < path.size());
 
 	if (search_stack.empty()) return nullptr;
 
@@ -330,7 +330,7 @@ bool iso_archive::exists(const std::string& path)
 
 bool iso_archive::is_file(const std::string& path)
 {
-	auto file_node = retrieve(path);
+	const auto file_node = retrieve(path);
 	if (!file_node) return false;
 
 	return !file_node->metadata.is_directory;
@@ -338,7 +338,7 @@ bool iso_archive::is_file(const std::string& path)
 
 iso_file iso_archive::open(const std::string& path)
 {
-	return iso_file(fs::file(m_path), *retrieve(path));
+	return iso_file(fs::file(m_path), *ensure(retrieve(path)));
 }
 
 psf::registry iso_archive::open_psf(const std::string& path)
@@ -355,7 +355,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 }
 
 iso_file::iso_file(fs::file&& iso_handle, const iso_fs_node& node)
-	: m_file(std::move(iso_handle)), m_meta(node.metadata), m_pos(0)
+	: m_file(std::move(iso_handle)), m_meta(node.metadata)
 {
 	m_file.seek(ISO_BLOCK_SIZE * node.metadata.extents[0].start);
 }
@@ -374,7 +374,7 @@ fs::stat_t iso_file::get_stat()
 	};
 }
 
-bool iso_file::trunc(u64)
+bool iso_file::trunc(u64 /*length*/)
 {
 	fs::g_tls_error = fs::error::readonly;
 	return false;
@@ -382,9 +382,11 @@ bool iso_file::trunc(u64)
 
 std::pair<u64, iso_extent_info> iso_file::get_extent_pos(u64 pos) const
 {
+	ensure(!m_meta.extents.empty());
+
 	auto it = m_meta.extents.begin();
 
-	while(pos >= it->size && it != m_meta.extents.end() - 1)
+	while (pos >= it->size && it != m_meta.extents.end() - 1)
 	{
 		pos -= it->size;
 
@@ -397,14 +399,14 @@ std::pair<u64, iso_extent_info> iso_file::get_extent_pos(u64 pos) const
 // assumed valid and in bounds.
 u64 iso_file::file_offset(u64 pos) const
 {
-	auto [local_pos, extent] = get_extent_pos(pos);
+	const auto [local_pos, extent] = get_extent_pos(pos);
 
 	return (extent.start * ISO_BLOCK_SIZE) + local_pos;
 }
 
 u64 iso_file::local_extent_remaining(u64 pos) const
 {
-	auto [local_pos, extent] = get_extent_pos(pos);
+	const auto [local_pos, extent] = get_extent_pos(pos);
 
 	return extent.size - local_pos;
 }
@@ -416,25 +418,22 @@ u64 iso_file::local_extent_size(u64 pos) const
 
 u64 iso_file::read(void* buffer, u64 size)
 {
-	auto r = read_at(m_pos, buffer, size);
+	const auto r = read_at(m_pos, buffer, size);
 	m_pos += r;
 	return r;
 }
 
 u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 {
-	u64 local_remaining = local_extent_remaining(offset);
+	const u64 local_remaining = local_extent_remaining(offset);
 
-	u64 total_read = m_file.read_at(file_offset(offset), buffer, std::min(size, local_remaining));
+	const u64 total_read = m_file.read_at(file_offset(offset), buffer, std::min(size, local_remaining));
 
-	auto total_size = this->size();
+	const auto total_size = this->size();
 
 	if (size > total_read && (offset + total_read) < total_size)
 	{
-		u64 second_total_read = read_at(offset + total_read,
-			reinterpret_cast<u8*>(buffer) + total_read,
-			size - total_read
-		);
+		const u64 second_total_read = read_at(offset + total_read, reinterpret_cast<u8*>(buffer) + total_read, size - total_read);
 
 		return total_read + second_total_read;
 	}
@@ -442,7 +441,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	return total_read;
 }
 
-u64 iso_file::write(const void*, u64)
+u64 iso_file::write(const void* /*buffer*/, u64 /*size*/)
 {
 	fs::g_tls_error = fs::error::readonly;
 	return 0;
@@ -462,10 +461,8 @@ u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 		return -1;
 	}
 
-	const u64 bad_res = -1;
-
-	u64 result = m_file.seek(file_offset(m_pos));
-	if (result == bad_res) return -1;
+	const u64 result = m_file.seek(file_offset(m_pos));
+	if (result == umax) return umax;
 
 	m_pos = new_pos;
 	return m_pos;
@@ -491,8 +488,7 @@ bool iso_dir::read(fs::dir_entry& entry)
 {
 	if (m_pos < m_node.children.size())
 	{
-		auto& selected = m_node.children[m_pos].get()->metadata;
-		u64 size = selected.size();
+		const auto& selected = m_node.children[m_pos].get()->metadata;
 
 		entry.name = selected.name;
 		entry.atime = selected.time;
@@ -501,7 +497,7 @@ bool iso_dir::read(fs::dir_entry& entry)
 		entry.is_directory = selected.is_directory;
 		entry.is_symlink = false;
 		entry.is_writable = false;
-		entry.size = size;
+		entry.size = selected.size();
 
 		m_pos++;
 
@@ -513,25 +509,23 @@ bool iso_dir::read(fs::dir_entry& entry)
 
 bool iso_device::stat(const std::string& path, fs::stat_t& info)
 {
-	auto relative_path = std::filesystem::relative(std::filesystem::path(path),
-		std::filesystem::path(fs_prefix)).string();
+	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
-	auto node = m_archive.retrieve(relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
 		return false;
 	}
 
-	auto& meta = node->metadata;
-	u64 size = meta.size();
+	const auto& meta = node->metadata;
 
 	info = fs::stat_t
 	{
 		.is_directory = meta.is_directory,
 		.is_symlink = false,
 		.is_writable = false,
-		.size = size,
+		.size = meta.size(),
 		.atime = meta.time,
 		.mtime = meta.time,
 		.ctime = meta.time
@@ -542,25 +536,24 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 
 bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 {
-	auto relative_path = std::filesystem::relative(std::filesystem::path(path),
-		std::filesystem::path(fs_prefix)).string();
+	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
-	auto node = m_archive.retrieve(relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
 		return false;
 	}
 
-	auto& meta = node->metadata;
-	u64 size = meta.size();
+	const auto& meta = node->metadata;
+	const u64 size = meta.size();
 
 	info = fs::device_stat
 	{
-		.block_size=size,
-		.total_size=size,
-		.total_free=0,
-		.avail_free=0
+		.block_size = size,
+		.total_size = size,
+		.total_free = 0,
+		.avail_free = 0
 	};
 
 	return false;
@@ -568,10 +561,9 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 
 std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	auto relative_path = std::filesystem::relative(std::filesystem::path(path),
-		std::filesystem::path(fs_prefix)).string();
+	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
-	auto node = m_archive.retrieve(relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -589,10 +581,9 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 
 std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 {
-	auto relative_path = std::filesystem::relative(std::filesystem::path(path),
-		std::filesystem::path(fs_prefix)).string();
+	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
-	auto node = m_archive.retrieve(relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -618,14 +609,12 @@ void iso_dir::rewind()
 
 void load_iso(const std::string& path)
 {
-	fs::set_virtual_device("iso_overlay_fs_dev",
-		stx::make_shared<iso_device>(path));
+	fs::set_virtual_device("iso_overlay_fs_dev", stx::make_shared<iso_device>(path));
 
 	vfs::mount("/dev_bdvd/"sv, iso_device::virtual_device_name + "/");
 }
 
 void unload_iso()
 {
-	fs::set_virtual_device("iso_overlay_fs_dev",
-		stx::shared_ptr<iso_device>());
+	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
 }

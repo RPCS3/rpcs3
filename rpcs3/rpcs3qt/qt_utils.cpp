@@ -683,27 +683,28 @@ namespace gui
 			return QString("%1 days ago %2").arg(current_date - exctrated_date).arg(date.toString(fmt_relative));
 		}
 
-		bool load_icon(QPixmap& icon, const std::string& icon_path,
-			const std::string& archive_path)
+		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
 		{
+			if (icon_path.empty()) return false;
+
+			if (archive_path.empty())
+			{
+				return icon.load(QString::fromStdString(icon_path));
+			}
+
 			if (!is_file_iso(archive_path)) return false;
 
 			iso_archive archive(archive_path);
 			if (!archive.exists(icon_path)) return false;
 
 			auto icon_file = archive.open(icon_path);
-			auto icon_size = icon_file.size();
+			const auto icon_size = icon_file.size();
+			if (icon_size == 0) return false;
 
 			QByteArray data(icon_size, 0);
 			icon_file.read(data.data(), icon_size);
-			QImage iconImage;
 
-			if (iconImage.loadFromData(data))
-			{
-				icon = QPixmap::fromImage(iconImage);
-			}
-
-			return true;
+			return icon.loadFromData(data);
 		}
 
 		QString format_timestamp(s64 time, const QString& fmt)

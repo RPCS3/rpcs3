@@ -21,9 +21,9 @@ void qt_video_source::set_video_path(const std::string& video_path)
 	m_video_path = QString::fromStdString(video_path);
 }
 
-void qt_video_source::set_source_path(const std::string& source_path)
+void qt_video_source::set_iso_path(const std::string& iso_path)
 {
-	m_source_path = QString::fromStdString(source_path);
+	m_iso_path = iso_path;
 }
 
 void qt_video_source::set_active(bool active)
@@ -62,7 +62,7 @@ void qt_video_source::init_movie()
 		return;
 	}
 
-	if (!m_image_change_callback || m_video_path.isEmpty() || (!QFile::exists(m_video_path) && m_source_path.isEmpty()))
+	if (!m_image_change_callback || m_video_path.isEmpty() || (m_iso_path.empty() && !QFile::exists(m_video_path)))
 	{
 		m_video_path.clear();
 		return;
@@ -72,24 +72,24 @@ void qt_video_source::init_movie()
 
 	if (lower.endsWith(".gif"))
 	{
-		if (m_source_path.isEmpty())
+		if (m_iso_path.empty())
 		{
 			m_movie = std::make_unique<QMovie>(m_video_path);
-			m_video_path.clear();
 		}
 		else
 		{
-			iso_archive archive(m_source_path.toStdString());
+			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
-			auto movie_size = movie_file.size();
+			const auto movie_size = movie_file.size();
+			if (movie_size == 0) return;
+
 			m_video_data = QByteArray(movie_size, 0);
 			movie_file.read(m_video_data.data(), movie_size);
 
-			QBuffer buffer(&m_video_data);
-			buffer.open(QIODevice::ReadOnly);
-			m_movie = std::make_unique<QMovie>(&buffer);
+			m_video_buffer = std::make_unique<QBuffer>(&m_video_data);
+			m_video_buffer->open(QIODevice::ReadOnly);
+			m_movie = std::make_unique<QMovie>(m_video_buffer.get());
 
-			m_video_path.clear();
 		}
 
 		if (!m_movie->isValid())
@@ -109,7 +109,7 @@ void qt_video_source::init_movie()
 	if (lower.endsWith(".pam"))
 	{
 		// We can't set PAM files as source of the video player, so we have to feed them as raw data.
-		if (m_source_path.isEmpty())
+		if (m_iso_path.empty())
 		{
 			QFile file(m_video_path);
 			if (!file.open(QFile::OpenModeFlag::ReadOnly))
@@ -119,20 +119,24 @@ void qt_video_source::init_movie()
 
 			// TODO: Decode the pam properly before pushing it to the player
 			m_video_data = file.readAll();
-			if (m_video_data.isEmpty())
-			{
-				return;
-			}
 		}
 		else
 		{
-			auto source_path = m_source_path.toStdString();
-			auto video_path = m_video_path.toStdString();
-			iso_archive archive(source_path.c_str());
-			auto movie_file = archive.open(video_path);
-			auto movie_size = movie_file.size();
+			iso_archive archive(m_iso_path);
+			auto movie_file = archive.open(m_video_path.toStdString());
+			const auto movie_size = movie_file.size();
+			if (movie_size == 0)
+			{
+				return;
+			}
+
 			m_video_data = QByteArray(movie_size, 0);
 			movie_file.read(m_video_data.data(), movie_size);
+		}
+
+		if (m_video_data.isEmpty())
+		{
+			return;
 		}
 
 		m_video_buffer = std::make_unique<QBuffer>(&m_video_data);
@@ -185,6 +189,7 @@ void qt_video_source::stop_movie()
 	if (m_movie)
 	{
 		m_movie->stop();
+		m_movie.reset();
 	}
 
 	m_video_sink.reset();
