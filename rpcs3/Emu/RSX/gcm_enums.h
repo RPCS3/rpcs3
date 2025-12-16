@@ -465,6 +465,11 @@ namespace gcm
 		RSX_SHADER_CONTROL_ALPHA_TEST              = 0x0400000, // Uses alpha test on the outputs
 		RSX_SHADER_CONTROL_POLYGON_STIPPLE         = 0x0800000, // Uses polygon stipple for dithered rendering
 		RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE       = 0x1000000, // Alpha to coverage
+
+		RSX_SHADER_CONTROL_DISABLE_EARLY_Z         = 0x2000000, // Do not allow early-Z optimizations on this shader
+
+		// Meta
+		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE)
 	};
 
 	// GCM Reports
