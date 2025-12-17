@@ -93,13 +93,13 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
+		{ "ocol0", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
+	const bool float_type = (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (uint i = 0; i < std::size(table); ++i)
 	{
@@ -244,7 +244,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	std::set<std::string> output_registers;
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
 		output_registers = { "r0", "r2", "r3", "r4" };
 	}
@@ -253,7 +253,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		output_registers = { "h0", "h4", "h6", "h8" };
 	}
 
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		output_registers.insert("r1");
 	}
@@ -335,8 +335,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main();\n\n";
 
-	if ((m_ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z) &&
-		!(m_ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD)) &&
+	if ((m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z) &&
+		!(m_prog.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD)) &&
 		g_cfg.video.shader_precision != gpu_preset_level::low)
 	{
 		// This is effectively unreachable code, but good enough to trick the GPU to skip early Z
@@ -348,7 +348,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	glsl::insert_rop(OS, m_shader_props);
 
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{

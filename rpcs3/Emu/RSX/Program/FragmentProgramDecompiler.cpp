@@ -84,7 +84,6 @@ std::vector<RegisterRef> get_fragment_program_output_set(u32 ctrl, u32 mrt_count
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
-	, m_ctrl(prog.ctrl)
 {
 	m_size = 0;
 }
@@ -805,7 +804,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader validation
 	// Shader must at least write to one output for the body to be considered valid
 
-	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	const bool fp16_out = !(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
 	const std::string init_value = float4_type + "(0.)";
 	std::array<std::string, 4> output_register_names;
@@ -814,7 +813,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	std::stringstream main_epilogue;
 
 	// Check depth export
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
 		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
