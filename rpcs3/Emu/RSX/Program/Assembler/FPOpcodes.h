@@ -85,6 +85,21 @@ namespace rsx::assembler
 
 	namespace FP
 	{
+		namespace constants
+		{
+			// The ISA can encode for 48 registers of any width.
+			// This allows to encode R0-R64 and H0-H95, though there aren't enough addressing bits for the latter.
+			constexpr u32 register_file_max_len = 48 * 16;
+
+			// Enums for analysis passes.
+			constexpr char content_unknown = 0;
+			constexpr char content_float32 = 'R';
+			constexpr char content_float16 = 'H';
+			constexpr char content_dual    = 'D';
+		}
+
+		using register_file_t = std::array<char, constants::register_file_max_len>;
+
 		// Returns number of operands consumed by an instruction
 		u8 get_operand_count(FP_opcode opcode);
 

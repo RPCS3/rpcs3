@@ -1495,7 +1495,7 @@ namespace rpcn
 		return notifs;
 	}
 
-	std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> rpcn_client::get_replies()
+	std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> rpcn_client::get_replies()
 	{
 		std::lock_guard lock(mutex_replies);
 		auto ret_replies = std::move(replies);
