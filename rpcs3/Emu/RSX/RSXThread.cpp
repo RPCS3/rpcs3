@@ -2242,6 +2242,8 @@ namespace rsx
 				}
 
 				if (sampler_descriptors[i]->is_cyclic_reference &&
+					!(current_fragment_program.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD)) &&
+					!g_cfg.video.strict_rendering_mode &&
 					g_cfg.video.shader_precision != gpu_preset_level::low)
 				{
 					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_DISABLE_EARLY_Z;
