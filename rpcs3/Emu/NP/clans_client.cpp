@@ -247,6 +247,10 @@ namespace clan
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, err_buf);
 
+		// WARN: This disables certificate verification!
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+
 		curl_easy_setopt(curl, CURLOPT_POST, 1);
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, xml.c_str());
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, xml.size());
