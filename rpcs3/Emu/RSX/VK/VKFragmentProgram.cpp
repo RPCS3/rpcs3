@@ -471,16 +471,13 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main();\n\n";
 
-	if ((m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z) &&
-		!(m_prog.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD)) &&
-		g_cfg.video.shader_precision != gpu_preset_level::low)
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z)
 	{
 		// This is effectively unreachable code, but good enough to trick the GPU to skip early Z
+		// For vulkan, depth export has stronger semantics than discard.
 		OS <<
-			"// Insert NOP sequence to disable early-Z\n"
-			"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
-			"	if (_test_bit(rop_control, 0))\n"
-			"		discard;\n\n";
+			"	// Insert pseudo-barrier sequence to disable early-Z\n"
+			"	gl_FragDepth = gl_FragCoord.z;\n\n";
 	}
 
 	glsl::insert_rop(OS, m_shader_props);

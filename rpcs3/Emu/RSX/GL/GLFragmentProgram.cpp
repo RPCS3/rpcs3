@@ -335,15 +335,12 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main();\n\n";
 
-	if ((m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z) &&
-		!(m_prog.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD)) &&
-		g_cfg.video.shader_precision != gpu_preset_level::low)
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z)
 	{
-		// This is effectively unreachable code, but good enough to trick the GPU to skip early Z
+		// This is effectively pointless code, but good enough to trick the GPU to skip early Z
 		OS <<
-			"// Insert NOP sequence to disable early-Z\n"
-			"if (isnan(gl_FragCoord.z))\n"
-			"	discard;\n\n";
+			"	// Insert pseudo-barrier sequence to disable early-Z\n"
+			"	gl_FragDepth = gl_FragCoord.z;\n\n";
 	}
 
 	glsl::insert_rop(OS, m_shader_props);
