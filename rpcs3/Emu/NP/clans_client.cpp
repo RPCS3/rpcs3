@@ -305,15 +305,15 @@ namespace clan
 		const u32 consumed_count = 0;
 
 		// Use the cached ticket if available
-		np::ticket ticket = nph.get_clan_ticket();
-		if (ticket.empty())
+		np::ticket clan_ticket;
+		if (!nph.get_clan_ticket_ready())
 		{
 			// If not cached, request a new ticket
 			nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
-			ticket = nph.get_clan_ticket();
 
 			// If still empty, return error
-			if (ticket.empty())
+			clan_ticket = nph.get_clan_ticket();
+			if (clan_ticket.empty())
 			{
 				clan_log.error("Failed to get clan ticket");
 				return "";
@@ -323,7 +323,7 @@ namespace clan
 		std::vector<byte> ticket_bytes(1024);
 		uint32_t ticket_size = UINT32_MAX;
 
-		Base64_Encode_NoNl(ticket.data(), ticket.size(), ticket_bytes.data(), &ticket_size);
+		Base64_Encode_NoNl(clan_ticket.data(), clan_ticket.size(), ticket_bytes.data(), &ticket_size);
 		std::string ticket_str = std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
 
 		return ticket_str;

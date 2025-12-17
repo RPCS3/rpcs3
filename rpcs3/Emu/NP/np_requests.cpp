@@ -871,7 +871,7 @@ namespace np
 		if (incoming_ticket.get_service_id() == CLANS_SERVICE_ID)
 		{
 			clan_ticket = incoming_ticket;
-			clan_ticket_ready.store(true);
+			clan_ticket_ready.store(1);
 			clan_ticket_ready.notify_all();
 			
 			return;

@@ -1364,9 +1364,14 @@ namespace np
 		return history;
 	}
 
+	u32 np_handler::get_clan_ticket_ready()
+	{
+		return clan_ticket_ready.load();
+	}
+
 	ticket np_handler::get_clan_ticket()
 	{
-		clan_ticket_ready.wait(false, atomic_wait_timeout{60'000'000'000}); // 60 seconds
+		clan_ticket_ready.wait(0, atomic_wait_timeout{60'000'000'000}); // 60 seconds
 
 		if (!clan_ticket_ready.load())
 		{
