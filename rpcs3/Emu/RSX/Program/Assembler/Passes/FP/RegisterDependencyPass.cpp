@@ -9,13 +9,7 @@
 
 namespace rsx::assembler::FP
 {
-	static constexpr u32 register_file_length = 48 * 8; // 24 F32 or 48 F16 registers
-	static constexpr char content_unknown = 0;
-	static constexpr char content_float32 = 'R';
-	static constexpr char content_float16 = 'H';
-	static constexpr char content_dual = 'D';
-
-	using register_file_t = std::array<char, register_file_length>;
+	using namespace constants;
 
 	struct DependencyPassContext
 	{
@@ -293,7 +287,7 @@ namespace rsx::assembler::FP
 	void insert_dependency_barriers(DependencyPassContext& ctx, BasicBlock* block)
 	{
 		register_file_t& register_file = ctx.exec_register_map[block];
-		std::memset(register_file.data(), content_unknown, register_file_length);
+		std::memset(register_file.data(), content_unknown, register_file_max_len);
 
 		std::unordered_set<u32> barrier16;
 		std::unordered_set<u32> barrier32;
@@ -403,7 +397,7 @@ namespace rsx::assembler::FP
 			if (ctx.sync_register_map.find(target) == ctx.sync_register_map.end())
 			{
 				auto& blob = ctx.sync_register_map[target];
-				std::memset(blob.data(), content_unknown, register_file_length);
+				std::memset(blob.data(), content_unknown, register_file_max_len);
 			}
 
 			auto& sync_register_file = ctx.sync_register_map[target];

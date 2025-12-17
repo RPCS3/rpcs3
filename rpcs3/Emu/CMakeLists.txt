@@ -411,6 +411,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/pad_config_types.cpp
     Io/pad_types.cpp
     Io/PadHandler.cpp
+    Io/ps_move_data.cpp
     Io/rb3drums_config.cpp
     Io/RB3MidiDrums.cpp
     Io/RB3MidiGuitar.cpp

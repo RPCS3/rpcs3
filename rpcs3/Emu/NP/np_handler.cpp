@@ -1734,4 +1734,16 @@ namespace np
 		return ctx;
 	}
 
+	void np_handler::callback_info::queue_callback(u32 req_id, u32 event_key, s32 error_code, u32 data_size) const
+	{
+		if (cb)
+		{
+			sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
+				{
+					cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
+					return 0;
+				});
+		}
+	}
+
 } // namespace np
