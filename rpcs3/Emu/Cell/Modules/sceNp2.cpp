@@ -543,7 +543,7 @@ error_code sceNpMatching2GetClanLobbyId(SceNpMatching2ContextId ctxId, SceNpClan
 
 	// Returning this rather than `CELL_OK` allows for games to
 	// not need Matching2 Clans support to connect, when Clans are enabled.
-	return CELL_ENOTCONN;
+	return SCE_NP_MATCHING2_SERVER_ERROR_SERVICE_UNAVAILABLE;
 }
 
 error_code sceNpMatching2GetLobbyMemberDataInternal(
