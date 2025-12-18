@@ -146,7 +146,7 @@ error_code sceNpClansCreateRequest(vm::ptr<SceNpClansRequestHandle> handle, u64 
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 	
 	s32 reqId = 0;
-	SceNpClansError res = clans_manager.client->createRequest(&reqId);
+	SceNpClansError res = clans_manager.client->create_request(&reqId);
 	if (res != SCE_NP_CLANS_SUCCESS)
 	{
 		return res;
@@ -168,7 +168,7 @@ error_code sceNpClansDestroyRequest(SceNpClansRequestHandle handle)
 
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 	
-	SceNpClansError res = clans_manager.client->destroyRequest(handle);
+	SceNpClansError res = clans_manager.client->destroy_request(handle);
 	if (res != SCE_NP_CLANS_SUCCESS)
 	{
 		return res;
@@ -187,7 +187,7 @@ error_code sceNpClansAbortRequest(SceNpClansRequestHandle handle)
 	}
 
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
-	clans_manager.client->destroyRequest(handle);
+	clans_manager.client->destroy_request(handle);
 
 	return CELL_OK;
 }
@@ -220,7 +220,7 @@ error_code sceNpClansCreateClan(SceNpClansRequestHandle handle, vm::cptr<char> n
 	std::string tag_str;
 	vm::read_string(tag.addr(), SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH, tag_str);
 
-	SceNpClansError res = clans_manager.client->createClan(nph, handle, name_str, tag_str, clanId);
+	SceNpClansError res = clans_manager.client->create_clan(nph, handle, name_str, tag_str, clanId);
 	if (res != SCE_NP_CLANS_SUCCESS)
 	{
 		return res;
@@ -246,7 +246,7 @@ error_code sceNpClansDisbandClan(SceNpClansRequestHandle handle, SceNpClanId cla
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
-	SceNpClansError res = clans_manager.client->disbandClan(nph, handle, clanId);
+	SceNpClansError res = clans_manager.client->disband_dlan(nph, handle, clanId);
 	if (res != SCE_NP_CLANS_SUCCESS)
 	{
 		return res;
@@ -289,7 +289,7 @@ error_code sceNpClansGetClanList(SceNpClansRequestHandle handle, vm::cptr<SceNpC
 	SceNpClansEntry host_clanList[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
-	SceNpClansError ret = clans_manager.client->getClanList(nph, handle, &host_paging, host_clanList, &host_pageResult);
+	SceNpClansError ret = clans_manager.client->get_clan_list(nph, handle, &host_paging, host_clanList, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -392,7 +392,7 @@ error_code sceNpClansSearchByName(SceNpClansRequestHandle handle, vm::cptr<SceNp
 	SceNpClansClanBasicInfo host_results[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
-	SceNpClansError ret = clans_manager.client->clanSearch(handle, &host_paging, &host_search, host_results, &host_pageResult);
+	SceNpClansError ret = clans_manager.client->clan_search(handle, &host_paging, &host_search, host_results, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -426,7 +426,7 @@ error_code sceNpClansGetClanInfo(SceNpClansRequestHandle handle, SceNpClanId cla
 
 	SceNpClansClanInfo host_info = {};
 	
-	SceNpClansError ret = clans_manager.client->getClanInfo(handle, clanId, &host_info);
+	SceNpClansError ret = clans_manager.client->get_clan_info(handle, clanId, &host_info);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -458,7 +458,7 @@ error_code sceNpClansUpdateClanInfo(SceNpClansRequestHandle handle, SceNpClanId 
 	SceNpClansUpdatableClanInfo host_info = {};
 	std::memcpy(&host_info, info.get_ptr(), sizeof(SceNpClansUpdatableClanInfo));
 
-	SceNpClansError ret = clans_manager.client->updateClanInfo(nph, handle, clanId, &host_info);
+	SceNpClansError ret = clans_manager.client->update_clan_info(nph, handle, clanId, &host_info);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -501,7 +501,7 @@ error_code sceNpClansGetMemberList(SceNpClansRequestHandle handle, SceNpClanId c
 	SceNpClansMemberEntry host_memList_addr[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
-	SceNpClansError ret = clans_manager.client->getMemberList(nph, handle, clanId, &host_paging, status, host_memList_addr, &host_pageResult);
+	SceNpClansError ret = clans_manager.client->get_member_list(nph, handle, clanId, &host_paging, status, host_memList_addr, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -538,7 +538,7 @@ error_code sceNpClansGetMemberInfo(SceNpClansRequestHandle handle, SceNpClanId c
 
 	SceNpClansMemberEntry host_memInfo = {};
 
-	SceNpClansError ret = clans_manager.client->getMemberInfo(nph, handle, clanId, host_npid, &host_memInfo);
+	SceNpClansError ret = clans_manager.client->get_member_info(nph, handle, clanId, host_npid, &host_memInfo);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -569,7 +569,7 @@ error_code sceNpClansUpdateMemberInfo(SceNpClansRequestHandle handle, SceNpClanI
 	SceNpClansUpdatableMemberInfo host_info = {};
 	std::memcpy(&host_info, info.get_ptr(), sizeof(SceNpClansUpdatableMemberInfo));
 
-	SceNpClansError ret = clans_manager.client->updateMemberInfo(nph, handle, clanId, &host_info);
+	SceNpClansError ret = clans_manager.client->update_member_info(nph, handle, clanId, &host_info);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -598,7 +598,7 @@ error_code sceNpClansChangeMemberRole(SceNpClansRequestHandle handle, SceNpClanI
 	SceNpId host_npid = {};
 	std::memcpy(&host_npid, npid.get_ptr(), sizeof(SceNpId));
 
-	SceNpClansError ret = clans_manager.client->changeMemberRole(nph, handle, clanId, host_npid, static_cast<SceNpClansMemberRole>(role));
+	SceNpClansError ret = clans_manager.client->change_member_role(nph, handle, clanId, host_npid, static_cast<SceNpClansMemberRole>(role));
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -650,7 +650,7 @@ error_code sceNpClansJoinClan(SceNpClansRequestHandle handle, SceNpClanId clanId
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
-	SceNpClansError ret = clans_manager.client->joinClan(nph, handle, clanId);
+	SceNpClansError ret = clans_manager.client->join_clan(nph, handle, clanId);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -671,7 +671,7 @@ error_code sceNpClansLeaveClan(SceNpClansRequestHandle handle, SceNpClanId clanI
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
-	SceNpClansError ret = clans_manager.client->leaveClan(nph, handle, clanId);
+	SceNpClansError ret = clans_manager.client->leave_clan(nph, handle, clanId);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -714,7 +714,7 @@ error_code sceNpClansKickMember(SceNpClansRequestHandle handle, SceNpClanId clan
 		std::memcpy(&host_message, message.get_ptr(), sizeof(SceNpClansMessage));
 	}
 
-	SceNpClansError ret = clans_manager.client->kickMember(nph, handle, clanId, host_npid, &host_message);
+	SceNpClansError ret = clans_manager.client->kick_member(nph, handle, clanId, host_npid, &host_message);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -757,7 +757,7 @@ error_code sceNpClansSendInvitation(SceNpClansRequestHandle handle, SceNpClanId 
 		std::memcpy(&host_message, message.get_ptr(), sizeof(SceNpClansMessage));
 	}
 
-	SceNpClansError ret = clans_manager.client->sendInvitation(nph, handle, clanId, host_npid, &host_message);
+	SceNpClansError ret = clans_manager.client->send_invitation(nph, handle, clanId, host_npid, &host_message);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -786,7 +786,7 @@ error_code sceNpClansCancelInvitation(SceNpClansRequestHandle handle, SceNpClanI
 	SceNpId host_npid = {};
 	std::memcpy(&host_npid, npid.get_ptr(), sizeof(SceNpId));
 
-	SceNpClansError ret = clans_manager.client->cancelInvitation(nph, handle, clanId, host_npid);
+	SceNpClansError ret = clans_manager.client->cancel_invitation(nph, handle, clanId, host_npid);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -826,7 +826,7 @@ error_code sceNpClansSendInvitationResponse(SceNpClansRequestHandle handle, SceN
 		std::memcpy(&host_message, message.get_ptr(), sizeof(SceNpClansMessage));
 	}
 
-	SceNpClansError ret = clans_manager.client->sendInvitationResponse(nph, handle, clanId, &host_message, accept);
+	SceNpClansError ret = clans_manager.client->send_invitation_response(nph, handle, clanId, &host_message, accept);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -861,7 +861,7 @@ error_code sceNpClansSendMembershipRequest(SceNpClansRequestHandle handle, u32 c
 		std::memcpy(&host_message, message.get_ptr(), sizeof(SceNpClansMessage));
 	}
 
-	SceNpClansError ret = clans_manager.client->requestMembership(nph, handle, clanId, &host_message);
+	SceNpClansError ret = clans_manager.client->request_membership(nph, handle, clanId, &host_message);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -882,7 +882,7 @@ error_code sceNpClansCancelMembershipRequest(SceNpClansRequestHandle handle, Sce
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 
-	SceNpClansError ret = clans_manager.client->cancelRequestMembership(nph, handle, clanId);
+	SceNpClansError ret = clans_manager.client->cancel_request_membership(nph, handle, clanId);
 
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
@@ -926,7 +926,7 @@ error_code sceNpClansSendMembershipResponse(SceNpClansRequestHandle handle, SceN
 		std::memcpy(&host_message, message.get_ptr(), sizeof(SceNpClansMessage));
 	}
 
-	SceNpClansError ret = clans_manager.client->sendMembershipResponse(nph, handle, clanId, host_npid, &host_message, allow);
+	SceNpClansError ret = clans_manager.client->send_membership_response(nph, handle, clanId, host_npid, &host_message, allow);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -969,7 +969,7 @@ error_code sceNpClansGetBlacklist(SceNpClansRequestHandle handle, SceNpClanId cl
 	SceNpClansBlacklistEntry host_blacklist[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
-	SceNpClansError ret = clans_manager.client->getBlacklist(nph, handle, clanId, &host_paging, host_blacklist, &host_pageResult);
+	SceNpClansError ret = clans_manager.client->get_blacklist(nph, handle, clanId, &host_paging, host_blacklist, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -1004,7 +1004,7 @@ error_code sceNpClansAddBlacklistEntry(SceNpClansRequestHandle handle, SceNpClan
 	SceNpId host_member = {};
 	std::memcpy(&host_member, member.get_ptr(), sizeof(SceNpId));
 
-	SceNpClansError ret = clans_manager.client->addBlacklistEntry(nph, handle, clanId, host_member);
+	SceNpClansError ret = clans_manager.client->add_blacklist_entry(nph, handle, clanId, host_member);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -1033,7 +1033,7 @@ error_code sceNpClansRemoveBlacklistEntry(SceNpClansRequestHandle handle, SceNpC
 	SceNpId host_member = {};
 	std::memcpy(&host_member, member.get_ptr(), sizeof(SceNpId));
 
-	SceNpClansError ret = clans_manager.client->removeBlacklistEntry(nph, handle, clanId, host_member);
+	SceNpClansError ret = clans_manager.client->remove_blacklist_entry(nph, handle, clanId, host_member);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -1076,7 +1076,7 @@ error_code sceNpClansRetrieveAnnouncements(SceNpClansRequestHandle handle, SceNp
 	SceNpClansMessageEntry host_announcements[SCE_NP_CLANS_PAGING_REQUEST_PAGE_MAX] = {};
 	SceNpClansPagingResult host_pageResult = {};
 
-	SceNpClansError ret = clans_manager.client->retrieveAnnouncements(nph, handle, clanId, &host_paging, host_announcements, &host_pageResult);
+	SceNpClansError ret = clans_manager.client->retrieve_announcements(nph, handle, clanId, &host_paging, host_announcements, &host_pageResult);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -1123,7 +1123,7 @@ error_code sceNpClansPostAnnouncement(SceNpClansRequestHandle handle, SceNpClanI
 	}
 
 	SceNpClansMessageId host_announcementId = 0;
-	SceNpClansError ret = clans_manager.client->postAnnouncement(nph, handle, clanId, &host_announcement, &host_data, duration, &host_announcementId);
+	SceNpClansError ret = clans_manager.client->post_announcement(nph, handle, clanId, &host_announcement, &host_data, duration, &host_announcementId);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
@@ -1146,7 +1146,7 @@ error_code sceNpClansRemoveAnnouncement(SceNpClansRequestHandle handle, SceNpCla
 	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	SceNpClansError ret = clans_manager.client->deleteAnnouncement(nph, handle, clanId, mId);
+	SceNpClansError ret = clans_manager.client->delete_announcement(nph, handle, clanId, mId);
 	if (ret != SCE_NP_CLANS_SUCCESS)
 	{
 		return ret;
