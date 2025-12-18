@@ -45,6 +45,8 @@ namespace clan
 		RecordBlacklistEntry,
 		DeleteBlacklistEntry,
 		ClanSearch,
+		CreateClan,
+		DisbandClan,
 		RequestMembership,
 		CancelRequestMembership,
 		AcceptMembershipRequest,
@@ -83,6 +85,9 @@ namespace clan
 		SceNpClansError destroyRequest(u32 reqId);
 
 		SceNpClansError clanSearch(u32 reqId, SceNpClansPagingRequest* paging, SceNpClansSearchableName* search, SceNpClansClanBasicInfo* clanList, SceNpClansPagingResult* pageResult);
+
+		SceNpClansError createClan(np::np_handler& nph, u32 reqId, std::string_view name, std::string_view tag, vm::ptr<SceNpClanId> clanId);
+		SceNpClansError disbandClan(np::np_handler& nph, u32 reqId, SceNpClanId clanId);
 
 		SceNpClansError getClanList(np::np_handler& nph, u32 reqId, SceNpClansPagingRequest* paging, SceNpClansEntry* clanList, SceNpClansPagingResult* pageResult);
 		SceNpClansError getClanInfo(u32 reqId, SceNpClanId clanId, SceNpClansClanInfo* clanInfo);

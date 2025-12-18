@@ -192,10 +192,9 @@ error_code sceNpClansAbortRequest(SceNpClansRequestHandle handle)
 	return CELL_OK;
 }
 
-// TODO: requires NpCommerce2
 error_code sceNpClansCreateClan(SceNpClansRequestHandle handle, vm::cptr<char> name, vm::cptr<char> tag, vm::ptr<SceNpClanId> clanId)
 {
-	sceNpClans.todo("sceNpClansCreateClan(handle=*0x%x, name=%s, tag=%s, clanId=*0x%x)", handle, name, tag, clanId);
+	sceNpClans.warning("sceNpClansCreateClan(handle=*0x%x, name=%s, tag=%s, clanId=*0x%x)", handle, name, tag, clanId);
 
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
@@ -212,24 +211,48 @@ error_code sceNpClansCreateClan(SceNpClansRequestHandle handle, vm::cptr<char> n
 		return SCE_NP_CLANS_ERROR_EXCEEDS_MAX;
 	}
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
+
+	std::string name_str;
+	vm::read_string(name.addr(), SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH, name_str);
+
+	std::string tag_str;
+	vm::read_string(tag.addr(), SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH, tag_str);
+
+	SceNpClansError res = clans_manager.client->createClan(nph, handle, name_str, tag_str, clanId);
+	if (res != SCE_NP_CLANS_SUCCESS)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-// TODO: should probably not be implemented on RPCS3 until `CreateClan` is,
-// to not let people disband a clan by accident
 error_code sceNpClansDisbandClan(SceNpClansRequestHandle handle, SceNpClanId clanId)
 {
-	sceNpClans.todo("sceNpClansDisbandClan(handle=*0x%x, clanId=*0x%x)", handle, clanId);
+	sceNpClans.warning("sceNpClansDisbandClan(handle=*0x%x, clanId=*0x%x)", handle, clanId);
 
 	if (!g_fxo->get<sce_np_clans_manager>().is_initialized)
 	{
 		return SCE_NP_CLANS_ERROR_NOT_INITIALIZED;
 	}
 
-	// TEMP: don't let people disband
-	return SCE_NP_CLANS_SERVER_ERROR_PERMISSION_DENIED;
+	if (!clanId)
+	{
+		return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
+	}
 
-	// return CELL_OK;
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	auto& clans_manager = g_fxo->get<sce_np_clans_manager>();
+
+	SceNpClansError res = clans_manager.client->disbandClan(nph, handle, clanId);
+	if (res != SCE_NP_CLANS_SUCCESS)
+	{
+		return res;
+	}
+
+	return CELL_OK;
 }
 
 error_code sceNpClansGetClanList(SceNpClansRequestHandle handle, vm::cptr<SceNpClansPagingRequest> paging, vm::ptr<SceNpClansEntry> clanList, vm::ptr<SceNpClansPagingResult> pageResult)

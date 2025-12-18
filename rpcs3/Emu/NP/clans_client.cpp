@@ -1,6 +1,6 @@
-#include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
 
+#include <string_view>
 #include <util/types.hpp>
 
 // wolfssl uses old-style casts which break clang builds
@@ -21,6 +21,7 @@
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
+#include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNpClans.h"
 #include "Emu/NP/clans_client.h"
 #include "Emu/NP/clans_config.h"
@@ -99,6 +100,8 @@ void fmt_class_string<clan::ClanRequestAction>::format(std::string& out, u64 arg
 			case clan::ClanRequestAction::RecordBlacklistEntry:     return "record_blacklist_entry";
 			case clan::ClanRequestAction::DeleteBlacklistEntry:     return "delete_blacklist_entry";
 			case clan::ClanRequestAction::ClanSearch:               return "clan_search";
+			case clan::ClanRequestAction::CreateClan:               return "create_clan";
+			case clan::ClanRequestAction::DisbandClan:              return "disband_clan";
 			case clan::ClanRequestAction::RequestMembership:        return "request_membership";
 			case clan::ClanRequestAction::CancelRequestMembership:  return "cancel_request_membership";
 			case clan::ClanRequestAction::AcceptMembershipRequest:  return "accept_membership_request";
@@ -310,14 +313,13 @@ namespace clan
 		{
 			// If not cached, request a new ticket
 			nph.req_ticket(0x00020001, &npid, service_id, cookie, cookie_size, entitlement_id, consumed_count);
+		}
 
-			// If still empty, return error
-			clan_ticket = nph.get_clan_ticket();
-			if (clan_ticket.empty())
-			{
-				clan_log.error("Failed to get clan ticket");
-				return "";
-			}
+		clan_ticket = nph.get_clan_ticket();
+		if (clan_ticket.empty())
+		{
+			clan_log.error("Failed to get clan ticket");
+			return "";
 		}
 
 		std::vector<byte> ticket_bytes(1024);
@@ -726,6 +728,54 @@ namespace clan
         };
 
         return SCE_NP_CLANS_SUCCESS;
+	}
+
+	SceNpClansError clans_client::createClan(np::np_handler& nph, u32 reqId, std::string_view name, std::string_view tag, vm::ptr<SceNpClanId> clanId)
+	{
+		std::string ticket = getClanTicket(nph);
+		if (ticket.empty())
+			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
+
+		pugi::xml_document doc = pugi::xml_document();
+		pugi::xml_node clan = doc.append_child("clan");
+		clan.append_child("ticket").text().set(ticket.c_str());
+
+		clan.append_child("name").text().set(name.data());
+		clan.append_child("tag").text().set(tag.data());
+
+		pugi::xml_document response = pugi::xml_document();
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::CreateClan, ClanManagerOperationType::UPDATE, &doc, &response);
+
+		if (clanRes != SCE_NP_CLANS_SUCCESS)
+			return clanRes;
+
+		pugi::xml_node clanResult = response.child("clan");
+		pugi::xml_attribute id = clanResult.attribute("id");
+		uint32_t clanId_int = id.as_uint();
+
+		*clanId = clanId_int;
+
+		return SCE_NP_CLANS_SUCCESS;
+	}
+
+	SceNpClansError clans_client::disbandClan(np::np_handler& nph, u32 reqId, SceNpClanId clanId)
+	{
+		std::string ticket = getClanTicket(nph);
+		if (ticket.empty())
+			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
+
+		pugi::xml_document doc = pugi::xml_document();
+		pugi::xml_node clan = doc.append_child("clan");
+		clan.append_child("ticket").text().set(ticket.c_str());
+		clan.append_child("id").text().set(clanId);
+
+		pugi::xml_document response = pugi::xml_document();
+		SceNpClansError clanRes = sendRequest(reqId, ClanRequestAction::DisbandClan, ClanManagerOperationType::UPDATE, &doc, &response);
+
+		if (clanRes != SCE_NP_CLANS_SUCCESS)
+			return clanRes;
+
+		return SCE_NP_CLANS_SUCCESS;
 	}
 
 	SceNpClansError clans_client::requestMembership(np::np_handler& nph, u32 reqId, SceNpClanId clanId, SceNpClansMessage* /*message*/)
