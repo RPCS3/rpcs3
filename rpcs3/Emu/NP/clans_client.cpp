@@ -26,6 +26,8 @@
 #include "Emu/NP/clans_client.h"
 #include "Emu/NP/clans_config.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/system_config.h"
+#include "Emu/system_config_types.h"
 
 LOG_CHANNEL(clan_log, "clans");
 
@@ -188,6 +190,11 @@ namespace clan
 
 	SceNpClansError clans_client::create_request(s32* req_id)
 	{
+		if (g_cfg.net.clans_status != np_clans_status::enabled)
+		{
+			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
+		}
+
 		const s32 id = idm::make<clan_request_ctx>();
 
 		if (id == id_manager::id_traits<clan_request_ctx>::invalid)

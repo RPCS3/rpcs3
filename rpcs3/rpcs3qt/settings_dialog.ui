@@ -2320,6 +2320,18 @@
               </widget>
              </item>
              <item>
+              <widget class="QGroupBox" name="gb_clansStatusBox">
+               <property name="title">
+                <string>Clans Status</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_clansStatusBox_layout">
+                <item>
+                 <widget class="QComboBox" name="clansStatusBox"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
               <spacer name="networkTabSpacerRight">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>

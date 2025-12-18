@@ -1435,10 +1435,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			ui->psnStatusBox->setCurrentIndex(find_item(ui->psnStatusBox, static_cast<int>(g_cfg.net.psn_status.def)));
 			ui->psnStatusBox->setEnabled(false);
+
+			ui->clansStatusBox->setCurrentIndex(find_item(ui->clansStatusBox, static_cast<int>(g_cfg.net.clans_status.def)));
+			ui->clansStatusBox->setEnabled(false);
 		}
 		else
 		{
 			ui->psnStatusBox->setEnabled(true);
+			ui->clansStatusBox->setEnabled(true);
 		}
 	});
 	m_emu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings_type::InternetStatus);
@@ -1446,6 +1450,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
+
+	m_emu_settings->EnhanceComboBox(ui->clansStatusBox, emu_settings_type::ClansStatus);
+	SubscribeTooltip(ui->gb_clansStatusBox, tooltips.settings.clans_status);
 
 	settings_dialog::refresh_countrybox();
 	connect(ui->psnCountryBox, &QComboBox::currentIndexChanged, this, [this](int index)

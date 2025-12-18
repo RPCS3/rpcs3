@@ -1187,6 +1187,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case np_psn_status::psn_rpcn: return tr("RPCN", "PSN Status");
 		}
 		break;
+	case emu_settings_type::ClansStatus:
+		switch (static_cast<np_clans_status>(index))
+		{
+		case np_clans_status::disabled: return tr("Disconnected", "Clans Status");
+		case np_clans_status::enabled: return tr("Connected", "Clans Status");
+		}
+		break;
 	case emu_settings_type::SleepTimersAccuracy:
 		switch (static_cast<sleep_timers_accuracy_level>(index))
 		{

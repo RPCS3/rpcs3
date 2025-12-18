@@ -260,6 +260,7 @@ public:
 		const QString bind          = tr("Interface IP Address to bind to.\nOnly available in custom configurations.");
 		const QString enable_upnp   = tr("Enable UPNP.\nThis will automatically forward ports bound on 0.0.0.0 if your router has UPNP enabled.");
 		const QString psn_country   = tr("Changes the RPCN country.");
+		const QString clans_status  = tr("If set to Connected, RPCS3 will use the configured Clans server for games that use of the Clans subsystem.");
 
 		// system
 
