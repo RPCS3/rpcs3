@@ -1,10 +1,10 @@
-#include "Emu/NP/np_structs_extra.h"
 #include "stdafx.h"
 #include <bit>
 
 #include "Emu/NP/np_allocator.h"
 #include "Emu/NP/np_cache.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/NP/np_structs_extra.h"
 
 LOG_CHANNEL(np_cache);
 
