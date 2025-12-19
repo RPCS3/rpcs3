@@ -1708,6 +1708,7 @@ namespace np
 		{
 			sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
 				{
+					sceNp2.trace("Calling callback 0x%x with req_id %d, event_type: 0x%x, error_code: 0x%x", cb, req_id, event_type, error_code);
 					cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
 					return 0;
 				});

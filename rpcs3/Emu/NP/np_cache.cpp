@@ -1,3 +1,4 @@
+#include "Emu/NP/np_structs_extra.h"
 #include "stdafx.h"
 #include <bit>
 
@@ -154,6 +155,8 @@ namespace np
 
 		slots.openPublicSlotNum  = open_public_slots;
 		slots.openPrivateSlotNum = open_private_slots;
+
+		extra_nps::print_SceNpMatching2RoomSlotInfo(&slots);
 
 		return {CELL_OK, slots};
 	}

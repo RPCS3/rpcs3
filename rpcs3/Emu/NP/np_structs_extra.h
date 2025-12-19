@@ -41,4 +41,5 @@ namespace extra_nps
 	void print_SceNpMatchingRoomStatus(const SceNpMatchingRoomStatus* data);
 	void print_SceNpMatchingJoinedRoomInfo(const SceNpMatchingJoinedRoomInfo* data);
 	void print_SceNpMatchingSearchJoinRoomInfo(const SceNpMatchingSearchJoinRoomInfo* data);
+	void print_SceNpMatching2RoomSlotInfo(const SceNpMatching2RoomSlotInfo* data);
 } // namespace extra_nps
