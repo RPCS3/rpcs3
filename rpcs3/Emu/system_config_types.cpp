@@ -276,21 +276,6 @@ void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<np_clans_status>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](np_clans_status value)
-	{
-		switch (value)
-		{
-		case np_clans_status::disabled: return "Disconnected";
-		case np_clans_status::enabled: return "Connected";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](spu_decoder_type type)

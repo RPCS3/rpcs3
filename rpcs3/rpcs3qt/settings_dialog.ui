@@ -2320,15 +2320,10 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="gb_clansStatusBox">
-               <property name="title">
-                <string>Clans Status</string>
-               </property>
-               <layout class="QVBoxLayout" name="gb_clansStatusBox_layout">
-                <item>
-                 <widget class="QComboBox" name="clansStatusBox"/>
-                </item>
-               </layout>
+              <widget class="QCheckBox" name="enable_clans">
+                <property name="text">
+                 <string>Enable Clans</string>
+                </property>
               </widget>
              </item>
              <item>

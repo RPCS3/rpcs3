@@ -280,13 +280,6 @@ enum class np_psn_status
 	psn_rpcn,
 };
 
-enum class np_clans_status
-{
-	disabled,
-	enabled
-};
-
-
 enum class shader_mode
 {
 	recompiler,

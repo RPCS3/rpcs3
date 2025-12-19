@@ -200,7 +200,7 @@ enum class emu_settings_type
 	BindAddress,
 	EnableUpnp,
 	PSNCountry,
-	ClansStatus,
+	EnableClans,
 
 	// System
 	LicenseArea,
@@ -412,7 +412,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
 	{ emu_settings_type::EnableUpnp,     { "Net", "UPNP Enabled"}},
 	{ emu_settings_type::PSNCountry,     { "Net", "PSN Country"}},
-	{ emu_settings_type::ClansStatus,     { "Net", "Clans status"}},
+	{ emu_settings_type::EnableClans,     { "Net", "Clans Enabled"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},

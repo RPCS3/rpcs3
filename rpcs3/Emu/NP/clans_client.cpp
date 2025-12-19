@@ -190,7 +190,7 @@ namespace clan
 
 	SceNpClansError clans_client::create_request(s32* req_id)
 	{
-		if (g_cfg.net.clans_status != np_clans_status::enabled)
+		if (!g_cfg.net.clans_enabled)
 		{
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 		}
