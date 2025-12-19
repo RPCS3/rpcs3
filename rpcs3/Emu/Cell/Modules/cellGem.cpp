@@ -276,6 +276,8 @@ public:
 
 	u64 start_timestamp_us = 0;
 
+	std::array<ps_move_data, CELL_GEM_MAX_NUM> fake_move_data {}; // No need to be in savestate
+
 	atomic_t<u32> m_wake_up = 0;
 	atomic_t<u32> m_done = 0;
 
@@ -624,9 +626,9 @@ public:
 			cellGem.notice("Could not load mouse gem config. Using defaults.");
 		}
 
-		cellGem.notice("Real gem config=\n", g_cfg_gem_real.to_string());
-		cellGem.notice("Fake gem config=\n", g_cfg_gem_fake.to_string());
-		cellGem.notice("Mouse gem config=\n", g_cfg_gem_mouse.to_string());
+		cellGem.notice("Real gem config=%s", g_cfg_gem_real.to_string());
+		cellGem.notice("Fake gem config=%s", g_cfg_gem_fake.to_string());
+		cellGem.notice("Mouse gem config=%s", g_cfg_gem_mouse.to_string());
 	}
 };
 
@@ -696,22 +698,165 @@ namespace gem
 		{
 		}
 
-		static inline u8 Y(u8 r, u8 g, u8 b) { return static_cast<u8>(0.299f * r + 0.587f * g + 0.114f * b); }
-		static inline u8 U(u8 r, u8 g, u8 b) { return static_cast<u8>(-0.14713f * r - 0.28886f * g + 0.436f * b); }
-		static inline u8 V(u8 r, u8 g, u8 b) { return static_cast<u8>(0.615f * r - 0.51499f * g - 0.10001f * b); }
+		YUV(const u8 rgb[3])
+		{
+			const u8 r = rgb[0];
+			const u8 g = rgb[1];
+			const u8 b = rgb[2];
+			y = Y(r, g, b);
+			u = U(r, g, b);
+			v = V(r, g, b);
+		}
+
+		static inline u8 Y(u8 r, u8 g, u8 b) { return static_cast<u8>(std::clamp(0.299f * r + 0.587f * g + 0.114f * b, 0.0f, 255.0f)); }
+		static inline u8 U(u8 r, u8 g, u8 b) { return static_cast<u8>(std::clamp(-0.169f * r - 0.331f * g + 0.499f * b + 128, 0.0f, 255.0f)); }
+		static inline u8 V(u8 r, u8 g, u8 b) { return static_cast<u8>(std::clamp(0.499f * r - 0.460f * g - 0.040f * b + 128, 0.0f, 255.0f)); }
 	};
 
-	bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
-	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                          u8* video_data_out, u32 video_data_out_size, std::string_view caller)
+	template <bool use_gain>
+	static inline void debayer_raw8_impl(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
 	{
-		if (output_format != CELL_GEM_NO_VIDEO_OUTPUT && !video_data_out)
+		constexpr u32 in_pitch = 640;
+		constexpr u32 out_pitch = 640 * 4;
+
+		// Hamilton–Adams demosaicing
+		for (s32 y = 0; y < 480; y++)
+		{
+			const bool is_even_y = (y % 2) == 0;
+			const u8* srcc = src + y * in_pitch;
+			const u8* srcu = src + std::max(0, y - 1) * in_pitch;
+			const u8* srcd = src + std::min(480 - 1, y + 1) * in_pitch;
+
+			u8* dst0 = dst + y * out_pitch;
+
+			// Split loops (roughly twice the performance by removing one condition)
+			if (is_even_y)
+			{
+				for (s32 x = 0; x < 640; x++, dst0 += 4)
+				{
+					const bool is_even_x = (x % 2) == 0;
+					const int xl = std::max(0, x - 1);
+					const int xr = std::min(640 - 1, x + 1);
+
+					u8 r, b, g;
+
+					if (is_even_x)
+					{
+						// Blue pixel
+						const u8 up = srcu[x];
+						const u8 down = srcd[x];
+						const u8 left = srcc[xl];
+						const u8 right = srcc[xr];
+						const int dh = std::abs(int(left) - int(right));
+						const int dv = std::abs(int(up)   - int(down));
+
+						r = (srcu[xl] + srcu[xr] + srcd[xl] + srcd[xr]) / 4;
+						if (dh < dv)
+							g = (left + right) / 2;
+						else if (dv < dh)
+							g = (up + down) / 2;
+						else
+							g = (up + down + left + right) / 4;
+						b = srcc[x];
+					}
+					else
+					{
+						// Green (on blue row)
+						r = (srcu[x] + srcd[x]) / 2;
+						g = srcc[x];
+						b = (srcc[xl] + srcc[xr]) / 2;
+					}
+
+					if constexpr (use_gain)
+					{
+						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					}
+					else
+					{
+						dst0[0] = r;
+						dst0[1] = g;
+						dst0[2] = b;
+					}
+					dst0[3] = alpha;
+				}
+			}
+			else
+			{
+				for (s32 x = 0; x < 640; x++, dst0 += 4)
+				{
+					const bool is_even_x = (x % 2) == 0;
+					const int xl = std::max(0, x - 1);
+					const int xr = std::min(640 - 1, x + 1);
+
+					u8 r, b, g;
+
+					if (is_even_x)
+					{
+						// Green (on red row)
+						r = (srcc[xl] + srcc[xr]) / 2;
+						g = srcc[x];
+						b = (srcu[x] + srcd[x]) / 2;
+					}
+					else
+					{
+						// Red pixel
+						const u8 up = srcu[x];
+						const u8 down = srcd[x];
+						const u8 left = srcc[xl];
+						const u8 right = srcc[xr];
+						const int dh = std::abs(int(left) - int(right));
+						const int dv = std::abs(int(up)   - int(down));
+
+						r = srcc[x];
+						if (dh < dv)
+							g = (left + right) / 2;
+						else if (dv < dh)
+							g = (up + down) / 2;
+						else
+							g = (up + down + left + right) / 4;
+						b = (srcu[xl] + srcu[xr] + srcd[xl] + srcd[xr]) / 4;
+					}
+
+					if constexpr (use_gain)
+					{
+						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					}
+					else
+					{
+						dst0[0] = r;
+						dst0[1] = g;
+						dst0[2] = b;
+					}
+					dst0[3] = alpha;
+				}
+			}
+		}
+	}
+
+	static void debayer_raw8(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
+	{
+		if (gain_r != 1.0f || gain_g != 1.0f || gain_b != 1.0f)
+			debayer_raw8_impl<true>(src, dst, alpha, gain_r, gain_g, gain_b);
+		else
+			debayer_raw8_impl<false>(src, dst, alpha, gain_r, gain_g, gain_b);
+	}
+
+	bool convert_image_format(CellCameraFormat input_format, const CellGemVideoConvertAttribute& vc,
+	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
+	                          u8* video_data_out, u32 video_data_out_size, u8* buffer_memory,
+	                          std::string_view caller)
+	{
+		if (vc.output_format != CELL_GEM_NO_VIDEO_OUTPUT && !video_data_out)
 		{
 			return false;
 		}
 
 		const u32 required_in_size = get_buffer_size_by_format(static_cast<s32>(input_format), width, height);
-		const s32 required_out_size = cellGemGetVideoConvertSize(output_format);
+		const s32 required_out_size = cellGemGetVideoConvertSize(vc.output_format);
 
 		if (video_data_in.size() != required_in_size)
 		{
@@ -721,7 +866,7 @@ namespace gem
 
 		if (required_out_size < 0 || video_data_out_size != static_cast<u32>(required_out_size))
 		{
-			cellGem.error("convert: out_size unknown: required=%d, actual=%d, format %d (called from %s)", required_out_size, video_data_out_size, output_format, caller);
+			cellGem.error("convert: out_size unknown: required=%d, actual=%d, format %d (called from %s)", required_out_size, video_data_out_size, vc.output_format, caller);
 			return false;
 		}
 
@@ -730,7 +875,121 @@ namespace gem
 			return false;
 		}
 
-		switch (output_format)
+		thread_local std::vector<u8> corrected_buffer;
+		thread_local std::vector<u8> combined_buffer;
+		thread_local std::vector<u8> conversion_buffer;
+
+		const u8* src_data = video_data_in.data();
+		const u8 alpha = vc.alpha;
+		const f32 gain_r = vc.gain * vc.blue_gain;
+		const f32 gain_g = vc.gain * vc.green_gain;
+		const f32 gain_b = vc.gain * vc.red_gain;
+
+		// Only RAW8 should be relevant for cellGem unless I'm mistaken
+		if (input_format == CELL_CAMERA_RAW8)
+		{
+			// TODO: CELL_GEM_AUTO_WHITE_BALANCE
+			// TODO: CELL_GEM_GAMMA_BOOST
+
+			// Correct outliers
+			if (vc.conversion_flags & CELL_GEM_FILTER_OUTLIER_PIXELS)
+			{
+				corrected_buffer.resize(width * height);
+
+				for (u32 y = 0; y < height; y++)
+				{
+					const u8* src = src_data + y * 640;
+					u8* dst = &corrected_buffer[y * 640];
+
+					for (u32 x = 0; x < width; x++, src++)
+					{
+						// Let's just say these 2 are outliers
+						if (const u8 val = *src; val > 0 && val < 255)
+						{
+							*dst++ = val;
+							continue;
+						}
+
+						// Just take the 4 neighbours for now
+						s32 sum = 0;
+						if (y >= 2) sum += *(src - (2 * 640));
+						if (x >= 2) sum += *(src - 2);
+						if (x < 638) sum += *(src + 2);
+						if (y < 478) sum += *(src + (2 * 640));
+
+						*dst++ = sum / 4; // Ignore count. It will only be less than 4 on the edges
+					}
+				}
+
+				src_data = corrected_buffer.data();
+			}
+
+			// Combine with previous frame
+			if (buffer_memory && (vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME))
+			{
+				combined_buffer.resize(width * height);
+
+				for (u32 i = 0; i < combined_buffer.size(); i++)
+				{
+					const u8 val = src_data[i];
+					u8& old = buffer_memory[i];
+					combined_buffer[i] = (old + val) / 2;
+					old = val;
+				}
+
+				src_data = combined_buffer.data();
+			}
+
+			switch (vc.output_format)
+			{
+			case CELL_GEM_YUV_640x480:
+			case CELL_GEM_YUV422_640x480:
+			case CELL_GEM_YUV411_640x480:
+			{
+				// Let's debayer the image first for YUV formats
+				conversion_buffer.resize(cellGemGetVideoConvertSize(CELL_GEM_RGBA_640x480));
+
+				debayer_raw8(src_data, conversion_buffer.data(), alpha, gain_r, gain_g, gain_b);
+
+				src_data = conversion_buffer.data();
+				input_format = CELL_CAMERA_RGBA;
+				width = 640;
+				height = 480;
+				break;
+			}
+			case CELL_GEM_BAYER_RESTORED:
+			case CELL_GEM_BAYER_RESTORED_RGGB:
+			case CELL_GEM_BAYER_RESTORED_RASTERIZED:
+			{
+				// Let's apply gain
+				if (gain_r != 1.0f || gain_g != 1.0f || gain_b != 1.0f)
+				{
+					conversion_buffer.resize(cellGemGetVideoConvertSize(CELL_GEM_RGBA_640x480));
+
+					const f32 bggr_gains[2][2] = {{gain_b, gain_g}, {gain_g, gain_r}};
+					const u8* src = src_data;
+					u8* dst = conversion_buffer.data();
+
+					for (u32 y = 0; y < 480; y++)
+					{
+						const f32* gains = bggr_gains[y % 2];
+
+						for (u32 x = 0; x < 640; x++)
+						{
+							*dst++ = static_cast<u8>(std::clamp(*src++ * gains[x % 2], 0.0f, 255.0f));
+						}
+					}
+
+					src_data = conversion_buffer.data();
+				}
+				break;
+			}
+			default:
+				break;
+			}
+		}
+
+		switch (vc.output_format)
 		{
 		case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
 		{
@@ -738,51 +997,18 @@ namespace gem
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-				const u32 out_pitch = width * 4;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = &video_data_in[y * in_pitch];
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst0 = video_data_out + y * out_pitch;
-					u8* dst1 = dst0 + out_pitch;
-
-					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 8, dst1 += 8)
-					{
-						const u8 b  = src0[0];
-						const u8 g0 = src0[1];
-						const u8 g1 = src1[0];
-						const u8 r  = src1[1];
-
-						const u8 top[4] = { r, g0, b, 255 };
-						const u8 bottom[4] = { r, g1, b, 255 };
-
-						// Top-Left
-						std::memcpy(dst0, top, 4);
-
-						// Top-Right Pixel
-						std::memcpy(dst0 + 4, top, 4);
-
-						// Bottom-Left Pixel
-						std::memcpy(dst1, bottom, 4);
-
-						// Bottom-Right Pixel
-						std::memcpy(dst1 + 4, bottom, 4);
-					}
-				}
+				debayer_raw8(src_data, video_data_out, alpha, gain_r, gain_g, gain_b);
 				break;
 			}
 			case CELL_CAMERA_RGBA:
 			{
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				break;
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
 			}
@@ -792,17 +1018,18 @@ namespace gem
 		{
 			if (input_format == CELL_CAMERA_RAW8)
 			{
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 			}
 			else
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
 				return false;
 			}
 			break;
 		}
 		case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
 		{
+			// YUV 4:4:4 planar. 1 value each per pixel
 			const u32 yuv_pitch = width;
 
 			u8* dst_y = video_data_out;
@@ -813,61 +1040,21 @@ namespace gem
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = &video_data_in[y * in_pitch];
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst_y0 = dst_y + y * yuv_pitch;
-					u8* dst_y1 = dst_y0 + yuv_pitch;
-
-					u8* dst_u0 = dst_u + y * yuv_pitch;
-					u8* dst_u1 = dst_u0 + yuv_pitch;
-
-					u8* dst_v0 = dst_v + y * yuv_pitch;
-					u8* dst_v1 = dst_v0 + yuv_pitch;
-
-					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst_y0 += 2, dst_y1 += 2, dst_u0 += 2, dst_u1 += 2, dst_v0 += 2, dst_v1 += 2)
-					{
-						const u8 b  = src0[0];
-						const u8 g0 = src0[1];
-						const u8 g1 = src1[0];
-						const u8 r  = src1[1];
-
-						// Convert RGBA to YUV
-						const YUV yuv_top    = YUV(r, g0, b);
-						const YUV yuv_bottom = YUV(r, g1, b);
-
-						dst_y0[0] = dst_y0[1] = yuv_top.y;
-						dst_y1[0] = dst_y1[1] = yuv_bottom.y;
-
-						dst_u0[0] = dst_u0[1] = yuv_top.u;
-						dst_u1[0] = dst_u1[1] = yuv_bottom.u;
-
-						dst_v0[0] = dst_v0[1] = yuv_top.v;
-						dst_v1[0] = dst_v1[1] = yuv_bottom.v;
-					}
-				}
+				fmt::throw_exception("Unreachable: should already be debayered");
 				break;
 			}
 			case CELL_CAMERA_RGBA:
 			{
-				const u32 in_pitch = width / 4;
+				const u32 in_pitch = width * 4;
 
 				for (u32 y = 0; y < height; y++)
 				{
-					const u8* src = &video_data_in[y * in_pitch];
+					const u8* src = src_data + y * in_pitch;
 
 					for (u32 x = 0; x < width; x++, src += 4)
 					{
-						const u8 r = src[0];
-						const u8 g = src[1];
-						const u8 b = src[2];
-
 						// Convert RGBA to YUV
-						const YUV yuv = YUV(r, g, b);
+						const YUV yuv = YUV(src);
 
 						*dst_y++ = yuv.y;
 						*dst_u++ = yuv.u;
@@ -878,8 +1065,8 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
 			}
@@ -887,6 +1074,7 @@ namespace gem
 		}
 		case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
 		{
+			// YUV 4:2:2 planar. 1 Y value per pixel, 1 U/V value per 2 horizontal pixels
 			const u32 y_pitch = width;
 			const u32 uv_pitch = width / 2;
 
@@ -898,43 +1086,7 @@ namespace gem
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = &video_data_in[y * in_pitch];
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst_y0 = dst_y + y * y_pitch;
-					u8* dst_y1 = dst_y0 + y_pitch;
-
-					u8* dst_u0 = dst_u + y * uv_pitch;
-					u8* dst_u1 = dst_u0 + uv_pitch;
-
-					u8* dst_v0 = dst_v + y * uv_pitch;
-					u8* dst_v1 = dst_v0 + uv_pitch;
-
-					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst_y0 += 2, dst_y1 += 2)
-					{
-						const u8 b  = src0[0];
-						const u8 g0 = src0[1];
-						const u8 g1 = src1[0];
-						const u8 r  = src1[1];
-
-						// Convert RGBA to YUV
-						const YUV yuv_top    = YUV(r, g0, b);
-						const YUV yuv_bottom = YUV(r, g1, b);
-
-						dst_y0[0] = dst_y0[1] = yuv_top.y;
-						dst_y1[0] = dst_y1[1] = yuv_bottom.y;
-
-						*dst_u0++ = yuv_top.u;
-						*dst_u1++ = yuv_bottom.u;
-
-						*dst_v0++ = yuv_top.v;
-						*dst_v1++ = yuv_bottom.v;
-					}
-				}
+				fmt::throw_exception("Unreachable: should already be debayered");
 				break;
 			}
 			case CELL_CAMERA_RGBA:
@@ -943,33 +1095,28 @@ namespace gem
 
 				for (u32 y = 0; y < height; y++)
 				{
-					const u8* src = &video_data_in[y * in_pitch];
+					const u8* src = src_data + y * in_pitch;
 
 					for (u32 x = 0; x < width - 1; x += 2, src += 8, dst_y += 2)
 					{
-						const u8 r_0 = src[0];
-						const u8 g_0 = src[1];
-						const u8 b_0 = src[2];
-						const u8 r_1 = src[4];
-						const u8 g_1 = src[5];
-						const u8 b_1 = src[6];
-
 						// Convert RGBA to YUV
-						const YUV yuv_0 = YUV(r_0, g_0, b_0);
-						const u8 y_1 = YUV::Y(r_1, g_1, b_1);
+						const YUV yuv_0 = YUV(src);
+						const YUV yuv_1 = YUV(src + 4);
 
 						dst_y[0] = yuv_0.y;
-						dst_y[1] = y_1;
-						*dst_u++ = yuv_0.u;
-						*dst_v++ = yuv_0.v;
+						dst_y[1] = yuv_1.y;
+
+						// Average U/V from 2 horizontal pixels
+						*dst_u++ = (yuv_0.u + yuv_1.u) / 2;
+						*dst_v++ = (yuv_0.v + yuv_1.v) / 2;
 					}
 				}
 				break;
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
 			}
@@ -977,109 +1124,54 @@ namespace gem
 		}
 		case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
 		{
-			const u32 y_pitch = width;
-			const u32 uv_pitch = width / 4;
-
+			// YUV 4:1:1 planar. 1 Y value per pixel, 1 U/V value per 2x2 pixel block
 			u8* dst_y = video_data_out;
-			u8* dst_u = dst_y + y_pitch * height;
-			u8* dst_v = dst_u + uv_pitch * height;
+			u8* dst_u = dst_y + 640 * 480;
+			u8* dst_v = dst_u + 320 * 240;
 
 			switch (input_format)
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = &video_data_in[y * in_pitch];
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst_y0 = dst_y + y * y_pitch;
-					u8* dst_y1 = dst_y0 + y_pitch;
-
-					u8* dst_u0 = dst_u + y * uv_pitch;
-					u8* dst_u1 = dst_u0 + uv_pitch;
-
-					u8* dst_v0 = dst_v + y * uv_pitch;
-					u8* dst_v1 = dst_v0 + uv_pitch;
-
-					for (u32 x = 0; x < width - 3; x += 4, src0 += 4, src1 += 4, dst_y0 += 4, dst_y1 += 4)
-					{
-						const u8 b_left   = src0[0];
-						const u8 g0_left  = src0[1];
-						const u8 b_right  = src0[2];
-						const u8 g0_right = src0[3];
-
-						const u8 g1_left  = src1[0];
-						const u8 r_left   = src1[1];
-						const u8 g1_right = src1[2];
-						const u8 r_right  = src1[3];
-
-						// Convert RGBA to YUV
-						const YUV yuv_top_left    = YUV(r_left, g0_left, b_left); // Re-used for top-right
-						const u8 y_top_right      = YUV::Y(r_right, g0_right, b_right);
-						const YUV yuv_bottom_left = YUV(r_left, g1_left, b_left); // Re-used for bottom-right
-						const u8 y_bottom_right   = YUV::Y(r_right, g1_right, b_right);
-
-						dst_y0[0] = dst_y0[1] = yuv_top_left.y;
-						dst_y0[2] = dst_y0[3] = y_top_right;
-
-						dst_y1[0] = dst_y1[1] = yuv_bottom_left.y;
-						dst_y1[2] = dst_y1[3] = y_bottom_right;
-
-						*dst_u0++ = yuv_top_left.u;
-						*dst_u1++ = yuv_bottom_left.u;
-
-						*dst_v0++ = yuv_top_left.v;
-						*dst_v1++ = yuv_bottom_left.v;
-					}
-				}
+				fmt::throw_exception("Unreachable: should already be debayered");
 				break;
 			}
 			case CELL_CAMERA_RGBA:
 			{
 				const u32 in_pitch = width * 4;
 
-				for (u32 y = 0; y < height; y++)
+				// 2 rows at a time to get a 2x2 pixel block
+				for (u32 y = 0; y < height - 1; y += 2)
 				{
-					const u8* src = &video_data_in[y * in_pitch];
+					const u8* src = src_data + y * in_pitch;
+					const u8* src2 = src + in_pitch;
+					u8* dst_y1 = dst_y + y * 640;
+					u8* dst_y2 = dst_y1 + 640;
 
-					for (u32 x = 0; x < width - 3; x += 4, src += 16, dst_y += 4)
+					for (u32 x = 0; x < width - 1; x += 2, src += 8, src2 += 8, dst_y1 += 2, dst_y2 += 2)
 					{
-						const u8 r_0 = src[0];
-						const u8 g_0 = src[1];
-						const u8 b_0 = src[2];
-						const u8 r_1 = src[4];
-						const u8 g_1 = src[5];
-						const u8 b_1 = src[6];
-						const u8 r_2 = src[8];
-						const u8 g_2 = src[9];
-						const u8 b_2 = src[10];
-						const u8 r_3 = src[12];
-						const u8 g_3 = src[13];
-						const u8 b_3 = src[14];
-
 						// Convert RGBA to YUV
-						const YUV yuv_0 = YUV(r_0, g_0, b_0);
-						const u8 y_1 = YUV::Y(r_1, g_1, b_1);
-						const u8 y_2 = YUV::Y(r_2, g_2, b_2);
-						const u8 y_3 = YUV::Y(r_3, g_3, b_3);
+						const YUV yuv_0 = YUV(src);
+						const YUV yuv_1 = YUV(src + 4);
+						const YUV yuv_2 = YUV(src2);
+						const YUV yuv_3 = YUV(src2 + 4);
 
-						dst_y[0] = yuv_0.y;
-						dst_y[1] = y_1;
-						dst_y[2] = y_2;
-						dst_y[3] = y_3;
-						*dst_u++ = yuv_0.u;
-						*dst_v++ = yuv_0.v;
+						dst_y1[0] = yuv_0.y;
+						dst_y1[1] = yuv_1.y;
+						dst_y2[0] = yuv_2.y;
+						dst_y2[1] = yuv_3.y;
+
+						// Average U/V from 2x2 pixel block
+						*dst_u++ = (yuv_0.u + yuv_1.u + yuv_2.u + yuv_3.u) / 4;
+						*dst_v++ = (yuv_0.v + yuv_1.v + yuv_2.v + yuv_3.v) / 4;
 					}
 				}
 				break;
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
 			}
@@ -1096,7 +1188,7 @@ namespace gem
 
 				for (u32 y = 0; y < height - 1; y += 2)
 				{
-					const u8* src0 = &video_data_in[y * in_pitch];
+					const u8* src0 = src_data + y * in_pitch;
 					const u8* src1 = src0 + in_pitch;
 
 					u8* dst0 = video_data_out + (y / 2) * out_pitch;
@@ -1109,8 +1201,8 @@ namespace gem
 						const u8 g1 = src1[0];
 						const u8 r  = src1[1];
 
-						const u8 top[4] = { r, g0, b, 255 };
-						const u8 bottom[4] = { r, g1, b, 255 };
+						const u8 top[4] = { r, g0, b, alpha };
+						const u8 bottom[4] = { r, g1, b, alpha };
 
 						// Top-Left
 						std::memcpy(dst0, top, 4);
@@ -1128,7 +1220,7 @@ namespace gem
 
 				for (u32 y = 0; y < height / 2; y++)
 				{
-					const u8* src = &video_data_in[y * 2 * in_pitch];
+					const u8* src = src_data + y * 2 * in_pitch;
 					u8* dst = video_data_out + y * out_pitch;
 
 					for (u32 x = 0; x < width / 2; x++, src += 4 * 2, dst += 4)
@@ -1140,19 +1232,97 @@ namespace gem
 			}
 			default:
 			{
-				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-				std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
 				return false;
 			}
 			}
 			break;
 		}
 		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+		{
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				const u32 dst_w = std::min(320u, width / 2);
+				const u32 dst_h = std::min(240u, height / 2);
+				const u32 in_pitch = width;
+				constexpr u32 out_pitch = 320 * 4;
+
+				for (u32 y = 0; y < dst_h; y++)
+				{
+					const u8* src0 = src_data + y * 2 * in_pitch;
+					const u8* src1 = src0 + in_pitch;
+
+					u8* dst = video_data_out + y * out_pitch;
+
+					for (u32 x = 0; x < dst_w; x++, src0 += 2, src1 += 2, dst += 4)
+					{
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
+
+						dst[0] = r;
+						dst[1] = g0;
+						dst[2] = g1;
+						dst[3] = b;
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			break;
+		}
 		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
 		{
-			cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, output_format, caller);
-			std::memcpy(video_data_out, video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
-			return false;
+			if (input_format == CELL_CAMERA_RAW8)
+			{
+				const u32 dst_w = std::min(320u, width / 2);
+				const u32 dst_h = std::min(240u, height / 2);
+				const u32 in_pitch = width;
+				constexpr u32 out_plane = 320 * 240;
+				constexpr u32 out_pitch = 320;
+
+				u8* dst_plane_r = video_data_out;
+				u8* dst_plane_g1 = video_data_out + out_plane;
+				u8* dst_plane_g2 = video_data_out + out_plane * 2;
+				u8* dst_plane_b = video_data_out + out_plane * 3;
+
+				for (u32 y = 0; y < dst_h; y++)
+				{
+					const u8* src0 = src_data + y * 2 * in_pitch;
+					const u8* src1 = src0 + in_pitch;
+
+					u8* dst_r = dst_plane_r + y * out_pitch;
+					u8* dst_g1 = dst_plane_g1 + y * out_pitch;
+					u8* dst_g2 = dst_plane_g2 + y * out_pitch;
+					u8* dst_b = dst_plane_b + y * out_pitch;
+
+					for (u32 x = 0; x < dst_w; x++, src0 += 2, src1 += 2)
+					{
+						const u8 b  = src0[0];
+						const u8 g0 = src0[1];
+						const u8 g1 = src1[0];
+						const u8 r  = src1[1];
+
+						dst_r[x] = r;
+						dst_g1[x] = g0;
+						dst_g2[x] = g1;
+						dst_b[x] = b;
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s (called from %s)", input_format, vc.output_format, caller);
+				std::memcpy(video_data_out, src_data, std::min<usz>(required_in_size, required_out_size));
+				return false;
+			}
+			break;
 		}
 		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
 		{
@@ -1161,7 +1331,7 @@ namespace gem
 		}
 		default:
 		{
-			cellGem.error("Trying to convert %s to %s (called from %s)", input_format, output_format, caller);
+			cellGem.error("Trying to convert %s to %s (called from %s)", input_format, vc.output_format, caller);
 			return false;
 		}
 		}
@@ -1340,13 +1510,15 @@ void gem_config_data::operator()()
 
 		const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		if (gem::convert_image_format(shared_data.format, vc.output_format, video_data_in, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size, "cellGem"))
+		if (gem::convert_image_format(shared_data.format, vc, video_data_in, shared_data.width, shared_data.height,
+			vc.video_data_out ? vc.video_data_out.get_ptr() : nullptr, video_data_out_size,
+			vc.buffer_memory ? vc.buffer_memory.get_ptr() : nullptr, "cellGem"))
 		{
 			cellGem.trace("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
 
 			if (g_cfg.io.paint_move_spheres)
 			{
-				paint_spheres(vc.output_format, shared_data.width, shared_data.height, vc_attribute.video_data_out ? vc_attribute.video_data_out.get_ptr() : nullptr, video_data_out_size);
+				paint_spheres(vc.output_format, shared_data.width, shared_data.height, vc.video_data_out ? vc.video_data_out.get_ptr() : nullptr, video_data_out_size);
 			}
 		}
 
@@ -1617,7 +1789,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
@@ -1657,7 +1829,7 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	}
 }
 
-static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, const ps_move_data& move_data)
+static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -1670,7 +1842,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
@@ -1703,10 +1875,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	// Calculate orientation
 	if (g_cfg.io.move == move_handler::real || (g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
 	{
-		gem_state->quat[0] = move_data.quaternion[0]; // x
-		gem_state->quat[1] = move_data.quaternion[1]; // y
-		gem_state->quat[2] = move_data.quaternion[2]; // z
-		gem_state->quat[3] = move_data.quaternion[3]; // w
+		gem_state->quat[0] = move_data.quaternion.x();
+		gem_state->quat[1] = move_data.quaternion.y();
+		gem_state->quat[2] = move_data.quaternion.z();
+		gem_state->quat[3] = move_data.quaternion.w();
 	}
 	else
 	{
@@ -1731,6 +1903,17 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		gem_state->quat[1] = q_y;
 		gem_state->quat[2] = q_z;
 		gem_state->quat[3] = q_w;
+	}
+
+	if constexpr (!ps_move_data::use_imu_for_velocity)
+	{
+		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			gem_state->vel[i] = move_data.vel_world[i];
+			gem_state->accel[i] = move_data.accel_world[i];
+		}
 	}
 
 	// Update visibility for fake handlers
@@ -1906,9 +2089,17 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		gem_state->temperature = pad->move_data.temperature;
-		gem_state->accel[0] = pad->move_data.accelerometer_x * 1000; // linear velocity in mm/s²
-		gem_state->accel[1] = pad->move_data.accelerometer_y * 1000; // linear velocity in mm/s²
-		gem_state->accel[2] = pad->move_data.accelerometer_z * 1000; // linear velocity in mm/s²
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			if constexpr (ps_move_data::use_imu_for_velocity)
+			{
+				gem_state->vel[i] = pad->move_data.vel_world[i];
+				gem_state->accel[i] = pad->move_data.accel_world[i];
+			}
+			gem_state->angvel[i] = pad->move_data.angvel_world[i];
+			gem_state->angaccel[i] = pad->move_data.angaccel_world[i];
+		}
 
 		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max, pad->move_data);
 	}
@@ -2147,7 +2338,8 @@ static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& con
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, mouse_no);
+		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2215,7 +2407,8 @@ static void gun_pos_to_gem_state(u32 gem_no, gem_config::gem_controller& control
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, {});
+		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, gem_no);
+		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
@@ -2769,7 +2962,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		inertial_state->counter = gem.inertial_counter++;
-		inertial_state->accelerometer[0] = 10; // Current gravity in m/s²
+		inertial_state->accelerometer[2] = 1.0f; // Current gravity in G units (9.81 == 1 unit)
 
 		switch (g_cfg.io.move)
 		{
@@ -2786,12 +2979,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 				if (pad && pad->is_connected() && !pad->is_copilot())
 				{
 					inertial_state->temperature = pad->move_data.temperature;
-					inertial_state->accelerometer[0] = pad->move_data.accelerometer_x;
-					inertial_state->accelerometer[1] = pad->move_data.accelerometer_y;
-					inertial_state->accelerometer[2] = pad->move_data.accelerometer_z;
-					inertial_state->gyro[0] = pad->move_data.gyro_x;
-					inertial_state->gyro[1] = pad->move_data.gyro_y;
-					inertial_state->gyro[2] = pad->move_data.gyro_z;
+
+					for (u32 i = 0; i < 3; i++)
+					{
+						inertial_state->accelerometer[i] = pad->move_data.accelerometer[i];
+						inertial_state->gyro[i] = pad->move_data.gyro[i];
+					}
 				}
 			}
 

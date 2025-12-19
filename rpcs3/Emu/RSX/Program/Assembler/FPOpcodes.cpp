@@ -402,12 +402,10 @@ namespace rsx::assembler::FP
 			return {};
 		}
 
-		constexpr u32 register_file_max_len = 48 * 8; // H0 - H47, R0 - R23
-
 		const u32 lane_width = reg.reg.f16 ? 2 : 4;
 		const u32 file_offset = reg.reg.id * lane_width * 4;
 
-		ensure(file_offset < register_file_max_len, "Invalid register index");
+		ensure(file_offset < constants::register_file_max_len, "Invalid register index");
 
 		rsx::simple_array<u32> result{};
 		auto insert_lane = [&](u32 word_offset)

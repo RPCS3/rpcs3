@@ -870,7 +870,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 			const QString installation_info =
 				tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-				.arg(rpcs3::utils::get_hdd0_game_dir())
+				.arg(QString::fromStdString(rpcs3::utils::get_hdd0_game_dir()))
 				.arg(gui::utils::format_byte_size(free_space))
 				.arg(info.data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
 				.arg(gui::utils::format_byte_size(info.data_size));

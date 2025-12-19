@@ -819,10 +819,7 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
-	if (!nph.abort_request(reqId))
-		return SCE_NP_MATCHING2_ERROR_REQUEST_NOT_FOUND;
-
-	return CELL_OK;
+	return nph.abort_request(reqId);
 }
 
 error_code sceNpMatching2GetServerInfo(

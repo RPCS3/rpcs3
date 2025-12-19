@@ -2,7 +2,8 @@
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
-#include "Emu/Io/pad_config_types.h"
+#include "pad_config_types.h"
+#include "ps_move_data.h"
 
 #include <map>
 #include <set>
@@ -467,38 +468,6 @@ struct VibrateMotor
 	VibrateMotor(bool is_large_motor)
 		: is_large_motor(is_large_motor)
 	{}
-};
-
-struct ps_move_data
-{
-	u32 external_device_id = 0;
-	std::array<u8, 38> external_device_read{};  // CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE
-	std::array<u8, 40> external_device_write{}; // CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE
-	std::array<u8, 5> external_device_data{};
-	bool external_device_connected = false;
-	bool external_device_read_requested = false;
-	bool external_device_write_requested = false;
-
-	bool calibration_requested = false;
-	bool calibration_succeeded = false;
-
-	bool magnetometer_enabled = false;
-	bool orientation_enabled = false;
-
-	static constexpr std::array<f32, 4> default_quaternion { 1.0f, 0.0f, 0.0f, 0.0f };
-	std::array<f32, 4> quaternion = default_quaternion; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
-	f32 accelerometer_x = 0.0f; // linear velocity in m/s²
-	f32 accelerometer_y = 0.0f; // linear velocity in m/s²
-	f32 accelerometer_z = 0.0f; // linear velocity in m/s²
-	f32 gyro_x = 0.0f; // angular velocity in rad/s
-	f32 gyro_y = 0.0f; // angular velocity in rad/s
-	f32 gyro_z = 0.0f; // angular velocity in rad/s
-	f32 magnetometer_x = 0.0f;
-	f32 magnetometer_y = 0.0f;
-	f32 magnetometer_z = 0.0f;
-	s16 temperature = 0;
-
-	void reset_sensors();
 };
 
 struct Pad

@@ -257,7 +257,7 @@ namespace np
 		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
 		u32 get_players_history_count(u32 options);
 		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
-		bool abort_request(u32 req_id);
+		error_code abort_request(u32 req_id);
 
 		// For signaling
 		void req_sign_infos(const std::string& npid, u32 conn_id);
@@ -372,21 +372,12 @@ namespace np
 			vm::ptr<SceNpMatching2RequestCallback> cb;
 			vm::ptr<void> cb_arg;
 			SceNpMatching2Event event_type;
+			bool abortable;
 
-			void queue_callback(u32 req_id, u32 event_key, s32 error_code, u32 data_size) const
-			{
-				if (cb)
-				{
-					sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
-					{
-						cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
-						return 0;
-					});
-				}
-			}
+			void queue_callback(u32 req_id, u32 event_key, s32 error_code, u32 data_size) const;
 		};
 
-		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type);
+		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type, bool abortable);
 		std::optional<callback_info> take_pending_request(u32 req_id);
 
 	private:

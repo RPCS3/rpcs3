@@ -126,7 +126,7 @@ namespace rsx
 				result.font_names.emplace_back("Roboto-Regular.ttf");
 				result.font_names.emplace_back("OpenSans-Regular.ttf");
 				result.font_names.emplace_back("FreeSans.ttf");
-#elifndef _WIN32
+#elif !defined(_WIN32)
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
 #endif

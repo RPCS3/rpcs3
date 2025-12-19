@@ -91,6 +91,7 @@
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\MouseHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
+    <ClCompile Include="Emu\Io\ps_move_data.cpp" />
     <ClCompile Include="Emu\Io\rb3drums_config.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
@@ -604,6 +605,7 @@
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\Io\pad_config_types.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
+    <ClInclude Include="Emu\Io\ps_move_data.h" />
     <ClInclude Include="Emu\Io\rb3drums_config.h" />
     <ClInclude Include="Emu\Io\RB3MidiDrums.h" />
     <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
