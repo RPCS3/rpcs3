@@ -1292,19 +1292,20 @@ namespace np
 		return false;
 	}
 
-	u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type)
+	u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type, bool abortable)
 	{
-		callback_info ret;
-
 		const auto ctx = get_match2_context(ctx_id);
 		ensure(ctx);
 
 		const u32 req_id = get_req_id(optParam ? optParam->appReqId : ctx->default_match2_optparam.appReqId);
 
-		ret.ctx_id = ctx_id;
-		ret.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
-		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
-		ret.event_type = event_type;
+		callback_info ret{
+			.ctx_id = ctx_id,
+			.cb = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc,
+			.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg,
+			.event_type = event_type,
+			.abortable = abortable,
+		};
 
 		nph_log.trace("Callback used is 0x%x with req_id %d", ret.cb, req_id);
 
@@ -1329,16 +1330,22 @@ namespace np
 		return cb_info;
 	}
 
-	bool np_handler::abort_request(u32 req_id)
+	error_code np_handler::abort_request(u32 req_id)
 	{
-		auto cb_info_opt = take_pending_request(req_id);
+		std::lock_guard lock(mutex_pending_requests);
 
-		if (!cb_info_opt)
-			return false;
+		if (!pending_requests.contains(req_id))
+			return SCE_NP_MATCHING2_ERROR_REQUEST_NOT_FOUND;
 
-		cb_info_opt->queue_callback(req_id, 0, SCE_NP_MATCHING2_ERROR_ABORTED, 0);
+		if (!::at32(pending_requests, req_id).abortable)
+			return SCE_NP_MATCHING2_ERROR_CANNOT_ABORT;
 
-		return true;
+		const auto cb_info = std::move(::at32(pending_requests, req_id));
+		pending_requests.erase(req_id);
+
+		cb_info.queue_callback(req_id, 0, SCE_NP_MATCHING2_ERROR_ABORTED, 0);
+
+		return CELL_OK;
 	}
 
 	event_data& np_handler::allocate_req_result(u32 event_key, u32 max_size, u32 initial_size)
@@ -1745,6 +1752,7 @@ namespace np
 		{
 			sysutil_register_cb([=, ctx_id = this->ctx_id, event_type = this->event_type, cb = this->cb, cb_arg = this->cb_arg](ppu_thread& cb_ppu) -> s32
 				{
+					sceNp2.trace("Calling callback 0x%x with req_id %d, event_type: 0x%x, error_code: 0x%x", cb, req_id, event_type, error_code);
 					cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
 					return 0;
 				});

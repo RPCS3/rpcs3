@@ -6,7 +6,7 @@ export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
 
-brew install -f --overwrite --quiet pipenv googletest opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
+brew install -f --overwrite --quiet googletest opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" glew sdl3 vulkan-headers vulkan-loader
 brew unlink --quiet ffmpeg qtbase qtsvg qtdeclarative
 
 brew link -f --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
@@ -43,11 +43,10 @@ if [ ! -d "/tmp/Qt/$QT_VER" ]; then
   sed -i '' "s/'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/'qt{0}_{0}{1}{2}'.format(major, minor, patch), 'qt{0}_{0}{1}{2}'.format(major, minor, patch)]))/g" qt-downloader
   sed -i '' "s/'{}\/{}\/qt{}_{}\/'/'{0}\/{1}\/qt{2}_{3}\/qt{2}_{3}\/'/g" qt-downloader
   cd "/tmp/Qt"
-  "$BREW_PATH/bin/pipenv" run pip3 uninstall py7zr requests semantic_version lxml
-  "$BREW_PATH/bin/pipenv" run pip3 install py7zr requests semantic_version lxml  --no-cache
+  pip3 install py7zr requests semantic_version lxml  --no-cache --break-system-packages
   mkdir -p "$QT_VER/macos" ; ln -s "macos" "$QT_VER/clang_64"
   sed -i '' 's/args\.version \/ derive_toolchain_dir(args) \/ //g' "$WORKDIR/qt-downloader/qt-downloader"
-  "$BREW_PATH/bin/pipenv" run "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats -o "$QT_VER/clang_64"
+  python3 "$WORKDIR/qt-downloader/qt-downloader" macos desktop "$QT_VER" clang_64 --opensource --addons qtmultimedia qtimageformats -o "$QT_VER/clang_64"
 fi
 
 cd "$WORKDIR"
@@ -58,7 +57,7 @@ export SDL3_DIR="$BREW_PATH/opt/sdl3/lib/cmake/SDL3"
 
 export PATH="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_PATH/lib $BREW_PATH/opt/ffmpeg@5/lib/libavcodec.dylib $BREW_PATH/opt/ffmpeg@5/lib/libavformat.dylib $BREW_PATH/opt/ffmpeg@5/lib/libavutil.dylib $BREW_PATH/opt/ffmpeg@5/lib/libswscale.dylib $BREW_PATH/opt/ffmpeg@5/lib/libswresample.dylib $BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++.1.dylib $BREW_PATH/lib/libSDL3.dylib $BREW_PATH/lib/libGLEW.dylib $BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/unwind/libunwind.1.dylib -Wl,-rpath,$BREW_PATH/lib"
-export CPPFLAGS="-I$BREW_PATH/include -no-pie -D__MAC_OS_X_VERSION_MIN_REQUIRED=144000"
+export CPPFLAGS="-I$BREW_PATH/include -D__MAC_OS_X_VERSION_MIN_REQUIRED=144000"
 export CFLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=144000"
 export LIBRARY_PATH="$BREW_PATH/lib"
 export LD_LIBRARY_PATH="$BREW_PATH/lib"
@@ -72,9 +71,6 @@ LLVM_DIR="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER"
 # exclude ffmpeg, LLVM, opencv, and sdl from submodule update
 # shellcheck disable=SC2046
 git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/opencv/ && !/SDL/ && !/feralinteractive/ { print $3 }' .gitmodules)
-
-# 3rdparty fixes
-sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
 mkdir build && cd build || exit 1
 

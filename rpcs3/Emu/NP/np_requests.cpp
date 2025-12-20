@@ -70,7 +70,7 @@ namespace np
 	u32 np_handler::get_server_status(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
 		// TODO: actually implement interaction with server for this?
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo, true);
 		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetServerInfo, sizeof(SceNpMatching2GetServerInfoResponse));
@@ -88,7 +88,7 @@ namespace np
 
 	u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext, false);
 
 		const auto cb_info_opt = take_pending_request(req_id);
 		ensure(cb_info_opt);
@@ -99,7 +99,7 @@ namespace np
 
 	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext, false);
 
 		const auto cb_info_opt = take_pending_request(req_id);
 		ensure(cb_info_opt);
@@ -110,7 +110,7 @@ namespace np
 
 	u32 np_handler::get_world_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList, true);
 
 		if (!get_rpcn()->get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
 		{
@@ -160,7 +160,7 @@ namespace np
 
 	u32 np_handler::create_join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2CreateJoinRoomRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, false);
 
 		extra_nps::print_SceNpMatching2CreateJoinRoomRequest(req);
 
@@ -222,7 +222,7 @@ namespace np
 
 	u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinRoomRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, false);
 
 		extra_nps::print_SceNpMatching2JoinRoomRequest(req);
 
@@ -312,7 +312,7 @@ namespace np
 
 	u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, false);
 
 		if (!get_rpcn()->leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -357,7 +357,7 @@ namespace np
 
 	u32 np_handler::search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SearchRoomRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, true);
 
 		extra_nps::print_SceNpMatching2SearchRoomRequest(req);
 
@@ -396,7 +396,7 @@ namespace np
 
 	u32 np_handler::get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, true);
 
 		extra_nps::print_SceNpMatching2GetRoomDataExternalListRequest(req);
 
@@ -436,7 +436,7 @@ namespace np
 
 	u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, false);
 
 		extra_nps::print_SceNpMatching2SetRoomDataExternalRequest(req);
 
@@ -471,7 +471,7 @@ namespace np
 
 	u32 np_handler::get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal, true);
 
 		if (!get_rpcn()->get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -525,7 +525,7 @@ namespace np
 
 	u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, false);
 
 		extra_nps::print_SceNpMatching2SetRoomDataInternalRequest(req);
 
@@ -559,7 +559,7 @@ namespace np
 
 	u32 np_handler::get_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataInternal, true);
 		extra_nps::print_SceNpMatching2GetRoomMemberDataInternalRequest(req);
 
 		if (!get_rpcn()->get_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
@@ -611,7 +611,7 @@ namespace np
 
 	u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, false);
 
 		extra_nps::print_SceNpMatching2SetRoomMemberDataInternalRequest(req);
 
@@ -647,7 +647,7 @@ namespace np
 
 	u32 np_handler::set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetUserInfo, false);
 
 		if (!get_rpcn()->set_userinfo(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -676,7 +676,7 @@ namespace np
 
 	u32 np_handler::get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo, true);
 
 		if (!get_rpcn()->ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 		{
@@ -723,7 +723,7 @@ namespace np
 
 	u32 np_handler::send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage, false);
 
 		if (!get_rpcn()->send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -804,7 +804,7 @@ namespace np
 
 		extra_nps::print_SceNpMatching2GetLobbyInfoListRequest(req);
 
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList, false);
 		auto cb_info_opt = take_pending_request(req_id);
 
 		if (!cb_info_opt)
