@@ -27,7 +27,6 @@
 #include "Emu/NP/clans_config.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/system_config.h"
-#include "Emu/system_config_types.h"
 
 LOG_CHANNEL(clan_log, "clans");
 

@@ -1435,9 +1435,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			ui->psnStatusBox->setCurrentIndex(find_item(ui->psnStatusBox, static_cast<int>(g_cfg.net.psn_status.def)));
 			ui->psnStatusBox->setEnabled(false);
-
 			ui->enable_clans->setEnabled(false);
-			ui->enable_clans->setChecked(false);
 		}
 		else
 		{
