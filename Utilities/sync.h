@@ -84,15 +84,15 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 	case FUTEX_WAIT_PRIVATE:
 	case FUTEX_WAIT_BITSET_PRIVATE:
 	{
-	  if (timeout)
-	  {
-		const uint64_t nsec = timeout->tv_nsec + timeout->tv_sec * 1000000000ull;
-		return os_sync_wait_on_address_with_timeout(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE, OS_CLOCK_MACH_ABSOLUTE_TIME, nsec);
-	  }
-	  else
-	  {
-		return os_sync_wait_on_address(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE);
-	  }
+		if (timeout)
+		{
+			const uint64_t nsec = timeout->tv_nsec + timeout->tv_sec * 1000000000ull;
+			return os_sync_wait_on_address_with_timeout(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE, OS_CLOCK_MACH_ABSOLUTE_TIME, nsec);
+		}
+		else
+		{
+			return os_sync_wait_on_address(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE);
+		}
 	}
 
 	case FUTEX_WAKE_PRIVATE:
@@ -100,7 +100,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 	{
 		for (;;)
 		{
-        	int ret = 0;
+			int ret = 0;
 			if (val == INT32_MAX)
 			{
 				ret = os_sync_wake_by_address_all(const_cast<void*>(uaddr), sizeof(uint), OS_SYNC_WAKE_BY_ADDRESS_NONE);
