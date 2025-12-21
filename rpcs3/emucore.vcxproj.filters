@@ -1396,6 +1396,12 @@
     <ClCompile Include="Emu\Io\ps_move_data.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\clans_config.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\clans_client.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2805,6 +2811,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\ps_move_data.h">
       <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\clans_client.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\clans_config.h">
+      <Filter>Emu\NP</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
