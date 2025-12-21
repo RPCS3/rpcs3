@@ -482,7 +482,7 @@ namespace clan
 		std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
 		SceNpId member_npid;
-		if (!strcmp(member_username.c_str(), nph.get_npid().handle.data))
+		if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 		{
 			member_npid = nph.get_npid();
 		}
@@ -550,7 +550,7 @@ namespace clan
 			std::string member_username = fmt::split(member_jid, {"@"})[0];
 
 			SceNpId member_npid;
-			if (!strcmp(member_username.c_str(), nph.get_npid().handle.data))
+			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 			{
 				member_npid = nph.get_npid();
 			}
@@ -619,7 +619,7 @@ namespace clan
 			std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
 			SceNpId member_npid = {};
-			if (!strcmp(member_username.c_str(), nph.get_npid().handle.data))
+			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 			{
 				member_npid = nph.get_npid();
 			}
@@ -1061,7 +1061,7 @@ namespace clan
 			SceNpId author_npid;
 			std::string author_username = fmt::split(author_jid, {"@"})[0];
 
-			if (!strcmp(author_username.c_str(), nph.get_npid().handle.data))
+			if (strncmp(author_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 			{
 				author_npid = nph.get_npid();
 			}
