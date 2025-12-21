@@ -324,6 +324,40 @@ namespace rsx
 		EXPECT_EQ(arr.find_if(FN(x == 99)), nullptr);
 	}
 
+	TEST(SimpleArray, InsertArray)
+	{
+		rsx::simple_array<int> arr{
+			0, 1, 2, 6, 7, 8, 9
+		};
+
+		const std::vector<int> tail{
+			10, 11, 12
+		};
+
+		const std::vector<int> mid{
+			3, 4, 5
+		};
+
+		// Insert end
+		arr.insert(arr.end(), tail);
+		EXPECT_EQ(arr.size(), 10);
+
+		// Insert mid
+		auto it = arr.begin();
+		std::advance(it, 3);
+		it = arr.insert(it, mid);
+
+		EXPECT_EQ(arr.size(), 13);
+		EXPECT_EQ(std::distance(arr.begin(), it), 3);
+		EXPECT_EQ(*it, 3);
+
+		// Verify
+		for (unsigned i = 0; i < arr.size(); ++i)
+		{
+			EXPECT_EQ(arr[i], static_cast<int>(i));
+		}
+	}
+
 	TEST(AlignedAllocator, Alloc)
 	{
 		auto ptr = rsx::aligned_allocator::malloc<256>(16);

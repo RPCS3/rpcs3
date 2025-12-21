@@ -2320,6 +2320,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="enable_clans">
+                <property name="text">
+                 <string>Enable Clans</string>
+                </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="networkTabSpacerRight">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>

@@ -82,8 +82,8 @@ namespace utils
 			return;
 		}
 
-		std::string msg = line;
-		fmt::trim_back(msg, "\n\r\t ");
+		std::string msg_buf = line;
+		std::string_view msg = fmt::trim_back_sv(msg_buf, "\n\r\t ");
 
 		if (level <= AV_LOG_ERROR)
 			media_log.error("av_log: %s", msg);

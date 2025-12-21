@@ -185,13 +185,13 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
-	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, QOverload<QTableWidgetItem*>::of(&game_list_frame::doubleClickedSlot));
+	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, qOverload<QTableWidgetItem*>(&game_list_frame::doubleClickedSlot));
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 
 	connect(m_game_grid, &QWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_grid, &game_list_grid::ItemSelectionChanged, this, &game_list_frame::NotifyGameSelection);
-	connect(m_game_grid, &game_list_grid::ItemDoubleClicked, this, QOverload<const game_info&>::of(&game_list_frame::doubleClickedSlot));
+	connect(m_game_grid, &game_list_grid::ItemDoubleClicked, this, qOverload<const game_info&>(&game_list_frame::doubleClickedSlot));
 
 	connect(m_game_compat, &game_compatibility::DownloadStarted, this, [this]()
 	{
@@ -1383,7 +1383,7 @@ void game_list_frame::ShowContextMenu(const QPoint& pos)
 
 	const std::string hdd1_cache_base_dir = rpcs3::utils::get_hdd1_dir() + "caches/";
 	const bool has_hdd1_cache_dir = !GetDirListBySerial(hdd1_cache_base_dir, current_game.serial).empty();
-	
+
 	if (has_hdd1_cache_dir)
 	{
 		QAction* remove_hdd1_cache = remove_menu->addAction(tr("&Remove HDD1 Cache"));
@@ -1856,7 +1856,7 @@ void game_list_frame::ShowContextMenu(const QPoint& pos)
 		{
 			text += tr("\nCurrent free disk space: %0\n").arg(gui::utils::format_byte_size(stat.avail_free));
 		}
-		
+
 		if (has_data_dir)
 		{
 			text += tr("\nPermanently remove %0 and selected (optional) contents from drive?\n").arg(is_disc_game ? tr("Game Data") : gameinfo->localized_category);

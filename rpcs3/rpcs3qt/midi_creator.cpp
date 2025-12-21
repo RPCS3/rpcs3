@@ -104,11 +104,11 @@ std::string midi_creator::set_device(u32 num, const midi_device& device)
 	return result;
 }
 
-void midi_creator::parse_devices(const std::string& list)
+void midi_creator::parse_devices(std::string_view list)
 {
 	m_sel_list = {};
 
-	const std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
+	const std::vector<std::string_view> devices_list = fmt::split_sv(list, { "@@@" });
 	for (usz index = 0; index < std::min(m_sel_list.size(), devices_list.size()); index++)
 	{
 		m_sel_list[index] = midi_device::from_string(devices_list[index]);

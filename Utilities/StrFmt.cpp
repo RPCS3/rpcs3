@@ -83,7 +83,8 @@ std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 	if (FormatMessageW((module_handle ? FORMAT_MESSAGE_FROM_HMODULE : FORMAT_MESSAGE_FROM_SYSTEM) | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
 			module_handle, error, 0, reinterpret_cast<LPWSTR>(&message_buffer), 0, nullptr))
 	{
-		message = fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(message_buffer), " \t\n\r\f\v"), error);
+		const std::string utf8 = wchar_to_utf8(message_buffer);
+		message = fmt::format("%s (0x%x)", fmt::trim_sv(utf8, " \t\n\r\f\v"), error);
 	}
 	else
 	{
@@ -823,7 +824,66 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 	return result;
 }
 
+std::vector<std::string_view> fmt::split_sv(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty)
+{
+	std::vector<std::string_view> result;
+
+	for (usz index = 0; index < source.size();)
+	{
+		usz pos = -1;
+		usz sep_size = 0;
+
+		for (auto& separator : separators)
+		{
+			if (usz pos0 = source.find(separator, index); pos0 < pos)
+			{
+				pos = pos0;
+				sep_size = separator.size();
+			}
+		}
+
+		if (!sep_size)
+		{
+			result.emplace_back(&source[index], source.size() - index);
+			return result;
+		}
+
+		std::string_view piece = {&source[index], pos - index};
+
+		index = pos + sep_size;
+
+		if (piece.empty() && is_skip_empty)
+		{
+			continue;
+		}
+
+		result.emplace_back(std::move(piece));
+	}
+
+	if (result.empty() && !is_skip_empty)
+	{
+		result.emplace_back();
+	}
+
+	return result;
+}
+
 std::string fmt::trim(const std::string& source, std::string_view values)
+{
+	const usz begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return {};
+
+	const usz end = source.find_last_not_of(values);
+
+	if (end == source.npos)
+		return source.substr(begin);
+
+	return source.substr(begin, end + 1 - begin);
+}
+
+std::string_view fmt::trim_sv(std::string_view source, std::string_view values)
 {
 	const usz begin = source.find_first_not_of(values);
 
@@ -848,10 +908,30 @@ std::string fmt::trim_front(const std::string& source, std::string_view values)
 	return source.substr(begin);
 }
 
+std::string_view fmt::trim_front_sv(std::string_view source, std::string_view values)
+{
+	const usz begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return {};
+
+	return source.substr(begin);
+}
+
 void fmt::trim_back(std::string& source, std::string_view values)
 {
 	const usz index = source.find_last_not_of(values);
 	source.resize(index + 1);
+}
+
+std::string_view fmt::trim_back_sv(std::string_view source, std::string_view values)
+{
+	const usz index = source.find_last_not_of(values);
+	if (index == std::string_view::npos)
+		return {};
+
+	source.remove_suffix(source.size() - (index + 1));
+	return source;
 }
 
 std::string fmt::to_upper(std::string_view string)

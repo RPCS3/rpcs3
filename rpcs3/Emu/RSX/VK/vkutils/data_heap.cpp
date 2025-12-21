@@ -53,7 +53,7 @@ namespace vk
 		VkFlags create_flags = 0;
 		if (m_prefer_writethrough)
 		{
-			create_flags |= VK_BUFFER_CREATE_ALLOW_NULL_RPCS3;
+			create_flags |= (VK_BUFFER_CREATE_ALLOW_NULL_RPCS3 | VK_BUFFER_CREATE_IGNORE_VMEM_PRESSURE_RPCS3);
 		}
 
 		heap = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, usage, create_flags, VMM_ALLOCATION_POOL_SYSTEM);
@@ -146,7 +146,7 @@ namespace vk
 		VkFlags create_flags = 0;
 		if (m_prefer_writethrough)
 		{
-			create_flags |= VK_BUFFER_CREATE_ALLOW_NULL_RPCS3;
+			create_flags |= (VK_BUFFER_CREATE_ALLOW_NULL_RPCS3 | VK_BUFFER_CREATE_IGNORE_VMEM_PRESSURE_RPCS3);
 		}
 
 		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, create_flags, VMM_ALLOCATION_POOL_SYSTEM);

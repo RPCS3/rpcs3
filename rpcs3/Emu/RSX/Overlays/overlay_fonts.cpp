@@ -120,9 +120,15 @@ namespace rsx
 			{
 				result.font_names.emplace_back("Arial.ttf");
 				result.font_names.emplace_back("arial.ttf");
-#ifndef _WIN32
-				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
-				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+#ifdef __APPLE__
+				result.font_names.emplace_back("DejaVuSans.ttf");
+				result.font_names.emplace_back("NotoSans-Regular.ttf");
+				result.font_names.emplace_back("Roboto-Regular.ttf");
+				result.font_names.emplace_back("OpenSans-Regular.ttf");
+				result.font_names.emplace_back("FreeSans.ttf");
+#elif !defined(_WIN32)
+				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
+				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
 #endif
 				// Attempt to load a font from dev_flash as a last resort
 				result.font_names.emplace_back("SCE-PS3-VR-R-LATIN.TTF");
@@ -207,7 +213,7 @@ namespace rsx
 				return font_found;
 			};
 
-			for (const auto& font_file : fs_settings.font_names)
+			for (const std::string& font_file : fs_settings.font_names)
 			{
 				if (fs::is_file(font_file))
 				{
@@ -256,7 +262,7 @@ namespace rsx
 			{
 				if (fallback_bytes.empty())
 				{
-					fmt::throw_exception("Failed to initialize font for character 0x%x on codepage %d.", static_cast<u32>(c), static_cast<u32>(codepage_id));
+					fmt::throw_exception("Failed to initialize font for character 0x%x on codepage %d.\nLookup dirs:\n%s\nTarget fonts:\n%s", static_cast<u32>(c), static_cast<u32>(codepage_id), fmt::merge(fs_settings.lookup_font_dirs, "\n"), fmt::merge(fs_settings.font_names, "\n"));
 				}
 
 				rsx_log.error("Failed to initialize font for character 0x%x on codepage %d. Falling back to font '%s'", static_cast<u32>(c), static_cast<u32>(codepage_id), fallback_file);

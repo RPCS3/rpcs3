@@ -375,7 +375,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	combobox->setCurrentIndex(index);
 
-	connect(combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), combobox, [this, is_ranged, combobox, type](int index)
+	connect(combobox, &QComboBox::currentIndexChanged, combobox, [this, is_ranged, combobox, type](int index)
 	{
 		if (index < 0) return;
 
@@ -973,9 +973,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::SPUBlockSize:
 		switch (static_cast<spu_block_size_type>(index))
 		{
-		case spu_block_size_type::safe: return tr("Safe", "SPU Analyzer Block Size");
-		case spu_block_size_type::mega: return tr("Mega", "SPU Analyzer Block Size");
-		case spu_block_size_type::giga: return tr("Giga", "SPU Analyzer Block Size");
+		case spu_block_size_type::safe: return tr("Safe", "SPU block size");
+		case spu_block_size_type::mega: return tr("Mega", "SPU block size");
+		case spu_block_size_type::giga: return tr("Giga", "SPU block size");
 		}
 		break;
 	case emu_settings_type::ThreadSchedulerMode:

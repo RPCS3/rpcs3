@@ -34,32 +34,33 @@ namespace vm
 	void reservation_update(u32 addr);
 	std::pair<bool, u64> try_reservation_update(u32 addr);
 
-	struct reservation_waiter_t
+	struct alignas(8) reservation_waiter_t
 	{
 		u32 wait_flag = 0;
 		u32 waiters_count = 0;
 	};
 
-	static inline atomic_t<reservation_waiter_t>* reservation_notifier(u32 raddr, u64 rtime)
+	static inline atomic_t<reservation_waiter_t, 128>* reservation_notifier(u32 raddr, u64 rtime)
 	{
-		constexpr u32 wait_vars_for_each = 64;
+		constexpr u32 wait_vars_for_each = 32;
 		constexpr u32 unique_address_bit_mask = 0b1111;
 		constexpr u32 unique_rtime_bit_mask = 0b1;
 
-		extern std::array<atomic_t<reservation_waiter_t>, wait_vars_for_each * (unique_address_bit_mask + 1) * (unique_rtime_bit_mask + 1)> g_resrv_waiters_count;
+		extern std::array<atomic_t<reservation_waiter_t, 128>, wait_vars_for_each * (unique_address_bit_mask + 1) * (unique_rtime_bit_mask + 1)> g_resrv_waiters_count;
 
 		// Storage efficient method to distinguish different nearby addresses (which are likely)
-		const usz index = std::popcount(raddr & -2048) * (1 << 5) + ((rtime / 128) & unique_rtime_bit_mask) * (1 << 4) + ((raddr / 128) & unique_address_bit_mask);
+		const usz index = std::min<usz>(std::popcount(raddr & -2048), 31) * (1 << 5) + ((rtime / 128) & unique_rtime_bit_mask) * (1 << 4) + ((raddr / 128) & unique_address_bit_mask);
 		return &g_resrv_waiters_count[index];
 	}
 
 	// Returns waiter count
 	static inline u32 reservation_notifier_count(u32 raddr, u64 rtime)
 	{
-		return reservation_notifier(raddr, rtime)->load().waiters_count;
+		reservation_waiter_t v = reservation_notifier(raddr, rtime)->load();
+		return v.wait_flag % 2 == 1 ? v.waiters_count : 0;
 	}
 
-	static inline void reservation_notifier_end_wait(atomic_t<reservation_waiter_t>& waiter)
+	static inline void reservation_notifier_end_wait(atomic_t<reservation_waiter_t, 128>& waiter)
 	{
 		waiter.atomic_op([](reservation_waiter_t& value)
 		{
@@ -73,9 +74,9 @@ namespace vm
 		});
 	}
 
-	static inline std::pair<atomic_t<reservation_waiter_t>*, u32> reservation_notifier_begin_wait(u32 raddr, u64 rtime)
+	static inline std::pair<atomic_t<reservation_waiter_t, 128>*, u32> reservation_notifier_begin_wait(u32 raddr, u64 rtime)
 	{
-		atomic_t<reservation_waiter_t>& waiter = *reservation_notifier(raddr, rtime);
+		atomic_t<reservation_waiter_t, 128>& waiter = *reservation_notifier(raddr, rtime);
 
 		u32 wait_flag = 0;
 

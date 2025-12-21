@@ -115,11 +115,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 		}
 
 		// Concat strings
-		wstr.clear();
-		for (const std::string& part : parts)
-		{
-			wstr += part;
-		}
+		wstr = fmt::merge(parts, {});
 
 		if (const usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
 		{

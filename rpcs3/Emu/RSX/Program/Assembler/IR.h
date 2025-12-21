@@ -10,6 +10,16 @@ namespace rsx::assembler
 	{
 		int id = 0;
 		bool f16 = false;
+
+		bool operator == (const Register& other) const
+		{
+			return id == other.id && f16 == other.f16;
+		}
+
+		std::string to_string() const
+		{
+			return std::string(f16 ? "H" : "R") + std::to_string(id);
+		}
 	};
 
 	struct RegisterRef
@@ -19,7 +29,7 @@ namespace rsx::assembler
 		// Vector information
 		union
 		{
-			u32 mask;
+			u32 mask = 0;
 
 			struct
 			{
@@ -29,6 +39,16 @@ namespace rsx::assembler
 				bool w : 1;
 			};
 		};
+
+		operator bool() const
+		{
+			return !!mask;
+		}
+
+		bool operator == (const RegisterRef& other) const
+		{
+			return reg == other.reg && mask == other.mask;
+		}
 	};
 
 	struct Instruction
@@ -71,12 +91,16 @@ namespace rsx::assembler
 	struct BasicBlock
 	{
 		u32 id = 0;
+
 		std::vector<Instruction> instructions; // Program instructions for the RSX processor
 		std::vector<FlowEdge> succ;            // Forward edges. Sorted closest first.
 		std::vector<FlowEdge> pred;            // Back edges. Sorted closest first.
 
 		std::vector<Instruction> prologue;     // Prologue, created by passes
 		std::vector<Instruction> epilogue;     // Epilogue, created by passes
+
+		std::vector<RegisterRef> input_list;   // Register inputs.
+		std::vector<RegisterRef> clobber_list; // Clobbered outputs
 
 		FlowEdge* insert_succ(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
@@ -90,6 +114,26 @@ namespace rsx::assembler
 			FlowEdge e{ .type = type, .from = b, .to = this };
 			pred.push_back(e);
 			return &pred.back();
+		}
+
+		bool is_of_type(EdgeType type) const
+		{
+			return pred.size() == 1 &&
+				pred.front().type == type;
+		}
+
+		bool has_sibling_of_type(EdgeType type) const
+		{
+			if (pred.size() != 1)
+			{
+				return false;
+			}
+
+			auto source_node = pred.front().from;
+			return std::find_if(
+				source_node->succ.begin(),
+				source_node->succ.end(),
+				FN(x.type == type)) != source_node->succ.end();
 		}
 	};
 }

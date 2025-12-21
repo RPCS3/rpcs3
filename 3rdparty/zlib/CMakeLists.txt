@@ -13,6 +13,6 @@ else()
 
 	add_library(3rdparty_zlib INTERFACE)
 	target_link_libraries(3rdparty_zlib INTERFACE zlibstatic)
-	target_include_directories(3rdparty_zlib INTERFACE zlib ${CMAKE_CURRENT_BINARY_DIR}/zlib)
+	target_include_directories(3rdparty_zlib SYSTEM INTERFACE zlib ${CMAKE_CURRENT_BINARY_DIR}/zlib)
 	target_compile_definitions(3rdparty_zlib INTERFACE -DZLIB_CONST=1)
 endif()

@@ -244,10 +244,10 @@ public:
 	std::vector<std::string> swizzles;
 
 	ShaderVariable() = default;
-	ShaderVariable(const std::string& var)
+	ShaderVariable(std::string_view var)
 	{
 		// Separate 'double destination' variables 'X=Y=SRC'
-		std::string simple_var;
+		std::string_view simple_var;
 		const auto eq_pos = var.find('=');
 
 		if (eq_pos != umax)
@@ -267,11 +267,11 @@ public:
 			simple_var = simple_var.substr(brace_pos);
 		}
 
-		auto var_blocks = fmt::split(simple_var, { "." });
+		const auto var_blocks = fmt::split_sv(simple_var, { "." });
 
 		ensure((!var_blocks.empty()));
 
-		name = prefix + var_blocks[0];
+		name = prefix + std::string(var_blocks[0]);
 
 		if (var_blocks.size() == 1)
 		{

@@ -137,7 +137,7 @@ bool vfs::unmount(std::string_view vpath)
 		return false;
 	}
 
-	const std::vector<std::string> entry_list = fmt::split(vpath, {"/"});
+	const std::vector<std::string_view> entry_list = fmt::split_sv(vpath, {"/"});
 
 	if (entry_list.empty())
 	{
@@ -166,7 +166,7 @@ bool vfs::unmount(std::string_view vpath)
 		}
 
 		// Get the current name based on the depth
-		const std::string& name = ::at32(entry_list, depth);
+		const std::string_view name = ::at32(entry_list, depth);
 
 		// Go through all children of this node
 		for (auto it = dir.dirs.begin(); it != dir.dirs.end();)
@@ -456,10 +456,10 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 		auto unescape_path = [](std::string_view path)
 		{
 			// Unescape from host FS
-			std::vector<std::string> escaped = fmt::split(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+			const std::vector<std::string_view> escaped = fmt::split_sv(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
 			std::vector<std::string> result;
-			for (auto& sv : escaped)
-				result.emplace_back(vfs::unescape(sv));
+			for (const auto& sv : escaped)
+				result.push_back(vfs::unescape(sv));
 
 			return fmt::merge(result, "/");
 		};

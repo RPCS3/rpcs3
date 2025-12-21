@@ -71,10 +71,14 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		// Flip image if necessary
 		if (flip_horizontally || flip_vertically)
 		{
-			Qt::Orientations orientation {};
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+			Qt::Orientations orientation{};
 			orientation.setFlag(Qt::Orientation::Horizontal, flip_horizontally);
 			orientation.setFlag(Qt::Orientation::Vertical, flip_vertically);
 			image.flip(orientation);
+#else
+			image.mirror(flip_horizontally, flip_vertically);
+#endif
 		}
 
 		if (image.format() != QImage::Format_RGBA8888)
@@ -114,45 +118,60 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		case CELL_CAMERA_RAW8: // The game seems to expect BGGR
 		{
 			// Let's use a very simple algorithm to convert the image to raw BGGR
-			const auto convert_to_bggr = [&image_buffer, &image, width, height](u32 y_begin, u32 y_end)
+			const auto convert_to_bggr = [this, &image_buffer, &image, width, height](u32 y_begin, u32 y_end)
 			{
 				u8* dst = &image_buffer.data[image_buffer.width * y_begin];
 
 				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
 					const u8* src = image.constScanLine(y);
+					const u8* srcu = image.constScanLine(std::max<s32>(0, y - 1));
+					const u8* srcd = image.constScanLine(std::min(height - 1, y + 1));
 					const bool is_top_pixel = (y % 2) == 0;
+
+					// We apply gaussian blur to get better demosaicing results later when debayering again
+					const auto blurred = [&](s32 x, s32 c)
+					{
+						const s32 i = x * 4 + c;
+						const s32 il = std::max(0, x - 1) * 4 + c;
+						const s32 ir = std::min<s32>(width - 1, x + 1) * 4 + c;
+						const s32 sum =
+							              srcu[i] +
+							src[il] + 4 * src[i]  + src[ir] +
+							              srcd[i];
+						return static_cast<u8>(std::clamp((sum + 4) / 8, 0, 255));
+					};
 
 					// Split loops (roughly twice the performance by removing one condition)
 					if (is_top_pixel)
 					{
-						for (u32 x = 0; x < width; x++, dst++, src += 4)
+						for (u32 x = 0; x < width; x++, dst++)
 						{
 							const bool is_left_pixel = (x % 2) == 0;
 
 							if (is_left_pixel)
 							{
-								*dst = src[2]; // Blue
+								*dst = blurred(x, 2); // Blue
 							}
 							else
 							{
-								*dst = src[1]; // Green
+								*dst = blurred(x, 1); // Green
 							}
 						}
 					}
 					else
 					{
-						for (u32 x = 0; x < width; x++, dst++, src += 4)
+						for (u32 x = 0; x < width; x++, dst++)
 						{
 							const bool is_left_pixel = (x % 2) == 0;
 
 							if (is_left_pixel)
 							{
-								*dst = src[1]; // Green
+								*dst = blurred(x, 1); // Green
 							}
 							else
 							{
-								*dst = src[0]; // Red
+								*dst = blurred(x, 0); // Red
 							}
 						}
 					}
@@ -182,13 +201,13 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 			// Simple RGB to Y0_U_Y1_V conversion from stackoverflow.
 			const auto convert_to_yuv422 = [&image_buffer, &image, width, height, format = m_format](u32 y_begin, u32 y_end)
 			{
-				constexpr int yuv_bytes_per_pixel = 2;
-				const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
+				constexpr s32 yuv_bytes_per_pixel = 2;
+				const s32 yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
 
-				const int y0_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 0 : 3;
-				const int u_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 1 : 2;
-				const int y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
-				const int v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
+				const s32 y0_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 0 : 3;
+				const s32 u_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 1 : 2;
+				const s32 y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
+				const s32 v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
 
 				for (u32 y = y_begin; y < height && y < y_end; y++)
 				{
@@ -197,19 +216,19 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 
 					for (u32 x = 0; x < width - 1; x += 2, src += 8)
 					{
-						const float r1 = src[0];
-						const float g1 = src[1];
-						const float b1 = src[2];
-						const float r2 = src[4];
-						const float g2 = src[5];
-						const float b2 = src[6];
+						const f32 r1 = src[0];
+						const f32 g1 = src[1];
+						const f32 b1 = src[2];
+						const f32 r2 = src[4];
+						const f32 g2 = src[5];
+						const f32 b2 = src[6];
 
-						const int y0 =  (0.257f * r1) + (0.504f * g1) + (0.098f * b1) +  16.0f;
-						const int u  = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
-						const int v  =  (0.439f * r1) - (0.368f * g1) - (0.071f * b1) + 128.0f;
-						const int y1 =  (0.257f * r2) + (0.504f * g2) + (0.098f * b2) +  16.0f;
+						const s32 y0 =  (0.257f * r1) + (0.504f * g1) + (0.098f * b1) +  16.0f;
+						const s32 u  = -(0.148f * r1) - (0.291f * g1) + (0.439f * b1) + 128.0f;
+						const s32 v  =  (0.439f * r1) - (0.368f * g1) - (0.071f * b1) + 128.0f;
+						const s32 y1 =  (0.257f * r2) + (0.504f * g2) + (0.098f * b2) +  16.0f;
 
-						const int yuv_index = x * yuv_bytes_per_pixel;
+						const s32 yuv_index = x * yuv_bytes_per_pixel;
 						yuv_row_ptr[yuv_index + y0_offset] = static_cast<u8>(std::clamp(y0, 0, 255));
 						yuv_row_ptr[yuv_index + u_offset]  = static_cast<u8>(std::clamp( u, 0, 255));
 						yuv_row_ptr[yuv_index + y1_offset] = static_cast<u8>(std::clamp(y1, 0, 255));

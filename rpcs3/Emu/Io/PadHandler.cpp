@@ -874,12 +874,12 @@ void PadHandlerBase::set_raw_orientation(ps_move_data& move_data, f32 accel_x, f
 	// The default position is flat on the ground, pointing forward.
 	// The accelerometers constantly measure G forces.
 	// The gyros measure changes in orientation and will reset when the device isn't moved anymore.
-	move_data.accelerometer_x = -accel_x;      // move_data: Increases if the device is rolled to the left
-	move_data.accelerometer_y = accel_z;       // move_data: Increases if the device is pitched upwards
-	move_data.accelerometer_z = accel_y;       // move_data: Increases if the device is moved upwards
-	move_data.gyro_x = degree_to_rad(-gyro_x); // move_data: Increases if the device is pitched upwards
-	move_data.gyro_y = degree_to_rad(gyro_z);  // move_data: Increases if the device is rolled to the right
-	move_data.gyro_z = degree_to_rad(-gyro_y); // move_data: Increases if the device is yawed to the left
+	move_data.accelerometer.x() = -accel_x;      // move_data: Increases if the device is rolled to the left
+	move_data.accelerometer.y() = accel_z;       // move_data: Increases if the device is pitched upwards
+	move_data.accelerometer.z() = accel_y;       // move_data: Increases if the device is moved upwards
+	move_data.gyro.x() = degree_to_rad(-gyro_x); // move_data: Increases if the device is pitched upwards
+	move_data.gyro.y() = degree_to_rad(gyro_z);  // move_data: Increases if the device is rolled to the right
+	move_data.gyro.z() = degree_to_rad(-gyro_y); // move_data: Increases if the device is yawed to the left
 }
 
 void PadHandlerBase::set_raw_orientation(Pad& pad)
@@ -950,7 +950,7 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	// Get elapsed time since last update
 	const u64 now_us = get_system_time();
-	const float elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
+	const f32 elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
 	last_ahrs_update_time_us = now_us;
 
 	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
@@ -959,17 +959,17 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	const FusionVector accelerometer{
 		.axis {
-			.x = -move_data.accelerometer_x,
-			.y = +move_data.accelerometer_y,
-			.z = +move_data.accelerometer_z
+			.x = -move_data.accelerometer.x(),
+			.y = +move_data.accelerometer.y(),
+			.z = +move_data.accelerometer.z()
 		}
 	};
 
 	const FusionVector gyroscope{
 		.axis {
-			.x = +PadHandlerBase::rad_to_degree(move_data.gyro_x),
-			.y = +PadHandlerBase::rad_to_degree(move_data.gyro_z),
-			.z = -PadHandlerBase::rad_to_degree(move_data.gyro_y)
+			.x = +PadHandlerBase::rad_to_degree(move_data.gyro.x()),
+			.y = +PadHandlerBase::rad_to_degree(move_data.gyro.z()),
+			.z = -PadHandlerBase::rad_to_degree(move_data.gyro.y())
 		}
 	};
 
@@ -979,9 +979,9 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	{
 		magnetometer = FusionVector{
 			.axis {
-				.x = move_data.magnetometer_x,
-				.y = move_data.magnetometer_y,
-				.z = move_data.magnetometer_z
+				.x = move_data.magnetometer.x(),
+				.y = move_data.magnetometer.y(),
+				.z = move_data.magnetometer.z()
 			}
 		};
 	}
@@ -995,4 +995,5 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	move_data.quaternion[1] = quaternion.array[2];
 	move_data.quaternion[2] = quaternion.array[3];
 	move_data.quaternion[3] = quaternion.array[0];
+	move_data.update_orientation(elapsed_sec);
 }

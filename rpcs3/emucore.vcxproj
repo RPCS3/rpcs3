@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang;$(SolutionDir)3rdparty\curl\curl\include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -91,6 +91,7 @@
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\MouseHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_types.cpp" />
+    <ClCompile Include="Emu\Io\ps_move_data.cpp" />
     <ClCompile Include="Emu\Io\rb3drums_config.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiDrums.cpp" />
     <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp" />
@@ -111,6 +112,7 @@
     <ClCompile Include="Emu\IPC_config.cpp" />
     <ClCompile Include="Emu\IPC_socket.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
+    <ClCompile Include="Emu\NP\clans_config.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
     <ClCompile Include="Emu\NP\rpcn_countries.cpp" />
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
@@ -156,8 +158,11 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\FPASM.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\FPOpcodes.cpp" />
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp" />
-    <ClCompile Include="Emu\RSX\Program\FragmentProgramRegister.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.cpp" />
+    <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.cpp" />
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
     <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp" />
@@ -184,6 +189,7 @@
     <ClCompile Include="Emu\NP\np_requests.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
     <ClCompile Include="Emu\NP\np_structs_extra.cpp" />
+    <ClCompile Include="Emu\NP\clans_client.cpp" />
     <ClCompile Include="Emu\NP\rpcn_client.cpp" />
     <ClCompile Include="Emu\NP\ip_address.cpp" />
     <ClCompile Include="Emu\vfs_config.cpp" />
@@ -601,6 +607,7 @@
     <ClInclude Include="Emu\Io\pad_config.h" />
     <ClInclude Include="Emu\Io\pad_config_types.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
+    <ClInclude Include="Emu\Io\ps_move_data.h" />
     <ClInclude Include="Emu\Io\rb3drums_config.h" />
     <ClInclude Include="Emu\Io\RB3MidiDrums.h" />
     <ClInclude Include="Emu\Io\RB3MidiGuitar.h" />
@@ -701,8 +708,11 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h" />
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\CFG.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\FPASM.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\FPOpcodes.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\IR.h" />
-    <ClInclude Include="Emu\RSX\Program\FragmentProgramRegister.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterAnnotationPass.h" />
+    <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.h" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Program\program_util.h" />

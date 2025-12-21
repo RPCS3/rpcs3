@@ -5,7 +5,7 @@
 
 extern std::string g_input_config_override;
 
-std::vector<std::string> cfg_pad::get_buttons(const std::string& str)
+std::vector<std::string> cfg_pad::get_buttons(std::string_view str)
 {
 	std::vector<std::string> vec = fmt::split(str, {","});
 

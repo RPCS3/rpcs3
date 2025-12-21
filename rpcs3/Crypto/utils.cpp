@@ -12,6 +12,7 @@
 #include <cstring>
 #include <cstdio>
 #include <ctime>
+#include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 

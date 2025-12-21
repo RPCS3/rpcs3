@@ -89,8 +89,8 @@ namespace logs
 		z_stream m_zs{};
 		shared_mutex m_m{};
 
-		atomic_t<u64, 64> m_buf{0}; // MSB (39 bits): push begin, LSB (25 bis): push size
-		atomic_t<u64, 64> m_out{0}; // Amount of bytes written to file
+		atomic_t<u64, 128> m_buf{0}; // MSB (39 bits): push begin, LSB (25 bis): push size
+		atomic_t<u64, 128> m_out{0}; // Amount of bytes written to file
 
 		uchar m_zout[65536]{};
 

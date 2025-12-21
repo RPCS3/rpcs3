@@ -148,7 +148,7 @@ std::vector<pad_list_entry> mm_joystick_handler::list_devices()
 template <typename T>
 std::set<T> mm_joystick_handler::find_keys(const cfg::string& cfg_string) const
 {
-	return find_keys<T>(cfg_pad::get_buttons(cfg_string));
+	return find_keys<T>(cfg_pad::get_buttons(cfg_string.to_string()));
 }
 
 template <typename T>

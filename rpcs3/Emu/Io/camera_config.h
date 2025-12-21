@@ -19,9 +19,9 @@ struct cfg_camera final : cfg::node
 		static constexpr u32 member_count = 5;
 
 		std::string to_string() const;
-		void from_string(const std::string& text);
+		void from_string(std::string_view text);
 	};
-	camera_setting get_camera_setting(const std::string& camera, bool& success);
+	camera_setting get_camera_setting(std::string_view camera, bool& success);
 	void set_camera_setting(const std::string& camera, const camera_setting& setting);
 
 	const std::string path;

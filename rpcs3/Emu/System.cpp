@@ -1866,8 +1866,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// PS1 Classic located in dev_hdd0/game
 			sys_log.notice("PS1 Game: %s, %s", m_title_id, m_title);
 
-			const std::string tail = m_path.substr(hdd0_game.size());
-			const std::string dirname = fmt::trim_front(tail, fs::delim).substr(0, tail.find_first_of(fs::delim));
+			const std::string_view tail = std::string_view(m_path).substr(hdd0_game.size());
+			const std::string dirname = std::string(fmt::trim_front_sv(tail, fs::delim).substr(0, tail.find_first_of(fs::delim)));
 			const std::string game_path = "/dev_hdd0/game/" + dirname;
 
 			argv.resize(9);
@@ -1894,8 +1894,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// PSP Remaster located in dev_hdd0/game
 			sys_log.notice("PSP Remaster Game: %s, %s", m_title_id, m_title);
 
-			const std::string tail = m_path.substr(hdd0_game.size());
-			const std::string dirname = fmt::trim_front(tail, fs::delim).substr(0, tail.find_first_of(fs::delim));
+			const std::string_view tail = std::string_view(m_path).substr(hdd0_game.size());
+			const std::string dirname = std::string(fmt::trim_front_sv(tail, fs::delim).substr(0, tail.find_first_of(fs::delim)));
 			const std::string game_path = "/dev_hdd0/game/" + dirname;
 
 			argv.resize(2);
@@ -1913,7 +1913,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Add HG games not in HDD0 to games.yml
 				[[maybe_unused]] const games_config::result res = m_games_config.add_external_hdd_game(m_title_id, game_dir);
 
-				const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
+				const std::string dir = std::string(fmt::trim_sv(std::string_view(game_dir).substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim));
 				vfs::mount("/dev_hdd0/game/" + dir, game_dir + '/');
 			}
 		}
@@ -2265,10 +2265,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				auto unescape = [](std::string_view path)
 				{
 					// Unescape from host FS
-					std::vector<std::string> escaped = fmt::split(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+					const std::vector<std::string_view> escaped = fmt::split_sv(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
 					std::vector<std::string> result;
-					for (auto& sv : escaped)
-						result.emplace_back(vfs::unescape(sv));
+					for (const auto& sv : escaped)
+						result.push_back(vfs::unescape(sv));
 
 					return fmt::merge(result, "/");
 				};
@@ -2315,7 +2315,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						game_dir = game_dir.substr(0, game_dir.size() - 4);
 					}
 
-					const std::string dir = fmt::trim(game_dir.substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim);
+					const std::string dir = std::string(fmt::trim_sv(std::string_view(game_dir).substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim));
 
 					m_dir = "/dev_hdd0/game/" + dir + '/';
 					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(game_dir).size()));
