@@ -666,6 +666,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::yaml-cpp
         3rdparty::zlib
         3rdparty::zstd
+        3rdparty::libcurl
 )
 
 if(APPLE)
