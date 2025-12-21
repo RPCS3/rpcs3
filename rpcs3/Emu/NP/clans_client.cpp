@@ -475,34 +475,34 @@ namespace clan
 			return clan_res;
 
 		pugi::xml_node clan_result = response.child("clan");
-		pugi::xml_node info = clan_result.child("info");
+		pugi::xml_node member_info = clan_result.child("info");
 
-		pugi::xml_attribute jid = info.attribute("jid");
-		std::string npid_str = jid.as_string();
-		std::string username = fmt::split(npid_str, {"@"})[0];
+		pugi::xml_attribute member_jid = member_info.attribute("jid");
+		std::string member_jid_str = member_jid.as_string();
+		std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
-		SceNpId npid;
-		if (!strcmp(username.c_str(), nph.get_npid().handle.data))
+		SceNpId member_npid;
+		if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 		{
-			npid = nph.get_npid();
+			member_npid = nph.get_npid();
 		}
 		else
 		{
-			np::string_to_npid(npid_str, npid);
+			np::string_to_npid(member_username, member_npid);
 		}
 
-		pugi::xml_node role = info.child("role");
+		pugi::xml_node role = member_info.child("role");
 		uint32_t role_int = role.text().as_uint();
 
-		pugi::xml_node status = info.child("status");
+		pugi::xml_node status = member_info.child("status");
 		uint32_t status_int = status.text().as_uint();
 
-		pugi::xml_node description = info.child("description");
+		pugi::xml_node description = member_info.child("description");
 		std::string description_str = description.text().as_string();
 
 		*mem_info = SceNpClansMemberEntry
 		{
-			.npid = npid,
+			.npid = member_npid,
 			.role = static_cast<SceNpClansMemberRole>(role_int),
 			.status = static_cast<SceNpClansMemberStatus>(status_int),
 			.updatable = SceNpClansUpdatableMemberInfo{
@@ -544,28 +544,28 @@ namespace clan
         uint32_t total_count = total.as_uint();
         
         int i = 0;
-        for (pugi::xml_node info = list.child("info"); info; info = info.next_sibling("info"))
+        for (pugi::xml_node member_info = list.child("info"); member_info; member_info = member_info.next_sibling("info"))
         {
-            std::string npid_str = info.attribute("jid").as_string();
-			std::string username = fmt::split(npid_str, {"@"})[0];
+            std::string member_jid = member_info.attribute("jid").as_string();
+			std::string member_username = fmt::split(member_jid, {"@"})[0];
 
-			SceNpId npid;
-			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
+			SceNpId member_npid;
+			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 			{
-				npid = nph.get_npid();
+				member_npid = nph.get_npid();
 			}
 			else
 			{
-				np::string_to_npid(npid_str, npid);
+				np::string_to_npid(member_username, member_npid);
 			}
 
-            uint32_t role_int = info.child("role").text().as_uint();
-            uint32_t status_int = info.child("status").text().as_uint();
-            std::string description_str = info.child("description").text().as_string();
+            uint32_t role_int = member_info.child("role").text().as_uint();
+            uint32_t status_int = member_info.child("status").text().as_uint();
+            std::string description_str = member_info.child("description").text().as_string();
 
             SceNpClansMemberEntry entry = SceNpClansMemberEntry
             {
-                .npid = npid,
+                .npid = member_npid,
                 .role = static_cast<SceNpClansMemberRole>(role_int),
                 .status = static_cast<SceNpClansMemberStatus>(status_int),
             };
@@ -612,17 +612,25 @@ namespace clan
         uint32_t total_count = total.as_uint();
 
         int i = 0;
-        for (pugi::xml_node node = list.child("entry"); node; node = node.next_sibling("entry"))
+        for (pugi::xml_node member = list.child("entry"); member; member = member.next_sibling("entry"))
         {
-            pugi::xml_node id = node.child("jid");
-            std::string npid_str = id.text().as_string();
+            pugi::xml_node member_jid = member.child("jid");
+            std::string member_jid_str = member_jid.text().as_string();
+			std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
-			SceNpId npid = {};
-            np::string_to_npid(npid_str.c_str(), npid);
+			SceNpId member_npid = {};
+			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
+			{
+				member_npid = nph.get_npid();
+			}
+			else
+			{
+				np::string_to_npid(member_username.c_str(), member_npid);
+			}
 
             SceNpClansBlacklistEntry entry = SceNpClansBlacklistEntry
             {
-                .entry = npid,
+                .entry = member_npid,
             };
 
             bl[i] = entry;
@@ -1047,19 +1055,19 @@ namespace clan
 
 			std::string subject_str = node.child("subject").text().as_string();
 			std::string msg_str = node.child("msg").text().as_string();
-			std::string npid_str = node.child("jid").text().as_string();
+			std::string author_jid = node.child("jid").text().as_string();
 			std::string msg_date = node.child("msg-date").text().as_string();
 
-			SceNpId npid;
-			std::string username = fmt::split(npid_str, {"@"})[0];
+			SceNpId author_npid;
+			std::string author_username = fmt::split(author_jid, {"@"})[0];
 
-			if (!strcmp(username.c_str(), nph.get_npid().handle.data))
+			if (strncmp(author_username.c_str(), nph.get_npid().handle.data, 16) == 0)
 			{
-				npid = nph.get_npid();
+				author_npid = nph.get_npid();
 			}
 			else
 			{
-				np::string_to_npid(npid_str, npid);
+				np::string_to_npid(author_username, author_npid);
 			}
 
 			// TODO: implement `binData` and `fromId`
@@ -1071,7 +1079,7 @@ namespace clan
 					.subject = "",
 					.body = "",
 				},
-				.npid = npid,
+				.npid = author_npid,
 				.postedBy = clan_id,
 			};
 
