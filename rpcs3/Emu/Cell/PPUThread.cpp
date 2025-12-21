@@ -4142,12 +4142,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					continue;
 				}
 
-				//std::unique_lock lock(g_fxo->get<jit_core_allocator>().sem);
-
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
-					//.unlock();
 					ppu_initialize(*prx, false, file_size);
 					ppu_finalize(*prx, true);
 					continue;
