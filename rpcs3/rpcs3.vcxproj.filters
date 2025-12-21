@@ -915,9 +915,6 @@
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\rpcn</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp">
-      <Filter>Gui\clans</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
     </ClCompile>
@@ -1244,6 +1241,9 @@
     </ClCompile>
     <ClCompile Include="gamemode_control.cpp">
       <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp">
+      <Filter>Gui\rpcn</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

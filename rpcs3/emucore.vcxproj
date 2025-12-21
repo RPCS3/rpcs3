@@ -627,6 +627,8 @@
     <ClInclude Include="Emu\IPC_socket.h" />
     <ClInclude Include="Emu\localized_string.h" />
     <ClInclude Include="Emu\localized_string_id.h" />
+    <ClInclude Include="Emu\NP\clans_client.h" />
+    <ClInclude Include="Emu\NP\clans_config.h" />
     <ClInclude Include="Emu\NP\fb_helpers.h" />
     <ClInclude Include="Emu\NP\generated\np2_structs_generated.h" />
     <ClInclude Include="Emu\NP\np_contexts.h" />
