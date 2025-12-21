@@ -812,14 +812,20 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		}
 
 #ifdef _WIN32
-		LARGE_INTEGER freq;
+		LARGE_INTEGER freq{};
 		if (!QueryPerformanceFrequency(&freq))
 		{
 			return 0;
 		}
 
-		if (freq.QuadPart <= 9'999'999)
+		if (!freq.QuadPart)
 		{
+			return 0;
+		}
+
+		if (freq.QuadPart <= 50'000)
+		{
+			// Bad precision
 			return 0;
 		}
 
@@ -890,7 +896,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		const ullong sec_base = ts0.tv_sec;
 #endif
 
-		constexpr usz sleep_time_ms = 40;
+		const usz sleep_time_ms = timer_freq <= 300'000 ? (300'000 * 50) / timer_freq : 50;
 
 		for (usz sample = 0; sample < sample_count; sample++)
 		{
