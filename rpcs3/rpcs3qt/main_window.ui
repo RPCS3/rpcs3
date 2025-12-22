@@ -282,6 +282,7 @@
     <addaction name="confGuiAct"/>
     <addaction name="separator"/>
     <addaction name="confRPCNAct"/>
+    <addaction name="confClansAct"/>
     <addaction name="confIPCAct"/>
     <addaction name="separator"/>
     <addaction name="confShortcutsAct"/>
@@ -1250,6 +1251,14 @@
    </property>
    <property name="toolTip">
     <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="confClansAct">
+   <property name="text">
+    <string>Clans</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Clans</string>
    </property>
   </action>
   <action name="confIPCAct">

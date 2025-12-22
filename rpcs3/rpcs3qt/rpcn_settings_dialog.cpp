@@ -196,7 +196,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	setLayout(vbox_global);
 
-	connect(cbx_servers, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(cbx_servers, &QComboBox::currentIndexChanged, this, [this](int index)
 		{
 			if (index < 0)
 				return;

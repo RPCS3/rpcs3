@@ -17,6 +17,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
+#elif __APPLE__
+#include <os/os_sync_wait_on_address.h>
 #endif
 
 #ifdef _WIN32
@@ -76,21 +78,71 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 {
 #ifdef __linux__
 	return syscall(SYS_futex, uaddr, futex_op, static_cast<int>(val), timeout, nullptr, static_cast<int>(mask));
+#elif __APPLE__
+	switch (futex_op)
+	{
+	case FUTEX_WAIT_PRIVATE:
+	case FUTEX_WAIT_BITSET_PRIVATE:
+	{
+		if (timeout)
+		{
+			const uint64_t nsec = timeout->tv_nsec + timeout->tv_sec * 1000000000ull;
+			return os_sync_wait_on_address_with_timeout(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE, OS_CLOCK_MACH_ABSOLUTE_TIME, nsec);
+		}
+		else
+		{
+			return os_sync_wait_on_address(const_cast<void*>(uaddr), static_cast<uint64_t>(val), sizeof(uint), OS_SYNC_WAIT_ON_ADDRESS_NONE);
+		}
+	}
+
+	case FUTEX_WAKE_PRIVATE:
+	case FUTEX_WAKE_BITSET_PRIVATE:
+	{
+		for (;;)
+		{
+			int ret = 0;
+			if (val == INT32_MAX)
+			{
+				ret = os_sync_wake_by_address_all(const_cast<void*>(uaddr), sizeof(uint), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+			}
+			else if (val-- >= 0)
+			{
+				ret = os_sync_wake_by_address_any(const_cast<void*>(uaddr), sizeof(uint), OS_SYNC_WAKE_BY_ADDRESS_NONE);
+			}
+			if (val <= 0 || val == INT32_MAX || (ret < 0 && errno == ENOENT))
+			{
+				return ret;
+			}
+		}
+	}
+	}
+	errno = EINVAL;
+	return -1;
 #else
 	static struct futex_manager
 	{
 		struct waiter
 		{
-			 uint val;
-			 uint mask;
-			 std::condition_variable cv;
+			uint val;
+			uint mask;
+			std::condition_variable cv;
 		};
 
-		std::mutex mutex;
-		std::unordered_multimap<volatile void*, waiter*> map;
+		struct bucket_t
+		{
+			std::mutex mutex;
+			std::unordered_multimap<volatile void*, waiter*> map;
+		};
+
+		// Not a power of 2 on purpose (for alignment optimiations)
+		bucket_t bucks[63];
 
 		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{
+			auto& bucket = bucks[(reinterpret_cast<u64>(uaddr) / 8) % std::size(bucks)];
+			auto& mutex = bucket.mutex;
+			auto& map = bucket.map;
+
 			std::unique_lock lock(mutex);
 
 			switch (futex_op)
@@ -111,7 +163,9 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 				waiter rec;
 				rec.val = val;
 				rec.mask = mask;
-				const auto& ref = *map.emplace(uaddr, &rec);
+
+				// Announce the waiter
+				map.emplace(uaddr, &rec);
 
 				int res = 0;
 
@@ -127,6 +181,16 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 					{
 						res = -1;
 						errno = ETIMEDOUT;
+
+						// Cleanup
+						for (auto range = map.equal_range(uaddr); range.first != range.second; range.first++)
+						{
+							if (range.first->second == &rec)
+							{
+								map.erase(range.first);
+								break;
+							}
+						}
 					}
 				}
 				else
@@ -134,7 +198,6 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 					// TODO: absolute timeout
 				}
 
-				map.erase(std::find(map.find(uaddr), map.end(), ref));
 				return res;
 			}
 
@@ -153,10 +216,26 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 
 					if (entry.mask & mask)
 					{
-						entry.cv.notify_one();
 						entry.mask = 0;
+						entry.cv.notify_one();
 						res++;
 						val--;
+					}
+				}
+
+				if (res)
+				{
+					// Cleanup
+					for (auto range = map.equal_range(uaddr); range.first != range.second;)
+					{
+						if (range.first->second->mask == 0)
+						{
+							map.erase(range.first);
+							range = map.equal_range(uaddr);
+							continue;
+						}
+
+						range.first++;
 					}
 				}
 

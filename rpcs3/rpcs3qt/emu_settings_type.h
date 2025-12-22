@@ -200,6 +200,7 @@ enum class emu_settings_type
 	BindAddress,
 	EnableUpnp,
 	PSNCountry,
+	EnableClans,
 
 	// System
 	LicenseArea,
@@ -239,7 +240,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::XFloatAccuracy,           { "Core", "XFloat Accuracy"}},
 	{ emu_settings_type::MFCCommandsShuffling,     { "Core", "MFC Commands Shuffling Limit"}},
 	{ emu_settings_type::SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
-	{ emu_settings_type::SPUBlockSize,             { "Core", "SPU Analyzer Block Size"}},
+	{ emu_settings_type::SPUBlockSize,             { "Core", "SPU Block Size"}},
 	{ emu_settings_type::SPUCache,                 { "Core", "SPU Cache"}},
 	{ emu_settings_type::DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 	{ emu_settings_type::MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
@@ -411,6 +412,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
 	{ emu_settings_type::EnableUpnp,     { "Net", "UPNP Enabled"}},
 	{ emu_settings_type::PSNCountry,     { "Net", "PSN Country"}},
+	{ emu_settings_type::EnableClans,     { "Net", "Clans Enabled"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},

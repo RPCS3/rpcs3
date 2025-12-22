@@ -273,7 +273,7 @@ void CgBinaryDisasm::TaskFP()
 		src2.HEX = GetData(data[3]);
 
 		m_step = 4 * sizeof(u32);
-		m_opcode = dst.opcode | (src1.opcode_is_branch << 6);
+		m_opcode = dst.opcode | (src1.opcode_hi << 6);
 
 		auto SCT = [&]()
 		{

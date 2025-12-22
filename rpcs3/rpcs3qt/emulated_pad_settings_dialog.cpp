@@ -302,7 +302,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 
 			combo->setCurrentIndex(combo->findData(static_cast<int>(saved_btn_id)));
 
-			connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, id, combo](int index)
+			connect(combo, &QComboBox::currentIndexChanged, this, [this, player, id, combo](int index)
 			{
 				if (index < 0 || !combo)
 					return;

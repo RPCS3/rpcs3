@@ -4,6 +4,7 @@
 #include "Emu/NP/np_allocator.h"
 #include "Emu/NP/np_cache.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/NP/np_structs_extra.h"
 
 LOG_CHANNEL(np_cache);
 
@@ -154,6 +155,8 @@ namespace np
 
 		slots.openPublicSlotNum  = open_public_slots;
 		slots.openPrivateSlotNum = open_private_slots;
+
+		extra_nps::print_SceNpMatching2RoomSlotInfo(&slots);
 
 		return {CELL_OK, slots};
 	}

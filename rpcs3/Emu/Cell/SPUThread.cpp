@@ -488,7 +488,7 @@ waitpkg_func static void __tpause(u32 cycles, u32 cstate)
 
 namespace vm
 {
-	std::array<atomic_t<reservation_waiter_t>, 2048> g_resrv_waiters_count{};
+	std::array<atomic_t<reservation_waiter_t, 128>, 1024> g_resrv_waiters_count{};
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
@@ -499,7 +499,7 @@ const spu_decoder<spu_itype> s_spu_itype;
 
 namespace vm
 {
-	extern atomic_t<u64, 64> g_range_lock_set[64];
+	extern atomic_t<u64, 128> g_range_lock_set[64];
 
 	// Defined here for performance reasons
 	writer_lock::~writer_lock() noexcept
@@ -2000,7 +2000,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		cpu_thread* _cpu = _this ? _this : get_current_cpu_thread();
 
-		atomic_t<u64, 64>* range_lock = nullptr;
+		atomic_t<u64, 128>* range_lock = nullptr;
 
 		if (!_this) [[unlikely]]
 		{
@@ -4928,12 +4928,12 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data, u32 cu
 	return !res;
 }
 
-bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_lock)
+bool spu_thread::reservation_check(u32 addr, u32 hash, atomic_t<u64, 128>* range_lock)
 {
 	if ((addr >> 28) < 2 || (addr >> 28) == 0xd)
 	{
 		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
-		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) == hash;
+		return compute_rdata_hash32(*vm::get_super_ptr<decltype(rdata)>(addr)) != hash;
 	}
 
 	// Ensure data is allocated (HACK: would raise LR event if not)
@@ -5066,6 +5066,8 @@ void spu_thread::deregister_cache_line_waiter(usz index)
 	{
 		return;
 	}
+
+	ensure(index < std::size(g_spu_waiters_by_value));
 
 	g_spu_waiters_by_value[index].atomic_op([](u64& x)
 	{

@@ -864,6 +864,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_downloader.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_clans_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_clans_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcn_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -908,6 +914,9 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\rpcn</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp">
+      <Filter>Gui\clans</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
@@ -1697,6 +1706,9 @@
       <Filter>Gui\patch manager</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\rpcn_settings_dialog.h">
+      <Filter>Gui\rpcn</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\clans_settings_dialog.h">
       <Filter>Gui\rpcn</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">

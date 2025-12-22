@@ -553,7 +553,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	reset_zcull_options();
 	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, reset_zcull_options);
 
-	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	connect(ui->zcullPrecisionMode, &QComboBox::currentIndexChanged, [this](int index)
 	{
 		if (index < 0) return;
 
@@ -589,7 +589,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
 		};
-		connect(ui->resBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [enable_3D_modes](int){ enable_3D_modes(); });
+		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
 		enable_3D_modes();
 	}
@@ -872,7 +872,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	apply_fsr_specific_options();
 	connect(ui->renderBox, &QComboBox::currentTextChanged, apply_renderer_specific_options);
 	connect(ui->renderBox, &QComboBox::currentTextChanged, this, apply_fsr_specific_options);
-	connect(ui->outputScalingMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply_fsr_specific_options);
+	connect(ui->outputScalingMode, &QComboBox::currentIndexChanged, this, apply_fsr_specific_options);
 
 	//                      _ _         _______    _
 	//       /\            | (_)       |__   __|  | |
@@ -997,7 +997,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [change_audio_output_device, get_audio_output_devices](int)
+	connect(ui->audioOutBox, &QComboBox::currentIndexChanged, this, [change_audio_output_device, get_audio_output_devices](int)
 	{
 		get_audio_output_devices(false);
 		change_audio_output_device(0); // Set device to 'Default'
@@ -1006,7 +1006,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->combo_audio_channel_layout, emu_settings_type::AudioChannelLayout);
 	SubscribeTooltip(ui->gb_audio_channel_layout, tooltips.settings.audio_channel_layout);
 
-	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(ui->combo_audio_format, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		const auto [text, value] = get_data(ui->combo_audio_format, index);
 		ui->list_audio_formats->setEnabled(static_cast<audio_format>(value) == audio_format::manual);
@@ -1071,7 +1071,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
 
 	SubscribeTooltip(ui->gb_audio_device, tooltips.settings.audio_device);
-	connect(ui->audioDeviceBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, change_audio_output_device);
+	connect(ui->audioDeviceBox, &QComboBox::currentIndexChanged, this, change_audio_output_device);
 	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); }); // Set device to 'Default'
 	get_audio_output_devices();
 
@@ -1111,7 +1111,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings_type::MicrophoneType);
 	SubscribeTooltip(ui->microphoneBox, tooltips.settings.microphone);
-	connect(ui->microphoneBox, QOverload<int>::of(&QComboBox::currentIndexChanged), change_microphone_type);
+	connect(ui->microphoneBox, &QComboBox::currentIndexChanged, change_microphone_type);
 	propagate_used_devices(); // Enables/Disables comboboxes and checks values from config for sanity
 
 	// Checkboxes
@@ -1184,7 +1184,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			cfg_log.error("The selected camera was not found. Selecting default camera as fallback.");
 			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(QString::fromStdString(default_camera)));
 		}
-		connect(ui->cameraIdBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+		connect(ui->cameraIdBox, &QComboBox::currentIndexChanged, this, [this](int index)
 		{
 			if (index >= 0) m_emu_settings->SetSetting(emu_settings_type::CameraID, ui->cameraIdBox->itemData(index).toString().toStdString());
 		});
@@ -1424,7 +1424,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Comboboxes
 
-	connect(ui->netStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	connect(ui->netStatusBox, &QComboBox::currentIndexChanged, [this](int index)
 	{
 		if (index < 0) return;
 		const auto [text, value] = get_data(ui->netStatusBox, index);
@@ -1435,10 +1435,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			ui->psnStatusBox->setCurrentIndex(find_item(ui->psnStatusBox, static_cast<int>(g_cfg.net.psn_status.def)));
 			ui->psnStatusBox->setEnabled(false);
+			ui->enable_clans->setEnabled(false);
 		}
 		else
 		{
 			ui->psnStatusBox->setEnabled(true);
+			ui->enable_clans->setEnabled(true);
 		}
 	});
 	m_emu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings_type::InternetStatus);
@@ -1447,8 +1449,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
 
+	m_emu_settings->EnhanceCheckBox(ui->enable_clans, emu_settings_type::EnableClans);
+	SubscribeTooltip(ui->enable_clans, tooltips.settings.enable_clans);
+
 	settings_dialog::refresh_countrybox();
-	connect(ui->psnCountryBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	connect(ui->psnCountryBox, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		if (index < 0)
 			return;
@@ -2277,7 +2282,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->combo_updates->addItem(tr("Automatic", "Updates"), gui::update_auto);
 		ui->combo_updates->addItem(tr("No", "Updates"), gui::update_off);
 		ui->combo_updates->setCurrentIndex(ui->combo_updates->findData(m_gui_settings->GetValue(gui::m_check_upd_start).toString()));
-		connect(ui->combo_updates, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+		connect(ui->combo_updates, &QComboBox::currentIndexChanged, [this](int index)
 		{
 			if (index >= 0) m_gui_settings->SetValue(gui::m_check_upd_start, ui->combo_updates->itemData(index));
 		});
