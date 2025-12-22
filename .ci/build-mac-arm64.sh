@@ -77,8 +77,8 @@ mkdir build && cd build || exit 1
 export MACOSX_DEPLOYMENT_TARGET=14.4
 
 "$BREW_PATH/bin/cmake" .. \
-    -DBUILD_RPCS3_TESTS=OFF \
-    -DRUN_RPCS3_TESTS=OFF \
+    -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
+    -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \
     -DUSE_VULKAN=ON \
