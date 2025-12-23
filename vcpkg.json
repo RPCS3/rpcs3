@@ -4,6 +4,7 @@
   "builtin-baseline": "b94ab47c998b93fe72b0f501eaac70f96328019e",
   "dependencies": [
     {
+    "curl",
       "name": "ffmpeg",
       "features": [
         "avcodec",
