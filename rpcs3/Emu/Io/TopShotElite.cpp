@@ -274,7 +274,7 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 
 	if (m_controller_index >= g_cfg_topshotelite.players.size())
 	{
-		topshotelite_log.warning("Top Shot Fearmaster controllers are only supported for Player1 to Player%d", g_cfg_topshotelite.players.size());
+		topshotelite_log.warning("Top Shot Elite controllers are only supported for Player1 to Player%d", g_cfg_topshotelite.players.size());
 		prepare_data(&ts, buf);
 		return;
 	}
