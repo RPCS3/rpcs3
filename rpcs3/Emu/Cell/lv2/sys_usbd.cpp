@@ -878,7 +878,9 @@ std::pair<u32, UsbTransfer&> usb_handler_thread::get_free_transfer()
 
 	u32 transfer_id = get_free_transfer_id();
 	auto& transfer  = get_transfer(transfer_id);
-	transfer.busy   = true;
+
+	libusb_transfer* const transfer_buf = transfer.transfer;
+	transfer = {.transfer_id = transfer_id, .transfer = transfer_buf, .busy = true};
 
 	return {transfer_id, transfer};
 }
