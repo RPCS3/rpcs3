@@ -25,6 +25,12 @@
 #define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
 #define GL_COMPUTE_IMAGE_SLOT(index)           SSBO_SLOT(index)
 
+#ifdef __APPLE__
+#ifndef glNamedBufferStorageEXT
+#define glNamedBufferStorageEXT __glewBufferStorageEXT
+#endif
+#endif
+
 //Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
@@ -90,3 +96,4 @@ namespace gl
 		ensure(glGetError() != GL_OUT_OF_MEMORY);
 	}
 }
+
