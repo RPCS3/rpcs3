@@ -1044,6 +1044,14 @@ void VKGSRender::end()
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 	{
 		ds->write_barrier(*m_current_command_buffer);
+
+		if (m_graphics_state.test(rsx::zeta_address_cyclic_barrier) &&
+			ds->current_layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+		{
+			// We actually need to end the subpass as a minimum. Without this, early-Z optimiazations in following draws will clobber reads from previous draws and cause flickering.
+			// Since we're ending the subpass, might as well restore DCC/HiZ for extra performance
+			ds->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		}
 	}
 
 	for (auto &rtt : m_rtts.m_bound_render_targets)
@@ -1053,6 +1061,8 @@ void VKGSRender::end()
 			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
+
+	m_graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 
