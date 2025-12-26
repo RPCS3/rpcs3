@@ -715,7 +715,10 @@ void GLGSRender::end()
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	gl::command_context cmd{ gl_state };
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(cmd);
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	{
+		ds->write_barrier(cmd);
+	}
 
 	for (auto &rtt : m_rtts.m_bound_render_targets)
 	{
@@ -724,6 +727,8 @@ void GLGSRender::end()
 			surface->write_barrier(cmd);
 		}
 	}
+
+	m_graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	update_draw_state();
 
