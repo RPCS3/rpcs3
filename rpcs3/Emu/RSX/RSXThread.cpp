@@ -1740,14 +1740,7 @@ namespace rsx
 				}
 			}
 
-			if (::size32(mrt_buffers) != current_fragment_program.mrt_buffers_count &&
-				!m_graphics_state.test(rsx::pipeline_state::fragment_program_dirty) &&
-				!is_current_program_interpreted())
-			{
-				// Notify that we should recompile the FS
-				m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
-			}
-
+			on_framebuffer_layout_updated();
 			return any_found;
 		};
 
@@ -1843,6 +1836,22 @@ namespace rsx
 		default:
 			rsx_log.fatal("Unhandled framebuffer option changed 0x%x", opt);
 		}
+	}
+
+	void thread::on_framebuffer_layout_updated()
+	{
+		if (m_graphics_state.test(rsx::fragment_program_state_dirty))
+		{
+			return;
+		}
+
+		const auto target = m_ctx->register_state->surface_color_target();
+		if (rsx::utility::get_mrt_buffers_count(target) == current_fragment_program.mrt_buffers_count)
+		{
+			return;
+		}
+
+		m_graphics_state |= rsx::fragment_program_state_dirty;
 	}
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)
