@@ -281,11 +281,8 @@
     <addaction name="confEmuAct"/>
     <addaction name="confGuiAct"/>
     <addaction name="separator"/>
-    <addaction name="confRPCNAct"/>
-    <addaction name="confClansAct"/>
-    <addaction name="confIPCAct"/>
-    <addaction name="separator"/>
     <addaction name="confShortcutsAct"/>
+    <addaction name="actionManage_SoundEffects"/>
     <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
@@ -296,18 +293,35 @@
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
-    <addaction name="confSavedataManagerAct"/>
+    <widget class="QMenu" name="menuNetworkServices">
+     <property name="title">
+      <string>Network Services</string>
+     </property>
+     <addaction name="confRPCNAct"/>
+     <addaction name="confClansAct"/>
+     <addaction name="confIPCAct"/>
+    </widget>
+    <addaction name="menuNetworkServices"/>
+    <widget class="QMenu" name="menuPortals">
+     <property name="title">
+      <string>Portals and Gates</string>
+     </property>
+     <addaction name="actionManage_Skylanders_Portal"/>
+     <addaction name="actionManage_Infinity_Base"/>
+     <addaction name="actionManage_Dimensions_ToyPad"/>
+     <addaction name="actionManage_KamenRider_RideGate"/>
+    </widget>
+    <addaction name="menuPortals"/>
+    <addaction name="separator"/>
     <addaction name="actionManage_RAP_Licenses"/>
+    <addaction name="confSavedataManagerAct"/>
     <addaction name="actionManage_Trophy_Data"/>
     <addaction name="actionManage_Savestates"/>
-    <addaction name="actionManage_Skylanders_Portal"/>
-    <addaction name="actionManage_Infinity_Base"/>
-    <addaction name="actionManage_Dimensions_ToyPad"/>
-    <addaction name="actionManage_KamenRider_RideGate"/>
+    <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="separator"/>
     <addaction name="actionManage_Screenshots"/>
-    <addaction name="actionManage_SoundEffects"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
