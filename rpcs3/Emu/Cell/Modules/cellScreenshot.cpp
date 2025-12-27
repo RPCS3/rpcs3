@@ -46,22 +46,6 @@ std::string screenshot_info::get_game_comment() const
 	return game_comment;
 }
 
-std::string screenshot_info::get_screenshot_path(s32 year, s32 month, s32 day, s32 hour, s32 minute, s32 second) const
-{
-	u32 counter = 0;
-	const std::string path = vfs::get(fmt::format("/dev_hdd0/photo/%04d/%02d/%02d/%s %02d-%02d-%04d %02d-%02d-%02d",
-	                                              year, month, day, vfs::escape(get_photo_title(), true), day, month, year, hour, minute, second));
-	constexpr std::string_view extension = ".png";
-	std::string suffix = std::string(extension);
-
-	while (!Emu.IsStopped() && fs::is_file(path + suffix))
-	{
-		suffix = fmt::format(" %d%s", ++counter, extension);
-	}
-
-	return path + suffix;
-}
-
 
 error_code cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 {
