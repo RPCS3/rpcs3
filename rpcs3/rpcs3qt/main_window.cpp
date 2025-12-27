@@ -2986,10 +2986,28 @@ void main_window::CreateConnects()
 		dlg.exec();
 	});
 
-	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
 	{
-		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
-		dlg->show();
+		rpcn_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confClansAct, &QAction::triggered, this, [this]()
+	{
+		if (!Emu.IsStopped())
+		{
+			QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
+			return;
+		}
+		
+		clans_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
+	{
+		ipc_settings_dialog dlg(this);
+		dlg.exec();
 	});
 
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, this, [this]()
@@ -3004,37 +3022,6 @@ void main_window::CreateConnects()
 		dlg.exec();
 		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
 		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
-	});
-
-	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
-	{
-		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
-		user_manager.exec();
-		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
-	});
-
-	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
-	{
-		rpcn_settings_dialog dlg(this);
-		dlg.exec();
-	});
-
-	connect(ui->confClansAct, &QAction::triggered, this, [this]()
-	{
-		if (!Emu.IsStopped())
-		{
-			QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
-			return;
-		}
-
-		clans_settings_dialog dlg(this);
-		dlg.exec();
-	});
-
-	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
-	{
-		ipc_settings_dialog dlg(this);
-		dlg.exec();
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
@@ -3101,10 +3088,23 @@ void main_window::CreateConnects()
 		patch_creator.exec();
 	});
 
+	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
+	{
+		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
+		user_manager.exec();
+		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+	});
+
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
 	{
 		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
 		screenshot_manager->show();
+	});
+
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	{
+		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
+		dlg->show();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
