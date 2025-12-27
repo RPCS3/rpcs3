@@ -264,6 +264,7 @@ namespace vk
 			}
 
 			builder << "\n"
+				"#define TEX_PARAM(index) texture_parameters[index + texture_base_index]\n"
 				"#define IS_TEXTURE_RESIDENT(index) true\n"
 				"#define SAMPLER1D(index) sampler1D_array[index]\n"
 				"#define SAMPLER2D(index) sampler2D_array[index]\n"
