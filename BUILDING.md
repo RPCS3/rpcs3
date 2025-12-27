@@ -108,9 +108,10 @@ Clone and initialize the repository
 ```bash
 git clone --recurse-submodules https://github.com/RPCS3/rpcs3.git
 cd rpcs3
+git submodule sync
 # This is automatically done by `git clone --recurse-submodules`,
 # but in case you forgot it, you can manually fetch submodules this way:
-git submodule update --init
+git submodule update --init --recursive
 ```
 
 ### Windows

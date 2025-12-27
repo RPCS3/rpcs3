@@ -39,7 +39,7 @@ kamen_rider_figure& rider_gate::get_figure_by_uid(const std::array<u8, 7> uid)
 	return figures[7];
 }
 
-void rider_gate::get_blank_response(u8 command, u8 sequence, std::array<u8, 64>& reply_buf)
+void rider_gate::get_blank_response(std::array<u8, 64>& reply_buf, u8 command, u8 sequence)
 {
 	reply_buf = {0x55, 0x02, command, sequence};
 	reply_buf[4] = generate_checksum(reply_buf, 4);
@@ -93,7 +93,7 @@ void rider_gate::query_block(std::array<u8, 64>& reply_buf, u8 command, u8 seque
 	reply_buf[21] = generate_checksum(reply_buf, 21);
 }
 
-void rider_gate::write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block, const u8* to_write_buf)
+void rider_gate::write_block(std::array<u8, 64>& reply_buf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block, const u8* to_write_buf)
 {
 	std::lock_guard lock(kamen_mutex);
 
@@ -108,7 +108,7 @@ void rider_gate::write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequen
 		}
 	}
 
-	get_blank_response(command, sequence, replyBuf);
+	get_blank_response(reply_buf, command, sequence);
 }
 
 std::optional<std::array<u8, 64>> rider_gate::pop_added_removed_response()
@@ -190,11 +190,50 @@ u8 rider_gate::load_figure(const std::array<u8, 0x14 * 0x10>& buf, fs::file in_f
 usb_device_kamen_rider::usb_device_kamen_rider(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
-	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x200, 0x0, 0x0, 0x0, 0x40, 0x0E6F, 0x200A, 0x100, 0x1, 0x2, 0x3, 0x1});
-	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x29, 0x1, 0x1, 0x0, 0x80, 0xFA}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x0, 0x0, 0x2, 0x3, 0x0, 0x0, 0x0}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x3, 0x40, 0x1}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x1, 0x3, 0x40, 0x1}));
+	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{
+		.bcdUSB             = 0x0200,
+		.bDeviceClass       = 0x00,
+		.bDeviceSubClass    = 0x00,
+		.bDeviceProtocol    = 0x00,
+		.bMaxPacketSize0    = 0x40,
+		.idVendor           = 0x0E6F,
+		.idProduct          = 0x200A,
+		.bcdDevice          = 0x0100,
+		.iManufacturer      = 0x01,
+		.iProduct           = 0x02,
+		.iSerialNumber      = 0x03,
+		.bNumConfigurations = 0x01});
+	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{
+		.wTotalLength        = 0x0029,
+		.bNumInterfaces      = 0x01,
+		.bConfigurationValue = 0x01,
+		.iConfiguration      = 0x00,
+		.bmAttributes        = 0x80,
+		.bMaxPower           = 0xFA}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{
+		.bInterfaceNumber   = 0x00,
+		.bAlternateSetting  = 0x00,
+		.bNumEndpoints      = 0x02,
+		.bInterfaceClass    = 0x03,
+		.bInterfaceSubClass = 0x00,
+		.bInterfaceProtocol = 0x00,
+		.iInterface         = 0x00}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{
+		.bcdHID            = 0x0100,
+		.bCountryCode      = 0x00,
+		.bNumDescriptors   = 0x01,
+		.bDescriptorType   = 0x22,
+		.wDescriptorLength = 0x001d}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{
+		.bEndpointAddress = 0x81,
+		.bmAttributes     = 0x03,
+		.wMaxPacketSize   = 0x0040,
+		.bInterval        = 0x1}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{
+		.bEndpointAddress = 0x01,
+		.bmAttributes     = 0x03,
+		.wMaxPacketSize   = 0x0040,
+		.bInterval        = 0x1}));
 }
 
 usb_device_kamen_rider::~usb_device_kamen_rider()
@@ -227,7 +266,7 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 	if (endpoint == 0x81)
 	{
 		// Respond after FF command
-		transfer->expected_time = get_timestamp() + 1000;
+		transfer->expected_time = get_timestamp() + 22000;
 		std::optional<std::array<u8, 64>> response = g_ridergate.pop_added_removed_response();
 		if (response)
 		{
@@ -246,6 +285,7 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 	}
 	else if (endpoint == 0x01)
 	{
+		transfer->expected_time = get_timestamp() + 10;
 		const u8 command = buf[2];
 		const u8 sequence = buf[3];
 
@@ -261,7 +301,7 @@ void usb_device_kamen_rider::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 		case 0xC0:
 		case 0xC3: // Color Commands
 		{
-			g_ridergate.get_blank_response(command, sequence, q_result);
+			g_ridergate.get_blank_response(q_result, command, sequence);
 			break;
 		}
 		case 0xD0: // Tag List
