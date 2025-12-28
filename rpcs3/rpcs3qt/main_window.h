@@ -49,7 +49,6 @@ class main_window : public QMainWindow
 	bool m_save_slider_pos = false;
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
-	std::function<void()> m_notify_batch_game_action_cb;
 
 	QIcon m_app_icon;
 	QIcon m_icon_play;
@@ -149,6 +148,7 @@ private:
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
+	void CreateShortCuts(const std::map<std::string, QString>& paths, bool create_desktop_shortcuts, bool create_app_shortcut);
 
 	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
 	void ExtractPup();

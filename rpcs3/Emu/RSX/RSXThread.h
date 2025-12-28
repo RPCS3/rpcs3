@@ -257,6 +257,10 @@ namespace rsx
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
 
+		// Notify framebuffer layout has been committed.
+		// FIXME: This should not be here
+		void on_framebuffer_layout_updated();
+
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
