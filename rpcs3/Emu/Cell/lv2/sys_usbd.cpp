@@ -55,6 +55,8 @@ cfg_guncon3 g_cfg_guncon3;
 cfg_topshotelite g_cfg_topshotelite;
 cfg_topshotfearmaster g_cfg_topshotfearmaster;
 
+extern atomic_t<bool> libusbd_active;
+
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 {
@@ -636,7 +638,7 @@ void usb_handler_thread::operator()()
 		u64 delay = 1'000;
 
 		// Process fake transfers
-		if (!fake_transfers.empty())
+		if (libusbd_active && !fake_transfers.empty())
 		{
 			std::lock_guard lock_tf(mutex_transfers);
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
@@ -1099,7 +1101,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	// Forcefully awake all waiters
 	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
-		// Special ternimation signal value
+		// Special termination signal value
 		cpu->gpr[4] = 4;
 		cpu->gpr[5] = 0;
 		cpu->gpr[6] = 0;
