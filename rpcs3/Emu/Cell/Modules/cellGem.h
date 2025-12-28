@@ -246,15 +246,15 @@ struct CellGemInfo
 // z increases towards user (away from the camera)
 struct CellGemState
 {
-	be_t<f32> pos[4];          // center of sphere (mm)
-	be_t<f32> vel[4];          // velocity of sphere (mm/s)
-	be_t<f32> accel[4];        // acceleration of sphere (mm/s²)
+	be_t<f32> pos[4];          // center of sphere in world coordinates (mm)
+	be_t<f32> vel[4];          // velocity of sphere in world coordinates (mm/s)
+	be_t<f32> accel[4];        // acceleration of sphere in world coordinates (mm/s²)
 	be_t<f32> quat[4];         // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
-	be_t<f32> angvel[4];       // angular velocity of controller (radians/s)
-	be_t<f32> angaccel[4];     // angular acceleration of controller (radians/s²)
-	be_t<f32> handle_pos[4];   // center of controller handle (mm)
-	be_t<f32> handle_vel[4];   // velocity of controller handle (mm/s)
-	be_t<f32> handle_accel[4]; // acceleration of controller handle (mm/s²)
+	be_t<f32> angvel[4];       // angular velocity of controller in world coordinates (radians/s)
+	be_t<f32> angaccel[4];     // angular acceleration of controller in world coordinates (radians/s²)
+	be_t<f32> handle_pos[4];   // center of controller handle in world coordinates (mm)
+	be_t<f32> handle_vel[4];   // velocity of controller handle in world coordinates (mm/s)
+	be_t<f32> handle_accel[4]; // acceleration of controller handle in world coordinates (mm/s²)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
 	be_t<u64> timestamp; // system_time_t (microseconds)

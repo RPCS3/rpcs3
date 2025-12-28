@@ -3931,6 +3931,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			continue;
 		}
 
+		for (auto it2 = it->second.begin(); it2 != it->second.end();)
+		{
+			if (*it2 < lsa || *it2 >= limit)
+			{
+				it2 = it->second.erase(it2);
+				continue;
+			}
+
+			it2++;
+		}
+
 		it++;
 	}
 

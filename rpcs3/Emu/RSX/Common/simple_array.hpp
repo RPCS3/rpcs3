@@ -337,7 +337,7 @@ namespace rsx
 			AUDIT(_loc < _size);
 
 			const auto remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
+			std::memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;
 			_size++;
@@ -365,12 +365,37 @@ namespace rsx
 			AUDIT(_loc < _size);
 
 			const u32 remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
+			std::memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;
 			_size++;
 
 			return pos;
+		}
+
+		iterator insert(iterator where, span_like<Ty> auto const& values)
+		{
+			ensure(where >= _data);
+			const auto _loc = offset(where);
+			const auto in_size = static_cast<u32>(values.size());
+			const auto in_size_bytes = in_size * sizeof(Ty);
+
+			reserve(_size + in_size);
+
+			if (_loc >= _size)
+			{
+				where = _data + _size;
+				std::memcpy(where, values.data(), in_size_bytes);
+				_size += in_size;
+				return where;
+			}
+
+			const u32 remaining_bytes = (_size - _loc) * sizeof(Ty);
+			where = _data + _loc;
+			std::memmove(where + in_size, where, remaining_bytes);
+			std::memmove(where, values.data(), in_size_bytes);
+			_size += in_size;
+			return where;
 		}
 
 		void operator += (const rsx::simple_array<Ty>& that)

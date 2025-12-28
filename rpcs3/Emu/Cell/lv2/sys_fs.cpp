@@ -848,7 +848,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	fs::file file(local_path, open_mode);
 
-	if (!file && open_mode == fs::read && fs::g_tls_error == fs::error::noent)
+	if (!file && open_mode == fs::read && fs::g_tls_error == fs::error::noent && mp.mp != &g_mp_sys_dev_hdd1)
 	{
 		// Try to gather split file (TODO)
 		std::vector<fs::file> fragments;
@@ -1389,7 +1389,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 			}
 
 			// Add additional entries for split file candidates (while ends with .66600)
-			while (data.back().name.ends_with(".66600"))
+			while (mp.mp != &g_mp_sys_dev_hdd1 && data.back().name.ends_with(".66600"))
 			{
 				data.emplace_back(data.back()).name.resize(data.back().name.size() - 6);
 			}
@@ -1505,6 +1505,7 @@ error_code sys_fs_closedir(ppu_thread& ppu, u32 fd)
 error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat> sb)
 {
 	ppu.state += cpu_flag::wait;
+	lv2_obj::sleep(ppu);
 
 	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
@@ -1552,8 +1553,18 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 			// Try to analyse split file (TODO)
 			u64 total_size = 0;
 
-			for (u32 i = 66601; i <= 66699; i++)
+			// Use attributes from the first fragment (consistently with sys_fs_open+fstat
+			fs::stat_t info_split{};
+			if (mp.mp != &g_mp_sys_dev_hdd1 && fs::get_stat(local_path + ".66600", info_split) && !info_split.is_directory)
 			{
+				// Success
+				total_size += info_split.size;
+			}
+
+			for (u32 i = 66601; total_size && i <= 66699; i++)
+			{
+				info = {};
+
 				if (fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
 				{
 					total_size += info.size;
@@ -1564,11 +1575,11 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 				}
 			}
 
-			// Use attributes from the first fragment (consistently with sys_fs_open+fstat)
-			if (fs::get_stat(local_path + ".66600", info) && !info.is_directory)
+			if (total_size)
 			{
 				// Success
-				info.size += total_size;
+				info_split.size = total_size;
+				info = info_split;
 				break;
 			}
 
@@ -2895,7 +2906,7 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 
 			for (u32 i = 66601; i <= 66699; i++)
 			{
-				if (!fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
+				if (mp != &g_mp_sys_dev_hdd1 && !fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
 				{
 					break;
 				}

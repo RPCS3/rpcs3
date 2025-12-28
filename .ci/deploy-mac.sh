@@ -16,9 +16,11 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/" || true
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
-cp "$(realpath /usr/local/lib/libMoltenVK.dylib)" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
-cp "$(realpath /usr/local/etc/vulkan/icd.d/MoltenVK_icd.json)" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
-sed -i '' "s/lib\//Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-macos-privateapi.tar
+tar -xvf MoltenVK-macos-privateapi.tar
+cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
+cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 
 cp "$(realpath /usr/local/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
 cp "$(realpath /usr/local/opt/llvm@$LLVM_COMPILER_VER/lib/unwind/libunwind.1.dylib)" "rpcs3.app/Contents/Frameworks/libunwind.1.dylib"

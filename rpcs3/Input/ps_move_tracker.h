@@ -77,6 +77,8 @@ private:
 
 	void draw_sphere_size_range(f32 result_radius);
 
+	CellGemVideoConvertAttribute m_vc_attr {};
+
 	u32 m_width = 0;
 	u32 m_height = 0;
 	s32 m_format = 0;

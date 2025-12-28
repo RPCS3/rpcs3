@@ -40,6 +40,9 @@ namespace rsx
 
 		xform_instancing_state_dirty  = (1 << 25), // Transform instancing state has changed
 
+		zeta_address_is_cyclic        = (1 << 26), // The currently bound Z buffer is active for R/W in a cyclic manner
+		zeta_address_cyclic_barrier   = (1 << 27), // A memory barrier is required to "end" the Z buffer cyclic state
+
 		// TODO - Should signal that we simply need to do a FP compare before the next draw call and invalidate the ucode if the content has changed.
 		// Marking as dirty to invalidate hot cache also works, it's not like there's tons of barriers per frame anyway.
 		fragment_program_needs_rehash = fragment_program_ucode_dirty,

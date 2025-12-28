@@ -176,6 +176,9 @@ void ps_move_handler::init_config(cfg_pad* cfg)
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 
+	// We have to enable orientation by default
+	cfg->orientation_enabled.def = true;
+
 	// apply defaults
 	cfg->from_default();
 }
@@ -608,7 +611,17 @@ std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::share
 	const u16 extra_buttons = input.sequence_number << 8 | input.buttons_3;
 	key_buf[ps_move_key_codes::ps]   = (extra_buttons & button_flags::ps)   ? 255 : 0;
 	key_buf[ps_move_key_codes::move] = (extra_buttons & button_flags::move) ? 255 : 0;
-	key_buf[ps_move_key_codes::t]    = (extra_buttons & button_flags::t)    ? input.trigger_2 : 0;
+
+	u16 trigger = 0;
+	if (extra_buttons & button_flags::t)
+	{
+		switch (dev->model)
+		{
+		case ps_move_model::ZCM1: trigger = (input.trigger_1 + input.trigger_2) / 2; break;
+		case ps_move_model::ZCM2: trigger = input.trigger_1; break;
+		}
+	}
+	key_buf[ps_move_key_codes::t] = trigger;
 
 	dev->battery_level = input.battery_level;
 
@@ -675,12 +688,20 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	if (dev->model == ps_move_model::ZCM1)
 	{
-		accel_x -= static_cast<f32>(zero_shift);
-		accel_y -= static_cast<f32>(zero_shift);
-		accel_z -= static_cast<f32>(zero_shift);
-		gyro_x -= static_cast<f32>(zero_shift);
-		gyro_y -= static_cast<f32>(zero_shift);
-		gyro_z -= static_cast<f32>(zero_shift);
+		const auto decode_16bit = [](s16 val)
+		{
+			const u8* data = reinterpret_cast<const u8*>(&val);
+			const u8 low = data[0] & 0xFF;
+			const u8 high = data[1] & 0xFF;
+			const s32 res = (low | (high << 8)) - zero_shift;
+			return static_cast<f32>(res);
+		};
+		accel_x = decode_16bit(input.accel_x_1);
+		accel_y = decode_16bit(input.accel_y_1);
+		accel_z = decode_16bit(input.accel_z_1);
+		gyro_x  = decode_16bit(input.gyro_x_1);
+		gyro_y  = decode_16bit(input.gyro_y_1);
+		gyro_z  = decode_16bit(input.gyro_z_1);
 	}
 
 	if (!device->config || !device->config->orientation_enabled)
@@ -711,21 +732,21 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 			gyro_z /= MOVE_ONE_G;
 		}
 
-		pad->move_data.accelerometer_x = accel_x;
-		pad->move_data.accelerometer_y = accel_y;
-		pad->move_data.accelerometer_z = accel_z;
-		pad->move_data.gyro_x = gyro_x;
-		pad->move_data.gyro_y = gyro_y;
-		pad->move_data.gyro_z = gyro_z;
+		pad->move_data.accelerometer.x() = accel_x;
+		pad->move_data.accelerometer.y() = accel_y;
+		pad->move_data.accelerometer.z() = accel_z;
+		pad->move_data.gyro.x() = gyro_x;
+		pad->move_data.gyro.y() = gyro_y;
+		pad->move_data.gyro.z() = gyro_z;
 
 		if (dev->model == ps_move_model::ZCM1)
 		{
 			const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
 
 			#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
-			pad->move_data.magnetometer_x = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
-			pad->move_data.magnetometer_y = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
-			pad->move_data.magnetometer_z = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
+			pad->move_data.magnetometer.x() = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
+			pad->move_data.magnetometer.y() = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
+			pad->move_data.magnetometer.z() = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
 		}
 	}
 

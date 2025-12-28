@@ -411,6 +411,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/pad_config_types.cpp
     Io/pad_types.cpp
     Io/PadHandler.cpp
+    Io/ps_move_data.cpp
     Io/rb3drums_config.cpp
     Io/RB3MidiDrums.cpp
     Io/RB3MidiGuitar.cpp
@@ -441,6 +442,8 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_requests.cpp
     NP/signaling_handler.cpp
     NP/np_structs_extra.cpp
+    NP/clans_client.cpp
+    NP/clans_config.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
     NP/rpcn_countries.cpp
@@ -516,12 +519,15 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_video.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
+    RSX/Program/Assembler/FPASM.cpp
+    RSX/Program/Assembler/FPOpcodes.cpp
     RSX/Program/Assembler/FPToCFG.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterAnnotationPass.cpp
+    RSX/Program/Assembler/Passes/FP/RegisterDependencyPass.cpp
     RSX/Program/CgBinaryProgram.cpp
     RSX/Program/CgBinaryFragmentProgram.cpp
     RSX/Program/CgBinaryVertexProgram.cpp
     RSX/Program/FragmentProgramDecompiler.cpp
-    RSX/Program/FragmentProgramRegister.cpp
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
@@ -539,7 +545,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_vertex_data.cpp
 )
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT APPLE)
     target_sources(rpcs3_emu PRIVATE
         RSX/GL/GLCommonDecompiler.cpp
         RSX/GL/GLCompute.cpp
@@ -660,6 +666,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::yaml-cpp
         3rdparty::zlib
         3rdparty::zstd
+        3rdparty::libcurl
 )
 
 if(APPLE)

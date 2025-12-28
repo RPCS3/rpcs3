@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -540,7 +541,9 @@ error_code sceNpMatching2GetClanLobbyId(SceNpMatching2ContextId ctxId, SceNpClan
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	return CELL_OK;
+	// Returning this rather than `CELL_OK` allows for games to
+	// not need Matching2 Clans support to connect, when Clans are enabled.
+	return SCE_NP_MATCHING2_SERVER_ERROR_SERVICE_UNAVAILABLE;
 }
 
 error_code sceNpMatching2GetLobbyMemberDataInternal(
@@ -819,10 +822,7 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
-	if (!nph.abort_request(reqId))
-		return SCE_NP_MATCHING2_ERROR_REQUEST_NOT_FOUND;
-
-	return CELL_OK;
+	return nph.abort_request(reqId);
 }
 
 error_code sceNpMatching2GetServerInfo(

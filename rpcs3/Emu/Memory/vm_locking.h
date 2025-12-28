@@ -28,7 +28,7 @@ namespace vm
 		range_bits = 3,
 	};
 
-	extern atomic_t<u64, 64> g_range_lock_bits[2];
+	extern atomic_t<u64, 128> g_range_lock_bits[2];
 
 	extern atomic_t<u64> g_shmem[];
 
@@ -36,13 +36,13 @@ namespace vm
 	void passive_lock(cpu_thread& cpu);
 
 	// Register range lock for further use
-	atomic_t<u64, 64>* alloc_range_lock();
+	atomic_t<u64, 128>* alloc_range_lock();
 
-	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size);
+	void range_lock_internal(atomic_t<u64, 128>* range_lock, u32 begin, u32 size);
 
 	// Lock memory range ignoring memory protection (Size!=0 also implies aligned begin)
 	template <uint Size = 0>
-	FORCE_INLINE void range_lock(atomic_t<u64, 64>* range_lock, u32 begin, u32 _size)
+	FORCE_INLINE void range_lock(atomic_t<u64, 128>* range_lock, u32 begin, u32 _size)
 	{
 		if constexpr (Size == 0)
 		{
@@ -80,7 +80,7 @@ namespace vm
 	}
 
 	// Release it
-	void free_range_lock(atomic_t<u64, 64>*) noexcept;
+	void free_range_lock(atomic_t<u64, 128>*) noexcept;
 
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);
@@ -91,12 +91,12 @@ namespace vm
 
 	struct writer_lock final
 	{
-		atomic_t<u64, 64>* range_lock;
+		atomic_t<u64, 128>* range_lock;
 
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
 		writer_lock() noexcept;
-		writer_lock(u32 addr, atomic_t<u64, 64>* range_lock = nullptr, u32 size = 128, u64 flags = range_locked) noexcept;
+		writer_lock(u32 addr, atomic_t<u64, 128>* range_lock = nullptr, u32 size = 128, u64 flags = range_locked) noexcept;
 		~writer_lock() noexcept;
 	};
 } // namespace vm

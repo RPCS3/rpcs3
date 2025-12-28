@@ -216,12 +216,12 @@ namespace glsl
 				enabled_options.push_back("_32_BIT_OUTPUT");
 			}
 
-			if (!props.fp32_outputs)
+			if (props.ROP_sRGB_packing)
 			{
 				enabled_options.push_back("_ENABLE_FRAMEBUFFER_SRGB");
 			}
 
-			if (props.disable_early_discard)
+			if (props.disable_early_discard && props.ROP_discard)
 			{
 				enabled_options.push_back("_DISABLE_EARLY_DISCARD");
 			}
@@ -231,7 +231,15 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_ROP_OUTPUT_ROUNDING");
 			}
 
-			enabled_options.push_back("_ENABLE_POLYGON_STIPPLE");
+			if (props.ROP_alpha_test)
+			{
+				enabled_options.push_back("_ENABLE_ALPHA_TEST");
+			}
+
+			if (props.ROP_polygon_stipple_test)
+			{
+				enabled_options.push_back("_ENABLE_POLYGON_STIPPLE");
+			}
 		}
 
 		// Import common header
@@ -276,12 +284,12 @@ namespace glsl
 			return;
 		}
 
-		if (props.emulate_coverage_tests)
+		if (props.ROP_alpha_to_coverage_test)
 		{
-			enabled_options.push_back("_EMULATE_COVERAGE_TEST");
+			enabled_options.push_back("_ENABLE_ALPHA_TO_COVERAGE_TEST");
 		}
 
-		if (!props.fp32_outputs || props.require_linear_to_srgb)
+		if (props.ROP_sRGB_packing || props.require_linear_to_srgb)
 		{
 			enabled_options.push_back("_ENABLE_LINEAR_TO_SRGB");
 		}
@@ -294,6 +302,11 @@ namespace glsl
 		if (props.require_wpos)
 		{
 			enabled_options.push_back("_ENABLE_WPOS");
+		}
+
+		if (props.ROP_alpha_test || (props.require_msaa_ops && props.require_tex_shadow_ops))
+		{
+			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
 		}
 
 		if (props.require_fog_read)
@@ -383,6 +396,11 @@ namespace glsl
 			if (props.require_shadowProj_ops)
 			{
 				enabled_options.push_back("_ENABLE_SHADOWPROJ");
+			}
+
+			if (props.require_alpha_kill)
+			{
+				enabled_options.push_back("_ENABLE_TEXTURE_ALPHA_KILL");
 			}
 
 			program_common::define_glsl_switches(OS, enabled_options);
