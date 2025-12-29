@@ -1777,6 +1777,7 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
 	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
+	ui->toolbar_rpcn	->setIcon(icon(":/Icons/rpcn.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
 	ui->sysStopAct->setIcon(icon(":/Icons/stop.png"));
@@ -2907,11 +2908,13 @@ void main_window::CreateConnects()
 		dlg.exec();
 	});
 
-	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
+	const auto open_rpcn_settings = [this]
 	{
 		rpcn_settings_dialog dlg(this);
 		dlg.exec();
-	});
+	};
+
+	connect(ui->confRPCNAct, &QAction::triggered, this, open_rpcn_settings);
 
 	connect(ui->confClansAct, &QAction::triggered, this, [this]()
 	{
@@ -3373,6 +3376,7 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_config, &QAction::triggered, this, [=]() { open_settings(0); });
 	connect(ui->toolbar_list, &QAction::triggered, this, [this]() { ui->setlistModeListAct->trigger(); });
 	connect(ui->toolbar_grid, &QAction::triggered, this, [this]() { ui->setlistModeGridAct->trigger(); });
+	connect(ui->toolbar_rpcn, &QAction::triggered, this, open_rpcn_settings);
 
 	connect(ui->sizeSlider, &QSlider::valueChanged, this, &main_window::ResizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [this]

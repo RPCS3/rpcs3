@@ -62,7 +62,6 @@
     <property name="font">
      <font>
       <pointsize>10</pointsize>
-      <weight>50</weight>
       <bold>false</bold>
      </font>
     </property>
@@ -141,7 +140,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -290,9 +289,6 @@
     <property name="title">
      <string>Manage</string>
     </property>
-    <addaction name="confVFSDialogAct"/>
-    <addaction name="separator"/>
-    <addaction name="actionManage_Users"/>
     <widget class="QMenu" name="menuNetworkServices">
      <property name="title">
       <string>Network Services</string>
@@ -301,7 +297,6 @@
      <addaction name="confClansAct"/>
      <addaction name="confIPCAct"/>
     </widget>
-    <addaction name="menuNetworkServices"/>
     <widget class="QMenu" name="menuPortals">
      <property name="title">
       <string>Portals and Gates</string>
@@ -311,6 +306,10 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
+    <addaction name="confVFSDialogAct"/>
+    <addaction name="separator"/>
+    <addaction name="actionManage_Users"/>
+    <addaction name="menuNetworkServices"/>
     <addaction name="menuPortals"/>
     <addaction name="separator"/>
     <addaction name="actionManage_RAP_Licenses"/>
@@ -486,6 +485,7 @@
    <addaction name="toolbar_start"/>
    <addaction name="toolbar_config"/>
    <addaction name="toolbar_controls"/>
+   <addaction name="toolbar_rpcn"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
   </widget>
@@ -1024,6 +1024,18 @@
    </property>
    <property name="toolTip">
     <string>Configure the emulator</string>
+   </property>
+  </action>
+  <action name="toolbar_rpcn">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/Icons/rpcn.png</normaloff>:/Icons/rpcn.png</iconset>
+   </property>
+   <property name="text">
+    <string>RPCN</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure RPCN settings</string>
    </property>
   </action>
   <action name="toolbar_controls">
