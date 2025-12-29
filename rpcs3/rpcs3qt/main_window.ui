@@ -279,6 +279,7 @@
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
+    <addaction name="confNetwrkAct"/>
     <addaction name="confAdvAct"/>
     <addaction name="confEmuAct"/>
     <addaction name="confGuiAct"/>
@@ -495,6 +496,7 @@
    <addaction name="toolbar_start"/>
    <addaction name="toolbar_config"/>
    <addaction name="toolbar_controls"/>
+   <addaction name="toolbar_rpcn"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
   </widget>
@@ -621,6 +623,14 @@
    </property>
    <property name="toolTip">
     <string>Configure system</string>
+   </property>
+  </action>
+  <action name="confNetwrkAct">
+   <property name="text">
+    <string>Network</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Network settings</string>
    </property>
   </action>
   <action name="confAdvAct">
@@ -1033,6 +1043,18 @@
    </property>
    <property name="toolTip">
     <string>Configure the emulator</string>
+   </property>
+  </action>
+  <action name="toolbar_rpcn">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/Icons/rpcn.png</normaloff>:/Icons/rpcn.png</iconset>
+   </property>
+   <property name="text">
+    <string>RPCN</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure RPCN settings</string>
    </property>
   </action>
   <action name="toolbar_controls">
