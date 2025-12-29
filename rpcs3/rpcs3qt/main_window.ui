@@ -62,6 +62,7 @@
     <property name="font">
      <font>
       <pointsize>10</pointsize>
+      <weight>50</weight>
       <bold>false</bold>
      </font>
     </property>
@@ -140,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -276,6 +277,7 @@
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
+    <addaction name="confNetwrkAct"/>
     <addaction name="confAdvAct"/>
     <addaction name="confEmuAct"/>
     <addaction name="confGuiAct"/>
@@ -289,6 +291,9 @@
     <property name="title">
      <string>Manage</string>
     </property>
+    <addaction name="confVFSDialogAct"/>
+    <addaction name="separator"/>
+    <addaction name="actionManage_Users"/>
     <widget class="QMenu" name="menuNetworkServices">
      <property name="title">
       <string>Network Services</string>
@@ -297,6 +302,7 @@
      <addaction name="confClansAct"/>
      <addaction name="confIPCAct"/>
     </widget>
+    <addaction name="menuNetworkServices"/>
     <widget class="QMenu" name="menuPortals">
      <property name="title">
       <string>Portals and Gates</string>
@@ -306,10 +312,6 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
-    <addaction name="confVFSDialogAct"/>
-    <addaction name="separator"/>
-    <addaction name="actionManage_Users"/>
-    <addaction name="menuNetworkServices"/>
     <addaction name="menuPortals"/>
     <addaction name="separator"/>
     <addaction name="actionManage_RAP_Licenses"/>
@@ -612,6 +614,14 @@
    </property>
    <property name="toolTip">
     <string>Configure system</string>
+   </property>
+  </action>
+  <action name="confNetwrkAct">
+   <property name="text">
+    <string>Network</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Network settings</string>
    </property>
   </action>
   <action name="confAdvAct">
