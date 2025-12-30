@@ -434,11 +434,12 @@ void log_frame::CreateAndConnectActions()
 		m_perform_show_in_mem_viewer->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the memory viewer."));
 
 		menu->addSeparator();
-		menu->addActions(m_log_level_acts->actions());
-		menu->addSeparator();
 		menu->addAction(m_stack_act_log);
 		menu->addAction(m_stack_act_err);
 		menu->addAction(m_show_prefix_act);
+		menu->addSeparator();
+		menu->addActions(m_log_level_acts->actions());
+
 		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
 

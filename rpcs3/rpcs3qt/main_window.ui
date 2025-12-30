@@ -335,24 +335,23 @@
     </property>
     <addaction name="actionLog_Viewer"/>
     <addaction name="toolsCheckConfigAct"/>
-    <addaction name="toolsCgDisasmAct"/>
-    <addaction name="toolskernel_explorerAct"/>
-    <addaction name="toolsmemory_viewerAct"/>
-    <addaction name="toolsRsxDebuggerAct"/>
-    <addaction name="toolsSystemCommandsAct"/>
-    <addaction name="patchCreatorAct"/>
     <addaction name="toolsVfsDialogAct"/>
+    <addaction name="patchCreatorAct"/>
     <addaction name="actionMusic_Player"/>
     <addaction name="separator"/>
+    <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
-    <addaction name="separator"/>
     <addaction name="toolsExtractMSELFAct"/>
     <addaction name="toolsExtractPUPAct"/>
     <addaction name="toolsExtractTARAct"/>
     <addaction name="separator"/>
-    <addaction name="actionopen_rsx_capture"/>
+    <addaction name="toolsSystemCommandsAct"/>
+    <addaction name="toolsmemory_viewerAct"/>
+    <addaction name="toolskernel_explorerAct"/>
+    <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="separator"/>
     <addaction name="actionCreate_RSX_Capture"/>
+    <addaction name="actionopen_rsx_capture"/>
     <addaction name="actionCreate_Savestate"/>
     <addaction name="actionCreate_Savestate_And_Exit"/>
    </widget>
