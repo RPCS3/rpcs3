@@ -32,6 +32,7 @@ using SceNpBasicMessageRecvAction = u32;
 
 using SceNpClanId = u32;
 using SceNpClansMessageId = u32;
+using SceNpClansMemberRole = u32;
 using SceNpClansMemberStatus = s32;
 
 using SceNpCustomMenuIndexMask = u32;
@@ -1264,7 +1265,7 @@ struct SceNpCommunicationId
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16 + 1]; // char term;
+	char data[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1]; // char term;
 	char dummy[3];
 };
 

@@ -301,6 +301,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	}
 
 	m_graphics_state.set(rsx::rtt_config_valid);
+	on_framebuffer_layout_updated();
 
 	check_zcull_status(true);
 	set_viewport();

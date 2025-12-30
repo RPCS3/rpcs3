@@ -239,6 +239,25 @@ namespace np
 		return true;
 	}
 
+	std::string ticket::get_service_id() const
+	{
+		if (!parse_success)
+		{
+			return "";
+		}
+
+		const auto& node = nodes[0].data.data_nodes[8];
+		if (node.len != SCE_NP_SERVICE_ID_SIZE)
+		{
+			return "";
+		}
+
+		// Trim null characters
+		const auto& vec = node.data.data_vec;
+		auto it = std::find(vec.begin(), vec.end(), 0);
+		return std::string(vec.begin(), it);
+	}
+
 	std::optional<ticket_data> ticket::parse_node(std::size_t index) const
 	{
 		if ((index + MIN_TICKET_DATA_SIZE) > size())
@@ -1350,6 +1369,24 @@ namespace np
 		auto& history = ::at32(players_history, npid_str);
 		history.timestamp = timestamp;
 		return history;
+	}
+
+	u32 np_handler::get_clan_ticket_ready()
+	{
+		return clan_ticket_ready.load();
+	}
+
+	ticket np_handler::get_clan_ticket()
+	{
+		clan_ticket_ready.wait(0, atomic_wait_timeout{60'000'000'000}); // 60 seconds
+
+		if (!clan_ticket_ready.load())
+		{
+			rpcn_log.error("Failed to get clan ticket within timeout.");
+			return ticket{};
+		}
+
+		return clan_ticket;
 	}
 
 	constexpr usz MAX_HISTORY_ENTRIES = 200;

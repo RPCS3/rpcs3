@@ -34,7 +34,7 @@ bool cheat_info::from_str(std::string_view cheat_line)
 	s64 val64 = 0;
 	if (cheat_vec.size() != 5 || !try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
 	{
-		log_cheat.fatal("Failed to parse cheat line");
+		log_cheat.error("Failed to parse cheat line: '%s'", cheat_line);
 		return false;
 	}
 

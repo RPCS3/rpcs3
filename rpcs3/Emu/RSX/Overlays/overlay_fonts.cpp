@@ -213,7 +213,7 @@ namespace rsx
 				return font_found;
 			};
 
-			for (const auto& font_file : fs_settings.font_names)
+			for (const std::string& font_file : fs_settings.font_names)
 			{
 				if (fs::is_file(font_file))
 				{
@@ -262,7 +262,7 @@ namespace rsx
 			{
 				if (fallback_bytes.empty())
 				{
-					fmt::throw_exception("Failed to initialize font for character 0x%x on codepage %d.", static_cast<u32>(c), static_cast<u32>(codepage_id));
+					fmt::throw_exception("Failed to initialize font for character 0x%x on codepage %d.\nLookup dirs:\n%s\nTarget fonts:\n%s", static_cast<u32>(c), static_cast<u32>(codepage_id), fmt::merge(fs_settings.lookup_font_dirs, "\n"), fmt::merge(fs_settings.font_names, "\n"));
 				}
 
 				rsx_log.error("Failed to initialize font for character 0x%x on codepage %d. Falling back to font '%s'", static_cast<u32>(c), static_cast<u32>(codepage_id), fallback_file);

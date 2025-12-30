@@ -2469,7 +2469,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_surface_info[i].samples = samples;
 	}
 
-	//Process depth surface as well
+	// Process depth surface as well
 	{
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
@@ -2486,7 +2486,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.samples = samples;
 	}
 
-	//Bind created rtts as current fbo...
+	// Bind created rtts as current fbo...
 	const auto draw_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
 	m_draw_buffers.clear();
 	m_fbo_images.clear();
@@ -2637,6 +2637,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	set_viewport();
 	set_scissor(clipped_scissor);
+	on_framebuffer_layout_updated();
 
 	check_zcull_status(true);
 }

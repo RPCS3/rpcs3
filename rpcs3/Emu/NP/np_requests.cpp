@@ -1,8 +1,9 @@
+#include "stdafx.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
+#include "Emu/NP/clans_client.h"
 #include "Emu/NP/rpcn_types.h"
 #include "Utilities/StrFmt.h"
-#include "stdafx.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/system_config.h"
@@ -863,7 +864,20 @@ namespace np
 		auto ticket_raw = reply.get_rawdata();
 		ensure(!reply.is_error(), "Malformed reply to RequestTicket command");
 
-		current_ticket = ticket(std::move(ticket_raw));
+		auto incoming_ticket = ticket(std::move(ticket_raw));
+		
+		// Clans: check if ticket belongs to the clan service.
+		//        If so, hijack the ticket and cache it for future use.
+		if (incoming_ticket.get_service_id() == CLANS_SERVICE_ID)
+		{
+			clan_ticket = incoming_ticket;
+			clan_ticket_ready.store(1);
+			clan_ticket_ready.notify_all();
+			
+			return;
+		}
+
+		current_ticket = incoming_ticket;
 		auto ticket_size = static_cast<s32>(current_ticket.size());
 
 		if (manager_cb)
