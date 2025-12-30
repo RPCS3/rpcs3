@@ -176,10 +176,29 @@ error_code select_photo(std::string dst_dir)
 
 					const std::string filename = info.path.substr(info.path.find_last_of(fs::delim) + 1);
 					const std::string title = info.get_metadata("title", filename);
-					const std::string dst_path = dst_dir + "/" + filename;
+					std::string dst_path = dst_dir + "/";
 					std::string sub_type = info.sub_type;
 
-					strcpy_trunc(g_filedata->dstFileName, filename);
+					// Try to find a unique filename (TODO: how does the PS3 copy the files exactly?)
+					std::string extension;
+					std::string dst_filename = filename;
+					if (const auto extension_start = filename.find_last_of('.');
+						extension_start != umax)
+					{
+						extension = filename.substr(extension_start);
+						dst_filename = filename.substr(0, extension_start);
+					}
+
+					std::string suffix = extension;
+					u32 counter = 0;
+					while (!Emu.IsStopped() && fs::is_file(dst_path + dst_filename + suffix))
+					{
+						suffix = fmt::format(" %d%s", ++counter, extension);
+					}
+					dst_filename += std::move(suffix);
+					dst_path += dst_filename;
+
+					strcpy_trunc(g_filedata->dstFileName, dst_filename);
 					strcpy_trunc(g_filedata->photo_title, title);
 					strcpy_trunc(g_filedata->game_title, Emu.GetTitle());
 					strcpy_trunc(g_filedata->game_comment, ""); // TODO
