@@ -293,7 +293,7 @@ void log_frame::CreateAndConnectActions()
 		});
 	});
 
-	m_perform_goto_on_debugger = new QAction(tr("Go to Debugger"), this);
+	m_perform_goto_on_debugger = new QAction(tr("Go-To on Debugger"), this);
 	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
 	{
 		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
