@@ -1303,11 +1303,7 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
 		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
 		u8* out_data[4] = { outBuff.get_ptr() };
-		int out_line[4] = { w * 4 }; // RGBA32 or ARGB32
-
-		// TODO:
-		// It's possible that we need to align the pitch to 128 here.
-		// PS HOME seems to rely on this somehow in certain cases.
+		int out_line[4] = { static_cast<int>(utils::align<u32>(w * 4, 128)) }; // RGBA32 or ARGB32
 
 		if (!alpha_plane)
 		{
@@ -1319,6 +1315,10 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 			{
 				fmt::throw_exception("cellVdecGetPictureExt: av_image_fill_linesizes failed (handle=0x%x, seq_id=%d, cmd_id=%d, ret=0x%x): %s", handle, frame.seq_id, frame.cmd_id, ret, utils::av_error_to_string(ret));
 			}
+
+			// TODO:
+			// It's possible that we need to align the pitches to 128/64 here.
+			// We also may need to do this manually in cellVdecGetPicItem
 		}
 
 		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
@@ -1429,9 +1429,10 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
+	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 128);
 	ensure(buffer_size >= 0);
-	info->size = utils::align<u32>(buffer_size, 128);
+	ensure(buffer_size % 128 == 0);
+	info->size = static_cast<u32>(buffer_size);
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);
 	info->auPts[0].upper = static_cast<u32>(pts >> 32);
