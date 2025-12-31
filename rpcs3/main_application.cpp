@@ -18,6 +18,7 @@
 #include "Emu/Io/Null/NullMouseHandler.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/MouseHandler.h"
+#include "Emu/VFS.h"
 #include "Input/basic_keyboard_handler.h"
 #include "Input/basic_mouse_handler.h"
 #include "Input/raw_mouse_handler.h"
@@ -36,6 +37,7 @@
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
 #endif
 
+#include <QDateTime>
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
@@ -376,6 +378,34 @@ EmuCallbacks main_application::CreateCallbacks()
 	};
 
 	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
+
+	callbacks.get_photo_path = [](std::string_view title)
+	{
+		const QDateTime date_time = QDateTime::currentDateTime();
+		const QDate date = date_time.date();
+		const QTime time = date_time.time();
+
+		std::string_view extension = ".png";
+		if (const auto extension_start = title.find_last_of('.');
+			extension_start != umax)
+		{
+			extension = title.substr(extension_start);
+			title = title.substr(0, extension_start);
+		}
+
+		std::string suffix = std::string(extension);
+		const std::string path = vfs::get(fmt::format("/dev_hdd0/photo/%04d/%02d/%02d/%s %02d-%02d-%04d %02d-%02d-%02d",
+		                                              date.year(), date.month(), date.day(), vfs::escape(title, true),
+		                                              date.day(), date.month(), date.year(), time.hour(), time.minute(), time.second()));
+
+		u32 counter = 0;
+		while (!Emu.IsStopped() && fs::is_file(path + suffix))
+		{
+			suffix = fmt::format(" %d%s", ++counter, extension);
+		}
+
+		return path + suffix;
+	};
 
 	return callbacks;
 }

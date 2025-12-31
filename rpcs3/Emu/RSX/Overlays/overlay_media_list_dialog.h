@@ -29,8 +29,8 @@ namespace rsx
 				utils::media_info info;
 				u32 index = 0;
 
-				media_entry* parent = nullptr;
-				std::vector<media_entry> children;
+				std::shared_ptr<media_entry> parent;
+				std::vector<std::shared_ptr<media_entry>> children;
 			};
 
 			media_list_dialog();
@@ -39,7 +39,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay);
+			s32 show(std::shared_ptr<media_entry> root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay);
 
 		private:
 			void reload(const std::string& title, u32 focused);
@@ -53,7 +53,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 			};
 
-			media_entry* m_media = nullptr;
+			std::shared_ptr<media_entry> m_media;
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
@@ -61,6 +61,6 @@ namespace rsx
 			std::unique_ptr<label> m_no_media_text;
 		};
 
-		error_code show_media_list_dialog(media_list_dialog::media_type type, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished);
+		error_code show_media_list_dialog(media_list_dialog::media_type type, u32 max_depth, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished);
 	}
 }

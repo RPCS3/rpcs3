@@ -293,7 +293,7 @@ void log_frame::CreateAndConnectActions()
 		});
 	});
 
-	m_perform_goto_on_debugger = new QAction(tr("Go-To On The Debugger"), this);
+	m_perform_goto_on_debugger = new QAction(tr("Go-To on Debugger"), this);
 	connect(m_perform_goto_on_debugger, &QAction::triggered, [this]()
 	{
 		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
@@ -315,7 +315,7 @@ void log_frame::CreateAndConnectActions()
 		memory_viewer_panel::ShowAtPC(static_cast<u32>(pc));
 	});
 
-	m_perform_goto_thread_on_debugger = new QAction(tr("Show Thread On The Debugger"), this);
+	m_perform_goto_thread_on_debugger = new QAction(tr("Show Thread on Debugger"), this);
 	connect(m_perform_goto_thread_on_debugger, &QAction::triggered, [this]()
 	{
 		QPlainTextEdit* pte = (m_tabWidget->currentIndex() == 1 ? m_tty : m_log);
@@ -434,11 +434,12 @@ void log_frame::CreateAndConnectActions()
 		m_perform_show_in_mem_viewer->setToolTip(tr("Jump to the selected hexadecimal address from the log text on the memory viewer."));
 
 		menu->addSeparator();
-		menu->addActions(m_log_level_acts->actions());
-		menu->addSeparator();
 		menu->addAction(m_stack_act_log);
 		menu->addAction(m_stack_act_err);
 		menu->addAction(m_show_prefix_act);
+		menu->addSeparator();
+		menu->addActions(m_log_level_acts->actions());
+
 		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
 
