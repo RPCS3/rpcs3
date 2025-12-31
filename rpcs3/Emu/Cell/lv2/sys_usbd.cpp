@@ -1054,6 +1054,27 @@ void connect_usb_controller(u8 index, input::product_type type)
 	}
 }
 
+void reconnect_usb(u32 assigned_number)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+
+	std::lock_guard lock(usbh->mutex);
+	for (auto& [nr, pair] : usbh->handled_devices)
+	{
+		auto& [internal_dev, dev] = pair;
+		if (nr == assigned_number)
+		{
+			usbh->disconnect_usb_device(dev, false);
+			usbh->connect_usb_device(dev, false);
+			break;
+		}
+	}
+}
+
 void handle_hotplug_event(bool connected)
 {
 	if (auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>())
