@@ -218,7 +218,6 @@
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
-    <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -243,9 +242,25 @@
     <property name="title">
      <string>Configuration</string>
     </property>
-    <widget class="QMenu" name="menuEmulatedPads">
+    <widget class="QMenu" name="menuMice">
      <property name="title">
-      <string>USB Devices</string>
+      <string>Mice</string>
+     </property>
+     <addaction name="actionBasic_Mouse"/>
+     <addaction name="actionRaw_Mouse"/>
+    </widget>
+    <widget class="QMenu" name="menuDevices">
+     <property name="title">
+      <string>Devices</string>
+     </property>
+     <addaction name="confPadsAct"/>
+     <addaction name="menuMice"/>
+     <addaction name="confCamerasAct"/>
+     <addaction name="actionPS_Move_Tracker"/>
+    </widget>
+    <widget class="QMenu" name="menuEmulatedDevices">
+     <property name="title">
+      <string>Emulated Devices</string>
      </property>
      <addaction name="confBuzzAct"/>
      <addaction name="confGHLtarAct"/>
@@ -259,27 +274,18 @@
      <addaction name="confTopShotFearmasterAct"/>
      <addaction name="confLogitechG27Act"/>
     </widget>
-    <widget class="QMenu" name="menuMice">
-     <property name="title">
-      <string>Mice</string>
-     </property>
-     <addaction name="actionBasic_Mouse"/>
-     <addaction name="actionRaw_Mouse"/>
-    </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
-    <addaction name="separator"/>
-    <addaction name="confPadsAct"/>
-    <addaction name="menuMice"/>
-    <addaction name="menuEmulatedPads"/>
-    <addaction name="confCamerasAct"/>
-    <addaction name="actionPS_Move_Tracker"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
+    <addaction name="confNetwrkAct"/>
     <addaction name="confAdvAct"/>
     <addaction name="confEmuAct"/>
     <addaction name="confGuiAct"/>
+    <addaction name="separator"/>
+    <addaction name="menuDevices"/>
+    <addaction name="menuEmulatedDevices"/>
     <addaction name="separator"/>
     <addaction name="confShortcutsAct"/>
     <addaction name="actionManage_SoundEffects"/>
@@ -329,24 +335,23 @@
     </property>
     <addaction name="actionLog_Viewer"/>
     <addaction name="toolsCheckConfigAct"/>
-    <addaction name="toolsCgDisasmAct"/>
-    <addaction name="toolskernel_explorerAct"/>
-    <addaction name="toolsmemory_viewerAct"/>
-    <addaction name="toolsRsxDebuggerAct"/>
-    <addaction name="toolsSystemCommandsAct"/>
-    <addaction name="patchCreatorAct"/>
     <addaction name="toolsVfsDialogAct"/>
+    <addaction name="patchCreatorAct"/>
     <addaction name="actionMusic_Player"/>
     <addaction name="separator"/>
+    <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
-    <addaction name="separator"/>
     <addaction name="toolsExtractMSELFAct"/>
     <addaction name="toolsExtractPUPAct"/>
     <addaction name="toolsExtractTARAct"/>
     <addaction name="separator"/>
-    <addaction name="actionopen_rsx_capture"/>
+    <addaction name="toolsSystemCommandsAct"/>
+    <addaction name="toolsmemory_viewerAct"/>
+    <addaction name="toolskernel_explorerAct"/>
+    <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="separator"/>
     <addaction name="actionCreate_RSX_Capture"/>
+    <addaction name="actionopen_rsx_capture"/>
     <addaction name="actionCreate_Savestate"/>
     <addaction name="actionCreate_Savestate_And_Exit"/>
    </widget>
@@ -367,12 +372,18 @@
      <addaction name="showCustomIconsAct"/>
      <addaction name="playHoverGifsAct"/>
     </widget>
-    <widget class="QMenu" name="menuGame_List_Mode">
+    <widget class="QMenu" name="menuGame_List_View">
      <property name="title">
-      <string>Game List Mode</string>
+      <string>Game List View</string>
      </property>
-     <addaction name="setlistModeListAct"/>
-     <addaction name="setlistModeGridAct"/>
+     <addaction name="setListModeAct"/>
+     <addaction name="setGridModeAct"/>
+    </widget>
+    <widget class="QMenu" name="menuGame_List_Grid_Mode">
+     <property name="title">
+      <string>Game List in Grid Mode</string>
+     </property>
+     <addaction name="showCompatibilityInGridAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_Categories">
      <property name="title">
@@ -397,15 +408,14 @@
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
-    <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
     <addaction name="separator"/>
-    <addaction name="showCompatibilityInGridAct"/>
-    <addaction name="separator"/>
-    <addaction name="refreshGameListAct"/>
-    <addaction name="menuGame_List_Mode"/>
+    <addaction name="menuGame_List_View"/>
+    <addaction name="menuGame_List_Grid_Mode"/>
     <addaction name="menuGame_List_Icons"/>
     <addaction name="menuGame_Categories"/>
+    <addaction name="separator"/>
+    <addaction name="refreshGameListAct"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -417,11 +427,10 @@
      </property>
      <addaction name="languageAct0"/>
     </widget>
-    <addaction name="updateAct"/>
-    <addaction name="welcomeAct"/>
-    <addaction name="separator"/>
     <addaction name="languageMenu"/>
     <addaction name="separator"/>
+    <addaction name="updateAct"/>
+    <addaction name="welcomeAct"/>
     <addaction name="supportAct"/>
     <addaction name="separator"/>
     <addaction name="aboutAct"/>
@@ -486,6 +495,7 @@
    <addaction name="toolbar_start"/>
    <addaction name="toolbar_config"/>
    <addaction name="toolbar_controls"/>
+   <addaction name="toolbar_rpcn"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
   </widget>
@@ -614,6 +624,14 @@
     <string>Configure system</string>
    </property>
   </action>
+  <action name="confNetwrkAct">
+   <property name="text">
+    <string>Network</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Network settings</string>
+   </property>
+  </action>
   <action name="confAdvAct">
    <property name="text">
     <string>Advanced</string>
@@ -651,7 +669,7 @@
   </action>
   <action name="exitAndSaveLogAct">
    <property name="text">
-    <string>Exit And Save Log</string>
+    <string>Exit and Save Log</string>
    </property>
    <property name="toolTip">
     <string>Exit RPCS3, move the log file to a custom location</string>
@@ -808,12 +826,12 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show Game Compatibility in Grid Mode</string>
+    <string>Show Game Compatibility</string>
    </property>
   </action>
   <action name="refreshGameListAct">
    <property name="text">
-    <string>Game List Refresh</string>
+    <string>Refresh Game List</string>
    </property>
   </action>
   <action name="actionManage_RAP_Licenses">
@@ -831,7 +849,7 @@
   </action>
   <action name="welcomeAct">
    <property name="text">
-    <string>View The Welcome Dialog</string>
+    <string>View Welcome Dialog</string>
    </property>
   </action>
   <action name="confVFSDialogAct">
@@ -887,7 +905,7 @@
     <string>Large</string>
    </property>
   </action>
-  <action name="setlistModeListAct">
+  <action name="setListModeAct">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -895,15 +913,15 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>List View</string>
+    <string>List Mode</string>
    </property>
   </action>
-  <action name="setlistModeGridAct">
+  <action name="setGridModeAct">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Grid View</string>
+    <string>Grid Mode</string>
    </property>
   </action>
   <action name="sysRebootAct">
@@ -1024,6 +1042,18 @@
    </property>
    <property name="toolTip">
     <string>Configure the emulator</string>
+   </property>
+  </action>
+  <action name="toolbar_rpcn">
+   <property name="icon">
+    <iconset>
+     <normaloff>:/Icons/rpcn.png</normaloff>:/Icons/rpcn.png</iconset>
+   </property>
+   <property name="text">
+    <string>RPCN</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure RPCN settings</string>
    </property>
   </action>
   <action name="toolbar_controls">
