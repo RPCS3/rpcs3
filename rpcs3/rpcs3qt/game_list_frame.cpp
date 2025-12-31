@@ -1172,8 +1172,8 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 
 	QAction* boot = new QAction(gameinfo->has_custom_config
 		? (is_current_running_game
-			? tr("&Reboot with global configuration")
-			: tr("&Boot with global configuration"))
+			? tr("&Reboot with Global Configuration")
+			: tr("&Boot with Global Configuration"))
 		: (is_current_running_game
 			? tr("&Reboot")
 			: tr("&Boot")));
@@ -1184,8 +1184,8 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 	if (gameinfo->has_custom_config)
 	{
 		QAction* boot_custom = menu.addAction(is_current_running_game
-			? tr("&Reboot with custom configuration")
-			: tr("&Boot with custom configuration"));
+			? tr("&Reboot with Custom Configuration")
+			: tr("&Boot with Custom Configuration"));
 		boot_custom->setFont(font);
 		connect(boot_custom, &QAction::triggered, [this, gameinfo]
 		{
@@ -1202,8 +1202,8 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 
 	{
 		QAction* boot_default = menu.addAction(is_current_running_game
-			? tr("&Reboot with default configuration")
-			: tr("&Boot with default configuration"));
+			? tr("&Reboot with Default Configuration")
+			: tr("&Boot with Default Configuration"));
 
 		connect(boot_default, &QAction::triggered, [this, gameinfo]
 		{
@@ -1212,8 +1212,8 @@ void game_list_frame::ShowSingleSelectionContextMenu(const game_info& gameinfo, 
 		});
 
 		QAction* boot_manual = menu.addAction(is_current_running_game
-			? tr("&Reboot with manually selected configuration")
-			: tr("&Boot with manually selected configuration"));
+			? tr("&Reboot with Manually Selected Configuration")
+			: tr("&Boot with Manually Selected Configuration"));
 
 		connect(boot_manual, &QAction::triggered, [this, gameinfo]
 		{

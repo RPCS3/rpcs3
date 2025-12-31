@@ -221,7 +221,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	if (enable_play_last)
 	{
-		ui->sysPauseAct->setText(tr("&Play last played game"));
+		ui->sysPauseAct->setText(tr("&Play Last Played Game"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
