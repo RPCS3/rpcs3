@@ -8,6 +8,24 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
+template <>
+void fmt_class_string<rsx::overlays::media_list_dialog::media_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](rsx::overlays::media_list_dialog::media_type arg)
+	{
+		switch (arg)
+		{
+		case rsx::overlays::media_list_dialog::media_type::invalid: return "invalid";
+		case rsx::overlays::media_list_dialog::media_type::directory: return "directory";
+		case rsx::overlays::media_list_dialog::media_type::audio: return "audio";
+		case rsx::overlays::media_list_dialog::media_type::video: return "video";
+		case rsx::overlays::media_list_dialog::media_type::photo: return "photo";
+		}
+
+		return unknown;
+	});
+}
+
 namespace rsx
 {
 	namespace overlays
@@ -203,7 +221,7 @@ namespace rsx
 			return result;
 		}
 
-		s32 media_list_dialog::show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay)
+		s32 media_list_dialog::show(std::shared_ptr<media_entry> root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay)
 		{
 			auto ref = g_fxo->get<display_manager>().get(uid);
 
@@ -237,7 +255,7 @@ namespace rsx
 				{
 					focused = 0;
 					ensure(static_cast<size_t>(return_code) < m_media->children.size());
-					m_media = &m_media->children[return_code];
+					m_media = m_media->children[return_code];
 					rsx_log.notice("Media dialog: selected entry: %d ('%s')", return_code, m_media->path);
 					continue;
 				}
@@ -287,9 +305,10 @@ namespace rsx
 			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
 
-			for (const media_entry& child : m_media->children)
+			for (const auto& child : m_media->children)
 			{
-				std::unique_ptr<overlay_element> entry = std::make_unique<media_list_entry>(child);
+				ensure(!!child);
+				std::unique_ptr<overlay_element> entry = std::make_unique<media_list_entry>(*child);
 				m_list->add_entry(entry);
 			}
 
@@ -321,9 +340,11 @@ namespace rsx
 			static constexpr auto thread_name = "MediaList Thread"sv;
 		};
 
-		void parse_media_recursive(u32 depth, const std::string& media_path, const std::string& name, media_list_dialog::media_type type, media_list_dialog::media_entry& current_entry)
+		void parse_media_recursive(u32 depth, u32 max_depth, const std::string& media_path, const std::string& name, media_list_dialog::media_type type, std::shared_ptr<media_list_dialog::media_entry> current_entry)
 		{
-			if (depth++ > music_selection_context::max_depth)
+			ensure(!!current_entry);
+
+			if (depth++ > max_depth && max_depth != umax)
 			{
 				return;
 			}
@@ -339,26 +360,27 @@ namespace rsx
 
 					const std::string unescaped_name = vfs::unescape(dir_entry.name);
 
-					media_list_dialog::media_entry new_entry{};
-					parse_media_recursive(depth, media_path + "/" + dir_entry.name, unescaped_name, type, new_entry);
-					if (new_entry.type != media_list_dialog::media_type::invalid)
+					auto new_entry = std::make_shared<media_list_dialog::media_entry>();
+					parse_media_recursive(depth, max_depth, media_path + "/" + dir_entry.name, unescaped_name, type, new_entry);
+					if (new_entry->type != media_list_dialog::media_type::invalid)
 					{
-						new_entry.parent = &current_entry;
-						new_entry.index = ::narrow<u32>(current_entry.children.size());
-						current_entry.children.emplace_back(std::move(new_entry));
+						rsx_log.notice("parse_media_recursive: found '%s' (type=%s)", dir_entry.name, new_entry->type);
+						new_entry->parent = current_entry;
+						new_entry->index = ::narrow<u32>(current_entry->children.size());
+						current_entry->children.emplace_back(std::move(new_entry));
 					}
 				}
 
 				// Only keep directories that contain valid entries
-				if (current_entry.children.empty())
+				if (current_entry->children.empty())
 				{
 					rsx_log.notice("parse_media_recursive: No matches in directory '%s'", media_path);
 				}
 				else
 				{
-					rsx_log.notice("parse_media_recursive: Found %d matches in directory '%s'", current_entry.children.size(), media_path);
-					current_entry.type = media_list_dialog::media_type::directory;
-					current_entry.info.path = media_path;
+					rsx_log.notice("parse_media_recursive: Found %d matches in directory '%s'", current_entry->children.size(), media_path);
+					current_entry->type = media_list_dialog::media_type::directory;
+					current_entry->info.path = media_path;
 				}
 			}
 			else
@@ -370,20 +392,20 @@ namespace rsx
 				auto [success, info] = utils::get_media_info(media_path, av_media_type);
 				if (success)
 				{
-					current_entry.type = type;
-					current_entry.info = std::move(info);
+					current_entry->type = type;
+					current_entry->info = std::move(info);
 					rsx_log.notice("parse_media_recursive: Found media '%s'", media_path);
 				}
 			}
 
-			if (current_entry.type != media_list_dialog::media_type::invalid)
+			if (current_entry->type != media_list_dialog::media_type::invalid)
 			{
-				current_entry.path = media_path;
-				current_entry.name = name;
+				current_entry->path = media_path;
+				current_entry->name = name;
 			}
 		}
 
-		error_code show_media_list_dialog(media_list_dialog::media_type type, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished)
+		error_code show_media_list_dialog(media_list_dialog::media_type type, u32 max_depth, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished)
 		{
 			rsx_log.todo("show_media_list_dialog(type=%d, path='%s', title='%s', on_finished=%d)", static_cast<s32>(type), path, title, !!on_finished);
 
@@ -394,12 +416,12 @@ namespace rsx
 
 			g_fxo->get<named_thread<media_list_dialog_thread>>()([=]()
 			{
-				media_list_dialog::media_entry root_media_entry{};
-				root_media_entry.type = media_list_dialog::media_type::directory;
+				auto root_media_entry = std::make_shared<media_list_dialog::media_entry>();
+				root_media_entry->type = media_list_dialog::media_type::directory;
 
 				if (fs::is_dir(path))
 				{
-					parse_media_recursive(0, path, title, type, root_media_entry);
+					parse_media_recursive(0, max_depth, path, title, type, root_media_entry);
 				}
 				else
 				{
@@ -412,7 +434,7 @@ namespace rsx
 
 				if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 				{
-					result = manager->create<rsx::overlays::media_list_dialog>()->show(&root_media_entry, media, title, focused, true);
+					result = manager->create<rsx::overlays::media_list_dialog>()->show(root_media_entry, media, title, focused, true);
 				}
 				else
 				{

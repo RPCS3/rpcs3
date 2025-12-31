@@ -246,7 +246,7 @@ private:
 		{0x054C, 0x01C8, 0x01C8, "PSP Type A", nullptr, nullptr},
 		{0x054C, 0x01C9, 0x01C9, "PSP Type B", nullptr, nullptr},
 		{0x054C, 0x01CA, 0x01CA, "PSP Type C", nullptr, nullptr},
-		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr},
+		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr}, // UsbPspCm
 		{0x054C, 0x02D2, 0x02D2, "PSP Slim", nullptr, nullptr},
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
@@ -260,9 +260,6 @@ private:
 
 		// Tony Hawk RIDE Skateboard
 		{0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller", nullptr, nullptr},
-
-		// PSP in UsbPspCm mode
-		{0x054C, 0x01CB, 0x01CB, "UsbPspcm", nullptr, nullptr},
 
 		// Sony Stereo Headsets
 		{0x12BA, 0x0032, 0x0032, "Wireless Stereo Headset", nullptr, nullptr},

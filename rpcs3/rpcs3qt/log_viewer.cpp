@@ -114,24 +114,19 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	init_action(trace_act, logs::level::trace);
 
 	menu.addAction(copy);
+	menu.addAction(clear);
+
 	menu.addSeparator();
 	menu.addAction(open);
-	menu.addSeparator();
+	menu.addAction(config);
+	menu.addAction(filter);
 	menu.addAction(save);
 	menu.addSeparator();
-	menu.addAction(config);
-	menu.addSeparator();
-	menu.addAction(filter);
-	menu.addSeparator();
 	menu.addAction(timestamps);
-	menu.addSeparator();
 	menu.addAction(threads);
-	menu.addSeparator();
 	menu.addAction(last_actions_only);
 	menu.addSeparator();
 	menu.addActions(log_level_acts->actions());
-	menu.addSeparator();
-	menu.addAction(clear);
 
 	connect(copy, &QAction::triggered, this, [this]()
 	{
