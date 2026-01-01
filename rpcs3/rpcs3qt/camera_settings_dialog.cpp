@@ -3,11 +3,14 @@
 #include "ui_camera_settings_dialog.h"
 #include "permissions.h"
 #include "Emu/Io/camera_config.h"
+#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include <QCameraDevice>
 #include <QMediaDevices>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QVideoSink>
 
 LOG_CHANNEL(camera_log, "Camera");
 
@@ -61,15 +64,13 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 {
 	ui->setupUi(this);
 
+	setAttribute(Qt::WA_DeleteOnClose);
+
 	load_config();
 
-	for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
-	{
-		if (camera_info.isNull()) continue;
-		ui->combo_camera->addItem(camera_info.description(), QVariant::fromValue(camera_info));
-		camera_log.notice("Found camera: '%s'", camera_info.description());
-	}
+	ui->combo_handlers->addItem("Qt", QVariant::fromValue(static_cast<int>(camera_handler::qt)));
 
+	connect(ui->combo_handlers, &QComboBox::currentIndexChanged, this, &camera_settings_dialog::handle_handler_change);
 	connect(ui->combo_camera, &QComboBox::currentIndexChanged, this, &camera_settings_dialog::handle_camera_change);
 	connect(ui->combo_settings, &QComboBox::currentIndexChanged, this, &camera_settings_dialog::handle_settings_change);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
@@ -85,33 +86,132 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 		}
 	});
 
-	if (ui->combo_camera->count() == 0)
-	{
-		ui->combo_camera->setEnabled(false);
-		ui->combo_settings->setEnabled(false);
-		ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(false);
-		ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(false);
-	}
-	else
+	const int handler_index = ui->combo_handlers->findData(static_cast<int>(g_cfg.io.camera.get()));
+	ui->combo_handlers->setCurrentIndex(std::max(0, handler_index));
+}
+
+camera_settings_dialog::~camera_settings_dialog()
+{
+	reset_cameras();
+}
+
+void camera_settings_dialog::enable_combos()
+{
+	const bool is_enabled = ui->combo_camera->count() > 0;
+
+	ui->combo_camera->setEnabled(is_enabled);
+	ui->combo_settings->setEnabled(is_enabled);
+	ui->buttonBox->button(QDialogButtonBox::Save)->setEnabled(is_enabled);
+	ui->buttonBox->button(QDialogButtonBox::Apply)->setEnabled(is_enabled);
+
+	if (is_enabled)
 	{
 		// TODO: show camera ID somewhere
 		ui->combo_camera->setCurrentIndex(0);
 	}
 }
 
-camera_settings_dialog::~camera_settings_dialog()
+void camera_settings_dialog::reset_cameras()
 {
+	m_media_capture_session.reset();
+	m_camera.reset();
+}
+
+void camera_settings_dialog::handle_handler_change(int index)
+{
+	reset_cameras();
+
+	if (index < 0 || !ui->combo_handlers->itemData(index).canConvert<int>())
+	{
+		ui->combo_settings->clear();
+		ui->combo_camera->clear();
+		enable_combos();
+		return;
+	}
+
+	m_handler = static_cast<camera_handler>(ui->combo_handlers->itemData(index).value<int>());
+
+	ui->combo_settings->blockSignals(true);
+	ui->combo_camera->blockSignals(true);
+
+	ui->combo_settings->clear();
+	ui->combo_camera->clear();
+
+	switch (m_handler)
+	{
+	case camera_handler::qt:
+	{
+		for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
+		{
+			if (camera_info.isNull()) continue;
+			ui->combo_camera->addItem(camera_info.description(), QVariant::fromValue(camera_info));
+			camera_log.notice("Found camera: '%s'", camera_info.description());
+		}
+		break;
+	}
+	default:
+		fmt::throw_exception("Unexpected camera handler %d", static_cast<int>(m_handler));
+	}
+
+	ui->combo_settings->blockSignals(false);
+	ui->combo_camera->blockSignals(false);
+
+	enable_combos();
 }
 
 void camera_settings_dialog::handle_camera_change(int index)
 {
-	if (index < 0 || !ui->combo_camera->itemData(index).canConvert<QCameraDevice>())
+	if (index < 0)
 	{
 		ui->combo_settings->clear();
 		return;
 	}
 
-	const QCameraDevice camera_info = ui->combo_camera->itemData(index).value<QCameraDevice>();
+	reset_cameras();
+
+	switch (m_handler)
+	{
+	case camera_handler::qt:
+		handle_qt_camera_change(ui->combo_camera->itemData(index));
+		break;
+	default:
+		fmt::throw_exception("Unexpected camera handler %d", static_cast<int>(m_handler));
+	}
+}
+
+void camera_settings_dialog::handle_settings_change(int index)
+{
+	if (index < 0)
+	{
+		return;
+	}
+
+	if (!gui::utils::check_camera_permission(this,
+		[this, index](){ handle_settings_change(index); },
+		[this](){ QMessageBox::warning(this, tr("Camera permissions denied!"), tr("RPCS3 has no permissions to access cameras on this device.")); }))
+	{
+		return;
+	}
+
+	switch (m_handler)
+	{
+	case camera_handler::qt:
+		handle_qt_settings_change(ui->combo_settings->itemData(index));
+		break;
+	default:
+		fmt::throw_exception("Unexpected camera handler %d", static_cast<int>(m_handler));
+	}
+}
+
+void camera_settings_dialog::handle_qt_camera_change(const QVariant& item_data)
+{
+	if (!item_data.canConvert<QCameraDevice>())
+	{
+		ui->combo_settings->clear();
+		return;
+	}
+
+	const QCameraDevice camera_info = item_data.value<QCameraDevice>();
 
 	if (camera_info.isNull())
 	{
@@ -119,10 +219,10 @@ void camera_settings_dialog::handle_camera_change(int index)
 		return;
 	}
 
-	m_camera.reset(new QCamera(camera_info));
-	m_media_capture_session.reset(new QMediaCaptureSession(nullptr));
+	m_camera = std::make_unique<QCamera>(camera_info);
+	m_media_capture_session = std::make_unique<QMediaCaptureSession>(nullptr);
 	m_media_capture_session->setCamera(m_camera.get());
-	m_media_capture_session->setVideoSink(ui->videoWidget->videoSink());
+	m_media_capture_session->setVideoOutput(ui->videoWidget);
 
 	if (!m_camera->isAvailable())
 	{
@@ -173,14 +273,14 @@ void camera_settings_dialog::handle_camera_change(int index)
 		int index = 0;
 		bool success = false;
 		const std::string key = camera_info.id().toStdString();
-		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(key, success);
+		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(fmt::format("%s", camera_handler::qt), key, success);
 
 		if (success)
 		{
 			camera_log.notice("Found config entry for camera \"%s\"", key);
 
-			// Select matching drowdown entry
-			const double epsilon = 0.001;
+			// Select matching dropdown entry
+			constexpr double epsilon = 0.001;
 
 			for (int i = 0; i < ui->combo_settings->count(); i++)
 			{
@@ -202,19 +302,10 @@ void camera_settings_dialog::handle_camera_change(int index)
 
 		ui->combo_settings->setCurrentIndex(std::max<int>(0, index));
 		ui->combo_settings->setEnabled(true);
-
-		// Update config to match user interface outcome
-		const QCameraFormat setting = ui->combo_settings->currentData().value<QCameraFormat>();
-		cfg_setting.width = setting.resolution().width();
-		cfg_setting.height = setting.resolution().height();
-		cfg_setting.min_fps = setting.minFrameRate();
-		cfg_setting.max_fps = setting.maxFrameRate();
-		cfg_setting.format = static_cast<int>(setting.pixelFormat());
-		g_cfg_camera.set_camera_setting(key, cfg_setting);
 	}
 }
 
-void camera_settings_dialog::handle_settings_change(int index)
+void camera_settings_dialog::handle_qt_settings_change(const QVariant& item_data)
 {
 	if (!m_camera)
 	{
@@ -227,28 +318,22 @@ void camera_settings_dialog::handle_settings_change(int index)
 		return;
 	}
 
-	if (!gui::utils::check_camera_permission(this,
-		[this, index](){ handle_settings_change(index); },
-		[this](){ QMessageBox::warning(this, tr("Camera permissions denied!"), tr("RPCS3 has no permissions to access cameras on this device.")); }))
+	if (item_data.canConvert<QCameraFormat>() && ui->combo_camera->currentData().canConvert<QCameraDevice>())
 	{
-		return;
-	}
-
-	if (index >= 0 && ui->combo_settings->itemData(index).canConvert<QCameraFormat>() && ui->combo_camera->currentData().canConvert<QCameraDevice>())
-	{
-		const QCameraFormat setting = ui->combo_settings->itemData(index).value<QCameraFormat>();
+		const QCameraFormat setting = item_data.value<QCameraFormat>();
 		if (!setting.isNull())
 		{
 			m_camera->setCameraFormat(setting);
 		}
 
-		cfg_camera::camera_setting cfg_setting;
+		cfg_camera::camera_setting cfg_setting {};
 		cfg_setting.width = setting.resolution().width();
 		cfg_setting.height = setting.resolution().height();
 		cfg_setting.min_fps = setting.minFrameRate();
 		cfg_setting.max_fps = setting.maxFrameRate();
 		cfg_setting.format = static_cast<int>(setting.pixelFormat());
-		g_cfg_camera.set_camera_setting(ui->combo_camera->currentData().value<QCameraDevice>().id().toStdString(), cfg_setting);
+		cfg_setting.colorspace = 0;
+		g_cfg_camera.set_camera_setting(fmt::format("%s", camera_handler::qt), ui->combo_camera->currentData().value<QCameraDevice>().id().toStdString(), cfg_setting);
 	}
 
 	m_camera->start();
