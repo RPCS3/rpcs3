@@ -15,7 +15,23 @@
   </property>
   <layout class="QVBoxLayout" name="mainLayout" stretch="0,1,0">
    <item>
-    <layout class="QHBoxLayout" name="settingsLayout" stretch="1,2">
+    <layout class="QHBoxLayout" name="settingsLayout" stretch="0,1,2">
+     <item>
+      <widget class="QGroupBox" name="gbHandler">
+       <property name="title">
+        <string>Handler</string>
+       </property>
+       <layout class="QVBoxLayout" name="handler_layout">
+        <item>
+         <widget class="QComboBox" name="combo_handlers">
+          <property name="placeholderText">
+           <string>No handlers found</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item>
       <widget class="QGroupBox" name="gbCamera">
        <property name="title">
@@ -75,10 +91,10 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="standardButtons">
-      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::StandardButton::Apply|QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Save</set>
      </property>
     </widget>
    </item>
