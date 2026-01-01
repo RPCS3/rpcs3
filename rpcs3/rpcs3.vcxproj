@@ -190,6 +190,7 @@
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="gamemode_control.cpp" />
+    <ClCompile Include="Input\camera_video_sink.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
@@ -944,6 +945,7 @@
     <ClInclude Include="Input\basic_mouse_handler.h" />
     <ClInclude Include="display_sleep_control.h" />
     <ClInclude Include="gamemode_control.h" />
+    <ClInclude Include="Input\camera_video_sink.h" />
     <ClInclude Include="Input\ds3_pad_handler.h" />
     <ClInclude Include="Input\ds4_pad_handler.h" />
     <ClInclude Include="Input\dualsense_pad_handler.h" />
