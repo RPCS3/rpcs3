@@ -273,7 +273,7 @@ void camera_settings_dialog::handle_qt_camera_change(const QVariant& item_data)
 		int index = 0;
 		bool success = false;
 		const std::string key = camera_info.id().toStdString();
-		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(fmt::format("%s", camera_handler::qt), key, success);
+		const cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(fmt::format("%s", camera_handler::qt), key, success);
 
 		if (success)
 		{
