@@ -1265,7 +1265,7 @@ struct SceNpCommunicationId
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16 + 1]; // char term;
+	char data[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1]; // char term;
 	char dummy[3];
 };
 

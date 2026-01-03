@@ -38,7 +38,7 @@ else
     echo "Failed to download translations.zip. Continuing without translations."
     exit 0
   }
-  unzip -o translations.zip -d "./bin/share/qt6/translations" >/dev/null 2>&1 || \
+  7z x translations.zip -o"./bin/share/qt6/translations" >/dev/null 2>&1 || \
     echo "Failed to extract translations.zip. Continuing without translations."
   rm -f translations.zip
 fi

@@ -81,7 +81,7 @@ vec4 fetch_fog_value(const in uint mode)
 }
 #endif
 
-#ifdef _EMULATE_COVERAGE_TEST
+#ifdef _ENABLE_ALPHA_TO_COVERAGE_TEST
 // Purely stochastic
 bool coverage_test_passes(const in vec4 _sample)
 {
@@ -109,6 +109,7 @@ vec4 srgb_to_linear(const in vec4 cs)
 }
 #endif
 
+#ifdef _ENABLE_COMPARISON_FUNC
 // Required by all fragment shaders for alpha test
 bool comparison_passes(const in float a, const in float b, const in uint func)
 {
@@ -125,5 +126,6 @@ bool comparison_passes(const in float a, const in float b, const in uint func)
 		case 7: return true; //always
 	}
 }
+#endif
 
 )"

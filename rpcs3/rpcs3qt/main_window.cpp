@@ -801,7 +801,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 	if (file_paths.count() == 1)
 	{
-		const QString file_path = file_paths.front();
+		const QString& file_path = file_paths.front();
 		const QFileInfo file_info(file_path);
 
 		if (file_info.isDir())
@@ -818,92 +818,6 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 			}
 
 			return InstallPackages(dir_file_paths, from_boot);
-		}
-
-		if (file_info.suffix().compare("pkg", Qt::CaseInsensitive) == 0)
-		{
-			compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
-
-			if (!info.is_valid)
-			{
-				QMessageBox::warning(this, tr("Invalid package!"), tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
-				return false;
-			}
-
-			if (info.type != compat::package_type::other)
-			{
-				if (info.type == compat::package_type::dlc)
-				{
-					info.local_cat = tr("\nDLC", "Block for package type (DLC)");
-				}
-				else
-				{
-					info.local_cat = tr("\nUpdate", "Block for package type (Update)");
-				}
-			}
-			else if (!info.local_cat.isEmpty())
-			{
-				info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
-			}
-
-			if (!info.title_id.isEmpty())
-			{
-				info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
-			}
-
-			if (!info.version.isEmpty())
-			{
-				info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
-			}
-
-			if (!info.changelog.isEmpty())
-			{
-				info.changelog = tr("Changelog:\n%0", "Block for Changelog").arg(info.changelog);
-			}
-
-			u64 free_space = 0;
-
-			// Retrieve disk space info on data path's drive
-			if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_dir(), stat))
-			{
-				free_space = stat.avail_free;
-			}
-
-			const QString installation_info =
-				tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-				.arg(QString::fromStdString(rpcs3::utils::get_hdd0_game_dir()))
-				.arg(gui::utils::format_byte_size(free_space))
-				.arg(info.data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
-				.arg(gui::utils::format_byte_size(info.data_size));
-
-			const QString info_string = QStringLiteral("%0\n\n%1%2%3%4").arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version);
-			QString message = tr("Do you want to install this package?\n\n%0\n\n%1").arg(info_string).arg(installation_info);
-
-			QMessageBox mb(QMessageBox::Icon::Question, tr("PKG Decrypter / Installer"), gui::utils::make_paragraph(message), QMessageBox::Yes | QMessageBox::No, this);
-			mb.setDefaultButton(QMessageBox::No);
-			mb.setTextFormat(Qt::RichText); // Support HTML tags
-			mb.button(QMessageBox::Yes)->setEnabled(info.data_size <= free_space);
-
-			if (!info.changelog.isEmpty())
-			{
-				mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-				mb.setDetailedText(info.changelog);
-
-				// Smartass hack to make the unresizeable message box wide enough for the changelog
-				const int log_width = QLabel(info.changelog).sizeHint().width();
-				while (QLabel(message).sizeHint().width() < log_width)
-				{
-					message += "          ";
-				}
-
-				mb.setText(message);
-			}
-
-			if (mb.exec() != QMessageBox::Yes)
-			{
-				gui_log.notice("PKG: Cancelled installation from drop.\n%s\n%s", info_string, info.changelog);
-				return true;
-			}
 		}
 	}
 
@@ -983,28 +897,22 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	}
 
 	std::vector<compat::package_info> packages;
+	bool precompile_caches = false;
+	bool create_desktop_shortcuts = false;
+	bool create_app_shortcut = false;
 
 	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
-	if (file_paths.size() > 1)
+	// Let the user choose the packages to install and select the order in which they shall be installed.
+	pkg_install_dialog dlg(file_paths, compat, this);
+	connect(&dlg, &QDialog::accepted, this, [&]()
 	{
-		// Let the user choose the packages to install and select the order in which they shall be installed.
-		pkg_install_dialog dlg(file_paths, compat, this);
-		connect(&dlg, &QDialog::accepted, this, [&packages, &dlg]()
-		{
-			packages = dlg.GetPathsToInstall();
-		});
-		dlg.exec();
-	}
-	else
-	{
-		packages.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
-	}
-
-	if (packages.empty())
-	{
-		return true;
-	}
+		packages = dlg.get_paths_to_install();
+		precompile_caches = dlg.precompile_caches();
+		create_desktop_shortcuts = dlg.create_desktop_shortcuts();
+		create_app_shortcut = dlg.create_app_shortcut();
+	});
+	dlg.exec();
 
 	if (!from_boot)
 	{
@@ -1178,9 +1086,9 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 		if (!bootable_paths_installed.empty())
 		{
-			m_game_list_frame->AddRefreshedSlot([this, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
+			m_game_list_frame->AddRefreshedSlot([this, create_desktop_shortcuts, precompile_caches, create_app_shortcut, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 			{
-				// Try to claim operaions on ID
+				// Try to claim operations on ID
 				for (auto it = paths.begin(); it != paths.end();)
 				{
 					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
@@ -1196,13 +1104,12 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				// Executes after PrecompileCachesFromInstalledPackages
-				m_notify_batch_game_action_cb = [this, paths]() mutable
-				{
-					ShowOptionalGamePreparations(tr("Success!"), tr("Successfully installed software from package(s)!"), std::move(paths));
-				};
+				CreateShortCuts(paths, create_desktop_shortcuts, create_app_shortcut);
 
-				PrecompileCachesFromInstalledPackages(paths);
+				if (precompile_caches)
+				{
+					PrecompileCachesFromInstalledPackages(paths);
+				}
 			});
 		}
 
@@ -1870,6 +1777,7 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_grid    ->setIcon(icon(":/Icons/grid.png"));
 	ui->toolbar_list    ->setIcon(icon(":/Icons/list.png"));
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
+	ui->toolbar_rpcn	->setIcon(icon(":/Icons/rpcn.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
 	ui->sysStopAct->setIcon(icon(":/Icons/stop.png"));
@@ -2402,6 +2310,8 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 
 	QVBoxLayout* vlayout = new QVBoxLayout(dlg);
 
+	QCheckBox* precompile_check = new QCheckBox(tr("Precompile caches"));
+	precompile_check->setChecked(true);
 	QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
 #ifdef _WIN32
 	QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
@@ -2410,10 +2320,12 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 #else
 	QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-	QLabel* label = new QLabel(tr("%1\nWould you like to install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
+	QLabel* label = new QLabel(tr("%1\nWould you like to precompile caches and install shortcuts to the installed software? (%2 new software detected)\n\n").arg(message).arg(bootable_paths.size()), dlg);
 
 	vlayout->addWidget(label);
 	vlayout->addStretch(10);
+	vlayout->addWidget(precompile_check);
+	vlayout->addStretch(3);
 	vlayout->addWidget(desk_check);
 	vlayout->addStretch(3);
 	vlayout->addWidget(quick_check);
@@ -2426,32 +2338,46 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 
 	connect(btn_box, &QDialogButtonBox::accepted, this, [=, this, paths = std::move(bootable_paths)]()
 	{
+		const bool precompile_caches = precompile_check->isChecked();
 		const bool create_desktop_shortcuts = desk_check->isChecked();
 		const bool create_app_shortcut = quick_check->isChecked();
 
 		dlg->hide();
 		dlg->accept();
 
-		std::set<gui::utils::shortcut_location> locations;
+		CreateShortCuts(paths, create_desktop_shortcuts, create_app_shortcut);
+
+		if (precompile_caches)
+		{
+			PrecompileCachesFromInstalledPackages(paths);
+		}
+	});
+
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->open();
+}
+
+void main_window::CreateShortCuts(const std::map<std::string, QString>& paths, bool create_desktop_shortcuts, bool create_app_shortcut)
+{
+	if (paths.empty()) return;
+
+	std::set<gui::utils::shortcut_location> locations;
 
 #ifdef _WIN32
-		locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+	locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
 #endif
-		if (create_desktop_shortcuts)
-		{
-			locations.insert(gui::utils::shortcut_location::desktop);
-		}
+	if (create_desktop_shortcuts)
+	{
+		locations.insert(gui::utils::shortcut_location::desktop);
+	}
 
-		if (create_app_shortcut)
-		{
-			locations.insert(gui::utils::shortcut_location::applications);
-		}
+	if (create_app_shortcut)
+	{
+		locations.insert(gui::utils::shortcut_location::applications);
+	}
 
-		if (locations.empty())
-		{
-			return;
-		}
-
+	if (!locations.empty())
+	{
 		std::vector<game_info> game_data_shortcuts;
 
 		for (const auto& [boot_path, title_id] : paths)
@@ -2477,12 +2403,8 @@ void main_window::ShowOptionalGamePreparations(const QString& title, const QStri
 		{
 			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
 		}
-	});
-
-	dlg->setAttribute(Qt::WA_DeleteOnClose);
-	dlg->open();
+	}
 }
-
 
 void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths)
 {
@@ -2538,8 +2460,8 @@ void main_window::CreateActions()
 	m_icon_size_act_group->addAction(ui->setIconSizeLargeAct);
 
 	m_list_mode_act_group = new QActionGroup(this);
-	m_list_mode_act_group->addAction(ui->setlistModeListAct);
-	m_list_mode_act_group->addAction(ui->setlistModeGridAct);
+	m_list_mode_act_group->addAction(ui->setListModeAct);
+	m_list_mode_act_group->addAction(ui->setGridModeAct);
 }
 
 void main_window::CreateConnects()
@@ -2871,6 +2793,7 @@ void main_window::CreateConnects()
 	connect(ui->confAudioAct,  &QAction::triggered, this, [open_settings]() { open_settings(2); });
 	connect(ui->confIOAct,     &QAction::triggered, this, [open_settings]() { open_settings(3); });
 	connect(ui->confSystemAct, &QAction::triggered, this, [open_settings]() { open_settings(4); });
+	connect(ui->confNetwrkAct, &QAction::triggered, this, [open_settings]() { open_settings(5); });
 	connect(ui->confAdvAct,    &QAction::triggered, this, [open_settings]() { open_settings(6); });
 	connect(ui->confEmuAct,    &QAction::triggered, this, [open_settings]() { open_settings(7); });
 	connect(ui->confGuiAct,    &QAction::triggered, this, [open_settings]() { open_settings(8); });
@@ -2982,15 +2905,17 @@ void main_window::CreateConnects()
 
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{
-		camera_settings_dialog dlg(this);
-		dlg.exec();
+		camera_settings_dialog* dlg = new camera_settings_dialog(this);
+		dlg->open();
 	});
 
-	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
+	const auto open_rpcn_settings = [this]
 	{
 		rpcn_settings_dialog dlg(this);
 		dlg.exec();
-	});
+	};
+
+	connect(ui->confRPCNAct, &QAction::triggered, this, open_rpcn_settings);
 
 	connect(ui->confClansAct, &QAction::triggered, this, [this]()
 	{
@@ -2999,7 +2924,7 @@ void main_window::CreateConnects()
 			QMessageBox::critical(this, tr("Error: Emulation Running"), tr("You need to stop the emulator before editing Clans connection information!"), QMessageBox::Ok);
 			return;
 		}
-		
+
 		clans_settings_dialog dlg(this);
 		dlg.exec();
 	});
@@ -3410,7 +3335,7 @@ void main_window::CreateConnects()
 
 	connect(m_list_mode_act_group, &QActionGroup::triggered, this, [this](QAction* act)
 	{
-		const bool is_list_act = act == ui->setlistModeListAct;
+		const bool is_list_act = act == ui->setListModeAct;
 		if (is_list_act == m_is_list_mode)
 			return;
 
@@ -3448,10 +3373,11 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->toolbar_controls, &QAction::triggered, this, open_pad_settings);
 	connect(ui->toolbar_config, &QAction::triggered, this, [=]() { open_settings(0); });
-	connect(ui->toolbar_list, &QAction::triggered, this, [this]() { ui->setlistModeListAct->trigger(); });
-	connect(ui->toolbar_grid, &QAction::triggered, this, [this]() { ui->setlistModeGridAct->trigger(); });
+	connect(ui->toolbar_controls, &QAction::triggered, this, open_pad_settings);
+	connect(ui->toolbar_rpcn, &QAction::triggered, this, open_rpcn_settings);
+	connect(ui->toolbar_list, &QAction::triggered, this, [this]() { ui->setListModeAct->trigger(); });
+	connect(ui->toolbar_grid, &QAction::triggered, this, [this]() { ui->setGridModeAct->trigger(); });
 
 	connect(ui->sizeSlider, &QSlider::valueChanged, this, &main_window::ResizeIcons);
 	connect(ui->sizeSlider, &QSlider::sliderReleased, this, [this]
@@ -3471,15 +3397,6 @@ void main_window::CreateConnects()
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
 	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
 	connect(m_game_list_frame, &game_list_frame::FocusToSearchBar, this, [this]() { ui->mw_searchbar->setFocus(); });
-
-	connect(m_game_list_frame, &game_list_frame::NotifyBatchedGameActionFinished, this, [this]() mutable
-	{
-		if (m_notify_batch_game_action_cb)
-		{
-			m_notify_batch_game_action_cb();
-			m_notify_batch_game_action_cb = {};
-		}
-	});
 }
 
 void main_window::CreateDockWindows()
@@ -3710,9 +3627,9 @@ void main_window::ConfigureGuiFromSettings()
 
 	// handle icon size options
 	if (m_is_list_mode)
-		ui->setlistModeListAct->setChecked(true);
+		ui->setListModeAct->setChecked(true);
 	else
-		ui->setlistModeGridAct->setChecked(true);
+		ui->setGridModeAct->setChecked(true);
 
 	const int icon_size_index = m_gui_settings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
 	m_other_slider_pos = m_gui_settings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();

@@ -700,8 +700,3 @@ void usb_device_dimensions::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoi
 		break;
 	}
 }
-
-void usb_device_dimensions::isochronous_transfer(UsbTransfer* transfer)
-{
-	usb_device_emulated::isochronous_transfer(transfer);
-}

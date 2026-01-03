@@ -528,7 +528,11 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
       QT_VER_MAIN: '6'
-      LLVM_COMPILER_VER: '19'
+      LLVM_COMPILER_VER: '-devel'
+      CC: 'clang-devel'
+      CXX: 'clang++-devel'
+      LLVM_CONFIG: 'llvm-config-devel'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -547,8 +551,10 @@ jobs:
         id: root
         uses: vmactions/freebsd-vm@v1
         with:
-          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR'
+          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR CC CXX LLVM_CONFIG'
           usesh: true
+          copyback: false
+          release: "14.3"
           run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
 
       - name: Save Build Ccache

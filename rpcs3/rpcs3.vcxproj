@@ -77,7 +77,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;HAVE_SDL3;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;HAVE_SDL3;WITH_DISCORD_RPC;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;NDEBUG;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -110,7 +110,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --release "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --translationdir "$(TargetDir)qt6\translations" --release "$(TargetPath)"
         xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv412\build\x64\bin\opencv_world4120.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
@@ -138,7 +138,7 @@
       <DisableSpecificWarnings>4577;4467;4281;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;HAVE_SDL3;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;HAVE_VULKAN;HAVE_OPENCV;CV_IGNORE_DEBUG_BUILD_GUARD;MINIUPNP_STATICLIB;ZLIB_CONST;AL_LIBTYPE_STATIC;WOLFSSL_USER_SETTINGS;HAVE_SDL3;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;QT_CONCURRENT_LIB;QT_MULTIMEDIA_LIB;QT_MULTIMEDIAWIDGETS_LIB;QT_SVG_LIB;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <SuppressStartupBanner>true</SuppressStartupBanner>
@@ -169,7 +169,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --debug "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --translationdir "$(TargetDir)qt6\translations"  --debug "$(TargetPath)"
         xcopy /y /d "$(SolutionDir)3rdparty\opencv\opencv\opencv412\build\x64\bin\opencv_world4120.dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
@@ -190,6 +190,7 @@
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="gamemode_control.cpp" />
+    <ClCompile Include="Input\camera_video_sink.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
@@ -200,6 +201,8 @@
     <ClCompile Include="Input\raw_mouse_handler.cpp" />
     <ClCompile Include="Input\ps_move_handler.cpp" />
     <ClCompile Include="Input\sdl_pad_handler.cpp" />
+    <ClCompile Include="Input\sdl_camera_handler.cpp" />
+    <ClCompile Include="Input\sdl_camera_video_sink.cpp" />
     <ClCompile Include="Input\sdl_instance.cpp" />
     <ClCompile Include="Input\skateboard_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
@@ -944,6 +947,7 @@
     <ClInclude Include="Input\basic_mouse_handler.h" />
     <ClInclude Include="display_sleep_control.h" />
     <ClInclude Include="gamemode_control.h" />
+    <ClInclude Include="Input\camera_video_sink.h" />
     <ClInclude Include="Input\ds3_pad_handler.h" />
     <ClInclude Include="Input\ds4_pad_handler.h" />
     <ClInclude Include="Input\dualsense_pad_handler.h" />
@@ -1068,6 +1072,8 @@
     <ClInclude Include="Input\raw_mouse_handler.h" />
     <ClInclude Include="Input\ps_move_handler.h" />
     <ClInclude Include="Input\sdl_pad_handler.h" />
+    <ClInclude Include="Input\sdl_camera_handler.h" />
+    <ClInclude Include="Input\sdl_camera_video_sink.h" />
     <ClInclude Include="Input\sdl_instance.h" />
     <ClInclude Include="Input\skateboard_pad_handler.h" />
     <ClInclude Include="main_application.h" />

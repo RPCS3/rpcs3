@@ -142,7 +142,7 @@ error_code select_photo(std::string dst_dir)
 	const std::string vfs_dir_path = vfs::get("/dev_hdd0/photo");
 	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE_PHOTO_IMPORT);
 
-	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::photo, vfs_dir_path, title,
+	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::photo, umax, vfs_dir_path, title,
 		[&pi_manager, dst_dir](s32 status, utils::media_info info)
 		{
 			sysutil_register_cb([&pi_manager, dst_dir, info, status](ppu_thread& ppu) -> s32
@@ -176,10 +176,29 @@ error_code select_photo(std::string dst_dir)
 
 					const std::string filename = info.path.substr(info.path.find_last_of(fs::delim) + 1);
 					const std::string title = info.get_metadata("title", filename);
-					const std::string dst_path = dst_dir + "/" + filename;
+					std::string dst_path = dst_dir + "/";
 					std::string sub_type = info.sub_type;
 
-					strcpy_trunc(g_filedata->dstFileName, filename);
+					// Try to find a unique filename (TODO: how does the PS3 copy the files exactly?)
+					std::string extension;
+					std::string dst_filename = filename;
+					if (const auto extension_start = filename.find_last_of('.');
+						extension_start != umax)
+					{
+						extension = filename.substr(extension_start);
+						dst_filename = filename.substr(0, extension_start);
+					}
+
+					std::string suffix = extension;
+					u32 counter = 0;
+					while (!Emu.IsStopped() && fs::is_file(dst_path + dst_filename + suffix))
+					{
+						suffix = fmt::format(" %d%s", ++counter, extension);
+					}
+					dst_filename += std::move(suffix);
+					dst_path += dst_filename;
+
+					strcpy_trunc(g_filedata->dstFileName, dst_filename);
 					strcpy_trunc(g_filedata->photo_title, title);
 					strcpy_trunc(g_filedata->game_title, Emu.GetTitle());
 					strcpy_trunc(g_filedata->game_comment, ""); // TODO
