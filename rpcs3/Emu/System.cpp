@@ -34,6 +34,7 @@
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
+#include "Loader/ISO.h"
 #include "Loader/ELF.h"
 #include "Loader/disc.h"
 
@@ -782,7 +783,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
 	utils::serial load;
 	load.set_reading_state();
- 
+
  	const std::string lower = fmt::to_lower(path);
 
 	if (lower.ends_with(".gz") || lower.ends_with(".zst"))
@@ -1078,6 +1079,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 	sys_log.notice("Path: %s", m_path);
 
 	std::string inherited_ps3_game_path;
+	bool launching_from_disc_archive = false;
 
 	{
 		Init();
@@ -1406,6 +1408,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				m_path = rpcs3::utils::get_hdd1_dir();
 				m_path += std::string_view(argv[0]).substr(9);
 			}
+			else if (is_file_iso(argv[0]))
+			{
+				m_path = argv[0];
+			}
 			else
 			{
 				sys_log.error("Unknown source for path redirection: %s", argv[0]);
@@ -1421,6 +1427,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+		if (is_file_iso(m_path))
+		{
+			load_iso(m_path);
+
+			std::string path = iso_device::virtual_device_name + "/";
+
+			vfs::mount("/dev_bdvd/"sv, path);
+
+			// ISOs that are install discs will error if set to EBOOT.BIN
+			// so this should cover both of them
+			if (fs::exists(path + "PS3_GAME/USRDIR/EBOOT.BIN"))
+			{
+				path = path + "PS3_GAME/USRDIR/EBOOT.BIN";
+			}
+
+			m_path = path;
+
+			m_dir = "/dev_bdvd/PS3_GAME/";
+			m_cat = "DG"sv;
+
+			launching_from_disc_archive = true;
+		}
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
@@ -1595,8 +1623,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 		}
 
+		// ISO PKG INSTALL HACK!
+		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		{
+			bdvd_dir = m_path;
+		}
+
 		// Special boot mode (directory scan)
-		if (fs::is_dir(m_path))
+		if (fs::is_dir(m_path) && !launching_from_disc_archive)
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
@@ -1787,6 +1821,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				sys_log.error("Failed to move disc game %s to '%s' (%s)", m_title_id, dst_dir, fs::g_tls_error);
 				return game_boot_result::wrong_disc_location;
+			}
+			else if (launching_from_disc_archive)
+			{
+				bdvd_dir = iso_device::virtual_device_name + "/";
 			}
 		}
 
@@ -2074,6 +2112,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Do it after installation to prevent false positives when RPCS3 closed in the middle of the operation
 				lock_file.open(lock_file_path, fs::read + fs::create + fs::excl);
 			}
+		}
+
+		// ISO has no USRDIR/EBOOT.BIN, and we've examined its PKGDIR and extras.
+		// time to wrap up
+		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		{
+			return game_boot_result::nothing_to_boot;
 		}
 
 		// Check firmware version
@@ -3368,7 +3413,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		{
 			if (spu.first->pc != spu.second || spu.first->unsavable)
 			{
-				std::string dump; 
+				std::string dump;
 				spu.first->dump_all(dump);
 
 				sys_log.error("SPU thread continued after being paused. (old_pc=0x%x, pc=0x%x, unsavable=%d)", spu.second, spu.first->pc, spu.first->unsavable);
@@ -3546,7 +3591,17 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 
-				if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
+				// Game mounted from archive
+				if (m_path.starts_with(iso_device::virtual_device_name + "/"))
+				{
+					auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+					ensure(device);
+
+					auto iso_device = dynamic_cast<class iso_device*>(device.get());
+					ar(iso_device->get_loaded_iso());
+					ar(m_title_id);
+				}
+				else if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
 				{
 					// Fake /dev_bdvd/PS3_GAME detected, use HDD0 for m_path restoration
 					ensure(vfs::unmount("/dev_bdvd/PS3_GAME"));
@@ -3831,6 +3886,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			disc.clear();
 			klic.clear();
 			hdd1.clear();
+			unload_iso();
 			init_mem_containers = nullptr;
 			m_config_path.clear();
 			m_config_mode = cfg_mode::custom;
@@ -4331,7 +4387,7 @@ const std::string& Emulator::GetFakeCat() const
 	{
 		const std::string mount_point = vfs::get("/dev_bdvd");
 
-		if (mount_point.empty() || !IsPathInsideDir(m_path, mount_point))
+		if (mount_point.empty() || (!IsPathInsideDir(m_path, mount_point) && !m_path.starts_with(iso_device::virtual_device_name)))
 		{
 			static const std::string s_hg = "HG";
 			return s_hg;
