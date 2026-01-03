@@ -56,7 +56,10 @@ fi
 
 # Copy Qt translations manually
 QT_TRANS="$WORKDIR/qt-downloader/$QT_VER/clang_64/translations"
-cp $QT_TRANS/qt*.qm rpcs3.app/Contents/translations
+cp $QT_TRANS/qt_*.qm rpcs3.app/Contents/translations
+cp $QT_TRANS/qtbase_*.qm rpcs3.app/Contents/translations
+cp $QT_TRANS/qtmultimedia_*.qm rpcs3.app/Contents/translations
+rm -f rpcs3.app/Contents/translations/qt_help_*.qm
 
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
