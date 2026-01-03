@@ -2254,7 +2254,7 @@ namespace vm
 			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 			std::memset(g_range_lock_bits, 0, sizeof(g_range_lock_bits));
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__arm64__)
 			utils::memory_release(g_hook_addr, 0x800000000);
 #endif
 			ensure(s_hook.map(g_hook_addr, utils::protection::rw, true));
