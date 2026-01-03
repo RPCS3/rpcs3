@@ -300,6 +300,7 @@ namespace gl
 			}
 
 			builder << "\n"
+				"#define TEX_PARAM(index) texture_parameters[index + texture_base_index]\n"
 				"#define IS_TEXTURE_RESIDENT(index) (texture_handles[index] < 0xFF)\n"
 				"#define SAMPLER1D(index) sampler1D_array[texture_handles[index]]\n"
 				"#define SAMPLER2D(index) sampler2D_array[texture_handles[index]]\n"

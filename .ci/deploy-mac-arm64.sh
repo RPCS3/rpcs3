@@ -57,6 +57,10 @@ else
   rm -f translations.zip
 fi
 
+# Copy Qt translations manually
+QT_TRANS="$WORKDIR/qt-downloader/$QT_VER/clang_64/translations"
+cp $QT_TRANS/qt*.qm rpcs3.app/Contents/translations
+
 # Hack
 install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/lib not needed"
 install_name_tool -delete_rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib RPCS3.app/Contents/MacOS/rpcs3 || echo "Hack for deleting rpath /opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/lib not needed"

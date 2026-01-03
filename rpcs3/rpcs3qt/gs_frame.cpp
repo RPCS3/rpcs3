@@ -1040,7 +1040,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 				}
 
-				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
+				const std::string cell_sshot_filename = Emu.GetCallbacks().get_photo_path(manager.get_photo_title() + ".png");
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);

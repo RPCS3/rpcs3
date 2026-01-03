@@ -680,79 +680,9 @@ namespace rsx
 		ROP_control_t rop_control{};
 		alignas(16) fragment_context_t payload{};
 
-		if (REGS(m_ctx)->alpha_test_enabled())
-		{
-			const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
-			rop_control.set_alpha_test_func(alpha_func);
-			rop_control.enable_alpha_test();
-		}
-
-		if (REGS(m_ctx)->polygon_stipple_enabled())
-		{
-			rop_control.enable_polygon_stipple();
-		}
-
-		auto can_use_hw_a2c = [&]() -> bool
-		{
-			const auto& config = RSX(m_ctx)->get_backend_config();
-			if (!config.supports_hw_a2c)
-			{
-				return false;
-			}
-
-			if (config.supports_hw_a2c_1spp)
-			{
-				return true;
-			}
-
-			return REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-		};
-
-		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled() && !can_use_hw_a2c())
-		{
-			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
-			// Alpha values generate a coverage mask for order independent blending
-			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
-			// Simulated using combined alpha blend and alpha test
-			rop_control.enable_alpha_to_coverage();
-			if (REGS(m_ctx)->msaa_sample_mask())
-			{
-				rop_control.enable_MSAA_writes();
-			}
-
-			// Sample configuration bits
-			switch (REGS(m_ctx)->surface_antialias())
-			{
-			case rsx::surface_antialiasing::center_1_sample:
-				break;
-			case rsx::surface_antialiasing::diagonal_centered_2_samples:
-				rop_control.set_msaa_control(1u);
-				break;
-			default:
-				rop_control.set_msaa_control(3u);
-				break;
-			}
-		}
-
-		// Check if framebuffer is actually an XRGB format and not a WZYX format
-		switch (REGS(m_ctx)->surface_color())
-		{
-		case rsx::surface_color_format::w16z16y16x16:
-		case rsx::surface_color_format::w32z32y32x32:
-		case rsx::surface_color_format::x32:
-			// These behave very differently from "normal" formats.
-			break;
-		default:
-			// Integer framebuffer formats.
-			rop_control.enable_framebuffer_INT();
-
-			// Check if we want sRGB conversion.
-			if (REGS(m_ctx)->framebuffer_srgb_enabled())
-			{
-				rop_control.enable_framebuffer_sRGB();
-			}
-			break;
-		}
+		// Always encode the alpha function. Toggling alpha-test is not guaranteed to trigger context param reload anymore.
+		const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
+		rop_control.set_alpha_test_func(alpha_func);
 
 		// Generate wpos coefficients
 		// wpos equation is now as follows (ignoring pixel center offset):
@@ -765,7 +695,6 @@ namespace rsx
 		payload.fog_mode = static_cast<u32>(REGS(m_ctx)->fog_equation());
 		payload.rop_control = rop_control.value;
 		payload.alpha_ref = REGS(m_ctx)->alpha_ref();
-
 
 		const auto window_origin = REGS(m_ctx)->shader_window_origin();
 		const u32 window_height = REGS(m_ctx)->shader_window_height();

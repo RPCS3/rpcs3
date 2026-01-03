@@ -36,12 +36,18 @@ namespace glsl
 		bool require_srgb_to_linear : 1;
 		bool require_linear_to_srgb : 1;
 		bool require_fog_read : 1;
-		bool emulate_coverage_tests : 1;
 		bool emulate_shadow_compare : 1;
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
+
+		// ROP control flags
 		bool ROP_output_rounding : 1;
+		bool ROP_sRGB_packing : 1;
+		bool ROP_alpha_test : 1;
+		bool ROP_alpha_to_coverage_test : 1;
+		bool ROP_polygon_stipple_test : 1;
+		bool ROP_discard : 1;
 
 		// Texturing spec
 		bool require_texture_ops : 1;           // Global switch to enable/disable all texture code
@@ -53,5 +59,6 @@ namespace glsl
 		bool require_tex2D_ops : 1;             // Include 2D texture stuff
 		bool require_tex3D_ops : 1;             // Include 3D texture stuff (including cubemap)
 		bool require_shadowProj_ops : 1;        // Include shadow2DProj projection textures (1D is unsupported anyway)
+		bool require_alpha_kill : 1;            // Include alpha kill checking code
 	};
 };

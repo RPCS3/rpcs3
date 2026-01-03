@@ -99,7 +99,6 @@ class FragmentProgramDecompiler
 
 protected:
 	const RSXFragmentProgram &m_prog;
-	u32 m_ctrl = 0;
 
 	/** returns the type name of float vectors.
 	 */

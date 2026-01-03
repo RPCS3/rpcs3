@@ -65,38 +65,51 @@ namespace vk
 		case VK_IMAGE_LAYOUT_GENERAL:
 		case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-			if (!sampler_state->is_cyclic_reference)
+			if (sampler_state->is_cyclic_reference) [[ unlikely ]]
 			{
-				// This was used in a cyclic ref before, but is missing a barrier
-				// No need for a full stall, use a custom barrier instead
-				VkPipelineStageFlags src_stage;
-				VkAccessFlags src_access;
-				if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-				{
-					src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-					src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-				}
-				else
-				{
-					src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-					src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-				}
-
-				vk::insert_image_memory_barrier(
-					cmd,
-					raw->value,
-					raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					src_stage, dst_stage,
-					src_access, VK_ACCESS_SHADER_READ_BIT,
-					{ raw->aspect(), 0, 1, 0, 1 });
-
-				raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				// Nothing to do
+				break;
 			}
+
+			// This was used in a cyclic ref before, but is missing a barrier
+			// No need for a full stall, use a custom barrier instead
+			VkPipelineStageFlags src_stage;
+			VkAccessFlags src_access;
+			if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+			{
+				src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			}
+			else
+			{
+				src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			}
+
+			vk::insert_image_memory_barrier(
+				cmd,
+				raw->value,
+				raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				src_stage, dst_stage,
+				src_access, VK_ACCESS_SHADER_READ_BIT,
+				{ raw->aspect(), 0, 1, 0, 1 });
+
+			raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			break;
 		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
-			raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			if (!sampler_state->is_cyclic_reference) [[ likely ]]
+			{
+				// Standard pre-read barrier.
+				raw->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				break;
+			}
+
+			// Normally this shouldn't happen. But that is only guaranteed if the attachment state never changes outside of RTT rebind interrupts.
+			// If the shader changes between binds to "disable" the cyclic nature, we could end up here.
+			// Draw 1 (cyllic) -> texture_barrier -> Draw 2 (no textures) -> attachment_optimal -> Draw 3 (cylic again, no new data) -> incorrect layout.
+			vk::as_rtt(raw)->texture_barrier(cmd);
 			break;
 		}
 	}
@@ -1044,6 +1057,15 @@ void VKGSRender::end()
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
 	{
 		ds->write_barrier(*m_current_command_buffer);
+
+		if (m_graphics_state.test(rsx::zeta_address_cyclic_barrier) &&
+			ds->current_layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+		{
+			// We actually need to end the subpass as a minimum. Without this, early-Z optimiazations in following draws will clobber reads from previous draws and cause flickering.
+			// Since we're ending the subpass, might as well restore DCC/HiZ for extra performance
+			ds->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			ds->reset_surface_counters();
+		}
 	}
 
 	for (auto &rtt : m_rtts.m_bound_render_targets)
@@ -1053,6 +1075,8 @@ void VKGSRender::end()
 			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
+
+	m_graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 

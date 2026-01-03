@@ -915,9 +915,6 @@
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\rpcn</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp">
-      <Filter>Gui\clans</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
     </ClCompile>
@@ -1245,6 +1242,18 @@
     <ClCompile Include="gamemode_control.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\clans_settings_dialog.cpp">
+      <Filter>Gui\rpcn</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\camera_video_sink.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\sdl_camera_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\sdl_camera_video_sink.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1474,6 +1483,15 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\custom_tree_widget.h">
       <Filter>Gui\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\camera_video_sink.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_handler.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_camera_video_sink.h">
+      <Filter>Io\camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -20,6 +20,10 @@
 #include "_discord_utils.h"
 #endif
 
+#ifdef HAVE_SDL3
+#include "Input/sdl_camera_handler.h"
+#endif
+
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
@@ -216,29 +220,74 @@ bool gui_application::Init()
 	return true;
 }
 
-void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
+void gui_application::SwitchTranslator(const QString& language_code)
 {
 	// remove the old translator
-	removeTranslator(&translator);
+	removeTranslator(&m_translator);
+	for (QTranslator* qt_translator : m_qt_translators)
+	{
+		removeTranslator(qt_translator);
+		qt_translator->deleteLater();
+	}
+	m_qt_translators.clear();
 
+	const QString default_code = QLocale(QLocale::English).bcp47Name();
 	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
-	const QString file_path = lang_path + filename;
 
+	// Load qt translation files
+	const QDir dir(lang_path);
+	if (dir.exists())
+	{
+		QStringList qm_files = dir.entryList(QStringList() << QStringLiteral("qt*_%1.qm").arg(language_code), QDir::Files | QDir::Readable);
+		if (qm_files.empty())
+		{
+			qm_files = dir.entryList(QStringList() << QStringLiteral("qt*_%1.qm").arg(QLocale::languageToCode(QLocale(language_code).language())), QDir::Files | QDir::Readable);
+		}
+
+		for (const QString& qm_file : qm_files)
+		{
+			const QString file_path = lang_path + qm_file;
+			QTranslator* qt_translator = new QTranslator(this);
+
+			if (qt_translator->load(file_path))
+			{
+				gui_log.notice("Installing translation: '%s'", file_path);
+				installTranslator(qt_translator);
+				m_qt_translators.push_back(std::move(qt_translator));
+			}
+			else
+			{
+				gui_log.error("Failed to load translation: '%s'", file_path);
+				qt_translator->deleteLater();
+			}
+		}
+	}
+	else
+	{
+		gui_log.error("Qt translation dir '%s' does not exist", lang_path);
+	}
+
+	const QString file_path = lang_path + QStringLiteral("rpcs3_%1.qm").arg(language_code);
 	if (QFileInfo(file_path).isFile())
 	{
 		// load the new translator
-		if (translator.load(file_path))
+		if (m_translator.load(file_path))
 		{
-			installTranslator(&translator);
+			gui_log.notice("Installing translation: '%s'", file_path);
+			installTranslator(&m_translator);
+		}
+		else
+		{
+			gui_log.error("Failed to load translation: '%s'", file_path);
 		}
 	}
-	else if (QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
+	else if (language_code != default_code)
 	{
 		// show error, but ignore default case "en", since it is handled in source code
-		gui_log.error("No translation file found in: %s", file_path);
+		gui_log.error("No translation file found in: '%s'", file_path);
 
 		// reset current language to default "en"
-		set_language_code(std::move(default_code));
+		set_language_code(default_code);
 	}
 }
 
@@ -260,7 +309,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 	// As per QT recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
 
-	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language_code), language_code);
+	SwitchTranslator(language_code);
 
 	if (m_main_window)
 	{
@@ -285,6 +334,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 	QStringList language_codes;
 
 	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+	gui_log.notice("Checking languages in '%s'", language_path);
 
 	if (QFileInfo(language_path).isDir())
 	{
@@ -303,9 +353,14 @@ QStringList gui_application::GetAvailableLanguageCodes()
 			}
 			else
 			{
+				gui_log.notice("Found language '%s' (%s)", language_code, filename);
 				language_codes << language_code;
 			}
 		}
+	}
+	else
+	{
+		gui_log.error("Language dir not found: '%s'", language_path);
 	}
 
 	return language_codes;
@@ -645,6 +700,12 @@ void gui_application::InitializeCallbacks()
 		{
 			return std::make_shared<qt_camera_handler>();
 		}
+#ifdef HAVE_SDL3
+		case camera_handler::sdl:
+		{
+			return std::make_shared<sdl_camera_handler>();
+		}
+#endif
 		}
 		return nullptr;
 	};

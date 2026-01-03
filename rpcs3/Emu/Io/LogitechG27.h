@@ -16,6 +16,16 @@
 #include <map>
 #include <vector>
 
+enum class logitech_personality
+{
+	driving_force_ex,
+	driving_force_pro,
+	g25,
+	driving_force_gt,
+	g27,
+	invalid,
+};
+
 enum class logitech_g27_ffb_state
 {
 	inactive,
@@ -83,9 +93,11 @@ struct logitech_g27_sdl_mapping
 
 	sdl_mapping dial_clockwise {};
 	sdl_mapping dial_anticlockwise {};
+	sdl_mapping dial_center {};
 
 	sdl_mapping select {};
-	sdl_mapping pause {};
+	sdl_mapping start {};
+	sdl_mapping ps {};
 
 	sdl_mapping shifter_1 {};
 	sdl_mapping shifter_2 {};
@@ -94,7 +106,6 @@ struct logitech_g27_sdl_mapping
 	sdl_mapping shifter_5 {};
 	sdl_mapping shifter_6 {};
 	sdl_mapping shifter_r {};
-	sdl_mapping shifter_press {};
 };
 
 class usb_device_logitech_g27 : public usb_device_emulated
@@ -112,9 +123,17 @@ public:
 
 private:
 	void sdl_refresh();
+	void set_personality(logitech_personality personality, bool reconnect = false);
+	void transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer);
+	void transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer);
+	void transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer);
+	void transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer);
+	void transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer);
 
 	u32 m_controller_index = 0;
 
+	logitech_personality m_personality = logitech_personality::invalid;
+	logitech_personality m_next_personality = logitech_personality::invalid;
 	logitech_g27_sdl_mapping m_mapping {};
 	bool m_reverse_effects = false;
 

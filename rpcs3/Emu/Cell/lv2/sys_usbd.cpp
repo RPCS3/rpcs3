@@ -246,7 +246,7 @@ private:
 		{0x054C, 0x01C8, 0x01C8, "PSP Type A", nullptr, nullptr},
 		{0x054C, 0x01C9, 0x01C9, "PSP Type B", nullptr, nullptr},
 		{0x054C, 0x01CA, 0x01CA, "PSP Type C", nullptr, nullptr},
-		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr},
+		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr}, // UsbPspCm
 		{0x054C, 0x02D2, 0x02D2, "PSP Slim", nullptr, nullptr},
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
@@ -260,9 +260,6 @@ private:
 
 		// Tony Hawk RIDE Skateboard
 		{0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller", nullptr, nullptr},
-
-		// PSP in UsbPspCm mode
-		{0x054C, 0x01CB, 0x01CB, "UsbPspcm", nullptr, nullptr},
 
 		// Sony Stereo Headsets
 		{0x12BA, 0x0032, 0x0032, "Wireless Stereo Headset", nullptr, nullptr},
@@ -636,6 +633,8 @@ void usb_handler_thread::operator()()
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
 
+		u64 delay = 1'000;
+
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
@@ -650,6 +649,13 @@ void usb_handler_thread::operator()()
 
 				if (transfer->expected_time > timestamp)
 				{
+					const u64 diff_time = transfer->expected_time - timestamp;
+
+					if (diff_time < delay)
+					{
+						delay = diff_time;
+					}
+
 					++it;
 					continue;
 				}
@@ -668,7 +674,7 @@ void usb_handler_thread::operator()()
 		if (handled_devices.empty())
 			thread_ctrl::wait_for(500'000);
 		else
-			thread_ctrl::wait_for(1'000);
+			thread_ctrl::wait_for(delay);
 	}
 }
 
@@ -878,7 +884,9 @@ std::pair<u32, UsbTransfer&> usb_handler_thread::get_free_transfer()
 
 	u32 transfer_id = get_free_transfer_id();
 	auto& transfer  = get_transfer(transfer_id);
-	transfer.busy   = true;
+
+	libusb_transfer* const transfer_buf = transfer.transfer;
+	transfer = {.transfer_id = transfer_id, .transfer = transfer_buf, .busy = true};
 
 	return {transfer_id, transfer};
 }
@@ -1041,6 +1049,27 @@ void connect_usb_controller(u8 index, input::product_type type)
 			break;
 		}
 		default:
+			break;
+		}
+	}
+}
+
+void reconnect_usb(u32 assigned_number)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+
+	std::lock_guard lock(usbh->mutex);
+	for (auto& [nr, pair] : usbh->handled_devices)
+	{
+		auto& [internal_dev, dev] = pair;
+		if (nr == assigned_number)
+		{
+			usbh->disconnect_usb_device(dev, false);
+			usbh->connect_usb_device(dev, false);
 			break;
 		}
 	}

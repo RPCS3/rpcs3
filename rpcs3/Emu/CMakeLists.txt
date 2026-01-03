@@ -545,7 +545,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_vertex_data.cpp
 )
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT APPLE)
     target_sources(rpcs3_emu PRIVATE
         RSX/GL/GLCommonDecompiler.cpp
         RSX/GL/GLCompute.cpp
@@ -666,6 +666,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::yaml-cpp
         3rdparty::zlib
         3rdparty::zstd
+        3rdparty::libcurl
 )
 
 if(APPLE)
