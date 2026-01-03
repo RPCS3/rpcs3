@@ -34,13 +34,13 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 	}
 
 	// Get image. This usually also converts the image to ARGB32.
-	QImage image = frame.toImage();
-	const u32 width = image.isNull() ? 0 : static_cast<u32>(image.width());
-	const u32 height = image.isNull() ? 0 : static_cast<u32>(image.height());
+	QImage image = tmp.toImage();
+	u32 width = image.isNull() ? 0 : static_cast<u32>(image.width());
+	u32 height = image.isNull() ? 0 : static_cast<u32>(image.height());
 
 	if (image.isNull())
 	{
-		camera_log.warning("Image is invalid: pixel_format=%s, format=%d", tmp.pixelFormat(), static_cast<int>(QVideoFrameFormat::imageFormatFromPixelFormat(tmp.pixelFormat())));
+		camera_log.warning("Image is invalid: pixel_format=%s, format=%d", tmp.pixelFormat(), static_cast<s32>(QVideoFrameFormat::imageFormatFromPixelFormat(tmp.pixelFormat())));
 	}
 	else
 	{
@@ -48,6 +48,8 @@ bool qt_camera_video_sink::present(const QVideoFrame& frame)
 		if (m_width > 0 && m_height > 0 && m_width != width && m_height != height)
 		{
 			image = image.scaled(m_width, m_height, Qt::AspectRatioMode::IgnoreAspectRatio, Qt::SmoothTransformation);
+			width = static_cast<u32>(image.width());
+			height = static_cast<u32>(image.height());
 		}
 
 		// Determine image flip
