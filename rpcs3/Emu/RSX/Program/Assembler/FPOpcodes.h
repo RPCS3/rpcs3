@@ -81,6 +81,9 @@ namespace rsx::assembler
 		// Custom opcodes for dependency injection
 		RSX_FP_OPCODE_OR16_LO = 0x46,  // Performs a 16-bit OR, taking one register channel as input and overwriting low 16 bits of the output
 		RSX_FP_OPCODE_OR16_HI = 0x47,  // Same as the lo variant but now overwrites the high 16-bit block
+
+		// Meta
+		RSX_FP_OPCODE_ENUM_MAX = RSX_FP_OPCODE_OR16_HI
 	};
 
 	namespace FP
@@ -99,6 +102,12 @@ namespace rsx::assembler
 		}
 
 		using register_file_t = std::array<char, constants::register_file_max_len>;
+
+		// Convert opcode to human-readable string
+		const char* get_opcode_name(FP_opcode opcode);
+
+		// Returns true if the instruction is implemented by RSX HW
+		bool is_instruction_valid(FP_opcode opcode);
 
 		// Returns number of operands consumed by an instruction
 		u8 get_operand_count(FP_opcode opcode);

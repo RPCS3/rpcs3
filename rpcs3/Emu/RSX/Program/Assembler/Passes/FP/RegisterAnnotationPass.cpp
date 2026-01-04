@@ -126,8 +126,9 @@ namespace rsx::assembler::FP
 	}
 
 	// Decay instructions into register references
-	void annotate_instructions(BasicBlock* block, const RSXFragmentProgram& prog, bool skip_delay_slots)
+	bool annotate_instructions(BasicBlock* block, const RSXFragmentProgram& prog, bool skip_delay_slots)
 	{
+		bool result = true;
 		for (auto& instruction : block->instructions)
 		{
 			if (skip_delay_slots && is_delay_slot(instruction))
@@ -135,7 +136,15 @@ namespace rsx::assembler::FP
 				continue;
 			}
 
-			const u32 operand_count = get_operand_count(static_cast<FP_opcode>(instruction.opcode));
+			const auto opcode = static_cast<FP_opcode>(instruction.opcode);
+			if (!is_instruction_valid(opcode))
+			{
+				rsx_log.error("[CFG] Annotation: Unexpected instruction '%s'", get_opcode_name(opcode));
+				result = false;
+				continue;
+			}
+
+			const u32 operand_count = get_operand_count(opcode);
 			for (u32 i = 0; i < operand_count; i++)
 			{
 				RegisterRef reg = get_src_register(prog, &instruction, i);
@@ -145,15 +154,29 @@ namespace rsx::assembler::FP
 					continue;
 				}
 
+				if (reg.reg.id >= 48)
+				{
+					rsx_log.error("[CFG] Annotation: Instruction references invalid register %s", reg.reg.to_string());
+					result = false;
+				}
+
 				instruction.srcs.push_back(std::move(reg));
 			}
 
 			RegisterRef dst = get_dst_register(&instruction);
 			if (dst)
 			{
+				if (dst.reg.id >= 48)
+				{
+					rsx_log.error("[CFG] Annotation: Instruction references invalid register %s", dst.reg.to_string());
+					result = false;
+				}
+
 				instruction.dsts.push_back(std::move(dst));
 			}
 		}
+
+		return result;
 	}
 
 	// Annotate each block with input and output lanes (read and clobber list)
@@ -215,12 +238,19 @@ namespace rsx::assembler::FP
 		block->input_list = compile_register_file(input_register_file);
 	}
 
-	void RegisterAnnotationPass::run(FlowGraph& graph)
+	bool RegisterAnnotationPass::run(FlowGraph& graph)
 	{
+		bool result = true;
 		for (auto& block : graph.blocks)
 		{
-			annotate_instructions(&block, m_prog, m_config.skip_delay_slots);
+			if (!annotate_instructions(&block, m_prog, m_config.skip_delay_slots))
+			{
+				result = false;
+			}
+
 			annotate_block_io(&block);
 		}
+
+		return result;
 	}
 }
