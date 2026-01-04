@@ -1,35 +1,42 @@
 #!/bin/sh -ex
 
-# shellcheck disable=SC2086
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
-
 brew install -f --overwrite --quiet ccache "llvm@$LLVM_COMPILER_VER"
 brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
-# shellcheck disable=SC3009
-arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python@3.14 opencv@4 ffmpeg@5 "llvm@$LLVM_COMPILER_VER" sdl3 vulkan-headers vulkan-loader
-arch -x86_64 /usr/local/bin/brew unlink  --quiet ffmpeg qtbase qtsvg qtdeclarative
-arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER" ffmpeg@5
+if [ "$AARCH64" -eq 1 ]; then
+  brew install -f --overwrite --quiet googletest opencv@4 sdl3 vulkan-headers vulkan-loader molten-vk 
+  brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative
+else
+  arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python@3.14 opencv@4 "llvm@$LLVM_COMPILER_VER" sdl3 vulkan-headers vulkan-loader molten-vk
+  arch -x86_64 /usr/local/bin/brew unlink  --quiet ffmpeg qtbase qtsvg qtdeclarative
+  arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
+fi
 
-# moltenvk based on commit for 1.4.0 release
-export HOMEBREW_DEVELOPER=1 # Prevents blocking of local formulae
-wget https://raw.githubusercontent.com/Homebrew/homebrew-core/ea2bec5f1f4384e188d7fc0702ab21a20a2ced08/Formula/m/molten-vk.rb
-arch -x86_64 /usr/local/bin/brew install -f --overwrite --formula --quiet ./molten-vk.rb
-export HOMEBREW_DEVELOPER=0
 export CXX=clang++
 export CC=clang
 
-export BREW_X64_PATH;
-BREW_X64_PATH="$("/usr/local/bin/brew" --prefix)"
-export BREW_BIN="/usr/local/bin"
-export BREW_SBIN="/usr/local/sbin"
-export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=X86'
+export BREW_PATH;
+if [ "$AARCH64" -eq 1 ]; then
+  BREW_PATH="$(brew --prefix)"
+  export BREW_BIN="/opt/homebrew/bin"
+  export BREW_SBIN="/opt/homebrew/sbin"
+else
+  BREW_PATH="$("/usr/local/bin/brew" --prefix)"
+  export BREW_BIN="/usr/local/bin"
+  export BREW_SBIN="/usr/local/sbin"
+fi
 
 export WORKDIR;
 WORKDIR="$(pwd)"
+
+# Setup ccache
+if [ ! -d "$CCACHE_DIR" ]; then
+  mkdir -p "$CCACHE_DIR"
+fi
 
 # Get Qt
 if [ ! -d "/tmp/Qt/$QT_VER" ]; then
@@ -50,68 +57,63 @@ cd "$WORKDIR"
 ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
-export SDL3_DIR="$BREW_X64_PATH/opt/sdl3/lib/cmake/SDL3"
+export SDL3_DIR="$BREW_PATH/opt/sdl3/lib/cmake/SDL3"
 
-export PATH="/opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/bin:$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
-# shellcheck disable=SC2155
-export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib,-L$(brew --prefix llvm)/lib/c++"
-export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -D__MAC_OS_X_VERSION_MIN_REQUIRED=144000"
-export CFLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=144000"
-export LIBRARY_PATH="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER/lib:$BREW_X64_PATH/lib"
-export LD_LIBRARY_PATH="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER/lib:$BREW_X64_PATH/lib"
+export PATH="/opt/homebrew/opt/llvm@$LLVM_COMPILER_VER/bin:$PATH"
+export LDFLAGS="-L$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++ -L$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/unwind -lunwind"
 
 export VULKAN_SDK
-VULKAN_SDK="$BREW_X64_PATH/opt/molten-vk"
-ln -s "$BREW_X64_PATH/opt/vulkan-loader/lib/libvulkan.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
+VULKAN_SDK="$BREW_PATH/opt/molten-vk"
+ln -s "$BREW_PATH/opt/vulkan-loader/lib/libvulkan.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
 
 export LLVM_DIR
-LLVM_DIR="$BREW_X64_PATH/opt/llvm@$LLVM_COMPILER_VER"
-# exclude ffmpeg, LLVM, opencv, and sdl from submodule update
+LLVM_DIR="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER"
+# Pull all the submodules except some
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/ffmpeg/ && !/llvm/ && !/opencv/ && !/SDL/ && !/feralinteractive/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/opencv/ && !/SDL/ && !/feralinteractive/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
-export MACOSX_DEPLOYMENT_TARGET=14.4
-
-"/opt/homebrew/bin/cmake" .. \
-    -DBUILD_RPCS3_TESTS=OFF \
-    -DRUN_RPCS3_TESTS=OFF \
+if [ "$AARCH64" -eq 1 ]; then
+cmake .. \
+    -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
+    -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 \
+    -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
+    -DSTATIC_LINK_LLVM=ON \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \
-    -DUSE_VULKAN=ON \
-    -DUSE_ALSA=OFF \
-    -DUSE_PULSE=OFF \
     -DUSE_AUDIOUNIT=ON \
-    -DUSE_SYSTEM_FFMPEG=ON \
-    -DLLVM_CCACHE_BUILD=OFF \
-    -DLLVM_BUILD_RUNTIME=OFF \
-    -DLLVM_BUILD_TOOLS=OFF \
-    -DLLVM_INCLUDE_DOCS=OFF \
-    -DLLVM_INCLUDE_EXAMPLES=OFF \
-    -DLLVM_INCLUDE_TESTS=OFF \
-    -DLLVM_INCLUDE_TOOLS=OFF \
-    -DLLVM_INCLUDE_UTILS=OFF \
-    -DLLVM_USE_PERF=OFF \
-    -DLLVM_ENABLE_Z3_SOLVER=OFF \
+    -DUSE_SYSTEM_FFMPEG=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
+    -DUSE_PRECOMPILED_HEADERS=OFF \
     -DUSE_SYSTEM_MVK=ON \
-    -DUSE_SYSTEM_FAUDIO=OFF \
     -DUSE_SYSTEM_SDL=ON \
     -DUSE_SYSTEM_OPENCV=ON \
-    "$CMAKE_EXTRA_OPTS" \
-    -DLLVM_TARGET_ARCH=X86_64 \
+    -G Ninja
+else
+cmake .. \
+    -DBUILD_RPCS3_TESTS=OFF \
+    -DRUN_RPCS3_TESTS=OFF \
     -DCMAKE_OSX_ARCHITECTURES=x86_64 \
     -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
     -DCMAKE_TOOLCHAIN_FILE=buildfiles/cmake/TCDarwinX86_64.cmake \
-    -DCMAKE_IGNORE_PATH="$BREW_X64_PATH/lib" \
-    -DCMAKE_IGNORE_PREFIX_PATH=/usr/local/opt \
-    -DCMAKE_CXX_FLAGS="-D__MAC_OS_X_VERSION_MIN_REQUIRED=144000" \
-    -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
+    -DSTATIC_LINK_LLVM=ON \
+    -DUSE_SDL=ON \
+    -DUSE_DISCORD_RPC=ON \
+    -DUSE_AUDIOUNIT=ON \
+    -DUSE_SYSTEM_FFMPEG=OFF \
+    -DUSE_NATIVE_INSTRUCTIONS=OFF \
+    -DUSE_PRECOMPILED_HEADERS=OFF \
+    -DUSE_SYSTEM_MVK=ON \
+    -DUSE_SYSTEM_SDL=ON \
+    -DUSE_SYSTEM_OPENCV=ON \
     -G Ninja
+fi
 
-"/opt/homebrew/bin/ninja"; build_status=$?;
+ninja; build_status=$?;
 
 cd ..
 

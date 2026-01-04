@@ -19,6 +19,7 @@
     "qtmultimedia",
     "qtsvg",
     "qttools",
+    "qttranslations",
     "vulkan",
     "zlib"
   ]

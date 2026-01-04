@@ -25,7 +25,7 @@ namespace rsx::assembler::FP
 			: m_prog(prog), m_config(options)
 		{}
 
-		void run(FlowGraph& graph) override;
+		bool run(FlowGraph& graph) override;
 
 	private:
 		const RSXFragmentProgram& m_prog;

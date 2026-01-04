@@ -178,7 +178,10 @@ if(HAS_MEMORY_BREAKPOINTS)
 endif()
 
 if(WIN32)
-    target_sources(rpcs3_ui PUBLIC "../windows.qrc")
+    target_sources(rpcs3_ui PRIVATE "../windows.qrc")
+    set_source_files_properties("../windows.qrc" PROPERTIES 
+        RCC_OPTIONS "--include;${CMAKE_CURRENT_SOURCE_DIR}/../qt/etc/qt.conf"
+    )
     target_compile_definitions(rpcs3_ui PRIVATE UNICODE _UNICODE)
 endif()
 

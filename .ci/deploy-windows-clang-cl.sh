@@ -26,7 +26,7 @@ curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/maste
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
 
 # Download translations
-mkdir -p ./bin/share/qt6/translations
+mkdir -p ./bin/qt6/translations
 ZIP_URL=$(curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \
   | grep "browser_download_url" \
   | grep "RPCS3-languages.zip" \
@@ -39,7 +39,7 @@ else
     echo "Failed to download translations.zip. Continuing without translations."
     exit 0
   }
-  7z x translations.zip -o"./bin/share/qt6/translations" >/dev/null 2>&1 || \
+  7z x translations.zip -o"./bin/qt6/translations" >/dev/null 2>&1 || \
     echo "Failed to extract translations.zip. Continuing without translations."
   rm -f translations.zip
 fi
