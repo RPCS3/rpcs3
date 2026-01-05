@@ -149,11 +149,6 @@ namespace rpcs3::utils
 		return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 	}
 
-	std::string get_games_dir()
-	{
-		return g_cfg_vfs.get(g_cfg_vfs.games_dir, get_emu_dir());
-	}
-
 	std::string get_hdd0_dir()
 	{
 		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, get_emu_dir());
@@ -184,9 +179,29 @@ namespace rpcs3::utils
 		return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, get_emu_dir());
 	}
 
+	std::string get_games_dir()
+	{
+		return g_cfg_vfs.get(g_cfg_vfs.games_dir, get_emu_dir());
+	}
+
 	std::string get_hdd0_game_dir()
 	{
 		return get_hdd0_dir() + "game/";
+	}
+
+	std::string get_hdd0_locks_dir()
+	{
+		return get_hdd0_game_dir() + "$locks/";
+	}
+
+	std::string get_hdd1_cache_dir()
+	{
+		return get_hdd1_dir() + "caches/";
+	}
+
+	std::string get_games_shortcuts_dir()
+	{
+		return get_games_dir() + "shortcuts/";
 	}
 
 	u64 get_cache_disk_usage()
@@ -224,6 +239,98 @@ namespace rpcs3::utils
 		}
 
 		return cache_dir;
+	}
+
+	std::string get_data_dir()
+	{
+		return fs::get_config_dir() + "data/";
+	}
+
+	std::string get_icons_dir()
+	{
+		return fs::get_config_dir() + "Icons/game_icons/";
+	}
+
+	std::string get_savestates_dir()
+	{
+		return fs::get_config_dir() + "savestates/";
+	}
+
+	std::string get_captures_dir()
+	{
+		return fs::get_config_dir() + "captures/";
+	}
+
+	std::string get_recordings_dir()
+	{
+		return fs::get_config_dir() + "recordings/";
+	}
+
+	std::string get_screenshots_dir()
+	{
+		return fs::get_config_dir() + "screenshots/";
+	}
+
+	std::string get_cache_dir_by_serial(const std::string& serial)
+	{
+		return get_cache_dir() + (serial == "vsh.self" ? "vsh" : serial);
+	}
+
+	std::string get_data_dir(const std::string& serial)
+	{
+		return get_data_dir() + serial;
+	}
+
+	std::string get_icons_dir(const std::string& serial)
+	{
+		return get_icons_dir() + serial;
+	}
+
+	std::string get_savestates_dir(const std::string& serial)
+	{
+		return get_savestates_dir() + serial;
+	}
+
+	std::string get_recordings_dir(const std::string& serial)
+	{
+		return get_recordings_dir() + serial;
+	}
+
+	std::string get_screenshots_dir(const std::string& serial)
+	{
+		return get_screenshots_dir() + serial;
+	}
+
+	std::set<std::string> get_dir_list(const std::string& base_dir, const std::string& serial)
+	{
+		std::set<std::string> dir_list;
+
+		for (const auto& entry : fs::dir(base_dir))
+		{
+			// Check for sub folder starting with serial (e.g. BCES01118_BCES01118)
+			if (entry.is_directory && entry.name.starts_with(serial))
+			{
+				dir_list.insert(base_dir + entry.name);
+			}
+		}
+
+		return dir_list;
+	}
+
+	std::set<std::string> get_file_list(const std::string& base_dir, const std::string& serial)
+	{
+		std::set<std::string> file_list;
+
+		for (const auto& entry : fs::dir(base_dir))
+		{
+			// Check for files starting with serial (e.g. BCES01118_BCES01118)
+			if (!entry.is_directory && entry.name.starts_with(serial))
+			{
+				file_list.insert(base_dir + entry.name);
+			}
+		}
+
+		return file_list;
 	}
 
 	std::string get_rap_file_path(const std::string_view& rap)

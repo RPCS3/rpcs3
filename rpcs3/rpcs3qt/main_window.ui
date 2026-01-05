@@ -1174,7 +1174,7 @@
   </action>
   <action name="batchRemoveCustomPadConfigurationsAct">
    <property name="text">
-    <string>Remove Custom Pad Configurations</string>
+    <string>Remove Custom Gamepad Configurations</string>
    </property>
   </action>
   <action name="batchRemoveShaderCachesAct">
