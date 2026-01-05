@@ -446,6 +446,7 @@ void log_viewer::dropEvent(QDropEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData(), true))
 	{
+		ev->acceptProposedAction();
 		show_log();
 	}
 }
@@ -454,7 +455,7 @@ void log_viewer::dragEnterEvent(QDragEnterEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
 }
 
@@ -462,13 +463,8 @@ void log_viewer::dragMoveEvent(QDragMoveEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
-}
-
-void log_viewer::dragLeaveEvent(QDragLeaveEvent* ev)
-{
-	ev->accept();
 }
 
 bool log_viewer::eventFilter(QObject* object, QEvent* event)
