@@ -1752,7 +1752,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						{
 							if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 							{
-								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 							}
 						}
 						else
@@ -1796,14 +1796,14 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 								{
 									if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 									{
-										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 								else
 								{
 									if (!SDL_StopHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id))
 									{
-										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 							}
@@ -1824,11 +1824,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					{
 						if (cmd == 0x02)
 						{
-							logitech_g27_log.error("Tried to play effect slot %d but it was never uploaded\n", i);
+							logitech_g27_log.error("Tried to play effect slot %d but it was never uploaded", i);
 						}
 						else
 						{
-							logitech_g27_log.error("Tried to stop effect slot %d but it was never uploaded\n", i);
+							logitech_g27_log.error("Tried to stop effect slot %d but it was never uploaded", i);
 						}
 					}
 				}
