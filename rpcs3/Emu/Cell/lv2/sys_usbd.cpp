@@ -137,6 +137,7 @@ public:
 	const std::array<u8, 7>& get_new_location();
 	void connect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void disconnect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
+	void reconnect_usb_device(u32 assigned_number);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
@@ -205,19 +206,23 @@ private:
 		{0x1BAD, 0x3430, 0x343F, "Harmonix Button Guitar - Wii", nullptr, nullptr},
 		{0x1BAD, 0x3530, 0x353F, "Harmonix Real Guitar - Wii", nullptr, nullptr},
 
-		//Top Shot Elite controllers
+		// Top Shot Elite controllers
 		{0x12BA, 0x04A0, 0x04A0, "Top Shot Elite", nullptr, nullptr},
 		{0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster", nullptr, nullptr},
 		{0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod", nullptr, nullptr},
 
 
-		// GT5 Wheels&co
+		// Wheels
 #ifdef HAVE_SDL3
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", &usb_device_logitech_g27::get_num_emu_devices, &usb_device_logitech_g27::make_instance},
 #else
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", nullptr, nullptr},
 #endif
+		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
+		{0x044F, 0xB652, 0xB652, "Thrustmaster FGT FFB old", nullptr, nullptr},
 		{0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro", nullptr, nullptr},
+		{0x044F, 0xB654, 0xB654, "Thrustmaster FGT FFB", nullptr, nullptr},
+		{0x044F, 0xb655, 0xb655, "Thrustmaster FGT Rumble 3-in-1", nullptr, nullptr},
 		{0x044F, 0xB65A, 0xB65A, "Thrustmaster F430", nullptr, nullptr},
 		{0x044F, 0xB65D, 0xB65D, "Thrustmaster FFB", nullptr, nullptr},
 		{0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS", nullptr, nullptr},
@@ -225,7 +230,6 @@ private:
 
 		// GT6
 		{0x2833, 0x0001, 0x0001, "Oculus", nullptr, nullptr},
-		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
 
 		// Buzz controllers
 		{0x054C, 0x1000, 0x1040, "buzzer0", &usb_device_buzz::get_num_emu_devices, &usb_device_buzz::make_instance},
@@ -968,6 +972,21 @@ void usb_handler_thread::disconnect_usb_device(std::shared_ptr<usb_device> dev, 
 	}
 }
 
+void usb_handler_thread::reconnect_usb_device(u32 assigned_number)
+{
+	std::lock_guard lock(mutex);
+	ensure(assigned_number != 0);
+	for (const auto& dev : usb_devices)
+	{
+		if (dev->assigned_number == assigned_number)
+		{
+			disconnect_usb_device(dev, false);
+			connect_usb_device(dev, false);
+			break;
+		}
+	}
+}
+
 void connect_usb_controller(u8 index, input::product_type type)
 {
 	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
@@ -1061,18 +1080,7 @@ void reconnect_usb(u32 assigned_number)
 	{
 		return;
 	}
-
-	std::lock_guard lock(usbh->mutex);
-	for (auto& [nr, pair] : usbh->handled_devices)
-	{
-		auto& [internal_dev, dev] = pair;
-		if (nr == assigned_number)
-		{
-			usbh->disconnect_usb_device(dev, false);
-			usbh->connect_usb_device(dev, false);
-			break;
-		}
-	}
+	usbh->reconnect_usb_device(assigned_number);
 }
 
 void handle_hotplug_event(bool connected)
