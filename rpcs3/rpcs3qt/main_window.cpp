@@ -4077,15 +4077,18 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 void main_window::dropEvent(QDropEvent* event)
 {
-	event->accept();
-
 	QStringList drop_paths;
+	const drop_type type = IsValidFile(*event->mimeData(), &drop_paths);
 
-	switch (IsValidFile(*event->mimeData(), &drop_paths)) // get valid file paths and drop type
+	if (type != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
+
+	switch (type) // get valid file paths and drop type
 	{
 	case drop_type::drop_error:
 	{
-		event->ignore();
 		break;
 	}
 	case drop_type::drop_rap_edat_pkg: // install the packages
@@ -4167,15 +4170,16 @@ void main_window::dropEvent(QDropEvent* event)
 
 void main_window::dragEnterEvent(QDragEnterEvent* event)
 {
-	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
 }
 
 void main_window::dragMoveEvent(QDragMoveEvent* event)
 {
-	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
-}
-
-void main_window::dragLeaveEvent(QDragLeaveEvent* event)
-{
-	event->accept();
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
 }
