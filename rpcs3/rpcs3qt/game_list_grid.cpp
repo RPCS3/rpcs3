@@ -40,7 +40,7 @@ void game_list_grid::populate(
 	const std::vector<game_info>& game_data,
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
-	const std::string& selected_item_id,
+	const std::set<std::string>& selected_item_ids,
 	bool play_hover_movies)
 {
 	clear_list();
@@ -110,7 +110,7 @@ void game_list_grid::populate(
 			item->set_video_path(game->info.movie_path);
 		}
 
-		if (selected_item_id == game->info.path + game->info.icon_path)
+		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
 		{
 			selected_item = item;
 		}

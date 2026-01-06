@@ -204,7 +204,7 @@ void game_list_table::populate(
 	const std::vector<game_info>& game_data,
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
-	const std::string& selected_item_id,
+	const std::set<std::string>& selected_item_ids,
 	bool play_hover_movies)
 {
 	clear_list();
@@ -219,7 +219,7 @@ void game_list_table::populate(
 
 	int row = 0;
 	int index = -1;
-	int selected_row = -1;
+	std::set<int> selected_rows;
 
 	const auto get_title = [&title_map](const QString& serial, const std::string& name) -> QString
 	{
@@ -378,15 +378,18 @@ void game_list_table::populate(
 		setItem(row, static_cast<int>(gui::game_list_columns::compat),     compat_item);
 		setItem(row, static_cast<int>(gui::game_list_columns::dir_size),   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
-		if (selected_item_id == game->info.path + game->info.icon_path)
+		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
 		{
-			selected_row = row;
+			selected_rows.insert(row);
 		}
 
 		row++;
 	}
 
-	selectRow(selected_row);
+	for (int selected_row : selected_rows)
+	{
+		selectionModel()->select(model()->index(selected_row, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
+	}
 }
 
 void game_list_table::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)
