@@ -369,7 +369,7 @@ void game_list_actions::ShowDiskUsageDialog()
 	if (m_disk_usage_future.isRunning()) // Still running the last request
 		return;
 
-	// Disk usage calculation can take several time (in particular on non ssd/m.2 disks)
+	// Disk usage calculation can take a while (in particular on non ssd/m.2 disks)
 	// so run it on a concurrent thread avoiding to block the entire GUI
 	m_disk_usage_future = QtConcurrent::run([this]()
 	{
