@@ -3,10 +3,8 @@
 #include "game_list_grid_item.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
-#include "Utilities/File.h"
 
 #include <QApplication>
-#include <QStringBuilder>
 
 game_list_grid::game_list_grid()
 	: flow_widget(nullptr), game_list_base()
