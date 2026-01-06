@@ -51,7 +51,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Debian & Ubuntu
 
-    sudo apt-get install build-essential ninja-build libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-3.2 libsdl3-dev libjack-dev libsndio-dev
+    sudo apt-get install build-essential ninja-build libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-dev libjack-dev libsndio-dev libcurl4-openssl-dev qt6-base-dev qt6-base-private-dev qt6-multimedia-dev qt6-svg-dev libxkbcommon-dev
 
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 

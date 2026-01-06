@@ -25,6 +25,9 @@ mkdir ./bin/config/input_configs
 curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./bin/config/input_configs/gamecontrollerdb.txt
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
 
+# Set Qt plugin & translation path
+cp D:/a/rpcs3/rpcs3/rpcs3/qt/etc/qt.conf ./bin/qt.conf
+
 # Download translations
 mkdir -p ./bin/qt6/translations
 ZIP_URL=$(curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \

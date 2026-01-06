@@ -221,7 +221,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	if (enable_play_last)
 	{
-		ui->sysPauseAct->setText(tr("&Play last played game"));
+		ui->sysPauseAct->setText(tr("&Play Last Played Game"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
@@ -2401,7 +2401,7 @@ void main_window::CreateShortCuts(const std::map<std::string, QString>& paths, b
 
 		if (!game_data_shortcuts.empty() && !locations.empty())
 		{
-			m_game_list_frame->CreateShortcuts(game_data_shortcuts, locations);
+			m_game_list_frame->actions()->CreateShortcuts(game_data_shortcuts, locations);
 		}
 	}
 }
@@ -2428,7 +2428,7 @@ void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::stri
 
 	if (!game_data.empty())
 	{
-		m_game_list_frame->BatchCreateCPUCaches(game_data, true);
+		m_game_list_frame->actions()->BatchCreateCPUCaches(game_data, true);
 	}
 }
 
@@ -2722,15 +2722,43 @@ void main_window::CreateConnects()
 	});
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
 
-	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, m_game_list_frame, [list = m_game_list_frame]() { list->BatchCreateCPUCaches(); });
-	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveCustomConfigurations);
-	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveCustomPadConfigurations);
-	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveShaderCaches);
-	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemovePPUCaches);
-	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_game_list_frame, &game_list_frame::BatchRemoveSPUCaches);
-	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, &main_window::RemoveHDD1Caches);
-	connect(ui->removeAllCachesAct, &QAction::triggered, this, &main_window::RemoveAllCaches);
-	connect(ui->removeSavestatesAct, &QAction::triggered, this, &main_window::RemoveSavestates);
+	connect(ui->batchCreateCPUCachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchCreateCPUCaches({}, false, true);
+	});
+	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveCustomConfigurations({}, true);
+	});
+	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveCustomPadConfigurations({}, true);
+	});
+	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveShaderCaches({}, true);
+	});
+	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemovePPUCaches({}, true);
+	});
+	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveSPUCaches({}, true);
+	});
+	connect(ui->removeHDD1CachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveHDD1Caches({}, true);
+	});
+	connect(ui->removeAllCachesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->BatchRemoveAllCaches({}, true);
+	});
+	connect(ui->removeSavestatesAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->SetContentList(game_list_actions::content_type::SAVESTATES, {});
+		m_game_list_frame->actions()->BatchRemoveContentLists({}, true);
+	});
 	connect(ui->cleanUpGameListAct, &QAction::triggered, this, &main_window::CleanUpGameList);
 
 	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
@@ -3659,67 +3687,6 @@ void main_window::SetIconSizeActions(int idx) const
 		ui->setIconSizeLargeAct->setChecked(true);
 }
 
-void main_window::RemoveHDD1Caches()
-{
-	if (fs::remove_all(rpcs3::utils::get_hdd1_dir() + "caches", false))
-	{
-		QMessageBox::information(this, tr("HDD1 Caches Removed"), tr("HDD1 caches successfully removed"));
-	}
-	else
-	{
-		QMessageBox::warning(this, tr("Error"), tr("Could not remove HDD1 caches"));
-	}
-}
-
-void main_window::RemoveAllCaches()
-{
-	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
-		return;
-
-	const std::string cache_base_dir = rpcs3::utils::get_cache_dir();
-	u64 caches_count = 0;
-	u64 caches_removed = 0;
-
-	for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
-	{
-		if (game && QString::fromStdString(game->info.category) != cat::cat_ps3_os && fs::exists(cache_base_dir + game->info.serial)) // If not OS category and cache exists
-		{
-			caches_count++;
-
-			if (fs::remove_all(cache_base_dir + game->info.serial))
-			{
-				caches_removed++;
-			}
-		}
-	}
-
-	if (caches_count == caches_removed)
-	{
-		QMessageBox::information(this, tr("Caches Removed"), tr("%0 cache(s) successfully removed").arg(caches_removed));
-	}
-	else
-	{
-		QMessageBox::warning(this, tr("Error"), tr("Could not remove %0 of %1 cache(s)").arg(caches_count - caches_removed).arg(caches_count));
-	}
-
-	RemoveHDD1Caches();
-}
-
-void main_window::RemoveSavestates()
-{
-	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove savestates?")) != QMessageBox::Yes)
-		return;
-
-	if (fs::remove_all(fs::get_config_dir() + "savestates", false))
-	{
-		QMessageBox::information(this, tr("Savestates Removed"), tr("Savestates successfully removed"));
-	}
-	else
-	{
-		QMessageBox::warning(this, tr("Error"), tr("Could not remove savestates"));
-	}
-}
-
 void main_window::CleanUpGameList()
 {
 	if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove invalid game paths from game list?\n"
@@ -4077,15 +4044,18 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 void main_window::dropEvent(QDropEvent* event)
 {
-	event->accept();
-
 	QStringList drop_paths;
+	const drop_type type = IsValidFile(*event->mimeData(), &drop_paths);
 
-	switch (IsValidFile(*event->mimeData(), &drop_paths)) // get valid file paths and drop type
+	if (type != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
+
+	switch (type) // get valid file paths and drop type
 	{
 	case drop_type::drop_error:
 	{
-		event->ignore();
 		break;
 	}
 	case drop_type::drop_rap_edat_pkg: // install the packages
@@ -4167,15 +4137,16 @@ void main_window::dropEvent(QDropEvent* event)
 
 void main_window::dragEnterEvent(QDragEnterEvent* event)
 {
-	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
 }
 
 void main_window::dragMoveEvent(QDragMoveEvent* event)
 {
-	event->setAccepted(IsValidFile(*event->mimeData()) != drop_type::drop_error);
-}
-
-void main_window::dragLeaveEvent(QDragLeaveEvent* event)
-{
-	event->accept();
+	if (IsValidFile(*event->mimeData()) != drop_type::drop_error)
+	{
+		event->acceptProposedAction();
+	}
 }

@@ -114,9 +114,6 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
-	void RemoveHDD1Caches();
-	void RemoveAllCaches();
-	void RemoveSavestates();
 	void CleanUpGameList();
 
 	void RemoveFirmwareCache();
@@ -131,7 +128,6 @@ protected:
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
 
 private:
 	void ConfigureGuiFromSettings();

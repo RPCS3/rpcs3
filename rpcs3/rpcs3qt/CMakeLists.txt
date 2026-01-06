@@ -31,7 +31,9 @@ add_library(rpcs3_ui STATIC
     flow_widget_item.cpp
     game_compatibility.cpp
     game_list.cpp
+    game_list_actions.cpp
     game_list_base.cpp
+    game_list_context_menu.cpp
     game_list_delegate.cpp
     game_list_frame.cpp
     game_list_grid.cpp

@@ -1020,6 +1020,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		return;
 	}
 
+	event->acceptProposedAction();
+
 	QMessageBox box(QMessageBox::Icon::Question, tr("Patch Manager"), tr("What do you want to do with the patch file?"), QMessageBox::StandardButton::Cancel, this);
 	QPushButton* button_yes = box.addButton(tr("Import"), QMessageBox::YesRole);
 	QPushButton* button_no = box.addButton(tr("Validate"), QMessageBox::NoRole);
@@ -1123,7 +1125,7 @@ void patch_manager_dialog::dragEnterEvent(QDragEnterEvent* event)
 {
 	if (is_valid_file(*event->mimeData()))
 	{
-		event->accept();
+		event->acceptProposedAction();
 	}
 }
 
@@ -1131,13 +1133,8 @@ void patch_manager_dialog::dragMoveEvent(QDragMoveEvent* event)
 {
 	if (is_valid_file(*event->mimeData()))
 	{
-		event->accept();
+		event->acceptProposedAction();
 	}
-}
-
-void patch_manager_dialog::dragLeaveEvent(QDragLeaveEvent* event)
-{
-	event->accept();
 }
 
 void patch_manager_dialog::download_update(bool automatic, bool auto_accept)

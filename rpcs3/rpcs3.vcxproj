@@ -289,6 +289,12 @@
     <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget_item.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_actions.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_context_menu.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_compatibility.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -586,6 +592,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget_item.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_actions.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_context_menu.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_compatibility.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -833,7 +845,9 @@
     <ClCompile Include="rpcs3qt\flow_widget.cpp" />
     <ClCompile Include="rpcs3qt\flow_widget_item.cpp" />
     <ClCompile Include="rpcs3qt\game_list.cpp" />
+    <ClCompile Include="rpcs3qt\game_list_actions.cpp" />
     <ClCompile Include="rpcs3qt\game_list_base.cpp" />
+    <ClCompile Include="rpcs3qt\game_list_context_menu.cpp" />
     <ClCompile Include="rpcs3qt\game_list_delegate.cpp" />
     <ClCompile Include="rpcs3qt\game_list_grid_item.cpp" />
     <ClCompile Include="rpcs3qt\game_list_table.cpp" />
@@ -1449,6 +1463,26 @@
       </Command>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\flow_widget_item.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DMINIUPNP_STATICLIB -DHAVE_SDL3 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DMINIUPNP_STATICLIB -DHAVE_SDL3 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\libsdl-org\SDL\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_actions.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DMINIUPNP_STATICLIB -DHAVE_SDL3 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DMINIUPNP_STATICLIB -DHAVE_SDL3 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\libsdl-org\SDL\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_context_menu.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>

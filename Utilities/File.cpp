@@ -901,6 +901,22 @@ std::string_view fs::get_parent_dir_view(std::string_view path, u32 parent_level
 	return result;
 }
 
+std::string fs::get_path_if_dir(const std::string& path)
+{
+	if (path.empty() || !fs::is_dir(path))
+	{
+		return {};
+	}
+
+	// If delimiters are already present at the end of the string then nothing else to do
+	if (usz sz = path.find_last_of(delim); sz != umax && (sz + 1) == path.size())
+	{
+		return path;
+	}
+
+	return path + '/';
+}
+
 bool fs::get_stat(const std::string& path, stat_t& info)
 {
 	// Ensure consistent information on failure

@@ -28,7 +28,7 @@ public:
 		const std::vector<game_info>& game_data,
 		const std::map<QString, QString>& notes_map,
 		const std::map<QString, QString>& title_map,
-		const std::string& selected_item_id,
+		const std::set<std::string>& selected_item_ids,
 		bool play_hover_movies) override;
 
 	void repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
