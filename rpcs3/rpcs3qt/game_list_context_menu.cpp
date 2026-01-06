@@ -581,7 +581,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		Q_EMIT m_game_list_frame->RequestBoot(gameinfo, cfg_mode::global);
 	});
 
-	const auto configure_l = [this, current_game, gameinfo](bool create_cfg_from_global_cfg)
+	auto configure_l = [this, current_game, gameinfo](bool create_cfg_from_global_cfg)
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, m_game_list_frame, &current_game, create_cfg_from_global_cfg);
 

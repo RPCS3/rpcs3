@@ -130,7 +130,7 @@ private:
 
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
-	std::string CurrentSelectionPath();
+	std::set<std::string> CurrentSelectionPaths();
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
 	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);

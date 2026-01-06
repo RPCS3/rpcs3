@@ -446,7 +446,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 
 	// Fill Game List / Game Grid
 
-	const std::string selected_item = CurrentSelectionPath();
+	const std::set<std::string> selected_items = CurrentSelectionPaths();
 
 	// Release old data
 	for (const auto& game : m_game_data)
@@ -481,7 +481,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 	{
 		m_game_grid->clear_list();
 		const int scroll_position = m_game_list->verticalScrollBar()->value();
-		m_game_list->populate(matching_apps, m_notes, m_titles, selected_item, m_play_hover_movies);
+		m_game_list->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies);
 		m_game_list->sort(m_game_data.size(), m_sort_column, m_col_sort_order);
 		RepaintIcons();
 
@@ -497,7 +497,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 	else
 	{
 		m_game_list->clear_list();
-		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_item, m_play_hover_movies);
+		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies);
 		RepaintIcons();
 	}
 }
@@ -1257,36 +1257,35 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 	return true;
 }
 
-std::string game_list_frame::CurrentSelectionPath()
+std::set<std::string> game_list_frame::CurrentSelectionPaths()
 {
-	std::string selection;
-
-	game_info game{};
+	std::set<std::string> selection;
 
 	if (m_old_layout_is_list)
 	{
-		if (!m_game_list->selectedItems().isEmpty())
+		for (const QTableWidgetItem* selected_item : m_game_list->selectedItems())
 		{
-			if (QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), 0))
+			if (const QTableWidgetItem* item = m_game_list->item(selected_item->row(), 0))
 			{
 				if (const QVariant var = item->data(gui::game_role); var.canConvert<game_info>())
 				{
-					game = var.value<game_info>();
+					if (const game_info game = var.value<game_info>())
+					{
+						selection.insert(game->info.path + game->info.icon_path);
+					}
 				}
 			}
 		}
 	}
 	else if (m_game_grid)
 	{
-		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
+		if (const game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
 		{
-			game = item->game();
+			if (const game_info& game = item->game())
+			{
+				selection.insert(game->info.path + game->info.icon_path);
+			}
 		}
-	}
-
-	if (game)
-	{
-		selection = game->info.path + game->info.icon_path;
 	}
 
 	m_old_layout_is_list = m_is_list_layout;
