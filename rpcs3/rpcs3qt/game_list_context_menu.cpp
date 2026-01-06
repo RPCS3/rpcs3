@@ -303,13 +303,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
 	remove_game->setEnabled(!is_current_running_game);
 
-	// Game info
-	QAction* game_info = manage_game_menu->addAction(tr("&Game Info"));
-	connect(game_info, &QAction::triggered, this, [this, gameinfo]()
-	{
-		m_game_list_actions->ShowGameInfoDialog({gameinfo});
-	});
-
 	// Custom Images menu
 	QMenu* icon_menu = addMenu(tr("&Custom Images"));
 	const std::array<QAction*, 3> custom_icon_actions =
@@ -457,8 +450,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		icon_menu->setEnabled(false);
 	}
 
-	addSeparator();
-
 	// Open Folder menu
 	QMenu* open_folder_menu = addMenu(tr("&Open Folder"));
 
@@ -574,6 +565,22 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
 	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
+
+	addSeparator();
+
+	// Disk usage
+	QAction* disk_usage = addAction(tr("&Disk Usage"));
+	connect(disk_usage, &QAction::triggered, this, [this]()
+	{
+		m_game_list_actions->ShowDiskUsageDialog();
+	});
+
+	// Game info
+	QAction* game_info = addAction(tr("&Game Info"));
+	connect(game_info, &QAction::triggered, this, [this, gameinfo]()
+	{
+		m_game_list_actions->ShowGameInfoDialog({gameinfo});
+	});
 
 	connect(boot, &QAction::triggered, m_game_list_frame, [this, gameinfo]()
 	{
@@ -896,8 +903,25 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		m_game_list_actions->ShowRemoveGameDialog(games);
 	});
 
+	addSeparator();
+
+	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
+	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
+	{
+		ensure(m_game_list_frame->GetGameCompatibility())->RequestCompatibility(true);
+	});
+
+	addSeparator();
+
+	// Disk usage
+	QAction* disk_usage = addAction(tr("&Disk Usage"));
+	connect(disk_usage, &QAction::triggered, this, [this]()
+	{
+		m_game_list_actions->ShowDiskUsageDialog();
+	});
+
 	// Game info
-	QAction* game_info = manage_game_menu->addAction(tr("&Game Info"));
+	QAction* game_info = addAction(tr("&Game Info"));
 	connect(game_info, &QAction::triggered, this, [this, games]()
 	{
 		m_game_list_actions->ShowGameInfoDialog(games);

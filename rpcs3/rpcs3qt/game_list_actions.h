@@ -3,6 +3,7 @@
 #include "gui_game_info.h"
 #include "shortcut_utils.h"
 
+#include <QFuture>
 #include <QObject>
 
 class progress_dialog;
@@ -53,15 +54,7 @@ public:
 
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
-
-	void BatchCreateCPUCaches(const std::vector<game_info>& games = {}, bool is_fast_compilation = false, bool is_interactive = false);
-	void BatchRemoveCustomConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveCustomPadConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveShaderCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemovePPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveSPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveHDD1Caches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveAllCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void ShowDiskUsageDialog();
 
 	// NOTES:
 	//   - SetContentList() MUST always be called to set the content's info to be removed by:
@@ -69,8 +62,6 @@ public:
 	//     - BatchRemoveContentLists()
 	//
 	void SetContentList(u16 content_types, const content_info& content_info);
-	void BatchRemoveContentLists(const std::vector<game_info>& games = {}, bool is_interactive = false);
-
 	void ClearContentList(bool refresh = false);
 	content_info GetContentInfo(const std::vector<game_info>& games);
 
@@ -88,6 +79,16 @@ public:
 	bool RemoveAllCaches(const std::string& serial, bool is_interactive = false);
 	bool RemoveContentList(const std::string& serial, bool is_interactive = false);
 
+	void BatchCreateCPUCaches(const std::vector<game_info>& games = {}, bool is_fast_compilation = false, bool is_interactive = false);
+	void BatchRemoveCustomConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveCustomPadConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveShaderCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemovePPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveSPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveHDD1Caches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveAllCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
+	void BatchRemoveContentLists(const std::vector<game_info>& games = {}, bool is_interactive = false);
+
 	static bool RemoveContentPath(const std::string& path, const std::string& desc);
 	static u32 RemoveContentPathList(const std::set<std::string>& path_list, const std::string& desc);
 	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
@@ -95,6 +96,7 @@ public:
 private:
 	game_list_frame* m_game_list_frame = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
+	QFuture<void> m_disk_usage_future;
 
 	// NOTE:
 	//   m_content_info is used by:
