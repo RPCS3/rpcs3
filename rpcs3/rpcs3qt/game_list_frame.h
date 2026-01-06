@@ -1,20 +1,18 @@
 #pragma once
 
 #include "game_list.h"
+#include "game_list_actions.h"
 #include "custom_dock_widget.h"
-#include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
 
 #include <QMainWindow>
-#include <QToolBar>
 #include <QStackedWidget>
 #include <QSet>
 #include <QTableWidgetItem>
 #include <QFutureWatcher>
-#include <QTimer>
 
 #include <memory>
 #include <optional>
@@ -56,61 +54,34 @@ public:
 	void SetShowHidden(bool show);
 
 	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
-
-	const std::vector<game_info>& GetGameInfo() const;
-
-	void CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations);
+	const std::vector<game_info>& GetGameInfo() const { return m_game_data; }
+	std::shared_ptr<game_list_actions> actions() const { return m_game_list_actions; }
+	std::shared_ptr<gui_settings> get_gui_settings() const { return m_gui_settings; }
+	std::shared_ptr<emu_settings> get_emu_settings() const { return m_emu_settings; }
+	std::shared_ptr<persistent_settings> get_persistent_settings() const { return m_persistent_settings; }
+	std::map<QString, QString>& notes() { return m_notes; }
+	std::map<QString, QString>& titles() { return m_titles; }
+	QSet<QString>& hidden_list() { return m_hidden_list; }
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
-	enum content_type
-	{
-		NO_CONTENT    = 0,
-		DISC          = (1 << 0),
-		DATA          = (1 << 1),
-		LOCKS         = (1 << 2),
-		CACHES        = (1 << 3),
-		CUSTOM_CONFIG = (1 << 4),
-		ICONS         = (1 << 5),
-		SHORTCUTS     = (1 << 6),
-		SAVESTATES    = (1 << 7),
-		CAPTURES      = (1 << 8),
-		RECORDINGS    = (1 << 9),
-		SCREENSHOTS   = (1 << 10)
-	};
+	void ShowCustomConfigIcon(const game_info& game);
 
-	struct content_info
+	// Enqueue slot for refreshed signal
+	// Allowing for an individual container for each distinct use case (currently disabled and contains only one such entry)
+	template <typename KeySlot = void, typename Func>
+	void AddRefreshedSlot(Func&& func)
 	{
-		u16 content_types = NO_CONTENT; // Always set by SetContentList()
-		bool clear_on_finish = true;    // Always overridden by BatchRemoveContentLists()
+		// NOTE: Remove assert when the need for individual containers arises
+		static_assert(std::is_void_v<KeySlot>);
 
-		bool is_single_selection = false;
-		u16 in_games_dir_count = 0;
-		QString info;
-		std::map<std::string, std::set<std::string>> name_list;
-		std::map<std::string, std::set<std::string>> path_list;
-		std::set<std::string> disc_list;
-		std::set<std::string> removed_disc_list; // Filled in by RemoveContentList()
-	};
+		connect(this, &game_list_frame::Refreshed, this, [this, func = std::move(func)]() mutable
+		{
+			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_paths);
+		}, Qt::SingleShotConnection);
+	}
 
 public Q_SLOTS:
-	void BatchCreateCPUCaches(const std::vector<game_info>& games = {}, bool is_fast_compilation = false, bool is_interactive = false);
-	void BatchRemoveCustomConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveCustomPadConfigurations(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveShaderCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemovePPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveSPUCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveHDD1Caches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-	void BatchRemoveAllCaches(const std::vector<game_info>& games = {}, bool is_interactive = false);
-
-	// NOTES:
-	//   - SetContentList() MUST always be called to set the content's info to be removed by:
-	//     - RemoveContentList()
-	//     - BatchRemoveContentLists()
-	//
-	void SetContentList(u16 content_types, const content_info& content_info);
-	void BatchRemoveContentLists(const std::vector<game_info>& games = {}, bool is_interactive = false);
-
 	void SetListMode(bool is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
@@ -128,6 +99,7 @@ private Q_SLOTS:
 	void doubleClickedSlot(QTableWidgetItem* item);
 	void doubleClickedSlot(const game_info& game);
 	void ItemSelectionChangedSlot();
+
 Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
@@ -138,7 +110,12 @@ Q_SIGNALS:
 	void Refreshed();
 	void RequestSaveStateManager(const game_info& game);
 
-public:
+protected:
+	/** Override inherited method from Qt to allow signalling when close happened.*/
+	void closeEvent(QCloseEvent* event) override;
+	bool eventFilter(QObject *object, QEvent *event) override;
+
+private:
 	template <typename KeyType>
 	struct GameIdsTable
 	{
@@ -146,75 +123,12 @@ public:
 		std::set<std::string> m_done_paths;
 	};
 
-	// Enqueue slot for refreshed signal
-	// Allowing for an individual container for each distinct use case (currently disabled and contains only one such entry)
-	template <typename KeySlot = void, typename Func>
-	void AddRefreshedSlot(Func&& func)
-	{
-		// NOTE: Remove assert when the need for individual containers arises
-		static_assert(std::is_void_v<KeySlot>);
-
-		connect(this, &game_list_frame::Refreshed, this, [this, func = std::move(func)]() mutable
-		{
-			func(m_refresh_funcs_manage_type->get<GameIdsTable<KeySlot>>().m_done_paths);
-		}, Qt::SingleShotConnection);
-	}
-
-protected:
-	/** Override inherited method from Qt to allow signalling when close happened.*/
-	void closeEvent(QCloseEvent* event) override;
-	bool eventFilter(QObject *object, QEvent *event) override;
-private:
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 
 	QString get_header_text(int col) const;
 	QString get_action_text(int col) const;
 
-	void ShowCustomConfigIcon(const game_info& game);
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
-
-	void ShowSingleSelectionContextMenu(const game_info& gameinfo, QPoint& global_pos);
-	void ShowMultiSelectionContextMenu(const std::vector<game_info>& games, QPoint& global_pos);
-
-	// NOTE:
-	//   m_content_info is used by:
-	//   - SetContentList()
-	//   - ClearContentList()
-	//   - GetContentInfo()
-	//   - RemoveContentList()
-	//   - BatchRemoveContentLists()
-	//
-	content_info m_content_info;
-
-	void ClearContentList(bool refresh = false);
-	content_info GetContentInfo(const std::vector<game_info>& games);
-
-	void ShowRemoveGameDialog(const std::vector<game_info>& games);
-	void ShowGameInfoDialog(const std::vector<game_info>& games);
-
-	static bool IsGameRunning(const std::string& serial);
-	bool ValidateRemoval(const std::string& serial, const std::string& path, const std::string& desc, bool is_interactive = false);
-	bool ValidateBatchRemoval(const std::string& desc, bool is_interactive = false);
-
-	static bool CreateCPUCaches(const std::string& path, const std::string& serial = {}, bool is_fast_compilation = false);
-	static bool CreateCPUCaches(const game_info& game, bool is_fast_compilation = false);
-	bool RemoveCustomConfiguration(const std::string& serial, const game_info& game = nullptr, bool is_interactive = false);
-	bool RemoveCustomPadConfiguration(const std::string& serial, const game_info& game = nullptr, bool is_interactive = false);
-	bool RemoveShaderCache(const std::string& serial, bool is_interactive = false);
-	bool RemovePPUCache(const std::string& serial, bool is_interactive = false);
-	bool RemoveSPUCache(const std::string& serial, bool is_interactive = false);
-	bool RemoveHDD1Cache(const std::string& serial, bool is_interactive = false);
-	bool RemoveAllCaches(const std::string& serial, bool is_interactive = false);
-	bool RemoveContentList(const std::string& serial, bool is_interactive = false);
-
-	static bool RemoveContentPath(const std::string& path, const std::string& desc);
-	static u32 RemoveContentPathList(const std::set<std::string>& path_list, const std::string& desc);
-	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
-
-	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials,
-		QString progressLabel, std::function<bool(const std::string&)> action,
-		std::function<void(u32, u32)> cancel_log, std::function<void()> action_on_finish, bool refresh_on_finish,
-		bool can_be_concurrent = false, std::function<bool()> should_wait_cb = {});
 
 	std::string CurrentSelectionPath();
 
@@ -223,6 +137,8 @@ private:
 
 	void WaitAndAbortRepaintThreads();
 	void WaitAndAbortSizeCalcThreads();
+
+	std::shared_ptr<game_list_actions> m_game_list_actions;
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_game_dock = nullptr;
