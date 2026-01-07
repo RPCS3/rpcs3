@@ -1,7 +1,6 @@
 #include "stdafx.h"
+#include "qt_utils.h"
 #include "game_list_base.h"
-
-#include "Loader/ISO.h"
 
 #include <QDir>
 #include <QPainter>
@@ -54,18 +53,10 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	{
 		if (game->icon_in_archive)
 		{
-			iso_archive archive(game->info.path);
-			auto icon_file = archive.open(game->info.icon_path);
-			auto icon_size = icon_file.size();
-			QByteArray data(icon_size, 0);
-			icon_file.read(data.data(), icon_size);
-			QImage iconImage;
-			if (iconImage.loadFromData(data))
-			{
-				game->icon = QPixmap::fromImage(iconImage);
-			}
+			game->icon_in_archive = gui::utils::load_icon(game->icon, game->info.icon_path, game->info.path);
 		}
-		else if (game_list_log.warning)
+
+		if (!game->icon_in_archive && game_list_log.warning)
 		{
 			bool logged = false;
 			{

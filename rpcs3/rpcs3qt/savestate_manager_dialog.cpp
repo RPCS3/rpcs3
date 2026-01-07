@@ -450,16 +450,7 @@ void savestate_manager_dialog::ResizeGameIcons()
 
 				if (!archive_path.empty())
 				{
-					iso_archive archive(archive_path);
-					auto icon_file = archive.open(icon_path);
-					auto icon_size = icon_file.size();
-					QByteArray data(icon_size, 0);
-					icon_file.read(data.data(), icon_size);
-					QImage iconImage;
-					if (iconImage.loadFromData(data))
-					{
-						icon = QPixmap::fromImage(iconImage);
-					}
+					gui::utils::load_icon(icon, icon_path, archive_path);
 				}
 
 				if (cancel && cancel->load())
