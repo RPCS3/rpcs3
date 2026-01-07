@@ -538,14 +538,6 @@ void game_list_frame::OnParsingFinished()
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
 
-		if (archive)
-		{
-			fs::stat_t iso_stat;
-			fs::get_stat(game.info.path, iso_stat);
-
-			game.info.size_on_disk = iso_stat.size;
-		}
-
 		const Localized thread_localized;
 
 		const std::string sfo_dir =  !archive ? rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf) : "PS3_GAME";
