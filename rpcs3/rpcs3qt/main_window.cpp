@@ -543,8 +543,16 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 	else
 	{
+		std::string game_path = Emu.GetBoot();
+		if (game_path.starts_with(iso_device::virtual_device_name))
+		{
+			auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+			auto iso_device = dynamic_cast<class iso_device*>(device.get());
+			game_path = iso_device->get_loaded_iso();
+		}
+
 		gui_log.success("Boot successful.");
-		AddRecentAction(gui::Recent_Game(QString::fromStdString(Emu.GetBoot()), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
+		AddRecentAction(gui::Recent_Game(QString::fromStdString(game_path), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
 	}
 
 	if (refresh_list)
