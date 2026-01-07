@@ -219,7 +219,7 @@ pad_capabilities PadHandlerBase::get_capabilities(const std::string& /*pad_id*/)
 		.has_rumble = b_has_rumble,
 		.has_accel = b_has_motion,
 		.has_gyro = b_has_motion,
-		.has_pressure_sensitivity = b_has_pressure_intensity_button
+		.has_pressure_intensity_button = b_has_pressure_intensity_button
 	};
 }
 
