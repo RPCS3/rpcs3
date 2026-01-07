@@ -619,13 +619,7 @@ void game_list_frame::OnParsingFinished()
 			{
 				game.info.icon_path = sfo_dir + "/ICON0.PNG";
 			}
-
-			if (!game.info.icon_path.empty() && archive)
-			{
-				if (!archive->exists(game.info.icon_path)) return;
-
-				game.icon_in_archive = true;
-			}
+			game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 		}
 
 		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
