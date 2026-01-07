@@ -369,6 +369,8 @@ jobs:
             mingw-w64-clang-x86_64-qt6-declarative
             mingw-w64-clang-x86_64-qt6-multimedia
             mingw-w64-clang-x86_64-qt6-svg
+            mingw-w64-clang-x86_64-qt6-tools
+            mingw-w64-clang-x86_64-qt6-translations
             base-devel
             curl
             git
