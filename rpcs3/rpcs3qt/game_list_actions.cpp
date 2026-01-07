@@ -25,6 +25,7 @@
 #include <QTimer>
 
 LOG_CHANNEL(game_list_log, "GameList");
+LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
@@ -340,7 +341,7 @@ void game_list_actions::ShowRemoveGameDialog(const std::vector<game_info>& games
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		if (!RemoveContentList(games[0]->info.serial, true))
+		if (!RemoveContentList(games[0]->info.serial))
 		{
 			QMessageBox::critical(m_game_list_frame, tr("Failure!"), caches->isChecked()
 				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->info.name))
@@ -351,7 +352,7 @@ void game_list_actions::ShowRemoveGameDialog(const std::vector<game_info>& games
 	}
 	else // Multi selection
 	{
-		BatchRemoveContentLists(games, true);
+		BatchRemoveContentLists(games);
 	}
 }
 
@@ -361,6 +362,41 @@ void game_list_actions::ShowGameInfoDialog(const std::vector<game_info>& games)
 		return;
 
 	QMessageBox::information(m_game_list_frame, tr("Game Info"), GetContentInfo(games).info);
+}
+
+void game_list_actions::ShowDiskUsageDialog()
+{
+	if (m_disk_usage_future.isRunning()) // Still running the last request
+		return;
+
+	// Disk usage calculation can take a while (in particular on non ssd/m.2 disks)
+	// so run it on a concurrent thread avoiding to block the entire GUI
+	m_disk_usage_future = QtConcurrent::run([this]()
+	{
+		const std::vector<std::pair<std::string, u64>> vfs_disk_usage = rpcs3::utils::get_vfs_disk_usage();
+		const u64 cache_disk_usage = rpcs3::utils::get_cache_disk_usage();
+
+		QString text;
+		u64 tot_data_size = 0;
+
+		for (const auto& [dev, data_size] : vfs_disk_usage)
+		{
+			text += tr("\n    %0: %1").arg(QString::fromStdString(dev)).arg(gui::utils::format_byte_size(data_size));
+			tot_data_size += data_size;
+		}
+
+		if (!text.isEmpty())
+			text = tr("\n  VFS disk usage: %0%1").arg(gui::utils::format_byte_size(tot_data_size)).arg(text);
+
+		text += tr("\n  Cache disk usage: %0").arg(gui::utils::format_byte_size(cache_disk_usage));
+
+		sys_log.success("%s", text);
+
+		Emu.CallFromMainThread([this, text]()
+		{
+			QMessageBox::information(m_game_list_frame, tr("Disk usage"), text);
+		}, nullptr, false);
+	});
 }
 
 bool game_list_actions::IsGameRunning(const std::string& serial)
@@ -1063,6 +1099,128 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 		});
 }
 
+void game_list_actions::BatchRemoveCustomConfigurations(const std::vector<game_info>& games, bool is_interactive)
+{
+	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Removal"), tr("Remove custom configuration?")) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	std::set<std::string> serials;
+
+	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
+	{
+		if (game->has_custom_config && !serials.count(game->info.serial))
+		{
+			serials.emplace(game->info.serial);
+		}
+	}
+
+	const u32 total = ::size32(serials);
+
+	if (total == 0)
+	{
+		QMessageBox::information(m_game_list_frame, tr("Custom Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, false, m_game_list_frame);
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->open();
+
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom configurations cleared"), [this](const std::string& serial)
+		{
+			return !serial.empty() && Emu.IsStopped(true) && RemoveCustomConfiguration(serial);
+		},
+		[](u32 removed, u32 total)
+		{
+			game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
+		}, nullptr, true);
+}
+
+void game_list_actions::BatchRemoveCustomPadConfigurations(const std::vector<game_info>& games, bool is_interactive)
+{
+	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Removal"), tr("Remove custom gamepad configuration?")) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	std::set<std::string> serials;
+
+	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
+	{
+		if (game->has_custom_pad_config && !serials.count(game->info.serial))
+		{
+			serials.emplace(game->info.serial);
+		}
+	}
+
+	const u32 total = ::size32(serials);
+
+	if (total == 0)
+	{
+		QMessageBox::information(m_game_list_frame, tr("Custom Gamepad Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Gamepad Configuration Batch Removal"), tr("Removing all custom gamepad configurations"), tr("Cancel"), 0, total, false, m_game_list_frame);
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->open();
+
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom gamepad configurations cleared"), [this](const std::string& serial)
+		{
+			return !serial.empty() && Emu.IsStopped(true) && RemoveCustomPadConfiguration(serial);
+		},
+		[](u32 removed, u32 total)
+		{
+			game_list_log.notice("Custom Gamepad Configuration Batch Removal was canceled. %d/%d custom gamepad configurations cleared", removed, total);
+		}, nullptr, true);
+}
+
+void game_list_actions::BatchRemoveShaderCaches(const std::vector<game_info>& games, bool is_interactive)
+{
+	if (!ValidateBatchRemoval("shader cache", is_interactive))
+	{
+		return;
+	}
+
+	std::set<std::string> serials;
+
+	if (games.empty())
+	{
+		serials.emplace("vsh.self");
+	}
+
+	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
+	{
+		serials.emplace(game->info.serial);
+	}
+
+	const u32 total = ::size32(serials);
+
+	if (total == 0)
+	{
+		QMessageBox::information(m_game_list_frame, tr("Shader Cache Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, false, m_game_list_frame);
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->open();
+
+	BatchActionBySerials(pdlg, serials, tr("%0/%1 shader caches cleared"), [this](const std::string& serial)
+		{
+			return !serial.empty() && Emu.IsStopped(true) && RemoveShaderCache(serial);
+		},
+		[](u32 removed, u32 total)
+		{
+			game_list_log.notice("Shader Cache Batch Removal was canceled. %d/%d caches cleared", removed, total);
+		}, nullptr, false);
+}
+
 void game_list_actions::BatchRemovePPUCaches(const std::vector<game_info>& games, bool is_interactive)
 {
 	if (!ValidateBatchRemoval("PPU cache", is_interactive))
@@ -1286,131 +1444,6 @@ void game_list_actions::BatchRemoveContentLists(const std::vector<game_info>& ga
 		{
 			ClearContentList(true); // Update the game list and clear the content's info once removed
 		}, false);
-}
-
-void game_list_actions::BatchRemoveCustomConfigurations(const std::vector<game_info>& games, bool is_interactive)
-{
-	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Removal"), tr("Remove custom configuration?")) != QMessageBox::Yes)
-	{
-		return;
-	}
-
-	std::set<std::string> serials;
-
-	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
-	{
-		if (game->has_custom_config && !serials.count(game->info.serial))
-		{
-			serials.emplace(game->info.serial);
-		}
-	}
-
-	const u32 total = ::size32(serials);
-
-	if (total == 0)
-	{
-		QMessageBox::information(m_game_list_frame, tr("Custom Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
-		return;
-	}
-
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, false, m_game_list_frame);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->open();
-
-	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom configurations cleared"),
-		[this](const std::string& serial)
-		{
-			return !serial.empty() && Emu.IsStopped(true) && RemoveCustomConfiguration(serial);
-		},
-		[](u32 removed, u32 total)
-		{
-			game_list_log.notice("Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
-		}, nullptr, true);
-}
-
-void game_list_actions::BatchRemoveCustomPadConfigurations(const std::vector<game_info>& games, bool is_interactive)
-{
-	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Removal"), tr("Remove custom gamepad configuration?")) != QMessageBox::Yes)
-	{
-		return;
-	}
-
-	std::set<std::string> serials;
-
-	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
-	{
-		if (game->has_custom_pad_config && !serials.count(game->info.serial))
-		{
-			serials.emplace(game->info.serial);
-		}
-	}
-
-	const u32 total = ::size32(serials);
-
-	if (total == 0)
-	{
-		QMessageBox::information(m_game_list_frame, tr("Custom Gamepad Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
-		return;
-	}
-
-	progress_dialog* pdlg = new progress_dialog(tr("Custom Gamepad Configuration Batch Removal"), tr("Removing all custom gamepad configurations"), tr("Cancel"), 0, total, false, m_game_list_frame);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->open();
-
-	BatchActionBySerials(pdlg, serials, tr("%0/%1 custom gamepad configurations cleared"),
-		[this](const std::string& serial)
-		{
-			return !serial.empty() && Emu.IsStopped(true) && RemoveCustomPadConfiguration(serial);
-		},
-		[](u32 removed, u32 total)
-		{
-			game_list_log.notice("Custom Gamepad Configuration Batch Removal was canceled. %d/%d custom gamepad configurations cleared", removed, total);
-		}, nullptr, true);
-}
-
-void game_list_actions::BatchRemoveShaderCaches(const std::vector<game_info>& games, bool is_interactive)
-{
-	if (!ValidateBatchRemoval("shader cache", is_interactive))
-	{
-		return;
-	}
-
-	std::set<std::string> serials;
-
-	if (games.empty())
-	{
-		serials.emplace("vsh.self");
-	}
-
-	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
-	{
-		serials.emplace(game->info.serial);
-	}
-
-	const u32 total = ::size32(serials);
-
-	if (total == 0)
-	{
-		QMessageBox::information(m_game_list_frame, tr("Shader Cache Batch Removal"), tr("No files found"), QMessageBox::Ok);
-		return;
-	}
-
-	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, false, m_game_list_frame);
-	pdlg->setAutoClose(false);
-	pdlg->setAutoReset(false);
-	pdlg->open();
-
-	BatchActionBySerials(pdlg, serials, tr("%0/%1 shader caches cleared"),
-		[this](const std::string& serial)
-		{
-			return !serial.empty() && Emu.IsStopped(true) && RemoveShaderCache(serial);
-		},
-		[](u32 removed, u32 total)
-		{
-			game_list_log.notice("Shader Cache Batch Removal was canceled. %d/%d caches cleared", removed, total);
-		}, nullptr, false);
 }
 
 void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations)
