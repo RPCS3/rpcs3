@@ -482,7 +482,7 @@ void pad_settings_dialog::InitButtons()
 			if ((!is_connected || !m_remap_timer.isActive()) && (
 				is_connected != m_enable_buttons ||
 				(is_connected && (
-					!capabilities.has_pressure_sensitivity != m_enable_pressure_intensity_button ||
+					capabilities.has_pressure_intensity_button != m_enable_pressure_intensity_button ||
 					capabilities.has_rumble != m_enable_rumble ||
 					capabilities.has_battery_led != m_enable_battery_led ||
 					(capabilities.has_led || capabilities.has_mono_led) != m_enable_led ||
@@ -490,7 +490,7 @@ void pad_settings_dialog::InitButtons()
 			{
 				if (is_connected)
 				{
-					m_enable_pressure_intensity_button = !capabilities.has_pressure_sensitivity;
+					m_enable_pressure_intensity_button = capabilities.has_pressure_intensity_button;
 					m_enable_rumble = capabilities.has_rumble;
 					m_enable_battery_led = capabilities.has_battery_led;
 					m_enable_led = capabilities.has_led || capabilities.has_mono_led;
