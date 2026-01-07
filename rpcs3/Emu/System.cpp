@@ -2361,8 +2361,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					const usz pos = resolved_path.rfind(m_game_dir);
-					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(pos + m_game_dir.size() + 1));
+					std::string disc_path = !launching_from_disc_archive ? resolved_path : m_path;
+					const usz pos = disc_path.rfind(m_game_dir);
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(disc_path.substr(pos + m_game_dir.size() + 1));
 					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else if (from_dev_flash)
