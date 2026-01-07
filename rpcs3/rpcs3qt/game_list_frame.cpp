@@ -523,19 +523,6 @@ void game_list_frame::OnParsingFinished()
 
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
-		const auto load_game_psf = [&dir_or_elf](const std::string& sfo_path, const std::unique_ptr<iso_archive>& archive)
-		{
-			if (!archive) return psf::load_object(sfo_path);
-
-			// HACK: psf does not accept a file_base argument,
-			// so we are creating a dummy fs:file and replacing the internal file_base handle with an iso_file
-			// instead.
-			fs::file psf_file(sfo_path);
-			psf_file.reset(std::make_unique<iso_file>(fs::file(dir_or_elf), *archive->retrieve(sfo_path)));
-
-			return psf::load_object(psf_file, sfo_path);
-		};
-
 		std::unique_ptr<iso_archive> archive;
 		if (is_file_iso(dir_or_elf))
 		{
@@ -562,7 +549,9 @@ void game_list_frame::OnParsingFinished()
 		const Localized thread_localized;
 
 		const std::string sfo_dir =  !archive ? rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf) : "PS3_GAME";
-		const psf::registry psf = load_game_psf(sfo_dir + "/PARAM.SFO", archive);
+		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
+
+		const psf::registry psf = !archive ? psf::load_object(sfo_path) : archive->open_psf(sfo_path);
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
