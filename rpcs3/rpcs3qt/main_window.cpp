@@ -78,6 +78,7 @@
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
 #include "Loader/mself.hpp"
 
 #include "Utilities/Thread.h"
@@ -3959,7 +3960,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		const QString suffix_lo = info.suffix().toLower();
 
 		// check for directories first, only valid if all other paths led to directories until now.
-		if (info.isDir())
+		if (info.isDir() || is_file_iso(path.toStdString()))
 		{
 			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{
@@ -4020,7 +4021,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 				type = drop_type::drop_rrc;
 			}
 			// The emulator allows to execute ANY filetype, just not from drag-and-drop because it is confusing to users
-			else if (path.toLower().endsWith(".savestat.gz") || path.toLower().endsWith(".savestat.zst") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o" || suffix_lo == "iso")
+			else if (path.toLower().endsWith(".savestat.gz") || path.toLower().endsWith(".savestat.zst") || suffix_lo == "savestat" || suffix_lo == "sprx" || suffix_lo == "self" || suffix_lo == "bin" || suffix_lo == "prx" || suffix_lo == "elf" || suffix_lo == "o")
 			{
 				type = drop_type::drop_game;
 			}

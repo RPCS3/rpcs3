@@ -4099,12 +4099,17 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 		{
 			auto dir_entry = std::move(*path_it);
 
-			if (!dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+			if (dir_entry.name == "." || dir_entry.name == "..")
 			{
 				continue;
 			}
 
 			const std::string dir_path = path + '/' + dir_entry.name;
+
+			if (!dir_entry.is_directory && !is_file_iso(dir_path))
+			{
+				continue;
+			}
 
 			if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
 			{
@@ -4203,10 +4208,17 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 		return error;
 	}
 
+	std::unique_ptr<iso_archive> archive;
+	if (is_file_iso(path))
+	{
+		archive = std::make_unique<iso_archive>(path);
+	}
+
 	// Load PARAM.SFO
 	const std::string elf_dir = fs::get_parent_dir(path);
-	std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(fs::get_parent_dir(elf_dir));
-	const psf::registry _psf = psf::load_object(sfo_dir + "/PARAM.SFO");
+	std::string sfo_dir = !archive ? rpcs3::utils::get_sfo_dir_from_game_path(fs::get_parent_dir(elf_dir)) : "PS3_GAME";
+	const std::string sfo_path = sfo_dir + "/PARAM.SFO";
+	const psf::registry _psf = !archive ? psf::load_object(sfo_path) : archive->open_psf(sfo_path);
 
 	const std::string title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
 	const std::string cat = std::string(psf::get_string(_psf, "CATEGORY"));
@@ -4227,6 +4239,23 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	{
 		sys_log.notice("Can not add game data to games.yml. (path=%s, title_id=%s, category=%s)", path, title_id, cat);
 		return game_boot_result::invalid_file_or_folder;
+	}
+
+	// Add ISO game
+	if (archive)
+	{
+		if (cat == "DG")
+		{
+			std::string iso_path = path;
+			switch (m_games_config.add_external_hdd_game(title_id, iso_path))
+			{
+				case games_config::result::failure: return game_boot_result::generic_error;
+				case games_config::result::success: return game_boot_result::no_errors;
+				case games_config::result::exists: return game_boot_result::already_added;
+			}
+
+			return game_boot_result::generic_error;
+		}
 	}
 
 	// Set bdvd_dir
