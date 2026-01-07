@@ -299,13 +299,8 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	{
 	case MFC_LSA_offs:
 	{
-		if (value >= SPU_LS_SIZE)
-		{
-			break;
-		}
-
 		std::lock_guard lock(mfc_prxy_mtx);
-		mfc_prxy_cmd.lsa = value;
+		mfc_prxy_cmd.lsa = value & (SPU_LS_SIZE - 1);
 		mfc_prxy_write_state.lsa = true;
 		return true;
 	}
