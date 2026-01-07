@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Loader/PSF.h"
+
 #include "Utilities/File.h"
 #include "util/types.hpp"
 
@@ -86,6 +88,8 @@ class iso_archive
 		bool is_file(const std::string& path);
 
 		iso_file open(const std::string& path);
+
+		psf::registry open_psf(const std::string& path);
 };
 
 class iso_device : public fs::device_base
