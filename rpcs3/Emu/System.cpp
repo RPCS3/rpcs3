@@ -932,6 +932,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 				if (result != game_boot_result::no_errors)
 				{
+					unload_iso();
 					GetCallbacks().close_gs_frame();
 				}
 			}
@@ -1184,6 +1185,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Load /dev_bdvd/ from game list if available
 				if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 				{
+					if (is_file_iso(game_path))
+					{
+						game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
+					}
+
 					if (game_path.ends_with("/./"))
 					{
 						// Marked as PS3_GAME directory
@@ -1840,6 +1846,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
+				if (is_file_iso(game_path))
+				{
+					load_iso(game_path);
+					launching_from_disc_archive = true;
+					game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
+				}
+
 				if (game_path.ends_with("/./"))
 				{
 					// Marked as PS3_GAME directory
@@ -1967,21 +1980,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// TODO: Verify timestamps and error codes with sys_fs
-			vfs::mount("/dev_bdvd", bdvd_dir);
-
 			vfs::mount("/dev_bdvd/PS3_GAME", inherited_ps3_game_path.empty() ? hdd0_game + m_path.substr(hdd0_game.size(), 10) : inherited_ps3_game_path);
 
 			const std::string new_ps3_game = vfs::get("/dev_bdvd/PS3_GAME");
 			sys_log.notice("Game: %s", new_ps3_game);
 
-			// Store /dev_bdvd/PS3_GAME location
-			if (games_config::result res = m_games_config.add_game(m_title_id, new_ps3_game + "/./"); res == games_config::result::success)
+			if (!new_ps3_game.starts_with(iso_device::virtual_device_name))
 			{
-				sys_log.notice("Registered BDVD/PS3_GAME game directory for title '%s': %s", m_title_id, new_ps3_game);
+				// Store /dev_bdvd/PS3_GAME location
+				if (games_config::result res = m_games_config.add_game(m_title_id, new_ps3_game + "/./"); res == games_config::result::success)
+				{
+					sys_log.notice("Registered BDVD/PS3_GAME game directory for title '%s': %s", m_title_id, new_ps3_game);
+				}
+				else if (res == games_config::result::failure)
+				{
+					sys_log.error("Failed to save BDVD/PS3_GAME location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
+				}
+
+				vfs::mount("/dev_bdvd", bdvd_dir);
 			}
-			else if (res == games_config::result::failure)
+			else
 			{
-				sys_log.error("Failed to save BDVD/PS3_GAME location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
+				vfs::mount("/dev_bdvd", iso_device::virtual_device_name + "/");
 			}
 		}
 		else if (disc.empty())
@@ -2229,7 +2249,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Check game updates
 		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
 				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
-				&& resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
+				&& (resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"))
+					|| launching_from_disc_archive)
 				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot)
 				&& ppu_exec == elf_error::ok)
 		{
