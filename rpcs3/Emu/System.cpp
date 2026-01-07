@@ -3886,7 +3886,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			disc.clear();
 			klic.clear();
 			hdd1.clear();
-			unload_iso();
 			init_mem_containers = nullptr;
 			m_config_path.clear();
 			m_config_mode = cfg_mode::custom;
@@ -3895,6 +3894,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			m_savestate_extension_flags1 = {};
 			m_emu_state_close_pending = false;
 			m_precompilation_option = {};
+
+			if (!m_continuous_mode)
+			{
+				unload_iso();
+			}
 
 			initialize_timebased_time(0, true);
 
