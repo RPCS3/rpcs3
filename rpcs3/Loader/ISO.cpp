@@ -263,6 +263,8 @@ iso_archive::iso_archive(const std::string& path)
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
+	if (passed_path.empty()) return nullptr;
+
 	std::string path = std::filesystem::path(passed_path).string();
 
 	size_t start = 0;
