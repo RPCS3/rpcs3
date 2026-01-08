@@ -669,8 +669,8 @@ namespace gl
 			}
 			else
 			{
-				//TODO: More tests on byte order
-				//ARGB8+native+unswizzled is confirmed with Dark Souls II character preview
+				// TODO: More tests on byte order
+				// ARGB8+native+unswizzled is confirmed with Dark Souls II character preview
 				switch (gcm_format)
 				{
 				case CELL_GCM_TEXTURE_A8R8G8B8:
@@ -697,8 +697,7 @@ namespace gl
 					fmt::throw_exception("Unexpected gcm format 0x%X", gcm_format);
 				}
 
-				//NOTE: Protection is handled by the caller
-				cached.set_dimensions(width, height, depth, (rsx_range.length() / height));
+				// NOTE: Protection is handled by the caller
 				no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			}
 
