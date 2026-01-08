@@ -1172,12 +1172,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::string disc_info;
 			m_ar->serialize(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
+			launching_from_disc_archive = is_file_iso(disc_info);
+
 			if (!klic[0])
 			{
 				klic.clear();
 			}
 
-			if (!disc_info.empty() && disc_info[0] != '/')
+			if (!launching_from_disc_archive && !disc_info.empty() && disc_info[0] != '/')
 			{
 				// Restore disc path for disc games (must exist in games.yml i.e. your game library)
 				m_title_id = disc_info;
@@ -1294,6 +1296,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			m_path_old = m_path;
 			resolve_path_as_vfs_path = true;
+			if (launching_from_disc_archive)
+			{
+				load_iso(disc_info);
+				m_path = iso_device::virtual_device_name + "/" + argv[0];
+
+				resolve_path_as_vfs_path = false;
+			}
 		}
 		else if (m_path.starts_with(vfs_boot_prefix))
 		{
@@ -1414,10 +1423,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				m_path = rpcs3::utils::get_hdd1_dir();
 				m_path += std::string_view(argv[0]).substr(9);
 			}
-			else if (is_file_iso(argv[0]))
-			{
-				m_path = argv[0];
-			}
 			else
 			{
 				sys_log.error("Unknown source for path redirection: %s", argv[0]);
@@ -1433,13 +1438,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
-		if (is_file_iso(m_path))
+		if (!launching_from_disc_archive && is_file_iso(m_path))
 		{
 			load_iso(m_path);
 
-			std::string path = iso_device::virtual_device_name + "/";
+			launching_from_disc_archive = true;
 
-			vfs::mount("/dev_bdvd/"sv, path);
+			std::string path = iso_device::virtual_device_name + "/";
 
 			// ISOs that are install discs will error if set to EBOOT.BIN
 			// so this should cover both of them
@@ -1449,11 +1454,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			m_path = path;
+		}
 
+		if (launching_from_disc_archive)
+		{
 			m_dir = "/dev_bdvd/PS3_GAME/";
 			m_cat = "DG"sv;
-
-			launching_from_disc_archive = true;
 		}
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
@@ -1630,7 +1636,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		// ISO PKG INSTALL HACK!
-		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		if (fs::is_dir(m_path) && launching_from_disc_archive)
 		{
 			bdvd_dir = m_path;
 		}
@@ -2136,7 +2142,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		// ISO has no USRDIR/EBOOT.BIN, and we've examined its PKGDIR and extras.
 		// time to wrap up
-		if (!m_path.ends_with("EBOOT.BIN") && launching_from_disc_archive)
+		if (fs::is_dir(m_path) && launching_from_disc_archive)
 		{
 			return game_boot_result::nothing_to_boot;
 		}
@@ -3620,8 +3626,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					ensure(device);
 
 					auto iso_device = dynamic_cast<class iso_device*>(device.get());
+
+					ar(m_path.substr(iso_device::virtual_device_name.size() + 1));
 					ar(iso_device->get_loaded_iso());
-					ar(m_title_id);
 				}
 				else if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
 				{

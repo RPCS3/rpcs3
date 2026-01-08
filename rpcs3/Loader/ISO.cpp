@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "ISO.h"
+#include "Emu/VFS.h"
 
 #include <codecvt>
 #include <algorithm>
@@ -619,6 +620,8 @@ void load_iso(const std::string& path)
 {
 	fs::set_virtual_device("iso_overlay_fs_dev",
 		stx::make_shared<iso_device>(path));
+
+	vfs::mount("/dev_bdvd/"sv, iso_device::virtual_device_name + "/");
 }
 
 void unload_iso()
