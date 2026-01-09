@@ -102,7 +102,12 @@ bool sdl_instance::initialize_impl()
 	set_hint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
 #endif
 
-	if (!SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC))
+	// Disable LG4FF driver on windows (only needed for SDL 3.4.0)
+#if _WIN32 && SDL_VERSION_ATLEAST(3, 4, 0)
+	set_hint(SDL_HINT_JOYSTICK_HIDAPI_LG4FF, "0");
+#endif
+
+	if (!SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_HAPTIC | SDL_INIT_CAMERA))
 	{
 		sdl_log.error("Could not initialize! SDL Error: %s", SDL_GetError());
 		return false;

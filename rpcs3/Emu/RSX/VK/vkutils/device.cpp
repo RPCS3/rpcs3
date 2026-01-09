@@ -102,7 +102,7 @@ namespace vk
 		multidraw_support.max_batch_size = 65536;
 
 		optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
-		optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+		optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout && get_driver_vendor() != driver_vendor::AMD;
 		optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
 
 		features = features2.features;

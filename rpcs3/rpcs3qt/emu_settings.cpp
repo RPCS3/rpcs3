@@ -1119,6 +1119,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case camera_handler::null: return tr("Null", "Camera handler");
 		case camera_handler::fake: return tr("Fake", "Camera handler");
 		case camera_handler::qt: return tr("Qt", "Camera handler");
+#ifdef HAVE_SDL3
+		case camera_handler::sdl: return tr("SDL", "Camera handler");
+#endif
 		}
 		break;
 	case emu_settings_type::MusicHandler:

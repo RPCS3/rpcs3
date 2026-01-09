@@ -114,24 +114,19 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	init_action(trace_act, logs::level::trace);
 
 	menu.addAction(copy);
+	menu.addAction(clear);
+
 	menu.addSeparator();
 	menu.addAction(open);
-	menu.addSeparator();
+	menu.addAction(config);
+	menu.addAction(filter);
 	menu.addAction(save);
 	menu.addSeparator();
-	menu.addAction(config);
-	menu.addSeparator();
-	menu.addAction(filter);
-	menu.addSeparator();
 	menu.addAction(timestamps);
-	menu.addSeparator();
 	menu.addAction(threads);
-	menu.addSeparator();
 	menu.addAction(last_actions_only);
 	menu.addSeparator();
 	menu.addActions(log_level_acts->actions());
-	menu.addSeparator();
-	menu.addAction(clear);
 
 	connect(copy, &QAction::triggered, this, [this]()
 	{
@@ -451,6 +446,7 @@ void log_viewer::dropEvent(QDropEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData(), true))
 	{
+		ev->acceptProposedAction();
 		show_log();
 	}
 }
@@ -459,7 +455,7 @@ void log_viewer::dragEnterEvent(QDragEnterEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
 }
 
@@ -467,13 +463,8 @@ void log_viewer::dragMoveEvent(QDragMoveEvent* ev)
 {
 	if (is_valid_file(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
-}
-
-void log_viewer::dragLeaveEvent(QDragLeaveEvent* ev)
-{
-	ev->accept();
 }
 
 bool log_viewer::eventFilter(QObject* object, QEvent* event)

@@ -3,16 +3,16 @@
 #include "game_list_grid_item.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
-#include "Utilities/File.h"
 
 #include <QApplication>
-#include <QStringBuilder>
 
 game_list_grid::game_list_grid()
 	: flow_widget(nullptr), game_list_base()
 {
 	setObjectName("game_list_grid");
 	setContextMenuPolicy(Qt::CustomContextMenu);
+
+	set_multi_selection_enabled(true);
 
 	m_icon_ready_callback = [this](const game_info& game, const movie_item_base* item)
 	{
@@ -42,12 +42,12 @@ void game_list_grid::populate(
 	const std::vector<game_info>& game_data,
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
-	const std::string& selected_item_id,
+	const std::set<std::string>& selected_item_ids,
 	bool play_hover_movies)
 {
 	clear_list();
 
-	game_list_grid_item* selected_item = nullptr;
+	std::set<flow_widget_item*> selected_items;
 
 	blockSignals(true);
 
@@ -112,9 +112,9 @@ void game_list_grid::populate(
 			item->set_video_path(game->info.movie_path);
 		}
 
-		if (selected_item_id == game->info.path + game->info.icon_path)
+		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
 		{
-			selected_item = item;
+			selected_items.insert(item);
 		}
 
 		add_widget(item);
@@ -127,7 +127,7 @@ void game_list_grid::populate(
 
 	QApplication::processEvents();
 
-	select_item(selected_item);
+	select_items(selected_items);
 }
 
 void game_list_grid::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

@@ -36,7 +36,7 @@ namespace rsx::assembler
 
 	struct CFGPass
 	{
-		virtual void run(FlowGraph& graph) = 0;
+		virtual bool run(FlowGraph& graph) = 0;
 	};
 
 	FlowGraph deconstruct_fragment_program(const RSXFragmentProgram& prog);

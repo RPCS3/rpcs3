@@ -17,28 +17,286 @@
 #include "Input/pad_thread.h"
 #include "Input/sdl_instance.h"
 
-LOG_CHANNEL(logitech_g27_log, "LOGIG27");
+LOG_CHANNEL(logitech_g27_log, "logitech_g27");
+
+#pragma pack(push, 1)
+struct DFEX_data
+{
+	u8 square : 1;
+	u8 cross : 1;
+	u8 circle : 1;
+	u8 triangle : 1;
+	u8 l1 : 1; // Left_paddle
+	u8 r1 : 1; // Right_paddle
+	u8 l2 : 1;
+	u8 r2 : 1;
+
+	u8 select : 1; // Share
+	u8 start : 1; // Options
+	u8 l3 : 1;
+	u8 r3 : 1;
+	u8 ps : 1;
+	u8 : 3;
+
+	u8 dpad; // 00=N, 01=NE, 02=E, 03=SW, 04=S, 05=SW, 06=W, 07=NW, 08=IDLE
+	u8 steering; // 00=Left, ff=Right
+	u8 brake_throttle; // 00=ThrottlePressed, 7f=BothReleased/BothPressed, ff=BrakePressed
+	u8 const1;
+	u8 const2;
+	u32 : 32;
+	u32 : 32;
+	u16 : 16;
+	u8 brake; // 00=Released, ff=Pressed
+	u8 throttle; // 00=Released, ff=Pressed
+	u32 : 32;
+	u32 : 32;
+};
+
+struct DFP_data
+{
+	u16 steering : 14; // 0000=Left, 1fff=Mid, 3fff=Right
+	u16 cross: 1;
+	u16 square : 1;
+
+	u8 circle : 1;
+	u8 triangle : 1;
+	u8 r1 : 1; // Right_paddle
+	u8 l1 : 1; // Left_paddle
+	u8 r2 : 1;
+	u8 l2 : 1;
+	u8 select : 1; // Share
+	u8 start : 1; // Options
+
+	u8 r3 : 1;
+	u8 l3 : 1;
+	u8 r3_2 : 1;
+	u8 l3_2 : 1;
+	u8 dpad : 4; // 0=N, 1=NE, 2=E, 3=SW, 4=S, 5=SW, 6=W, 7=NW, 8=IDLE
+
+	u8 brake_throttle; // 00=ThrottlePressed, 7f=BothReleased/BothPressed, ff=BrakePressed
+	u8 throttle; // 00=Pressed, ff=Released
+	u8 brake; // 00=Pressed, ff=Released
+
+	u8 pedals_attached : 1;
+	u8 powered : 1;
+	u8 : 1;
+	u8 self_check_done : 1;
+	u8 set1 : 1; // always set
+	u8 : 3;
+};
+
+struct DFGT_data
+{
+	u8 dpad : 4; // 0=N, 1=NE, 2=E, 3=SW, 4=S, 5=SW, 6=W, 7=NW, 8=IDLE
+	u8 cross: 1;
+	u8 square : 1;
+	u8 circle : 1;
+	u8 triangle : 1;
+
+	u8 r1 : 1; // Right_paddle
+	u8 l1 : 1; // Left_paddle
+	u8 r2 : 1;
+	u8 l2 : 1;
+	u8 select : 1; // Share
+	u8 start : 1; // Options
+	u8 r3 : 1;
+	u8 l3 : 1;
+
+	u8 : 2;
+	u8 dial_center : 1;
+	u8 plus : 1;
+	u8 dial_cw : 1;
+	u8 dial_ccw : 1;
+	u8 minus : 1;
+	u8 : 1;
+
+	u8 ps : 1;
+	u8 pedals_attached : 1;
+	u8 powered : 1;
+	u8 self_check_done : 1;
+	u8 set1 : 1;
+	u8 : 1;
+	u8 set2 : 1;
+	u8 : 1;
+
+	u16 steering : 14; // 0000=Left, 1fff=Mid, 3fff=Right
+	u16 : 2;
+	u8 throttle; // 00=Pressed, ff=Released
+	u8 brake; // 00=Pressed, ff=Released
+};
+
+struct G25_data
+{
+	u8 dpad : 4; // 0=N, 1=NE, 2=E, 3=SW, 4=S, 5=SW, 6=W, 7=NW, 8=IDLE
+	u8 cross: 1;
+	u8 square : 1;
+	u8 circle : 1;
+	u8 triangle : 1;
+
+	u8 r1 : 1; // Right_paddle
+	u8 l1 : 1; // Left_paddle
+	u8 r2 : 1; // + dial_center
+	u8 l2 : 1;
+	u8 select : 1; // Share
+	u8 start : 1; // Options
+	u8 r3 : 1; // + dial_cw + plus
+	u8 l3 : 1; // + dial_ccw + minus
+
+	u8 gear1 : 1;
+	u8 gear2 : 1;
+	u8 gear3 : 1;
+	u8 gear4 : 1;
+	u8 gear5 : 1;
+	u8 gear6 : 1;
+	u8 gearR : 1;
+	u8 : 1;
+
+	u16 pedals_detached : 1;
+	u16 powered : 1;
+	u16 steering : 14; // 0000=Left, 1fff=Mid, 3fff=Right
+
+	u8 throttle; // 00=Pressed, ff=Released
+	u8 brake; // 00=Pressed, ff=Released
+	u8 clutch; // 00=Pressed, ff=Released
+
+	u8 shifter_x; // 30=left(1,2), 7a=middle(3,4), b2=right(5,6)
+	u8 shifter_y; // 32=bottom(2,4,6), b7=top(1,3,5)
+
+	u8 shifter_attached : 1;
+	u8 set1 : 1;
+	u8 : 1;
+	u8 shifter_pressed : 1;
+	u8 : 4;
+};
+
+struct G27_data
+{
+	u8 dpad : 4; // 0=N, 1=NE, 2=E, 3=SW, 4=S, 5=SW, 6=W, 7=NW, 8=IDLE
+	u8 cross: 1;
+	u8 square : 1;
+	u8 circle : 1;
+	u8 triangle : 1;
+
+	u8 r1 : 1; // Right_paddle
+	u8 l1 : 1; // Left_paddle
+	u8 r2 : 1;
+	u8 l2 : 1;
+	u8 select : 1; // Share
+	u8 start : 1; // Options
+	u8 r3 : 1; // + dial_center
+	u8 l3 : 1;
+
+	u8 gear1 : 1;
+	u8 gear2 : 1;
+	u8 gear3 : 1;
+	u8 gear4 : 1;
+	u8 gear5 : 1;
+	u8 gear6 : 1;
+	u8 dial_cw : 1;
+	u8 dial_ccw : 1;
+
+	u16 plus : 1;
+	u16 minus : 1;
+	u16 steering : 14; // 0000=Left, 1fff=Mid, 3fff=Right
+
+	u8 throttle; // 00=Pressed, ff=Released
+	u8 brake; // 00=Pressed, ff=Released
+	u8 clutch; // 00=Pressed, ff=Released
+
+	u8 shifter_x; // 30=left(1,2), 7a=middle(3,4), b2=right(5,6)
+	u8 shifter_y; // 32=bottom(2,4,6), b7=top(1,3,5)
+
+	u8 gearR : 1;
+	u8 pedals_detached : 1;
+	u8 powered : 1;
+	u8 shifter_attached : 1;
+	u8 set1 : 1;
+	u8 : 1;
+	u8 shifter_pressed : 1;
+	u8 range : 1;
+};
+#pragma pack(pop)
+
+static const std::map<logitech_personality,
+	std::pair<UsbDeviceDescriptor, std::array<u8, 0x29>>> s_logitech_personality = {
+{
+	logitech_personality::driving_force_ex,
+	{
+		UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x10, 0x046D, 0xC294, 0x1350, 0x01, 0x02, 0x00, 0x01},
+		{0x09, 0x02, 0x29, 0x00, 0x01, 0x01, 0x04, 0x80, 0x31, 0x09, 0x04, 0x00, 0x00, 0x02, 0x03, 0x00,
+			0x00, 0x00, 0x09, 0x21, 0x00, 0x01, 0x21, 0x01, 0x22, 0x9D, 0x00, 0x07, 0x05, 0x81, 0x03, 0x40,
+			0x00, 0x0A, 0x07, 0x05, 0x01, 0x03, 0x10, 0x00, 0x0A}
+	}
+},
+{
+	logitech_personality::driving_force_pro,
+	{
+		UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x10, 0x046D, 0xC298, 0x1350, 0x01, 0x02, 0x00, 0x01},
+		{0x09, 0x02, 0x29, 0x00, 0x01, 0x01, 0x04, 0x80, 0x31, 0x09, 0x04, 0x00, 0x00, 0x02, 0x03, 0x00,
+			0x00, 0x00, 0x09, 0x21, 0x00, 0x01, 0x21, 0x01, 0x22, 0x61, 0x00, 0x07, 0x05, 0x81, 0x03, 0x08,
+			0x00, 0x0A, 0x07, 0x05, 0x01, 0x03, 0x08, 0x00, 0x0A}
+	}
+},
+{
+	logitech_personality::g25,
+	{
+		UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x10, 0x046D, 0xC299, 0x1350, 0x01, 0x02, 0x00, 0x01},
+		{0x09, 0x02, 0x29, 0x00, 0x01, 0x01, 0x04, 0x80, 0x31, 0x09, 0x04, 0x00, 0x00, 0x02, 0x03, 0x00,
+			0x00, 0x00, 0x09, 0x21, 0x11, 0x01, 0x21, 0x01, 0x22, 0x6F, 0x00, 0x07, 0x05, 0x81, 0x03, 0x10,
+			0x00, 0x02, 0x07, 0x05, 0x01, 0x03, 0x10, 0x00, 0x02}
+	}
+},
+{
+	logitech_personality::driving_force_gt,
+	{
+		UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x10, 0x046D, 0xC29A, 0x1350, 0x00, 0x02, 0x00, 0x01},
+		{0x09, 0x02, 0x29, 0x00, 0x01, 0x01, 0x00, 0x80, 0x31, 0x09, 0x04, 0x00, 0x00, 0x02, 0x03, 0x00,
+			0x00, 0xFE, 0x09, 0x21, 0x11, 0x01, 0x21, 0x01, 0x22, 0x73, 0x00, 0x07, 0x05, 0x81, 0x03, 0x10,
+			0x00, 0x02, 0x07, 0x05, 0x01, 0x03, 0x10, 0x00, 0x02}
+	}
+},
+{
+	logitech_personality::g27,
+	{
+		UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x10, 0x046D, 0xC29B, 0x1350, 0x01, 0x02, 0x00, 0x01},
+		{0x09, 0x02, 0x29, 0x00, 0x01, 0x01, 0x04, 0x80, 0x31, 0x09, 0x04, 0x00, 0x00, 0x02, 0x03, 0x00,
+			0x00, 0x00, 0x09, 0x21, 0x11, 0x01, 0x21, 0x01, 0x22, 0x85, 0x00, 0x07, 0x05, 0x81, 0x03, 0x10,
+			0x00, 0x02, 0x07, 0x05, 0x01, 0x03, 0x10, 0x00, 0x02}
+	}
+}
+};
 
 // ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
-static const SDL_HapticDirection STEERING_DIRECTION =
+static constexpr SDL_HapticDirection STEERING_DIRECTION =
 {
 	.type = SDL_HAPTIC_STEERING_AXIS,
 	.dir = {0, 0, 0}
 };
 
-usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std::array<u8, 7>& location)
-	: usb_device_emulated(location), m_controller_index(controller_index)
+void usb_device_logitech_g27::set_personality(logitech_personality personality, bool reconnect)
 {
-	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0, 0, 0, 16, 0x046d, 0xc29b, 0x1350, 1, 2, 0, 1});
+	m_personality = personality;
+	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, ::at32(s_logitech_personality, personality).first);
 
 	// parse the raw response like with passthrough device
-	static constexpr u8 raw_config[] = {0x9, 0x2, 0x29, 0x0, 0x1, 0x1, 0x4, 0x80, 0x31, 0x9, 0x4, 0x0, 0x0, 0x2, 0x3, 0x0, 0x0, 0x0, 0x9, 0x21, 0x11, 0x1, 0x21, 0x1, 0x22, 0x85, 0x0, 0x7, 0x5, 0x81, 0x3, 0x10, 0x0, 0x2, 0x7, 0x5, 0x1, 0x3, 0x10, 0x0, 0x2};
+	const u8* raw_config = ::at32(s_logitech_personality, personality).second.data();
 	auto& conf = device.add_node(UsbDescriptorNode(raw_config[0], raw_config[1], &raw_config[2]));
-	for (unsigned int index = raw_config[0]; index < sizeof(raw_config);)
+	for (unsigned int index = raw_config[0]; index < raw_config[2];)
 	{
 		conf.add_node(UsbDescriptorNode(raw_config[index], raw_config[index + 1], &raw_config[index + 2]));
 		index += raw_config[index];
 	}
+
+	if (reconnect)
+	{
+		reconnect_usb(assigned_number);
+	}
+}
+
+usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std::array<u8, 7>& location)
+	: usb_device_emulated(location), m_controller_index(controller_index)
+{
+	set_personality(logitech_personality::driving_force_ex);
 
 	m_default_spring_effect.type = SDL_HAPTIC_SPRING;
 	m_default_spring_effect.condition.direction = STEERING_DIRECTION;
@@ -63,7 +321,14 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			sdl_refresh();
-			thread_ctrl::wait_for(5'000'000);
+			thread_ctrl::wait_for(1'000'000);
+
+			std::unique_lock lock(g_cfg_logitech_g27.m_mutex);
+			if (logitech_personality::invalid != m_next_personality && m_personality != m_next_personality)
+			{
+				set_personality(m_next_personality, true);
+				m_next_personality = logitech_personality::invalid;
+			}
 		}
 	});
 }
@@ -115,7 +380,7 @@ u16 usb_device_logitech_g27::get_num_emu_devices()
 
 void usb_device_logitech_g27::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	logitech_g27_log.todo("control transfer bmRequestType %02x, bRequest %02x, wValue %04x, wIndex %04x, wLength %04x, %s", bmRequestType, bRequest, wValue, wIndex, wLength, fmt::buf_to_hexstring(buf, buf_size));
+	logitech_g27_log.notice("control transfer bmRequestType %02x, bRequest %02x, wValue %04x, wIndex %04x, wLength %04x, %s", bmRequestType, bRequest, wValue, wIndex, wLength, fmt::buf_to_hexstring(buf, buf_size));
 
 	usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
 }
@@ -194,9 +459,11 @@ static inline logitech_g27_sdl_mapping get_runtime_mapping()
 
 	convert_mapping(cfg.dial_clockwise, mapping.dial_clockwise);
 	convert_mapping(cfg.dial_anticlockwise, mapping.dial_anticlockwise);
+	convert_mapping(cfg.dial_center, mapping.dial_center);
 
 	convert_mapping(cfg.select, mapping.select);
-	convert_mapping(cfg.pause, mapping.pause);
+	convert_mapping(cfg.start, mapping.start);
+	convert_mapping(cfg.ps, mapping.ps);
 
 	convert_mapping(cfg.shifter_1, mapping.shifter_1);
 	convert_mapping(cfg.shifter_2, mapping.shifter_2);
@@ -205,7 +472,6 @@ static inline logitech_g27_sdl_mapping get_runtime_mapping()
 	convert_mapping(cfg.shifter_5, mapping.shifter_5);
 	convert_mapping(cfg.shifter_6, mapping.shifter_6);
 	convert_mapping(cfg.shifter_r, mapping.shifter_r);
-	convert_mapping(cfg.shifter_press, mapping.shifter_press);
 
 	return mapping;
 }
@@ -467,6 +733,50 @@ static u8 hat_components_to_logitech_g27_hat(bool up, bool down, bool left, bool
 	return sdl_hat_to_logitech_g27_hat(sdl_hat);
 }
 
+static std::pair<u8, u8> shifter_to_coord_xy(bool shifter_1, bool shifter_2, bool shifter_3, bool shifter_4,
+		bool shifter_5, bool shifter_6, bool shifter_r)
+{
+	// rough analog values recorded in https://github.com/RPCS3/rpcs3/pull/17199#issuecomment-2883934412
+	constexpr u8 coord_center = 0x80;
+	constexpr u8 coord_top = 0xb7;
+	constexpr u8 coord_bottom = 0x32;
+	constexpr u8 coord_left = 0x30;
+	constexpr u8 coord_right = 0xb3;
+	constexpr u8 coord_right_reverse = 0xaa;
+	if (shifter_1)
+	{
+		return {coord_left, coord_top};
+	}
+	else if (shifter_2)
+	{
+		return {coord_left, coord_bottom};
+	}
+	else if (shifter_3)
+	{
+		return {coord_center, coord_top};
+	}
+	else if (shifter_4)
+	{
+		return {coord_center, coord_bottom};
+	}
+	else if (shifter_5)
+	{
+		return {coord_right, coord_top};
+	}
+	else if (shifter_6)
+	{
+		return {coord_right, coord_bottom};
+	}
+	else if (shifter_r)
+	{
+		return {coord_right_reverse, coord_bottom};
+	}
+	else
+	{
+		return {coord_center, coord_center};
+	}
+}
+
 static bool fetch_sdl_as_button(SDL_Joystick* joystick, const sdl_mapping& mapping)
 {
 	switch (mapping.type)
@@ -646,6 +956,220 @@ static inline void set_bit(u8* buf, int bit_num, bool set)
 		buf[byte_num] = buf[byte_num] & (~mask);
 }
 
+void usb_device_logitech_g27::transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer)
+{
+	DFEX_data data{};
+	ensure(buf_size >= sizeof(data));
+	transfer->expected_count = sizeof(data);
+
+	const std::lock_guard lock(m_sdl_handles_mutex);
+	data.square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+	data.cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+	data.circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
+	data.triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+	data.l1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
+	data.r1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+	data.l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+	data.r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+	data.select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+	data.start = sdl_to_logitech_g27_button(m_joysticks, m_mapping.start);
+	data.l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+	data.r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
+	data.dpad = hat_components_to_logitech_g27_hat(
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.up),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.down),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.left),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.right)
+	);
+	data.steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering) >> 6;
+	data.brake_throttle = 0x7f;
+	data.const1 = 0x7f;
+	data.const2 = 0x7f;
+	data.brake = 0xff - sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+	data.throttle = 0xff - sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+	std::memcpy(buf, &data, sizeof(data));
+}
+
+void usb_device_logitech_g27::transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer)
+{
+	DFP_data data{};
+	ensure(buf_size >= sizeof(data));
+	transfer->expected_count = sizeof(data);
+
+	const std::lock_guard lock(m_sdl_handles_mutex);
+	data.steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+	data.cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+	data.square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+	data.circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
+	data.triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+	data.r1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+	data.l1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
+	data.r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+	data.l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+	data.select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+	data.start = sdl_to_logitech_g27_button(m_joysticks, m_mapping.start);
+	data.r3 = data.r3_2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
+	data.l3 = data.l3_2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+	data.dpad = hat_components_to_logitech_g27_hat(
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.up),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.down),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.left),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.right)
+	);
+	data.brake_throttle = 0x7f;
+	data.throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+	data.brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+	data.pedals_attached = 1;
+	data.powered = 1;
+	data.self_check_done = 1;
+	data.set1 = 1;
+	std::memcpy(buf, &data, sizeof(data));
+}
+
+void usb_device_logitech_g27::transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer)
+{
+	DFGT_data data{};
+	ensure(buf_size >= sizeof(data));
+	transfer->expected_count = sizeof(data);
+
+	const std::lock_guard lock(m_sdl_handles_mutex);
+	data.dpad = hat_components_to_logitech_g27_hat(
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.up),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.down),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.left),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.right)
+	);
+	data.cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+	data.square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+	data.circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
+	data.triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+	data.r1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+	data.l1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
+	data.r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+	data.l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+	data.select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+	data.start = sdl_to_logitech_g27_button(m_joysticks, m_mapping.start);
+	data.r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
+	data.l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+	data.dial_center = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_center);
+	data.plus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.plus);
+	data.dial_cw = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_clockwise);
+	data.dial_ccw = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_anticlockwise);
+	data.minus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.minus);
+	data.ps = sdl_to_logitech_g27_button(m_joysticks, m_mapping.ps);
+	data.pedals_attached = 1;
+	data.powered = 1;
+	data.self_check_done = 1;
+	data.set1 = 1;
+	data.set2 = 1;
+	data.steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+	data.throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+	data.brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+	std::memcpy(buf, &data, sizeof(data));
+}
+
+void usb_device_logitech_g27::transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer)
+{
+	G25_data data{};
+	ensure(buf_size >= sizeof(data));
+	transfer->expected_count = sizeof(data);
+
+	const std::lock_guard lock(m_sdl_handles_mutex);
+	data.dpad = hat_components_to_logitech_g27_hat(
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.up),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.down),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.left),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.right)
+	);
+	data.cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+	data.square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+	data.circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
+	data.triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+	data.r1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+	data.l1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
+	data.r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+	data.l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+	data.select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+	data.start = sdl_to_logitech_g27_button(m_joysticks, m_mapping.start);
+	data.r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
+	data.l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+	data.gear1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_1);
+	data.gear2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_2);
+	data.gear3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_3);
+	data.gear4 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_4);
+	data.gear5 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_5);
+	data.gear6 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_6);
+	data.gearR = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_r);
+	data.pedals_detached = 0;
+	data.powered = 1;
+	data.steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+	data.throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+	data.brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+	data.clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.clutch);
+	auto [shifter_x, shifter_y] = shifter_to_coord_xy(data.gear1, data.gear2,
+		data.gear3, data.gear4, data.gear5, data.gear6, data.gearR);
+	data.shifter_x = shifter_x;
+	data.shifter_y = shifter_y;
+	data.shifter_attached = 1;
+	data.set1 = 1;
+	data.shifter_pressed = data.gearR;
+	std::memcpy(buf, &data, sizeof(data));
+}
+
+void usb_device_logitech_g27::transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer)
+{
+	G27_data data{};
+	ensure(buf_size >= sizeof(data));
+	transfer->expected_count = sizeof(data);
+
+	const std::lock_guard lock(m_sdl_handles_mutex);
+	data.dpad = hat_components_to_logitech_g27_hat(
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.up),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.down),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.left),
+		sdl_to_logitech_g27_button(m_joysticks, m_mapping.right)
+	);
+	data.cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
+	data.square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
+	data.circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
+	data.triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
+	data.r1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
+	data.l1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
+	data.r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
+	data.l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
+	data.select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
+	data.start = sdl_to_logitech_g27_button(m_joysticks, m_mapping.start);
+	data.r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
+	data.l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
+	data.gear1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_1);
+	data.gear2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_2);
+	data.gear3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_3);
+	data.gear4 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_4);
+	data.gear5 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_5);
+	data.gear6 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_6);
+	const bool shifter_r = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_r);
+	data.dial_cw = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_clockwise);
+	data.dial_ccw = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_anticlockwise);
+	data.plus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.plus);
+	data.minus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.minus);
+	data.steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
+	data.throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
+	data.brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
+	data.clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.clutch);
+	auto [shifter_x, shifter_y] = shifter_to_coord_xy(data.gear1, data.gear2,
+		data.gear3, data.gear4, data.gear5, data.gear6, shifter_r);
+	data.shifter_x = shifter_x;
+	data.shifter_y = shifter_y;
+	data.gearR = shifter_r;
+	data.pedals_detached = 0;
+	data.powered = 1;
+	data.shifter_attached = 1;
+	data.set1 = 1;
+	data.shifter_pressed = shifter_r;
+	data.range = (m_wheel_range > 360);
+	std::memcpy(buf, &data, sizeof(data));
+}
+
 void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
 	transfer->fake = true;
@@ -655,168 +1179,31 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 
 	if (endpoint & (1 << 7))
 	{
-		if (buf_size < 11)
-		{
-			logitech_g27_log.error("Not populating input buffer with a buffer of the size of %u", buf_size);
-			return;
-		}
-
-		ensure(buf_size >= 11);
 		memset(buf, 0, buf_size);
-
-		transfer->expected_count = 11;
-
 		sdl_instance::get_instance().pump_events();
 
-		// Fetch input states from SDL
-		m_sdl_handles_mutex.lock();
-		const u16 steering = sdl_to_logitech_g27_steering(m_joysticks, m_mapping.steering);
-		const u8 throttle = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.throttle);
-		const u8 brake = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.brake);
-		const u8 clutch = sdl_to_logitech_g27_pedal(m_joysticks, m_mapping.clutch);
-		const bool shift_up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_up);
-		const bool shift_down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shift_down);
-
-		const bool up = sdl_to_logitech_g27_button(m_joysticks, m_mapping.up);
-		const bool down = sdl_to_logitech_g27_button(m_joysticks, m_mapping.down);
-		const bool left = sdl_to_logitech_g27_button(m_joysticks, m_mapping.left);
-		const bool right = sdl_to_logitech_g27_button(m_joysticks, m_mapping.right);
-
-		const bool triangle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.triangle);
-		const bool cross = sdl_to_logitech_g27_button(m_joysticks, m_mapping.cross);
-		const bool square = sdl_to_logitech_g27_button(m_joysticks, m_mapping.square);
-		const bool circle = sdl_to_logitech_g27_button(m_joysticks, m_mapping.circle);
-
-		const bool l2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l2);
-		const bool l3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.l3);
-		const bool r2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r2);
-		const bool r3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.r3);
-
-		const bool plus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.plus);
-		const bool minus = sdl_to_logitech_g27_button(m_joysticks, m_mapping.minus);
-
-		const bool dial_clockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_clockwise);
-		const bool dial_anticlockwise = sdl_to_logitech_g27_button(m_joysticks, m_mapping.dial_anticlockwise);
-
-		const bool select = sdl_to_logitech_g27_button(m_joysticks, m_mapping.select);
-		const bool pause = sdl_to_logitech_g27_button(m_joysticks, m_mapping.pause);
-
-		const bool shifter_1 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_1);
-		const bool shifter_2 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_2);
-		const bool shifter_3 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_3);
-		const bool shifter_4 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_4);
-		const bool shifter_5 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_5);
-		const bool shifter_6 = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_6);
-		const bool shifter_r = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_r);
-		const bool shifter_press = sdl_to_logitech_g27_button(m_joysticks, m_mapping.shifter_press);
-		m_sdl_handles_mutex.unlock();
-
-		// populate buffer
-		buf[0] = hat_components_to_logitech_g27_hat(up, down, left, right);
-		set_bit(buf, 8, shift_up);
-		set_bit(buf, 9, shift_down);
-
-		set_bit(buf, 7, triangle);
-		set_bit(buf, 4, cross);
-		set_bit(buf, 5, square);
-		set_bit(buf, 6, circle);
-
-		set_bit(buf, 11, l2);
-		set_bit(buf, 15, l3);
-		set_bit(buf, 10, r2);
-		set_bit(buf, 14, r3);
-
-		set_bit(buf, 22, dial_clockwise);
-		set_bit(buf, 23, dial_anticlockwise);
-
-		set_bit(buf, 24, plus);
-		set_bit(buf, 25, minus);
-
-		set_bit(buf, 12, select);
-		set_bit(buf, 13, pause);
-
-		set_bit(buf, 16, shifter_1);
-		set_bit(buf, 17, shifter_2);
-		set_bit(buf, 18, shifter_3);
-		set_bit(buf, 19, shifter_4);
-		set_bit(buf, 20, shifter_5);
-		set_bit(buf, 21, shifter_6);
-		set_bit(buf, 80, shifter_r);
-
-		// calibrated, unsure
-		set_bit(buf, 82, true);
-		// shifter connected
-		set_bit(buf, 83, true);
-		/*
-		 * shifter pressed/down bit
-		 * mechanical references:
-		 * - G29 shifter mechanical explanation https://youtu.be/d7qCn3o8K98?t=1124
-		 * - same mechanism on the G27 https://youtu.be/rdjejtIfkVA?t=760
-		 * - same mechanism on the G25 https://youtu.be/eCyt_4luwF0?t=130
-		 * on healthy G29/G27/G25 shifters, shifter is mechnically kept pressed in reverse, the bit should be set
-		 * the shifter_press mapping alone captures instead a shifter press without going into reverse, ie. neutral press, just in case there are games using it for input
-		 */
-		set_bit(buf, 86, shifter_press | shifter_r);
-
-		buf[3] = (steering << 2) | buf[3];
-		buf[4] = steering >> 6;
-		buf[5] = throttle;
-		buf[6] = brake;
-		buf[7] = clutch;
-
-		// rough analog values recorded in https://github.com/RPCS3/rpcs3/pull/17199#issuecomment-2883934412
-		// buf[8] shifter x
-		// buf[9] shifter y
-		constexpr u8 shifter_coord_center = 0x80;
-		constexpr u8 shifter_coord_top = 0xb7;
-		constexpr u8 shifter_coord_bottom = 0x32;
-		constexpr u8 shifter_coord_left = 0x30;
-		constexpr u8 shifter_coord_right = 0xb3;
-		constexpr u8 shifter_coord_right_reverse = 0xaa;
-		if (shifter_1)
+		switch (m_personality)
 		{
-			buf[8] = shifter_coord_left;
-			buf[9] = shifter_coord_top;
-		}
-		else if (shifter_2)
-		{
-			buf[8] = shifter_coord_left;
-			buf[9] = shifter_coord_bottom;
-		}
-		else if (shifter_3)
-		{
-			buf[8] = shifter_coord_center;
-			buf[9] = shifter_coord_top;
-		}
-		else if (shifter_4)
-		{
-			buf[8] = shifter_coord_center;
-			buf[9] = shifter_coord_bottom;
-		}
-		else if (shifter_5)
-		{
-			buf[8] = shifter_coord_right;
-			buf[9] = shifter_coord_top;
-		}
-		else if (shifter_6)
-		{
-			buf[8] = shifter_coord_right;
-			buf[9] = shifter_coord_bottom;
-		}
-		else if (shifter_r)
-		{
-			buf[8] = shifter_coord_right_reverse;
-			buf[9] = shifter_coord_bottom;
-		}
-		else
-		{
-			buf[8] = shifter_coord_center;
-			buf[9] = shifter_coord_center;
+		case logitech_personality::driving_force_ex:
+			transfer_dfex(buf_size, buf, transfer);
+			break;
+		case logitech_personality::driving_force_pro:
+			transfer_dfp(buf_size, buf, transfer);
+			break;
+		case logitech_personality::g25:
+			transfer_g25(buf_size, buf, transfer);
+			break;
+		case logitech_personality::driving_force_gt:
+			transfer_dfgt(buf_size, buf, transfer);
+			break;
+		case logitech_personality::g27:
+			transfer_g27(buf_size, buf, transfer);
+			break;
+		case logitech_personality::invalid:
+			fmt::throw_exception("unreachable");
 		}
 
-		buf[10] = buf[10] | (m_wheel_range > 360 ? 0x90 : 0x10);
-
-		// logitech_g27_log.error("%02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7], buf[8], buf[9], buf[10]);
+		// logitech_g27_log.error("dev=%d, ep in : %s",  static_cast<u8>(m_personality), fmt::buf_to_hexstring(buf, buf_size));
 
 		return;
 	}
@@ -831,8 +1218,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 
 		transfer->expected_count = buf_size;
 
-		// logitech_g27_log.error("%02x %02x %02x %02x %02x %02x %02x", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
-		// printf("%02x %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
+		// logitech_g27_log.error("ep out : %s", fmt::buf_to_hexstring(buf, buf_size));
 
 		// TODO maybe force clipping from cfg
 
@@ -843,9 +1229,44 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 			switch (buf[1])
 			{
 			case 0x01:
+			case 0x09:
+			case 0x10:
 			{
-				// Change to DFP
-				logitech_g27_log.error("Drive Force Pro mode switch command ignored");
+				// Change device mode
+				u8 cmd = buf[1];
+				u8 arg = buf[2];
+				if (buf[8] == 0xf8) // we have 2 commands back to back
+				{
+					cmd = buf[9];
+					arg = buf[10];
+				}
+
+				m_next_personality = logitech_personality::invalid;
+				if (cmd == 0x09 && arg == 0x04)
+					m_next_personality = logitech_personality::g27;
+				else if (cmd == 0x09 && arg == 0x03)
+					m_next_personality = logitech_personality::driving_force_gt;
+				else if ((cmd == 0x09 && arg == 0x02) || cmd == 0x10)
+					m_next_personality = logitech_personality::g25;
+				else if ((cmd == 0x09 && arg == 0x01) || cmd == 0x01)
+					m_next_personality = logitech_personality::driving_force_pro;
+				else if (cmd == 0x09 && arg == 0x00)
+					m_next_personality = logitech_personality::driving_force_ex;
+
+				if (logitech_personality limit = static_cast<logitech_personality>(g_cfg_logitech_g27.compatibility_limit.get());
+					limit < m_next_personality)
+				{
+					m_next_personality = limit;
+				}
+
+				logitech_g27_log.success("Change device mode : buf=[%s], cmd=0x%x, arg=0x%x, lim=%d -> pers=%d(%s)",
+					fmt::buf_to_hexstring(buf, buf_size), cmd, arg, g_cfg_logitech_g27.compatibility_limit.get(),
+					static_cast<u8>(m_next_personality),
+					m_next_personality == logitech_personality::g27 ? "G27"
+					: m_next_personality == logitech_personality::driving_force_gt ? "Driving Force GT"
+					: m_next_personality == logitech_personality::g25 ? "G25"
+					: m_next_personality == logitech_personality::driving_force_pro ? "Driving Force Pro"
+					: m_next_personality == logitech_personality::driving_force_ex ? "Driving Force EX" : "Invalid");
 				break;
 			}
 			case 0x02:
@@ -862,22 +1283,10 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				m_wheel_range = 900;
 				break;
 			}
-			case 0x09:
-			{
-				// Change device mode
-				logitech_g27_log.error("Change device mode to %d %s detaching command ignored", buf[2], buf[3] ? "with" : "without");
-				break;
-			}
 			case 0x0a:
 			{
 				// Revert indentity
 				logitech_g27_log.error("Revert device identity after reset %s command ignored", buf[2] ? "enable" : "disable");
-				break;
-			}
-			case 0x10:
-			{
-				// Switch to G25 with detach
-				logitech_g27_log.error("Switch to G25 with detach command ignored");
 				break;
 			}
 			case 0x11:
@@ -1077,8 +1486,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						new_effect.condition.direction = STEERING_DIRECTION;
 						new_effect.condition.length = SDL_HAPTIC_INFINITY;
 						const u16 saturation = logitech_g27_clip_to_saturation(buf[4]);
-						const u16 deadband = 2 * 0xFFFF / 255;
-						s16 center = 0;
+						constexpr u16 deadband = 2 * 0xFFFF / 255;
+						constexpr s16 center = 0;
 						s16 left_coeff = 0;
 						s16 right_coeff = 0;
 						if (buf[1] == 0x03)
@@ -1343,7 +1752,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						{
 							if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 							{
-								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+								logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 							}
 						}
 						else
@@ -1387,14 +1796,14 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 								{
 									if (!SDL_RunHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id, 1))
 									{
-										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed playing sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 								else
 								{
 									if (!SDL_StopHapticEffect(m_haptic_handle, m_effect_slots[i].effect_id))
 									{
-										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s\n", m_effect_slots[i].last_effect.type, i, SDL_GetError());
+										logitech_g27_log.error("Failed stopping sdl effect %d on slot %d, %s", m_effect_slots[i].last_effect.type, i, SDL_GetError());
 									}
 								}
 							}
@@ -1415,11 +1824,11 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 					{
 						if (cmd == 0x02)
 						{
-							logitech_g27_log.error("Tried to play effect slot %d but it was never uploaded\n", i);
+							logitech_g27_log.error("Tried to play effect slot %d but it was never uploaded", i);
 						}
 						else
 						{
-							logitech_g27_log.error("Tried to stop effect slot %d but it was never uploaded\n", i);
+							logitech_g27_log.error("Tried to stop effect slot %d but it was never uploaded", i);
 						}
 					}
 				}
