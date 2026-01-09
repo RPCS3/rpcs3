@@ -434,6 +434,11 @@ void savestate_manager_dialog::ResizeGameIcons()
 				{
 					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
 					{
+						if (!archive_path.empty())
+						{
+							gui::utils::load_icon(icon, icon_path, archive_path);
+						}
+
 						// Load game icon
 						if (!icon.load(QString::fromStdString(icon_path)))
 						{
@@ -446,11 +451,6 @@ void savestate_manager_dialog::ResizeGameIcons()
 					{
 						icon = item->data(GameUserRole::GamePixmap).value<QPixmap>();
 					}
-				}
-
-				if (!archive_path.empty())
-				{
-					gui::utils::load_icon(icon, icon_path, archive_path);
 				}
 
 				if (cancel && cancel->load())
