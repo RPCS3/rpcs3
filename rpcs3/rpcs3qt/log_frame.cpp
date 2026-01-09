@@ -615,17 +615,22 @@ void log_frame::UpdateUI()
 				buf_line.assign(std::string_view(m_tty_buf).substr(str_index, m_tty_buf.find_first_of('\n', str_index) - str_index));
 				str_index += buf_line.size() + 1;
 
-				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [this](s8 c)
+				// If ANSI TTY is enabled, remove all control characters except for ESC (0x1B) for ANSI sequences
+				if (m_ansi_tty)
 				{
-					// If ANSI TTY is enabled, preserve ESC (0x1B) for ANSI sequences
-					if (m_ansi_tty)
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
 					{
 						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F && c != 0x1B);
-					}
-
-					// Remove all control characters so output is clean
-					return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
-				}), buf_line.end());
+					}), buf_line.end());
+				}
+				// Otherwise, remove all control characters to keep the output clean
+				else
+				{
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+					{
+						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
+					}), buf_line.end());
+				}
 
 				// save old scroll bar state
 				QScrollBar* sb = m_tty->verticalScrollBar();
