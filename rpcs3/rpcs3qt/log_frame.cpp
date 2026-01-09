@@ -295,13 +295,13 @@ void log_frame::CreateAndConnectActions()
 		m_gui_settings->SetValue(gui::l_ansi_code, checked);
 		m_ansi_tty = checked;
 
-		if (!m_tty_ansi_highlighter)
+		if (m_ansi_tty)
 		{
 			m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
 		}
 		else
 		{
-			delete m_tty_ansi_highlighter;
+			m_tty_ansi_highlighter->deleteLater();
 			m_tty_ansi_highlighter = nullptr;
 		}
 	});
