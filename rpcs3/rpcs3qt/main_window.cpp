@@ -78,6 +78,7 @@
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
 #include "Loader/mself.hpp"
 
 #include "Utilities/Thread.h"
@@ -542,8 +543,16 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 	else
 	{
+		std::string game_path = Emu.GetBoot();
+		if (game_path.starts_with(iso_device::virtual_device_name))
+		{
+			auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+			auto iso_device = dynamic_cast<class iso_device*>(device.get());
+			game_path = iso_device->get_loaded_iso();
+		}
+
 		gui_log.success("Boot successful.");
-		AddRecentAction(gui::Recent_Game(QString::fromStdString(Emu.GetBoot()), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
+		AddRecentAction(gui::Recent_Game(QString::fromStdString(game_path), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
 	}
 
 	if (refresh_list)
@@ -569,6 +578,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"ISO files (*.iso);;"
 		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
@@ -3958,7 +3968,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		const QString suffix_lo = info.suffix().toLower();
 
 		// check for directories first, only valid if all other paths led to directories until now.
-		if (info.isDir())
+		if (info.isDir() || is_file_iso(path.toStdString()))
 		{
 			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{
