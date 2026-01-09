@@ -641,7 +641,7 @@ namespace gui
 			usz byte_unit = 0;
 			usz divisor = 1;
 #if defined(__APPLE__)
-			constexpr usz multiplier = 1000; 
+			constexpr usz multiplier = 1000;
 			static const QString s_units[]{"B", "kB", "MB", "GB", "TB", "PB"};
 #else
 			constexpr usz multiplier = 1024;

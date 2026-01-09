@@ -137,6 +137,7 @@ public:
 	const std::array<u8, 7>& get_new_location();
 	void connect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void disconnect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
+	void reconnect_usb_device(u32 assigned_number);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
@@ -205,19 +206,23 @@ private:
 		{0x1BAD, 0x3430, 0x343F, "Harmonix Button Guitar - Wii", nullptr, nullptr},
 		{0x1BAD, 0x3530, 0x353F, "Harmonix Real Guitar - Wii", nullptr, nullptr},
 
-		//Top Shot Elite controllers
+		// Top Shot Elite controllers
 		{0x12BA, 0x04A0, 0x04A0, "Top Shot Elite", nullptr, nullptr},
 		{0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster", nullptr, nullptr},
 		{0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod", nullptr, nullptr},
 
 
-		// GT5 Wheels&co
+		// Wheels
 #ifdef HAVE_SDL3
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", &usb_device_logitech_g27::get_num_emu_devices, &usb_device_logitech_g27::make_instance},
 #else
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", nullptr, nullptr},
 #endif
+		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
+		{0x044F, 0xB652, 0xB652, "Thrustmaster FGT FFB old", nullptr, nullptr},
 		{0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro", nullptr, nullptr},
+		{0x044F, 0xB654, 0xB654, "Thrustmaster FGT FFB", nullptr, nullptr},
+		{0x044F, 0xb655, 0xb655, "Thrustmaster FGT Rumble 3-in-1", nullptr, nullptr},
 		{0x044F, 0xB65A, 0xB65A, "Thrustmaster F430", nullptr, nullptr},
 		{0x044F, 0xB65D, 0xB65D, "Thrustmaster FFB", nullptr, nullptr},
 		{0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS", nullptr, nullptr},
@@ -225,7 +230,6 @@ private:
 
 		// GT6
 		{0x2833, 0x0001, 0x0001, "Oculus", nullptr, nullptr},
-		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
 
 		// Buzz controllers
 		{0x054C, 0x1000, 0x1040, "buzzer0", &usb_device_buzz::get_num_emu_devices, &usb_device_buzz::make_instance},
@@ -246,7 +250,7 @@ private:
 		{0x054C, 0x01C8, 0x01C8, "PSP Type A", nullptr, nullptr},
 		{0x054C, 0x01C9, 0x01C9, "PSP Type B", nullptr, nullptr},
 		{0x054C, 0x01CA, 0x01CA, "PSP Type C", nullptr, nullptr},
-		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr},
+		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr}, // UsbPspCm
 		{0x054C, 0x02D2, 0x02D2, "PSP Slim", nullptr, nullptr},
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
@@ -260,9 +264,6 @@ private:
 
 		// Tony Hawk RIDE Skateboard
 		{0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller", nullptr, nullptr},
-
-		// PSP in UsbPspCm mode
-		{0x054C, 0x01CB, 0x01CB, "UsbPspcm", nullptr, nullptr},
 
 		// Sony Stereo Headsets
 		{0x12BA, 0x0032, 0x0032, "Wireless Stereo Headset", nullptr, nullptr},
@@ -636,6 +637,8 @@ void usb_handler_thread::operator()()
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
 
+		u64 delay = 1'000;
+
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
@@ -650,6 +653,13 @@ void usb_handler_thread::operator()()
 
 				if (transfer->expected_time > timestamp)
 				{
+					const u64 diff_time = transfer->expected_time - timestamp;
+
+					if (diff_time < delay)
+					{
+						delay = diff_time;
+					}
+
 					++it;
 					continue;
 				}
@@ -668,7 +678,7 @@ void usb_handler_thread::operator()()
 		if (handled_devices.empty())
 			thread_ctrl::wait_for(500'000);
 		else
-			thread_ctrl::wait_for(1'000);
+			thread_ctrl::wait_for(delay);
 	}
 }
 
@@ -878,7 +888,9 @@ std::pair<u32, UsbTransfer&> usb_handler_thread::get_free_transfer()
 
 	u32 transfer_id = get_free_transfer_id();
 	auto& transfer  = get_transfer(transfer_id);
-	transfer.busy   = true;
+
+	libusb_transfer* const transfer_buf = transfer.transfer;
+	transfer = {.transfer_id = transfer_id, .transfer = transfer_buf, .busy = true};
 
 	return {transfer_id, transfer};
 }
@@ -957,6 +969,21 @@ void usb_handler_thread::disconnect_usb_device(std::shared_ptr<usb_device> dev, 
 		{
 			return val == dev;
 		});
+	}
+}
+
+void usb_handler_thread::reconnect_usb_device(u32 assigned_number)
+{
+	std::lock_guard lock(mutex);
+	ensure(assigned_number != 0);
+	for (const auto& dev : usb_devices)
+	{
+		if (dev->assigned_number == assigned_number)
+		{
+			disconnect_usb_device(dev, false);
+			connect_usb_device(dev, false);
+			break;
+		}
 	}
 }
 
@@ -1044,6 +1071,16 @@ void connect_usb_controller(u8 index, input::product_type type)
 			break;
 		}
 	}
+}
+
+void reconnect_usb(u32 assigned_number)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+	usbh->reconnect_usb_device(assigned_number);
 }
 
 void handle_hotplug_event(bool connected)

@@ -38,9 +38,6 @@ void gl::init()
 #ifdef __unix__
 	glewExperimental = true;
 	glewInit();
-#ifdef HAVE_X11
-	glxewInit();
-#endif
 #endif
 }
 

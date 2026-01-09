@@ -358,6 +358,9 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 		case camera_handler::null: return "Null";
 		case camera_handler::fake: return "Fake";
 		case camera_handler::qt: return "Qt";
+#ifdef HAVE_SDL3
+		case camera_handler::sdl: return "SDL";
+#endif
 		}
 
 		return unknown;

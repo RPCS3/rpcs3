@@ -8,6 +8,42 @@
 
 namespace rsx::assembler::FP
 {
+	static const char* s_opcode_names[RSX_FP_OPCODE_ENUM_MAX + 1] =
+	{
+		"NOP", "MOV", "MUL", "ADD", "MAD", "DP3", "DP4", "DST", "MIN", "MAX", "SLT", "SGE", "SLE", "SGT", "SNE", "SEQ",                                   // 0x00 - 0x0F
+		"FRC", "FLR", "KIL", "PK4", "UP4", "DDX", "DDY", "TEX", "TXP", "TXD", "RCP", "RSQ", "EX2", "LG2", "LIT", "LRP",                                   // 0x10 - 0x1F
+		"STR", "SFL", "COS", "SIN", "PK2", "UP2", "POW", "PKB", "UPB", "PK16", "UP16", "BEM", "PKG", "UPG", "DP2A", "TXL",                                // 0x20 - 0x2F
+		"UNK_30", "TXB", "UNK_32", "TEXBEM", "TXPBEM", "BEMLUM", "REFL", "TIMESWTEX", "DP2", "NRM", "DIV", "DIVSQ", "LIF", "FENCT", "FENCB", "UNK_3F",    // 0x30 - 0x3F
+		"BRK", "CAL", "IFE", "LOOP", "REP", "RET",                                                                                                        // 0x40 - 0x45 (Flow control)
+		"OR16_LO", "OR16_HI"                                                                                                                              // Custom instructions for RPCS3 use
+	};
+
+	const char* get_opcode_name(FP_opcode opcode)
+	{
+		if (opcode > RSX_FP_OPCODE_ENUM_MAX)
+		{
+			return "invalid";
+		}
+		return s_opcode_names[opcode];
+	}
+
+	bool is_instruction_valid(FP_opcode opcode)
+	{
+		switch (opcode)
+		{
+		case RSX_FP_OPCODE_POW:
+		case RSX_FP_OPCODE_BEM:
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXPBEM:
+		case RSX_FP_OPCODE_BEMLUM:
+		case RSX_FP_OPCODE_TIMESWTEX:
+			return false;
+		default:
+			// This isn't necessarily true
+			return opcode <= RSX_FP_OPCODE_ENUM_MAX;
+		}
+	}
+
 	u8 get_operand_count(FP_opcode opcode)
 	{
 		switch (opcode)
@@ -90,6 +126,8 @@ namespace rsx::assembler::FP
 			return 2;
 		case RSX_FP_OPCODE_LIF:
 			return 1;
+		case RSX_FP_OPCODE_REFL:
+			return 2;
 		case RSX_FP_OPCODE_FENCT:
 		case RSX_FP_OPCODE_FENCB:
 		case RSX_FP_OPCODE_BRK:
@@ -110,8 +148,6 @@ namespace rsx::assembler::FP
 		case RSX_FP_OPCODE_TXPBEM:
 		case RSX_FP_OPCODE_BEMLUM:
 			fmt::throw_exception("Unimplemented BEM class instruction"); // Unused
-		case RSX_FP_OPCODE_REFL:
-			return 2;
 		case RSX_FP_OPCODE_TIMESWTEX:
 			fmt::throw_exception("Unimplemented TIMESWTEX instruction"); // Unused
 		default:
@@ -397,7 +433,7 @@ namespace rsx::assembler::FP
 	// Convert vector mask to file range
 	rsx::simple_array<u32> get_register_file_range(const RegisterRef& reg)
 	{
-		if (!reg.mask)
+		if (!reg.mask || reg.reg.id >= 48)
 		{
 			return {};
 		}

@@ -123,11 +123,11 @@ jobs:
       matrix:
         include:
           - name: Intel
-            build_sh: .ci/build-mac.sh
+            AARCH64: 0
             UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac
           - name: Apple Silicon
-            build_sh: .ci/build-mac-arm64.sh
+            AARCH64: 1
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
     name: RPCS3 Mac ${{ matrix.name }} 
@@ -140,6 +140,7 @@ jobs:
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
+      AARCH64: ${{ matrix.AARCH64 }}
       RUN_UNIT_TESTS: github.event_name == 'pull_request' && 'ON' || 'OFF'
     steps:
       - name: Checkout repository
@@ -164,7 +165,7 @@ jobs:
           restore-keys: ${{ runner.os }}-qt-${{ matrix.name }}-${{ env.QT_VER }}
 
       - name: Build
-        run: ${{ matrix.build_sh }}
+        run: .ci/build-mac.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@main
@@ -368,6 +369,8 @@ jobs:
             mingw-w64-clang-x86_64-qt6-declarative
             mingw-w64-clang-x86_64-qt6-multimedia
             mingw-w64-clang-x86_64-qt6-svg
+            mingw-w64-clang-x86_64-qt6-tools
+            mingw-w64-clang-x86_64-qt6-translations
             base-devel
             curl
             git
@@ -413,7 +416,11 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
       QT_VER_MAIN: '6'
-      LLVM_COMPILER_VER: '19'
+      LLVM_COMPILER_VER: '-devel'
+      CC: 'clang-devel'
+      CXX: 'clang++-devel'
+      LLVM_CONFIG: 'llvm-config-devel'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -432,8 +439,10 @@ jobs:
         id: root
         uses: vmactions/freebsd-vm@v1
         with:
-          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR'
+          envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR CC CXX LLVM_CONFIG'
           usesh: true
+          copyback: false
+          release: "14.3"
           run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
 
       - name: Save Build Ccache

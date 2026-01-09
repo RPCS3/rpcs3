@@ -15,7 +15,7 @@ public:
 		[[maybe_unused]] const std::vector<game_info>& game_data,
 		[[maybe_unused]] const std::map<QString, QString>& notes_map,
 		[[maybe_unused]] const std::map<QString, QString>& title_map,
-		[[maybe_unused]] const std::string& selected_item_id,
+		[[maybe_unused]] const std::set<std::string>& selected_item_ids,
 		[[maybe_unused]] bool play_hover_movies){};
 
 	void set_icon_size(QSize size) { m_icon_size = std::move(size); }

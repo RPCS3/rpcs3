@@ -18,11 +18,11 @@ struct kamen_rider_figure
 class rider_gate
 {
 public:
-	void get_blank_response(u8 command, u8 sequence, std::array<u8, 64>& reply_buf);
-	void wake_rider_gate(std::array<u8, 64>& replyBuf, u8 command, u8 sequence);
-	void get_list_tags(std::array<u8, 64>& replyBuf, u8 command, u8 sequence);
-	void query_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block);
-	void write_block(std::array<u8, 64>& replyBuf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block, const u8* to_write_buf);
+	void get_blank_response(std::array<u8, 64>& reply_buf, u8 command, u8 sequence);
+	void wake_rider_gate(std::array<u8, 64>& reply_buf, u8 command, u8 sequence);
+	void get_list_tags(std::array<u8, 64>& reply_buf, u8 command, u8 sequence);
+	void query_block(std::array<u8, 64>& reply_buf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block);
+	void write_block(std::array<u8, 64>& reply_buf, u8 command, u8 sequence, const u8* uid, u8 sector, u8 block, const u8* to_write_buf);
 	std::optional<std::array<u8, 64>> pop_added_removed_response();
 
 	bool remove_figure(u8 position);

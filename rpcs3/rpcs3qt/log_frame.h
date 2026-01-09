@@ -9,7 +9,6 @@
 
 #include <memory>
 
-#include <QFuture>
 #include <QTabWidget>
 #include <QPlainTextEdit>
 #include <QActionGroup>
@@ -42,7 +41,6 @@ protected:
 private Q_SLOTS:
 	void UpdateUI();
 private:
-	void show_disk_usage(const std::vector<std::pair<std::string, u64>>& vfs_disk_usage, u64 cache_disk_usage);
 	void SetLogLevel(logs::level lev) const;
 	void SetTTYLogging(bool val) const;
 
@@ -53,7 +51,6 @@ private:
 	std::unique_ptr<find_dialog> m_find_dialog;
 
 	QTimer* m_timer = nullptr;
-	QFuture<void> m_disk_usage_future;
 
 	std::vector<QColor> m_color;
 	QColor m_color_stack;
@@ -79,7 +76,6 @@ private:
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
-	QAction* m_show_disk_usage_act = nullptr;
 	QAction* m_perform_goto_on_debugger = nullptr;
 	QAction* m_perform_goto_thread_on_debugger = nullptr;
 	QAction* m_perform_show_in_mem_viewer = nullptr;
