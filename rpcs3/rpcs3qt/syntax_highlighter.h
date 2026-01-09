@@ -52,3 +52,14 @@ class GlslHighlighter : public Highlighter
 public:
 	explicit GlslHighlighter(QTextDocument* parent = nullptr);
 };
+
+class AnsiHighlighter : public Highlighter
+{
+	Q_OBJECT
+
+public:
+	explicit AnsiHighlighter(QTextDocument* parent = nullptr);
+
+protected:
+	void highlightBlock(const QString &text) override;
+};

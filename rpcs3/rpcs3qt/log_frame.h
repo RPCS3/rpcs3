@@ -5,6 +5,7 @@
 
 #include "custom_dock_widget.h"
 #include "find_dialog.h"
+#include "syntax_highlighter.h"
 
 #include <memory>
 
@@ -69,6 +70,7 @@ private:
 	QPlainTextEdit* m_tty = nullptr;
 	QLineEdit* m_tty_input = nullptr;
 	int m_tty_channel = -1;
+	AnsiHighlighter* m_tty_ansi_highlighter = nullptr;
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
