@@ -11,6 +11,8 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
+#include "Loader/ISO.h"
+
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QStringBuilder>
@@ -242,6 +244,12 @@ void game_list_table::populate(
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
 		game->item = icon_item;
 
+		if (is_file_iso(game->info.path) && !game->info.movie_path.empty()
+				&& !fs::exists(game->info.movie_path))
+		{
+			icon_item->set_source_path(game->info.path);
+		}
+
 		icon_item->set_image_change_callback([this, icon_item, game](const QVideoFrame& frame)
 		{
 			if (!icon_item || !game)
@@ -276,6 +284,13 @@ void game_list_table::populate(
 				{
 					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
 					game->info.size_on_disk = 0;
+				}
+				else if(is_file_iso(game->info.path))
+				{
+					fs::stat_t iso_stat;
+					fs::get_stat(game->info.path, iso_stat);
+
+					game->info.size_on_disk = iso_stat.size;
 				}
 				else
 				{

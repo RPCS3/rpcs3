@@ -155,7 +155,7 @@ namespace fs
 	// Virtual device
 	struct device_base
 	{
-		const std::string fs_prefix;
+		std::string fs_prefix;
 
 		device_base();
 		virtual ~device_base();
