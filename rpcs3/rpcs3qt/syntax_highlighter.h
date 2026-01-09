@@ -2,7 +2,7 @@
 
 #include <QSyntaxHighlighter>
 #include <QRegularExpression>
-#include <qbrush.h>
+#include <QBrush>
 
 // Inspired by https://doc.qt.io/qt-5/qtwidgets-richtext-syntaxhighlighter-example.html
 
