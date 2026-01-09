@@ -183,3 +183,104 @@ GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
 	commentStartExpression = QRegularExpression("/\\*");
 	commentEndExpression = QRegularExpression("\\*/");
 }
+
+AnsiHighlighter::AnsiHighlighter(QTextDocument* parent) : Highlighter(parent)
+{
+}
+
+void AnsiHighlighter::highlightBlock(const QString &text)
+{
+	// Match ANSI SGR sequences, e.g. "\x1b[31m" or "\x1b[1;32m"
+	const QRegularExpression ansi_re("\x1b\\[[0-9;]*m");
+	const QRegularExpression param_re("\x1b\\[([0-9;]*)m");
+
+	QTextCharFormat escapeFormat;
+	escapeFormat.setForeground(Qt::darkGray);
+	escapeFormat.setFontItalic(true);
+
+	QTextCharFormat currentFormat;
+	currentFormat.setForeground(gui::utils::get_foreground_color());
+
+	int pos = 0;
+	auto it = ansi_re.globalMatch(text);
+	while (it.hasNext())
+	{
+		auto match = it.next();
+		int start = match.capturedStart();
+		int length = match.capturedLength();
+
+		// Apply current format to the chunk before this escape sequence
+		if (start > pos)
+		{
+			setFormat(pos, start - pos, currentFormat);
+		}
+
+		// Highlight the escape sequence itself
+		setFormat(start, length, escapeFormat);
+
+		// Parse SGR parameters and update currentFormat
+		QRegularExpressionMatch pm = param_re.match(match.captured());
+		if (pm.hasMatch())
+		{
+			QString params = pm.captured(1);
+			if (params.isEmpty())
+			{
+				// empty or just \x1b[m = reset
+				currentFormat = QTextCharFormat();
+				currentFormat.setForeground(gui::utils::get_foreground_color());
+			}
+			else
+			{
+				const QStringList codes = params.split(';', Qt::SkipEmptyParts);
+				for (const QString& c : codes)
+				{
+					bool ok = false;
+					const int code = c.toInt(&ok);
+					if (!ok) continue;
+					switch (code)
+					{
+						case 0:
+							currentFormat = QTextCharFormat();
+							currentFormat.setForeground(gui::utils::get_foreground_color());
+							break;
+						case 1:
+							currentFormat.setFontWeight(QFont::Bold);
+							break;
+						case 3:
+							currentFormat.setFontItalic(true);
+							break;
+						case 4:
+							currentFormat.setFontUnderline(true);
+							break;
+						case 30: currentFormat.setForeground(Qt::black); break;
+						case 31: currentFormat.setForeground(Qt::red); break;
+						case 32: currentFormat.setForeground(Qt::darkGreen); break;
+						case 33: currentFormat.setForeground(Qt::darkYellow); break;
+						case 34: currentFormat.setForeground(Qt::darkBlue); break;
+						case 35: currentFormat.setForeground(Qt::darkMagenta); break;
+						case 36: currentFormat.setForeground(Qt::darkCyan); break;
+						case 37: currentFormat.setForeground(Qt::lightGray); break;
+						case 39: currentFormat.setForeground(gui::utils::get_foreground_color()); break;
+						case 90: currentFormat.setForeground(Qt::darkGray); break;
+						case 91: currentFormat.setForeground(Qt::red); break;
+						case 92: currentFormat.setForeground(Qt::green); break;
+						case 93: currentFormat.setForeground(Qt::yellow); break;
+						case 94: currentFormat.setForeground(Qt::blue); break;
+						case 95: currentFormat.setForeground(Qt::magenta); break;
+						case 96: currentFormat.setForeground(Qt::cyan); break;
+						case 97: currentFormat.setForeground(Qt::white); break;
+						// Background and extended colors not yet handled
+						default:
+							break;
+					}
+				}
+			}
+		}
+
+		pos = start + length;
+	}
+
+	// Apply remaining format
+	if (pos < text.length())
+		setFormat(pos, text.length() - pos, currentFormat);
+}
