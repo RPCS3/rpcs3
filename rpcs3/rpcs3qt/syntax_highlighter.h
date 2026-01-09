@@ -10,11 +10,11 @@ class Highlighter : public QSyntaxHighlighter
 	Q_OBJECT
 
 public:
-	explicit Highlighter(QTextDocument *parent = nullptr);
+	explicit Highlighter(QTextDocument* parent = nullptr);
 
 protected:
-	void highlightBlock(const QString &text) override;
-	void addRule(const QString &pattern, const QBrush &brush);
+	void highlightBlock(const QString& text) override;
+	void addRule(const QString& pattern, const QBrush& brush);
 
 	struct HighlightingRule
 	{
@@ -42,7 +42,7 @@ class AsmHighlighter : public Highlighter
 	Q_OBJECT
 
 public:
-	explicit AsmHighlighter(QTextDocument *parent = nullptr);
+	explicit AsmHighlighter(QTextDocument* parent = nullptr);
 };
 
 class GlslHighlighter : public Highlighter
@@ -50,5 +50,5 @@ class GlslHighlighter : public Highlighter
 	Q_OBJECT
 
 public:
-	explicit GlslHighlighter(QTextDocument *parent = nullptr);
+	explicit GlslHighlighter(QTextDocument* parent = nullptr);
 };

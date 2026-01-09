@@ -1,11 +1,11 @@
 #include "syntax_highlighter.h"
 #include "qt_utils.h"
 
-Highlighter::Highlighter(QTextDocument *parent) : QSyntaxHighlighter(parent)
+Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 {
 }
 
-void Highlighter::addRule(const QString &pattern, const QBrush &brush)
+void Highlighter::addRule(const QString& pattern, const QBrush& brush)
 {
 	HighlightingRule rule;
 	rule.pattern = QRegularExpression(pattern);
@@ -13,14 +13,14 @@ void Highlighter::addRule(const QString &pattern, const QBrush &brush)
 	highlightingRules.append(rule);
 }
 
-void Highlighter::highlightBlock(const QString &text)
+void Highlighter::highlightBlock(const QString& text)
 {
 	for (const HighlightingRule& rule : highlightingRules)
 	{
 		QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
 		while (matchIterator.hasNext())
 		{
-			QRegularExpressionMatch match = matchIterator.next();
+			const QRegularExpressionMatch match = matchIterator.next();
 			setFormat(match.capturedStart(), match.capturedLength(), rule.format);
 		}
 	}
@@ -67,7 +67,7 @@ LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
 	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace", color, color));
 }
 
-AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
+AsmHighlighter::AsmHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
 	addRule("^\\b[A-Z0-9]+\\b",       Qt::darkBlue);    // Instructions
 	addRule("-?R\\d[^,;\\s]*",        Qt::darkRed);     // -R0.*
@@ -78,7 +78,7 @@ AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 	addRule("#[^\\n]*",               Qt::darkGreen);   // Single line comment
 }
 
-GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
+GlslHighlighter::GlslHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
 	const QStringList keywordPatterns = QStringList()
 		// Selection-Iteration-Jump Statements:
