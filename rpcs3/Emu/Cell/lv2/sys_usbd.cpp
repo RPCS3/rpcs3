@@ -14,6 +14,7 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usb_microphone.h"
 #include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
@@ -185,6 +186,9 @@ private:
 		// Music devices
 		{0x1415, 0x0000, 0x0000, "Singstar Microphone", nullptr, nullptr},
 		// {0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless", nullptr, nullptr}, // TODO: verifiy
+		// {0x12ba, 0x00f0, 0x00f0, "Bandfuse USB Guitar Adapter", nullptr, nullptr},
+		// {0x28aa, 0x0001, 0x0001, "Bandfuse USB Microphone", nullptr, nullptr},
+		// {0x046d, 0x0a03, 0x0a03, "Logitech Microphone", nullptr, nullptr},
 
 		{0x12BA, 0x00FF, 0x00FF, "Rocksmith Guitar Adapter", nullptr, nullptr},
 		{0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar", nullptr, nullptr},
@@ -547,6 +551,20 @@ usb_handler_thread::usb_handler_thread()
 				connect_usb_device(usb_dev, true);
 			}
 		}
+	}
+
+	switch (g_cfg.audio.microphone_type)
+	{
+		case microphone_handler::standard:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Logitech));
+			break;
+		case microphone_handler::real_singstar:
+		case microphone_handler::singstar:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::SingStar));
+			break;
+		case microphone_handler::rocksmith:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Rocksmith));
+			break;
 	}
 
 	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
@@ -1128,7 +1146,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	// Forcefully awake all waiters
 	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
-		// Special ternimation signal value
+		// Special termination signal value
 		cpu->gpr[4] = 4;
 		cpu->gpr[5] = 0;
 		cpu->gpr[6] = 0;
@@ -1480,7 +1498,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 			case LIBUSB_REQUEST_SET_CONFIGURATION:
 			{
 				pipe.device->set_configuration(static_cast<u8>(+request->wValue));
-				pipe.device->set_interface(0);
+				pipe.device->set_interface(0, 0);
 				break;
 			}
 			default: break;
@@ -1523,7 +1541,7 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
+	sys_usbd.trace("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -1537,7 +1555,20 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 	const auto& pipe               = usbh.get_pipe(id_pipe);
 	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
 
+	transfer.iso_request.buf = iso_request->buf;
+	transfer.iso_request.start_frame = iso_request->start_frame;
+	transfer.iso_request.num_packets = iso_request->num_packets;
+	for (u32 index = 0; index < iso_request->num_packets; index++)
+	{
+		transfer.iso_request.packets[index] = iso_request->packets[index];
+	}
+
 	pipe.device->isochronous_transfer(&transfer);
+
+	if (transfer.fake)
+	{
+		usbh.push_fake_transfer(&transfer);
+	}
 
 	// returns an identifier specific to the transfer
 	return not_an_error(transfer_id);
@@ -1567,7 +1598,7 @@ error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle,
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
+	sys_usbd.trace("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
