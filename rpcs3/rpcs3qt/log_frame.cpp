@@ -138,8 +138,6 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	m_tty->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_tty->document()->setMaximumBlockCount(max_block_count_tty);
 	m_tty->installEventFilter(this);
-	
-	m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
 
 	m_tty_input = new QLineEdit();
 	if (m_tty_channel >= 0)
@@ -169,6 +167,11 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 
 	CreateAndConnectActions();
 	LoadSettings();
+
+	if (m_ansi_tty)
+	{
+		m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
+	}
 
 	m_timer = new QTimer(this);
 	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
@@ -339,6 +342,16 @@ void log_frame::CreateAndConnectActions()
 	{
 		m_gui_settings->SetValue(gui::l_ansi_code, checked);
 		m_ansi_tty = checked;
+
+		if (!m_tty_ansi_highlighter)
+		{
+			m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
+		}
+		else
+		{
+			delete m_tty_ansi_highlighter;
+			m_tty_ansi_highlighter = nullptr;
+		}
 	});
 
 	m_tty_channel_acts = new QActionGroup(this);
@@ -651,13 +664,15 @@ void log_frame::UpdateUI()
 				buf_line.assign(std::string_view(m_tty_buf).substr(str_index, m_tty_buf.find_first_of('\n', str_index) - str_index));
 				str_index += buf_line.size() + 1;
 
-				// Ignore control characters and greater/equal to 0x80, but preserve ESC (0x1B) if ANSI mode is enabled
-				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [this](s8 c) {
+				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [this](s8 c)
+				{
+					// If ANSI TTY is enabled, preserve ESC (0x1B) for ANSI sequences
 					if (m_ansi_tty)
 					{
-						// Keep ESC (0x1B) so ANSI sequences remain intact
 						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F && c != 0x1B);
 					}
+
+					// Remove all control characters so output is clean
 					return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
 				}), buf_line.end());
 

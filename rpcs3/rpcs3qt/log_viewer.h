@@ -34,7 +34,6 @@ private:
 	QString m_full_log;
 	QPlainTextEdit* m_log_text;
 	LogHighlighter* m_log_highlighter;
-	AnsiHighlighter* m_ansi_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
 	std::bitset<32> m_log_levels = std::bitset<32>(0b11111111u);
 	bool m_show_timestamps = true;

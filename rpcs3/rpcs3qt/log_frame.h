@@ -1,11 +1,11 @@
 #pragma once
 
 #include "Utilities/File.h"
+#include "rpcs3qt/syntax_highlighter.h"
 #include "util/logs.hpp"
 
 #include "custom_dock_widget.h"
 #include "find_dialog.h"
-#include "syntax_highlighter.h"
 
 #include <memory>
 
@@ -13,6 +13,8 @@
 #include <QTabWidget>
 #include <QPlainTextEdit>
 #include <QActionGroup>
+
+class AnsiHighlighter;
 
 class gui_settings;
 
