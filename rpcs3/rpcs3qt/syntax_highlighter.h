@@ -2,6 +2,7 @@
 
 #include <QSyntaxHighlighter>
 #include <QRegularExpression>
+#include <qbrush.h>
 
 // Inspired by https://doc.qt.io/qt-5/qtwidgets-richtext-syntaxhighlighter-example.html
 
@@ -61,5 +62,7 @@ public:
 	explicit AnsiHighlighter(QTextDocument* parent = nullptr);
 
 protected:
-	void highlightBlock(const QString &text) override;
+	QColor m_foreground_color;
+
+	void highlightBlock(const QString& text) override;
 };
