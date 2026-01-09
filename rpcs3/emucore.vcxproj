@@ -459,6 +459,7 @@
     <ClCompile Include="Emu\Io\Skylander.cpp" />
     <ClCompile Include="Emu\Io\KamenRider.cpp" />
     <ClCompile Include="Emu\Io\usb_device.cpp" />
+    <ClCompile Include="Emu\Io\usb_microphone.cpp" />
     <ClCompile Include="Emu\Io\usb_vfs.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp" />
@@ -831,6 +832,7 @@
     <ClInclude Include="Emu\Io\Skylander.h" />
     <ClInclude Include="Emu\Io\KamenRider.h" />
     <ClInclude Include="Emu\Io\usb_device.h" />
+    <ClInclude Include="Emu\Io\usb_microphone.h" />
     <ClInclude Include="Emu\Io\usb_vfs.h" />
     <ClInclude Include="Emu\IPC.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
