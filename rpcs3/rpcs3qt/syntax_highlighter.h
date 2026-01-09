@@ -62,6 +62,10 @@ public:
 	explicit AnsiHighlighter(QTextDocument* parent = nullptr);
 
 protected:
+	const QRegularExpression ansi_re = QRegularExpression("\x1b\\[[0-9;]*m");
+	const QRegularExpression param_re = QRegularExpression("\x1b\\[([0-9;]*)m");
+
+	QTextCharFormat m_escape_format;
 	QColor m_foreground_color;
 
 	void highlightBlock(const QString& text) override;

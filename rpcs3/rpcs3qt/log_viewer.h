@@ -9,7 +9,6 @@
 #include <memory>
 
 class LogHighlighter;
-class AnsiHighlighter;
 class gui_settings;
 
 class log_viewer : public QWidget

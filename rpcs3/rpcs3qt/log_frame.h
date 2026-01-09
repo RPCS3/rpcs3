@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/File.h"
-#include "rpcs3qt/syntax_highlighter.h"
 #include "util/logs.hpp"
 
 #include "custom_dock_widget.h"

@@ -186,20 +186,15 @@ GlslHighlighter::GlslHighlighter(QTextDocument* parent) : Highlighter(parent)
 
 AnsiHighlighter::AnsiHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
+	m_escape_format.setForeground(Qt::darkGray);
+	m_escape_format.setFontItalic(true);
+
 	m_foreground_color = gui::utils::get_foreground_color();
 }
 
 void AnsiHighlighter::highlightBlock(const QString& text)
 {
-	// Match ANSI SGR sequences, e.g. "\x1b[31m" or "\x1b[1;32m"
-	static const QRegularExpression ansi_re("\x1b\\[[0-9;]*m");
-	static const QRegularExpression param_re("\x1b\\[([0-9;]*)m");
-
-	static QTextCharFormat escape_format;
-	escape_format.setForeground(Qt::darkGray);
-	escape_format.setFontItalic(true);
-
-	static QTextCharFormat current_format;
+	QTextCharFormat current_format;
 	current_format.setForeground(m_foreground_color);
 
 	int pos = 0;
@@ -217,7 +212,7 @@ void AnsiHighlighter::highlightBlock(const QString& text)
 		}
 
 		// Highlight the escape sequence itself
-		setFormat(start, length, escape_format);
+		setFormat(start, length, m_escape_format);
 
 		// Parse SGR parameters and update currentFormat
 		const QRegularExpressionMatch pm = param_re.match(match.captured());
