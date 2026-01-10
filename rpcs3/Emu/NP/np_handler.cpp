@@ -254,7 +254,7 @@ namespace np
 
 		// Trim null characters
 		const auto& vec = node.data.data_vec;
-		auto it = std::find(vec.begin(), vec.end(), 0);
+		const auto it = std::find(vec.begin(), vec.end(), 0);
 		return std::string(vec.begin(), it);
 	}
 
@@ -1375,12 +1375,12 @@ namespace np
 		return history;
 	}
 
-	u32 np_handler::get_clan_ticket_ready()
+	u32 np_handler::get_clan_ticket_ready() const
 	{
 		return clan_ticket_ready.load();
 	}
 
-	ticket np_handler::get_clan_ticket()
+	ticket np_handler::get_clan_ticket() const
 	{
 		clan_ticket_ready.wait(0, atomic_wait_timeout{60'000'000'000}); // 60 seconds
 
