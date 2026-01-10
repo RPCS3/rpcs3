@@ -418,10 +418,10 @@ void savestate_manager_dialog::ResizeGameIcons()
 		{
 			const qreal dpr = devicePixelRatioF();
 			const int savestate_index = item->data(GameUserRole::GameIndex).toInt();
-			const std::string icon_path = m_savestate_db[savestate_index]->game_icon_path;
-			const std::string archive_path = m_savestate_db[savestate_index]->archive_path;
+			std::string game_icon_path = m_savestate_db[savestate_index]->game_icon_path;
+			std::string game_archive_path = m_savestate_db[savestate_index]->archive_path;
 
-			item->set_icon_load_func([this, icon_path, archive_path, savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			item->set_icon_load_func([this, icon_path = std::move(game_icon_path), archive_path = std::move(game_archive_path), savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -434,13 +434,8 @@ void savestate_manager_dialog::ResizeGameIcons()
 				{
 					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
 					{
-						if (!archive_path.empty())
-						{
-							gui::utils::load_icon(icon, icon_path, archive_path);
-						}
-
 						// Load game icon
-						if (!icon.load(QString::fromStdString(icon_path)))
+						if (!gui::utils::load_icon(icon, icon_path, archive_path))
 						{
 							gui_log.warning("Could not load savestate game icon from path %s", icon_path);
 						}

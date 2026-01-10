@@ -531,8 +531,7 @@ void game_list_frame::OnParsingFinished()
 
 		const auto file_exists = [&archive](const std::string& path)
 		{
-			if (!archive) return fs::is_file(path);
-			return archive->is_file(path);
+			return archive ? archive->is_file(path) : fs::is_file(path);
 		};
 
 		gui_game_info game{};
@@ -540,10 +539,10 @@ void game_list_frame::OnParsingFinished()
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir =  !archive ? rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf) : "PS3_GAME";
+		const std::string sfo_dir = archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
 
-		const psf::registry psf = !archive ? psf::load_object(sfo_path) : archive->open_psf(sfo_path);
+		const psf::registry psf = archive ? archive->open_psf(sfo_path) : psf::load_object(sfo_path);
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
