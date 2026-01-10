@@ -179,6 +179,9 @@ namespace gui
 		}
 
 		// Loads an icon from an (ISO) archive file.
+		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path);
+
+		// Loads an icon (optionally from an (ISO) archive file).
 		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path);
 
 		template <typename T>
