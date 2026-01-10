@@ -2531,6 +2531,22 @@ void main_window::CreateConnects()
 		AddGamesFromDirs(std::move(paths));
 	});
 
+	connect(ui->addIsoGamesAct, &QAction::triggered, this, [this]()
+	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return;
+		}
+
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), QString::fromStdString(fs::get_config_dir()), tr("ISO files (*.iso);;All files (*.*)"));
+		if (paths.isEmpty())
+		{
+			return;
+		}
+
+		AddGamesFromDirs(std::move(paths));
+	});
+
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
 	{
 		// Enable/Disable Recent Games List
