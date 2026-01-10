@@ -348,10 +348,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 	auto* archive_file = retrieve(path);
 	if (!archive_file) return psf::registry();
 
-	// HACK: psf does not accept a file_base argument,
-	// instead we are creating a dummy fs::file and replacing the internal file_base handle with an iso_file
-	fs::file psf_file(path);
-	psf_file.reset(std::make_unique<iso_file>(fs::file(m_path), *archive_file));
+	const fs::file psf_file(std::make_unique<iso_file>(fs::file(m_path), *archive_file));
 
 	return psf::load_object(psf_file, path);
 }

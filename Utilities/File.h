@@ -257,6 +257,8 @@ namespace fs
 		// Open file with specified mode
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
+		file(std::unique_ptr<file_base>&& ptr) : m_file(std::move(ptr)) {}
+
 		static file from_native_handle(native_handle handle);
 
 		// Open memory for read
