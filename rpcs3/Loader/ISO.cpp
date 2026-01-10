@@ -102,24 +102,17 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	}
 	else if (names_in_ucs2) // for strings in joliet descriptor
 	{
-		std::string new_file_name;
-		int read = 0;
-		const u8* raw_str = reinterpret_cast<const u8*>(file_name.c_str());
-		while (read < file_name_length)
+		// characters are stored in big endian format.
+		std::u16string utf16;
+		utf16.resize(file_name_length / 2);
+
+		const u16* raw = reinterpret_cast<const u16*>(file_name.data());
+		for (size_t i = 0; i < utf16.size(); ++i, raw++)
 		{
-			// characters are stored in big endian format.
-			const u16 upper = raw_str[read];
-			const u8 lower = raw_str[read + 1];
-
-			const u16 code_point = (upper << 8) + lower;
-
-			std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> convert;
-			new_file_name += convert.to_bytes(code_point);
-
-			read += 2;
+			utf16[i] = *reinterpret_cast<const be_t<u16>*>(raw);
 		}
 
-		file_name = new_file_name;
+		file_name = utf16_to_utf8(utf16);
 	}
 
 	if (file_name.ends_with(";1"))
@@ -269,9 +262,10 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	if (passed_path.empty()) return nullptr;
 
 	const std::string path = std::filesystem::path(passed_path).string();
+	const std::string_view path_sv = path;
 
 	size_t start = 0;
-	size_t end = path.find_first_of(fs::delim);
+	size_t end = path_sv.find_first_of(fs::delim);
 
 	std::stack<iso_fs_node*> search_stack;
 	search_stack.push(&m_root);
@@ -286,7 +280,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 			end = path.size();
 		}
 
-		const auto path_component = path.substr(start, end-start);
+		const std::string_view path_component = path_sv.substr(start, end-start);
 
 		bool found = false;
 
@@ -316,7 +310,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		if (!found) return nullptr;
 
 		start = end + 1;
-		end = path.find_first_of(fs::delim, start);
+		end = path_sv.find_first_of(fs::delim, start);
 	}
 	while (start < path.size());
 
@@ -348,10 +342,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 	auto* archive_file = retrieve(path);
 	if (!archive_file) return psf::registry();
 
-	// HACK: psf does not accept a file_base argument,
-	// instead we are creating a dummy fs::file and replacing the internal file_base handle with an iso_file
-	fs::file psf_file(path);
-	psf_file.reset(std::make_unique<iso_file>(fs::file(m_path), *archive_file));
+	const fs::file psf_file(std::make_unique<iso_file>(fs::file(m_path), *archive_file));
 
 	return psf::load_object(psf_file, path);
 }
