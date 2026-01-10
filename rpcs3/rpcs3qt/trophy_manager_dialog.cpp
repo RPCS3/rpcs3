@@ -649,9 +649,9 @@ void trophy_manager_dialog::ResizeGameIcons()
 		{
 			const qreal dpr = devicePixelRatioF();
 			const int trophy_index = item->data(GameUserRole::GameIndex).toInt();
-			const QString icon_path = QString::fromStdString(m_trophies_db[trophy_index]->path);
+			QString trophy_icon_path = QString::fromStdString(m_trophies_db[trophy_index]->path);
 
-			item->set_icon_load_func([this, icon_path, localized_icon, trophy_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			item->set_icon_load_func([this, icon_path = std::move(trophy_icon_path), localized_icon, trophy_index, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{

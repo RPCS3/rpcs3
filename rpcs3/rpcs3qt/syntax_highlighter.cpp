@@ -1,11 +1,11 @@
 #include "syntax_highlighter.h"
 #include "qt_utils.h"
 
-Highlighter::Highlighter(QTextDocument *parent) : QSyntaxHighlighter(parent)
+Highlighter::Highlighter(QTextDocument* parent) : QSyntaxHighlighter(parent)
 {
 }
 
-void Highlighter::addRule(const QString &pattern, const QBrush &brush)
+void Highlighter::addRule(const QString& pattern, const QBrush& brush)
 {
 	HighlightingRule rule;
 	rule.pattern = QRegularExpression(pattern);
@@ -13,14 +13,14 @@ void Highlighter::addRule(const QString &pattern, const QBrush &brush)
 	highlightingRules.append(rule);
 }
 
-void Highlighter::highlightBlock(const QString &text)
+void Highlighter::highlightBlock(const QString& text)
 {
 	for (const HighlightingRule& rule : highlightingRules)
 	{
 		QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
 		while (matchIterator.hasNext())
 		{
-			QRegularExpressionMatch match = matchIterator.next();
+			const QRegularExpressionMatch match = matchIterator.next();
 			setFormat(match.capturedStart(), match.capturedLength(), rule.format);
 		}
 	}
@@ -67,7 +67,7 @@ LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
 	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace", color, color));
 }
 
-AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
+AsmHighlighter::AsmHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
 	addRule("^\\b[A-Z0-9]+\\b",       Qt::darkBlue);    // Instructions
 	addRule("-?R\\d[^,;\\s]*",        Qt::darkRed);     // -R0.*
@@ -78,7 +78,7 @@ AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
 	addRule("#[^\\n]*",               Qt::darkGreen);   // Single line comment
 }
 
-GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
+GlslHighlighter::GlslHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
 	const QStringList keywordPatterns = QStringList()
 		// Selection-Iteration-Jump Statements:
@@ -182,4 +182,101 @@ GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
 	multiLineCommentFormat.setForeground(Qt::darkGreen);
 	commentStartExpression = QRegularExpression("/\\*");
 	commentEndExpression = QRegularExpression("\\*/");
+}
+
+AnsiHighlighter::AnsiHighlighter(QTextDocument* parent) : Highlighter(parent)
+{
+	m_escape_format.setForeground(Qt::darkGray);
+	m_escape_format.setFontItalic(true);
+
+	m_foreground_color = gui::utils::get_foreground_color();
+}
+
+void AnsiHighlighter::highlightBlock(const QString& text)
+{
+	QTextCharFormat current_format;
+	current_format.setForeground(m_foreground_color);
+
+	int pos = 0;
+	auto it = ansi_re.globalMatch(text);
+	while (it.hasNext())
+	{
+		const auto match = it.next();
+		const int start = match.capturedStart();
+		const int length = match.capturedLength();
+
+		// Apply current format to the chunk before this escape sequence
+		if (start > pos)
+		{
+			setFormat(pos, start - pos, current_format);
+		}
+
+		// Highlight the escape sequence itself
+		setFormat(start, length, m_escape_format);
+
+		// Parse SGR parameters and update currentFormat
+		const QRegularExpressionMatch pm = param_re.match(match.captured());
+		if (pm.hasMatch())
+		{
+			const QString params = pm.captured(1);
+			if (params.isEmpty())
+			{
+				// empty or just \x1b[m = reset
+				current_format = QTextCharFormat();
+				current_format.setForeground(m_foreground_color);
+			}
+			else
+			{
+				const QStringList codes = params.split(';', Qt::SkipEmptyParts);
+				for (const QString& c : codes)
+				{
+					bool ok = false;
+					const int code = c.toInt(&ok);
+					if (!ok) continue;
+					switch (code)
+					{
+						case 0:
+							current_format = QTextCharFormat();
+							current_format.setForeground(m_foreground_color);
+							break;
+						case 1:
+							current_format.setFontWeight(QFont::Bold);
+							break;
+						case 3:
+							current_format.setFontItalic(true);
+							break;
+						case 4:
+							current_format.setFontUnderline(true);
+							break;
+						case 30: current_format.setForeground(Qt::black); break;
+						case 31: current_format.setForeground(Qt::red); break;
+						case 32: current_format.setForeground(Qt::darkGreen); break;
+						case 33: current_format.setForeground(Qt::darkYellow); break;
+						case 34: current_format.setForeground(Qt::darkBlue); break;
+						case 35: current_format.setForeground(Qt::darkMagenta); break;
+						case 36: current_format.setForeground(Qt::darkCyan); break;
+						case 37: current_format.setForeground(Qt::lightGray); break;
+						case 39: current_format.setForeground(m_foreground_color); break;
+						case 90: current_format.setForeground(Qt::darkGray); break;
+						case 91: current_format.setForeground(Qt::red); break;
+						case 92: current_format.setForeground(Qt::green); break;
+						case 93: current_format.setForeground(Qt::yellow); break;
+						case 94: current_format.setForeground(Qt::blue); break;
+						case 95: current_format.setForeground(Qt::magenta); break;
+						case 96: current_format.setForeground(Qt::cyan); break;
+						case 97: current_format.setForeground(Qt::white); break;
+						// Background and extended colors not yet handled
+						default:
+							break;
+					}
+				}
+			}
+		}
+
+		pos = start + length;
+	}
+
+	// Apply remaining format
+	if (pos < text.length())
+		setFormat(pos, text.length() - pos, current_format);
 }

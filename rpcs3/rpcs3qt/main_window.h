@@ -104,6 +104,7 @@ private Q_SLOTS:
 	void BootElf();
 	void BootTest();
 	void BootGame();
+	void BootISO();
 	void BootVSH();
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");

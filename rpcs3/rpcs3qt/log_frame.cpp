@@ -3,6 +3,7 @@
 #include "gui_settings.h"
 #include "hex_validator.h"
 #include "memory_viewer_panel.h"
+#include "syntax_highlighter.h"
 
 #include "Utilities/lockless.h"
 #include "util/asm.hpp"
@@ -161,6 +162,11 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	CreateAndConnectActions();
 	LoadSettings();
 
+	if (m_ansi_tty)
+	{
+		m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
+	}
+
 	m_timer = new QTimer(this);
 	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
 }
@@ -288,6 +294,16 @@ void log_frame::CreateAndConnectActions()
 	{
 		m_gui_settings->SetValue(gui::l_ansi_code, checked);
 		m_ansi_tty = checked;
+
+		if (m_ansi_tty && !m_tty_ansi_highlighter)
+		{
+			m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
+		}
+		else if (!m_ansi_tty && m_tty_ansi_highlighter)
+		{
+			m_tty_ansi_highlighter->deleteLater();
+			m_tty_ansi_highlighter = nullptr;
+		}
 	});
 
 	m_tty_channel_acts = new QActionGroup(this);
@@ -599,8 +615,22 @@ void log_frame::UpdateUI()
 				buf_line.assign(std::string_view(m_tty_buf).substr(str_index, m_tty_buf.find_first_of('\n', str_index) - str_index));
 				str_index += buf_line.size() + 1;
 
-				// Ignore control characters and greater/equal to 0x80
-				buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf_line.end());
+				// If ANSI TTY is enabled, remove all control characters except for ESC (0x1B) for ANSI sequences
+				if (m_ansi_tty)
+				{
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+					{
+						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F && c != 0x1B);
+					}), buf_line.end());
+				}
+				// Otherwise, remove all control characters to keep the output clean
+				else
+				{
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+					{
+						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
+					}), buf_line.end());
+				}
 
 				// save old scroll bar state
 				QScrollBar* sb = m_tty->verticalScrollBar();

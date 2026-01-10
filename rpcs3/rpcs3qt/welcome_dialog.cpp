@@ -83,12 +83,12 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 	{
 		if (ui->create_desktop_shortcut->isChecked())
 		{
-			gui::utils::create_shortcut("RPCS3", "", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::desktop);
+			gui::utils::create_shortcut("RPCS3", "", "", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::desktop);
 		}
 
 		if (ui->create_applications_menu_shortcut->isChecked())
 		{
-			gui::utils::create_shortcut("RPCS3", "", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
+			gui::utils::create_shortcut("RPCS3", "", "", "", "RPCS3", ":/rpcs3.svg", fs::get_temp_dir(), gui::utils::shortcut_location::applications);
 		}
 
 		if (ui->use_dark_theme->isChecked() && ui->use_dark_theme->isEnabled()) // if checked and also on initial welcome dialog
