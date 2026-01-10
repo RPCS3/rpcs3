@@ -12,6 +12,7 @@ namespace gui::utils
 	};
 
 	bool create_shortcut(const std::string& name,
+	                     const std::string& path,
 	                     const std::string& serial,
 	                     const std::string& target_cli_args,
 	                     const std::string& description,

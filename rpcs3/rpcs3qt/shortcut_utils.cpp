@@ -4,6 +4,7 @@
 #include "Emu/VFS.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "Loader/ISO.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -31,7 +32,7 @@ LOG_CHANNEL(sys_log, "SYS");
 
 namespace gui::utils
 {
-	bool create_square_shortcut_icon_file(const std::string& src_icon_path, const std::string& target_icon_dir, std::string& target_icon_path, const std::string& extension, int size)
+	bool create_square_shortcut_icon_file(const std::string& path, const std::string& src_icon_path, const std::string& target_icon_dir, std::string& target_icon_path, const std::string& extension, int size)
 	{
 		if (src_icon_path.empty() || target_icon_dir.empty() || extension.empty())
 		{
@@ -39,7 +40,15 @@ namespace gui::utils
 			return false;
 		}
 
-		QPixmap icon(QString::fromStdString(src_icon_path));
+		const bool is_archive = is_file_iso(path);
+
+		QPixmap icon;
+		if (!load_icon(icon, src_icon_path, is_archive ? path : ""))
+		{
+			sys_log.error("Failed to create shortcut. Failed to load %sicon: '%s'", is_archive ? "iso " : "", src_icon_path);
+			return false;
+		}
+
 		if (!gui::utils::create_square_pixmap(icon, size))
 		{
 			sys_log.error("Failed to create shortcut. Icon empty.");
@@ -67,6 +76,7 @@ namespace gui::utils
 	}
 
 	bool create_shortcut(const std::string& name,
+	                     const std::string& path,
 	    [[maybe_unused]] const std::string& serial,
 	    [[maybe_unused]] const std::string& target_cli_args,
 	    [[maybe_unused]] const std::string& description,
@@ -189,7 +199,7 @@ namespace gui::utils
 		if (!src_icon_path.empty() && !target_icon_dir.empty())
 		{
 			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(src_icon_path, target_icon_dir, target_icon_path, "ico", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, "ico", 512))
 				return cleanup(false, ".ico creation failed");
 
 			const std::wstring w_icon_path = utf8_to_wchar(target_icon_path);
@@ -301,7 +311,7 @@ namespace gui::utils
 		if (!src_icon_path.empty())
 		{
 			std::string target_icon_path = resources_dir;
-			if (!create_square_shortcut_icon_file(src_icon_path, resources_dir, target_icon_path, "icns", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, resources_dir, target_icon_path, "icns", 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
 				return false;
@@ -339,7 +349,7 @@ namespace gui::utils
 		if (!src_icon_path.empty() && !target_icon_dir.empty())
 		{
 			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(src_icon_path, target_icon_dir, target_icon_path, "png", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, "png", 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
 				return false;

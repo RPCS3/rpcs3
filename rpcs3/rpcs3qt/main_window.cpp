@@ -700,6 +700,34 @@ void main_window::BootGame()
 	Boot(dir_path.toStdString(), "", false, true);
 }
 
+void main_window::BootISO()
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
+	const QString path = QFileDialog::getOpenFileName(this, tr("Select ISO"), path_last_game, tr("ISO files (*.iso);;All files (*.*)"));
+
+	if (path.isEmpty())
+	{
+		if (stopped)
+		{
+			Emu.Resume();
+		}
+		return;
+	}
+
+	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(path).dir().path());
+
+	gui_log.notice("Booting from BootISO...");
+	Boot(path.toStdString(), "", true, true);
+}
+
 void main_window::BootVSH()
 {
 	gui_log.notice("Booting from BootVSH...");
@@ -2479,6 +2507,7 @@ void main_window::CreateConnects()
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootTestAct, &QAction::triggered, this, &main_window::BootTest);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->bootIsoAct, &QAction::triggered, this, &main_window::BootISO);
 	connect(ui->bootVSHAct, &QAction::triggered, this, &main_window::BootVSH);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, [this](){ BootRsxCapture(); });
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
@@ -2528,6 +2557,22 @@ void main_window::CreateConnects()
 
 		QStringList paths;
 		paths << dir;
+		AddGamesFromDirs(std::move(paths));
+	});
+
+	connect(ui->addIsoGamesAct, &QAction::triggered, this, [this]()
+	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return;
+		}
+
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), QString::fromStdString(fs::get_config_dir()), tr("ISO files (*.iso);;All files (*.*)"));
+		if (paths.isEmpty())
+		{
+			return;
+		}
+
 		AddGamesFromDirs(std::move(paths));
 	});
 

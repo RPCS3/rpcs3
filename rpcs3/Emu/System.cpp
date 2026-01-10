@@ -1174,6 +1174,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			launching_from_disc_archive = is_file_iso(disc_info);
 
+			sys_log.notice("Savestate: is iso archive = %d ('%s')", launching_from_disc_archive, disc_info);
+
 			if (!klic[0])
 			{
 				klic.clear();
@@ -1299,6 +1301,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (launching_from_disc_archive)
 			{
+				sys_log.notice("Savestate: Loading iso archive");
+
 				load_iso(disc_info);
 				m_path = iso_device::virtual_device_name + "/" + argv[0];
 
@@ -1441,6 +1445,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
 		if (!launching_from_disc_archive && is_file_iso(m_path))
 		{
+			sys_log.notice("Loading iso archive '%s'", m_path);
+
 			load_iso(m_path);
 
 			launching_from_disc_archive = true;
@@ -1456,6 +1462,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			m_path = path;
 		}
+
+		sys_log.notice("Load: is iso archive = %d (m_path='%s')", launching_from_disc_archive, m_path);
 
 		if (launching_from_disc_archive)
 		{
@@ -1855,6 +1863,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			{
 				if (is_file_iso(game_path))
 				{
+					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
+
 					load_iso(game_path);
 					launching_from_disc_archive = true;
 					game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
@@ -2368,7 +2378,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					const std::string& disc_path = !launching_from_disc_archive ? resolved_path : m_path;
+					const std::string& disc_path = launching_from_disc_archive ? m_path : resolved_path;
 					const usz pos = disc_path.rfind(m_game_dir);
 					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(disc_path.substr(pos + m_game_dir.size() + 1));
 					m_dir = "/dev_bdvd/PS3_GAME/";
