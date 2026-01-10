@@ -2,7 +2,7 @@
 
 namespace gui::utils
 {
-	enum shortcut_location
+	enum class shortcut_location
 	{
 		desktop,
 		applications,
@@ -19,4 +19,6 @@ namespace gui::utils
 	                     const std::string& src_icon_path,
 	                     const std::string& target_icon_dir,
 	                     shortcut_location shortcut_location);
+
+	void remove_shortcuts(const std::string& name, const std::string& serial);
 }

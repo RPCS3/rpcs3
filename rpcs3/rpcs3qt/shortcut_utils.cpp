@@ -32,9 +32,17 @@ LOG_CHANNEL(sys_log, "SYS");
 
 namespace gui::utils
 {
-	bool create_square_shortcut_icon_file(const std::string& path, const std::string& src_icon_path, const std::string& target_icon_dir, std::string& target_icon_path, const std::string& extension, int size)
+#ifdef _WIN32
+	static const std::string icon_extension = "ico";
+#elif defined(__APPLE__)
+	static const std::string icon_extension = "icns";
+#else
+	static const std::string icon_extension = "png";
+#endif
+
+	bool create_square_shortcut_icon_file(const std::string& path, const std::string& src_icon_path, const std::string& target_icon_dir, std::string& target_icon_path, int size)
 	{
-		if (src_icon_path.empty() || target_icon_dir.empty() || extension.empty())
+		if (src_icon_path.empty() || target_icon_dir.empty())
 		{
 			sys_log.error("Failed to create shortcut. Icon parameters empty.");
 			return false;
@@ -55,7 +63,7 @@ namespace gui::utils
 			return false;
 		}
 
-		target_icon_path = target_icon_dir + "shortcut." + fmt::to_lower(extension);
+		target_icon_path = target_icon_dir + "shortcut." + fmt::to_lower(icon_extension);
 
 		QFile icon_file(QString::fromStdString(target_icon_path));
 		if (!icon_file.open(QFile::OpenModeFlag::ReadWrite | QFile::OpenModeFlag::Truncate))
@@ -65,7 +73,7 @@ namespace gui::utils
 		}
 
 		// Use QImageWriter instead of QPixmap::save in order to be able to log errors
-		if (QImageWriter writer(&icon_file, fmt::to_upper(extension).c_str()); !writer.write(icon.toImage()))
+		if (QImageWriter writer(&icon_file, fmt::to_upper(icon_extension).c_str()); !writer.write(icon.toImage()))
 		{
 			sys_log.error("Failed to write icon file '%s': %s", target_icon_path, writer.errorString());
 			return false;
@@ -100,21 +108,21 @@ namespace gui::utils
 
 		std::string link_path;
 
-		if (location == shortcut_location::desktop)
+		switch (location)
 		{
+		case shortcut_location::desktop:
 			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::DesktopLocation).toStdString();
-		}
-		else if (location == shortcut_location::applications)
-		{
+			break;
+		case shortcut_location::applications:
 			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
-		}
+			break;
 #ifdef _WIN32
-		else if (location == shortcut_location::rpcs3_shortcuts)
-		{
-			link_path = rpcs3::utils::get_games_dir() + "/shortcuts/";
+		case shortcut_location::rpcs3_shortcuts:
+			link_path = rpcs3::utils::get_games_shortcuts_dir();
 			fs::create_dir(link_path);
-		}
+			break;
 #endif
+		}
 
 		if (!fs::is_dir(link_path) && !fs::create_dir(link_path))
 		{
@@ -199,7 +207,7 @@ namespace gui::utils
 		if (!src_icon_path.empty() && !target_icon_dir.empty())
 		{
 			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, "ico", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
 				return cleanup(false, ".ico creation failed");
 
 			const std::wstring w_icon_path = utf8_to_wchar(target_icon_path);
@@ -311,7 +319,7 @@ namespace gui::utils
 		if (!src_icon_path.empty())
 		{
 			std::string target_icon_path = resources_dir;
-			if (!create_square_shortcut_icon_file(path, src_icon_path, resources_dir, target_icon_path, "icns", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, resources_dir, target_icon_path, 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
 				return false;
@@ -349,7 +357,7 @@ namespace gui::utils
 		if (!src_icon_path.empty() && !target_icon_dir.empty())
 		{
 			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, "png", 512))
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
 				return false;
@@ -381,6 +389,85 @@ namespace gui::utils
 		}
 
 		return true;
+#endif
+	}
+
+	void remove_shortcuts(const std::string& name, [[maybe_unused]] const std::string& serial)
+	{
+		const std::string simple_name = QString::fromStdString(vfs::escape(name, true)).simplified().toStdString();
+		if (simple_name.empty() || simple_name == "." || simple_name == "..")
+		{
+			sys_log.error("Failed to remove shortcuts: Cleaned file name empty or not allowed");
+			return;
+		}
+
+		const auto remove_file = [](const std::string& path)
+		{
+			if (!path.empty() && fs::is_file(path))
+			{
+				if (fs::remove_file(path))
+				{
+					sys_log.success("Removed shortcut file '%s'", path);
+				}
+				else
+				{
+					sys_log.error("Failed to remove shortcut file '%s': error='%s'", path, fs::g_tls_error);
+				}
+			}
+		};
+
+		std::vector<shortcut_location> locations = {
+			shortcut_location::desktop,
+			shortcut_location::applications
+		};
+#ifdef _WIN32
+		locations.push_back(shortcut_location::rpcs3_shortcuts);
+#endif
+
+		for (shortcut_location location : locations)
+		{
+			std::string link_path;
+
+			switch (location)
+			{
+			case shortcut_location::desktop:
+				link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::DesktopLocation).toStdString();
+				break;
+			case shortcut_location::applications:
+				link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
+				link_path += "/RPCS3";
+				break;
+#ifdef _WIN32
+			case shortcut_location::rpcs3_shortcuts:
+				link_path = rpcs3::utils::get_games_shortcuts_dir();
+				break;
+#endif
+			}
+
+#ifdef _WIN32
+			fmt::append(link_path, "/%s.lnk", simple_name);
+			remove_file(link_path);
+#elif defined(__APPLE__)
+			fmt::append(link_path, "/%s.app", simple_name);
+
+			const std::string contents_dir = link_path + "/Contents/";
+			const std::string plist_path = contents_dir + "Info.plist";
+			const std::string launcher_path = contents_dir + "MacOS/launcher";
+			const std::string resources_dir = contents_dir + "Resources";
+			const std::string icon_path = fmt::format("%s/shortcut.%s", resources_dir, icon_extension);
+
+			remove_file(plist_path);
+			remove_file(launcher_path);
+			remove_file(icon_path);
+#else
+			fmt::append(link_path, "/%s.desktop", simple_name);
+			remove_file(link_path);
+#endif
+		}
+
+#ifndef __APPLE__
+		const std::string icon_path = fmt::format("%sIcons/game_icons/%s/shortcut.%s", fs::get_config_dir(), serial, icon_extension);
+		remove_file(icon_path);
 #endif
 	}
 }
