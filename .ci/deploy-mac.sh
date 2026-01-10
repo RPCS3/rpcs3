@@ -76,7 +76,11 @@ echo "[InternetShortcut]" > Quickstart.url
 echo "URL=https://rpcs3.net/quickstart" >> Quickstart.url
 echo "IconIndex=0" >> Quickstart.url
 
-ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.7z"
+if [ "$AARCH64" -eq 1 ]; then
+  ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos_arm64.7z"
+else
+  ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.7z"
+fi
 7z a -mx9 "$ARCHIVE_FILEPATH" RPCS3.app Quickstart.url
 FILESIZE=$(stat -f %z "$ARCHIVE_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$ARCHIVE_FILEPATH" | awk '{ print $1 }')
