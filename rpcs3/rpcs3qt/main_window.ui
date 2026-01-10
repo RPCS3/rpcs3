@@ -62,7 +62,6 @@
     <property name="font">
      <font>
       <pointsize>10</pointsize>
-      <weight>50</weight>
       <bold>false</bold>
      </font>
     </property>
@@ -211,6 +210,7 @@
      <addaction name="separator"/>
     </widget>
     <addaction name="bootGameAct"/>
+    <addaction name="bootIsoAct"/>
     <addaction name="bootVSHAct"/>
     <addaction name="bootElfMenu"/>
     <addaction name="bootSavestateAct"/>
@@ -1517,6 +1517,11 @@
   <action name="addIsoGamesAct">
    <property name="text">
     <string>Add ISO Games</string>
+   </property>
+  </action>
+  <action name="bootIsoAct">
+   <property name="text">
+    <string>Boot ISO</string>
    </property>
   </action>
  </widget>
