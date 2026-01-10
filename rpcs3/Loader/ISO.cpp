@@ -269,9 +269,10 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	if (passed_path.empty()) return nullptr;
 
 	const std::string path = std::filesystem::path(passed_path).string();
+	const std::string_view path_sv = path;
 
 	size_t start = 0;
-	size_t end = path.find_first_of(fs::delim);
+	size_t end = path_sv.find_first_of(fs::delim);
 
 	std::stack<iso_fs_node*> search_stack;
 	search_stack.push(&m_root);
@@ -286,7 +287,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 			end = path.size();
 		}
 
-		const auto path_component = path.substr(start, end-start);
+		const std::string_view path_component = path_sv.substr(start, end-start);
 
 		bool found = false;
 
@@ -316,7 +317,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		if (!found) return nullptr;
 
 		start = end + 1;
-		end = path.find_first_of(fs::delim, start);
+		end = path_sv.find_first_of(fs::delim, start);
 	}
 	while (start < path.size());
 
