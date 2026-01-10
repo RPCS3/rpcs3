@@ -123,15 +123,25 @@ jobs:
       matrix:
         include:
           - name: Intel
+            runs-on: macos-14
             AARCH64: 0
+            BUILD_MAC_KK: 0
             UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac
           - name: Apple Silicon
+            runs-on: macos-14
             AARCH64: 1
+            BUILD_MAC_KK: 0
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
+          - name: Apple Silicon (KosmicKrisp)
+            runs-on: macos-15
+            AARCH64: 1
+            BUILD_MAC_KK: 1
+            UPLOAD_COMMIT_HASH: ""
+            UPLOAD_REPO_FULL_NAME: ""
     name: RPCS3 Mac ${{ matrix.name }} 
-    runs-on: macos-14
+    runs-on: ${{ matrix.runs-on }}
     env:
       CCACHE_DIR: /tmp/ccache_dir
       QT_VER: '6.10.2'
@@ -141,6 +151,7 @@ jobs:
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
       AARCH64: ${{ matrix.AARCH64 }}
+      BUILD_MAC_KK: ${{ matrix.BUILD_MAC_KK }}
       RUN_UNIT_TESTS: github.event_name == 'pull_request' && 'ON' || 'OFF'
     steps:
       - name: Checkout repository
@@ -184,6 +195,7 @@ jobs:
 
       - name: Deploy master build to GitHub Releases
         if: |
+          env.BUILD_MAC_KK == 0 &&
           github.event_name != 'pull_request' &&
           github.repository == 'RPCS3/rpcs3' &&
           github.ref == 'refs/heads/master'
@@ -192,14 +204,14 @@ jobs:
         run: .ci/github-upload.sh
 
       - name: Save Build Ccache
-        if: github.ref == 'refs/heads/master'
+        if: env.BUILD_MAC_KK == 0 && github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
       - name: Save Qt Cache
-        if: github.ref == 'refs/heads/master'
+        if: env.BUILD_MAC_KK == 0 && github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: /tmp/Qt
