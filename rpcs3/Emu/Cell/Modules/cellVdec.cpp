@@ -211,6 +211,7 @@ struct vdec_context final
 	lf_queue<vdec_cmd> in_cmd;
 
 	AVRational log_time_base{}; // Used to reduce log spam
+	AVRational log_framerate{}; // Used to reduce log spam
 
 	vdec_context(s32 type, u32 /*profile*/, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: type(type)
@@ -292,6 +293,19 @@ struct vdec_context final
 		sws_freeContext(sws);
 	}
 
+	static u32 freq_to_framerate_code(f64 freq)
+	{
+		if (std::abs(freq - 23.976) < 0.002) return CELL_VDEC_FRC_24000DIV1001;
+		if (std::abs(freq - 24.000) < 0.001) return CELL_VDEC_FRC_24;
+		if (std::abs(freq - 25.000) < 0.001) return CELL_VDEC_FRC_25;
+		if (std::abs(freq - 29.970) < 0.002) return CELL_VDEC_FRC_30000DIV1001;
+		if (std::abs(freq - 30.000) < 0.001) return CELL_VDEC_FRC_30;
+		if (std::abs(freq - 50.000) < 0.001) return CELL_VDEC_FRC_50;
+		if (std::abs(freq - 59.940) < 0.002) return CELL_VDEC_FRC_60000DIV1001;
+		if (std::abs(freq - 60.000) < 0.001) return CELL_VDEC_FRC_60;
+		return 0;
+	}
+
 	void exec(ppu_thread& ppu, u32 vid)
 	{
 		perf_meter<"VDEC"_u32> perf0;
@@ -341,6 +355,7 @@ struct vdec_context final
 
 				out_queue.clear(); // Flush image queue
 				log_time_base = {};
+				log_framerate = {};
 
 				frc_set = 0; // TODO: ???
 				next_pts = 0;
@@ -471,10 +486,10 @@ struct vdec_context final
 						frame.userdata = au_usrd;
 						frame.attr = attr;
 
+						u64 amend = 0;
+
 						if (frc_set)
 						{
-							u64 amend = 0;
-
 							switch (frc_set)
 							{
 							case CELL_VDEC_FRC_24000DIV1001: amend = 1001 * 90000 / 24000; break;
@@ -491,62 +506,45 @@ struct vdec_context final
 							}
 							}
 
-							next_pts += amend;
-							next_dts += amend;
 							frame.frc = frc_set;
 						}
-						else if (ctx->time_base.num == 0)
+						else if (ctx->time_base.den && ctx->time_base.num)
 						{
-							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
+							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ticks_per_frame;
+
+							frame.frc = freq_to_framerate_code(freq);
+							if (frame.frc)
 							{
-								cellVdec.error("time_base.num is 0 (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+								amend = u64{90000} * ctx->time_base.num * ticks_per_frame / ctx->time_base.den;
+							}
+						}
+						else if (ctx->framerate.den && ctx->framerate.num)
+						{
+							const auto freq = ctx->framerate.num / static_cast<f64>(ctx->framerate.den);
+
+							frame.frc = freq_to_framerate_code(freq);
+							if (frame.frc)
+							{
+								amend = u64{90000} * ctx->framerate.den / ctx->framerate.num;
+							}
+						}
+
+						if (amend == 0 || frame.frc == 0)
+						{
+							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num || log_framerate.den != ctx->framerate.den || log_framerate.num != ctx->framerate.num)
+							{
+								cellVdec.error("Invalid frequency (handle=0x%x, seq_id=%d, cmd_id=%d, timebase=%d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 								log_time_base = ctx->time_base;
+								log_framerate = ctx->framerate;
 							}
 
 							// Hack
-							const u64 amend = u64{90000} / 30;
+							amend = u64{90000} / 30;
 							frame.frc = CELL_VDEC_FRC_30;
-							next_pts += amend;
-							next_dts += amend;
 						}
-						else
-						{
-							u64 amend = u64{90000} * ctx->time_base.num * ticks_per_frame / ctx->time_base.den;
-							const auto freq = 1. * ctx->time_base.den / ctx->time_base.num / ticks_per_frame;
 
-							if (std::abs(freq - 23.976) < 0.002)
-								frame.frc = CELL_VDEC_FRC_24000DIV1001;
-							else if (std::abs(freq - 24.000) < 0.001)
-								frame.frc = CELL_VDEC_FRC_24;
-							else if (std::abs(freq - 25.000) < 0.001)
-								frame.frc = CELL_VDEC_FRC_25;
-							else if (std::abs(freq - 29.970) < 0.002)
-								frame.frc = CELL_VDEC_FRC_30000DIV1001;
-							else if (std::abs(freq - 30.000) < 0.001)
-								frame.frc = CELL_VDEC_FRC_30;
-							else if (std::abs(freq - 50.000) < 0.001)
-								frame.frc = CELL_VDEC_FRC_50;
-							else if (std::abs(freq - 59.940) < 0.002)
-								frame.frc = CELL_VDEC_FRC_60000DIV1001;
-							else if (std::abs(freq - 60.000) < 0.001)
-								frame.frc = CELL_VDEC_FRC_60;
-							else
-							{
-								if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
-								{
-									// 1/1000 usually means that the time stamps are written in 1ms units and that the frame rate may vary.
-									cellVdec.error("Unsupported time_base (handle=0x%x, seq_id=%d, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->seq_id, cmd->id, ctx->time_base.num, ctx->time_base.den, ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
-									log_time_base = ctx->time_base;
-								}
-
-								// Hack
-								amend = u64{90000} / 30;
-								frame.frc = CELL_VDEC_FRC_30;
-							}
-
-							next_pts += amend;
-							next_dts += amend;
-						}
+						next_pts += amend;
+						next_dts += amend;
 
 						cellVdec.trace("Got picture (handle=0x%x, seq_id=%d, cmd_id=%d, pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", handle, cmd->seq_id, cmd->id, frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
