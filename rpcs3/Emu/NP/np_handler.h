@@ -257,8 +257,8 @@ namespace np
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
 		const ticket& get_ticket() const;
-		u32 get_clan_ticket_ready();
-		ticket get_clan_ticket();
+		u32 get_clan_ticket_ready() const;
+		ticket get_clan_ticket() const;
 		void add_player_to_history(const SceNpId* npid, const char* description);
 		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
 		u32 get_players_history_count(u32 options);
