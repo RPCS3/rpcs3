@@ -9,6 +9,8 @@
 #include <filesystem>
 #include <stack>
 
+LOG_CHANNEL(sys_log, "SYS");
+
 bool is_file_iso(const std::string& path)
 {
 	if (path.empty()) return false;
@@ -609,6 +611,8 @@ void iso_dir::rewind()
 
 void load_iso(const std::string& path)
 {
+	sys_log.notice("Loading iso '%s'", path);
+
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::make_shared<iso_device>(path));
 
 	vfs::mount("/dev_bdvd/"sv, iso_device::virtual_device_name + "/");
@@ -616,5 +620,7 @@ void load_iso(const std::string& path)
 
 void unload_iso()
 {
+	sys_log.notice("Unoading iso");
+
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
 }
