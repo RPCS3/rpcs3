@@ -4,6 +4,7 @@
 #include "flow_widget_item.h"
 #include "flow_layout.h"
 
+#include <set>
 #include <QWidget>
 #include <QScrollArea>
 #include <QPaintEvent>

@@ -780,7 +780,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 
 		if (sinfo)
 		{
-			if (sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo2))
+			if (sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo) && sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo2))
 			{
 				return CELL_VDEC_ERROR_ARG;
 			}
@@ -790,7 +790,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 
 		//const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
 		//const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
-		u32 nrOfBuf       = sinfo ? +sinfo->numberOfDecodedFrameBuffer : 0;
+		u32 nrOfBuf = sinfo && sinfo->thisSize == sizeof(CellVdecDivxSpecificInfo2) ? +sinfo->numberOfDecodedFrameBuffer : 0;
 
 		if (nrOfBuf == 0)
 		{
