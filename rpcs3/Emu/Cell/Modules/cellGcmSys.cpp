@@ -235,10 +235,20 @@ u32 cellGcmGetReportDataLocation(u32 index, u32 location)
 
 u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 {
-	cellGcmSys.warning("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
+	cellGcmSys.trace("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
 
-	// NOTE: No error checkings
-	return cellGcmGetReportDataAddressLocation(index, location)->timer;
+	if (location == CELL_GCM_LOCATION_LOCAL)
+	{
+		return cellGcmGetTimeStamp(index);
+	}
+
+	if (index >= 1024 * 1024)
+	{
+		cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
+	}
+
+	const auto address = gcmIoOffsetToAddress(0x0e000000 + index * 0x10);
+	return *vm::get_super_ptr<u64>(address);
 }
 
 //----------------------------------------------------------------------------
@@ -1508,8 +1518,8 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddress);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddressLocation);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataLocation);
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);     // HLE-ing this allows for optimizations around reports
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation);
+	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);         // HLE-ing this allows for optimizations around reports
+	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation).flag(MFF_FORCED_HLE); // Ditto
 
 	// Command Buffer Control
 	REG_FUNC(cellGcmSys, cellGcmGetControlRegister);
