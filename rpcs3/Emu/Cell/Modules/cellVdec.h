@@ -16,6 +16,7 @@ enum CellVdecCodecType : s32
 {
 	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
 	CELL_VDEC_CODEC_TYPE_AVC   = 1,
+	CELL_VDEC_CODEC_TYPE_MPEG4 = 2,
 	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
 	CELL_VDEC_CODEC_TYPE_MAX
 };
@@ -388,6 +389,7 @@ struct CellVdecAvcInfo
 // DIVX Profile
 enum DIVX_level : u8
 {
+	CELL_VDEC_MPEG4_SIMPLE_PROFILE           = 4,
 	CELL_VDEC_DIVX_QMOBILE                   = 10,
 	CELL_VDEC_DIVX_MOBILE                    = 11,
 	CELL_VDEC_DIVX_HOME_THEATER              = 12,

@@ -267,7 +267,7 @@ static const std::map<logitech_personality,
 };
 
 // ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
-static const SDL_HapticDirection STEERING_DIRECTION =
+static constexpr SDL_HapticDirection STEERING_DIRECTION =
 {
 	.type = SDL_HAPTIC_STEERING_AXIS,
 	.dir = {0, 0, 0}
@@ -1486,8 +1486,8 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 						new_effect.condition.direction = STEERING_DIRECTION;
 						new_effect.condition.length = SDL_HAPTIC_INFINITY;
 						const u16 saturation = logitech_g27_clip_to_saturation(buf[4]);
-						const u16 deadband = 2 * 0xFFFF / 255;
-						s16 center = 0;
+						constexpr u16 deadband = 2 * 0xFFFF / 255;
+						constexpr s16 center = 0;
 						s16 left_coeff = 0;
 						s16 right_coeff = 0;
 						if (buf[1] == 0x03)

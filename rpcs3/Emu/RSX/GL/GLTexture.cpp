@@ -289,6 +289,8 @@ namespace gl
 	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
 		u32 dst_offset, const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
 	{
+		ensure(src && dst);
+
 		auto initialize_scratch_mem = [&]() -> bool // skip_transform
 		{
 			const u64 max_mem = (mem_info->memory_required) ? mem_info->memory_required : mem_info->image_size_in_bytes;

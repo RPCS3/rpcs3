@@ -78,6 +78,7 @@
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
 #include "Loader/mself.hpp"
 
 #include "Utilities/Thread.h"
@@ -542,8 +543,16 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 	else
 	{
+		std::string game_path = Emu.GetBoot();
+		if (game_path.starts_with(iso_device::virtual_device_name))
+		{
+			const auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+			const auto iso_dev = ensure(dynamic_cast<const iso_device*>(device.get()));
+			game_path = iso_dev->get_loaded_iso();
+		}
+
 		gui_log.success("Boot successful.");
-		AddRecentAction(gui::Recent_Game(QString::fromStdString(Emu.GetBoot()), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
+		AddRecentAction(gui::Recent_Game(QString::fromStdString(game_path), QString::fromStdString(Emu.GetTitleAndTitleID())), false);
 	}
 
 	if (refresh_list)
@@ -569,6 +578,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
+		"ISO files (*.iso);;"
 		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
@@ -688,6 +698,34 @@ void main_window::BootGame()
 
 	gui_log.notice("Booting from BootGame...");
 	Boot(dir_path.toStdString(), "", false, true);
+}
+
+void main_window::BootISO()
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
+	const QString path = QFileDialog::getOpenFileName(this, tr("Select ISO"), path_last_game, tr("ISO files (*.iso);;All files (*.*)"));
+
+	if (path.isEmpty())
+	{
+		if (stopped)
+		{
+			Emu.Resume();
+		}
+		return;
+	}
+
+	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(path).dir().path());
+
+	gui_log.notice("Booting from BootISO...");
+	Boot(path.toStdString(), "", true, true);
 }
 
 void main_window::BootVSH()
@@ -2469,6 +2507,7 @@ void main_window::CreateConnects()
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootTestAct, &QAction::triggered, this, &main_window::BootTest);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->bootIsoAct, &QAction::triggered, this, &main_window::BootISO);
 	connect(ui->bootVSHAct, &QAction::triggered, this, &main_window::BootVSH);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, [this](){ BootRsxCapture(); });
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
@@ -2518,6 +2557,22 @@ void main_window::CreateConnects()
 
 		QStringList paths;
 		paths << dir;
+		AddGamesFromDirs(std::move(paths));
+	});
+
+	connect(ui->addIsoGamesAct, &QAction::triggered, this, [this]()
+	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return;
+		}
+
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), QString::fromStdString(fs::get_config_dir()), tr("ISO files (*.iso);;All files (*.*)"));
+		if (paths.isEmpty())
+		{
+			return;
+		}
+
 		AddGamesFromDirs(std::move(paths));
 	});
 
@@ -3958,7 +4013,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		const QString suffix_lo = info.suffix().toLower();
 
 		// check for directories first, only valid if all other paths led to directories until now.
-		if (info.isDir())
+		if (info.isDir() || is_file_iso(path.toStdString()))
 		{
 			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{

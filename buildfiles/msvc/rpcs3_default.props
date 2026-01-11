@@ -7,7 +7,7 @@
     <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
-    <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.7\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
+    <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.8\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
     <GTestInstalled Condition="Exists('$(GTestPath)')">true</GTestInstalled>
   </PropertyGroup>
   <ItemDefinitionGroup>

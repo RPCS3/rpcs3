@@ -218,7 +218,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		static_cast<gl::framebuffer_holder*>(m_draw_fbo)->release();
 	}
 
-	for (auto &fbo : m_framebuffer_cache)
+	for (auto& fbo : m_framebuffer_cache)
 	{
 		if (fbo.matches(color_targets, depth_stencil_target))
 		{
@@ -263,6 +263,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			}
 		}
 	}
+
+	ensure(m_draw_fbo);
 
 	switch (rsx::method_registers.surface_color_target())
 	{

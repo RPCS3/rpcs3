@@ -738,7 +738,7 @@ pad_capabilities sdl_pad_handler::get_capabilities(const std::string& pad_id)
 	capabilities.has_rumble &= dev->sdl.has_rumble;
 	capabilities.has_accel &= dev->sdl.has_accel;
 	capabilities.has_gyro &= dev->sdl.has_gyro;
-	capabilities.has_pressure_sensitivity &= dev->sdl.is_ds3_with_pressure_buttons;
+	capabilities.has_pressure_intensity_button &= !dev->sdl.is_ds3_with_pressure_buttons; // Only allow if there's not pressure sensitivity
 
 	return capabilities;
 }

@@ -7,6 +7,8 @@
 #include "gui_settings.h"
 #include "progress_dialog.h"
 
+#include "Loader/ISO.h"
+
 #include <QApplication>
 #include <QClipboard>
 #include <QScrollBar>
@@ -208,7 +210,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	m_savestate_table->create_header_actions(m_savestate_column_acts,
 		[this](int col) { return m_gui_settings->GetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetSavestateListColVisibility(static_cast<gui::savestate_list_columns>(col), visible); });
-	
+
 	m_game_table->create_header_actions(m_game_column_acts,
 		[this](int col) { return m_gui_settings->GetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetSavestateGamelistColVisibility(static_cast<gui::savestate_game_list_columns>(col), visible); });
@@ -416,9 +418,10 @@ void savestate_manager_dialog::ResizeGameIcons()
 		{
 			const qreal dpr = devicePixelRatioF();
 			const int savestate_index = item->data(GameUserRole::GameIndex).toInt();
-			const std::string icon_path = m_savestate_db[savestate_index]->game_icon_path;
+			std::string game_icon_path = m_savestate_db[savestate_index]->game_icon_path;
+			std::string game_archive_path = m_savestate_db[savestate_index]->archive_path;
 
-			item->set_icon_load_func([this, icon_path, savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			item->set_icon_load_func([this, icon_path = std::move(game_icon_path), archive_path = std::move(game_archive_path), savestate_index, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -432,7 +435,7 @@ void savestate_manager_dialog::ResizeGameIcons()
 					if (!item->data(GameUserRole::GamePixmapLoaded).toBool())
 					{
 						// Load game icon
-						if (!icon.load(QString::fromStdString(icon_path)))
+						if (!gui::utils::load_icon(icon, icon_path, archive_path))
 						{
 							gui_log.warning("Could not load savestate game icon from path %s", icon_path);
 						}
@@ -617,6 +620,11 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 			{
 				game_data_ptr->game_name = gameinfo->info.name;
 				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
+				if (gameinfo->icon_in_archive)
+				{
+					game_data_ptr->archive_path = gameinfo->info.path;
+				}
+
 				break;
 			}
 		}

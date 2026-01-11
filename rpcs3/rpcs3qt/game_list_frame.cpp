@@ -15,6 +15,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/sysinfo.hpp"
@@ -522,13 +523,26 @@ void game_list_frame::OnParsingFinished()
 
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
 	{
+		std::unique_ptr<iso_archive> archive;
+		if (is_file_iso(dir_or_elf))
+		{
+			archive = std::make_unique<iso_archive>(dir_or_elf);
+		}
+
+		const auto file_exists = [&archive](const std::string& path)
+		{
+			return archive ? archive->is_file(path) : fs::is_file(path);
+		};
+
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
-		const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
+		const std::string sfo_dir = archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
+
+		const psf::registry psf = archive ? archive->open_psf(sfo_path) : psf::load_object(sfo_path);
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
@@ -596,7 +610,7 @@ void game_list_frame::OnParsingFinished()
 
 		if (game.info.icon_path.empty())
 		{
-			if (std::string icon_path = sfo_dir + "/" + localized_icon; fs::is_file(icon_path))
+			if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
 			{
 				game.info.icon_path = std::move(icon_path);
 			}
@@ -604,19 +618,20 @@ void game_list_frame::OnParsingFinished()
 			{
 				game.info.icon_path = sfo_dir + "/ICON0.PNG";
 			}
+			game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 		}
 
-		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; fs::is_file(movie_path))
+		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_gif = true;
 		}
-		else if (std::string movie_path = sfo_dir + "/" + localized_movie; fs::is_file(movie_path))
+		else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_pam = true;
 		}
-		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; fs::is_file(movie_path))
+		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
 		{
 			game.info.movie_path = std::move(movie_path);
 			game.has_hover_pam = true;
@@ -740,6 +755,10 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				add_disc_dir(entry.path, legit_paths);
+			}
+			else if (is_file_iso(entry.path))
+			{
+				push_path(entry.path, legit_paths);
 			}
 			else
 			{
@@ -961,32 +980,31 @@ void game_list_frame::ShowContextMenu(const QPoint& pos)
 	QPoint global_pos;
 	std::vector<game_info> games;
 
-	// NOTE: Currently, only m_game_list supports rows multi selection!
-	//
-	// TODO: Add support to rows multi selection to m_game_grid
-
 	if (m_is_list_layout)
 	{
 		global_pos = m_game_list->viewport()->mapToGlobal(pos);
 
-		const auto item_list = m_game_list->selectedItems();
-		game_info gameinfo;
-
-		for (const auto& item : item_list)
+		for (const QTableWidgetItem* item : m_game_list->selectedItems())
 		{
-			if (item->column() != static_cast<int>(gui::game_list_columns::icon))
+			if (!item || item->column() != static_cast<int>(gui::game_list_columns::icon))
 				continue;
 
-			if (gameinfo = GetGameInfoFromItem(item); gameinfo)
+			if (game_info gameinfo = GetGameInfoFromItem(item))
 				games.push_back(gameinfo);
 		}
 	}
-	else if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
+	else if (m_game_grid)
 	{
 		global_pos = m_game_grid->mapToGlobal(pos);
 
-		if (game_info gameinfo = item->game(); gameinfo)
-			games.push_back(gameinfo);
+		for (const flow_widget_item* selected_item : m_game_grid->selected_items())
+		{
+			if (const game_list_grid_item* item = static_cast<const game_list_grid_item*>(selected_item))
+			{
+				if (game_info gameinfo = item->game())
+					games.push_back(gameinfo);
+			}
+		}
 	}
 
 	if (!games.empty())
@@ -1154,16 +1172,19 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 
 				if (object == m_game_list)
 				{
-					QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon));
+					const QTableWidgetItem* item = m_game_list->item(m_game_list->currentRow(), static_cast<int>(gui::game_list_columns::icon));
 
-					if (!item || !item->isSelected())
-						return false;
-
-					gameinfo = GetGameInfoFromItem(item);
+					if (item && item->isSelected())
+					{
+						gameinfo = GetGameInfoFromItem(item);
+					}
 				}
-				else if (game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
+				else if (const auto items = m_game_grid->selected_items(); !items.empty())
 				{
-					gameinfo = item->game();
+					if (const game_list_grid_item* item = static_cast<const game_list_grid_item*>(*items.begin()))
+					{
+						gameinfo = item->game();
+					}
 				}
 
 				if (!gameinfo)
@@ -1279,11 +1300,14 @@ std::set<std::string> game_list_frame::CurrentSelectionPaths()
 	}
 	else if (m_game_grid)
 	{
-		if (const game_list_grid_item* item = static_cast<game_list_grid_item*>(m_game_grid->selected_item()))
+		for (const flow_widget_item* selected_item : m_game_grid->selected_items())
 		{
-			if (const game_info& game = item->game())
+			if (const game_list_grid_item* item = static_cast<const game_list_grid_item*>(selected_item))
 			{
-				selection.insert(game->info.path + game->info.icon_path);
+				if (const game_info& game = item->game())
+				{
+					selection.insert(game->info.path + game->info.icon_path);
+				}
 			}
 		}
 	}

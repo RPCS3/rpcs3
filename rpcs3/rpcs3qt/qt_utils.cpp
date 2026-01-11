@@ -12,6 +12,7 @@
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
+#include "Loader/ISO.h"
 #include <cmath>
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -392,27 +393,46 @@ namespace gui
 			std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + title_id + "/ICON0.PNG";
 			bool found_file       = fs::is_file(icon_path);
 
+			std::unique_ptr<QPixmap> pixmap;
+
 			if (!found_file)
 			{
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
-				const QString qpath = QString::fromStdString(path);
-				const std::string path_list[] = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
-					                              qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
+				std::vector<std::string> path_list;
 
-				for (const std::string& pth : path_list)
+				const bool is_archive = is_file_iso(path);
+				if (is_archive)
 				{
-					if (!fs::is_dir(pth))
+					icon_path = "PS3_GAME/ICON0.PNG";
+
+					QPixmap px;
+					if (load_iso_icon(px, icon_path, path))
 					{
-						continue;
+						found_file = true;
+						pixmap = std::make_unique<QPixmap>(std::move(px));
 					}
+				}
+				else
+				{
+					const QString qpath = QString::fromStdString(path);
+					path_list = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
+					                    qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
 
-					const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(pth, title_id);
-					icon_path = sfo_dir + "/ICON0.PNG";
-					found_file = fs::is_file(icon_path);
-
-					if (found_file)
+					for (const std::string& pth : path_list)
 					{
-						break;
+						if (!fs::is_dir(pth))
+						{
+							continue;
+						}
+
+						const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(pth, title_id);
+						icon_path = sfo_dir + "/ICON0.PNG";
+						found_file = fs::is_file(icon_path);
+
+						if (found_file)
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -420,7 +440,7 @@ namespace gui
 			if (found_file)
 			{
 				// load the image from path. It will most likely be a rectangle
-				const QImage source = QImage(QString::fromStdString(icon_path));
+				const QImage source = pixmap ? pixmap->toImage() : QImage(QString::fromStdString(icon_path));
 				const int edge_max = std::max(source.width(), source.height());
 
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
@@ -680,6 +700,36 @@ namespace gui
 			}
 
 			return QString("%1 days ago %2").arg(current_date - exctrated_date).arg(date.toString(fmt_relative));
+		}
+
+		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty() || archive_path.empty()) return false;
+			if (!is_file_iso(archive_path)) return false;
+
+			iso_archive archive(archive_path);
+			if (!archive.exists(icon_path)) return false;
+
+			auto icon_file = archive.open(icon_path);
+			const auto icon_size = icon_file.size();
+			if (icon_size == 0) return false;
+
+			QByteArray data(icon_size, 0);
+			icon_file.read(data.data(), icon_size);
+
+			return icon.loadFromData(data);
+		}
+
+		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty()) return false;
+
+			if (archive_path.empty())
+			{
+				return icon.load(QString::fromStdString(icon_path));
+			}
+
+			return load_iso_icon(icon, icon_path, archive_path);
 		}
 
 		QString format_timestamp(s64 time, const QString& fmt)

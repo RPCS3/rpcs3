@@ -17,6 +17,7 @@ public:
 	qt_video_source();
 	virtual ~qt_video_source();
 
+	void set_iso_path(const std::string& iso_path);
 	void set_video_path(const std::string& video_path) override;
 	const QString& video_path() const { return m_video_path; }
 
@@ -43,6 +44,7 @@ protected:
 	atomic_t<bool> m_has_new = false;
 
 	QString m_video_path;
+	std::string m_iso_path; // path of the source archive
 	QByteArray m_video_data{};
 	QImage m_image{};
 	std::vector<u8> m_image_path;

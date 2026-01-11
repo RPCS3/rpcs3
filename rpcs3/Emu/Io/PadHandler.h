@@ -90,7 +90,7 @@ struct pad_capabilities
 	bool has_rumble = false;
 	bool has_accel = false;
 	bool has_gyro = false;
-	bool has_pressure_sensitivity = false;
+	bool has_pressure_intensity_button = true;
 };
 
 using pad_preview_values = std::array<int, 6>;

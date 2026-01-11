@@ -62,7 +62,6 @@
     <property name="font">
      <font>
       <pointsize>10</pointsize>
-      <weight>50</weight>
       <bold>false</bold>
      </font>
     </property>
@@ -211,6 +210,7 @@
      <addaction name="separator"/>
     </widget>
     <addaction name="bootGameAct"/>
+    <addaction name="bootIsoAct"/>
     <addaction name="bootVSHAct"/>
     <addaction name="bootElfMenu"/>
     <addaction name="bootSavestateAct"/>
@@ -218,6 +218,7 @@
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
+    <addaction name="addIsoGamesAct"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -242,17 +243,17 @@
     <property name="title">
      <string>Configuration</string>
     </property>
-    <widget class="QMenu" name="menuMice">
-     <property name="title">
-      <string>Mice</string>
-     </property>
-     <addaction name="actionBasic_Mouse"/>
-     <addaction name="actionRaw_Mouse"/>
-    </widget>
     <widget class="QMenu" name="menuDevices">
      <property name="title">
       <string>Devices</string>
      </property>
+     <widget class="QMenu" name="menuMice">
+      <property name="title">
+       <string>Mice</string>
+      </property>
+      <addaction name="actionBasic_Mouse"/>
+      <addaction name="actionRaw_Mouse"/>
+     </widget>
      <addaction name="confPadsAct"/>
      <addaction name="menuMice"/>
      <addaction name="confCamerasAct"/>
@@ -296,9 +297,6 @@
     <property name="title">
      <string>Manage</string>
     </property>
-    <addaction name="confVFSDialogAct"/>
-    <addaction name="separator"/>
-    <addaction name="actionManage_Users"/>
     <widget class="QMenu" name="menuNetworkServices">
      <property name="title">
       <string>Network Services</string>
@@ -307,7 +305,6 @@
      <addaction name="confClansAct"/>
      <addaction name="confIPCAct"/>
     </widget>
-    <addaction name="menuNetworkServices"/>
     <widget class="QMenu" name="menuPortals">
      <property name="title">
       <string>Portals and Gates</string>
@@ -317,6 +314,10 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
+    <addaction name="confVFSDialogAct"/>
+    <addaction name="separator"/>
+    <addaction name="actionManage_Users"/>
+    <addaction name="menuNetworkServices"/>
     <addaction name="menuPortals"/>
     <addaction name="separator"/>
     <addaction name="actionManage_RAP_Licenses"/>
@@ -1046,7 +1047,7 @@
   </action>
   <action name="toolbar_rpcn">
    <property name="icon">
-    <iconset>
+    <iconset resource="../resources.qrc">
      <normaloff>:/Icons/rpcn.png</normaloff>:/Icons/rpcn.png</iconset>
    </property>
    <property name="text">
@@ -1511,6 +1512,16 @@
   <action name="actionDownload_Update">
    <property name="text">
     <string>Download Update</string>
+   </property>
+  </action>
+  <action name="addIsoGamesAct">
+   <property name="text">
+    <string>Add ISO Games</string>
+   </property>
+  </action>
+  <action name="bootIsoAct">
+   <property name="text">
+    <string>Boot ISO</string>
    </property>
   </action>
  </widget>

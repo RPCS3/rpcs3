@@ -14,7 +14,7 @@ namespace gl
 		class shader
 		{
 			std::string source;
-			::glsl::program_domain type;
+			::glsl::program_domain type {};
 			GLuint m_id = GL_NONE;
 
 			fence m_compiled_fence;

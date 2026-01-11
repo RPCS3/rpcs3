@@ -11,6 +11,8 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
+#include "Loader/ISO.h"
+
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QStringBuilder>
@@ -277,6 +279,13 @@ void game_list_table::populate(
 					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
 					game->info.size_on_disk = 0;
 				}
+				else if (is_file_iso(game->info.path))
+				{
+					fs::stat_t iso_stat;
+					fs::get_stat(game->info.path, iso_stat);
+
+					game->info.size_on_disk = iso_stat.size;
+				}
 				else
 				{
 					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
@@ -293,6 +302,11 @@ void game_list_table::populate(
 		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
 			icon_item->set_video_path(game->info.movie_path);
+
+			if (!fs::exists(game->info.movie_path) && is_file_iso(game->info.path))
+			{
+				icon_item->set_iso_path(game->info.path);
+			}
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);
