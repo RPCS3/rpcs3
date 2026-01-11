@@ -329,16 +329,24 @@ jobs:
   Windows_Build_Clang:
     # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
-    name: RPCS3 Windows Clang
-    runs-on: windows-2025
     strategy:
+      fail-fast: false
       matrix:
         include:
           - msys2: clang64
             compiler: clang
-            arch: win64
+            arch: x86_64
+            os: windows-2025
+            name: X64
+          - msys2: clangarm64
+            compiler: clang
+            arch: aarch64
+            os: windows-11-arm
+            name: ARM64
     env:
       CCACHE_DIR: 'C:\ccache'
+    name: RPCS3 Windows Clang ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -352,25 +360,25 @@ jobs:
           update: true
           cache: true
           install: |
-            mingw-w64-clang-x86_64-clang
-            mingw-w64-clang-x86_64-ccache
-            mingw-w64-clang-x86_64-cmake
-            mingw-w64-clang-x86_64-lld
-            mingw-w64-clang-x86_64-ninja
-            mingw-w64-clang-x86_64-llvm
-            mingw-w64-clang-x86_64-ffmpeg
-            mingw-w64-clang-x86_64-opencv
-            mingw-w64-clang-x86_64-glew
-            mingw-w64-clang-x86_64-vulkan
-            mingw-w64-clang-x86_64-vulkan-headers
-            mingw-w64-clang-x86_64-vulkan-loader
-            mingw-w64-clang-x86_64-gtest
-            mingw-w64-clang-x86_64-qt6-base
-            mingw-w64-clang-x86_64-qt6-declarative
-            mingw-w64-clang-x86_64-qt6-multimedia
-            mingw-w64-clang-x86_64-qt6-svg
-            mingw-w64-clang-x86_64-qt6-tools
-            mingw-w64-clang-x86_64-qt6-translations
+            mingw-w64-clang-${{ matrix.arch }}-clang
+            mingw-w64-clang-${{ matrix.arch }}-ccache
+            mingw-w64-clang-${{ matrix.arch }}-cmake
+            mingw-w64-clang-${{ matrix.arch }}-lld
+            mingw-w64-clang-${{ matrix.arch }}-ninja
+            mingw-w64-clang-${{ matrix.arch }}-llvm
+            mingw-w64-clang-${{ matrix.arch }}-ffmpeg
+            mingw-w64-clang-${{ matrix.arch }}-opencv
+            mingw-w64-clang-${{ matrix.arch }}-glew
+            mingw-w64-clang-${{ matrix.arch }}-vulkan
+            mingw-w64-clang-${{ matrix.arch }}-vulkan-headers
+            mingw-w64-clang-${{ matrix.arch }}-vulkan-loader
+            mingw-w64-clang-${{ matrix.arch }}-gtest
+            mingw-w64-clang-${{ matrix.arch }}-qt6-base
+            mingw-w64-clang-${{ matrix.arch }}-qt6-declarative
+            mingw-w64-clang-${{ matrix.arch }}-qt6-multimedia
+            mingw-w64-clang-${{ matrix.arch }}-qt6-svg
+            mingw-w64-clang-${{ matrix.arch }}-qt6-tools
+            mingw-w64-clang-${{ matrix.arch }}-qt6-translations
             base-devel
             curl
             git
@@ -381,8 +389,8 @@ jobs:
         id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ matrix.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ matrix.arch }}-
 
       - name: Build RPCS3
         shell: msys2 {0}
@@ -390,7 +398,7 @@ jobs:
           export CCACHE_DIR=$(cygpath -u "$CCACHE_DIR")
           echo "CCACHE_DIR=$CCACHE_DIR"
           .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
-          .ci/build-windows-clang.sh
+          .ci/build-windows-clang.sh ${{ matrix.arch }} ${{ matrix.msys2 }}
 
       - name: Save build Ccache
         if: github.ref == 'refs/heads/master'
@@ -402,7 +410,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@main
         with:
-          name: RPCS3 for Windows (${{ runner.arch }}, ${{ matrix.compiler }})
+          name: RPCS3 for Windows (${{ matrix.name }}, clang)
           path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
           compression-level: 0
           if-no-files-found: error
