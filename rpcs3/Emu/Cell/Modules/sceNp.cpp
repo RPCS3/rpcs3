@@ -745,7 +745,7 @@ error_code sceNpDrmIsAvailable(ppu_thread& ppu, vm::cptr<u8> k_licensee_addr, vm
 	lv2_obj::sleep(ppu);
 
 	const auto ret = npDrmIsAvailable(k_licensee_addr, drm_path);
-	lv2_sleep(25'000, &ppu);
+	lv2_sleep(5'000, &ppu);
 
 	return ret;
 }
