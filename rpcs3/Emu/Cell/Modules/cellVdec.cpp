@@ -232,6 +232,7 @@ struct vdec_context final
 			codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 			break;
 		}
+		case CELL_VDEC_CODEC_TYPE_MPEG4:
 		case CELL_VDEC_CODEC_TYPE_DIVX:
 		{
 			codec = avcodec_find_decoder(AV_CODEC_ID_MPEG4);
@@ -770,6 +771,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		decoderVerLower = 0x1030000;
 		break;
 	}
+	case CELL_VDEC_CODEC_TYPE_MPEG4:
 	case CELL_VDEC_CODEC_TYPE_DIVX:
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
@@ -812,6 +814,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		{
 		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
 		case CELL_VDEC_DIVX_MOBILE      : memSize = new_sdk ? 0x19A740 : 0x26DED0; break;
+		case CELL_VDEC_MPEG4_SIMPLE_PROFILE: // just a guess based on the profile used by singstar before and after update
 		case CELL_VDEC_DIVX_HOME_THEATER: memSize = new_sdk ? 0x386A60 : 0x498060; break;
 		case CELL_VDEC_DIVX_HD_720      : memSize = new_sdk ? 0x692070 : 0x805690; break;
 		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;
@@ -1508,7 +1511,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		avc->reserved[0] = 0;
 		avc->reserved[1] = 0;
 	}
-	else if (vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
+	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG4 || vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
 	{
 		const vm::ptr<CellVdecDivxInfo> dvx = picinfo_addr;
 
