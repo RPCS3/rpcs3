@@ -844,6 +844,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_path.clear();
 	m_path_old.clear();
 	m_path_original.clear();
+	m_path_real.clear();
 	m_title_id.clear();
 	m_title.clear();
 	m_localized_title.clear();
@@ -1460,7 +1461,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				path = path + "PS3_GAME/USRDIR/EBOOT.BIN";
 			}
 
-			m_path = path;
+			m_path_real = m_path;
+			m_path = std::move(path);
 		}
 
 		sys_log.notice("Load: is iso archive = %d (m_path='%s')", launching_from_disc_archive, m_path);
@@ -3980,6 +3982,15 @@ game_boot_result Emulator::Restart(bool graceful)
 
 	Emu.after_kill_callback = [this]
 	{
+		// Reset boot path in case of ISO
+		if (m_path.starts_with(iso_device::virtual_device_name))
+		{
+			sys_log.notice("Continuous boot: Resetting boot path from '%s' to '%s'", m_path, m_path_real);
+			ensure(!m_path_real.empty());
+			ensure(!m_path_real.starts_with(iso_device::virtual_device_name));
+			m_path = m_path_real;
+		}
+
 		// Reload with prior configs.
 		if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
 		{
