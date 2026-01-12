@@ -101,6 +101,7 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::Login: return "Login";
 			case rpcn::CommandType::Terminate: return "Terminate";
 			case rpcn::CommandType::Create: return "Create";
+			case rpcn::CommandType::Delete: return "Delete";
 			case rpcn::CommandType::SendToken: return "SendToken";
 			case rpcn::CommandType::SendResetToken: return "SendResetToken";
 			case rpcn::CommandType::ResetPassword: return "ResetPassword";
@@ -255,7 +256,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 27;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 28;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -656,7 +657,7 @@ namespace rpcn
 			}
 
 			// Those commands are handled synchronously and won't be forwarded to NP Handler
-			if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create ||
+			if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create || command == CommandType::Delete ||
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
@@ -1192,7 +1193,7 @@ namespace rpcn
 		std::copy(token.begin(), token.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 
@@ -1278,7 +1279,7 @@ namespace rpcn
 
 	bool rpcn_client::terminate_connection()
 	{
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		std::vector<u8> data;
@@ -1314,7 +1315,7 @@ namespace rpcn
 		std::copy(email.begin(), email.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::Create, req_id, data, packet_data))
@@ -1348,7 +1349,7 @@ namespace rpcn
 		std::copy(password.begin(), password.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::SendToken, req_id, data, packet_data))
@@ -1381,7 +1382,7 @@ namespace rpcn
 		std::copy(email.begin(), email.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::SendResetToken, req_id, data, packet_data))
@@ -1416,7 +1417,7 @@ namespace rpcn
 		std::copy(password.begin(), password.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::ResetPassword, req_id, data, packet_data))
@@ -1435,13 +1436,43 @@ namespace rpcn
 		return error;
 	}
 
+	ErrorType rpcn_client::delete_account()
+	{
+		const auto npid = g_cfg_rpcn.get_npid();
+		const auto password = g_cfg_rpcn.get_password();
+
+		std::vector<u8> data;
+		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
+		data.push_back(0);
+		std::copy(password.begin(), password.end(), std::back_inserter(data));
+		data.push_back(0);
+
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		if (!forge_send_reply(CommandType::Delete, req_id, data, packet_data))
+		{
+			return ErrorType::Malformed;
+		}
+
+		vec_stream reply(packet_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			rpcn_log.success("Account was successfully deleted!");
+		}
+
+		return error;
+	}
+
 	bool rpcn_client::add_friend(const std::string& friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::AddFriend, req_id, data, packet_data))
@@ -1467,7 +1498,7 @@ namespace rpcn
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
 		data.push_back(0);
 
-		u64 req_id = rpcn_request_counter.fetch_add(1);
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::RemoveFriend, req_id, data, packet_data))

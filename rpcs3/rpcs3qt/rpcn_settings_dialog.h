@@ -3,6 +3,7 @@
 #include <optional>
 
 #include <QDialog>
+#include <QComboBox>
 #include <QLineEdit>
 #include <QListWidget>
 
@@ -83,6 +84,13 @@ private:
 	std::optional<std::string> m_token;
 };
 
+class rpcn_confirm_delete_dialog : public QDialog
+{
+	Q_OBJECT
+public:
+	rpcn_confirm_delete_dialog(QWidget* parent);
+};
+
 class rpcn_account_edit_dialog : public QDialog
 {
 	Q_OBJECT
@@ -95,6 +103,7 @@ private:
 private Q_SLOTS:
 	void resend_token();
 	void change_password();
+	void delete_account();
 
 protected:
 	QLineEdit *m_edit_username, *m_edit_token;
