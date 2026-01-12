@@ -3433,7 +3433,7 @@ error_code sceNpLookupUserProfile(s32 transId, vm::cptr<SceNpId> npId, vm::ptr<S
 error_code sceNpLookupUserProfileAsync(s32 transId, vm::cptr<SceNpId> npId, vm::ptr<SceNpUserInfo> userInfo, vm::ptr<SceNpAboutMe> aboutMe, vm::ptr<SceNpMyLanguages> languages,
     vm::ptr<SceNpCountryCode> countryCode, vm::ptr<SceNpAvatarImage> avatarImage, s32 prio, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpLookupUserProfile(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)", transId, npId, userInfo,
+	sceNp.todo("sceNpLookupUserProfileAsync(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)", transId, npId, userInfo,
 	    aboutMe, languages, countryCode, avatarImage, prio, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
