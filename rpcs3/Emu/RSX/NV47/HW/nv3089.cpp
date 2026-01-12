@@ -187,19 +187,27 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_line_length = (in_w * in_bpp);
+			const u32 in_width_min = std::min<u32>(clip_h > 1 && in_pitch > 0 ? (in_pitch / in_bpp) : in_w, in_w);
+			const u32 src_line_length = (in_width_min * in_bpp);
 
 			u32 src_address = 0;
 			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
+
+			if (!dst_address)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%dx)", dst_offset, dst_dma);
+				RSX(ctx)->recover_fifo();
+				return { false, src_info, dst_info };
+			}
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address for in block transfer (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
@@ -221,9 +229,9 @@ namespace rsx
 				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
 				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
