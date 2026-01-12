@@ -80,6 +80,8 @@ namespace gui::utils
 		}
 
 		icon_file.close();
+
+		sys_log.notice("Created shortcut icon file '%s'", target_icon_path);
 		return true;
 	}
 
@@ -241,6 +243,8 @@ namespace gui::utils
 #elif defined(__APPLE__)
 		fmt::append(link_path, "/%s.app", simple_name);
 
+		sys_log.notice("Creating shortcut '%s' with arguments '%s'", link_path, target_cli_args);
+
 		const std::string contents_dir = link_path + "/Contents/";
 		const std::string macos_dir = contents_dir + "MacOS/";
 		const std::string resources_dir = contents_dir + "Resources/";
@@ -339,6 +343,8 @@ namespace gui::utils
 
 		fmt::append(link_path, "/%s.desktop", simple_name);
 
+		sys_log.notice("Creating shortcut '%s' for '%s' with arguments '%s'", link_path, exe_path, target_cli_args);
+
 		std::string file_content;
 		fmt::append(file_content, "[Desktop Entry]\n");
 		fmt::append(file_content, "Encoding=UTF-8\n");
@@ -401,17 +407,31 @@ namespace gui::utils
 			return;
 		}
 
-		const auto remove_file = [](const std::string& path)
+		const auto remove_path = [](const std::string& path, bool is_file)
 		{
-			if (!path.empty() && fs::is_file(path))
+			if (!path.empty())
 			{
-				if (fs::remove_file(path))
+				if (is_file && fs::is_file(path))
 				{
-					sys_log.success("Removed shortcut file '%s'", path);
+					if (fs::remove_file(path))
+					{
+						sys_log.success("Removed shortcut file '%s'", path);
+					}
+					else
+					{
+						sys_log.error("Failed to remove shortcut file '%s': error='%s'", path, fs::g_tls_error);
+					}
 				}
-				else
+				else if (!is_file && fs::is_dir(path))
 				{
-					sys_log.error("Failed to remove shortcut file '%s': error='%s'", path, fs::g_tls_error);
+					if (fs::remove_all(path))
+					{
+						sys_log.success("Removed shortcut directory '%s'", path);
+					}
+					else
+					{
+						sys_log.error("Failed to remove shortcut directory '%s': error='%s'", path, fs::g_tls_error);
+					}
 				}
 			}
 		};
@@ -446,28 +466,17 @@ namespace gui::utils
 
 #ifdef _WIN32
 			fmt::append(link_path, "/%s.lnk", simple_name);
-			remove_file(link_path);
+			remove_path(link_path, true);
 #elif defined(__APPLE__)
 			fmt::append(link_path, "/%s.app", simple_name);
-
-			const std::string contents_dir = link_path + "/Contents/";
-			const std::string plist_path = contents_dir + "Info.plist";
-			const std::string launcher_path = contents_dir + "MacOS/launcher";
-			const std::string resources_dir = contents_dir + "Resources";
-			const std::string icon_path = fmt::format("%s/shortcut.%s", resources_dir, icon_extension);
-
-			remove_file(plist_path);
-			remove_file(launcher_path);
-			remove_file(icon_path);
+			remove_path(link_path, false);
 #else
 			fmt::append(link_path, "/%s.desktop", simple_name);
-			remove_file(link_path);
+			remove_path(link_path, true);
 #endif
 		}
 
-#ifndef __APPLE__
 		const std::string icon_path = fmt::format("%sIcons/game_icons/%s/shortcut.%s", fs::get_config_dir(), serial, icon_extension);
-		remove_file(icon_path);
-#endif
+		remove_path(icon_path, true);
 	}
 }
