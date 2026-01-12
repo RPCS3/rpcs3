@@ -50,7 +50,7 @@ fi
 # Generate sha256 hashes
 # Write to file for GitHub releases
 sha256sum "$BUILD" | awk '{ print $1 }' | tee "$BUILD.sha256"
-echo "$(cat "$BUILD.sha256");$(stat -c %s "$BUILD")B" > GitHubReleaseMessage.txt
+echo "$(cat "$BUILD.sha256");$(stat -c %s "$BUILD")B" > "$RELEASE_MESSAGE"
 
 # Move files to publishing directory
 mkdir -p "$ARTIFACT_DIR"
