@@ -106,9 +106,9 @@ namespace rsx
 
 		void ZCULL_control::set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue)
 		{
-			surface_active = surface_active;
-			zpass_count_enabled = zpass_active;
-			stats_enabled = zcull_stats_active;
+			this->surface_active = surface_active;
+			this->zpass_count_enabled = zpass_active;
+			this->stats_enabled = zcull_stats_active;
 
 			check_state(ptimer, flush_queue);
 
