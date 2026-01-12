@@ -3991,6 +3991,9 @@ game_boot_result Emulator::Restart(bool graceful)
 			m_path = m_path_real;
 		}
 
+		// Allow Boot (guarded by GracefulShutdown, which is the scope of this callback)
+		m_restrict_emu_state_change = 0;
+
 		// Reload with prior configs.
 		if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
 		{
