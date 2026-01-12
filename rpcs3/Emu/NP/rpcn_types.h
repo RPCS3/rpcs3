@@ -9,6 +9,7 @@ namespace rpcn
 		Login,
 		Terminate,
 		Create,
+		Delete,
 		SendToken,
 		SendResetToken,
 		ResetPassword,
