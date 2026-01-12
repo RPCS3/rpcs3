@@ -1373,7 +1373,7 @@ namespace rsx
 				set_dirty(false);
 			}
 
-			if (context == rsx::texture_upload_context::framebuffer_storage && !Emu.IsStopped())
+			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				// Lock, unlock
 				auto surface = derived()->get_render_target();
