@@ -345,6 +345,7 @@ jobs:
             name: ARM64
     env:
       CCACHE_DIR: 'C:\ccache'
+      RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
     name: RPCS3 Windows Clang ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     steps:
