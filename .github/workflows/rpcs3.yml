@@ -400,6 +400,19 @@ jobs:
           .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
           .ci/build-windows-clang.sh ${{ matrix.arch }} ${{ matrix.msys2 }}
 
+      - name: Deploy master build to GitHub Releases (only aarch64)
+        if: |
+          matrix.arch == 'aarch64' &&
+          github.event_name != 'pull_request' &&
+          github.repository == 'RPCS3/rpcs3' &&
+          github.ref == 'refs/heads/master'
+        env:
+          RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
+          # We specify it here since this upload is specific to arm64
+          UPLOAD_COMMIT_HASH: ee05050fd1d8488148a771b526702656a10dacf0
+          UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win-arm64"
+        run: .ci/github-upload.sh
+
       - name: Save build Ccache
         if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
