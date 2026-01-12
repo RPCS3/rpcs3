@@ -394,7 +394,7 @@ public:
 		{
 			if (active)
 			{
-				_this->m_restrict_emu_state_change--;
+				_this->m_restrict_emu_state_change.try_dec(0);
 			}
 		}
 
