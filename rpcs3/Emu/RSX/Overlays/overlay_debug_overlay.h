@@ -19,7 +19,7 @@ namespace rsx
 			void set_text(std::string&& text);
 		};
 
-		void reset_debug_overlay();
+		void reset_debug_overlays();
 		void set_debug_overlay_text(std::string&& text);
 	}
 }

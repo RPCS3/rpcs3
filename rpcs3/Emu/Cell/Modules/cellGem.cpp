@@ -14,6 +14,8 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_cursor.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/Debug/overlay_ps_move_debug.h"
 #include "Input/pad_thread.h"
 #include "Input/ps_move_config.h"
 #include "Input/ps_move_tracker.h"
@@ -1783,6 +1785,23 @@ static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_contro
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
 }
 
+static void show_ps_move_debug_overlay(u32 gem_num, const ps_move_data& md, const CellGemState& state)
+{
+	if (gem_num != 0 || !g_cfg.misc.use_native_interface)
+		return;
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		if (auto overlay = manager->get<rsx::overlays::ps_move_debug_overlay>())
+		{
+			const gem_config_data::gem_color& rgb = gem_config_data::gem_color::get_default_color(gem_num);
+
+			// Use quaternion from state instead of ps_move_data so that we can also check the fake/mouse move
+			overlay->show(md, rgb.r, rgb.g, rgb.b, state.quat[0], state.quat[1], state.quat[2], state.quat[3]);
+		}
+	}
+}
+
 static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
@@ -1928,6 +1947,11 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	{
 		// Let's say the sphere is not visible if the position is at the edge of the screen
 		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+	}
+
+	if (g_cfg.io.ps_move_debug_overlay)
+	{
+		show_ps_move_debug_overlay(gem_num, move_data, *gem_state);
 	}
 
 	if (g_cfg.io.show_move_cursor)

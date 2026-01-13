@@ -115,6 +115,7 @@ public:
 		const QString debug_overlay                = tr("Provides a graphical overlay of various debugging information.\nIf unsure, don't use this option.");
 		const QString debug_overlay_io             = tr("Provides a graphical overlay with pad input values for player 1.\nThis is only shown if the debug overlay is disabled.\nIf unsure, don't use this option.");
 		const QString debug_overlay_mouse          = tr("Provides a graphical overlay with mouse input values.\nThis is only shown if the other debug overlays are disabled.\nIf unsure, don't use this option.");
+		const QString debug_overlay_ps_move        = tr("Provides a graphical overlay with PSMove input values.\nIf unsure, don't use this option.");
 		const QString log_shader_programs          = tr("Dump game shaders to file. Only useful to developers.\nIf unsure, don't use this option.");
 		const QString disable_occlusion_queries    = tr("Disables running occlusion queries. Minor to moderate performance boost.\nMight introduce issues with broken occlusion e.g missing geometry and extreme pop-in.");
 		const QString disable_video_output         = tr("Disables all video output and PS3 graphical rendering.\nIts only use case is to evaluate performance on CELL for development.");
