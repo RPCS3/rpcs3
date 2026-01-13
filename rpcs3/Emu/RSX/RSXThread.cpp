@@ -156,10 +156,10 @@ namespace rsx
 				{
 					bool ok = true;
 
-					for (u32 offs_index = 0x100000; offs_index < size_to_check; offs_index += 0x100000)
+					for (u32 offs_index = 0x100000; offs_index < size_to_check + (offset & 0xfffff); offs_index += 0x100000)
 					{
 						// This check does not check continuity but rather that it's mapped at all
-						if (render->iomap_table.get_addr(offs_index) == umax)
+						if (render->iomap_table.get_addr(offset + offs_index) == umax)
 						{
 							ok = false;
 						}
