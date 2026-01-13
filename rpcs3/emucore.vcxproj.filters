@@ -1405,6 +1405,9 @@
     <ClCompile Include="Emu\NP\clans_client.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\ISO.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2823,6 +2826,9 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\clans_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ISO.h">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
