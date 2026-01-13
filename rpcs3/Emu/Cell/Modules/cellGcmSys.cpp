@@ -230,6 +230,7 @@ u32 cellGcmGetReportDataLocation(u32 index, u32 location)
 	cellGcmSys.warning("cellGcmGetReportDataLocation(index=%d, location=%d)", index, location);
 
 	vm::ptr<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(index, location);
+	ensure(!!report);
 	return report->value;
 }
 
@@ -237,18 +238,9 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 {
 	cellGcmSys.trace("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL)
-	{
-		return cellGcmGetTimeStamp(index);
-	}
-
-	if (index >= 1024 * 1024)
-	{
-		cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
-	}
-
-	const auto address = gcmIoOffsetToAddress(0x0e000000 + index * 0x10);
-	return *vm::get_super_ptr<u64>(address);
+	vm::ptr<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(index, location);
+	ensure(!!report);
+	return vm::get_super_ptr<CellGcmReportData>(report.addr())->timer;
 }
 
 //----------------------------------------------------------------------------
