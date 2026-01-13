@@ -390,6 +390,7 @@ struct CellVdecAvcInfo
 enum DIVX_level : u8
 {
 	CELL_VDEC_MPEG4_PROFILE_1                = 1, // SingStar Vol.2 / Vol.3
+	CELL_VDEC_MPEG4_PROFILE_3                = 3, // Used for SingStar recordings
 	CELL_VDEC_MPEG4_PROFILE_4                = 4, // SingStar Pop
 	CELL_VDEC_DIVX_QMOBILE                   = 10,
 	CELL_VDEC_DIVX_MOBILE                    = 11,
