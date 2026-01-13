@@ -13,14 +13,21 @@ COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_
 COMM_COUNT=$(git rev-list --count HEAD)
 COMM_HASH=$(git rev-parse --short=8 HEAD)
 
+# Differentiate Windows builds
+if [ "$COMPILER" == 'clang' ];then
+	BUILD_SUFFIX="win64_${CPU_ARCH}_${COMPILER}"
+else
+	BUILD_SUFFIX="${CPU_ARCH}_${COMPILER}"
+fi
+
 # Format the above into filenames
 if [ -n "$PR_NUMBER" ]; then
     AVVER="${COMM_TAG}-${COMM_HASH}"
-    BUILD_RAW="rpcs3-v${AVVER}_${CPU_ARCH}_${COMPILER}"
+    BUILD_RAW="rpcs3-v${AVVER}_${BUILD_SUFFIX}"
     BUILD="${BUILD_RAW}.7z"
 else
     AVVER="${COMM_TAG}-${COMM_COUNT}"
-    BUILD_RAW="rpcs3-v${AVVER}-${COMM_HASH}_${CPU_ARCH}_${COMPILER}"
+    BUILD_RAW="rpcs3-v${AVVER}-${COMM_HASH}_${BUILD_SUFFIX}"
     BUILD="${BUILD_RAW}.7z"
 fi
 
