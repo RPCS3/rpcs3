@@ -187,8 +187,7 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 in_width_min = std::min<u32>(clip_h > 1 && in_pitch > 0 ? (in_pitch / in_bpp) : in_w, in_w);
-			const u32 src_line_length = (in_width_min * in_bpp);
+			const u32 src_line_length = (std::min<u32>(in_w, in_x + static_cast<u32>(std::ceil(clip_w / scale_x))) * in_bpp);
 
 			u32 src_address = 0;
 			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
