@@ -14,7 +14,7 @@ COMM_COUNT=$(git rev-list --count HEAD)
 COMM_HASH=$(git rev-parse --short=8 HEAD)
 
 # Differentiate Windows builds
-if [ "$COMPILER" == 'clang' ];then
+if [ "$COMPILER" = 'clang' ];then
 	BUILD_SUFFIX="win64_${CPU_ARCH}_${COMPILER}"
 else
 	BUILD_SUFFIX="${CPU_ARCH}_${COMPILER}"
