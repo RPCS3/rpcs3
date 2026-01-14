@@ -726,8 +726,6 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 			}
 		}
 
-		// TODO: sinfo
-
 		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
 		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
 
@@ -792,8 +790,6 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 				return { CELL_VDEC_ERROR_ARG, "Invalid MPEG4 specific info size %d", sinfo->thisSize };
 			}
 		}
-
-		// TODO: sinfo
 
 		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
 		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
