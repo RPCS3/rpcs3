@@ -1200,8 +1200,7 @@ error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode
 		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
-	// TODO: what does the 3 stand for ?
-	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != CELL_VDEC_CODEC_TYPE_VC1) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
 		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
@@ -1248,8 +1247,7 @@ error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode m
 		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
-	// TODO: what does the 3 stand for ?
-	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != CELL_VDEC_CODEC_TYPE_VC1) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
 		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
