@@ -811,7 +811,7 @@ bool game_list_actions::RemoveContentList(const std::string& serial, bool is_int
 	// Add serial (title id) to the list of serials to be removed in "games.yml" file (if any)
 	if (content_types & DISC)
 	{
-		if (const auto it = m_content_info.disc_list.find(serial); it != m_content_info.disc_list.cend())
+		if (m_content_info.disc_list.contains(serial))
 			m_content_info.removed_disc_list.insert(serial);
 	}
 
@@ -851,18 +851,10 @@ bool game_list_actions::RemoveContentList(const std::string& serial, bool is_int
 	{
 		if (const auto it = m_content_info.name_list.find(serial); it != m_content_info.name_list.cend())
 		{
-			const bool remove_rpcs3_links = ValidateRemoval(serial, rpcs3::utils::get_games_shortcuts_dir(), "link");
-
-			for (const auto& name : it->second)
+			for (const std::string& name : it->second)
 			{
-				// Remove illegal characters from name to match the link name created by gui::utils::create_shortcut()
-				const std::string simple_name = QString::fromStdString(vfs::escape(name, true)).simplified().toStdString();
-
-				// Remove rpcs3 shortcuts
-				if (remove_rpcs3_links)
-					RemoveContentBySerial(rpcs3::utils::get_games_shortcuts_dir(), simple_name + ".lnk", "link");
-
-				// TODO: Remove shortcuts from desktop/start menu
+				// Remove all shortcuts
+				gui::utils::remove_shortcuts(name, serial);
 			}
 		}
 	}
