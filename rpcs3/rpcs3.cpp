@@ -26,6 +26,7 @@
 #include "Utilities/sema.h"
 #include "Utilities/date_time.h"
 #include "util/console.h"
+#include "util/asm.hpp"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
@@ -680,6 +681,10 @@ int run_rpcs3(int argc, char** argv)
 
 		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
+
+#ifdef ARCH_ARM64
+	utils::init_arm_timer_scale();
+#endif
 
 #ifdef _WIN32
 	sys_log.notice("Initialization times before main(): %fGc", intro_cycles / 1000000000.);
