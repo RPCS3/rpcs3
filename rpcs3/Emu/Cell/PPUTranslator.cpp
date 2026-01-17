@@ -1641,6 +1641,17 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 {
 	const auto [a, b, c] = get_vrs<u8[16]>(op.va, op.vb, op.vc);
 
+#ifdef ARCH_ARM64
+
+	if (op.ra == op.rb)
+	{
+		set_vr(op.vd, tbl(a, (~c & 0xf)));
+		return;
+	}
+
+	set_vr(op.vd, tbl2(a, b, (~c & 0xf)));
+#endif
+
 	if (op.ra == op.rb)
 	{
 		set_vr(op.vd, pshufb(a, ~c & 0xf));
