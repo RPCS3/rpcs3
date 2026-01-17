@@ -232,7 +232,8 @@ void gui_application::SwitchTranslator(const QString& language_code)
 	m_qt_translators.clear();
 
 	const QString default_code = QLocale(QLocale::English).bcp47Name();
-	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	QDir plugin_dir(QLibraryInfo::path(QLibraryInfo::PluginsPath));
+	const QString lang_path = plugin_dir.absoluteFilePath("../translations/");
 
 	// Load qt translation files
 	const QDir dir(lang_path);
@@ -333,7 +334,8 @@ QStringList gui_application::GetAvailableLanguageCodes()
 {
 	QStringList language_codes;
 
-	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+	QDir plugin_dir(QLibraryInfo::path(QLibraryInfo::PluginsPath));
+	const QString language_path = plugin_dir.absoluteFilePath("../translations/");
 	gui_log.notice("Checking languages in '%s'", language_path);
 
 	if (QFileInfo(language_path).isDir())
