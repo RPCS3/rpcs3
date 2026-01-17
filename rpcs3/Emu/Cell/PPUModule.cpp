@@ -51,6 +51,7 @@ std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::get()
 std::vector<std::string> g_ppu_function_names;
 
 atomic_t<u32> liblv2_begin = 0, liblv2_end = 0;
+atomic_t<bool> libusbd_active = false;
 
 extern u32 ppu_generate_id(std::string_view name)
 {
@@ -1919,6 +1920,10 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 		liblv2_begin = prx->segs[0].addr;
 		liblv2_end = prx->segs[0].addr + prx->segs[0].size;
 	}
+	if (prx->path.ends_with("sys/external/libusbd.sprx"sv))
+	{
+		libusbd_active = true;
+	}
 
 	std::vector<u32> applied;
 
@@ -2052,6 +2057,10 @@ void ppu_unload_prx(const lv2_prx& prx)
 	{
 		liblv2_begin = 0;
 		liblv2_end = 0;
+	}
+	if (prx.path.ends_with("sys/external/libusbd.sprx"sv))
+	{
+		libusbd_active = false;
 	}
 
 	// Format patch name
