@@ -481,6 +481,7 @@ public:
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
 	const NPD_HEADER* GetNPDHeader() const;
 	static bool GetKeyFromRap(const char *content_id, u8 *npdrm_key);
+	std::string GetRapFilePath();
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>
@@ -562,5 +563,6 @@ private:
 fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr);
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr, NPD_HEADER* npd_out = nullptr);
 bool get_npdrm_self_header(const fs::file& self, NPD_HEADER& npd);
+std::string get_rap_file_path_of_self(const fs::file& elf_or_self);
 
 u128 get_default_self_klic();
