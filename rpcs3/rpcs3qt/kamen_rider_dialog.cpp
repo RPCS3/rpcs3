@@ -16,36 +16,85 @@
 #include <QCompleter>
 
 kamen_rider_dialog* kamen_rider_dialog::inst = nullptr;
-std::array<std::optional<std::tuple<u8, u8, u8>>, UI_FIG_NUM> kamen_rider_dialog::figure_slots = {};
+std::array<std::optional<std::tuple<u8, u8, u8, u8>>, UI_FIG_NUM> kamen_rider_dialog::figure_slots = {};
 QString last_kamen_rider_path;
 
-static const std::map<const std::pair<const u8, const u8>, const std::string> list_kamen_riders = {
-	{{0x10, 0x10}, "Kamen Rider Drive Wind"},
-	{{0x10, 0x20}, "Kamen Rider Drive Water"},
-	{{0x10, 0x30}, "Kamen Rider Drive Fire"},
-	{{0x10, 0x40}, "Kamen Rider Drive Light"},
-	{{0x10, 0x50}, "Kamen Rider Drive Dark"},
-	{{0x11, 0x10}, "Kamen Rider Gaim Wind"},
-	{{0x11, 0x20}, "Kamen Rider Gaim Water"},
-	{{0x12, 0x20}, "Kamen Rider Wizard Water"},
-	{{0x12, 0x30}, "Kamen Rider Wizard Fire"},
-	{{0x13, 0x40}, "Kamen Rider Fourze Light"},
-	{{0x14, 0x20}, "Kamen Rider 000 Water"},
-	{{0x15, 0x10}, "Kamen Rider W (Double) Wind"},
-	{{0x16, 0x50}, "Kamen Rider Decade Dark"},
-	{{0x17, 0x50}, "Kamen Rider Kiva Dark"},
-	{{0x18, 0x40}, "Kamen Rider Den-O Light"},
-	{{0x19, 0x30}, "Kamen Rider Kabuto Fire"},
-	{{0x1A, 0x30}, "Kamen Rider Hibiki Fire"},
-	{{0x1B, 0x50}, "Kamen Rider Blade Dark"},
-	{{0x1C, 0x50}, "Kamen Rider Faiz Dark"},
-	{{0x1D, 0x10}, "Kamen Rider Ryuki Wind"},
-	{{0x1E, 0x20}, "Kamen Rider Agito Water"},
-	{{0x1F, 0x40}, "Kamen Rider Kuuga Light"},
-	{{0x20, 0x00}, "Type Wild"},
-	{{0x21, 0x00}, "Kamen Rider Zangetsu"},
-	{{0x22, 0x00}, "All Dragon"},
-	{{0x31, 0x00}, "Kachidoki Arms"},
+static const std::map<const std::tuple<const u8, const u8, const u8>, const std::string> list_kamen_riders = {
+	// Character ID [0x1b], ERC type [0x1a], Figure type [0x19]
+	{{0x10, 0x01, 0x10}, "Kamen Rider Drive (Wind)"},
+	{{0x10, 0x01, 0x20}, "Kamen Rider Drive (Water)"},
+	{{0x10, 0x01, 0x30}, "Kamen Rider Drive (Fire)"},
+	{{0x10, 0x01, 0x40}, "Kamen Rider Drive (Light)"},
+	{{0x10, 0x01, 0x50}, "Kamen Rider Drive (Dark)"},
+		{{0x20, 0x01, 0x00}, "Kamen Rider Drive - Type Wild"},
+		{{0x20, 0x02, 0x00}, "Kamen Rider Drive - Type Wild Gyasha Ver"},
+	 // {{    ,     ,     }, "Kamen Rider Drive - Type Speed Flare"},
+	 // {{    ,     ,     }, "Kamen Rider Drive - Type Technic"}, // 1.05 update
+	{{0x11, 0x01, 0x10}, "Kamen Rider Gaim (Wind)"},
+	{{0x11, 0x01, 0x20}, "Kamen Rider Gaim (Water)"},
+		{{0x21, 0x01, 0x00}, "Kamen Rider Gaim - Jimber Lemon Arms"},
+		{{0x21, 0x02, 0x00}, "Kamen Rider Gaim - Kachidoki Arms"},
+		{{0x21, 0x03, 0x00}, "Kamen Rider Gaim - Kiwami Arms"},
+	{{0x12, 0x01, 0x20}, "Kamen Rider Wizard (Water)"},
+	{{0x12, 0x01, 0x30}, "Kamen Rider Wizard (Fire)"},
+		{{0x22, 0x01, 0x00}, "Kamen Rider Wizard - Infinity Style"},
+		{{0x22, 0x02, 0x00}, "Kamen Rider Wizard - All Dragon"},
+		{{0x22, 0x03, 0x00}, "Kamen Rider Wizard - Infinity Gold Dragon"},
+	{{0x13, 0x01, 0x40}, "Kamen Rider Fourze (Light)"},
+		{{0x23, 0x01, 0x00}, "Kamen Rider Fourze - Magnet States"},
+		{{0x23, 0x02, 0x00}, "Kamen Rider Fourze - Cosmic States"},
+		{{0x23, 0x03, 0x00}, "Kamen Rider Fourze - Meteor Nadeshiko Fusion States"},
+	{{0x14, 0x01, 0x20}, "Kamen Rider OOO (Water)"},
+		{{0x24, 0x01, 0x00}, "Kamen Rider OOO - Super Tatoba Combo"},
+		{{0x24, 0x02, 0x00}, "Kamen Rider OOO - Putotyra Combo"},
+		{{0x24, 0x04, 0x00}, "Kamen Rider OOO - Tajadol Combo"},
+	{{0x15, 0x01, 0x10}, "Kamen Rider W (Double) (Wind)"},
+		{{0x25, 0x01, 0x00}, "Kamen Rider W (Double) - Cyclone Joker Extreme"},
+		{{0x25, 0x02, 0x00}, "Kamen Rider W (Double) - Cyclone Joker Gold Extreme"},
+		{{0x25, 0x03, 0x00}, "Kamen Rider W (Double) - Fang Joker"},
+	{{0x16, 0x01, 0x50}, "Kamen Rider Decade (Dark)"},
+		{{0x26, 0x01, 0x00}, "Kamen Rider Decade - Complete Form"},
+		{{0x26, 0x02, 0x00}, "Kamen Rider Decade - Strongest Complete Form"},
+		{{0x26, 0x03, 0x00}, "Kamen Rider Decade - Final Form"},
+	{{0x17, 0x01, 0x50}, "Kamen Rider Kiva (Dark)"},
+		{{0x27, 0x01, 0x00}, "Kamen Rider Kiva - Dogabaki Form"},
+		{{0x27, 0x02, 0x00}, "Kamen Rider Kiva - Emperor Form"},
+	{{0x18, 0x01, 0x40}, "Kamen Rider Den-O (Light)"},
+		{{0x28, 0x01, 0x00}, "Kamen Rider Den-O - Super Climax Form"},
+		{{0x28, 0x02, 0x00}, "Kamen Rider Den-O - Liner Form"},
+		{{0x28, 0x03, 0x00}, "Kamen Rider Den-O - Climax Form"},
+	{{0x19, 0x01, 0x30}, "Kamen Rider Kabuto (Fire)"},
+		{{0x29, 0x01, 0x00}, "Kamen Rider Kabuto - Hyper Form"},
+		{{0x29, 0x02, 0x00}, "Kamen Rider Kabuto - Masked Form"},
+	{{0x1a, 0x01, 0x30}, "Kamen Rider Hibiki (Fire)"},
+		{{0x2a, 0x01, 0x00}, "Kamen Rider Hibiki - Kurenai"},
+		{{0x2a, 0x02, 0x00}, "Kamen Rider Hibiki - Armed"},
+	{{0x1b, 0x01, 0x50}, "Kamen Rider Blade (Dark)"},
+		{{0x2b, 0x01, 0x00}, "Kamen Rider Blade - Joker Form"},
+		{{0x2b, 0x02, 0x00}, "Kamen Rider Blade - King Form"},
+	{{0x1c, 0x01, 0x50}, "Kamen Rider Faiz (Dark)"},
+		{{0x2c, 0x01, 0x00}, "Kamen Rider Faiz - Axel Form"},
+		{{0x2c, 0x02, 0x00}, "Kamen Rider Faiz - Blaster Form"},
+	{{0x1d, 0x01, 0x10}, "Kamen Rider Ryuki (Wind)"},
+		{{0x2d, 0x01, 0x00}, "Kamen Rider Ryuki - Dragreder"},
+		{{0x2d, 0x02, 0x00}, "Kamen Rider Ryuki - Survive"},
+	{{0x1e, 0x01, 0x20}, "Kamen Rider Agito (Water)"},
+		{{0x2e, 0x01, 0x00}, "Kamen Rider Agito - Shining Form"},
+		{{0x2e, 0x02, 0x00}, "Kamen Rider Agito - Burning Form"},
+	{{0x1f, 0x01, 0x40}, "Kamen Rider Kuuga (Light)"},
+		{{0x2f, 0x01, 0x00}, "Kamen Rider Kuuga - Ultimate Form"},
+		{{0x2f, 0x02, 0x00}, "Kamen Rider Kuuga - Amazing Mighty"},
+
+	{{0x31, 0x01, 0x00}, "Kamen Rider Baron"},
+	{{0x31, 0x02, 0x00}, "Kamen Rider Zangetsu Shin"},
+	{{0x32, 0x01, 0x00}, "Kamen Rider Beast"},
+	{{0x33, 0x01, 0x00}, "Kamen Rider Meteor"},
+	{{0x34, 0x01, 0x00}, "Kamen Rider Birth"},
+	{{0x35, 0x01, 0x00}, "Kamen Rider Accel"},
+	{{0x36, 0x01, 0x00}, "Kamen Rider Diend"},
+	{{0x36, 0x02, 0x00}, "Kamen Rider Shocker Combatman"},
+	{{0x39, 0x01, 0x00}, "Kamen Rider Gatack"},
+	// {{    ,     ,     }, "Kamen Rider Mach"}, // 01.05 update
 };
 
 static u32 kamen_rider_crc32(const std::array<u8, 16>& buffer)
@@ -113,12 +162,13 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 	QStringList filterlist;
 	for (const auto& [entry, figure_name] : list_kamen_riders)
 	{
-		const uint qvar = (entry.first << 8) | entry.second;
+		const auto& [character_id, erc_type, figure_type] = entry;
+		const uint qvar = (character_id << 16) | (erc_type << 8) | figure_type;
 		QString name = QString::fromStdString(figure_name);
 		combo_figlist->addItem(name, QVariant(qvar));
 		filterlist << std::move(name);
 	}
-	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFF));
+	combo_figlist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
 	combo_figlist->setEditable(true);
 	combo_figlist->setInsertPolicy(QComboBox::NoInsert);
 	combo_figlist->model()->sort(0, Qt::AscendingOrder);
@@ -137,17 +187,22 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 	vbox_panel->addWidget(line);
 
 	QHBoxLayout* hbox_idvar = new QHBoxLayout();
-	QLabel* label_id = new QLabel(tr("ID:"));
-	QLabel* label_type = new QLabel(tr("Type:"));
+	QLabel* label_id = new QLabel(tr("Character:"));
+	QLabel* label_erc = new QLabel(tr("ERC:"));
+	QLabel* label_fig = new QLabel(tr("Figure:"));
 	QLineEdit* edit_id = new QLineEdit("0");
-	QLineEdit* edit_type = new QLineEdit("0");
+	QLineEdit* edit_erc = new QLineEdit("0");
+	QLineEdit* edit_fig = new QLineEdit("0");
 	QRegularExpressionValidator* rxv = new QRegularExpressionValidator(QRegularExpression("\\d*"), this);
 	edit_id->setValidator(rxv);
-	edit_type->setValidator(rxv);
+	edit_erc->setValidator(rxv);
+	edit_fig->setValidator(rxv);
 	hbox_idvar->addWidget(label_id);
 	hbox_idvar->addWidget(edit_id);
-	hbox_idvar->addWidget(label_type);
-	hbox_idvar->addWidget(edit_type);
+	hbox_idvar->addWidget(label_erc);
+	hbox_idvar->addWidget(edit_erc);
+	hbox_idvar->addWidget(label_fig);
+	hbox_idvar->addWidget(edit_fig);
 	vbox_panel->addLayout(hbox_idvar);
 
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
@@ -162,42 +217,50 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 
 	connect(combo_figlist, &QComboBox::currentIndexChanged, [=](int index)
 		{
-			const u16 fig_info = combo_figlist->itemData(index).toUInt();
-			if (fig_info != 0xFFFF)
+			const u32 fig_info = combo_figlist->itemData(index).toUInt();
+			if (fig_info != 0xFFFFFFFF)
 			{
-				const u8 fig_id = fig_info >> 8;
-				const u8 fig_type = fig_info & 0xFF;
+				const u8 character_id = (fig_info >> 16) & 0xff;
+				const u8 erc_type     = (fig_info >>  8) & 0xff;
+				const u8 figure_type  =  fig_info        & 0xff;
 
-				edit_id->setText(QString::number(fig_id));
-				edit_type->setText(QString::number(fig_type));
+				edit_id->setText(QString::number(character_id));
+				edit_erc->setText(QString::number(erc_type));
+				edit_fig->setText(QString::number(figure_type));
 			}
 		});
 
 	connect(btn_create, &QAbstractButton::clicked, this, [=, this]()
 		{
-			bool ok_id = false, ok_var = false;
-			const u8 fig_id = edit_id->text().toUShort(&ok_id);
-			if (!ok_id)
+			bool ok_character = false, ok_erc = false, ok_fig = false;
+			const u8 character_id = edit_id->text().toUShort(&ok_character);
+			if (!ok_character)
 			{
 				QMessageBox::warning(this, tr("Error converting value"), tr("ID entered is invalid!"), QMessageBox::Ok);
 				return;
 			}
-			const u8 fig_type = edit_type->text().toUShort(&ok_var);
-			if (!ok_var)
+			const u8 erc_type = edit_erc->text().toUShort(&ok_erc);
+			if (!ok_erc)
 			{
-				QMessageBox::warning(this, tr("Error converting value"), tr("Variant entered is invalid!"), QMessageBox::Ok);
+				QMessageBox::warning(this, tr("Error converting value"), tr("ERC entered is invalid!"), QMessageBox::Ok);
+				return;
+			}
+			const u8 figure_type = edit_fig->text().toUShort(&ok_fig);
+			if (!ok_fig)
+			{
+				QMessageBox::warning(this, tr("Error converting value"), tr("Figure entered is invalid!"), QMessageBox::Ok);
 				return;
 			}
 
 			QString predef_name = last_kamen_rider_path;
-			const auto found_fig = list_kamen_riders.find(std::make_pair(fig_id, fig_type));
+			const auto found_fig = list_kamen_riders.find(std::make_tuple(character_id, erc_type, figure_type));
 			if (found_fig != list_kamen_riders.cend())
 			{
 				predef_name += QString::fromStdString(found_fig->second + ".bin");
 			}
 			else
 			{
-				predef_name += QString("Unknown(%1 %2).bin").arg(fig_id).arg(fig_type);
+				predef_name += QString("Unknown(%1 %2 %3).bin").arg(character_id).arg(erc_type).arg(figure_type);
 			}
 
 			file_path = QFileDialog::getSaveFileName(this, tr("Create Kamen Rider File"), predef_name, tr("Kamen Rider Object (*.bin);;All Files (*)"));
@@ -231,7 +294,7 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 			buf[7] = 0x89;
 			buf[8] = 0x44;
 			buf[10] = 0xc2;
-			std::array<u8, 16> figure_data = {u8(dist(mt)), 0x03, 0x00, 0x00, 0x01, 0x0e, 0x0a, 0x0a, 0x10, fig_type, 0x01, fig_id};
+			std::array<u8, 16> figure_data = {u8(dist(mt)), 0x03, 0x00, 0x00, 0x01, 0x0e, 0x0a, 0x0a, 0x10, figure_type, erc_type, character_id};
 			write_to_ptr<le_t<u32>>(figure_data.data(), 0xC, kamen_rider_crc32(figure_data));
 			memcpy(&buf[16], figure_data.data(), figure_data.size());
 			fig_file.write(buf.data(), buf.size());
@@ -338,7 +401,7 @@ void kamen_rider_dialog::clear_kamen_rider(u8 slot)
 {
 	if (const auto& slot_infos = ::at32(figure_slots, slot))
 	{
-		const auto& [cur_slot, id, var] = slot_infos.value();
+		const auto& [cur_slot, character_id, erc_type, figure_type] = slot_infos.value();
 		g_ridergate.remove_figure(cur_slot);
 		figure_slots[slot] = {};
 		update_edits();
@@ -385,11 +448,12 @@ void kamen_rider_dialog::load_kamen_rider_path(u8 slot, const QString& path)
 
 	clear_kamen_rider(slot);
 
-	u8 fig_id = data[0x1B];
-	u8 fig_type = data[0x19];
+	u8 character_id = data[0x1b];
+	u8 erc_type = data[0x1a];
+	u8 figure_type = data[0x19];
 
 	u8 portal_slot = g_ridergate.load_figure(data, std::move(fig_file));
-	figure_slots[slot] = std::tuple(portal_slot, fig_id, fig_type);
+	figure_slots[slot] = std::tuple(portal_slot, character_id, erc_type, figure_type);
 
 	update_edits();
 }
@@ -401,15 +465,15 @@ void kamen_rider_dialog::update_edits()
 		QString display_string;
 		if (const auto& sd = figure_slots[i])
 		{
-			const auto& [portal_slot, fig_id, fig_type] = sd.value();
-			const auto found_fig = list_kamen_riders.find(std::make_pair(fig_id, fig_type));
+			const auto& [portal_slot, character_id, erc_type, figure_type] = sd.value();
+			const auto found_fig = list_kamen_riders.find(std::make_tuple(character_id, erc_type, figure_type));
 			if (found_fig != list_kamen_riders.cend())
 			{
 				display_string = QString::fromStdString(found_fig->second);
 			}
 			else
 			{
-				display_string = QString(tr("Unknown (Id:%1 Type:%2)")).arg(fig_id).arg(fig_type);
+				display_string = QString(tr("Unknown (Character:%1 ERC:%2 Figure:%3)")).arg(character_id).arg(erc_type).arg(figure_type);
 			}
 		}
 		else
