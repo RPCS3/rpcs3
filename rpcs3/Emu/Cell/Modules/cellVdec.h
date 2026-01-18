@@ -14,10 +14,15 @@ enum CellVdecError : u32
 
 enum CellVdecCodecType : s32
 {
-	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
-	CELL_VDEC_CODEC_TYPE_AVC   = 1,
-	CELL_VDEC_CODEC_TYPE_MPEG4 = 2,
-	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
+	CELL_VDEC_CODEC_TYPE_MPEG2    = 0,
+	CELL_VDEC_CODEC_TYPE_AVC      = 1,
+	CELL_VDEC_CODEC_TYPE_MPEG4    = 2,
+	CELL_VDEC_CODEC_TYPE_VC1      = 3,
+	CELL_VDEC_CODEC_TYPE_DIVX     = 5,
+	CELL_VDEC_CODEC_TYPE_JVT      = 7,
+	CELL_VDEC_CODEC_TYPE_DIVX3_11 = 9,
+	CELL_VDEC_CODEC_TYPE_MVC      = 11,
+	CELL_VDEC_CODEC_TYPE_MVC2     = 13, // seems the same as CELL_VDEC_CODEC_TYPE_MVC?
 	CELL_VDEC_CODEC_TYPE_MAX
 };
 
@@ -389,9 +394,6 @@ struct CellVdecAvcInfo
 // DIVX Profile
 enum DIVX_level : u8
 {
-	CELL_VDEC_MPEG4_PROFILE_1                = 1, // SingStar Vol.2 / Vol.3
-	CELL_VDEC_MPEG4_PROFILE_3                = 3, // Used for SingStar recordings
-	CELL_VDEC_MPEG4_PROFILE_4                = 4, // SingStar Pop
 	CELL_VDEC_DIVX_QMOBILE                   = 10,
 	CELL_VDEC_DIVX_MOBILE                    = 11,
 	CELL_VDEC_DIVX_HOME_THEATER              = 12,
@@ -675,4 +677,21 @@ struct CellVdecMpeg2Info
 	u8 ccDataLength[2];
 	u8 ccData[2][128];
 	be_t<u64> reserved[2];
+};
+
+enum MPEG4_level
+{
+	CELL_VDEC_MPEG4_SP_L1,
+	CELL_VDEC_MPEG4_SP_L2,
+	CELL_VDEC_MPEG4_SP_L3,
+	CELL_VDEC_MPEG4_SP_D1_NTSC,
+	CELL_VDEC_MPEG4_SP_VGA,
+	CELL_VDEC_MPEG4_SP_D1_PAL,
+};
+
+struct CellVdecMpeg4SpecificInfo
+{
+	be_t<u32> thisSize;
+	be_t<u16> maxDecodedFrameWidth;
+	be_t<u16> maxDecodedFrameHeight;
 };
