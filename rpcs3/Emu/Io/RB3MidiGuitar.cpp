@@ -266,12 +266,15 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8* msg, usz size)
 	if (size == 8 && msg[0] == 0xF0 && msg[4] == 0x05)
 	{
         // if the velocity remains the same, the game does not know that you've just played a string
-        if (msg[6] != 0 && msg[6] == button_state.string_velocities[msg[5] - 1])
+        u8& velocity = ::at32(button_state.string_velocities, msg[5] - 1]);
+        if (msg[6] != 0 && msg[6] == velocity)
         {
-		    button_state.string_velocities[msg[5] - 1] = msg[6] ^ 1;  // to be sure to change the velocity
+		    velocity = msg[6] ^ 1;  // to be sure to change the velocity
         }
         else
-		    button_state.string_velocities[msg[5] - 1] = msg[6];
+        {
+		    velocity = msg[6];
+        }
 	}
 
 	// read buttons
