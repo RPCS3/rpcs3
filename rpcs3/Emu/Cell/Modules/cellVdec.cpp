@@ -822,7 +822,9 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		{
 		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
 		case CELL_VDEC_DIVX_MOBILE      : memSize = new_sdk ? 0x19A740 : 0x26DED0; break;
-		case CELL_VDEC_MPEG4_SIMPLE_PROFILE: // just a guess based on the profile used by singstar before and after update
+		case CELL_VDEC_MPEG4_PROFILE_1:
+		case CELL_VDEC_MPEG4_PROFILE_3:
+		case CELL_VDEC_MPEG4_PROFILE_4: // just a guess based on the profile used by singstar before and after update
 		case CELL_VDEC_DIVX_HOME_THEATER: memSize = new_sdk ? 0x386A60 : 0x498060; break;
 		case CELL_VDEC_DIVX_HD_720      : memSize = new_sdk ? 0x692070 : 0x805690; break;
 		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;

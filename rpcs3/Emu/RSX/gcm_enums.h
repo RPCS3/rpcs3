@@ -1820,7 +1820,7 @@ namespace rsx
 
 		enum class context_dma : u32
 		{
-			to_memory_get_report = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
+			report_location_local = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
 			report_location_main = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN,
 			memory_host_buffer = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER,
 		};

@@ -339,6 +339,14 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		default: break; // unreachable
 		}
 
+		if (shortcut_key == gui::shortcuts::shortcut::gw_restart && !boot_current_game_savestate(true, index))
+		{
+			// Normal restart if there is no savestate
+			Emu.Restart();
+			break;
+		}
+
+		// Reboot with savestate
 		boot_current_game_savestate(false, index);
 		break;
 	}

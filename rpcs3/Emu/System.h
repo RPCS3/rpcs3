@@ -148,6 +148,7 @@ class Emulator final
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_path_original;
+	std::string m_path_real;
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_localized_title;
@@ -393,7 +394,7 @@ public:
 		{
 			if (active)
 			{
-				_this->m_restrict_emu_state_change--;
+				_this->m_restrict_emu_state_change.try_dec(0);
 			}
 		}
 

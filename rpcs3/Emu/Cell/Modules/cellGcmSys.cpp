@@ -98,16 +98,26 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 
 error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict);
 
-u32 gcmIoOffsetToAddress(u32 ioOffset)
+u32 gcmIoOffsetToAddress(u32 io_offs)
 {
-	const u32 upper12Bits = g_fxo->get<gcm_config>().offsetTable.eaAddress[ioOffset >> 20];
+	u32 upper_12bits = 0;
 
-	if (upper12Bits > 0xBFF)
+	if (io_offs < 0x20000000)
 	{
-		return 0;
+		upper_12bits = rsx::get_current_renderer()->iomap_table.ea[io_offs >> 20];
+
+		if (upper_12bits >= rsx::constants::local_mem_base)
+		{
+			upper_12bits = 0;
+		}
 	}
 
-	return (upper12Bits << 20) | (ioOffset & 0xFFFFF);
+	if (!upper_12bits)
+	{
+		cellGcmSys.error("Failed to convert io offset: 0x%x", io_offs);
+	}
+
+	return upper_12bits | (io_offs & 0xFFFFF);
 }
 
 void InitOffsetTable()
@@ -132,15 +142,15 @@ u32 cellGcmGetLabelAddress(u8 index)
 	return rsx::get_current_renderer()->label_addr + 0x10 * index;
 }
 
-vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 location)
+vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(ppu_thread& ppu, u32 index, u32 location)
 {
-	cellGcmSys.warning("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
+	cellGcmSys.trace("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
 
 	if (location == CELL_GCM_LOCATION_MAIN)
 	{
 		if (index >= 1024 * 1024)
 		{
-			cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
+			cellGcmSys.error("%s: Wrong main index (%d)", ppu.current_function, index);
 		}
 
 		return vm::cast(gcmIoOffsetToAddress(0x0e000000 + index * 0x10));
@@ -150,7 +160,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 
 	if (index >= 2048)
 	{
-		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
+		cellGcmSys.error("%s: Wrong local index (%d)", ppu.current_function, index);
 	}
 
 	return vm::cast(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10);
@@ -225,20 +235,22 @@ u32 cellGcmGetReportDataAddress(u32 index)
 	return rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
 }
 
-u32 cellGcmGetReportDataLocation(u32 index, u32 location)
+u32 cellGcmGetReportDataLocation(ppu_thread& ppu, u32 index, u32 location)
 {
 	cellGcmSys.warning("cellGcmGetReportDataLocation(index=%d, location=%d)", index, location);
 
-	vm::ptr<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(index, location);
+	vm::ptr<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(ppu, index, location);
 	return report->value;
 }
 
-u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
+u64 cellGcmGetTimeStampLocation(ppu_thread& ppu, u32 index, u32 location)
 {
-	cellGcmSys.warning("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
+	cellGcmSys.trace("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
 
-	// NOTE: No error checkings
-	return cellGcmGetReportDataAddressLocation(index, location)->timer;
+	vm::ptr<CellGcmReportData> report = cellGcmGetReportDataAddressLocation(ppu, index, location);
+
+	// Timestamp reports don't need host GPU access and are much faster to emulate
+	return vm::get_super_ptr<CellGcmReportData>(report.addr())->timer;
 }
 
 //----------------------------------------------------------------------------
@@ -1508,8 +1520,8 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddress);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddressLocation);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataLocation);
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);     // HLE-ing this allows for optimizations around reports
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation);
+	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);         // HLE-ing this allows for optimizations around reports
+	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation).flag(MFF_FORCED_HLE); // Ditto
 
 	// Command Buffer Control
 	REG_FUNC(cellGcmSys, cellGcmGetControlRegister);

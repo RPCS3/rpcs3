@@ -56,7 +56,7 @@ struct UsbDeviceRequest
 
 struct UsbDeviceIsoRequest
 {
-	vm::ptr<void> buf;
+	vm::bptr<void> buf;
 	be_t<u32> start_frame;
 	be_t<u32> num_packets;
 	be_t<u16> packets[8];
