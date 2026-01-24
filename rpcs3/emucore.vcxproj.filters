@@ -996,7 +996,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\NP\fb_helpers.cpp">
+    <ClCompile Include="Emu\NP\pb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_cache.cpp">
@@ -1051,6 +1051,9 @@
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\ip_address.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\generated\np2_structs.pb.cc">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_config.cpp">
@@ -2283,7 +2286,7 @@
     <ClInclude Include="Emu\NP\rpcn_client.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\NP\generated\np2_structs_generated.h">
+    <ClInclude Include="Emu\NP\generated\np2_structs.pb.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\rpcn_config.h">
@@ -2755,7 +2758,7 @@
     <ClInclude Include="Emu\RSX\Host\MM.h">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\NP\fb_helpers.h">
+    <ClInclude Include="Emu\NP\pb_helpers.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_contexts.h">

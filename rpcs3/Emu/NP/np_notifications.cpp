@@ -5,7 +5,7 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/np_structs_extra.h"
-#include "Emu/NP/fb_helpers.h"
+#include "Emu/NP/pb_helpers.h"
 #include "Emu/NP/signaling_handler.h"
 #include "Emu/NP/ip_address.h"
 
@@ -15,7 +15,7 @@ namespace np
 {
 	void np_handler::notif_user_joined_room(vec_stream& noti)
 	{
-		const auto* notification = noti.get_flatbuffer<NotificationUserJoinedRoom>();
+		auto notification = noti.get_protobuf<np2_structs::NotificationUserJoinedRoom>();
 
 		if (noti.is_error())
 		{
@@ -23,7 +23,7 @@ namespace np
 			return;
 		}
 
-		ensure(notification->update_info());
+		ensure(notification->has_update_info());
 
 		const u32 event_key = get_event_key();
 		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
@@ -45,10 +45,11 @@ namespace np
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
 		// We initiate signaling if necessary
-		if (const auto* signaling_info = notification->signaling())
+		if (notification->has_signaling())
 		{
-			const u32 addr_p2p = register_ip(signaling_info->ip());
-			const u16 port_p2p = signaling_info->port();
+			const auto& signaling_info = notification->signaling();
+			const u32 addr_p2p = register_ip(signaling_info.ip());
+			const u16 port_p2p = signaling_info.port().value();
 
 			const u16 member_id = notif_data->roomMemberDataInternal->memberId;
 			const SceNpId& npid = notif_data->roomMemberDataInternal->userInfo.npId;
@@ -74,7 +75,7 @@ namespace np
 	void np_handler::notif_user_left_room(vec_stream& noti)
 	{
 		u64 room_id       = noti.get<u64>();
-		const auto* update_info = noti.get_flatbuffer<RoomMemberUpdateInfo>();
+		auto update_info = noti.get_protobuf<np2_structs::RoomMemberUpdateInfo>();
 
 		if (noti.is_error())
 		{
@@ -87,7 +88,7 @@ namespace np
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberUpdateInfo, sizeof(SceNpMatching2RoomMemberUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberUpdateInfo*>(edata.data());
-		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
+		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, *update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		// Ensures we do not call the callback if the room is not in the cache(ie we left the room already)
@@ -113,7 +114,7 @@ namespace np
 	void np_handler::notif_room_destroyed(vec_stream& noti)
 	{
 		u64 room_id       = noti.get<u64>();
-		const auto* update_info = noti.get_flatbuffer<RoomUpdateInfo>();
+		auto update_info = noti.get_protobuf<np2_structs::RoomUpdateInfo>();
 
 		if (noti.is_error())
 		{
@@ -125,7 +126,7 @@ namespace np
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomUpdateInfo, sizeof(SceNpMatching2RoomUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomUpdateInfo*>(edata.data());
-		RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(update_info, notif_data);
+		RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(*update_info, notif_data);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		rpcn_log.notice("Received notification that room(%d) was destroyed", room_id);
@@ -146,7 +147,7 @@ namespace np
 	void np_handler::notif_updated_room_data_internal(vec_stream& noti)
 	{
 		SceNpMatching2RoomId room_id = noti.get<u64>();
-		const auto* update_info = noti.get_flatbuffer<RoomDataInternalUpdateInfo>();
+		auto update_info = noti.get_protobuf<np2_structs::RoomDataInternalUpdateInfo>();
 
 		if (noti.is_error())
 		{
@@ -159,7 +160,7 @@ namespace np
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomDataInternalUpdateInfo, sizeof(SceNpMatching2RoomDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomDataInternalUpdateInfo*>(edata.data());
-		RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(edata, update_info, notif_data, npid, include_onlinename, include_avatarurl);
+		RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(edata, *update_info, notif_data, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(notif_data->newRoomDataInternal.get_ptr());
@@ -181,7 +182,7 @@ namespace np
 	void np_handler::notif_updated_room_member_data_internal(vec_stream& noti)
 	{
 		SceNpMatching2RoomId room_id = noti.get<u64>();
-		const auto* update_info = noti.get_flatbuffer<RoomMemberDataInternalUpdateInfo>();
+		auto update_info = noti.get_protobuf<np2_structs::RoomMemberDataInternalUpdateInfo>();
 
 		if (noti.is_error())
 		{
@@ -194,7 +195,7 @@ namespace np
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMemberDataInternalUpdateInfo, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMemberDataInternalUpdateInfo*>(edata.data());
-		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, update_info, notif_data, include_onlinename, include_avatarurl);
+		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, *update_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		if (!np_cache.add_member(room_id, notif_data->newRoomMemberDataInternal.get_ptr()))
@@ -220,7 +221,7 @@ namespace np
 	{
 		u64 room_id        = noti.get<u64>();
 		u16 member_id      = noti.get<u16>();
-		const auto* message_info = noti.get_flatbuffer<RoomMessageInfo>();
+		auto message_info = noti.get_protobuf<np2_structs::RoomMessageInfo>();
 
 		if (noti.is_error())
 		{
@@ -233,7 +234,7 @@ namespace np
 
 		auto& edata      = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_RoomMessageInfo, sizeof(SceNpMatching2RoomMessageInfo));
 		auto* notif_data = reinterpret_cast<SceNpMatching2RoomMessageInfo*>(edata.data());
-		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, message_info, notif_data, include_onlinename, include_avatarurl);
+		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, *message_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		rpcn_log.notice("Received notification of a room message from member(%d) in room(%d)", member_id, room_id);
@@ -250,19 +251,19 @@ namespace np
 
 	void np_handler::notif_signaling_helper(vec_stream& noti)
 	{
-		const auto* matching_info = noti.get_flatbuffer<MatchingSignalingInfo>();
+		auto matching_info = noti.get_protobuf<np2_structs::MatchingSignalingInfo>();
 
-		if (noti.is_error() || !matching_info->addr() || !matching_info->npid() || !matching_info->addr()->ip())
+		if (noti.is_error() || !matching_info->has_addr() || matching_info->npid().empty() || matching_info->addr().ip().empty())
 		{
 			rpcn_log.error("Received faulty SignalingHelper notification");
 			return;
 		}
 
 		SceNpId npid_p2p;
-		string_to_npid(matching_info->npid()->string_view(), npid_p2p);
+		string_to_npid(matching_info->npid(), npid_p2p);
 
-		const u32 addr_p2p = register_ip(matching_info->addr()->ip());
-		const u16 port_p2p = matching_info->addr()->port();
+		const u32 addr_p2p = register_ip(matching_info->addr().ip());
+		const u16 port_p2p = matching_info->addr().port().value();
 
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.send_information_packets(addr_p2p, port_p2p, npid_p2p);
@@ -270,7 +271,7 @@ namespace np
 
 	void np_handler::generic_gui_notification_handler(vec_stream& noti, std::string_view name, s32 notification_type)
 	{
-		const auto* update_info = noti.get_flatbuffer<MatchingRoomStatus>();
+		auto update_info = noti.get_protobuf<np2_structs::MatchingRoomStatus>();
 
 		if (noti.is_error())
 		{
@@ -290,7 +291,7 @@ namespace np
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoomStatus_SIZE), sizeof(SceNpMatchingRoomStatus), MAX_SceNpMatchingRoomStatus_SIZE);
 		auto* room_status = reinterpret_cast<SceNpMatchingRoomStatus*>(edata.data());
-		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, update_info, room_status);
+		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, *update_info, room_status);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingRoomStatus(room_status);
@@ -351,7 +352,7 @@ namespace np
 
 	void np_handler::notif_quickmatch_complete_gui(vec_stream& noti)
 	{
-		const auto* update_info = noti.get_flatbuffer<MatchingRoomStatus>();
+		auto update_info = noti.get_protobuf<np2_structs::MatchingRoomStatus>();
 
 		if (noti.is_error())
 		{
@@ -363,7 +364,7 @@ namespace np
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingJoinedRoomInfo_SIZE), sizeof(SceNpMatchingJoinedRoomInfo), MAX_SceNpMatchingJoinedRoomInfo_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingJoinedRoomInfo*>(edata.data());
-		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, update_info, room_info);
+		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, *update_info, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingJoinedRoomInfo(room_info);

@@ -16,7 +16,7 @@
 #include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 
-#include "generated/np2_structs_generated.h"
+#include "generated/np2_structs.pb.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -256,7 +256,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 28;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 29;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -1658,57 +1658,55 @@ namespace rpcn
 
 	bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2CreateJoinRoomRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::CreateJoinRoomRequest pb_req;
 
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> final_searchintattrexternal_vec;
+		pb_req.set_worldid(req->worldId);
+		pb_req.set_lobbyid(req->lobbyId);
+		pb_req.set_maxslot(req->maxSlot);
+		pb_req.set_flagattr(req->flagAttr);
+		pb_req.mutable_teamid()->set_value(req->teamId);
+
 		if (req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal)
 		{
-			std::vector<flatbuffers::Offset<IntAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
 			{
-				auto bin = CreateIntAttr(builder, req->roomSearchableIntAttrExternal[i].id, req->roomSearchableIntAttrExternal[i].num);
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roomsearchableintattrexternal();
+				attr->mutable_id()->set_value(req->roomSearchableIntAttrExternal[i].id);
+				attr->set_num(req->roomSearchableIntAttrExternal[i].num);
 			}
-			final_searchintattrexternal_vec = builder.CreateVector(davec);
 		}
 
 		// WWE SmackDown vs. RAW 2009 passes roomBinAttrExternal in roomSearchableBinAttrExternal so we parse based on attribute ids
 
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_searchbinattrexternal_vec;
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrexternal_vec;
-
-		std::vector<flatbuffers::Offset<BinAttr>> davec_binattrinternal;
-		std::vector<flatbuffers::Offset<BinAttr>> davec_searchable_binattrexternal;
-		std::vector<flatbuffers::Offset<BinAttr>> davec_binattrexternal;
-
-		auto put_binattr = [&](SceNpMatching2AttributeId id, flatbuffers::Offset<BinAttr> bin)
+		auto put_binattr = [&](const SceNpMatching2BinAttr& binattr)
 		{
-			switch (id)
+			np2_structs::BinAttr* attr = nullptr;
+			switch (binattr.id)
 			{
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_INTERNAL_1_ID:
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_INTERNAL_2_ID:
-				davec_binattrinternal.push_back(bin);
+				attr = pb_req.add_roombinattrinternal();
 				break;
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_EXTERNAL_1_ID:
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_EXTERNAL_2_ID:
-				davec_binattrexternal.push_back(bin);
+				attr = pb_req.add_roombinattrexternal();
 				break;
 			case SCE_NP_MATCHING2_ROOM_SEARCHABLE_BIN_ATTR_EXTERNAL_1_ID:
-				davec_searchable_binattrexternal.push_back(bin);
+				attr = pb_req.add_roomsearchablebinattrexternal();
 				break;
 			default:
-				rpcn_log.error("Unexpected bin attribute id in createjoin_room request: 0x%x", id);
-				break;
+				rpcn_log.error("Unexpected bin attribute id in createjoin_room request: 0x%x", binattr.id);
+				return;
 			}
+			attr->mutable_id()->set_value(binattr.id);
+			attr->set_data(binattr.ptr.get_ptr(), binattr.size);
 		};
 
 		if (req->roomBinAttrInternalNum && req->roomBinAttrInternal)
 		{
 			for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomBinAttrInternal[i].id, builder.CreateVector(req->roomBinAttrInternal[i].ptr.get_ptr(), req->roomBinAttrInternal[i].size));
-				put_binattr(req->roomBinAttrInternal[i].id, bin);
+				put_binattr(req->roomBinAttrInternal[i]);
 			}
 		}
 
@@ -1716,8 +1714,7 @@ namespace rpcn
 		{
 			for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomSearchableBinAttrExternal[i].id, builder.CreateVector(req->roomSearchableBinAttrExternal[i].ptr.get_ptr(), req->roomSearchableBinAttrExternal[i].size));
-				put_binattr(req->roomSearchableBinAttrExternal[i].id, bin);
+				put_binattr(req->roomSearchableBinAttrExternal[i]);
 			}
 		}
 
@@ -1725,38 +1722,30 @@ namespace rpcn
 		{
 			for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomBinAttrExternal[i].id, builder.CreateVector(req->roomBinAttrExternal[i].ptr.get_ptr(), req->roomBinAttrExternal[i].size));
-				put_binattr(req->roomBinAttrExternal[i].id, bin);
+				put_binattr(req->roomBinAttrExternal[i]);
 			}
 		}
 
-		if (!davec_binattrinternal.empty())
-			final_binattrinternal_vec = builder.CreateVector(davec_binattrinternal);
-
-		if (!davec_searchable_binattrexternal.empty())
-			final_searchbinattrexternal_vec = builder.CreateVector(davec_searchable_binattrexternal);
-
-		if (!davec_binattrexternal.empty())
-			final_binattrexternal_vec = builder.CreateVector(davec_binattrexternal);
-
-		flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
 		if (req->roomPassword)
-			final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> final_groupconfigs_vec;
+			pb_req.set_roompassword(req->roomPassword->data, 8);
+
 		if (req->groupConfigNum && req->groupConfig)
 		{
-			std::vector<flatbuffers::Offset<GroupConfig>> davec;
 			for (u32 i = 0; i < req->groupConfigNum; i++)
 			{
-				auto bin = CreateGroupConfig(builder, req->groupConfig[i].slotNum, req->groupConfig[i].withLabel ? builder.CreateVector(req->groupConfig[i].label.data, 8) : 0, req->groupConfig[i].withPassword);
-				davec.push_back(bin);
+				auto* gc = pb_req.add_groupconfig();
+				gc->set_slotnum(req->groupConfig[i].slotNum);
+				gc->set_withpassword(req->groupConfig[i].withPassword);
+				if (req->groupConfig[i].withLabel)
+					gc->set_label(req->groupConfig[i].label.data, 8);
 			}
-			final_groupconfigs_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> final_allowedusers_vec;
+
+		if (req->passwordSlotMask)
+			pb_req.set_passwordslotmask(*req->passwordSlotMask);
+
 		if (req->allowedUserNum && req->allowedUser)
 		{
-			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->allowedUserNum; i++)
 			{
 				// Some games just give us garbage, make sure npid is valid before passing
@@ -1765,221 +1754,207 @@ namespace rpcn
 				{
 					continue;
 				}
-
-				auto bin = builder.CreateString(req->allowedUser[i].handle.data);
-				davec.push_back(bin);
+				pb_req.add_alloweduser(req->allowedUser[i].handle.data);
 			}
-			final_allowedusers_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> final_blockedusers_vec;
+
 		if (req->blockedUserNum && req->blockedUser)
 		{
-			std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
 			for (u32 i = 0; i < req->blockedUserNum; i++)
 			{
 				if (!np::is_valid_npid(req->blockedUser[i]))
 				{
 					continue;
 				}
-
-				auto bin = builder.CreateString(req->blockedUser[i].handle.data);
-				davec.push_back(bin);
+				pb_req.add_blockeduser(req->blockedUser[i].handle.data);
 			}
-			final_blockedusers_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
+
 		if (req->joinRoomGroupLabel)
-			final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
+			pb_req.set_joinroomgrouplabel(req->joinRoomGroupLabel->data, 8);
+
 		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
-			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
 			{
-				auto bin = CreateBinAttr(
-					builder, req->roomMemberBinAttrInternal[i].id, builder.CreateVector(reinterpret_cast<const u8*>(req->roomMemberBinAttrInternal[i].ptr.get_ptr()), req->roomMemberBinAttrInternal[i].size));
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roommemberbinattrinternal();
+				attr->mutable_id()->set_value(req->roomMemberBinAttrInternal[i].id);
+				attr->set_data(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size);
 			}
-			final_memberbinattrinternal_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<OptParam> final_optparam;
+
 		if (req->sigOptParam)
-			final_optparam = CreateOptParam(builder, req->sigOptParam->type, req->sigOptParam->flag, req->sigOptParam->hubMemberId);
-		u64 final_passwordSlotMask = 0;
-		if (req->passwordSlotMask)
-			final_passwordSlotMask = *req->passwordSlotMask;
+		{
+			auto* opt = pb_req.mutable_sigoptparam();
+			opt->mutable_type()->set_value(req->sigOptParam->type);
+			opt->mutable_flag()->set_value(req->sigOptParam->flag);
+			opt->mutable_hubmemberid()->set_value(req->sigOptParam->hubMemberId);
+		}
 
-		auto req_finished = CreateCreateJoinRoomRequest(builder, req->worldId, req->lobbyId, req->maxSlot, req->flagAttr, final_binattrinternal_vec, final_searchintattrexternal_vec,
-			final_searchbinattrexternal_vec, final_binattrexternal_vec, final_roompassword, final_groupconfigs_vec, final_passwordSlotMask, final_allowedusers_vec, final_blockedusers_vec, final_grouplabel,
-			final_memberbinattrinternal_vec, req->teamId, final_optparam);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::CreateRoom, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::CreateRoom, req_id);
 	}
 
 	bool rpcn_client::join_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2JoinRoomRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::JoinRoomRequest pb_req;
 
-		flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
+		pb_req.set_roomid(req->roomId);
+		pb_req.mutable_teamid()->set_value(req->teamId);
+
 		if (req->roomPassword)
-			final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
-		flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
+			pb_req.set_roompassword(req->roomPassword->data, 8);
+
 		if (req->joinRoomGroupLabel)
-			final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
+			pb_req.set_joinroomgrouplabel(req->joinRoomGroupLabel->data, 8);
+
 		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
-			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomMemberBinAttrInternal[i].id, builder.CreateVector(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size));
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roommemberbinattrinternal();
+				attr->mutable_id()->set_value(req->roomMemberBinAttrInternal[i].id);
+				attr->set_data(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size);
 			}
-			final_memberbinattrinternal_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
 
-		auto req_finished = CreateJoinRoomRequest(builder, req->roomId, final_roompassword, final_grouplabel, final_memberbinattrinternal_vec, final_optdata, req->teamId);
-		builder.Finish(req_finished);
+		auto* optdata = pb_req.mutable_optdata();
+		optdata->set_data(req->optData.data, 16);
+		optdata->set_len(req->optData.length);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::JoinRoom, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::JoinRoom, req_id);
 	}
 
 	bool rpcn_client::leave_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveRoomRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
-		auto req_finished = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
-		builder.Finish(req_finished);
+		np2_structs::LeaveRoomRequest pb_req;
+		pb_req.set_roomid(req->roomId);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::LeaveRoom, req_id);
+		auto* optdata = pb_req.mutable_optdata();
+		optdata->set_data(req->optData.data, 16);
+		optdata->set_len(req->optData.length);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::LeaveRoom, req_id);
 	}
 
 	bool rpcn_client::search_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SearchRoomRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntSearchFilter>>> final_intfilter_vec;
+		np2_structs::SearchRoomRequest pb_req;
+
+		pb_req.set_option(req->option);
+		pb_req.set_worldid(req->worldId);
+		pb_req.set_lobbyid(req->lobbyId);
+		pb_req.set_rangefilter_startindex(req->rangeFilter.startIndex);
+		pb_req.set_rangefilter_max(req->rangeFilter.max);
+		pb_req.set_flagfilter(req->flagFilter);
+		pb_req.set_flagattr(req->flagAttr);
+
 		if (req->intFilterNum && req->intFilter)
 		{
-			std::vector<flatbuffers::Offset<IntSearchFilter>> davec{};
 			for (u32 i = 0; i < req->intFilterNum; i++)
 			{
-				auto int_attr = CreateIntAttr(builder, req->intFilter[i].attr.id, req->intFilter[i].attr.num);
-				auto bin = CreateIntSearchFilter(builder, req->intFilter[i].searchOperator, int_attr);
-				davec.push_back(bin);
+				auto* filter = pb_req.add_intfilter();
+				filter->mutable_searchoperator()->set_value(req->intFilter[i].searchOperator);
+				auto* attr = filter->mutable_attr();
+				attr->mutable_id()->set_value(req->intFilter[i].attr.id);
+				attr->set_num(req->intFilter[i].attr.num);
 			}
-			final_intfilter_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinSearchFilter>>> final_binfilter_vec;
+
 		if (req->binFilterNum && req->binFilter)
 		{
-			std::vector<flatbuffers::Offset<BinSearchFilter>> davec;
 			for (u32 i = 0; i < req->binFilterNum; i++)
 			{
-				auto bin_attr = CreateBinAttr(builder, req->binFilter[i].attr.id, builder.CreateVector(req->binFilter[i].attr.ptr.get_ptr(), req->binFilter[i].attr.size));
-				auto bin = CreateBinSearchFilter(builder, req->binFilter[i].searchOperator, bin_attr);
-				davec.push_back(bin);
+				auto* filter = pb_req.add_binfilter();
+				filter->mutable_searchoperator()->set_value(req->binFilter[i].searchOperator);
+				auto* attr = filter->mutable_attr();
+				attr->mutable_id()->set_value(req->binFilter[i].attr.id);
+				attr->set_data(req->binFilter[i].attr.ptr.get_ptr(), req->binFilter[i].attr.size);
 			}
-			final_binfilter_vec = builder.CreateVector(davec);
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<u16>> attrid_vec;
 		if (req->attrIdNum && req->attrId)
 		{
-			std::vector<u16> attr_ids;
 			for (u32 i = 0; i < req->attrIdNum; i++)
 			{
-				attr_ids.push_back(req->attrId[i]);
+				pb_req.add_attrid()->set_value(req->attrId[i]);
 			}
-			attrid_vec = builder.CreateVector(attr_ids);
 		}
 
-		SearchRoomRequestBuilder s_req(builder);
-		s_req.add_option(req->option);
-		s_req.add_worldId(req->worldId);
-		s_req.add_lobbyId(req->lobbyId);
-		s_req.add_rangeFilter_startIndex(req->rangeFilter.startIndex);
-		s_req.add_rangeFilter_max(req->rangeFilter.max);
-		s_req.add_flagFilter(req->flagFilter);
-		s_req.add_flagAttr(req->flagAttr);
-		if (req->intFilterNum)
-			s_req.add_intFilter(final_intfilter_vec);
-		if (req->binFilterNum)
-			s_req.add_binFilter(final_binfilter_vec);
-		if (req->attrIdNum)
-			s_req.add_attrId(attrid_vec);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		auto req_finished = s_req.Finish();
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::SearchRoom, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SearchRoom, req_id);
 	}
 
 	bool rpcn_client::get_roomdata_external_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataExternalListRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		std::vector<u64> roomIds;
+		np2_structs::GetRoomDataExternalListRequest pb_req;
+
 		for (u32 i = 0; i < req->roomIdNum && req->roomId; i++)
 		{
-			roomIds.push_back(req->roomId[i]);
+			pb_req.add_roomids(req->roomId[i]);
 		}
-		std::vector<u16> attrIds;
+
 		for (u32 i = 0; i < req->attrIdNum && req->attrId; i++)
 		{
-			attrIds.push_back(req->attrId[i]);
+			pb_req.add_attrids()->set_value(req->attrId[i]);
 		}
 
-		auto req_finished = CreateGetRoomDataExternalListRequestDirect(builder, &roomIds, &attrIds);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomDataExternalList, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomDataExternalList, req_id);
 	}
 
 	bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> final_searchintattrexternal_vec;
+		np2_structs::SetRoomDataExternalRequest pb_req;
+		pb_req.set_roomid(req->roomId);
+
 		if (req->roomSearchableIntAttrExternalNum && req->roomSearchableIntAttrExternal)
 		{
-			std::vector<flatbuffers::Offset<IntAttr>> davec;
 			for (u32 i = 0; i < req->roomSearchableIntAttrExternalNum; i++)
 			{
-				auto bin = CreateIntAttr(builder, req->roomSearchableIntAttrExternal[i].id, req->roomSearchableIntAttrExternal[i].num);
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roomsearchableintattrexternal();
+				attr->mutable_id()->set_value(req->roomSearchableIntAttrExternal[i].id);
+				attr->set_num(req->roomSearchableIntAttrExternal[i].num);
 			}
-			final_searchintattrexternal_vec = builder.CreateVector(davec);
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_searchbinattrexternal_vec;
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrexternal_vec;
-
-		std::vector<flatbuffers::Offset<BinAttr>> davec_searchable_binattrexternal;
-		std::vector<flatbuffers::Offset<BinAttr>> davec_binattrexternal;
-
-		auto put_binattr = [&](SceNpMatching2AttributeId id, flatbuffers::Offset<BinAttr> bin)
+		auto put_binattr = [&](const SceNpMatching2BinAttr& binattr)
 		{
-			switch (id)
+			np2_structs::BinAttr* attr = nullptr;
+			switch (binattr.id)
 			{
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_EXTERNAL_1_ID:
 			case SCE_NP_MATCHING2_ROOM_BIN_ATTR_EXTERNAL_2_ID:
-				davec_binattrexternal.push_back(bin);
+				attr = pb_req.add_roombinattrexternal();
 				break;
 			case SCE_NP_MATCHING2_ROOM_SEARCHABLE_BIN_ATTR_EXTERNAL_1_ID:
-				davec_searchable_binattrexternal.push_back(bin);
+				attr = pb_req.add_roomsearchablebinattrexternal();
 				break;
 			default:
-				rpcn_log.error("Unexpected bin attribute id in set_roomdata_external request: 0x%x", id);
-				break;
+				rpcn_log.error("Unexpected bin attribute id in set_roomdata_external request: 0x%x", binattr.id);
+				return;
 			}
+			attr->mutable_id()->set_value(binattr.id);
+			attr->set_data(binattr.ptr.get_ptr(), binattr.size);
 		};
 
 		if (req->roomSearchableBinAttrExternalNum && req->roomSearchableBinAttrExternal)
 		{
 			for (u32 i = 0; i < req->roomSearchableBinAttrExternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomSearchableBinAttrExternal[i].id, builder.CreateVector(req->roomSearchableBinAttrExternal[i].ptr.get_ptr(), req->roomSearchableBinAttrExternal[i].size));
-				put_binattr(req->roomSearchableBinAttrExternal[i].id, bin);
+				put_binattr(req->roomSearchableBinAttrExternal[i]);
 			}
 		}
 
@@ -1987,155 +1962,143 @@ namespace rpcn
 		{
 			for (u32 i = 0; i < req->roomBinAttrExternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomBinAttrExternal[i].id, builder.CreateVector(req->roomBinAttrExternal[i].ptr.get_ptr(), req->roomBinAttrExternal[i].size));
-				put_binattr(req->roomBinAttrExternal[i].id, bin);
+				put_binattr(req->roomBinAttrExternal[i]);
 			}
 		}
 
-		if (!davec_searchable_binattrexternal.empty())
-			final_searchbinattrexternal_vec = builder.CreateVector(davec_searchable_binattrexternal);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		if (!davec_binattrexternal.empty())
-			final_binattrexternal_vec = builder.CreateVector(davec_binattrexternal);
-
-		auto req_finished = CreateSetRoomDataExternalRequest(builder, req->roomId, final_searchintattrexternal_vec, final_searchbinattrexternal_vec, final_binattrexternal_vec);
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomDataExternal, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SetRoomDataExternal, req_id);
 	}
 
 	bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::GetRoomDataInternalRequest pb_req;
+		pb_req.set_roomid(req->roomId);
 
-		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attr_ids_vec;
 		if (req->attrIdNum && req->attrId)
 		{
-			std::vector<u16> attr_ids;
 			for (u32 i = 0; i < req->attrIdNum; i++)
 			{
-				attr_ids.push_back(req->attrId[i]);
+				pb_req.add_attrid()->set_value(req->attrId[i]);
 			}
-			final_attr_ids_vec = builder.CreateVector(attr_ids);
 		}
 
-		auto req_finished = CreateGetRoomDataInternalRequest(builder, req->roomId, final_attr_ids_vec);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomDataInternal, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomDataInternal, req_id);
 	}
 
 	bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
+		np2_structs::SetRoomDataInternalRequest pb_req;
+		pb_req.set_roomid(req->roomId);
+		pb_req.set_flagfilter(req->flagFilter);
+		pb_req.set_flagattr(req->flagAttr);
+
 		if (req->roomBinAttrInternalNum && req->roomBinAttrInternal)
 		{
-			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomBinAttrInternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomBinAttrInternal[i].id, builder.CreateVector(req->roomBinAttrInternal[i].ptr.get_ptr(), req->roomBinAttrInternal[i].size));
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roombinattrinternal();
+				attr->mutable_id()->set_value(req->roomBinAttrInternal[i].id);
+				attr->set_data(req->roomBinAttrInternal[i].ptr.get_ptr(), req->roomBinAttrInternal[i].size);
 			}
-			final_binattrinternal_vec = builder.CreateVector(davec);
 		}
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>>> final_grouppasswordconfig_vec;
+
 		if (req->passwordConfigNum && req->passwordConfig)
 		{
-			std::vector<flatbuffers::Offset<RoomGroupPasswordConfig>> davec;
 			for (u32 i = 0; i < req->passwordConfigNum; i++)
 			{
-				auto rg = CreateRoomGroupPasswordConfig(builder, req->passwordConfig[i].groupId, req->passwordConfig[i].withPassword);
-				davec.push_back(rg);
+				auto* cfg = pb_req.add_passwordconfig();
+				cfg->mutable_groupid()->set_value(req->passwordConfig[i].groupId);
+				cfg->set_withpassword(req->passwordConfig[i].withPassword);
 			}
-			final_grouppasswordconfig_vec = builder.CreateVector(davec);
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<u64>> final_passwordSlotMask;
 		if (req->passwordSlotMask)
 		{
-			const u64 value = *req->passwordSlotMask;
-			final_passwordSlotMask = builder.CreateVector(&value, 1);
+			pb_req.add_passwordslotmask(*req->passwordSlotMask);
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<u16>> final_ownerprivilege_vec;
 		if (req->ownerPrivilegeRankNum && req->ownerPrivilegeRank)
 		{
-			std::vector<u16> priv_ranks;
 			for (u32 i = 0; i < req->ownerPrivilegeRankNum; i++)
 			{
-				priv_ranks.push_back(req->ownerPrivilegeRank[i]);
+				pb_req.add_ownerprivilegerank()->set_value(req->ownerPrivilegeRank[i]);
 			}
-			final_ownerprivilege_vec = builder.CreateVector(priv_ranks);
 		}
 
-		auto req_finished =
-			CreateSetRoomDataInternalRequest(builder, req->roomId, req->flagFilter, req->flagAttr, final_binattrinternal_vec, final_grouppasswordconfig_vec, final_passwordSlotMask, final_ownerprivilege_vec);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomDataInternal, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SetRoomDataInternal, req_id);
 	}
 
 	bool rpcn_client::get_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomMemberDataInternalRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<u16>> final_attrid_vec;
+		np2_structs::GetRoomMemberDataInternalRequest pb_req;
+		pb_req.set_roomid(req->roomId);
+		pb_req.mutable_memberid()->set_value(req->memberId);
+
 		if (req->attrIdNum && req->attrId)
 		{
-			std::vector<u16> attrid_vec;
 			for (u32 i = 0; i < req->attrIdNum; i++)
 			{
-				attrid_vec.push_back(req->attrId[i]);
+				pb_req.add_attrid()->set_value(req->attrId[i]);
 			}
-			final_attrid_vec = builder.CreateVector(attrid_vec);
 		}
 
-		auto req_finished = CreateGetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, final_attrid_vec);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomMemberDataInternal, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomMemberDataInternal, req_id);
 	}
 
 	bool rpcn_client::set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
+		np2_structs::SetRoomMemberDataInternalRequest pb_req;
+		pb_req.set_roomid(req->roomId);
+		pb_req.mutable_memberid()->set_value(req->memberId);
+		pb_req.mutable_teamid()->set_value(req->teamId);
+
 		if (req->roomMemberBinAttrInternalNum && req->roomMemberBinAttrInternal)
 		{
-			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->roomMemberBinAttrInternal[i].id, builder.CreateVector(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size));
-				davec.push_back(bin);
+				auto* attr = pb_req.add_roommemberbinattrinternal();
+				attr->mutable_id()->set_value(req->roomMemberBinAttrInternal[i].id);
+				attr->set_data(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size);
 			}
-			final_binattrinternal_vec = builder.CreateVector(davec);
 		}
 
-		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, final_binattrinternal_vec);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::SetRoomMemberDataInternal, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SetRoomMemberDataInternal, req_id);
 	}
 
 	bool rpcn_client::set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattr_vec;
+		np2_structs::SetUserInfo pb_req;
+		pb_req.mutable_serverid()->set_value(req->serverId);
+
 		if (req->userBinAttrNum && req->userBinAttr)
 		{
-			std::vector<flatbuffers::Offset<BinAttr>> davec;
 			for (u32 i = 0; i < req->userBinAttrNum; i++)
 			{
-				auto bin = CreateBinAttr(builder, req->userBinAttr[i].id, builder.CreateVector(req->userBinAttr[i].ptr.get_ptr(), req->userBinAttr[i].size));
-				davec.push_back(bin);
+				auto* attr = pb_req.add_userbinattr();
+				attr->mutable_id()->set_value(req->userBinAttr[i].id);
+				attr->set_data(req->userBinAttr[i].ptr.get_ptr(), req->userBinAttr[i].size);
 			}
-			final_memberbinattr_vec = builder.CreateVector(davec);
 		}
 
-		auto req_finished = CreateSetUserInfo(builder, req->serverId, final_memberbinattr_vec);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::SetUserInfo, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SetUserInfo, req_id);
 	}
 
 	bool rpcn_client::ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
@@ -2150,34 +2113,38 @@ namespace rpcn
 
 	bool rpcn_client::send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::SendRoomMessageRequest pb_req;
+		pb_req.set_roomid(req->roomId);
+		pb_req.mutable_casttype()->set_value(req->castType);
+		pb_req.mutable_option()->set_value(req->option);
 
-		std::vector<u16> dst;
 		switch (req->castType)
 		{
 		case SCE_NP_MATCHING2_CASTTYPE_BROADCAST:
 			break;
 		case SCE_NP_MATCHING2_CASTTYPE_UNICAST:
-			dst.push_back(req->dst.unicastTarget);
+			pb_req.add_dst()->set_value(req->dst.unicastTarget);
 			break;
 		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
 			for (u32 i = 0; i < req->dst.multicastTarget.memberIdNum && req->dst.multicastTarget.memberId; i++)
 			{
-				dst.push_back(req->dst.multicastTarget.memberId[i]);
+				pb_req.add_dst()->set_value(req->dst.multicastTarget.memberId[i]);
 			}
 			break;
 		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM:
-			dst.push_back(req->dst.multicastTargetTeamId);
+			pb_req.add_dst()->set_value(req->dst.multicastTargetTeamId);
 			break;
 		default:
 			ensure(false);
 			break;
 		}
 
-		auto req_finished = CreateSendRoomMessageRequest(builder, req->roomId, req->castType, builder.CreateVector(dst.data(), dst.size()), builder.CreateVector(reinterpret_cast<const u8*>(req->msg.get_ptr()), req->msgLen), req->option);
-		builder.Finish(req_finished);
+		pb_req.set_msg(req->msg.get_ptr(), req->msgLen);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::SendRoomMessage, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SendRoomMessage, req_id);
 	}
 
 	bool rpcn_client::req_sign_infos(u32 req_id, const std::string& npid)
@@ -2203,32 +2170,32 @@ namespace rpcn
 
 	bool rpcn_client::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::MessageDetails pb_message;
+		pb_message.set_communicationid(static_cast<const char*>(msg_data.commId.data));
+		pb_message.set_msgid(msg_data.msgId);
+		pb_message.mutable_maintype()->set_value(msg_data.mainType);
+		pb_message.mutable_subtype()->set_value(msg_data.subType);
+		pb_message.set_msgfeatures(msg_data.msgFeatures);
+		pb_message.set_subject(msg_data.subject);
+		pb_message.set_body(msg_data.body);
+		pb_message.set_data(msg_data.data.data(), msg_data.data.size());
 
-		flatbuffers::FlatBufferBuilder nested_builder(1024);
-		auto fb_message = CreateMessageDetailsDirect(nested_builder, static_cast<const char*>(msg_data.commId.data), msg_data.msgId, msg_data.mainType, msg_data.subType, msg_data.msgFeatures, msg_data.subject.c_str(), msg_data.body.c_str(), &msg_data.data);
-		nested_builder.Finish(fb_message);
-		builder.ForceVectorAlignment(nested_builder.GetSize(), sizeof(uint8_t), nested_builder.GetBufferMinAlignment());
-		auto nested_flatbuffer_vector = builder.CreateVector(nested_builder.GetBufferPointer(), nested_builder.GetSize());
+		std::string serialized_message;
+		pb_message.SerializeToString(&serialized_message);
 
-		std::vector<flatbuffers::Offset<flatbuffers::String>> davec;
+		np2_structs::SendMessageRequest pb_req;
+		pb_req.set_message(serialized_message);
 		for (const auto& npid : npids)
 		{
-			auto s_npid = builder.CreateString(npid);
-			davec.push_back(s_npid);
+			pb_req.add_npids(npid);
 		}
-		auto npids_vector = builder.CreateVector(davec);
 
-		// auto npids = builder.Create
-		auto fb_sendmessage = CreateSendMessageRequest(builder, nested_flatbuffer_vector, npids_vector);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		builder.Finish(fb_sendmessage);
-		const u8* buf = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
-		std::vector<u8> data(bufsize + sizeof(u32));
-
-		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + sizeof(u32), buf, bufsize);
+		std::vector<u8> data(serialized.size() + sizeof(u32));
+		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(serialized.size());
+		memcpy(data.data() + sizeof(u32), serialized.data(), serialized.size());
 
 		return forge_send(CommandType::SendMessage, rpcn_request_counter.fetch_add(1), data);
 	}
@@ -2244,63 +2211,91 @@ namespace rpcn
 
 	bool rpcn_client::record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::RecordScoreRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_pcid(char_id);
+		pb_req.set_score(score);
+		if (comment)
+		{
+			pb_req.set_comment(*comment);
+		}
+		if (score_data)
+		{
+			pb_req.set_data(score_data->data(), score_data->size());
+		}
 
-		auto req_finished = CreateRecordScoreRequestDirect(builder, board_id, char_id, score, comment ? (*comment).c_str() : nullptr, score_data ? &*score_data : nullptr);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::RecordScore, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::RecordScore, req_id);
 	}
 
 	bool rpcn_client::get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateGetScoreRangeRequest(builder, board_id, start_rank, num_rank, with_comment, with_gameinfo);
-		builder.Finish(req_finished);
+		np2_structs::GetScoreRangeRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_startrank(start_rank);
+		pb_req.set_numranks(num_rank);
+		pb_req.set_withcomment(with_comment);
+		pb_req.set_withgameinfo(with_gameinfo);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreRange, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetScoreRange, req_id);
 	}
 
 	bool rpcn_client::get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::GetScoreNpIdRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_withcomment(with_comment);
+		pb_req.set_withgameinfo(with_gameinfo);
 
-		std::vector<flatbuffers::Offset<ScoreNpIdPcId>> davec;
 		for (usz i = 0; i < npids.size(); i++)
 		{
-			auto npid = CreateScoreNpIdPcId(builder, builder.CreateString(static_cast<const char*>(npids[i].first.handle.data)), npids[i].second);
-			davec.push_back(npid);
+			auto* npid_entry = pb_req.add_npids();
+			npid_entry->set_npid(static_cast<const char*>(npids[i].first.handle.data));
+			npid_entry->set_pcid(npids[i].second);
 		}
 
-		auto req_finished = CreateGetScoreNpIdRequest(builder, board_id, builder.CreateVector(davec), with_comment, with_gameinfo);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreNpid, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetScoreNpid, req_id);
 	}
 
 	bool rpcn_client::get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateGetScoreFriendsRequest(builder, board_id, include_self, max_entries, with_comment, with_gameinfo);
-		builder.Finish(req_finished);
+		np2_structs::GetScoreFriendsRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_include_self(include_self);
+		pb_req.set_max(max_entries);
+		pb_req.set_withcomment(with_comment);
+		pb_req.set_withgameinfo(with_gameinfo);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreFriends, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetScoreFriends, req_id);
 	}
 
 	bool rpcn_client::record_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateRecordScoreGameDataRequest(builder, board_id, pc_id, score);
-		builder.Finish(req_finished);
+		np2_structs::RecordScoreGameDataRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_pcid(pc_id);
+		pb_req.set_score(score);
 
-		const u8* buf = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		const usz bufsize = serialized.size();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32) + score_data.size());
 
 		rpcn_client::write_communication_id(communication_id, data);
 		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), serialized.data(), bufsize);
 		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize]) = static_cast<u32>(score_data.size());
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32), score_data.data(), score_data.size());
 
@@ -2309,246 +2304,303 @@ namespace rpcn
 
 	bool rpcn_client::get_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, const SceNpId& npid)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateGetScoreGameDataRequest(builder, board_id, builder.CreateString(reinterpret_cast<const char*>(npid.handle.data)), pc_id);
-		builder.Finish(req_finished);
+		np2_structs::GetScoreGameDataRequest pb_req;
+		pb_req.set_boardid(board_id);
+		pb_req.set_npid(reinterpret_cast<const char*>(npid.handle.data));
+		pb_req.set_pcid(pc_id);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetScoreData, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetScoreData, req_id);
 	}
 
 	bool rpcn_client::tus_set_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser)
 	{
-		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
-		const std::vector<s64> variable_array(variableArray.get_ptr(), variableArray.get_ptr() + arrayNum);
+		np2_structs::TusSetMultiSlotVariableRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
 
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusSetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array), builder.CreateVector(variable_array));
-		builder.Finish(req_finished);
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			pb_req.add_slotidarray(slotIdArray[i]);
+			pb_req.add_variablearray(variableArray[i]);
+		}
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusSetMultiSlotVariable, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusSetMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
 	{
-		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+		np2_structs::TusGetMultiSlotVariableRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
 
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusGetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
-		builder.Finish(req_finished);
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			pb_req.add_slotidarray(slotIdArray[i]);
+		}
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiSlotVariable, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_multiuser_variable(u32 req_id, const SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::TusGetMultiUserVariableRequest pb_req;
+		pb_req.set_slotid(slotId);
 
-		std::vector<flatbuffers::Offset<TusUser>> davec;
 		for (s32 i = 0; i < std::min(arrayNum, ::narrow<s32>(targetNpIdArray.size())); i++)
 		{
-			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
+			auto* user = pb_req.add_users();
+			user->set_vuser(vuser);
+			user->set_npid(targetNpIdArray[i].data);
 		}
 
-		auto req_finished = CreateTusGetMultiUserVariableRequest(builder, builder.CreateVector(davec), slotId);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiUserVariable, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetMultiUserVariable, req_id);
 	}
 
 	bool rpcn_client::tus_get_friends_variable(u32 req_id, const SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusGetFriendsVariableRequest(builder, slotId, includeSelf, sortType, arrayNum);
-		builder.Finish(req_finished);
+		np2_structs::TusGetFriendsVariableRequest pb_req;
+		pb_req.set_slotid(slotId);
+		pb_req.set_includeself(includeSelf);
+		pb_req.set_sorttype(sortType);
+		pb_req.set_arraynum(arrayNum);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetFriendsVariable, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetFriendsVariable, req_id);
 	}
 
 	bool rpcn_client::tus_add_and_get_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-
-		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
-		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
+		np2_structs::TusAddAndGetVariableRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
+		pb_req.set_slotid(slotId);
+		pb_req.set_invariable(inVariable);
 
 		if (option)
 		{
 			if (option->isLastChangedDate)
 			{
-				std::vector<u64> is_last_changed_date_vec;
-				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
-				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+				pb_req.add_islastchangeddate(option->isLastChangedDate->tick);
 			}
 
 			if (option->isLastChangedAuthorId)
 			{
-				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
 			}
 		}
 
-		auto req_finished = CreateTusAddAndGetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, inVariable, isLastChangedDate, isLastChangedAuthorId);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusAddAndGetVariable, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusAddAndGetVariable, req_id);
 	}
 
 	bool rpcn_client::tus_try_and_set_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-
-		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
-		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
-		flatbuffers::Offset<flatbuffers::Vector<int64_t>> compareValue;
+		np2_structs::TusTryAndSetVariableRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
+		pb_req.set_slotid(slotId);
+		pb_req.set_opetype(opeType);
+		pb_req.set_variable(variable);
 
 		if (option)
 		{
 			if (option->isLastChangedDate)
 			{
-				std::vector<u64> is_last_changed_date_vec;
-				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
-				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+				pb_req.add_islastchangeddate(option->isLastChangedDate->tick);
 			}
 
 			if (option->isLastChangedAuthorId)
 			{
-				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
 			}
 
 			if (option->compareValue)
 			{
-				std::vector<s64> compare_value_vec;
-				compare_value_vec.push_back(*(option->compareValue));
-				compareValue = builder.CreateVector(compare_value_vec);
+				pb_req.add_comparevalue(*(option->compareValue));
 			}
 		}
 
-		auto req_finished = CreateTusTryAndSetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, opeType, variable, isLastChangedDate, isLastChangedAuthorId, compareValue);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusTryAndSetVariable, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusTryAndSetVariable, req_id);
 	}
 
 	bool rpcn_client::tus_delete_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
 	{
-		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+		np2_structs::TusDeleteMultiSlotVariableRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
 
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusDeleteMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
-		builder.Finish(req_finished);
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			pb_req.add_slotidarray(slotIdArray[i]);
+		}
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusDeleteMultiSlotVariable, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusDeleteMultiSlotVariable, req_id);
 	}
 
 	bool rpcn_client::tus_set_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, const std::vector<u8>& tus_data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::TusSetDataRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
+		pb_req.set_slotid(slotId);
+		pb_req.set_data(tus_data.data(), tus_data.size());
 
-		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
-		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
+		if (info)
+		{
+			pb_req.set_info(info->data, static_cast<size_t>(info->infoSize));
+		}
 
 		if (option)
 		{
 			if (option->isLastChangedDate)
 			{
-				std::vector<u64> is_last_changed_date_vec;
-				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
-				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+				pb_req.add_islastchangeddate(option->isLastChangedDate->tick);
 			}
 
 			if (option->isLastChangedAuthorId)
 			{
-				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
 			}
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_info;
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		if (info)
-		{
-			fb_info = builder.CreateVector(info->data, static_cast<size_t>(info->infoSize));
-		}
-
-		auto req_finished = CreateTusSetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, builder.CreateVector(tus_data), fb_info, isLastChangedDate, isLastChangedAuthorId);
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusSetData, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusSetData, req_id);
 	}
 
 	bool rpcn_client::tus_get_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusGetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId);
-		builder.Finish(req_finished);
+		np2_structs::TusGetDataRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
+		pb_req.set_slotid(slotId);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetData, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetData, req_id);
 	}
 
 	bool rpcn_client::tus_get_multislot_data_status(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
 	{
-		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+		np2_structs::TusGetMultiSlotDataStatusRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
 
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusGetMultiSlotDataStatusRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
-		builder.Finish(req_finished);
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			pb_req.add_slotidarray(slotIdArray[i]);
+		}
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiSlotDataStatus, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetMultiSlotDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::TusGetMultiUserDataStatusRequest pb_req;
+		pb_req.set_slotid(slotId);
 
-		std::vector<flatbuffers::Offset<TusUser>> davec;
 		for (s32 i = 0; i < std::min(arrayNum, ::narrow<s32>(targetNpIdArray.size())); i++)
 		{
-			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
+			auto* user = pb_req.add_users();
+			user->set_vuser(vuser);
+			user->set_npid(targetNpIdArray[i].data);
 		}
 
-		auto req_finished = CreateTusGetMultiUserDataStatusRequest(builder, builder.CreateVector(davec), slotId);
-		builder.Finish(req_finished);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetMultiUserDataStatus, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetMultiUserDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusGetFriendsDataStatusRequest(builder, slotId, includeSelf, sortType, arrayNum);
-		builder.Finish(req_finished);
+		np2_structs::TusGetFriendsDataStatusRequest pb_req;
+		pb_req.set_slotid(slotId);
+		pb_req.set_includeself(includeSelf);
+		pb_req.set_sorttype(sortType);
+		pb_req.set_arraynum(arrayNum);
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusGetFriendsDataStatus, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusGetFriendsDataStatus, req_id);
 	}
 
 	bool rpcn_client::tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
 	{
-		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+		np2_structs::TusDeleteMultiSlotDataRequest pb_req;
+		auto* user = pb_req.mutable_user();
+		user->set_vuser(vuser);
+		user->set_npid(targetNpId.data);
 
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateTusDeleteMultiSlotDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
-		builder.Finish(req_finished);
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			pb_req.add_slotidarray(slotIdArray[i]);
+		}
 
-		return forge_request_with_com_id(builder, communication_id, CommandType::TusDeleteMultiSlotData, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::TusDeleteMultiSlotData, req_id);
 	}
 
 	bool rpcn_client::send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateSetPresenceRequest(builder, builder.CreateString(pr_title), builder.CreateString(pr_status), builder.CreateString(pr_comment), builder.CreateVector(pr_data));
-		builder.Finish(req_finished);
+		np2_structs::SetPresenceRequest pb_req;
+		pb_req.set_title(pr_title);
+		pb_req.set_status(pr_status);
+		pb_req.set_comment(pr_comment);
+		pb_req.set_data(pr_data.data(), pr_data.size());
 
-		return forge_request_with_com_id(builder, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));
 	}
 
 	bool rpcn_client::createjoin_room_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingAttr* attr_list)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
+		np2_structs::CreateRoomGUIRequest pb_req;
 
 		u32 total_slots = 0;
 		u32 private_slots = 0;
 		bool privilege_grant = false;
 		bool stealth = false;
-
-		std::vector<flatbuffers::Offset<MatchingAttr>> vec_attrs;
 
 		for (const SceNpMatchingAttr* cur_attr = attr_list; cur_attr != nullptr; cur_attr = cur_attr->next ? cur_attr->next.get_ptr() : nullptr)
 		{
@@ -2584,17 +2636,21 @@ namespace rpcn
 				ensure(cur_attr->id >= 1u && cur_attr->id <= 16u, "Invalid game bin attribute id");
 				ensure(cur_attr->value.data.size <= 64u || ((cur_attr->id == 1u || cur_attr->id == 2u) && cur_attr->value.data.size <= 256u), "Invalid game bin size");
 
-				const std::vector<u8> vec_data(static_cast<const u8*>(cur_attr->value.data.ptr.get_ptr()), static_cast<const u8*>(cur_attr->value.data.ptr.get_ptr()) + cur_attr->value.data.size);
-				auto attr = CreateMatchingAttrDirect(builder, cur_attr->type, cur_attr->id, 0, &vec_data);
-				vec_attrs.push_back(attr);
+				auto* attr = pb_req.add_game_attrs();
+				attr->set_attr_type(cur_attr->type);
+				attr->set_attr_id(cur_attr->id);
+				attr->set_num(0);
+				attr->set_data(cur_attr->value.data.ptr.get_ptr(), cur_attr->value.data.size);
 				break;
 			}
 			case SCE_NP_MATCHING_ATTR_TYPE_GAME_NUM:
 			{
 				ensure(cur_attr->id >= 1u && cur_attr->id <= 16u, "Invalid game num attribute id");
 
-				auto attr = CreateMatchingAttrDirect(builder, cur_attr->type, cur_attr->id, cur_attr->value.num, nullptr);
-				vec_attrs.push_back(attr);
+				auto* attr = pb_req.add_game_attrs();
+				attr->set_attr_type(cur_attr->type);
+				attr->set_attr_id(cur_attr->id);
+				attr->set_num(cur_attr->value.num);
 				break;
 			}
 			default:
@@ -2602,187 +2658,185 @@ namespace rpcn
 			}
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<MatchingAttr>>> final_attrs_vec;
+		pb_req.set_total_slots(total_slots);
+		pb_req.set_private_slots(private_slots);
+		pb_req.set_privilege_grant(privilege_grant);
+		pb_req.set_stealth(stealth);
 
-		if (!vec_attrs.empty())
-		{
-			final_attrs_vec = builder.CreateVector(vec_attrs);
-		}
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		auto req_finished = CreateCreateRoomGUIRequest(builder, total_slots, private_slots, privilege_grant, stealth, final_attrs_vec);
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::CreateRoomGUI, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::CreateRoomGUI, req_id);
 	}
 
 	bool rpcn_client::join_room_gui(u32 req_id, const SceNpRoomId& room_id)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		auto req_finished = CreateMatchingGuiRoomIdDirect(builder, &vec_room_id);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::JoinRoomGUI, req_id);
+		np2_structs::MatchingGuiRoomId pb_req;
+		pb_req.set_id(room_id.opt, sizeof(room_id.opt));
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::JoinRoomGUI, req_id);
 	}
 
 	bool rpcn_client::leave_room_gui(u32 req_id, const SceNpRoomId& room_id)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		auto req_finished = CreateMatchingGuiRoomIdDirect(builder, &vec_room_id);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::LeaveRoomGUI, req_id);
+		np2_structs::MatchingGuiRoomId pb_req;
+		pb_req.set_id(room_id.opt, sizeof(room_id.opt));
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::LeaveRoomGUI, req_id);
 	}
 
 	bool rpcn_client::get_room_list_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingReqRange* range, vm::ptr<SceNpMatchingSearchCondition> cond, vm::ptr<SceNpMatchingAttr> attr)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-
-		const s32 range_start = range->start;
-		const u32 range_max = range->max;
-
-		std::vector<flatbuffers::Offset<MatchingSearchCondition>> vec_conds;
-		std::vector<flatbuffers::Offset<MatchingAttr>> vec_attrs;
+		np2_structs::GetRoomListGUIRequest pb_req;
+		pb_req.set_range_start(range->start);
+		pb_req.set_range_max(range->max);
 
 		for (auto cur_cond = cond; cur_cond; cur_cond = cur_cond->next)
 		{
-			auto fb_cond = CreateMatchingSearchCondition(builder, cur_cond->target_attr_type, cur_cond->target_attr_id, cur_cond->comp_op, cur_cond->compared.value.num);
-			vec_conds.push_back(fb_cond);
+			auto* pb_cond = pb_req.add_conds();
+			pb_cond->set_attr_type(cur_cond->target_attr_type);
+			pb_cond->set_attr_id(cur_cond->target_attr_id);
+			pb_cond->set_comp_op(cur_cond->comp_op);
+			pb_cond->set_comp_value(cur_cond->compared.value.num);
 		}
 
 		for (auto cur_attr = attr; cur_attr; cur_attr = cur_attr->next)
 		{
-			auto fb_attr = CreateMatchingAttr(builder, cur_attr->type, cur_attr->id);
-			vec_attrs.push_back(fb_attr);
+			auto* pb_attr = pb_req.add_attrs();
+			pb_attr->set_attr_type(cur_attr->type);
+			pb_attr->set_attr_id(cur_attr->id);
 		}
 
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<MatchingSearchCondition>>> final_conds_vec;
-		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<MatchingAttr>>> final_attrs_vec;
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
 
-		if (!vec_conds.empty())
-		{
-			final_conds_vec = builder.CreateVector(vec_conds);
-		}
-
-		if (!vec_attrs.empty())
-		{
-			final_attrs_vec = builder.CreateVector(vec_attrs);
-		}
-
-		auto req_finished = CreateGetRoomListGUIRequest(builder, range_start, range_max, final_conds_vec, final_attrs_vec);
-		builder.Finish(req_finished);
-
-		return forge_request_with_com_id(builder, communication_id, CommandType::GetRoomListGUI, req_id);
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomListGUI, req_id);
 	}
 
 	bool rpcn_client::set_room_search_flag_gui(u32 req_id, const SceNpRoomId& room_id, bool stealth)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		auto req_finished = CreateSetRoomSearchFlagGUIDirect(builder, &vec_room_id, stealth);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::SetRoomSearchFlagGUI, req_id);
+		np2_structs::SetRoomSearchFlagGUI pb_req;
+		pb_req.set_roomid(room_id.opt, sizeof(room_id.opt));
+		pb_req.set_stealth(stealth);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::SetRoomSearchFlagGUI, req_id);
 	}
 
 	bool rpcn_client::get_room_search_flag_gui(u32 req_id, const SceNpRoomId& room_id)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		auto req_finished = CreateMatchingGuiRoomIdDirect(builder, &vec_room_id);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::GetRoomSearchFlagGUI, req_id);
+		np2_structs::MatchingGuiRoomId pb_req;
+		pb_req.set_id(room_id.opt, sizeof(room_id.opt));
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::GetRoomSearchFlagGUI, req_id);
 	}
 
 	bool rpcn_client::set_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		std::vector<flatbuffers::Offset<MatchingAttr>> vec_attrs;
+		np2_structs::MatchingRoom pb_req;
+		pb_req.set_id(room_id.opt, sizeof(room_id.opt));
 
 		for (auto cur_attr = attrs; cur_attr; cur_attr = cur_attr->next)
 		{
-			u32 num = 0;
-			flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_vec_data = 0;
+			auto* pb_attr = pb_req.add_attr();
+			pb_attr->set_attr_type(cur_attr->type);
+			pb_attr->set_attr_id(cur_attr->id);
 
 			switch (cur_attr->type)
 			{
 			case SCE_NP_MATCHING_ATTR_TYPE_GAME_BIN:
 			{
-				const std::vector<u8> vec_data(static_cast<const u8*>(cur_attr->value.data.ptr.get_ptr()), static_cast<const u8*>(cur_attr->value.data.ptr.get_ptr()) + cur_attr->value.data.size);
-				fb_vec_data = builder.CreateVector(vec_data);
+				pb_attr->set_data(cur_attr->value.data.ptr.get_ptr(), cur_attr->value.data.size);
 				break;
 			}
 			case SCE_NP_MATCHING_ATTR_TYPE_GAME_NUM:
 			{
-				num = cur_attr->value.num;
+				pb_attr->set_num(cur_attr->value.num);
 				break;
 			}
 			default: fmt::throw_exception("Invalid attr type reached set_room_info_gui");
 			}
-
-			auto fb_attr = CreateMatchingAttr(builder, cur_attr->type, cur_attr->id, num, fb_vec_data);
-			vec_attrs.push_back(fb_attr);
 		}
 
-		auto req_finished = CreateMatchingRoomDirect(builder, &vec_room_id, &vec_attrs);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::SetRoomInfoGUI, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::SetRoomInfoGUI, req_id);
 	}
 
 	bool rpcn_client::get_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		const std::vector<u8> vec_room_id(room_id.opt, room_id.opt + sizeof(room_id.opt));
-		std::vector<flatbuffers::Offset<MatchingAttr>> vec_attrs;
+		np2_structs::MatchingRoom pb_req;
+		pb_req.set_id(room_id.opt, sizeof(room_id.opt));
 
 		for (auto cur_attr = attrs; cur_attr; cur_attr = cur_attr->next)
 		{
-			auto fb_attr = CreateMatchingAttr(builder, cur_attr->type, cur_attr->id);
-			vec_attrs.push_back(fb_attr);
+			auto* pb_attr = pb_req.add_attr();
+			pb_attr->set_attr_type(cur_attr->type);
+			pb_attr->set_attr_id(cur_attr->id);
 		}
 
-		auto req_finished = CreateMatchingRoomDirect(builder, &vec_room_id, &vec_attrs);
-		builder.Finish(req_finished);
-		return forge_request_with_data(builder, CommandType::GetRoomInfoGUI, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_data(serialized, CommandType::GetRoomInfoGUI, req_id);
 	}
 
 	bool rpcn_client::quickmatch_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-		std::vector<flatbuffers::Offset<MatchingSearchCondition>> vec_conds;
+		np2_structs::QuickMatchGUIRequest pb_req;
+		pb_req.set_available_num(available_num);
 
 		for (auto cur_cond = cond; cur_cond; cur_cond = cur_cond->next)
 		{
-			auto fb_cond = CreateMatchingSearchCondition(builder, cur_cond->target_attr_type, cur_cond->target_attr_id, cur_cond->comp_op, cur_cond->compared.value.num);
-			vec_conds.push_back(fb_cond);
+			auto* pb_cond = pb_req.add_conds();
+			pb_cond->set_attr_type(cur_cond->target_attr_type);
+			pb_cond->set_attr_id(cur_cond->target_attr_id);
+			pb_cond->set_comp_op(cur_cond->comp_op);
+			pb_cond->set_comp_value(cur_cond->compared.value.num);
 		}
 
-		auto req_finished = CreateQuickMatchGUIRequestDirect(builder, &vec_conds, available_num);
-		builder.Finish(req_finished);
-		return forge_request_with_com_id(builder, com_id, CommandType::QuickMatchGUI, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, com_id, CommandType::QuickMatchGUI, req_id);
 	}
 
 	bool rpcn_client::searchjoin_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr)
 	{
-		flatbuffers::FlatBufferBuilder builder(1024);
-
-		std::vector<flatbuffers::Offset<MatchingSearchCondition>> vec_conds;
-		std::vector<flatbuffers::Offset<MatchingAttr>> vec_attrs;
+		np2_structs::SearchJoinRoomGUIRequest pb_req;
 
 		for (auto cur_cond = cond; cur_cond; cur_cond = cur_cond->next)
 		{
-			auto fb_cond = CreateMatchingSearchCondition(builder, cur_cond->target_attr_type, cur_cond->target_attr_id, cur_cond->comp_op, cur_cond->compared.value.num);
-			vec_conds.push_back(fb_cond);
+			auto* pb_cond = pb_req.add_conds();
+			pb_cond->set_attr_type(cur_cond->target_attr_type);
+			pb_cond->set_attr_id(cur_cond->target_attr_id);
+			pb_cond->set_comp_op(cur_cond->comp_op);
+			pb_cond->set_comp_value(cur_cond->compared.value.num);
 		}
 
 		for (auto cur_attr = attr; cur_attr; cur_attr = cur_attr->next)
 		{
-			auto fb_attr = CreateMatchingAttr(builder, cur_attr->type, cur_attr->id);
-			vec_attrs.push_back(fb_attr);
+			auto* pb_attr = pb_req.add_attrs();
+			pb_attr->set_attr_type(cur_attr->type);
+			pb_attr->set_attr_id(cur_attr->id);
 		}
 
-		auto req_finished = CreateSearchJoinRoomGUIRequestDirect(builder, vec_conds.empty() ? nullptr : &vec_conds, vec_attrs.empty() ? nullptr : &vec_attrs);
-		builder.Finish(req_finished);
-		return forge_request_with_com_id(builder, com_id, CommandType::SearchJoinRoomGUI, req_id);
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, com_id, CommandType::SearchJoinRoomGUI, req_id);
 	}
 
 	void rpcn_client::write_communication_id(const SceNpCommunicationId& com_id, std::vector<u8>& data)
@@ -2793,28 +2847,26 @@ namespace rpcn
 		memcpy(data.data(), com_id_str.data(), COMMUNICATION_ID_SIZE);
 	}
 
-	bool rpcn_client::forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_com_id(const std::string& serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
 	{
-		const u8* buf = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
+		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		rpcn_client::write_communication_id(com_id, data);
 
 		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), serialized_data.data(), bufsize);
 
 		return forge_send(command, packet_id, data);
 	}
 
-	bool rpcn_client::forge_request_with_data(const flatbuffers::FlatBufferBuilder& builder, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_data(const std::string& serialized_data, CommandType command, u64 packet_id)
 	{
-		const u8* buf = builder.GetBufferPointer();
-		const usz bufsize = builder.GetSize();
+		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(sizeof(u32) + bufsize);
 
 		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(bufsize);
-		memcpy(data.data() + sizeof(u32), buf, bufsize);
+		memcpy(data.data() + sizeof(u32), serialized_data.data(), bufsize);
 
 		return forge_send(command, packet_id, data);
 	}
@@ -3066,15 +3118,15 @@ namespace rpcn
 		// Unserialize the message
 		vec_stream sdata(data);
 		std::string sender = sdata.get_string(false);
-		auto* fb_mdata = sdata.get_flatbuffer<MessageDetails>();
+		auto pb_mdata = sdata.get_protobuf<np2_structs::MessageDetails>();
 
 		if (sdata.is_error())
 		{
 			return;
 		}
 
-		if (!fb_mdata->communicationId() || fb_mdata->communicationId()->size() == 0 || fb_mdata->communicationId()->size() > 9 ||
-			!fb_mdata->subject() || !fb_mdata->body() || !fb_mdata->data())
+		if (pb_mdata->communicationid().empty() || pb_mdata->communicationid().size() > 9 ||
+			pb_mdata->subject().empty() || pb_mdata->body().empty())
 		{
 			rpcn_log.warning("Discarded invalid message!");
 			return;
@@ -3082,14 +3134,14 @@ namespace rpcn
 
 		message_data mdata = {
 			.msgId = message_counter,
-			.mainType = fb_mdata->mainType(),
-			.subType = fb_mdata->subType(),
-			.msgFeatures = fb_mdata->msgFeatures(),
-			.subject = fb_mdata->subject()->str(),
-			.body = fb_mdata->body()->str()};
+			.mainType = ::narrow<u16>(pb_mdata->maintype().value()),
+			.subType = ::narrow<u16>(pb_mdata->subtype().value()),
+			.msgFeatures = pb_mdata->msgfeatures(),
+			.subject = pb_mdata->subject(),
+			.body = pb_mdata->body()};
 
-		strcpy_trunc(mdata.commId.data, fb_mdata->communicationId()->str());
-		mdata.data.assign(fb_mdata->data()->Data(), fb_mdata->data()->Data() + fb_mdata->data()->size());
+		strcpy_trunc(mdata.commId.data, pb_mdata->communicationid());
+		mdata.data.assign(pb_mdata->data().begin(), pb_mdata->data().end());
 
 		// Save the message and call callbacks
 		{
