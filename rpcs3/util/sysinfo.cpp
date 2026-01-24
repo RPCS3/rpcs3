@@ -621,6 +621,20 @@ std::string utils::get_firmware_version()
 	return {};
 }
 
+std::pair<u64, u64> utils::get_memory_usage()
+{
+#ifdef _WIN32
+	::MEMORYSTATUSEX status{};
+	status.dwLength = sizeof(status);
+	::GlobalMemoryStatusEx(&status);
+	return { status.ullTotalPhys, status.ullAvailPhys };
+
+#else
+	// TODO
+	return { get_total_memory(), 0 };
+#endif
+}
+
 utils::OS_version utils::get_OS_version()
 {
 	OS_version res {};
@@ -972,7 +986,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 u64 utils::get_total_memory()
 {
 #ifdef _WIN32
-	::MEMORYSTATUSEX memInfo;
+	::MEMORYSTATUSEX memInfo{};
 	memInfo.dwLength = sizeof(memInfo);
 	::GlobalMemoryStatusEx(&memInfo);
 	return memInfo.ullTotalPhys;
