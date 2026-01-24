@@ -74,16 +74,20 @@ namespace vk
 			// This was used in a cyclic ref before, but is missing a barrier
 			// No need for a full stall, use a custom barrier instead
 			VkPipelineStageFlags src_stage;
-			VkAccessFlags src_access;
+			VkAccessFlags src_access, dst_access;
 			if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 			{
 				src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dst_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+				dst_stage |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			}
 			else
 			{
 				src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 				src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				dst_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				dst_stage |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 			}
 
 			vk::insert_image_memory_barrier(
@@ -91,7 +95,7 @@ namespace vk
 				raw->value,
 				raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				src_stage, dst_stage,
-				src_access, VK_ACCESS_SHADER_READ_BIT,
+				src_access, dst_access,
 				{ raw->aspect(), 0, 1, 0, 1 });
 
 			raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
