@@ -304,6 +304,8 @@ namespace vk
 
 			_vkSetDebugUtilsObjectNameEXT(m_device, &name_info);
 		}
+
+		m_debug_name = name;
 	}
 
 	image_view::image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
