@@ -28,8 +28,8 @@ static const std::map<const std::tuple<const u8, const u8, const u8>, const std:
 	{{0x10, 0x01, 0x50}, "Kamen Rider Drive (Dark)"},
 		{{0x20, 0x01, 0x00}, "Kamen Rider Drive - Type Wild"},
 		{{0x20, 0x02, 0x00}, "Kamen Rider Drive - Type Wild Gyasha Ver"},
-	 // {{    ,     ,     }, "Kamen Rider Drive - Type Speed Flare"},
-	 // {{    ,     ,     }, "Kamen Rider Drive - Type Technic"}, // 1.05 update
+		{{0x20, 0x03, 0x00}, "Kamen Rider Drive - Type Technic"},
+		{{0x20, 0x06, 0x00}, "Kamen Rider Drive - Type Speed Flare"},
 	{{0x11, 0x01, 0x10}, "Kamen Rider Gaim (Wind)"},
 	{{0x11, 0x01, 0x20}, "Kamen Rider Gaim (Water)"},
 		{{0x21, 0x01, 0x00}, "Kamen Rider Gaim - Jimber Lemon Arms"},
@@ -85,6 +85,7 @@ static const std::map<const std::tuple<const u8, const u8, const u8>, const std:
 		{{0x2f, 0x01, 0x00}, "Kamen Rider Kuuga - Ultimate Form"},
 		{{0x2f, 0x02, 0x00}, "Kamen Rider Kuuga - Amazing Mighty"},
 
+	{{0x30, 0x01, 0x00}, "Kamen Rider Mach"},
 	{{0x31, 0x01, 0x00}, "Kamen Rider Baron"},
 	{{0x31, 0x02, 0x00}, "Kamen Rider Zangetsu Shin"},
 	{{0x32, 0x01, 0x00}, "Kamen Rider Beast"},
@@ -94,7 +95,6 @@ static const std::map<const std::tuple<const u8, const u8, const u8>, const std:
 	{{0x36, 0x01, 0x00}, "Kamen Rider Diend"},
 	{{0x36, 0x02, 0x00}, "Kamen Rider Shocker Combatman"},
 	{{0x39, 0x01, 0x00}, "Kamen Rider Gatack"},
-	// {{    ,     ,     }, "Kamen Rider Mach"}, // 01.05 update
 };
 
 static u32 kamen_rider_crc32(const std::array<u8, 16>& buffer)
@@ -190,9 +190,9 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 	QLabel* label_id = new QLabel(tr("Character:"));
 	QLabel* label_erc = new QLabel(tr("ERC:"));
 	QLabel* label_fig = new QLabel(tr("Figure:"));
-	QLineEdit* edit_id = new QLineEdit("0");
-	QLineEdit* edit_erc = new QLineEdit("0");
-	QLineEdit* edit_fig = new QLineEdit("0");
+	QLineEdit* edit_id = new QLineEdit("16");
+	QLineEdit* edit_erc = new QLineEdit("1");
+	QLineEdit* edit_fig = new QLineEdit("16");
 	QRegularExpressionValidator* rxv = new QRegularExpressionValidator(QRegularExpression("\\d*"), this);
 	edit_id->setValidator(rxv);
 	edit_erc->setValidator(rxv);
