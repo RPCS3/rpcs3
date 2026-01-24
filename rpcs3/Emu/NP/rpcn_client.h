@@ -136,12 +136,6 @@ public:
 		if (error)
 			return nullptr;
 
-		if (rawdata_vec.empty())
-		{
-			error = true;
-			return nullptr;
-		}
-
 		auto msg = std::make_unique<T>();
 		if (!msg->ParseFromArray(rawdata_vec.data(), static_cast<int>(rawdata_vec.size())))
 		{
