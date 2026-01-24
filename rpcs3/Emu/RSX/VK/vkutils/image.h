@@ -33,6 +33,7 @@ namespace vk
 		VkImageAspectFlags m_storage_aspect = 0;
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
+		std::string m_debug_name;
 
 		void validate(const vk::render_device& dev, const VkImageCreateInfo& info) const;
 
