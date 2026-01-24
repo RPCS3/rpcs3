@@ -8,7 +8,7 @@ brew install -f --overwrite --quiet ccache "llvm@$LLVM_COMPILER_VER"
 brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 if [ "$AARCH64" -eq 1 ]; then
   brew install -f --overwrite --quiet googletest opencv@4 sdl3 vulkan-headers vulkan-loader molten-vk 
-  brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative
+  brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative protobuf
 else
   arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python@3.14 opencv@4 "llvm@$LLVM_COMPILER_VER" sdl3 vulkan-headers vulkan-loader molten-vk
