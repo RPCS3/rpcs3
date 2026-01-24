@@ -8615,7 +8615,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
 	}
 
-	if (!m_patterns.empty())
+	if (!m_patterns.empty() && g_cfg.core.spu_debug)
 	{
 		std::string out_dump;
 		dump(result, out_dump);

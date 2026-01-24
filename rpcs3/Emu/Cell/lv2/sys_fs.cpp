@@ -900,10 +900,8 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT};
-		default: sys_fs.error("lv2_file::open(): unknown error %s", error); break;
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO};
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
@@ -1374,8 +1372,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 		default:
 		{
-			sys_fs.error("sys_fs_opendir(): unknown error %s", error);
-			return {CELL_EIO, path};
+			fmt::throw_exception("unknown error %s", error);
 		}
 		}
 	}
@@ -1597,8 +1594,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 		default:
 		{
-			sys_fs.error("sys_fs_stat(): unknown error %s", error);
-			return {CELL_EIO, path};
+			fmt::throw_exception("unknown error %s", error);
 		}
 		}
 	}
@@ -1732,10 +1728,8 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		{
 			return {sys_fs.warning, CELL_EEXIST, path};
 		}
-		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	sys_fs.notice("sys_fs_mkdir(): directory %s created", path);
@@ -1797,10 +1791,8 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		{
 		case fs::error::noent: return {CELL_ENOENT, from};
 		case fs::error::exist: return {CELL_EEXIST, to};
-		default: sys_fs.error("sys_fs_rename(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, from}; // ???
 	}
 
 	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
@@ -1852,10 +1844,8 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		{
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
-		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
@@ -1910,10 +1900,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
@@ -2632,10 +2620,8 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::inval: return {CELL_EINVAL, "fd=%u, offset=0x%x, whence=%d", fd, offset, whence};
-		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return CELL_EIO; // ???
 	}
 
 	lock.unlock();
@@ -2751,10 +2737,8 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 		{
 		case fs::error::exist: return {CELL_EISDIR, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_get_block_size(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	static_cast<void>(ppu.test_stopped());
@@ -2809,10 +2793,8 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	return CELL_OK;
@@ -2858,10 +2840,8 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::ok:
-		default: sys_fs.error("sys_fs_ftruncate(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return CELL_EIO; // ???
 	}
 
 	return CELL_OK;
@@ -3057,10 +3037,8 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return {CELL_EIO, path}; // ???
 	}
 
 	return CELL_OK;
