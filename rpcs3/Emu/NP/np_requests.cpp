@@ -1251,10 +1251,11 @@ namespace np
 		for (int i = 0; i < resp->rankarray_size(); i++)
 		{
 			const auto& pb_rankdata = resp->rankarray(i);
-			ensure(!pb_rankdata.npid().empty() && !pb_rankdata.onlinename().empty());
 
 			if (pb_rankdata.recorddate() == 0)
 				continue;
+
+			ensure(!pb_rankdata.npid().empty() && !pb_rankdata.onlinename().empty());
 
 			num_scores_registered++;
 
