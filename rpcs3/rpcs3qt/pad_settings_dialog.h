@@ -101,6 +101,7 @@ private Q_SLOTS:
 	void ChangeConfig(const QString& config_file);
 	void ChangeDevice(int index);
 	void HandleDeviceClassChange(u32 class_id) const;
+	void HandleDeviceProductChange(u32 product_id) const;
 	void AddConfigFile();
 	void RemoveConfigFile();
 	/** Update the current player config with the GUI values. */

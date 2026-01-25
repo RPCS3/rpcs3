@@ -150,11 +150,28 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 		case CELL_GCM_LOCATION_MAIN:
 		{
-			if (const u32 ea = render->iomap_table.get_addr(offset); ea + 1)
+			if (const u32 ea = render->iomap_table.get_addr(offset); ea != umax)
 			{
-				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+				if (size_to_check <= 1 || (offset < render->main_mem_size && render->main_mem_size - offset >= size_to_check))
 				{
-					return ea;
+					bool ok = true;
+
+					for (u32 offs_index = 0x100000; offs_index < size_to_check + (offset & 0xfffff); offs_index += 0x100000)
+					{
+						// This check does not check continuity but rather that it's mapped at all
+						if (render->iomap_table.get_addr(offset + offs_index) == umax)
+						{
+							ok = false;
+						}
+					}
+
+					if (ok)
+					{
+						if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+						{
+							return ea;
+						}
+					}
 				}
 			}
 
@@ -175,7 +192,7 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
-			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea + 1)
+			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea != umax)
 			{
 				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
 				{

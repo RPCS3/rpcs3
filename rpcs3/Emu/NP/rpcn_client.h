@@ -26,7 +26,6 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpTus.h"
-#include <flatbuffers/flatbuffers.h>
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -130,31 +129,21 @@ public:
 	}
 
 	template <typename T>
-	const T* get_flatbuffer()
+	std::unique_ptr<T> get_protobuf()
 	{
 		auto rawdata_vec = get_rawdata();
 
 		if (error)
 			return nullptr;
 
-		if (vec.empty())
+		auto msg = std::make_unique<T>();
+		if (!msg->ParseFromArray(rawdata_vec.data(), static_cast<int>(rawdata_vec.size())))
 		{
 			error = true;
 			return nullptr;
 		}
 
-		const T* ret = flatbuffers::GetRoot<T>(rawdata_vec.data());
-		flatbuffers::Verifier verifier(rawdata_vec.data(), rawdata_vec.size());
-
-		if (!ret->Verify(verifier))
-		{
-			error = true;
-			return nullptr;
-		}
-
-		aligned_bufs.push_back(std::move(rawdata_vec));
-
-		return ret;
+		return msg;
 	}
 
 	// Setters
@@ -177,7 +166,6 @@ public:
 
 protected:
 	std::vector<u8>& vec;
-	std::vector<std::vector<u8>> aligned_bufs;
 	usz i      = 0;
 	bool error = false;
 };
@@ -399,8 +387,8 @@ namespace rpcn
 
 		std::vector<u8> forge_request(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data) const;
 		bool forge_send(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data);
-		bool forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
-		bool forge_request_with_data(const flatbuffers::FlatBufferBuilder& builder, CommandType command, u64 packet_id);
+		bool forge_request_with_com_id(const std::string& serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
+		bool forge_request_with_data(const std::string& serialized_data, CommandType command, u64 packet_id);
 		bool forge_send_reply(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
 		bool error_and_disconnect(const std::string& error_mgs);

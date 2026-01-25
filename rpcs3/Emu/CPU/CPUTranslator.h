@@ -3081,13 +3081,22 @@ protected:
 
 	// Allow PSHUFB intrinsic
 	bool m_use_ssse3 = true;
+#ifdef ARCH_ARM64
+	// all arm CPUS have FMA
+	bool m_use_fma = true;
 
+	// Should be nonsense to set this for ARM,
+	// but this flag is only used in SPU verification
+	// For now, setting this flag will speed up SPU verification
+	// but I will remove this later with explicit parralelism - Whatcookie
+	bool m_use_avx = true;
+#else
 	// Allow FMA
 	bool m_use_fma = false;
 
 	// Allow AVX
 	bool m_use_avx = false;
-
+#endif
 	// Allow skylake-x tier AVX-512
 	bool m_use_avx512 = false;
 

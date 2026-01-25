@@ -716,7 +716,7 @@ namespace vk
 			view_swizzle = source->native_component_map;
 		}
 
-		image->set_debug_name("Temp view");
+		image->set_debug_name(fmt::format("Temp view, fmt=0x%x", gcm_format));
 		image->set_native_component_layout(view_swizzle);
 		auto view = image->get_view(remap_vector);
 
@@ -1258,7 +1258,7 @@ namespace vk
 		{
 		default:
 			//TODO
-			err_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
+			warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 			return false;
 #ifndef __APPLE__
 		case CELL_GCM_TEXTURE_R5G6B5:

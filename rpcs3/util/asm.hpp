@@ -183,10 +183,35 @@ namespace utils
 #endif
 	}
 
-	// Synchronization helper (cache-friendly busy waiting)
-	inline void busy_wait(usz cycles = 3000)
+	// The hardware clock on many arm timers run south of 100mhz
+	// and the busy waits in RPCS3 were written assuming an x86 machine
+	// with hardware timers that run around 3GHz.
+	// For instance, on the snapdragon 8 gen 2, the hardware timer runs at 19.2mhz.
+	// This means that a busy wait that would have taken nanoseconds on x86 will run for
+	// many microseconds on many arm machines. 
+#ifdef ARCH_ARM64
+
+	inline u64 arm_timer_scale = 1;
+
+	inline void init_arm_timer_scale()
 	{
+		u64 freq = 0;
+		asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
+		
+		// Try to scale hardware timer to match 3GHz
+		u64 timer_scale = freq / 30000000;
+		if (timer_scale)
+			arm_timer_scale = timer_scale;
+	}
+#endif
+		
+	inline void busy_wait(u64 cycles = 3000)
+	{
+#ifdef ARCH_ARM64
+		const u64 stop = get_tsc() + ((cycles / 100) * arm_timer_scale);
+#else
 		const u64 stop = get_tsc() + cycles;
+#endif
 		do pause();
 		while (get_tsc() < stop);
 	}
