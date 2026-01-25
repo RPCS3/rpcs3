@@ -61,6 +61,21 @@ void VKGSRender::reinitialize_swapchain()
 		frame_context_cleanup(&ctx);
 	}
 
+	// NOTE: frame_context_cleanup alters the queued_frames structure.
+	while (!m_queued_frames.empty())
+	{
+		auto& frame = m_queued_frames.front();
+		if (!frame->swap_command_buffer)
+		{
+			// Drop it
+			m_queued_frames.pop_front();
+			continue;
+		}
+
+		frame_context_cleanup(frame);
+	}
+	ensure(m_queued_frames.empty());
+
 	// Discard the current upscaling pipeline if any
 	m_upscaler.reset();
 
