@@ -1183,6 +1183,13 @@ namespace vk
 		{
 			ensure(scratch_buf);
 
+			// WAW hazard - complete previous work before executing any transfers
+			insert_buffer_memory_barrier(
+				cmd2, scratch_buf->value, 0, scratch_offset,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT);
+
 			if (upload_commands.size() > 1)
 			{
 				auto range_ptr = buffer_copies.data();
@@ -1197,8 +1204,11 @@ namespace vk
 				vkCmdCopyBuffer(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 			}
 
-			insert_buffer_memory_barrier(cmd2, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+			insert_buffer_memory_barrier(
+				cmd2, scratch_buf->value, 0, scratch_offset,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 		}
 
 		// Swap and deswizzle if requested
