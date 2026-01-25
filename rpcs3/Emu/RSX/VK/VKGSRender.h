@@ -227,6 +227,7 @@ private:
 	void begin_render_pass();
 	void close_render_pass();
 	VkRenderPass get_render_pass();
+	void invalidate_render_pass();
 
 	void update_draw_state();
 	void check_present_status();

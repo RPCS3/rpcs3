@@ -143,6 +143,17 @@ VkRenderPass VKGSRender::get_render_pass()
 	return m_cached_renderpass;
 }
 
+void VKGSRender::invalidate_render_pass()
+{
+	// Regenerate renderpass key for the next draw call
+	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
+		key != m_current_renderpass_key)
+	{
+		m_current_renderpass_key = key;
+		m_cached_renderpass = VK_NULL_HANDLE;
+	}
+}
+
 void VKGSRender::update_draw_state()
 {
 	m_profiler.start();
@@ -514,12 +525,7 @@ void VKGSRender::load_texture_env()
 	if (check_for_cyclic_refs)
 	{
 		// Regenerate renderpass key
-		if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
-			key != m_current_renderpass_key)
-		{
-			m_current_renderpass_key = key;
-			m_cached_renderpass = VK_NULL_HANDLE;
-		}
+		invalidate_render_pass();
 	}
 
 	if (backend_config.supports_asynchronous_compute)
@@ -1069,6 +1075,9 @@ void VKGSRender::end()
 			// Since we're ending the subpass, might as well restore DCC/HiZ for extra performance
 			ds->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			ds->reset_surface_counters();
+
+			// Regenerate render pass key
+			invalidate_render_pass();
 		}
 	}
 
