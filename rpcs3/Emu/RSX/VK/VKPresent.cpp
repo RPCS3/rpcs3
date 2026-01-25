@@ -52,7 +52,7 @@ void VKGSRender::reinitialize_swapchain()
 	m_current_command_buffer->reset();
 	m_current_command_buffer->begin();
 
-	for (auto &ctx : frame_context_storage)
+	for (auto &ctx : m_frame_context_storage)
 	{
 		if (ctx.present_image == umax)
 			continue;
@@ -67,6 +67,16 @@ void VKGSRender::reinitialize_swapchain()
 	// Drain all the queues
 	vkDeviceWaitIdle(*m_device);
 
+	// Reset frame context storage
+	for (auto& ctx : m_frame_context_storage)
+	{
+		ctx.destroy(*m_device);
+	}
+	m_current_frame = nullptr;
+	m_max_async_frames = 0;
+	m_current_queue_index = 0;
+	m_frame_context_storage.clear();
+
 	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(m_swapchain_dims.width, m_swapchain_dims.height))
 	{
@@ -74,6 +84,16 @@ void VKGSRender::reinitialize_swapchain()
 		swapchain_unavailable = true;
 		return;
 	}
+
+	// Re-initialize CPU frame contexts
+	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_frame_context_storage.resize(m_max_async_frames);
+	for (auto& ctx : m_frame_context_storage)
+	{
+		ctx.init(*m_device);
+	}
+	m_current_queue_index = 0;
+	m_current_frame = &m_frame_context_storage[0];
 
 	// Prepare new swapchain images for use
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
@@ -158,10 +178,10 @@ void VKGSRender::advance_queued_frames()
 	m_current_frame->tag_frame_end();
 
 	m_queued_frames.push_back(m_current_frame);
-	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
+	ensure(m_queued_frames.size() <= m_max_async_frames);
 
-	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
-	m_current_frame = &frame_context_storage[m_current_queue_index];
+	m_current_queue_index = (m_current_queue_index + 1) % m_max_async_frames;
+	m_current_frame = &m_frame_context_storage[m_current_queue_index];
 	m_current_frame->flags |= frame_context_state::dirty;
 
 	vk::advance_frame_counter();
@@ -398,7 +418,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (m_current_frame == &m_aux_frame_context)
 	{
-		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame = &m_frame_context_storage[m_current_queue_index];
 		if (m_current_frame->swap_command_buffer)
 		{
 			// Its possible this flip request is triggered by overlays and the flip queue is in undefined state
@@ -520,7 +540,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
-	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
+	u64 timeout = m_swapchain->get_swap_image_count() <= 2? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
 		switch (status)
