@@ -32,4 +32,5 @@ namespace np
 	void MatchingRoomList_to_SceNpMatchingRoomList(event_data& edata, const np2_structs::MatchingRoomList& resp, SceNpMatchingRoomList* room_list);
 	void MatchingSearchJoinRoomInfo_to_SceNpMatchingSearchJoinRoomInfo(event_data& edata, const np2_structs::MatchingSearchJoinRoomInfo& resp, SceNpMatchingSearchJoinRoomInfo* room_info);
 	void MatchingAttr_to_SceNpMatchingAttr(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::MatchingAttr>& attr_list, vm::bptr<SceNpMatchingAttr>& first_attr);
+	void OptParam_to_SceNpMatching2SignalingOptParam(const np2_structs::OptParam& resp, SceNpMatching2SignalingOptParam* opt_param);
 } // namespace np

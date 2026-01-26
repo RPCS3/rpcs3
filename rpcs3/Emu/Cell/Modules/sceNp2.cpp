@@ -1335,6 +1335,30 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, signaling_opt_param] = nph.local_get_signaling_opt_param(roomId);
+
+	if (error)
+	{
+		return error;
+	}
+
+	*signalingOptParam = *signaling_opt_param;
+
 	return CELL_OK;
 }
 

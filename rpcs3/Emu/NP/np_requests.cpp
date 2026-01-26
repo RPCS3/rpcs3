@@ -200,8 +200,11 @@ namespace np
 			return;
 		}
 
-		const auto resp = reply.get_protobuf<np2_structs::RoomDataInternal>();
+		const auto resp = reply.get_protobuf<np2_structs::CreateRoomResponse>();
 		ensure(!reply.is_error(), "Malformed reply to CreateRoom command");
+		ensure(resp->has_internal());
+
+		const auto& resp_internal = resp->internal();
 
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
@@ -209,13 +212,19 @@ namespace np
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2CreateJoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, *resp, room_info, npid, include_onlinename, include_avatarurl);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp_internal, room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		const auto resp_opt_param = resp->opt_param();
+		SceNpMatching2SignalingOptParam opt_param{};
+		OptParam_to_SceNpMatching2SignalingOptParam(resp_opt_param, &opt_param);
+
 		np_cache.insert_room(room_info);
-		np_cache.update_password(room_resp->roomDataInternal->roomId, cached_cj_password);
+		np_cache.update_password(room_info->roomId, cached_cj_password);
+		np_cache.update_opt_param(room_info->roomId, &opt_param);
 
 		extra_nps::print_SceNpMatching2CreateJoinRoomResponse(room_resp);
+		extra_nps::print_SceNpMatching2SignalingOptParam(&opt_param);
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 	}
@@ -275,36 +284,38 @@ namespace np
 		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp->room_data(), room_info, npid, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		const u64 room_id = resp->room_data().roomid();
+
+		const auto resp_opt_param = resp->opt_param();
+		SceNpMatching2SignalingOptParam opt_param{};
+		OptParam_to_SceNpMatching2SignalingOptParam(resp_opt_param, &opt_param);
 		np_cache.insert_room(room_info);
+		np_cache.update_opt_param(room_id, &opt_param);
 
 		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
+		extra_nps::print_SceNpMatching2SignalingOptParam(&opt_param);
 
 		// We initiate signaling if necessary
-		if (resp->signaling_data_size() > 0)
+		for (int i = 0; i < resp->signaling_data_size(); i++)
 		{
-			const u64 room_id = resp->room_data().roomid();
+			const auto& signaling_info = resp->signaling_data(i);
+			ensure(signaling_info.has_addr());
 
-			for (int i = 0; i < resp->signaling_data_size(); i++)
-			{
-				const auto& signaling_info = resp->signaling_data(i);
-				ensure(signaling_info.has_addr());
+			const u32 addr_p2p = register_ip(signaling_info.addr().ip());
+			const u16 port_p2p = signaling_info.addr().port().value();
 
-				const u32 addr_p2p = register_ip(signaling_info.addr().ip());
-				const u16 port_p2p = signaling_info.addr().port().value();
+			const u16 member_id = signaling_info.member_id().value();
+			const auto [npid_res, npid_p2p] = np_cache.get_npid(room_id, member_id);
 
-				const u16 member_id = signaling_info.member_id().value();
-				const auto [npid_res, npid_p2p] = np_cache.get_npid(room_id, member_id);
+			if (npid_res != CELL_OK)
+				continue;
 
-				if (npid_res != CELL_OK)
-					continue;
+			rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid_p2p->handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
 
-				rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid_p2p->handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
-
-				// Attempt Signaling
-				auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-				const u32 conn_id = sigh.init_sig2(*npid_p2p, room_id, member_id);
-				sigh.start_sig(conn_id, addr_p2p, port_p2p);
-			}
+			// Attempt Signaling
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			const u32 conn_id = sigh.init_sig2(*npid_p2p, room_id, member_id);
+			sigh.start_sig(conn_id, addr_p2p, port_p2p);
 		}
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
