@@ -1064,7 +1064,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
 {
-	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
+	sceNp2.warning("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1072,6 +1072,17 @@ error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<S
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!queueInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	*queueInfo = {};
+	// TODO: check the values returned on real hardware
+	queueInfo->requestCbQueueLen = 255;
+	queueInfo->sessionEventCbQueueLen = 255;
+	queueInfo->sessionMsgCbQueueLen = 255;
 
 	return CELL_OK;
 }
