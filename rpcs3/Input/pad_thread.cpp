@@ -34,6 +34,14 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
+// Mouse-based motion sensor emulation state.
+// Written from the Qt native event handler and consumed by pad_thread.
+std::atomic<bool> g_mouse_gyro_rmb{false};   // Whether right mouse button is currently held (gyro active)
+std::atomic<s32> g_mouse_gyro_dx{0};         // Accumulated mouse X delta
+std::atomic<s32> g_mouse_gyro_dy{0};         // Accumulated mouse Y delta
+std::atomic<s32> g_mouse_gyro_wheel{0};      // Accumulated mouse wheel delta
+std::atomic<bool> g_mouse_gyro_reset{false}; // One-shot reset request on right mouse button release
+
 extern void pad_state_notify_state_change(usz index, u32 state);
 extern bool is_input_allowed();
 extern std::string g_input_config_override;
@@ -602,6 +610,51 @@ void pad_thread::operator()()
 		}
 
 		apply_copilots();
+
+		// Inject hardcoded mouse-based motion deltas into pad sensors for gyro emulation.
+		// The Qt frontend accumulates deltas while RMB is held.
+		if (Emu.IsRunning())
+		{
+			const bool reset = g_mouse_gyro_reset.exchange(false, std::memory_order_relaxed);
+
+			const s32 dx = g_mouse_gyro_dx.exchange(0, std::memory_order_relaxed);
+			const s32 dy = g_mouse_gyro_dy.exchange(0, std::memory_order_relaxed);
+			const s32 wh = g_mouse_gyro_wheel.exchange(0, std::memory_order_relaxed);
+
+			if (dx || dy || wh || reset)
+			{
+				auto clamp_u16_0_1023 = [](s32 v) -> u16
+				{
+					return static_cast<u16>(std::clamp(v, 0, 1023));
+				};
+
+				for (const auto& pad : m_pads)
+				{
+					if (!pad || !pad->is_connected())
+						continue;
+
+					if (reset)
+					{
+						// RMB released → reset motion
+						// 512 is the neutral value within the 0-1023 motion range.
+						pad->m_sensors[0].m_value = 512;
+						pad->m_sensors[1].m_value = 512;
+						pad->m_sensors[2].m_value = 512;
+					}
+					else
+					{
+						// RMB held → accumulate motion
+						// Axes have been chosen as tested in Sly 4 minigames. Top-down view motion uses X/Z axes.
+						pad->m_sensors[0].m_value =
+							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[0].m_value) + dx); // Mouse X → Motion X
+						pad->m_sensors[1].m_value =
+							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[1].m_value) + wh); // Mouse Wheel → Motion Y
+						pad->m_sensors[2].m_value =
+							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[2].m_value) + dy); // Mouse Y → Motion Z
+					}
+				}
+			}
+		}
 
 		if (Emu.IsRunning())
 		{

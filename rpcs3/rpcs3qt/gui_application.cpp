@@ -70,6 +70,13 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+// Mouse-based motion sensor emulation state (defined in pad_thread)
+extern std::atomic<bool> g_mouse_gyro_rmb;
+extern std::atomic<s32> g_mouse_gyro_dx;
+extern std::atomic<s32> g_mouse_gyro_dy;
+extern std::atomic<s32> g_mouse_gyro_wheel;
+extern std::atomic<bool> g_mouse_gyro_reset;
+
 std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
 
 s32 gui_application::m_language_id = static_cast<s32>(CELL_SYSUTIL_LANG_ENGLISH_US);
@@ -1356,7 +1363,9 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 
 	if (eventType == "windows_generic_MSG")
 	{
-		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE))
+		if (MSG* msg = static_cast<MSG*>(message); msg && (msg->message == WM_INPUT || msg->message == WM_KEYDOWN || msg->message == WM_KEYUP || msg->message == WM_DEVICECHANGE
+			|| msg->message == WM_MOUSEMOVE || msg->message == WM_MOUSEWHEEL
+			|| msg->message == WM_LBUTTONDOWN || msg->message == WM_LBUTTONUP || msg->message == WM_RBUTTONDOWN || msg->message == WM_RBUTTONUP))
 		{
 			if (msg->message == WM_DEVICECHANGE && (msg->wParam == DBT_DEVICEARRIVAL || msg->wParam == DBT_DEVICEREMOVECOMPLETE))
 			{
@@ -1365,6 +1374,66 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
 				}
 				return false;
+			}
+
+			// Hardcoded mouse-based motion input.
+			// Captures native mouse events while the game window is focused.
+			// Accumulates deltas for motion sensor emulation when RMB is held.
+			// Intentionally independent of chosen pad configuration.
+			if (Emu.IsRunning() && GetForegroundWindow() == msg->hwnd)
+			{
+				switch (msg->message)
+				{
+				case WM_RBUTTONDOWN:
+					// Enable mouse-driven gyro emulation while RMB is held.
+					g_mouse_gyro_rmb.store(true, std::memory_order_relaxed);
+					break;
+
+				case WM_RBUTTONUP:
+					// Disable gyro emulation and request a one-shot motion reset.
+					g_mouse_gyro_rmb.store(false, std::memory_order_relaxed);
+					g_mouse_gyro_reset.store(true, std::memory_order_relaxed);
+					break;
+
+				case WM_MOUSEMOVE:
+				{
+					// Track relative mouse movement using a persistent last cursor position.
+					static POINT last{};
+					POINT cur;
+					cur.x = static_cast<short>(LOWORD(msg->lParam));
+					cur.y = static_cast<short>(HIWORD(msg->lParam));
+
+					// Initialize reference position on first event.
+					if (last.x == 0 && last.y == 0)
+						last = cur;
+
+					const s32 dx = cur.x - last.x;
+					const s32 dy = cur.y - last.y;
+					last = cur;
+
+					// Accumulate deltas only while gyro emulation is active.
+					if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+					{
+						g_mouse_gyro_dx.fetch_add(dx, std::memory_order_relaxed);
+						g_mouse_gyro_dy.fetch_add(dy, std::memory_order_relaxed);
+					}
+					break;
+				}
+
+				case WM_MOUSEWHEEL:
+				{
+					// Accumulate mouse wheel steps as motion input as well.
+					if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+					{
+						const s32 steps = GET_WHEEL_DELTA_WPARAM(msg->wParam) / WHEEL_DELTA;
+						g_mouse_gyro_wheel.fetch_add(steps, std::memory_order_relaxed);
+					}
+					break;
+				}
+
+				default:
+					break;
+				}
 			}
 
 			if (auto* handler = g_fxo->try_get<MouseHandlerBase>(); handler && handler->type == mouse_handler::raw)
