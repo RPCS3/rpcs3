@@ -74,16 +74,20 @@ namespace vk
 			// This was used in a cyclic ref before, but is missing a barrier
 			// No need for a full stall, use a custom barrier instead
 			VkPipelineStageFlags src_stage;
-			VkAccessFlags src_access;
+			VkAccessFlags src_access, dst_access;
 			if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 			{
 				src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 				src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				dst_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+				dst_stage |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 			}
 			else
 			{
 				src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 				src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				dst_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+				dst_stage |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 			}
 
 			vk::insert_image_memory_barrier(
@@ -91,7 +95,7 @@ namespace vk
 				raw->value,
 				raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				src_stage, dst_stage,
-				src_access, VK_ACCESS_SHADER_READ_BIT,
+				src_access, dst_access,
 				{ raw->aspect(), 0, 1, 0, 1 });
 
 			raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -137,6 +141,17 @@ VkRenderPass VKGSRender::get_render_pass()
 	}
 
 	return m_cached_renderpass;
+}
+
+void VKGSRender::invalidate_render_pass()
+{
+	// Regenerate renderpass key for the next draw call
+	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
+		key != m_current_renderpass_key)
+	{
+		m_current_renderpass_key = key;
+		m_cached_renderpass = VK_NULL_HANDLE;
+	}
 }
 
 void VKGSRender::update_draw_state()
@@ -510,12 +525,7 @@ void VKGSRender::load_texture_env()
 	if (check_for_cyclic_refs)
 	{
 		// Regenerate renderpass key
-		if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
-			key != m_current_renderpass_key)
-		{
-			m_current_renderpass_key = key;
-			m_cached_renderpass = VK_NULL_HANDLE;
-		}
+		invalidate_render_pass();
 	}
 
 	if (backend_config.supports_asynchronous_compute)
@@ -1065,6 +1075,9 @@ void VKGSRender::end()
 			// Since we're ending the subpass, might as well restore DCC/HiZ for extra performance
 			ds->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			ds->reset_surface_counters();
+
+			// Regenerate render pass key
+			invalidate_render_pass();
 		}
 	}
 

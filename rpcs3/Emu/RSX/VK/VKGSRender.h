@@ -159,8 +159,9 @@ private:
 	u64 m_texture_parameters_dynamic_offset = 0;
 	u64 m_stipple_array_dynamic_offset = 0;
 
-	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
-	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	std::vector<vk::frame_context_t> m_frame_context_storage;
+	u32 m_max_async_frames = 0u;
+	// Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	vk::frame_context_t m_aux_frame_context;
 
 	u32 m_current_queue_index = 0;
@@ -227,6 +228,7 @@ private:
 	void begin_render_pass();
 	void close_render_pass();
 	VkRenderPass get_render_pass();
+	void invalidate_render_pass();
 
 	void update_draw_state();
 	void check_present_status();
