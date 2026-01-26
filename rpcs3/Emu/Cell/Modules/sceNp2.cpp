@@ -616,9 +616,9 @@ error_code sceNpMatching2CreateServerContext(
 	return CELL_OK;
 }
 
-error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo) // TODO
+error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo)
 {
-	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
+	sceNp2.warning("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -626,6 +626,14 @@ error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!memInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	SceNpMatching2MemoryInfo mem_info = nph.get_memory_info();
+	*memInfo = mem_info;
 
 	return CELL_OK;
 }
