@@ -1672,6 +1672,11 @@ namespace np
 		return np_cache.get_memberids(room_id, sort_method);
 	}
 
+	std::pair<error_code, std::optional<SceNpMatching2SignalingOptParam>> np_handler::local_get_signaling_opt_param(SceNpMatching2RoomId room_id)
+	{
+		return np_cache.get_opt_param(room_id);
+	}
+
 	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id)
 	{
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(ctx_id);

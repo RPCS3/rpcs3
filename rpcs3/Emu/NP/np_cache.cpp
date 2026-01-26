@@ -120,6 +120,11 @@ namespace np
 		rooms[room_id].password = password;
 	}
 
+	void cache_manager::update_opt_param(SceNpMatching2RoomId room_id, const SceNpMatching2SignalingOptParam* sce_opt_param)
+	{
+		rooms[room_id].opt_param = *sce_opt_param;
+	}
+
 	std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> cache_manager::get_slots(SceNpMatching2RoomId room_id)
 	{
 		std::lock_guard lock(mutex);
@@ -221,6 +226,18 @@ namespace np
 		}
 
 		return {CELL_OK, rooms[room_id].password};
+	}
+
+	std::pair<error_code, std::optional<SceNpMatching2SignalingOptParam>> cache_manager::get_opt_param(SceNpMatching2RoomId room_id)
+	{
+		std::lock_guard lock(mutex);
+
+		if (!rooms.contains(room_id))
+		{
+			return {SCE_NP_MATCHING2_ERROR_ROOM_NOT_FOUND, {}};
+		}
+
+		return {CELL_OK, rooms[room_id].opt_param};
 	}
 
 	error_code cache_manager::get_member_and_attrs(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, bool include_onlinename, bool include_avatarurl)
