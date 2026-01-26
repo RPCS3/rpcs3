@@ -1764,4 +1764,16 @@ namespace np
 		}
 	}
 
+	SceNpMatching2MemoryInfo np_handler::get_memory_info() const
+	{
+		auto [m_size, m_usage, m_max_usage] = np_memory.get_stats();
+
+		SceNpMatching2MemoryInfo mem_info{};
+		mem_info.totalMemSize = m_size;
+		mem_info.curMemUsage = m_usage;
+		mem_info.maxMemUsage = m_max_usage;
+
+		return mem_info;
+	}
+
 } // namespace np

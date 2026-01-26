@@ -262,6 +262,7 @@ namespace np
 		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
 		u32 get_players_history_count(u32 options);
 		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
+		SceNpMatching2MemoryInfo get_memory_info() const;
 		error_code abort_request(u32 req_id);
 
 		// For signaling
