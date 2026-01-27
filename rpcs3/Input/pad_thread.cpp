@@ -35,7 +35,6 @@
 LOG_CHANNEL(sys_log, "SYS");
 
 // Mouse-based motion sensor emulation state.
-// Written from the Qt native event handler and consumed by pad_thread.
 std::atomic<bool> g_mouse_gyro_rmb{false};   // Whether right mouse button is currently held (gyro active)
 std::atomic<s32> g_mouse_gyro_dx{0};         // Accumulated mouse X delta
 std::atomic<s32> g_mouse_gyro_dy{0};         // Accumulated mouse Y delta
@@ -644,12 +643,9 @@ void pad_thread::operator()()
 					{
 						// RMB held → accumulate motion
 						// Axes have been chosen as tested in Sly 4 minigames. Top-down view motion uses X/Z axes.
-						pad->m_sensors[0].m_value =
-							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[0].m_value) + dx); // Mouse X → Motion X
-						pad->m_sensors[1].m_value =
-							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[1].m_value) + wh); // Mouse Wheel → Motion Y
-						pad->m_sensors[2].m_value =
-							clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[2].m_value) + dy); // Mouse Y → Motion Z
+						pad->m_sensors[0].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[0].m_value) + dx); // Mouse X → Motion X
+						pad->m_sensors[1].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[1].m_value) + wh); // Mouse Wheel → Motion Y
+						pad->m_sensors[2].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[2].m_value) + dy); // Mouse Y → Motion Z
 					}
 				}
 			}
