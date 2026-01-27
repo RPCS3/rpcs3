@@ -19,6 +19,7 @@
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
+#include "Input/pad_thread.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -61,13 +62,6 @@ namespace pad
 {
 	extern atomic_t<bool> g_home_menu_requested;
 }
-
-// Mouse-based motion sensor emulation state (defined in pad_thread)
-extern std::atomic<bool> g_mouse_gyro_rmb;
-extern std::atomic<s32> g_mouse_gyro_dx;
-extern std::atomic<s32> g_mouse_gyro_dy;
-extern std::atomic<s32> g_mouse_gyro_wheel;
-extern std::atomic<bool> g_mouse_gyro_reset;
 
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
 	: QWindow()
@@ -1226,67 +1220,63 @@ bool gs_frame::event(QEvent* ev)
 
 	// Hardcoded mouse-based motion input.
 	// Captures mouse events while the game window is focused.
-	// Accumulates deltas for motion sensor emulation when RMB is held.
+	// Updates motion sensor values via mouse position and mouse wheel while RMB is held.
 	// Intentionally independent of chosen pad configuration.
 	if (Emu.IsRunning())
 	{
-		switch (ev->type())
+		if (auto* pad_thr = pad::get_pad_thread(true))
 		{
-		case QEvent::MouseButtonPress:
-		{
-			auto* e = static_cast<QMouseEvent*>(ev);
-			if (e->button() == Qt::RightButton)
+			switch (ev->type())
 			{
-				// Enable mouse-driven gyro emulation while RMB is held.
-				g_mouse_gyro_rmb.store(true);
+			case QEvent::MouseButtonPress:
+			{
+				auto* e = static_cast<QMouseEvent*>(ev);
+				if (e->button() == Qt::RightButton)
+				{
+					// Enable mouse-driven gyro emulation while RMB is held.
+					pad_thr->mouse_gyro_rmb_down();
+				}
+				break;
 			}
-			break;
-		}
-		case QEvent::MouseButtonRelease:
-		{
-			auto* e = static_cast<QMouseEvent*>(ev);
-			if (e->button() == Qt::RightButton)
+			case QEvent::MouseButtonRelease:
 			{
-				// Disable gyro emulation and request a one-shot motion reset.
-				g_mouse_gyro_rmb.store(false);
-				g_mouse_gyro_reset.store(true);
+				auto* e = static_cast<QMouseEvent*>(ev);
+				if (e->button() == Qt::RightButton)
+				{
+					// Disable gyro emulation and request a one-shot motion reset.
+					pad_thr->mouse_gyro_rmb_up();
+				}
+				break;
 			}
-			break;
-		}
-		case QEvent::MouseMove:
-		{
-			// Track relative mouse movement using a persistent last cursor position.
-			static QPoint last;
-			auto* e = static_cast<QMouseEvent*>(ev);
-			const QPoint cur = e->pos();
+			case QEvent::MouseMove:
+			{				
+				auto* e = static_cast<QMouseEvent*>(ev);
 
-			// Initialize reference position on first event.
-			if (last.isNull())
-				last = cur;
+				// Track cursor offset from window center.
+				const QPoint center(width() / 2, height() / 2);
+				const QPoint cur = e->position().toPoint();
 
-			const s32 dx = cur.x() - last.x();
-			const s32 dy = cur.y() - last.y();
-			last = cur;
+				const s32 off_x = cur.x() - center.x() + DEFAULT_MOTION_X;
+				const s32 off_y = cur.y() - center.y() + DEFAULT_MOTION_Z;
 
-			// Accumulate deltas while gyro emulation is active.
-			if (g_mouse_gyro_rmb.load())
-			{
-				g_mouse_gyro_dx.fetch_add(dx);
-				g_mouse_gyro_dy.fetch_add(dy);
+				// Determine motion from relative mouse position while gyro emulation is active.
+				pad_thr->mouse_gyro_set_xz(off_x, off_y);
+
+				break;
 			}
-			break;
-		}
-		case QEvent::Wheel:
-		{
-			// Accumulate mouse wheel steps while gyro emulation is active.
-			auto* e = static_cast<QWheelEvent*>(ev);
-			if (g_mouse_gyro_rmb.load())
+			case QEvent::Wheel:
 			{
+				auto* e = static_cast<QWheelEvent*>(ev);
+
+				// Track mouse wheels steps.
 				const s32 steps = e->angleDelta().y() / 120;
-				g_mouse_gyro_wheel.fetch_add(steps);
+
+				// Accumulate mouse wheel steps while gyro emulation is active.
+				pad_thr->mouse_gyro_set_y(steps);
+
+				break;
 			}
-			break;
-		}
+			}
 		}
 	}
 

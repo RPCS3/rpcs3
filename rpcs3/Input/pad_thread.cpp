@@ -34,13 +34,6 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-// Mouse-based motion sensor emulation state.
-std::atomic<bool> g_mouse_gyro_rmb{false};   // Whether right mouse button is currently held (gyro active)
-std::atomic<s32> g_mouse_gyro_dx{0};         // Accumulated mouse X delta
-std::atomic<s32> g_mouse_gyro_dy{0};         // Accumulated mouse Y delta
-std::atomic<s32> g_mouse_gyro_wheel{0};      // Accumulated mouse wheel delta
-std::atomic<bool> g_mouse_gyro_reset{false}; // One-shot reset request on right mouse button release
-
 extern void pad_state_notify_state_change(usz index, u32 state);
 extern bool is_input_allowed();
 extern std::string g_input_config_override;
@@ -87,6 +80,9 @@ pad_thread::~pad_thread()
 void pad_thread::Init()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
+
+	// Reset mouse-based gyro state
+	m_mouse_gyro.clear();
 
 	// Cache old settings if possible
 	std::array<pad_setting, CELL_PAD_MAX_PORT_NUM> pad_settings;
@@ -614,38 +610,33 @@ void pad_thread::operator()()
 		// The Qt frontend accumulates deltas while RMB is held.
 		if (Emu.IsRunning())
 		{
-			const bool reset = g_mouse_gyro_reset.exchange(false);
+			const bool reset = m_mouse_gyro.reset;
 
-			const s32 dx = g_mouse_gyro_dx.exchange(0);
-			const s32 dy = g_mouse_gyro_dy.exchange(0);
-			const s32 wh = g_mouse_gyro_wheel.exchange(0);
+			const s32 gyro_x = m_mouse_gyro.gyro_x;
+			const s32 gyro_y = m_mouse_gyro.gyro_y;
+			const s32 gyro_z = m_mouse_gyro.gyro_z;
 
-			if (dx || dy || wh || reset)
+			if (gyro_x || gyro_y || gyro_z || reset)
 			{
-				const auto clamp_u16_0_1023 = [](s32 v) -> u16
-				{
-					return static_cast<u16>(std::clamp(v, 0, 1023));
-				};
+				auto& pad = m_pads[0];
 
-				for (const auto& pad : m_pads)
+				if (pad && pad->is_connected())
 				{
-					if (!pad || !pad->is_connected())
-						continue;
-
 					if (reset)
 					{
 						// RMB released → reset motion
 						pad->m_sensors[0].m_value = DEFAULT_MOTION_X;
 						pad->m_sensors[1].m_value = DEFAULT_MOTION_Y;
 						pad->m_sensors[2].m_value = DEFAULT_MOTION_Z;
+						m_mouse_gyro.clear();
 					}
 					else
 					{
 						// RMB held → accumulate motion
 						// Axes have been chosen as tested in Sly 4 minigames. Top-down view motion uses X/Z axes.
-						pad->m_sensors[0].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[0].m_value) + dx); // Mouse X → Motion X
-						pad->m_sensors[1].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[1].m_value) + wh); // Mouse Wheel → Motion Y
-						pad->m_sensors[2].m_value = clamp_u16_0_1023(static_cast<s32>(pad->m_sensors[2].m_value) + dy); // Mouse Y → Motion Z
+						pad->m_sensors[0].m_value = gyro_x; // Mouse X → Motion X
+						pad->m_sensors[1].m_value = gyro_y; // Mouse Wheel → Motion Y
+						pad->m_sensors[2].m_value = gyro_z; // Mouse Y → Motion Z
 					}
 				}
 			}
@@ -984,4 +975,32 @@ void pad_thread::open_home_menu()
 
 		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});
 	}
+}
+
+void pad_thread::mouse_gyro_rmb_down()
+{
+	m_mouse_gyro.rmb = true;
+}
+
+void pad_thread::mouse_gyro_rmb_up()
+{
+	m_mouse_gyro.rmb = false;
+	m_mouse_gyro.reset = true;
+}
+
+void pad_thread::mouse_gyro_set_xz(s32 off_x, s32 off_y)
+{
+	if (!m_mouse_gyro.rmb)
+		return;
+
+	m_mouse_gyro.gyro_x = static_cast<u16>(std::clamp(off_x, 0, DEFAULT_MOTION_X * 2 - 1));
+	m_mouse_gyro.gyro_z = static_cast<u16>(std::clamp(off_y, 0, DEFAULT_MOTION_Z * 2 - 1));
+}
+
+void pad_thread::mouse_gyro_set_y(s32 steps)
+{
+	if (!m_mouse_gyro.rmb)
+		return;
+
+	m_mouse_gyro.gyro_y = static_cast<u16>(std::clamp(m_mouse_gyro.gyro_y + steps, 0, DEFAULT_MOTION_Y * 2 - 1));
 }
