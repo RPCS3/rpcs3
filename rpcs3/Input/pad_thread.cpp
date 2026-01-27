@@ -606,8 +606,8 @@ void pad_thread::operator()()
 
 		apply_copilots();
 
-		// Inject hardcoded mouse-based motion deltas into pad sensors for gyro emulation.
-		// The Qt frontend accumulates deltas while RMB is held.
+		// Inject mouse-based motion sensor values into pad sensors for gyro emulation.
+		// The Qt frontend maps cursor offset and wheel input to absolute motion values while RMB is held.
 		if (Emu.IsRunning())
 		{
 			const bool reset = m_mouse_gyro.reset;
@@ -618,6 +618,7 @@ void pad_thread::operator()()
 
 			if (gyro_x || gyro_y || gyro_z || reset)
 			{
+				// Mouse-based gyro input is intentionally bound to Player 1 only.
 				auto& pad = m_pads[0];
 
 				if (pad && pad->is_connected())

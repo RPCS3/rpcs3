@@ -1268,7 +1268,7 @@ bool gs_frame::event(QEvent* ev)
 			{
 				auto* e = static_cast<QWheelEvent*>(ev);
 
-				// Track mouse wheels steps.
+				// Track mouse wheel steps.
 				const s32 steps = e->angleDelta().y() / 120;
 
 				// Accumulate mouse wheel steps while gyro emulation is active.
