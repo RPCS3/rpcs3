@@ -62,6 +62,13 @@ namespace pad
 	extern atomic_t<bool> g_home_menu_requested;
 }
 
+// Mouse-based motion sensor emulation state (defined in pad_thread)
+extern std::atomic<bool> g_mouse_gyro_rmb;
+extern std::atomic<s32> g_mouse_gyro_dx;
+extern std::atomic<s32> g_mouse_gyro_dy;
+extern std::atomic<s32> g_mouse_gyro_wheel;
+extern std::atomic<bool> g_mouse_gyro_reset;
+
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
 	: QWindow()
 	, m_initial_geometry(geometry)
@@ -1216,6 +1223,73 @@ bool gs_frame::event(QEvent* ev)
 		// This will make the cursor visible again if it was hidden by the mouse idle timeout
 		handle_cursor(visibility(), false, false, true);
 	}
+
+	// Hardcoded mouse-based motion input.
+	// Captures mouse events while the game window is focused.
+	// Accumulates deltas for motion sensor emulation when RMB is held.
+	// Intentionally independent of chosen pad configuration.
+	if (Emu.IsRunning())
+	{
+		switch (ev->type())
+		{
+		case QEvent::MouseButtonPress:
+		{
+			auto* e = static_cast<QMouseEvent*>(ev);
+			if (e->button() == Qt::RightButton)
+			{
+				// Enable mouse-driven gyro emulation while RMB is held.
+				g_mouse_gyro_rmb.store(true, std::memory_order_relaxed);
+			}
+			break;
+		}
+		case QEvent::MouseButtonRelease:
+		{
+			auto* e = static_cast<QMouseEvent*>(ev);
+			if (e->button() == Qt::RightButton)
+			{
+				// Disable gyro emulation and request a one-shot motion reset.
+				g_mouse_gyro_rmb.store(false, std::memory_order_relaxed);
+				g_mouse_gyro_reset.store(true, std::memory_order_relaxed);
+			}
+			break;
+		}
+		case QEvent::MouseMove:
+		{
+			// Track relative mouse movement using a persistent last cursor position.
+			static QPoint last;
+			auto* e = static_cast<QMouseEvent*>(ev);
+			const QPoint cur = e->pos();
+
+			// Initialize reference position on first event.
+			if (last.isNull())
+				last = cur;
+
+			const s32 dx = cur.x() - last.x();
+			const s32 dy = cur.y() - last.y();
+			last = cur;
+
+			// Accumulate deltas while gyro emulation is active.
+			if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+			{
+				g_mouse_gyro_dx.fetch_add(dx, std::memory_order_relaxed);
+				g_mouse_gyro_dy.fetch_add(dy, std::memory_order_relaxed);
+			}
+			break;
+		}
+		case QEvent::Wheel:
+		{
+			// Accumulate mouse wheel steps while gyro emulation is active.
+			auto* e = static_cast<QWheelEvent*>(ev);
+			if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+			{
+				const s32 steps = e->angleDelta().y() / 120;
+				g_mouse_gyro_wheel.fetch_add(steps, std::memory_order_relaxed);
+			}
+			break;
+		}
+		}
+	}
+
 	return QWindow::event(ev);
 }
 
