@@ -636,10 +636,9 @@ void pad_thread::operator()()
 					if (reset)
 					{
 						// RMB released → reset motion
-						// 512 is the neutral value within the 0-1023 motion range.
-						pad->m_sensors[0].m_value = 512;
-						pad->m_sensors[1].m_value = 512;
-						pad->m_sensors[2].m_value = 512;
+						pad->m_sensors[0].m_value = DEFAULT_MOTION_X;
+						pad->m_sensors[1].m_value = DEFAULT_MOTION_Y;
+						pad->m_sensors[2].m_value = DEFAULT_MOTION_Z;
 					}
 					else
 					{
