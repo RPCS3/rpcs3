@@ -614,11 +614,11 @@ void pad_thread::operator()()
 		// The Qt frontend accumulates deltas while RMB is held.
 		if (Emu.IsRunning())
 		{
-			const bool reset = g_mouse_gyro_reset.exchange(false, std::memory_order_relaxed);
+			const bool reset = g_mouse_gyro_reset.exchange(false);
 
-			const s32 dx = g_mouse_gyro_dx.exchange(0, std::memory_order_relaxed);
-			const s32 dy = g_mouse_gyro_dy.exchange(0, std::memory_order_relaxed);
-			const s32 wh = g_mouse_gyro_wheel.exchange(0, std::memory_order_relaxed);
+			const s32 dx = g_mouse_gyro_dx.exchange(0);
+			const s32 dy = g_mouse_gyro_dy.exchange(0);
+			const s32 wh = g_mouse_gyro_wheel.exchange(0);
 
 			if (dx || dy || wh || reset)
 			{

@@ -1238,7 +1238,7 @@ bool gs_frame::event(QEvent* ev)
 			if (e->button() == Qt::RightButton)
 			{
 				// Enable mouse-driven gyro emulation while RMB is held.
-				g_mouse_gyro_rmb.store(true, std::memory_order_relaxed);
+				g_mouse_gyro_rmb.store(true);
 			}
 			break;
 		}
@@ -1248,8 +1248,8 @@ bool gs_frame::event(QEvent* ev)
 			if (e->button() == Qt::RightButton)
 			{
 				// Disable gyro emulation and request a one-shot motion reset.
-				g_mouse_gyro_rmb.store(false, std::memory_order_relaxed);
-				g_mouse_gyro_reset.store(true, std::memory_order_relaxed);
+				g_mouse_gyro_rmb.store(false);
+				g_mouse_gyro_reset.store(true);
 			}
 			break;
 		}
@@ -1269,10 +1269,10 @@ bool gs_frame::event(QEvent* ev)
 			last = cur;
 
 			// Accumulate deltas while gyro emulation is active.
-			if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+			if (g_mouse_gyro_rmb.load())
 			{
-				g_mouse_gyro_dx.fetch_add(dx, std::memory_order_relaxed);
-				g_mouse_gyro_dy.fetch_add(dy, std::memory_order_relaxed);
+				g_mouse_gyro_dx.fetch_add(dx);
+				g_mouse_gyro_dy.fetch_add(dy);
 			}
 			break;
 		}
@@ -1280,10 +1280,10 @@ bool gs_frame::event(QEvent* ev)
 		{
 			// Accumulate mouse wheel steps while gyro emulation is active.
 			auto* e = static_cast<QWheelEvent*>(ev);
-			if (g_mouse_gyro_rmb.load(std::memory_order_relaxed))
+			if (g_mouse_gyro_rmb.load())
 			{
 				const s32 steps = e->angleDelta().y() / 120;
-				g_mouse_gyro_wheel.fetch_add(steps, std::memory_order_relaxed);
+				g_mouse_gyro_wheel.fetch_add(steps);
 			}
 			break;
 		}
