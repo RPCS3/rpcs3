@@ -623,7 +623,7 @@ void pad_thread::operator()()
 
 			if (dx || dy || wh || reset)
 			{
-				auto clamp_u16_0_1023 = [](s32 v) -> u16
+				const auto clamp_u16_0_1023 = [](s32 v) -> u16
 				{
 					return static_cast<u16>(std::clamp(v, 0, 1023));
 				};
