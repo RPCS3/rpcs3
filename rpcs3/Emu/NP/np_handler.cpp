@@ -1085,6 +1085,11 @@ namespace np
 
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
+		const std::string npids_string = fmt::format("\"%s\"", fmt::merge(npids, "\",\""));
+
+		rpcn_log.notice("Sending message to %s:", npids_string);
+		msg_data.print();
+
 		get_rpcn()->send_message(msg_data, npids);
 	}
 

@@ -3122,6 +3122,7 @@ namespace rpcn
 
 		if (sdata.is_error())
 		{
+			rpcn_log.error("Error parsing MessageReceived notification");
 			return;
 		}
 
@@ -3142,6 +3143,9 @@ namespace rpcn
 
 		strcpy_trunc(mdata.commId.data, pb_mdata->communicationid());
 		mdata.data.assign(pb_mdata->data().begin(), pb_mdata->data().end());
+
+		rpcn_log.notice("Received message from %s:", sender);
+		mdata.print();
 
 		// Save the message and call callbacks
 		{
