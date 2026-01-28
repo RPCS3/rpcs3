@@ -188,7 +188,7 @@ namespace fmt
 				result.append(separator);
 		}
 
-		return result.append(source.back());
+		return result.append(*end);
 	}
 
 	template <typename T>
