@@ -101,6 +101,53 @@ sudo apt-get install cmake
 
     sudo zypper install git cmake ninja libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt6-qtbase-devel libqt6-qtmultimedia-devel libqt6-qtsvg-devel libQt6Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
 
+### macOS
+
+The following tools are required to build RPCS3 on macOS:
+- Xcode Command Line Tools
+- [Homebrew](https://brew.sh/)
+- [CMake 3.28.0+](https://www.cmake.org/download/)
+- [Qt 6.10.1](https://www.qt.io/download-qt-installer)
+- [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (provides MoltenVK for Vulkan support on macOS)
+
+**NOTE:** You need precisely Vulkan SDK 1.3.268.0. Future SDKs may not work.
+
+#### Installing Xcode Command Line Tools
+
+```bash
+xcode-select --install
+```
+
+#### Installing dependencies via Homebrew
+
+```bash
+brew install cmake ninja llvm molten-vk glew openal-soft sdl3
+```
+
+#### Installing Qt
+
+Download and install Qt 6.10.1 from the [Qt installer](https://www.qt.io/download-qt-installer). Make sure to include the `qtmultimedia` module.
+
+Set the `Qt6_ROOT` environment variable to point to your Qt installation:
+
+```bash
+export Qt6_ROOT=/path/to/Qt/6.10.1/macos
+```
+
+You may want to add this to your shell profile (`~/.zshrc` or `~/.bash_profile`).
+
+#### Installing Vulkan SDK
+
+Download and install [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) for macOS. Run the installer and follow the instructions.
+
+After installation, set up the environment variables by sourcing the setup script:
+
+```bash
+source ~/VulkanSDK/1.3.268.0/setup-env.sh
+```
+
+You may want to add this to your shell profile for persistence.
+
 ## Setup the project
 
 Clone and initialize the repository
@@ -191,3 +238,49 @@ If compiling for ARM, pass the flag `-DUSE_NATIVE_INSTRUCTIONS=OFF` to the first
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
 If desired, use the various build options in [CMakeLists](https://github.com/RPCS3/rpcs3/blob/master/CMakeLists.txt).
+
+### macOS
+
+While still in the project root:
+
+1) `cmake -B build -G Ninja` to generate build files
+2) `cmake --build build` to compile
+3) The RPCS3 application bundle will be created at `build/bin/rpcs3.app`
+
+#### Code Signing
+
+On macOS, the application must be code signed to run. After building, sign the application with:
+
+```bash
+codesign --force --deep --sign - build/bin/rpcs3.app
+```
+
+This applies an ad-hoc signature. For distribution, use a proper Apple Developer certificate.
+
+#### Running RPCS3
+
+After code signing, you can run RPCS3:
+
+```bash
+open build/bin/rpcs3.app
+```
+
+Or run directly from the command line:
+
+```bash
+build/bin/rpcs3.app/Contents/MacOS/rpcs3
+```
+
+**NOTE:** If you encounter a "damaged app" warning on first launch, you may need to remove the quarantine attribute:
+
+```bash
+xattr -cr build/bin/rpcs3.app
+```
+
+#### Debugging with LLDB
+
+When debugging on macOS, configure LLDB to ignore SIGSEGV signals:
+
+```
+process handle SIGSEGV --stop false --pass true --notify false
+```
