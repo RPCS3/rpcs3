@@ -616,9 +616,9 @@ error_code sceNpMatching2CreateServerContext(
 	return CELL_OK;
 }
 
-error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo) // TODO
+error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo)
 {
-	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
+	sceNp2.warning("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -626,6 +626,14 @@ error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!memInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	SceNpMatching2MemoryInfo mem_info = nph.get_memory_info();
+	*memInfo = mem_info;
 
 	return CELL_OK;
 }
@@ -1056,7 +1064,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
 {
-	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
+	sceNp2.warning("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1064,6 +1072,17 @@ error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<S
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!queueInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	*queueInfo = {};
+	// TODO: check the values returned on real hardware
+	queueInfo->requestCbQueueLen = 255;
+	queueInfo->sessionEventCbQueueLen = 255;
+	queueInfo->sessionMsgCbQueueLen = 255;
 
 	return CELL_OK;
 }
@@ -1334,6 +1353,30 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, signaling_opt_param] = nph.local_get_signaling_opt_param(roomId);
+
+	if (error)
+	{
+		return error;
+	}
+
+	*signalingOptParam = *signaling_opt_param;
 
 	return CELL_OK;
 }

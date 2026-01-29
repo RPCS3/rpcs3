@@ -632,4 +632,11 @@ namespace np
 		MatchingAttr_to_SceNpMatchingAttr(edata, resp.attr(), room_info->attr);
 	}
 
+	void OptParam_to_SceNpMatching2SignalingOptParam(const np2_structs::OptParam& resp, SceNpMatching2SignalingOptParam* opt_param)
+	{
+		opt_param->type = resp.type().value();
+		opt_param->flag = resp.flag().value();
+		opt_param->hubMemberId = resp.hubmemberid().value();
+	}
+
 } // namespace np
