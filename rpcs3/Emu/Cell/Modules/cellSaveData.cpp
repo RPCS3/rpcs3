@@ -2514,13 +2514,24 @@ error_code cellSaveDataUserFixedDelete(ppu_thread& ppu, u32 userId, PSetList set
 	return savedata_op(ppu, SAVEDATA_OP_FIXED_DELETE, 0, vm::null, 1, setList, setBuf, vm::null, funcFixed, vm::null, vm::null, container, 6, userdata, userId, funcDone);
 }
 
+error_code cellSaveDataGetEnableOverlay()
+{
+	cellSaveData.todo("cellSaveDataGetEnableOverlay()");
+
+	// auto& manager = g_fxo->get<savedata_manager>();
+	// manager.enable_overlay;
+
+	// TODO
+	
+	return CELL_OK;
+}
+
 void cellSaveDataEnableOverlay(s32 enable)
 {
 	cellSaveData.notice("cellSaveDataEnableOverlay(enable=%d)", enable);
 	auto& manager = g_fxo->get<savedata_manager>();
 	manager.enable_overlay = enable != 0;
 }
-
 
 // Functions (Extensions)
 error_code cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
@@ -2678,6 +2689,7 @@ void cellSysutil_SaveData_init()
 	REG_VAR(cellSysutil, g_savedata_context).flag(MFF_HIDDEN);
 
 	// libsysutil functions:
+	REG_FUNC(cellSysutil, cellSaveDataGetEnableOverlay);
 	REG_FUNC(cellSysutil, cellSaveDataEnableOverlay);
 
 	REG_FUNC(cellSysutil, cellSaveDataDelete2);
