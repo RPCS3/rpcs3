@@ -48,7 +48,7 @@ namespace np
 			return std::nullopt;
 		}
 
-		strcpy_trunc(id.data, split_id);
+		strcpy_trunc(id.data, split_id[0]);
 		id.num = std::stoi(std::string(split_id[1]));
 
 		return id;

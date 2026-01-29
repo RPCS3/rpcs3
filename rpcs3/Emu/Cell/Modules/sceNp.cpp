@@ -1173,6 +1173,7 @@ error_code _sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32
 	{
 		struct sceNpBasicSendMessage_time_slots
 		{
+			sceNpBasicSendMessage_time_slots() = default;
 			sceNpBasicSendMessage_time_slots(sceNpBasicSendMessage_time_slots&&) = delete;
 			std::array<u64, 20> data{};
 		};
