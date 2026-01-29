@@ -1345,7 +1345,7 @@ error_code sceNpMatching2CreateContext(
 
 error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2SignalingOptParam> signalingOptParam)
 {
-	sceNp2.todo("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
+	sceNp2.warning("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
