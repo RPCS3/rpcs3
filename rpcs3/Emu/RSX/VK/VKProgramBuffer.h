@@ -60,6 +60,11 @@ namespace vk
 				vertexProgramData.uniforms,
 				fragmentProgramData.uniforms);
 
+			if (compile_async)
+			{
+				return nullptr;
+			}
+
 			return callback(result);
 		}
 	};
