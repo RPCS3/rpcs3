@@ -2171,7 +2171,7 @@ namespace rpcn
 	bool rpcn_client::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
 		np2_structs::MessageDetails pb_message;
-		pb_message.set_communicationid(static_cast<const char*>(msg_data.commId.data));
+		pb_message.set_communicationid(np::communication_id_to_string(msg_data.commId));
 		pb_message.set_msgid(msg_data.msgId);
 		pb_message.mutable_maintype()->set_value(msg_data.mainType);
 		pb_message.mutable_subtype()->set_value(msg_data.subType);
@@ -3126,8 +3126,9 @@ namespace rpcn
 			return;
 		}
 
-		if (pb_mdata->communicationid().empty() || pb_mdata->communicationid().size() > 9 ||
-			pb_mdata->subject().empty() || pb_mdata->body().empty())
+		const auto communication_id = np::string_to_communication_id(pb_mdata->communicationid());
+
+		if (!communication_id)
 		{
 			rpcn_log.warning("Discarded invalid message!");
 			return;
@@ -3141,7 +3142,7 @@ namespace rpcn
 			.subject = pb_mdata->subject(),
 			.body = pb_mdata->body()};
 
-		strcpy_trunc(mdata.commId.data, pb_mdata->communicationid());
+		mdata.commId = *communication_id;
 		mdata.data.assign(pb_mdata->data().begin(), pb_mdata->data().end());
 
 		rpcn_log.notice("Received message from %s:", sender);
