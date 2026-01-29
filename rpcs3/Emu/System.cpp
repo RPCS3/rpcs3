@@ -3415,6 +3415,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				}
 
 				thread_ctrl::wait_for(5'000);
+				i++;
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)
