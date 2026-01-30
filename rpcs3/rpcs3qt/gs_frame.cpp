@@ -1234,7 +1234,7 @@ bool gs_frame::event(QEvent* ev)
 				if (e->button() == Qt::RightButton)
 				{
 					// Enable mouse-driven gyro emulation while RMB is held.
-					pad_thr->mouse_gyro_rmb_down();
+					pad_thr->m_mouse_gyro.set_gyro_active();
 				}
 				break;
 			}
@@ -1244,7 +1244,7 @@ bool gs_frame::event(QEvent* ev)
 				if (e->button() == Qt::RightButton)
 				{
 					// Disable gyro emulation and request a one-shot motion reset.
-					pad_thr->mouse_gyro_rmb_up();
+					pad_thr->m_mouse_gyro.set_gyro_reset();
 				}
 				break;
 			}
@@ -1260,7 +1260,7 @@ bool gs_frame::event(QEvent* ev)
 				const s32 off_y = cur.y() - center.y() + DEFAULT_MOTION_Z;
 
 				// Determine motion from relative mouse position while gyro emulation is active.
-				pad_thr->mouse_gyro_set_xz(off_x, off_y);
+				pad_thr->m_mouse_gyro.set_gyro_xz(off_x, off_y);
 
 				break;
 			}
@@ -1272,7 +1272,7 @@ bool gs_frame::event(QEvent* ev)
 				const s32 steps = e->angleDelta().y() / 120;
 
 				// Accumulate mouse wheel steps while gyro emulation is active.
-				pad_thr->mouse_gyro_set_y(steps);
+				pad_thr->m_mouse_gyro.set_gyro_y(steps);
 
 				break;
 			}

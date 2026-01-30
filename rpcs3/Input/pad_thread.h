@@ -5,6 +5,7 @@
 #include "Emu/Io/pad_types.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
+#include "Input/mouse_gyro_state.h"
 #include "Utilities/mutex.h"
 
 #include <map>
@@ -41,10 +42,7 @@ public:
 
 	static auto constexpr thread_name = "Pad Thread"sv;
 
-	void mouse_gyro_rmb_down();
-	void mouse_gyro_rmb_up();
-	void mouse_gyro_set_xz(s32 off_x, s32 off_y);
-	void mouse_gyro_set_y(s32 steps);
+	mouse_gyro_state m_mouse_gyro;
 
 protected:
 	void Init();
@@ -72,27 +70,6 @@ private:
 	bool m_resume_emulation_flag = false;
 	bool m_ps_button_pressed = false;
 	atomic_t<bool> m_home_menu_open = false;
-
-	// Mouse-based motion sensor emulation state.
-	struct mouse_gyro_state
-	{
-		std::atomic<bool> rmb {false};              // Whether right mouse button is currently held (gyro active)
-		std::atomic<s32> gyro_x {DEFAULT_MOTION_X}; // Accumulated from mouse X position relative to center
-		std::atomic<s32> gyro_y {DEFAULT_MOTION_Y}; // Accumulated from mouse wheel delta
-		std::atomic<s32> gyro_z {DEFAULT_MOTION_Z}; // Accumulated from mouse Y position relative to center
-		std::atomic<bool> reset {false};            // One-shot reset request on right mouse button release
-
-		void clear()
-		{
-			rmb = false;
-			gyro_x = DEFAULT_MOTION_X;
-			gyro_y = DEFAULT_MOTION_Y;
-			gyro_z = DEFAULT_MOTION_Z;
-			reset = false;
-		}
-	};
-
-	mouse_gyro_state m_mouse_gyro;
 };
 
 namespace pad

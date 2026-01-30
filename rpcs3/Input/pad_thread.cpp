@@ -606,46 +606,13 @@ void pad_thread::operator()()
 
 		apply_copilots();
 
-		// Inject mouse-based motion sensor values into pad sensors for gyro emulation.
-		// The Qt frontend maps cursor offset and wheel input to absolute motion values while RMB is held.
-		if (Emu.IsRunning())
-		{
-			const bool reset = m_mouse_gyro.reset;
-
-			const s32 gyro_x = m_mouse_gyro.gyro_x;
-			const s32 gyro_y = m_mouse_gyro.gyro_y;
-			const s32 gyro_z = m_mouse_gyro.gyro_z;
-
-			if (gyro_x || gyro_y || gyro_z || reset)
-			{
-				// Mouse-based gyro input is intentionally bound to Player 1 only.
-				auto& pad = m_pads[0];
-
-				if (pad && pad->is_connected())
-				{
-					if (reset)
-					{
-						// RMB released → reset motion
-						pad->m_sensors[0].m_value = DEFAULT_MOTION_X;
-						pad->m_sensors[1].m_value = DEFAULT_MOTION_Y;
-						pad->m_sensors[2].m_value = DEFAULT_MOTION_Z;
-						m_mouse_gyro.clear();
-					}
-					else
-					{
-						// RMB held → accumulate motion
-						// Axes have been chosen as tested in Sly 4 minigames. Top-down view motion uses X/Z axes.
-						pad->m_sensors[0].m_value = gyro_x; // Mouse X → Motion X
-						pad->m_sensors[1].m_value = gyro_y; // Mouse Wheel → Motion Y
-						pad->m_sensors[2].m_value = gyro_z; // Mouse Y → Motion Z
-					}
-				}
-			}
-		}
-
 		if (Emu.IsRunning())
 		{
 			update_pad_states();
+
+			// Inject mouse-based motion sensor values into pad sensors for gyro emulation.
+			// Intentionally bound to Player 1 only.
+			m_mouse_gyro.gyro_run(m_pads[0]);
 		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
@@ -976,32 +943,4 @@ void pad_thread::open_home_menu()
 
 		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});
 	}
-}
-
-void pad_thread::mouse_gyro_rmb_down()
-{
-	m_mouse_gyro.rmb = true;
-}
-
-void pad_thread::mouse_gyro_rmb_up()
-{
-	m_mouse_gyro.rmb = false;
-	m_mouse_gyro.reset = true;
-}
-
-void pad_thread::mouse_gyro_set_xz(s32 off_x, s32 off_y)
-{
-	if (!m_mouse_gyro.rmb)
-		return;
-
-	m_mouse_gyro.gyro_x = static_cast<u16>(std::clamp(off_x, 0, DEFAULT_MOTION_X * 2 - 1));
-	m_mouse_gyro.gyro_z = static_cast<u16>(std::clamp(off_y, 0, DEFAULT_MOTION_Z * 2 - 1));
-}
-
-void pad_thread::mouse_gyro_set_y(s32 steps)
-{
-	if (!m_mouse_gyro.rmb)
-		return;
-
-	m_mouse_gyro.gyro_y = static_cast<u16>(std::clamp(m_mouse_gyro.gyro_y + steps, 0, DEFAULT_MOTION_Y * 2 - 1));
 }
