@@ -42,7 +42,7 @@ public:
 
 	static auto constexpr thread_name = "Pad Thread"sv;
 
-	mouse_gyro_handler m_mouse_gyro;
+	mouse_gyro_handler& get_mouse_gyro() { return m_mouse_gyro; }
 
 protected:
 	void Init();
@@ -70,6 +70,8 @@ private:
 	bool m_resume_emulation_flag = false;
 	bool m_ps_button_pressed = false;
 	atomic_t<bool> m_home_menu_open = false;
+
+	mouse_gyro_handler m_mouse_gyro;
 };
 
 namespace pad

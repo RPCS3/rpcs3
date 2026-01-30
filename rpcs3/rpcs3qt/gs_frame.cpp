@@ -407,7 +407,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
 		{
-			const bool mouse_gyro_enabled = pad_thr->m_mouse_gyro.toggle_enabled();
+			const bool mouse_gyro_enabled = pad_thr->get_mouse_gyro().toggle_enabled();
 			gui_log.notice("Mouse-based gyro emulation %s", mouse_gyro_enabled ? "enabled" : "disabled");
 		}
 		break;
@@ -1232,7 +1232,7 @@ bool gs_frame::event(QEvent* ev)
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
 		{
-			pad_thr->m_mouse_gyro.handle_event(ev, *this);
+			pad_thr->get_mouse_gyro().handle_event(ev, *this);
 		}
 	}
 
