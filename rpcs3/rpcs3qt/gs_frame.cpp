@@ -1218,7 +1218,7 @@ bool gs_frame::event(QEvent* ev)
 		handle_cursor(visibility(), false, false, true);
 	}
 
-	// Hardcoded mouse-based motion input.
+	// Mouse-based motion input.
 	if (Emu.IsRunning())
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
