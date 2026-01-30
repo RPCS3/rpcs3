@@ -76,11 +76,11 @@ private:
 	// Mouse-based motion sensor emulation state.
 	struct mouse_gyro_state
 	{
-		bool rmb = false;				// Whether right mouse button is currently held (gyro active)
-		s32 gyro_x = DEFAULT_MOTION_X;	// Accumulated from mouse X position relative to center
-		s32 gyro_y = DEFAULT_MOTION_Y;	// Accumulated from mouse wheel delta
-		s32 gyro_z = DEFAULT_MOTION_Z;	// Accumulated from mouse Y position relative to center
-		bool reset = false;				// One-shot reset request on right mouse button release
+		std::atomic<bool> rmb {false};              // Whether right mouse button is currently held (gyro active)
+		std::atomic<s32> gyro_x {DEFAULT_MOTION_X}; // Accumulated from mouse X position relative to center
+		std::atomic<s32> gyro_y {DEFAULT_MOTION_Y}; // Accumulated from mouse wheel delta
+		std::atomic<s32> gyro_z {DEFAULT_MOTION_Z}; // Accumulated from mouse Y position relative to center
+		std::atomic<bool> reset {false};            // One-shot reset request on right mouse button release
 
 		void clear()
 		{
