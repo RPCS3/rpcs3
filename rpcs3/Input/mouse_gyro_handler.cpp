@@ -16,6 +16,13 @@ void mouse_gyro_handler::clear()
 	gyro_z = DEFAULT_MOTION_Z;
 }
 
+bool mouse_gyro_handler::toggle_enabled()
+{
+	enabled = !enabled;
+	clear();
+	return enabled;
+}
+
 void mouse_gyro_handler::set_gyro_active()
 {
 	active = true;
@@ -46,7 +53,10 @@ void mouse_gyro_handler::set_gyro_y(s32 steps)
 
 void mouse_gyro_handler::handle_event(QEvent* ev, const QWindow& win)
 {
-	// Hardcoded mouse-based motion input.
+	if (!enabled)
+		return;
+
+	// Mouse-based motion input.
 	// Captures mouse events while the game window is focused.
 	// Updates motion sensor values via mouse position and mouse wheel while RMB is held.
 	// Intentionally independent of chosen pad configuration.
@@ -109,6 +119,9 @@ void mouse_gyro_handler::handle_event(QEvent* ev, const QWindow& win)
 
 void mouse_gyro_handler::apply_gyro(const std::shared_ptr<Pad>& pad)
 {
+	if (!enabled)
+		return;
+
 	if (!pad || !pad->is_connected())
 		return;
 

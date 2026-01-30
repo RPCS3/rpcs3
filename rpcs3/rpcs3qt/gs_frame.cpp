@@ -403,6 +403,15 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		audio::change_volume(-5);
 		break;
 	}
+	case gui::shortcuts::shortcut::gw_toggle_mouse_gyro:
+	{
+		if (auto* pad_thr = pad::get_pad_thread(true))
+		{
+			const bool mouse_gyro_enabled = pad_thr->m_mouse_gyro.toggle_enabled();
+			gui_log.notice("Mouse-based gyro emulation %s", mouse_gyro_enabled ? "enabled" : "disabled");
+		}
+		break;
+	}
 	default:
 	{
 		break;
