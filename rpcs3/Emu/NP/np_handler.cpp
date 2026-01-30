@@ -1127,6 +1127,7 @@ namespace np
 					case rpcn::CommandType::LeaveRoom: reply_leave_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchRoom: reply_search_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetRoomDataExternalList: reply_get_roomdata_external_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetRoomMemberDataExternalList: reply_get_room_member_data_external_list(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, error); break;
 					case rpcn::CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, error); break;
