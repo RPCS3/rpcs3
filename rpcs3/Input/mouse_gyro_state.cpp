@@ -44,7 +44,7 @@ void mouse_gyro_state::set_gyro_y(s32 steps)
 	gyro_y = static_cast<u16>(std::clamp(gyro_y + steps, 0, DEFAULT_MOTION_Y * 2 - 1));
 }
 
-void mouse_gyro_state::gyro_detect(QEvent* ev, const QWindow& win)
+void mouse_gyro_state::handle_event(QEvent* ev, const QWindow& win)
 {
 	// Hardcoded mouse-based motion input.
 	// Captures mouse events while the game window is focused.
@@ -107,7 +107,7 @@ void mouse_gyro_state::gyro_detect(QEvent* ev, const QWindow& win)
 	}
 }
 
-void mouse_gyro_state::gyro_run(const std::shared_ptr<Pad>& pad)
+void mouse_gyro_state::apply_gyro(const std::shared_ptr<Pad>& pad)
 {
 	if (!pad || !pad->is_connected())
 		return;

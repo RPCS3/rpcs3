@@ -1223,7 +1223,7 @@ bool gs_frame::event(QEvent* ev)
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
 		{
-			pad_thr->m_mouse_gyro.gyro_detect(ev, *this);
+			pad_thr->m_mouse_gyro.handle_event(ev, *this);
 		}
 	}
 
