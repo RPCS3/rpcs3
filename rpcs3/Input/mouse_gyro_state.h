@@ -3,7 +3,8 @@
 #include "util/types.hpp"
 #include "Emu/Io/pad_types.h"
 
-#include <algorithm>
+class QEvent;
+class QWindow;
 
 // Mouse-based motion sensor emulation state.
 class mouse_gyro_state
@@ -29,5 +30,6 @@ public:
 	void set_gyro_xz(s32 off_x, s32 off_y);
 	void set_gyro_y(s32 steps);
 
+	void gyro_detect(QEvent* ev, const QWindow& win);
 	void gyro_run(const std::shared_ptr<Pad>& pad);
 };

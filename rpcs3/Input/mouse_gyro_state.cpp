@@ -1,5 +1,12 @@
 #include "mouse_gyro_state.h"
 
+#include <QEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+#include <QWindow>
+
+#include <algorithm>
+
 void mouse_gyro_state::clear()
 {
 	active = false;
@@ -35,6 +42,65 @@ void mouse_gyro_state::set_gyro_y(s32 steps)
 		return;
 
 	gyro_y = static_cast<u16>(std::clamp(gyro_y + steps, 0, DEFAULT_MOTION_Y * 2 - 1));
+}
+
+void mouse_gyro_state::gyro_detect(QEvent* ev, const QWindow& win)
+{
+	// Hardcoded mouse-based motion input.
+	// Captures mouse events while the game window is focused.
+	// Updates motion sensor values via mouse position and mouse wheel while RMB is held.
+	// Intentionally independent of chosen pad configuration.
+	switch (ev->type())
+	{
+	case QEvent::MouseButtonPress:
+	{
+		auto* e = static_cast<QMouseEvent*>(ev);
+		if (e->button() == Qt::RightButton)
+		{
+			// Enable mouse-driven gyro emulation while RMB is held.
+			set_gyro_active();
+		}
+		break;
+	}
+	case QEvent::MouseButtonRelease:
+	{
+		auto* e = static_cast<QMouseEvent*>(ev);
+		if (e->button() == Qt::RightButton)
+		{
+			// Disable gyro emulation and request a one-shot motion reset.
+			set_gyro_reset();
+		}
+		break;
+	}
+	case QEvent::MouseMove:
+	{
+		auto* e = static_cast<QMouseEvent*>(ev);
+
+		// Track cursor offset from window center.
+		const QPoint center(win.width() / 2, win.height() / 2);
+		const QPoint cur = e->position().toPoint();
+
+		const s32 off_x = cur.x() - center.x() + DEFAULT_MOTION_X;
+		const s32 off_y = cur.y() - center.y() + DEFAULT_MOTION_Z;
+
+		// Determine motion from relative mouse position while gyro emulation is active.
+		set_gyro_xz(off_x, off_y);
+
+		break;
+	}
+	case QEvent::Wheel:
+	{
+		auto* e = static_cast<QWheelEvent*>(ev);
+
+		// Track mouse wheel steps.
+		const s32 steps = e->angleDelta().y() / 120;
+
+		// Accumulate mouse wheel steps while gyro emulation is active.
+		set_gyro_y(steps);
+
+		break;
+	}
+	}
 }
 
 void mouse_gyro_state::gyro_run(const std::shared_ptr<Pad>& pad)
