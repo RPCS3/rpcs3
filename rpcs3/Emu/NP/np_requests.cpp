@@ -445,6 +445,50 @@ namespace np
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 	}
 
+	u32 np_handler::get_room_member_data_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataExternalListRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, true);
+
+		if (!get_rpcn()->get_room_member_data_external_list(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_get_room_member_data_external_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in GetRoomMemberDataExternalList reply");
+
+		if (error == rpcn::ErrorType::RoomMissing)
+		{
+			cb_info_opt->queue_callback(req_id, 0, SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM, 0);
+			return;
+		}
+
+		const auto resp = reply.get_protobuf<np2_structs::GetRoomMemberDataExternalListResponse>();
+		ensure(!reply.is_error(), "Malformed reply to GetRoomMemberDataExternalList command");
+
+		const u32 event_key = get_event_key();
+		auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomMemberDataExternalList, sizeof(SceNpMatching2GetRoomMemberDataExternalListResponse));
+		auto* sce_get_room_member_ext_resp = reinterpret_cast<SceNpMatching2GetRoomMemberDataExternalListResponse*>(edata.data());
+		GetRoomMemberDataExternalListResponse_to_SceNpMatching2GetRoomMemberDataExternalListResponse(edata, *resp, sce_get_room_member_ext_resp, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		extra_nps::print_SceNpMatching2GetRoomMemberDataExternalListResponse(sce_get_room_member_ext_resp);
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+	}
+
 	u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, false);

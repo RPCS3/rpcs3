@@ -117,6 +117,7 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::LeaveRoom: return "LeaveRoom";
 			case rpcn::CommandType::SearchRoom: return "SearchRoom";
 			case rpcn::CommandType::GetRoomDataExternalList: return "GetRoomDataExternalList";
+			case rpcn::CommandType::GetRoomMemberDataExternalList: return "GetRoomMemberDataExternalList";
 			case rpcn::CommandType::SetRoomDataExternal: return "SetRoomDataExternal";
 			case rpcn::CommandType::GetRoomDataInternal: return "GetRoomDataInternal";
 			case rpcn::CommandType::SetRoomDataInternal: return "SetRoomDataInternal";
@@ -1913,6 +1914,16 @@ namespace rpcn
 		pb_req.SerializeToString(&serialized);
 
 		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomDataExternalList, req_id);
+	}
+
+	bool rpcn_client::get_room_member_data_external_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
+	{
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u64));
+
+		rpcn_client::write_communication_id(communication_id, data);
+		write_to_ptr<le_t<u64>>(data, COMMUNICATION_ID_SIZE, room_id);
+
+		return forge_send(CommandType::GetRoomMemberDataExternalList, req_id, data);
 	}
 
 	bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req)
