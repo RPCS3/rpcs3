@@ -610,7 +610,7 @@ void pad_thread::operator()()
 		{
 			update_pad_states();
 
-			// Inject mouse-based motion sensor values into pad sensors for gyro emulation.
+			// Apply mouse-based gyro emulation.
 			// Intentionally bound to Player 1 only.
 			m_mouse_gyro.apply_gyro(m_pads[0]);
 		}

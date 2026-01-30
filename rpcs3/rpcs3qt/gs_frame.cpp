@@ -1227,7 +1227,7 @@ bool gs_frame::event(QEvent* ev)
 		handle_cursor(visibility(), false, false, true);
 	}
 
-	// Mouse-based motion input.
+	// Handle events for mouse-based gyro emulation.
 	if (Emu.IsRunning())
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
