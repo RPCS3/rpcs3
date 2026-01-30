@@ -26,5 +26,5 @@ public:
 	void set_gyro_y(s32 steps);
 
 	void gyro_detect(QEvent* ev, const QWindow& win);
-	void gyro_run(const std::shared_ptr<Pad>& pad);
+	void apply_gyro(const std::shared_ptr<Pad>& pad);
 };

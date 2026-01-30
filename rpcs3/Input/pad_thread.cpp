@@ -612,8 +612,7 @@ void pad_thread::operator()()
 
 			// Inject mouse-based motion sensor values into pad sensors for gyro emulation.
 			// Intentionally bound to Player 1 only.
-			auto& main_pad = m_pads[0];
-			m_mouse_gyro.gyro_run(main_pad);
+			m_mouse_gyro.gyro_run(m_pads[0]);
 		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;

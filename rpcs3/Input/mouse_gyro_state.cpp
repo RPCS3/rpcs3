@@ -100,6 +100,10 @@ void mouse_gyro_state::gyro_detect(QEvent* ev, const QWindow& win)
 
 		break;
 	}
+	default:
+	{
+		break;
+	}
 	}
 }
 
