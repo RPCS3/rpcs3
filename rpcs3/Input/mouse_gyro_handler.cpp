@@ -1,4 +1,4 @@
-#include "mouse_gyro_state.h"
+#include "mouse_gyro_handler.h"
 
 #include <QEvent>
 #include <QMouseEvent>
@@ -7,7 +7,7 @@
 
 #include <algorithm>
 
-void mouse_gyro_state::clear()
+void mouse_gyro_handler::clear()
 {
 	active = false;
 	reset = false;
@@ -16,18 +16,18 @@ void mouse_gyro_state::clear()
 	gyro_z = DEFAULT_MOTION_Z;
 }
 
-void mouse_gyro_state::set_gyro_active()
+void mouse_gyro_handler::set_gyro_active()
 {
 	active = true;
 }
 
-void mouse_gyro_state::set_gyro_reset()
+void mouse_gyro_handler::set_gyro_reset()
 {
 	active = false;
 	reset = true;
 }
 
-void mouse_gyro_state::set_gyro_xz(s32 off_x, s32 off_y)
+void mouse_gyro_handler::set_gyro_xz(s32 off_x, s32 off_y)
 {
 	if (!active)
 		return;
@@ -36,7 +36,7 @@ void mouse_gyro_state::set_gyro_xz(s32 off_x, s32 off_y)
 	gyro_z = static_cast<u16>(std::clamp(off_y, 0, DEFAULT_MOTION_Z * 2 - 1));
 }
 
-void mouse_gyro_state::set_gyro_y(s32 steps)
+void mouse_gyro_handler::set_gyro_y(s32 steps)
 {
 	if (!active)
 		return;
@@ -44,7 +44,7 @@ void mouse_gyro_state::set_gyro_y(s32 steps)
 	gyro_y = static_cast<u16>(std::clamp(gyro_y + steps, 0, DEFAULT_MOTION_Y * 2 - 1));
 }
 
-void mouse_gyro_state::handle_event(QEvent* ev, const QWindow& win)
+void mouse_gyro_handler::handle_event(QEvent* ev, const QWindow& win)
 {
 	// Hardcoded mouse-based motion input.
 	// Captures mouse events while the game window is focused.
@@ -107,7 +107,7 @@ void mouse_gyro_state::handle_event(QEvent* ev, const QWindow& win)
 	}
 }
 
-void mouse_gyro_state::apply_gyro(const std::shared_ptr<Pad>& pad)
+void mouse_gyro_handler::apply_gyro(const std::shared_ptr<Pad>& pad)
 {
 	if (!pad || !pad->is_connected())
 		return;

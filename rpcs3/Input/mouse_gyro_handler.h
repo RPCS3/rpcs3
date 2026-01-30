@@ -8,7 +8,7 @@ class QEvent;
 class QWindow;
 
 // Mouse-based motion sensor emulation state.
-class mouse_gyro_state
+class mouse_gyro_handler
 {
 private:
 	atomic_t<bool> active = false; // Whether right mouse button is currently held (gyro active)

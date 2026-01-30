@@ -5,7 +5,7 @@
 #include "Emu/Io/pad_types.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
-#include "Input/mouse_gyro_state.h"
+#include "Input/mouse_gyro_handler.h"
 #include "Utilities/mutex.h"
 
 #include <map>
@@ -42,7 +42,7 @@ public:
 
 	static auto constexpr thread_name = "Pad Thread"sv;
 
-	mouse_gyro_state m_mouse_gyro;
+	mouse_gyro_handler m_mouse_gyro;
 
 protected:
 	void Init();
