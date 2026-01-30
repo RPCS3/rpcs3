@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Emu/Io/pad_types.h"
 
 class QEvent;
@@ -10,11 +11,11 @@ class QWindow;
 class mouse_gyro_state
 {
 private:
-	bool active = false;           // Whether right mouse button is currently held (gyro active)
-	bool reset = false;            // One-shot reset request on right mouse button release
-	s32 gyro_x = DEFAULT_MOTION_X; // Accumulated from mouse X position relative to center
-	s32 gyro_y = DEFAULT_MOTION_Y; // Accumulated from mouse wheel delta
-	s32 gyro_z = DEFAULT_MOTION_Z; // Accumulated from mouse Y position relative to center
+	atomic_t<bool> active = false; // Whether right mouse button is currently held (gyro active)
+	atomic_t<bool> reset = false;  // One-shot reset request on right mouse button release
+	atomic_t<s32> gyro_x = DEFAULT_MOTION_X; // Accumulated from mouse X position relative to center
+	atomic_t<s32> gyro_y = DEFAULT_MOTION_Y; // Accumulated from mouse wheel delta
+	atomic_t<s32> gyro_z = DEFAULT_MOTION_Z; // Accumulated from mouse Y position relative to center
 
 public:
 	void clear();
