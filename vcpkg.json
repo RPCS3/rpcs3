@@ -15,6 +15,7 @@
     },
     "libpng",
     "opencv",
+    "protobuf",
     "qtbase",
     "qtmultimedia",
     "qtsvg",
