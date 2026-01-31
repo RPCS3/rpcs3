@@ -1,7 +1,7 @@
 {
   "name": "rpcs3",
   "version-string": "1.0",
-  "builtin-baseline": "b94ab47c998b93fe72b0f501eaac70f96328019e",
+  "builtin-baseline": "7c45dcccbe6463539a6b92c264258043d267c8f6",
   "dependencies": [
     "curl",
     {
@@ -15,6 +15,7 @@
     },
     "libpng",
     "opencv",
+    "protobuf",
     "qtbase",
     "qtmultimedia",
     "qtsvg",

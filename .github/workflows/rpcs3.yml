@@ -456,7 +456,12 @@ jobs:
       VCPKG_TRIPLET: x64-windows
       VCPKG_BUILD_TYPE: release
       VCPKG_ROOT: "${{github.workspace}}/vcpkg"
-      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+      VCPKG_BINARY_SOURCES: 'clear;nuget,https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json,readwrite'
+      X_VCPKG_NUGET_ID: "GitHub"
+      X_VCPKG_NUGET_USER: "${{ github.actor }}"
+      X_VCPKG_NUGET_PASSWORD: "${{ secrets.GITHUB_TOKEN }}"
+      NUGET_CREDENTIALPROVIDERS_AUTODETECT: 'false'
+      VCPKG_MAX_CONCURRENCY: '1'
     name: RPCS3 Windows Clang (Clang-CL)
     steps:
       - name: Checkout repository
@@ -471,17 +476,18 @@ jobs:
           .\vcpkg\bootstrap-vcpkg.bat
 
       - name: 'Setup NuGet Credentials for vcpkg'
+        shell: pwsh
         run: |
-          `./vcpkg/vcpkg fetch nuget | tail -n 1` \
-          sources add \
-          -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
-          -storepasswordincleartext \
-          -name "GitHub" \
-          -username "${{ github.repository_owner }}" \
-          -password "${{ secrets.GITHUB_TOKEN }}"
-          `./vcpkg/vcpkg fetch nuget | tail -n 1` \
-          setapikey "${{ secrets.GITHUB_TOKEN }}" \
-          -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          dotnet nuget locals all --clear        
+          $configPath = "${{ github.workspace }}\nuget.config"
+          dotnet new nugetconfig --force --output "${{ github.workspace }}"
+          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
+            --name "GitHub" `
+            --username "${{ github.actor }}" `
+            --password "${{ secrets.GITHUB_TOKEN }}" `
+            --store-password-in-clear-text `
+            --configfile "$configPath"
+          echo "VCPKG_NUGET_CONFIG=$configPath" >> $env:GITHUB_ENV
 
       - name: Restore LLVM Cache
         uses: actions/cache/restore@main
