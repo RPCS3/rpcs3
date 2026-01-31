@@ -6,7 +6,7 @@
 #include "np_handler.h"
 #include "np_contexts.h"
 #include "np_structs_extra.h"
-#include "fb_helpers.h"
+#include "pb_helpers.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -165,12 +165,12 @@ namespace np
 			return;
 
 		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in CreateRoomGUI reply");
-		const auto* resp = reply.get_flatbuffer<MatchingRoomStatus>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoomStatus>();
 		ensure(!reply.is_error(), "Malformed reply to CreateRoomGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingJoinedRoomInfo_SIZE), sizeof(SceNpMatchingJoinedRoomInfo), MAX_SceNpMatchingJoinedRoomInfo_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingJoinedRoomInfo*>(edata.data());
-		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, resp, room_info);
+		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, *resp, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		gui_cache.add_room(room_info->room_status.id);
@@ -230,12 +230,12 @@ namespace np
 			return;
 		}
 
-		const auto* resp = reply.get_flatbuffer<MatchingRoomStatus>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoomStatus>();
 		ensure(!reply.is_error(), "Malformed reply to JoinRoomGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingJoinedRoomInfo_SIZE), sizeof(SceNpMatchingJoinedRoomInfo), MAX_SceNpMatchingJoinedRoomInfo_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingJoinedRoomInfo*>(edata.data());
-		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, resp, room_info);
+		MatchingRoomStatus_to_SceNpMatchingJoinedRoomInfo(edata, *resp, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingJoinedRoomInfo(room_info);
@@ -291,12 +291,12 @@ namespace np
 			return;
 		}
 
-		const auto* resp = reply.get_flatbuffer<MatchingRoomStatus>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoomStatus>();
 		ensure(!reply.is_error(), "Malformed reply to LeaveRoomGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoomStatus_SIZE), sizeof(SceNpMatchingRoomStatus), MAX_SceNpMatchingRoomStatus_SIZE);
 		auto* room_status = reinterpret_cast<SceNpMatchingRoomStatus*>(edata.data());
-		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, resp, room_status);
+		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, *resp, room_status);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingRoomStatus(room_status);
@@ -343,12 +343,12 @@ namespace np
 			return;
 
 		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in GetRoomListGUI reply");
-		const auto* resp = reply.get_flatbuffer<MatchingRoomList>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoomList>();
 		ensure(!reply.is_error(), "Malformed reply to GetRoomListGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoomList_SIZE), sizeof(SceNpMatchingRoomList), MAX_SceNpMatchingRoomList_SIZE);
 		auto* room_list = reinterpret_cast<SceNpMatchingRoomList*>(edata.data());
-		MatchingRoomList_to_SceNpMatchingRoomList(edata, resp, room_list);
+		MatchingRoomList_to_SceNpMatchingRoomList(edata, *resp, room_list);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingRoomList(room_list);
@@ -443,12 +443,12 @@ namespace np
 			return;
 		}
 
-		const auto* resp = reply.get_flatbuffer<MatchingRoom>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoom>();
 		ensure(!reply.is_error(), "Malformed reply to GetRoomSearchFlagGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoom_SIZE), sizeof(SceNpMatchingRoom), MAX_SceNpMatchingRoom_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingRoom*>(edata.data());
-		MatchingRoom_to_SceNpMatchingRoom(edata, resp, room_info);
+		MatchingRoom_to_SceNpMatchingRoom(edata, *resp, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingRoom(room_info);
@@ -538,12 +538,12 @@ namespace np
 			return;
 		}
 
-		const auto* resp = reply.get_flatbuffer<MatchingRoom>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingRoom>();
 		ensure(!reply.is_error(), "Malformed reply to GetRoomInfoGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingRoom_SIZE), sizeof(SceNpMatchingRoom), MAX_SceNpMatchingRoom_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingRoom*>(edata.data());
-		MatchingRoom_to_SceNpMatchingRoom(edata, resp, room_info);
+		MatchingRoom_to_SceNpMatchingRoom(edata, *resp, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingRoom(room_info);
@@ -576,12 +576,12 @@ namespace np
 			return;
 
 		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in QuickMatchGUI reply");
-		const auto* resp = reply.get_flatbuffer<MatchingGuiRoomId>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingGuiRoomId>();
 		ensure(!reply.is_error(), "Malformed reply to QuickMatchGUI command");
 
 		SceNpRoomId room_id{};
-		ensure(resp->id() && resp->id()->size() == sizeof(SceNpRoomId::opt));
-		std::memcpy(room_id.opt, resp->id()->data(), sizeof(SceNpRoomId::opt));
+		ensure(!resp->id().empty() && resp->id().size() == sizeof(SceNpRoomId::opt));
+		std::memcpy(room_id.opt, resp->id().data(), sizeof(SceNpRoomId::opt));
 		const auto [_, inserted] = pending_quickmatching.insert_or_assign(room_id, ctx->ctx_id);
 		ensure(inserted);
 
@@ -657,12 +657,12 @@ namespace np
 			return;
 		}
 
-		const auto* resp = reply.get_flatbuffer<MatchingSearchJoinRoomInfo>();
+		const auto resp = reply.get_protobuf<np2_structs::MatchingSearchJoinRoomInfo>();
 		ensure(!reply.is_error(), "Malformed reply to SearchJoinRoomGUI command");
 
 		event_data edata(np_memory.allocate(MAX_SceNpMatchingSearchJoinRoomInfo_SIZE), sizeof(SceNpMatchingSearchJoinRoomInfo), MAX_SceNpMatchingSearchJoinRoomInfo_SIZE);
 		auto* room_info = reinterpret_cast<SceNpMatchingSearchJoinRoomInfo*>(edata.data());
-		MatchingSearchJoinRoomInfo_to_SceNpMatchingSearchJoinRoomInfo(edata, resp, room_info);
+		MatchingSearchJoinRoomInfo_to_SceNpMatchingSearchJoinRoomInfo(edata, *resp, room_info);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_SceNpMatchingSearchJoinRoomInfo(room_info);

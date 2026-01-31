@@ -599,7 +599,7 @@ void usb_device_mic::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue,
 		case GET_MIN:
 		{
 			ensure(buf_size >= 2);
-			constexpr s16 minVol = 0xff00;
+			constexpr s16 minVol = -256;
 			buf[0] = (minVol     ) & 0xff;
 			buf[1] = (minVol >> 8) & 0xff;
 			usb_mic_log.notice("Get Min Volume: 0x%04x (%d dB)", minVol, minVol / 256);
@@ -608,7 +608,7 @@ void usb_device_mic::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue,
 		case GET_MAX:
 		{
 			ensure(buf_size >= 2);
-			constexpr s16 maxVol = 0x0100;
+			constexpr s16 maxVol = 256;
 			buf[0] = (maxVol     ) & 0xff;
 			buf[1] = (maxVol >> 8) & 0xff;
 			usb_mic_log.notice("Get Max Volume: 0x%04x (%d dB)", maxVol, maxVol / 256);

@@ -95,6 +95,7 @@ private:
 	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;
+	QAction* m_log_while_hidden_act = nullptr;
 
 	QAction* m_tty_act = nullptr;
 

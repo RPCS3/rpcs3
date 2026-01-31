@@ -1529,6 +1529,11 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 	return CELL_OK;
 }
 
+error_code sceNpTrophyNetworkSync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
 
 DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 {
@@ -1553,4 +1558,5 @@ DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
+	REG_FUNC(sceNpTrophy, sceNpTrophyNetworkSync);
 });

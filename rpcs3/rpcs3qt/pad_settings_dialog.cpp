@@ -184,6 +184,11 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 		if (index < 0) return;
 		HandleDeviceClassChange(ui->chooseClass->currentData().toUInt());
 	});
+	connect(ui->chooseProduct, &QComboBox::currentIndexChanged, this, [this](int index)
+	{
+		if (index < 0) return;
+		HandleDeviceProductChange(ui->chooseProduct->currentData().toUInt());
+	});
 
 	ui->chb_show_emulated_values->setChecked(m_gui_settings->GetValue(gui::pads_show_emulated).toBool());
 
@@ -1788,6 +1793,106 @@ void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 		}
 		}
 	}
+}
+
+void pad_settings_dialog::HandleDeviceProductChange(u32 product_id) const
+{
+	QString cross_title = tr("Cross");
+	QString circle_title = tr("Circle");
+	QString square_title = tr("Square");
+	QString triangle_title = tr("Triangle");
+	QString dpad_up_title = tr("Up");
+	QString dpad_down_title = tr("Down");
+	QString right_stick_up_title = tr("Up");
+	QString right_stick_down_title = tr("Down");
+	QString right_stick_right_title = tr("Right");
+	QString l1_title = tr("L1");
+	QString l2_title = tr("L2");
+	QString l3_title = tr("L3");
+	QString r1_title = tr("R1");
+	QString r3_title = tr("R3");
+
+	switch (static_cast<input::product_type>(product_id))
+	{
+	case input::product_type::red_octane_gh_guitar:
+	{
+		cross_title = tr("Green Fret");
+		circle_title = tr("Red Fret");
+		square_title = tr("Yellow Fret");
+		triangle_title = tr("Blue Fret");
+		dpad_up_title = tr("Strum Up");
+		dpad_down_title = tr("Strum Down");
+		right_stick_right_title = tr("Whammy");
+		l1_title = tr("Orange Fret");
+		break;
+	}
+	case input::product_type::harmonix_rockband_guitar:
+	{
+		cross_title = tr("Green Fret");
+		circle_title = tr("Red Fret");
+		square_title = tr("Blue Fret");
+		triangle_title = tr("Yellow Fret");
+		dpad_up_title = tr("Strum Up");
+		dpad_down_title = tr("Strum Down");
+		right_stick_up_title = tr("Pickup Switch Up");
+		right_stick_down_title = tr("Pickup Switch Down");
+		right_stick_right_title = tr("Whammy");
+		l1_title = tr("Orange Fret");
+		l2_title = tr("Solo Modifier");
+		r1_title = tr("Tilt");
+		break;
+	}
+	case input::product_type::red_octane_gh_drum_kit:
+	{
+		cross_title = tr("Green Pad");
+		circle_title = tr("Red Pad");
+		square_title = tr("Blue Pad");
+		triangle_title = tr("Yellow Pad");
+		l1_title = tr("Foot Pedal");
+		r1_title = tr("Orange Pad");
+		break;
+	}
+	case input::product_type::harmonix_rockband_drum_kit:
+	{
+		cross_title = tr("Green Pad");
+		circle_title = tr("Red Pad");
+		square_title = tr("Blue Pad");
+		triangle_title = tr("Yellow Pad");
+		l1_title = tr("Foot Pedal");
+		break;
+	}
+	case input::product_type::harmonix_rockband_drum_kit_2:
+	{
+		cross_title = tr("Green Pad");
+		circle_title = tr("Red Pad");
+		square_title = tr("Blue Pad");
+		triangle_title = tr("Yellow Pad");
+		l1_title = tr("Foot Pedal");
+		l3_title = tr("Pad Modifier");
+		r1_title = tr("Double Bass Pedal");
+		r3_title = tr("Cymbal Modifier");
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	ui->gb_triangle->setTitle(triangle_title);
+	ui->gb_circle->setTitle(circle_title);
+	ui->gb_cross->setTitle(cross_title);
+	ui->gb_square->setTitle(square_title);
+	ui->gb_dpad_up->setTitle(dpad_up_title);
+	ui->gb_dpad_down->setTitle(dpad_down_title);
+	ui->gb_right_stick_up->setTitle(right_stick_up_title);
+	ui->gb_right_stick_down->setTitle(right_stick_down_title);
+	ui->gb_right_stick_right->setTitle(right_stick_right_title);
+	ui->gb_l1->setTitle(l1_title);
+	ui->gb_l2->setTitle(l2_title);
+	ui->gb_l3->setTitle(l3_title);
+	ui->gb_r1->setTitle(r1_title);
+	ui->gb_r3->setTitle(r3_title);
 }
 
 void pad_settings_dialog::AddConfigFile()

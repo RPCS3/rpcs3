@@ -237,6 +237,7 @@ namespace gui
 	const gui_save l_ansi_code = gui_save(logger, "ANSI_code", true);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);
 	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
+	const gui_save l_log_hide  = gui_save(logger, "Log hide",  false);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 
