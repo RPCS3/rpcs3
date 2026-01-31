@@ -195,6 +195,15 @@ namespace extra_nps
 		}
 	}
 
+	void print_SceNpMatching2RoomMemberDataExternal(const SceNpMatching2RoomMemberDataExternal* member)
+	{
+		sceNp2.warning("SceNpMatching2RoomMemberDataExternal:");
+		sceNp2.warning("next: *0x%x", member->next);
+		print_SceNpUserInfo2(&member->userInfo);
+		sceNp2.warning("joinDate: %lld", member->joinDate.tick);
+		sceNp2.warning("role: %d", member->role);
+	}
+
 	void print_SceNpMatching2RoomMemberDataInternal(const SceNpMatching2RoomMemberDataInternal* member)
 	{
 		sceNp2.warning("SceNpMatching2RoomMemberDataInternal:");
@@ -394,6 +403,21 @@ namespace extra_nps
 			sceNp2.warning("SceNpMatching2GetRoomDataExternalListResponse[%d]:", i);
 			print_SceNpMatching2RoomDataExternal(cur_room.get_ptr());
 			cur_room = cur_room->next;
+		}
+	}
+
+	void print_SceNpMatching2GetRoomMemberDataExternalListResponse(const SceNpMatching2GetRoomMemberDataExternalListResponse* resp)
+	{
+		sceNp2.warning("SceNpMatching2GetRoomMemberDataExternalListResponse:");
+		sceNp2.warning("roomMemberDataExternalNum: %d", resp->roomMemberDataExternalNum);
+
+		vm::bptr<SceNpMatching2RoomMemberDataExternal> cur_member = resp->roomMemberDataExternal;
+
+		for (u32 i = 0; i < resp->roomMemberDataExternalNum && cur_member; i++)
+		{
+			sceNp2.warning("roomMemberDataExternal[%d]:", i);
+			print_SceNpMatching2RoomMemberDataExternal(cur_member.get_ptr());
+			cur_member = cur_member->next;
 		}
 	}
 

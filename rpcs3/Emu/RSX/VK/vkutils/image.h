@@ -33,6 +33,7 @@ namespace vk
 		VkImageAspectFlags m_storage_aspect = 0;
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
+		std::string m_debug_name;
 
 		void validate(const vk::render_device& dev, const VkImageCreateInfo& info) const;
 
@@ -83,6 +84,7 @@ namespace vk
 		VkSharingMode sharing_mode() const;
 		VkImageAspectFlags aspect() const;
 		rsx::format_class format_class() const;
+		std::string debug_name() const;
 
 		// Pipeline management
 		void push_layout(const command_buffer& cmd, VkImageLayout layout);
@@ -127,6 +129,7 @@ namespace vk
 		vk::image* m_resource = nullptr;
 
 		void create_impl();
+		void set_debug_name(std::string_view name);
 	};
 
 	class viewable_image : public image

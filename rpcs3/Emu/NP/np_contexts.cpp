@@ -17,7 +17,12 @@ generic_async_transaction_context::generic_async_transaction_context(const SceNp
 generic_async_transaction_context::~generic_async_transaction_context()
 {
 	if (thread.joinable())
-		thread.join();
+	{
+		if (std::this_thread::get_id() == thread.get_id())
+			thread.detach();
+		else
+			thread.join();
+	}
 }
 
 std::optional<s32> generic_async_transaction_context::get_transaction_status()

@@ -1118,10 +1118,35 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
-{
-	sceNp.warning("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
+u64 sys_time_get_system_time();
 
+error_code acquire_time_slot(u64* time_array, usz array_size, u64 slot_duration)
+{
+	static shared_mutex mutex;
+	std::lock_guard lock(mutex);
+
+	const u64 current_time = sys_time_get_system_time();
+
+	for (usz index = 0; index < array_size; index++)
+	{
+		if (time_array[index] == 0)
+		{
+			time_array[index] = current_time;
+			return CELL_OK;
+		}
+
+		if (current_time > (time_array[index] + slot_duration))
+		{
+			time_array[index] = current_time;
+			return CELL_OK;
+		}
+	}
+
+	return SCE_NP_BASIC_ERROR_BUSY;
+}
+
+error_code _sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size, bool rate_limited)
+{
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -1144,6 +1169,23 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
+	if (rate_limited)
+	{
+		struct sceNpBasicSendMessage_time_slots
+		{
+			sceNpBasicSendMessage_time_slots() = default;
+			sceNpBasicSendMessage_time_slots(sceNpBasicSendMessage_time_slots&&) = delete;
+			std::array<u64, 20> data{};
+		};
+
+		auto& time_slots = g_fxo->get<sceNpBasicSendMessage_time_slots>();
+
+		if (auto error = acquire_time_slot(time_slots.data.data(), time_slots.data.size(), 60000000); error != CELL_OK)
+		{
+			return error;
+		}
+	}
+
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
@@ -1162,6 +1204,19 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 
 	nph.send_message(msg_data, npids);
 
 	return CELL_OK;
+}
+
+error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
+{
+	sceNp.warning("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
+	return _sceNpBasicSendMessage(to, data, size, false);
+}
+
+// This function is sceNpBasicSendMessage + a rate limiter that will return SCE_NP_BASIC_ERROR_BUSY if it too many messages have been sent
+error_code sceNpBasicLimited_0xEB42E2E6(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
+{
+	sceNp.warning("sceNpBasicLimited_0xEB42E2E6(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
+	return _sceNpBasicSendMessage(to, data, size, true);
 }
 
 error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageDetails> msg, sys_memory_container_t containerId)
@@ -7288,6 +7343,11 @@ s32 _Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxm
 	sceNp.todo("_Z32_sce_np_sysutil_cxml_prepare_docPN16sysutil_cxmlutil11FixedMemoryERN4cxml8DocumentEPKcRNS2_7ElementES6_i()");
 	return CELL_OK;
 }
+
+DECLARE(ppu_module_manager::sceNpBasicLimited)
+("sceNpBasicLimited", []() {
+	ppu_module_manager::register_static_function<&sceNpBasicLimited_0xEB42E2E6>("sceNpBasicLimited", ppu_select_name("sceNpBasicLimited", "sceNpBasicLimited_0xEB42E2E6"), BIND_FUNC_WITH_BLR(sceNpBasicLimited_0xEB42E2E6, "sceNpBasicLimited"), 0xEB42E2E6);
+});
 
 DECLARE(ppu_module_manager::sceNp)
 ("sceNp", []() {

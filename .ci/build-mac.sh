@@ -1,4 +1,13 @@
 #!/bin/sh -ex
+# Gather explicit version number and number of commits
+COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' rpcs3/rpcs3_version.cpp)
+COMM_COUNT=$(git rev-list --count HEAD)
+COMM_HASH=$(git rev-parse --short=8 HEAD)
+
+# AVVER is used for GitHub releases, it is the version number. LVER is used for release naming.
+AVVER="${COMM_TAG}-${COMM_COUNT}"
+export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
+echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
@@ -8,12 +17,11 @@ brew install -f --overwrite --quiet ccache "llvm@$LLVM_COMPILER_VER"
 brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 if [ "$AARCH64" -eq 1 ]; then
   brew install -f --overwrite --quiet googletest opencv@4 sdl3 vulkan-headers vulkan-loader molten-vk 
-  brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative
+  brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative protobuf
 else
   arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   arch -x86_64 /usr/local/bin/brew install -f --overwrite --quiet python@3.14 opencv@4 "llvm@$LLVM_COMPILER_VER" sdl3 vulkan-headers vulkan-loader molten-vk
   arch -x86_64 /usr/local/bin/brew unlink  --quiet ffmpeg qtbase qtsvg qtdeclarative
-  arch -x86_64 /usr/local/bin/brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 fi
 
 export CXX=clang++
@@ -80,6 +88,8 @@ cmake .. \
     -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
+    -DMACOSX_BUNDLE_SHORT_VERSION_STRING="${COMM_TAG}" \
+    -DMACOSX_BUNDLE_BUNDLE_VERSION="${COMM_COUNT}" \
     -DSTATIC_LINK_LLVM=ON \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \
@@ -100,6 +110,8 @@ cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=buildfiles/cmake/TCDarwinX86_64.cmake \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 \
     -DCMAKE_OSX_SYSROOT="$(xcrun --sdk macosx --show-sdk-path)" \
+    -DMACOSX_BUNDLE_SHORT_VERSION_STRING="${COMM_TAG}" \
+    -DMACOSX_BUNDLE_BUNDLE_VERSION="${COMM_COUNT}"\
     -DSTATIC_LINK_LLVM=ON \
     -DUSE_SDL=ON \
     -DUSE_DISCORD_RPC=ON \

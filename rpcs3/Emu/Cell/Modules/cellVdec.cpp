@@ -726,8 +726,6 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 			}
 		}
 
-		// TODO: sinfo
-
 		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
 		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
 
@@ -780,6 +778,81 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		break;
 	}
 	case CELL_VDEC_CODEC_TYPE_MPEG4:
+	{
+		cellVdec.warning("cellVdecQueryAttr: MPEG4 (profile=%d)", profile);
+
+		const vm::ptr<CellVdecMpeg4SpecificInfo> sinfo = vm::cast(spec_addr);
+
+		if (sinfo)
+		{
+			if (sinfo->thisSize != sizeof(CellVdecMpeg4SpecificInfo))
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid MPEG4 specific info size %d", sinfo->thisSize };
+			}
+		}
+
+		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
+		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
+
+		switch (profile)
+		{
+		case CELL_VDEC_MPEG4_SP_L1:
+		{
+			if (maxDecW > 176 || maxDecH > 144)
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
+			}
+
+			memSize = new_sdk ? 0x8B78B : 0xBB70B;
+			break;
+		}
+		case CELL_VDEC_MPEG4_SP_L2:
+		case CELL_VDEC_MPEG4_SP_L3:
+		{
+			if (maxDecW > 352 || maxDecH > 288)
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
+			}
+
+			memSize = new_sdk ? 0xEFE0B : 0x11FD8B;
+			break;
+		}
+		case CELL_VDEC_MPEG4_SP_D1_NTSC:
+		{
+			if (maxDecW > 720 || maxDecH > 480)
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
+			}
+
+			memSize = new_sdk ? 0x22DB0B : 0x25DA8B;
+			break;
+		}
+		case CELL_VDEC_MPEG4_SP_VGA:
+		{
+			if (maxDecW > 640 || maxDecH > 480)
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
+			}
+
+			memSize = new_sdk ? 0x1FC00B : 0x22BF8B;
+			break;
+		}
+		case CELL_VDEC_MPEG4_SP_D1_PAL:
+		{
+			if (maxDecW > 720 || maxDecH > 576)
+			{
+				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
+			}
+
+			memSize = new_sdk ? 0x28570B : 0x2B568B;
+			break;
+		}
+		default: return { CELL_VDEC_ERROR_ARG, "Invalid MPEG4 profile %d", profile };
+		}
+
+		decoderVerLower = 0x1080000;
+		break;
+	}
 	case CELL_VDEC_CODEC_TYPE_DIVX:
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
@@ -822,9 +895,6 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 		{
 		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
 		case CELL_VDEC_DIVX_MOBILE      : memSize = new_sdk ? 0x19A740 : 0x26DED0; break;
-		case CELL_VDEC_MPEG4_PROFILE_1:
-		case CELL_VDEC_MPEG4_PROFILE_3:
-		case CELL_VDEC_MPEG4_PROFILE_4: // just a guess based on the profile used by singstar before and after update
 		case CELL_VDEC_DIVX_HOME_THEATER: memSize = new_sdk ? 0x386A60 : 0x498060; break;
 		case CELL_VDEC_DIVX_HD_720      : memSize = new_sdk ? 0x692070 : 0x805690; break;
 		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;
@@ -1126,8 +1196,7 @@ error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode
 		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
-	// TODO: what does the 3 stand for ?
-	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != CELL_VDEC_CODEC_TYPE_VC1) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
 		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
@@ -1174,8 +1243,7 @@ error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode m
 		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
-	// TODO: what does the 3 stand for ?
-	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != CELL_VDEC_CODEC_TYPE_VC1) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
 		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
@@ -1527,6 +1595,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		avc->reserved[0] = 0;
 		avc->reserved[1] = 0;
 	}
+	// TODO: handle MPEG4 properly
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG4 || vdec->type == CELL_VDEC_CODEC_TYPE_DIVX)
 	{
 		const vm::ptr<CellVdecDivxInfo> dvx = picinfo_addr;
