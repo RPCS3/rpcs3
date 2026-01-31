@@ -185,8 +185,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
-	QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Disable IPv6"));
-	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
+	// QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Enable IPv6(Experimental)"));
+	// checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Checked : Qt::Unchecked);
 
 	const auto update_npid_label = [label_npid]()
 	{
@@ -206,7 +206,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_buttons->setLayout(vbox_buttons);
 
 	vbox_global->addWidget(grp_buttons);
-	vbox_global->addWidget(checkbox_disable_ipv6);
+	// vbox_global->addWidget(checkbox_disable_ipv6);
 
 	setLayout(vbox_global);
 
@@ -359,11 +359,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
 
-	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
-	{
-		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
-		g_cfg_rpcn.save();
-	});
+	// connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
+	// {
+	// 	g_cfg_rpcn.set_ipv6_support(state == Qt::Checked);
+	// 	g_cfg_rpcn.save();
+	// });
 }
 
 void rpcn_account_dialog::refresh_combobox()
