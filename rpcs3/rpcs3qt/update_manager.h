@@ -39,23 +39,19 @@ private:
 
 	update_info m_update_info {};
 
-	bool m_dialog_deferred = false;
-	bool m_initialization_complete = true;
-
 	std::string m_request_url;
 	std::string m_expected_hash;
 	u64 m_expected_size = 0;
 
-	bool handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data, bool initialization_complete);
+	bool handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data);
 	bool handle_rpcs3(const QByteArray& data, bool auto_accept);
 
 public:
 	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
-	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr, bool initialization_complete = true);
+	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
 	void update(bool auto_accept);
-	void set_initialization_complete(bool complete);
-	void show_pending_update_dialog();
 
 Q_SIGNALS:
 	void signal_update_available(bool update_available);
+	void signal_about_to_terminate();
 };

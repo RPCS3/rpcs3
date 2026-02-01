@@ -52,12 +52,11 @@ update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gu
 {
 }
 
-void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent, bool initialization_complete)
+void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
-	update_log.notice("Checking for updates: automatic=%d, check_only=%d, auto_accept=%d, initialization_complete=%d", automatic, check_only, auto_accept, initialization_complete);
+	update_log.notice("Checking for updates: automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
 	m_update_info = {};
-	m_initialization_complete = initialization_complete;
 
 	if (automatic)
 	{
@@ -90,7 +89,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 
 	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only, auto_accept](const QByteArray& data)
 	{
-		const bool result_json = handle_json(automatic, check_only, auto_accept, data, m_initialization_complete);
+		const bool result_json = handle_json(automatic, check_only, auto_accept, data);
 
 		if (!result_json)
 		{
@@ -114,9 +113,9 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
-bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data, bool initialization_complete)
+bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
 {
-	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d, initialization_complete=%d", automatic, check_only, auto_accept, initialization_complete);
+	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
@@ -304,15 +303,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		return true;
 	}
 
-	// Check if initialization is complete before showing dialog
-	if (!initialization_complete && !auto_accept)
-	{
-		update_log.notice("Update dialog deferred: initialization not yet complete");
-		m_dialog_deferred = true;
-		m_downloader->close_progress_dialog();
-		return true;
-	}
-
 	update(auto_accept);
 	return true;
 }
@@ -322,16 +312,6 @@ void update_manager::update(bool auto_accept)
 	update_log.notice("Updating with auto_accept=%d", auto_accept);
 
 	ensure(m_downloader);
-
-	// Defensive check: ensure we're in a safe state
-	if (!m_initialization_complete && !auto_accept)
-	{
-		update_log.error("Update triggered before initialization complete! Aborting for safety.");
-		m_downloader->close_progress_dialog();
-		QMessageBox::critical(m_parent, tr("Update Error"), 
-			tr("Update cannot proceed: application is still initializing. Please try again in a moment."));
-		return;
-	}
 
 	if (!auto_accept)
 	{
@@ -786,6 +766,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		m_gui_settings->sync(); // Make sure to sync before terminating RPCS3
 	}
 
+	Q_EMIT signal_about_to_terminate();
+
 	Emu.GracefulShutdown(false);
 	Emu.CleanUp();
 
@@ -811,20 +793,4 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	return true;
-}
-
-void update_manager::set_initialization_complete(bool complete)
-{
-	update_log.notice("Initialization complete state changed to: %d", complete);
-	m_initialization_complete = complete;
-}
-
-void update_manager::show_pending_update_dialog()
-{
-	if (m_dialog_deferred)
-	{
-		update_log.notice("Showing deferred update dialog");
-		m_dialog_deferred = false;
-		update(false);
-	}
 }

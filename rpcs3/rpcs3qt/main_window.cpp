@@ -259,23 +259,21 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	});
 #endif
 
+	connect(&m_updater, &update_manager::signal_about_to_terminate, this, [this]()
+	{
+		if (m_game_list_frame)
+		{
+			m_game_list_frame->StopAllThreads();
+		}
+	});
+
 #ifdef RPCS3_UPDATE_SUPPORTED
-	// Start game list refresh early, before update check
-	// This ensures the game list is loading while we check for updates
-	m_game_list_frame->Refresh(true);
-
-	// Connect to game list ready signal to know when initialization is safe
-	connect(m_game_list_frame, &game_list_frame::Refreshed, this, &main_window::on_game_list_ready, Qt::QueuedConnection);
-
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
 		const bool auto_accept   = !in_background && update_value == gui::update_auto;
-		m_updater.check_for_updates(true, in_background, auto_accept, this, false);
+		m_updater.check_for_updates(true, in_background, auto_accept, this);
 	}
-#else
-	// If updates not supported, just refresh game list normally
-	m_game_list_frame->Refresh(true);
 #endif
 
 	// Disable vsh if not present.
@@ -284,22 +282,12 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Focus to search bar by default
 	ui->mw_searchbar->setFocus();
 
-#ifndef RPCS3_UPDATE_SUPPORTED
-	// Refresh gamelist last (only if updates not supported, otherwise already done above)
-	// m_game_list_frame->Refresh(true); // Already called above
-#endif
+	// Refresh gamelist last
+	m_game_list_frame->Refresh(true);
 
 	update_gui_pad_thread();
 
 	return true;
-}
-
-void main_window::on_game_list_ready()
-{
-	gui_log.notice("Game list initialization complete, setting safe state for update dialog");
-	m_initialization_complete = true;
-	m_updater.set_initialization_complete(true);
-	m_updater.show_pending_update_dialog();
 }
 
 void main_window::update_gui_pad_thread()

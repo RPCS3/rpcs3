@@ -110,7 +110,6 @@ private Q_SLOTS:
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 	void show_boot_error(game_boot_result status);
-	void on_game_list_ready();
 
 	void SaveWindowState() const;
 	void SetIconSizeActions(int idx) const;
@@ -201,6 +200,4 @@ private:
 	std::unique_ptr<gui_pad_thread> m_gui_pad_thread;
 
 	system_state m_system_state = system_state::stopped;
-
-	bool m_initialization_complete = false;
 };
