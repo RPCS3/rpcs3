@@ -267,16 +267,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Connect to game list ready signal to know when initialization is safe
 	connect(m_game_list_frame, &game_list_frame::Refreshed, this, &main_window::on_game_list_ready, Qt::QueuedConnection);
 
-	// Set up timeout mechanism in case game list initialization fails or takes too long
-	QTimer::singleShot(10000, this, [this]()
-	{
-		if (!m_initialization_complete)
-		{
-			gui_log.warning("Game list initialization timeout after 10 seconds, proceeding with update check anyway");
-			on_game_list_ready();
-		}
-	});
-
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
