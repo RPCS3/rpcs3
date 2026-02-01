@@ -53,5 +53,4 @@ public:
 
 Q_SIGNALS:
 	void signal_update_available(bool update_available);
-	void signal_about_to_terminate();
 };

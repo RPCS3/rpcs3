@@ -221,11 +221,6 @@ void game_list_frame::LoadSettings()
 
 game_list_frame::~game_list_frame()
 {
-	StopAllThreads();
-}
-
-void game_list_frame::StopAllThreads()
-{
 	WaitAndAbortSizeCalcThreads();
 	WaitAndAbortRepaintThreads();
 	gui::utils::stop_future_watcher(m_parsing_watcher, true);

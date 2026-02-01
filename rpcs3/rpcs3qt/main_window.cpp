@@ -259,31 +259,28 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	});
 #endif
 
-	connect(&m_updater, &update_manager::signal_about_to_terminate, this, [this]()
-	{
-		if (m_game_list_frame)
-		{
-			m_game_list_frame->StopAllThreads();
-		}
-	});
-
-#ifdef RPCS3_UPDATE_SUPPORTED
-	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
-	{
-		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
-		const bool auto_accept   = !in_background && update_value == gui::update_auto;
-		m_updater.check_for_updates(true, in_background, auto_accept, this);
-	}
-#endif
-
 	// Disable vsh if not present.
 	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self"));
 
 	// Focus to search bar by default
 	ui->mw_searchbar->setFocus();
 
-	// Refresh gamelist last
+	// Refresh gamelist first, then check for updates after it finishes
 	m_game_list_frame->Refresh(true);
+
+#ifdef RPCS3_UPDATE_SUPPORTED
+	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
+	{
+		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
+		const bool auto_accept   = !in_background && update_value == gui::update_auto;
+
+		// Defer update check until game list finishes loading
+		m_game_list_frame->AddRefreshedSlot([this, in_background, auto_accept](std::set<std::string>&)
+		{
+			m_updater.check_for_updates(true, in_background, auto_accept, this);
+		});
+	}
+#endif
 
 	update_gui_pad_thread();
 
