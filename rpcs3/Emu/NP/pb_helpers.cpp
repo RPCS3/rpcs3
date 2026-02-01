@@ -171,6 +171,15 @@ namespace np
 		}
 	}
 
+	void RoomMemberDataExternal_to_SceNpMatching2RoomMemberDataExternal(event_data& edata, const np2_structs::RoomMemberDataExternal& member, SceNpMatching2RoomMemberDataExternal* member_info, bool include_onlinename, bool include_avatarurl)
+	{
+		ensure(member.has_userinfo());
+
+		UserInfo_to_SceNpUserInfo2(edata, member.userinfo(), &member_info->userInfo, include_onlinename, include_avatarurl);
+		member_info->joinDate.tick = member.joindate();
+		member_info->role = member.role().value();
+	}
+
 	void SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(event_data& edata, const np2_structs::SearchRoomResponse& resp, SceNpMatching2SearchRoomResponse* search_resp)
 	{
 		search_resp->range.size       = resp.rooms_size();
@@ -181,8 +190,7 @@ namespace np
 		for (int i = 0; i < resp.rooms_size(); i++)
 		{
 			const auto& pb_room = resp.rooms(i);
-			SceNpMatching2RoomDataExternal* cur_room;
-			cur_room = edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), (i > 0) ? prev_room->next : search_resp->roomDataExternal);
+			SceNpMatching2RoomDataExternal* cur_room = edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), (i > 0) ? prev_room->next : search_resp->roomDataExternal);
 			RoomDataExternal_to_SceNpMatching2RoomDataExternal(edata, pb_room, cur_room, true, true);
 			prev_room = cur_room;
 		}
@@ -196,12 +204,25 @@ namespace np
 		for (int i = 0; i < resp.rooms_size(); i++)
 		{
 			const auto& pb_room = resp.rooms(i);
-			SceNpMatching2RoomDataExternal* cur_room;
-
-			cur_room = edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), (i > 0) ? prev_room->next : get_resp->roomDataExternal);
+			SceNpMatching2RoomDataExternal* cur_room = edata.allocate<SceNpMatching2RoomDataExternal>(sizeof(SceNpMatching2RoomDataExternal), (i > 0) ? prev_room->next : get_resp->roomDataExternal);
 
 			RoomDataExternal_to_SceNpMatching2RoomDataExternal(edata, pb_room, cur_room, include_onlinename, include_avatarurl);
 			prev_room = cur_room;
+		}
+	}
+
+	void GetRoomMemberDataExternalListResponse_to_SceNpMatching2GetRoomMemberDataExternalListResponse(event_data& edata, const np2_structs::GetRoomMemberDataExternalListResponse& resp, SceNpMatching2GetRoomMemberDataExternalListResponse* get_resp, bool include_onlinename, bool include_avatarurl)
+	{
+		get_resp->roomMemberDataExternalNum = resp.members_size();
+
+		SceNpMatching2RoomMemberDataExternal* prev_member = nullptr;
+		for (int i = 0; i < resp.members_size(); i++)
+		{
+			const auto& pb_member = resp.members(i);
+			SceNpMatching2RoomMemberDataExternal* cur_member = edata.allocate<SceNpMatching2RoomMemberDataExternal>(sizeof(SceNpMatching2RoomMemberDataExternal), (i > 0) ? prev_member->next : get_resp->roomMemberDataExternal);
+
+			RoomMemberDataExternal_to_SceNpMatching2RoomMemberDataExternal(edata, pb_member, cur_member, include_onlinename, include_avatarurl);
+			prev_member = cur_member;
 		}
 	}
 
@@ -630,6 +651,13 @@ namespace np
 		room_info->lobbyid.opt[27] = 1;
 		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, resp.room(), &room_info->room_status);
 		MatchingAttr_to_SceNpMatchingAttr(edata, resp.attr(), room_info->attr);
+	}
+
+	void OptParam_to_SceNpMatching2SignalingOptParam(const np2_structs::OptParam& resp, SceNpMatching2SignalingOptParam* opt_param)
+	{
+		opt_param->type = resp.type().value();
+		opt_param->flag = resp.flag().value();
+		opt_param->hubMemberId = resp.hubmemberid().value();
 	}
 
 } // namespace np

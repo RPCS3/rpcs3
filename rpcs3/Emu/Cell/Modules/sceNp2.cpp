@@ -616,9 +616,9 @@ error_code sceNpMatching2CreateServerContext(
 	return CELL_OK;
 }
 
-error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo) // TODO
+error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo)
 {
-	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
+	sceNp2.warning("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -626,6 +626,14 @@ error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!memInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	SceNpMatching2MemoryInfo mem_info = nph.get_memory_info();
+	*memInfo = mem_info;
 
 	return CELL_OK;
 }
@@ -790,12 +798,19 @@ error_code sceNpMatching2JoinLobby(
 error_code sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomMemberDataExternalListRequest> reqParam,
     vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2GetRoomMemberDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2GetRoomMemberDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam); res != CELL_OK)
 	{
 		return res;
+	}
+
+	const u32 request_id = nph.get_room_member_data_external_list(ctxId, optParam, reqParam.get_ptr());
+
+	if (assignedReqId)
+	{
+		*assignedReqId = request_id;
 	}
 
 	return CELL_OK;
@@ -1056,7 +1071,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
 {
-	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
+	sceNp2.warning("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1064,6 +1079,17 @@ error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<S
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!queueInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	*queueInfo = {};
+	// TODO: check the values returned on real hardware
+	queueInfo->requestCbQueueLen = 255;
+	queueInfo->sessionEventCbQueueLen = 255;
+	queueInfo->sessionMsgCbQueueLen = 255;
 
 	return CELL_OK;
 }
@@ -1326,7 +1352,7 @@ error_code sceNpMatching2CreateContext(
 
 error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2SignalingOptParam> signalingOptParam)
 {
-	sceNp2.todo("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
+	sceNp2.warning("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1334,6 +1360,30 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, signaling_opt_param] = nph.local_get_signaling_opt_param(roomId);
+
+	if (error)
+	{
+		return error;
+	}
+
+	*signalingOptParam = *signaling_opt_param;
 
 	return CELL_OK;
 }

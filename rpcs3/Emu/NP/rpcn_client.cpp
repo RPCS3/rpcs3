@@ -117,6 +117,7 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::LeaveRoom: return "LeaveRoom";
 			case rpcn::CommandType::SearchRoom: return "SearchRoom";
 			case rpcn::CommandType::GetRoomDataExternalList: return "GetRoomDataExternalList";
+			case rpcn::CommandType::GetRoomMemberDataExternalList: return "GetRoomMemberDataExternalList";
 			case rpcn::CommandType::SetRoomDataExternal: return "SetRoomDataExternal";
 			case rpcn::CommandType::GetRoomDataInternal: return "GetRoomDataInternal";
 			case rpcn::CommandType::SetRoomDataInternal: return "SetRoomDataInternal";
@@ -256,7 +257,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 29;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 30;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -1915,6 +1916,16 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, communication_id, CommandType::GetRoomDataExternalList, req_id);
 	}
 
+	bool rpcn_client::get_room_member_data_external_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
+	{
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u64));
+
+		rpcn_client::write_communication_id(communication_id, data);
+		write_to_ptr<le_t<u64>>(data, COMMUNICATION_ID_SIZE, room_id);
+
+		return forge_send(CommandType::GetRoomMemberDataExternalList, req_id, data);
+	}
+
 	bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
 		np2_structs::SetRoomDataExternalRequest pb_req;
@@ -2171,7 +2182,7 @@ namespace rpcn
 	bool rpcn_client::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
 		np2_structs::MessageDetails pb_message;
-		pb_message.set_communicationid(static_cast<const char*>(msg_data.commId.data));
+		pb_message.set_communicationid(np::communication_id_to_string(msg_data.commId));
 		pb_message.set_msgid(msg_data.msgId);
 		pb_message.mutable_maintype()->set_value(msg_data.mainType);
 		pb_message.mutable_subtype()->set_value(msg_data.subType);
@@ -3122,11 +3133,13 @@ namespace rpcn
 
 		if (sdata.is_error())
 		{
+			rpcn_log.error("Error parsing MessageReceived notification");
 			return;
 		}
 
-		if (pb_mdata->communicationid().empty() || pb_mdata->communicationid().size() > 9 ||
-			pb_mdata->subject().empty() || pb_mdata->body().empty())
+		const auto communication_id = np::string_to_communication_id(pb_mdata->communicationid());
+
+		if (!communication_id)
 		{
 			rpcn_log.warning("Discarded invalid message!");
 			return;
@@ -3140,8 +3153,11 @@ namespace rpcn
 			.subject = pb_mdata->subject(),
 			.body = pb_mdata->body()};
 
-		strcpy_trunc(mdata.commId.data, pb_mdata->communicationid());
+		mdata.commId = *communication_id;
 		mdata.data.assign(pb_mdata->data().begin(), pb_mdata->data().end());
+
+		rpcn_log.notice("Received message from %s:", sender);
+		mdata.print();
 
 		// Save the message and call callbacks
 		{

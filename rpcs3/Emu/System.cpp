@@ -3393,7 +3393,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			bool is_being_held_longer = false;
 
-			for (int i = 0; !*join_ended && thread_ctrl::state() != thread_state::aborting;)
+			for (int i = 0; !*join_ended && thread_ctrl::state() != thread_state::aborting; i++)
 			{
 				if (g_watchdog_hold_ctr)
 				{

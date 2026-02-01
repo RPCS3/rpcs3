@@ -58,6 +58,8 @@ namespace np
 		std::map<SceNpMatching2RoomGroupId, SceNpMatching2RoomGroup> groups;
 		std::map<SceNpMatching2RoomMemberId, member_cache> members;
 
+		SceNpMatching2SignalingOptParam opt_param{};
+
 		bool owner = false;
 	};
 
@@ -70,10 +72,12 @@ namespace np
 		bool add_member(SceNpMatching2RoomId room_id, const SceNpMatching2RoomMemberDataInternal* sce_roommemberdata);
 		bool del_member(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id);
 		void update_password(SceNpMatching2RoomId room_id, const std::optional<SceNpMatching2SessionPassword>& password);
+		void update_opt_param(SceNpMatching2RoomId room_id, const SceNpMatching2SignalingOptParam* sce_opt_param);
 
 		std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> get_slots(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> get_memberids(u64 room_id, s32 sort_method);
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> get_password(SceNpMatching2RoomId room_id);
+		std::pair<error_code, std::optional<SceNpMatching2SignalingOptParam>> get_opt_param(SceNpMatching2RoomId room_id);
 		error_code get_member_and_attrs(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, bool include_onlinename, bool include_avatarurl);
 		std::pair<error_code, std::optional<SceNpId>> get_npid(u64 room_id, u16 member_id);
 		std::optional<u16> get_memberid(u64 room_id, const SceNpId& npid);

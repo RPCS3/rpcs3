@@ -314,6 +314,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::libsnd3,
 		&ppu_module_manager::libsynth2,
 		&ppu_module_manager::sceNp,
+		&ppu_module_manager::sceNpBasicLimited,
 		&ppu_module_manager::sceNp2,
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
