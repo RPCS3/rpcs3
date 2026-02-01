@@ -177,6 +177,7 @@ namespace np
 		u32 leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req);
 		u32 search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SearchRoomRequest* req);
 		u32 get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req);
+		u32 get_room_member_data_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataExternalListRequest* req);
 		u32 set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req);
 		u32 get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req);
 		u32 set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req);
@@ -323,6 +324,7 @@ namespace np
 		void reply_leave_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_search_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_get_roomdata_external_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_get_room_member_data_external_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_set_roomdata_external(u32 req_id, rpcn::ErrorType error);
 		void reply_get_roomdata_internal(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_set_roomdata_internal(u32 req_id, rpcn::ErrorType error);

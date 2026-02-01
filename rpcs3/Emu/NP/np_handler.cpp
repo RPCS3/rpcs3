@@ -1085,6 +1085,9 @@ namespace np
 
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
+		rpcn_log.notice("Sending message to \"%s\":", fmt::merge(npids, "\",\""));
+		msg_data.print();
+
 		get_rpcn()->send_message(msg_data, npids);
 	}
 
@@ -1124,6 +1127,7 @@ namespace np
 					case rpcn::CommandType::LeaveRoom: reply_leave_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchRoom: reply_search_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetRoomDataExternalList: reply_get_roomdata_external_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetRoomMemberDataExternalList: reply_get_room_member_data_external_list(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, error); break;
 					case rpcn::CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, error); break;

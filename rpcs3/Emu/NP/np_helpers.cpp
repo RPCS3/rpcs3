@@ -8,6 +8,8 @@
 #include <WS2tcpip.h>
 #endif
 
+LOG_CHANNEL(rpcn_log, "rpcn");
+
 namespace np
 {
 	std::string ip_to_string(u32 ip_addr)
@@ -32,6 +34,24 @@ namespace np
 	{
 		std::string_view com_id_data(communicationId.data, 9);
 		return fmt::format("%s_%02d", com_id_data, communicationId.num);
+	}
+
+	std::optional<SceNpCommunicationId> string_to_communication_id(std::string_view str)
+	{
+		SceNpCommunicationId id{};
+
+		const auto split_id = fmt::split_sv(str, {"_"});
+
+		if (split_id.size() != 2 || split_id[0].length() != 9 || split_id[1].length() != 2 || !std::isdigit(split_id[1][0]) || !std::isdigit(split_id[1][1]))
+		{
+			rpcn_log.error("Tried to parse an invalid communication_id!");
+			return std::nullopt;
+		}
+
+		strcpy_trunc(id.data, split_id[0]);
+		id.num = std::stoi(std::string(split_id[1]));
+
+		return id;
 	}
 
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
@@ -79,12 +99,6 @@ namespace np
 	{
 		memset(&avatar_url, 0, sizeof(avatar_url));
 		strcpy_trunc(avatar_url.data, str);
-	}
-
-	void string_to_communication_id(std::string_view str, SceNpCommunicationId& comm_id)
-	{
-		memset(&comm_id, 0, sizeof(comm_id));
-		strcpy_trunc(comm_id.data, str);
 	}
 
 	bool is_valid_npid(const SceNpId& npid)

@@ -99,6 +99,10 @@ class GetRoomListGUIRequest;
 struct GetRoomListGUIRequestDefaultTypeInternal;
 extern GetRoomListGUIRequestDefaultTypeInternal _GetRoomListGUIRequest_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<34> GetRoomListGUIRequest_class_data_;
+class GetRoomMemberDataExternalListResponse;
+struct GetRoomMemberDataExternalListResponseDefaultTypeInternal;
+extern GetRoomMemberDataExternalListResponseDefaultTypeInternal _GetRoomMemberDataExternalListResponse_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<50> GetRoomMemberDataExternalListResponse_class_data_;
 class GetRoomMemberDataInternalRequest;
 struct GetRoomMemberDataInternalRequestDefaultTypeInternal;
 extern GetRoomMemberDataInternalRequestDefaultTypeInternal _GetRoomMemberDataInternalRequest_default_instance_;
@@ -235,6 +239,10 @@ class RoomMemberBinAttrInternal;
 struct RoomMemberBinAttrInternalDefaultTypeInternal;
 extern RoomMemberBinAttrInternalDefaultTypeInternal _RoomMemberBinAttrInternal_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<38> RoomMemberBinAttrInternal_class_data_;
+class RoomMemberDataExternal;
+struct RoomMemberDataExternalDefaultTypeInternal;
+extern RoomMemberDataExternalDefaultTypeInternal _RoomMemberDataExternal_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<35> RoomMemberDataExternal_class_data_;
 class RoomMemberDataInternal;
 struct RoomMemberDataInternalDefaultTypeInternal;
 extern RoomMemberDataInternalDefaultTypeInternal _RoomMemberDataInternal_default_instance_;
@@ -9818,6 +9826,218 @@ class RoomMessageInfo final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<28> RoomMessageInfo_class_data_;
 // -------------------------------------------------------------------
 
+class RoomMemberDataExternal final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.RoomMemberDataExternal) */ {
+ public:
+  inline RoomMemberDataExternal() : RoomMemberDataExternal(nullptr) {}
+  ~RoomMemberDataExternal() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(RoomMemberDataExternal* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(RoomMemberDataExternal));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR RoomMemberDataExternal(::google::protobuf::internal::ConstantInitialized);
+
+  inline RoomMemberDataExternal(const RoomMemberDataExternal& from) : RoomMemberDataExternal(nullptr, from) {}
+  inline RoomMemberDataExternal(RoomMemberDataExternal&& from) noexcept
+      : RoomMemberDataExternal(nullptr, ::std::move(from)) {}
+  inline RoomMemberDataExternal& operator=(const RoomMemberDataExternal& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RoomMemberDataExternal& operator=(RoomMemberDataExternal&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const RoomMemberDataExternal& default_instance() {
+    return *reinterpret_cast<const RoomMemberDataExternal*>(
+        &_RoomMemberDataExternal_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 89;
+  friend void swap(RoomMemberDataExternal& a, RoomMemberDataExternal& b) { a.Swap(&b); }
+  inline void Swap(RoomMemberDataExternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(RoomMemberDataExternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  RoomMemberDataExternal* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<RoomMemberDataExternal>(arena);
+  }
+  void CopyFrom(const RoomMemberDataExternal& from);
+  void MergeFrom(const RoomMemberDataExternal& from) { RoomMemberDataExternal::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(RoomMemberDataExternal* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.RoomMemberDataExternal"; }
+
+  explicit RoomMemberDataExternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  RoomMemberDataExternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const RoomMemberDataExternal& from);
+  RoomMemberDataExternal(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, RoomMemberDataExternal&& from) noexcept
+      : RoomMemberDataExternal(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kUserInfoFieldNumber = 1,
+    kRoleFieldNumber = 3,
+    kJoinDateFieldNumber = 2,
+  };
+  // .np2_structs.UserInfo userInfo = 1;
+  bool has_userinfo() const;
+  void clear_userinfo() ;
+  const ::np2_structs::UserInfo& userinfo() const;
+  [[nodiscard]] ::np2_structs::UserInfo* PROTOBUF_NULLABLE release_userinfo();
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL mutable_userinfo();
+  void set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  ::np2_structs::UserInfo* PROTOBUF_NULLABLE unsafe_arena_release_userinfo();
+
+  private:
+  const ::np2_structs::UserInfo& _internal_userinfo() const;
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL _internal_mutable_userinfo();
+
+  public:
+  // .np2_structs.uint8 role = 3;
+  bool has_role() const;
+  void clear_role() ;
+  const ::np2_structs::uint8& role() const;
+  [[nodiscard]] ::np2_structs::uint8* PROTOBUF_NULLABLE release_role();
+  ::np2_structs::uint8* PROTOBUF_NONNULL mutable_role();
+  void set_allocated_role(::np2_structs::uint8* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_role(::np2_structs::uint8* PROTOBUF_NULLABLE value);
+  ::np2_structs::uint8* PROTOBUF_NULLABLE unsafe_arena_release_role();
+
+  private:
+  const ::np2_structs::uint8& _internal_role() const;
+  ::np2_structs::uint8* PROTOBUF_NONNULL _internal_mutable_role();
+
+  public:
+  // uint64 joinDate = 2;
+  void clear_joindate() ;
+  ::uint64_t joindate() const;
+  void set_joindate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_joindate() const;
+  void _internal_set_joindate(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.RoomMemberDataExternal)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 3,
+                                   2, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const RoomMemberDataExternal& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE userinfo_;
+    ::np2_structs::uint8* PROTOBUF_NULLABLE role_;
+    ::uint64_t joindate_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<35> RoomMemberDataExternal_class_data_;
+// -------------------------------------------------------------------
+
 class RoomGroupPasswordConfig final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.RoomGroupPasswordConfig) */ {
  public:
@@ -16601,6 +16821,191 @@ class IntSearchFilter final : public ::google::protobuf::MessageLite
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<28> IntSearchFilter_class_data_;
+// -------------------------------------------------------------------
+
+class GetRoomMemberDataExternalListResponse final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.GetRoomMemberDataExternalListResponse) */ {
+ public:
+  inline GetRoomMemberDataExternalListResponse() : GetRoomMemberDataExternalListResponse(nullptr) {}
+  ~GetRoomMemberDataExternalListResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(GetRoomMemberDataExternalListResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(GetRoomMemberDataExternalListResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR GetRoomMemberDataExternalListResponse(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetRoomMemberDataExternalListResponse(const GetRoomMemberDataExternalListResponse& from) : GetRoomMemberDataExternalListResponse(nullptr, from) {}
+  inline GetRoomMemberDataExternalListResponse(GetRoomMemberDataExternalListResponse&& from) noexcept
+      : GetRoomMemberDataExternalListResponse(nullptr, ::std::move(from)) {}
+  inline GetRoomMemberDataExternalListResponse& operator=(const GetRoomMemberDataExternalListResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetRoomMemberDataExternalListResponse& operator=(GetRoomMemberDataExternalListResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const GetRoomMemberDataExternalListResponse& default_instance() {
+    return *reinterpret_cast<const GetRoomMemberDataExternalListResponse*>(
+        &_GetRoomMemberDataExternalListResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 90;
+  friend void swap(GetRoomMemberDataExternalListResponse& a, GetRoomMemberDataExternalListResponse& b) { a.Swap(&b); }
+  inline void Swap(GetRoomMemberDataExternalListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetRoomMemberDataExternalListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetRoomMemberDataExternalListResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<GetRoomMemberDataExternalListResponse>(arena);
+  }
+  void CopyFrom(const GetRoomMemberDataExternalListResponse& from);
+  void MergeFrom(const GetRoomMemberDataExternalListResponse& from) { GetRoomMemberDataExternalListResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(GetRoomMemberDataExternalListResponse* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.GetRoomMemberDataExternalListResponse"; }
+
+  explicit GetRoomMemberDataExternalListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  GetRoomMemberDataExternalListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GetRoomMemberDataExternalListResponse& from);
+  GetRoomMemberDataExternalListResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GetRoomMemberDataExternalListResponse&& from) noexcept
+      : GetRoomMemberDataExternalListResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kMembersFieldNumber = 1,
+  };
+  // repeated .np2_structs.RoomMemberDataExternal members = 1;
+  int members_size() const;
+  private:
+  int _internal_members_size() const;
+
+  public:
+  void clear_members() ;
+  ::np2_structs::RoomMemberDataExternal* PROTOBUF_NONNULL mutable_members(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>* PROTOBUF_NONNULL mutable_members();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>& _internal_members() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>* PROTOBUF_NONNULL _internal_mutable_members();
+  public:
+  const ::np2_structs::RoomMemberDataExternal& members(int index) const;
+  ::np2_structs::RoomMemberDataExternal* PROTOBUF_NONNULL add_members();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>& members() const;
+  // @@protoc_insertion_point(class_scope:np2_structs.GetRoomMemberDataExternalListResponse)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<0, 1,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const GetRoomMemberDataExternalListResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::RoomMemberDataExternal > members_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<50> GetRoomMemberDataExternalListResponse_class_data_;
 // -------------------------------------------------------------------
 
 class CreateJoinRoomRequest final : public ::google::protobuf::MessageLite
@@ -38601,6 +39006,293 @@ inline ::google::protobuf::RepeatedPtrField<::np2_structs::MatchingAttr>* PROTOB
 MatchingSearchJoinRoomInfo::_internal_mutable_attr() {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return &_impl_.attr_;
+}
+
+// -------------------------------------------------------------------
+
+// RoomMemberDataExternal
+
+// .np2_structs.UserInfo userInfo = 1;
+inline bool RoomMemberDataExternal::has_userinfo() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  PROTOBUF_ASSUME(!value || _impl_.userinfo_ != nullptr);
+  return value;
+}
+inline void RoomMemberDataExternal::clear_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.userinfo_ != nullptr) _impl_.userinfo_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::np2_structs::UserInfo& RoomMemberDataExternal::_internal_userinfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::UserInfo* p = _impl_.userinfo_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::UserInfo&>(::np2_structs::_UserInfo_default_instance_);
+}
+inline const ::np2_structs::UserInfo& RoomMemberDataExternal::userinfo() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.RoomMemberDataExternal.userInfo)
+  return _internal_userinfo();
+}
+inline void RoomMemberDataExternal::unsafe_arena_set_allocated_userinfo(
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.userinfo_);
+  }
+  _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.RoomMemberDataExternal.userInfo)
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE RoomMemberDataExternal::release_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::UserInfo* released = _impl_.userinfo_;
+  _impl_.userinfo_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE RoomMemberDataExternal::unsafe_arena_release_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.RoomMemberDataExternal.userInfo)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::UserInfo* temp = _impl_.userinfo_;
+  _impl_.userinfo_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL RoomMemberDataExternal::_internal_mutable_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.userinfo_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::UserInfo>(GetArena());
+    _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(p);
+  }
+  return _impl_.userinfo_;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL RoomMemberDataExternal::mutable_userinfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::UserInfo* _msg = _internal_mutable_userinfo();
+  // @@protoc_insertion_point(field_mutable:np2_structs.RoomMemberDataExternal.userInfo)
+  return _msg;
+}
+inline void RoomMemberDataExternal::set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.userinfo_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+
+  _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.RoomMemberDataExternal.userInfo)
+}
+
+// uint64 joinDate = 2;
+inline void RoomMemberDataExternal::clear_joindate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint64_t RoomMemberDataExternal::joindate() const {
+  // @@protoc_insertion_point(field_get:np2_structs.RoomMemberDataExternal.joinDate)
+  return _internal_joindate();
+}
+inline void RoomMemberDataExternal::set_joindate(::uint64_t value) {
+  _internal_set_joindate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.RoomMemberDataExternal.joinDate)
+}
+inline ::uint64_t RoomMemberDataExternal::_internal_joindate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joindate_;
+}
+inline void RoomMemberDataExternal::_internal_set_joindate(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = value;
+}
+
+// .np2_structs.uint8 role = 3;
+inline bool RoomMemberDataExternal::has_role() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
+  PROTOBUF_ASSUME(!value || _impl_.role_ != nullptr);
+  return value;
+}
+inline void RoomMemberDataExternal::clear_role() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.role_ != nullptr) _impl_.role_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::np2_structs::uint8& RoomMemberDataExternal::_internal_role() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::uint8* p = _impl_.role_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::uint8&>(::np2_structs::_uint8_default_instance_);
+}
+inline const ::np2_structs::uint8& RoomMemberDataExternal::role() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.RoomMemberDataExternal.role)
+  return _internal_role();
+}
+inline void RoomMemberDataExternal::unsafe_arena_set_allocated_role(
+    ::np2_structs::uint8* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.role_);
+  }
+  _impl_.role_ = reinterpret_cast<::np2_structs::uint8*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.RoomMemberDataExternal.role)
+}
+inline ::np2_structs::uint8* PROTOBUF_NULLABLE RoomMemberDataExternal::release_role() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::uint8* released = _impl_.role_;
+  _impl_.role_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::uint8* PROTOBUF_NULLABLE RoomMemberDataExternal::unsafe_arena_release_role() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.RoomMemberDataExternal.role)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::uint8* temp = _impl_.role_;
+  _impl_.role_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::uint8* PROTOBUF_NONNULL RoomMemberDataExternal::_internal_mutable_role() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.role_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::uint8>(GetArena());
+    _impl_.role_ = reinterpret_cast<::np2_structs::uint8*>(p);
+  }
+  return _impl_.role_;
+}
+inline ::np2_structs::uint8* PROTOBUF_NONNULL RoomMemberDataExternal::mutable_role()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::uint8* _msg = _internal_mutable_role();
+  // @@protoc_insertion_point(field_mutable:np2_structs.RoomMemberDataExternal.role)
+  return _msg;
+}
+inline void RoomMemberDataExternal::set_allocated_role(::np2_structs::uint8* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.role_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+
+  _impl_.role_ = reinterpret_cast<::np2_structs::uint8*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.RoomMemberDataExternal.role)
+}
+
+// -------------------------------------------------------------------
+
+// GetRoomMemberDataExternalListResponse
+
+// repeated .np2_structs.RoomMemberDataExternal members = 1;
+inline int GetRoomMemberDataExternalListResponse::_internal_members_size() const {
+  return _internal_members().size();
+}
+inline int GetRoomMemberDataExternalListResponse::members_size() const {
+  return _internal_members_size();
+}
+inline void GetRoomMemberDataExternalListResponse::clear_members() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.members_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::RoomMemberDataExternal* PROTOBUF_NONNULL GetRoomMemberDataExternalListResponse::mutable_members(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.GetRoomMemberDataExternalListResponse.members)
+  return _internal_mutable_members()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>* PROTOBUF_NONNULL GetRoomMemberDataExternalListResponse::mutable_members()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetRoomMemberDataExternalListResponse.members)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_members();
+}
+inline const ::np2_structs::RoomMemberDataExternal& GetRoomMemberDataExternalListResponse::members(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.GetRoomMemberDataExternalListResponse.members)
+  return _internal_members().Get(index);
+}
+inline ::np2_structs::RoomMemberDataExternal* PROTOBUF_NONNULL GetRoomMemberDataExternalListResponse::add_members()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::RoomMemberDataExternal* _add =
+      _internal_mutable_members()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetRoomMemberDataExternalListResponse.members)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>& GetRoomMemberDataExternalListResponse::members() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetRoomMemberDataExternalListResponse.members)
+  return _internal_members();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>&
+GetRoomMemberDataExternalListResponse::_internal_members() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.members_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExternal>* PROTOBUF_NONNULL
+GetRoomMemberDataExternalListResponse::_internal_mutable_members() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.members_;
 }
 
 #ifdef __GNUC__

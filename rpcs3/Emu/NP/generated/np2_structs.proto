@@ -606,3 +606,14 @@ message MatchingSearchJoinRoomInfo {
   MatchingRoomStatus room = 1;
   repeated MatchingAttr attr = 2;
 }
+
+message RoomMemberDataExternal {
+  UserInfo userInfo = 1;
+  uint64 joinDate = 2;
+  uint8 role = 3;
+}
+
+message GetRoomMemberDataExternalListResponse
+{
+  repeated RoomMemberDataExternal members = 1;
+}
