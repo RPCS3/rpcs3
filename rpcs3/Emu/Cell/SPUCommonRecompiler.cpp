@@ -29,6 +29,8 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#include "Emu/Cell/spu_optimizer.h"
+
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -166,7 +168,7 @@ DECLARE(spu_runtime::tr_interpreter) = []
 DECLARE(spu_runtime::g_dispatcher) = []
 {
 	// Allocate 2^20 positions in data area
-	const auto ptr = reinterpret_cast<std::remove_const_t<decltype(spu_runtime::g_dispatcher)>>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
+	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
 
 	for (auto& x : *ptr)
 	{
@@ -669,7 +671,7 @@ std::deque<spu_program> spu_cache::get()
 		spu_program res;
 		res.entry_point = addr;
 		res.lower_bound = addr;
-		res.data = std::move(func);
+		res.data() = std::move(func);
 		result.emplace_front(std::move(res));
 	}
 
@@ -683,17 +685,17 @@ void spu_cache::add(const spu_program& func)
 		return;
 	}
 
-	be_t<u32> size = ::size32(func.data);
+	be_t<u32> size = ::size32(func.get_data());
 	be_t<u32> addr = func.entry_point;
 
 	// Add CRC (forced non-zero)
-	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.data.data()), size * 4), 1) << 16;
+	size |= std::max<u32>(calculate_crc16(reinterpret_cast<const uchar*>(func.get_data().data()), size * 4), 1) << 16;
 
 	const fs::iovec_clone gather[3]
 	{
 		{&size, sizeof(size)},
 		{&addr, sizeof(addr)},
-		{func.data.data(), func.data.size() * 4}
+		{func.get_data().data(), func.get_data().size() * 4}
 	};
 
 	// Append data
@@ -889,7 +891,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			// Get data start
 			const u32 start = func.lower_bound;
-			const u32 size0 = ::size32(func.data);
+			const u32 size0 = ::size32(func.get_data());
 
 			be_t<u64> hash_start;
 			{
@@ -897,7 +899,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				u8 output[20];
 
 				sha1_starts(&ctx);
-				sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+				sha1_update(&ctx, reinterpret_cast<const u8*>(func.get_data().data()), func.get_data().size() * 4);
 				sha1_finish(&ctx, output);
 				std::memcpy(&hash_start, output, sizeof(hash_start));
 			}
@@ -916,7 +918,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			// Initialize LS with function data only
 			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
 			{
-				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
+				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.get_data()[i]);
 			}
 
 			// Call analyser
@@ -924,7 +926,7 @@ void spu_cache::initialize(bool build_existing_cache)
 
 			if (func2 != func)
 			{
-				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.get_data().size(), size0);
 
 				if (logged_error < 2)
 				{
@@ -1027,10 +1029,10 @@ void spu_cache::initialize(bool build_existing_cache)
 			// Call analyser
 			spu_program func2 = compiler->analyse(ls.data(), block_addr, &targets);
 
-			while (!func2.data.empty())
+			while (!func2.get_data().empty())
 			{
-				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.data.back());
-				const u32 prog_size = ::size32(func2.data);
+				const u32 last_inst = std::bit_cast<be_t<u32>>(func2.get_data().back());
+				const u32 prog_size = ::size32(func2.get_data());
 
 				if (!compiler->compile(std::move(func2)))
 				{
@@ -1187,7 +1189,7 @@ void spu_cache::initialize(bool build_existing_cache)
 			for (auto&& f : func_list)
 			{
 				// Interpret as a byte string
-				std::span<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
+				std::span<u8> data = {reinterpret_cast<u8*>(f.data().data()), f.data().size() * sizeof(u32)};
 
 				sorted[data] = &f;
 			}
@@ -1266,9 +1268,9 @@ void spu_cache::initialize(bool build_existing_cache)
 
 				fmt::append(dump, "\n\t%49s", "");
 
-				for (u32 i = 0; i < std::min<usz>(f->data.size(), std::max<usz>(64, utils::aligned_div<u32>(depth_m, 4))); i++)
+				for (u32 i = 0; i < std::min<usz>(f->get_data().size(), std::max<usz>(64, utils::aligned_div<u32>(depth_m, 4))); i++)
 				{
-					fmt::append(dump, "%-10s", g_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
+					fmt::append(dump, "%-10s", g_spu_iname.decode(std::bit_cast<be_t<u32>>(f->get_data()[i])));
 				}
 
 				n_max = std::max(n_max, ::size32(depth_n));
@@ -1287,10 +1289,21 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 }
 
+const std::vector<u32>& spu_program::get_optimized_data() const noexcept
+{
+	return g_cfg.core.spu_optimizer ? m_optimized_data : m_data;
+}
+
+std::vector<u32>& spu_program::optimized_data() noexcept
+{
+	ensure(g_cfg.core.spu_optimizer);
+	return m_optimized_data;
+}
+
 bool spu_program::operator==(const spu_program& rhs) const noexcept
 {
 	// TODO
-	return entry_point - lower_bound == rhs.entry_point - rhs.lower_bound && data == rhs.data;
+	return entry_point - lower_bound == rhs.entry_point - rhs.lower_bound && m_data == rhs.m_data;
 }
 
 bool spu_program::operator<(const spu_program& rhs) const noexcept
@@ -1299,8 +1312,8 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 	const u32 rhs_offs = (rhs.entry_point - rhs.lower_bound) / 4;
 
 	// Select range for comparison
-	std::span<const u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
-	std::span<const u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
+	std::span<const u32> lhs_data(m_data.data() + lhs_offs, m_data.size() - lhs_offs);
+	std::span<const u32> rhs_data(rhs.m_data.data() + rhs_offs, rhs.m_data.size() - rhs_offs);
 
 	const auto cmp0 = span_less<const u32>::compare(lhs_data, rhs_data);
 
@@ -1310,8 +1323,8 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 		return false;
 
 	// Compare from address 0 to the point before the entry point (TODO: undesirable)
-	lhs_data = {data.data(), lhs_offs};
-	rhs_data = {rhs.data.data(), rhs_offs};
+	lhs_data = {m_data.data(), lhs_offs};
+	rhs_data = {rhs.m_data.data(), rhs_offs};
 
 	const auto cmp1 = span_less<const u32>::compare(lhs_data, rhs_data);
 
@@ -1348,7 +1361,7 @@ spu_runtime::spu_runtime()
 
 spu_item* spu_runtime::add_empty(spu_program&& data)
 {
-	if (data.data.empty())
+	if (data.get_data().empty())
 	{
 		return nullptr;
 	}
@@ -1357,7 +1370,7 @@ spu_item* spu_runtime::add_empty(spu_program&& data)
 	spu_item* prev = nullptr;
 
 	//Try to add item that doesn't exist yet
-	const auto ret = m_stuff[data.data[0] >> 12].push_if([&](spu_item& _new, spu_item& _old)
+	const auto ret = m_stuff[data.get_data()[0] >> 12].push_if([&](spu_item& _new, spu_item& _old)
 	{
 		if (_new.data == _old.data)
 		{
@@ -1396,7 +1409,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		{
 			if (const auto ptr = it->compiled.load())
 			{
-				std::span<const u32> range{it->data.data.data(), it->data.data.size()};
+				std::span<const u32> range{it->data.get_data().data(), it->data.get_data().size()};
 				range = range.subspan((it->data.entry_point - it->data.lower_bound) / 4);
 				m_flat_list.emplace_back(range, ptr);
 			}
@@ -1968,7 +1981,7 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 	{
 		if (const auto ptr = item.compiled.load())
 		{
-			std::span<const u32> range{item.data.data.data(), item.data.data.size()};
+			std::span<const u32> range{item.data.get_data().data(), item.data.get_data().size()};
 			range = range.subspan((item.data.entry_point - item.data.lower_bound) / 4);
 
 			if (addr / 4 + range.size() > 0x10000)
@@ -2155,7 +2168,8 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
-	const auto func = spu.jit->compile(spu.jit->analyse(spu._ptr<u32>(0), spu.pc));
+	auto program = spu.jit->analyse(spu._ptr<u32>(0), spu.pc);
+	const auto func = spu.jit->compile(std::move(program));
 
 	if (!func)
 	{
@@ -2889,7 +2903,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 {
 	// Result: addr + raw instruction data
 	spu_program result;
-	result.data.reserve(10000);
+	result.data().reserve(10000);
 	result.entry_point = entry_point;
 	result.lower_bound = entry_point;
 
@@ -3281,15 +3295,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_abs);
 
-						if (result.data.size() < new_size)
+						if (result.data().size() < new_size)
 						{
-							result.data.resize(new_size);
+							result.data().resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_abs.size(); i++)
 						{
 							add_block(jt_abs[i]);
-							result.data[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_abs[i]);
+							result.data()[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_abs[i]);
 							m_targets[start + i * 4];
 						}
 
@@ -3300,15 +3314,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_rel);
 
-						if (result.data.size() < new_size)
+						if (result.data().size() < new_size)
 						{
-							result.data.resize(new_size);
+							result.data().resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_rel.size(); i++)
 						{
 							add_block(jt_rel[i]);
-							result.data[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_rel[i] - start);
+							result.data()[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_rel[i] - start);
 							m_targets[start + i * 4];
 						}
 
@@ -3716,16 +3730,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// Insert raw instruction value
 		const u32 new_size = (pos - lsa) / 4;
 
-		if (result.data.size() <= new_size)
+		if (result.data().size() <= new_size)
 		{
-			if (result.data.size() < new_size)
+			if (result.data().size() < new_size)
 			{
-				result.data.resize(new_size);
+				result.data().resize(new_size);
 			}
 
-			result.data.emplace_back(std::bit_cast<u32, be_t<u32>>(data));
+			result.data().emplace_back(std::bit_cast<u32, be_t<u32>>(data));
 		}
-		else if (u32& raw_val = result.data[new_size])
+		else if (u32& raw_val = result.data()[new_size])
 		{
 			ensure(raw_val == std::bit_cast<u32, be_t<u32>>(data));
 		}
@@ -3737,7 +3751,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	while (lsa > 0 || limit < SPU_LS_SIZE)
 	{
-		const u32 initial_size = ::size32(result.data);
+		const u32 initial_size = ::size32(result.data());
 
 		// Check unreachable blocks
 		limit = std::min<u32>(limit, lsa + initial_size * 4);
@@ -3796,7 +3810,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					// Check for possible fallthrough predecessor
 					if (!had_fallthrough)
 					{
-						if (::at32(result.data, (j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
+						if (::at32(result.data(), (j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
 						{
 							break;
 						}
@@ -3820,14 +3834,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		}
 
-		result.data.resize((limit - lsa) / 4);
+		result.data().resize((limit - lsa) / 4);
 
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
 
-		for (u32 i = 0; i < result.data.size(); i++)
+		for (u32 i = 0; i < result.data().size(); i++)
 		{
-			if (result.data[i] == 0)
+			if (result.data()[i] == 0)
 			{
 				const u32 pos  = lsa + i * 4;
 				const u32 data = ls[pos / 4];
@@ -3840,7 +3854,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 				{
-					result.data.resize(valid_size);
+					result.data().resize(valid_size);
 					break;
 				}
 			}
@@ -3851,24 +3865,24 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 
 		// Even if NOP or LNOP, should be removed at the end
-		result.data.resize(valid_size);
+		result.data().resize(valid_size);
 
 		// Repeat if blocks were removed
-		if (result.data.size() == initial_size)
+		if (result.data().size() == initial_size)
 		{
 			break;
 		}
 	}
 
-	limit = std::min<u32>(limit, lsa + ::size32(result.data) * 4);
-	m_inst_attrs.resize(result.data.size());
+	limit = std::min<u32>(limit, lsa + ::size32(result.data()) * 4);
+	m_inst_attrs.resize(result.data().size());
 
 	// Cleanup block info
 	for (u32 i = 0; i < workload.size(); i++)
 	{
 		const u32 addr = workload[i];
 
-		if (addr < lsa || addr >= limit || !result.data[(addr - lsa) / 4])
+		if (addr < lsa || addr >= limit || !result.data()[(addr - lsa) / 4])
 		{
 			m_block_info[addr / 4] = false;
 			m_entry_info[addr / 4] = false;
@@ -3907,7 +3921,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		const u32 prev = (it->first - 4) & 0x3fffc;
 
 		// TODO: check the correctness
-		if (m_targets.count(prev) == 0 && prev >= lsa && prev < limit && result.data[(prev - lsa) / 4])
+		if (m_targets.count(prev) == 0 && prev >= lsa && prev < limit && result.data()[(prev - lsa) / 4])
 		{
 			// Add target and the predecessor
 			m_targets[prev].push_back(it->first);
@@ -3946,16 +3960,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	}
 
 	// Fill holes which contain only NOP and LNOP instructions (TODO: compile)
-	for (u32 i = 0, nnop = 0, vsize = 0; i <= result.data.size(); i++)
+	for (u32 i = 0, nnop = 0, vsize = 0; i <= result.data().size(); i++)
 	{
-		if (i >= result.data.size() || result.data[i])
+		if (i >= result.data().size() || result.data()[i])
 		{
 			if (nnop && nnop == i - vsize)
 			{
 				// Write only complete NOP sequence
 				for (u32 j = vsize; j < i; j++)
 				{
-					result.data[j] = std::bit_cast<u32, be_t<u32>>(ls[lsa / 4 + j]);
+					result.data()[j] = std::bit_cast<u32, be_t<u32>>(ls[lsa / 4 + j]);
 				}
 			}
 
@@ -3988,7 +4002,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			block.size++;
 
 			// Decode instruction
-			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4])};
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data()[(ia - lsa) / 4])};
 
 			const auto type = g_spu_itype.decode(op.opcode);
 
@@ -4489,7 +4503,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		for (u32 ia = addr; ia < addr + bb.size * 4; ia += 4)
 		{
 			// Decode instruction again
-			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
+			op.opcode = std::bit_cast<be_t<u32>>(result.data()[(ia - lsa) / 41]);
 			last_inst = g_spu_itype.decode(op.opcode);
 
 			// Propagate some constants
@@ -5108,9 +5122,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	bool likely_putllc_loop = false;
 	bool had_putllc_evaluation = false;
 
-	for (u32 i = 0, count = 0; i < result.data.size(); i++)
+	for (u32 i = 0, count = 0; i < result.data().size(); i++)
 	{
-		const u32 inst = std::bit_cast<be_t<u32>>(result.data[i]);
+		const u32 inst = std::bit_cast<be_t<u32>>(result.data()[i]);
 
 		if (spu_opcode_t{inst}.ra == MFC_RdAtomicStat && g_spu_itype.decode(inst) == spu_itype::RDCH)
 		{
@@ -5607,13 +5621,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				const u32 previous_pc = m_bbs.at(reg_state_it[stackframe_it].pc).size * 4 + reg_state_it[stackframe_it].pc - 4;
 
-				bool may_return = previous_pc + 4 != entry_point + result.data.size() * 4 && (m_ret_info[(previous_pc / 4) + 1] || m_entry_info[previous_pc / 4]);
+				bool may_return = previous_pc + 4 != entry_point + result.data().size() * 4 && (m_ret_info[(previous_pc / 4) + 1] || m_entry_info[previous_pc / 4]);
 
 				if (!may_return)
 				{
 					const u32 branch_target = op_branch_targets(previous_pc, spu_opcode_t{data})[0];
 
-					if (branch_target == umax || branch_target >= entry_point + result.data.size() * 4 || branch_target < entry_point)
+					if (branch_target == umax || branch_target >= entry_point + result.data().size() * 4 || branch_target < entry_point)
 					{
 						may_return = true;
 					}
@@ -5855,14 +5869,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 		}
 
-		data = std::bit_cast<be_t<u32>>(::at32(result.data, (pos - lsa) / 4));
+		data = std::bit_cast<be_t<u32>>(::at32(result.data(), (pos - lsa) / 4));
 		const auto op = spu_opcode_t{data};
 		const auto type = g_spu_itype.decode(data);
 
 		// For debugging
 		if (false && likely_putllc_loop && is_pattern_match)
 		{
-			SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
+			SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data().data()), result.lower_bound);
 			dis_asm.disasm(pos);
 
 			std::string consts;
@@ -7274,13 +7288,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	}
 
 	std::string func_hash;
-	if (!result.data.empty())
+	if (!result.data().empty())
 	{
 		sha1_context ctx;
 		u8 output[20]{};
 
 		sha1_starts(&ctx);
-		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data().data()), result.data().size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(func_hash, "%s", fmt::base57(output));
 	}
@@ -7303,7 +7317,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			u8 output[20]{};
 
 			sha1_starts(&ctx);
-			sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()) + (pattern.lsa_pc - result.lower_bound), pattern.rdatomic_pc - pattern.lsa_pc);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(result.data().data()) + (pattern.lsa_pc - result.lower_bound), pattern.rdatomic_pc - pattern.lsa_pc);
 			sha1_finish(&ctx, output);
 			fmt::append(pattern_hash, "%s", fmt::base57(output));
 		}
@@ -7455,7 +7469,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		spu_log.notice("Likely missed PUTLLC16 patterns. (entry=0x%x)", entry_point);
 	}
 
-	if (result.data.empty())
+	if (result.data().empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
 	}
@@ -7467,16 +7481,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		spu_log.notice("Dump SPU Function with pattern(s):\n%s", out_dump);
 	}
 
-	for (u32 i = 0; i < result.data.size(); i++)
+	for (u32 i = 0; i < result.data().size(); i++)
 	{
 		const be_t<u32> ls_val = ls[result.lower_bound / 4 + i];
 
-		if (result.data[i] && std::bit_cast<u32>(ls_val) != result.data[i])
+		if (result.data()[i] && std::bit_cast<u32>(ls_val) != result.data()[i])
 		{
 			std::string out_dump;
 			dump(result, out_dump);
 			spu_log.error("SPU Function Dump:\n%s", out_dump);
-			fmt::throw_exception("SPU Analyzer failed: Instruction mismatch at 0x%x [read: 0x%x vs LS: 0x%x] (i=0x%x)", result.lower_bound + i * 4, std::bit_cast<be_t<u32>>(result.data[i]), ls_val, i);
+			fmt::throw_exception("SPU Analyzer failed: Instruction mismatch at 0x%x [read: 0x%x vs LS: 0x%x] (i=0x%x)", result.lower_bound + i * 4, std::bit_cast<be_t<u32>>(result.data()[i]), ls_val, i);
 		}
 	}
 
@@ -7485,17 +7499,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
-	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
+	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.get_data().data()), result.lower_bound);
 
 	std::string hash;
 
-	if (!result.data.empty())
+	if (!result.get_data().empty())
 	{
 		sha1_context ctx;
 		u8 output[20];
 
 		sha1_starts(&ctx);
-		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(result.get_data().data()), result.get_data().size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
 	}
@@ -7504,7 +7518,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		hash = "N/A";
 	}
 
-	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.data.size(), hash);
+	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", result.entry_point, result.get_data().size(), hash);
 
 	for (auto& bb : m_bbs)
 	{
@@ -7638,12 +7652,12 @@ struct spu_llvm_worker
 
 			// Get data start
 			const u32 start = func.lower_bound;
-			const u32 size0 = ::size32(func.data);
+			const u32 size0 = ::size32(func.get_data());
 
 			// Initialize LS with function data only
 			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
 			{
-				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
+				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.get_data()[i]);
 			}
 
 			// Call analyser
@@ -7651,7 +7665,7 @@ struct spu_llvm_worker
 
 			if (func2 != func)
 			{
-				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
+				spu_log.error("[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.get_data().size(), size0);
 			}
 			else if (const auto target = compiler->compile(std::move(func2)))
 			{
@@ -7951,7 +7965,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Allocate executable area with necessary size
-		const auto result = jit_runtime::alloc(22 + 1 + 9 + ::size32(func.data) * (16 + 16) + 36 + 47, 16);
+		const auto result = jit_runtime::alloc(22 + 1 + 9 + ::size32(func.get_data()) * (16 + 16) + 36 + 47, 16);
 
 		if (!result)
 		{
@@ -7959,14 +7973,14 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		m_pos = func.lower_bound;
-		m_size = ::size32(func.data) * 4;
+		m_size = ::size32(func.get_data()) * 4;
 
 		{
 			sha1_context ctx;
 			u8 output[20];
 
 			sha1_starts(&ctx);
-			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(func.get_data().data()), func.get_data().size() * 4);
 			sha1_finish(&ctx, output);
 
 			be_t<u64> hash_start;
@@ -8012,9 +8026,9 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x00;
 
 		// Verification (slow)
-		for (u32 i = 0; i < func.data.size(); i++)
+		for (u32 i = 0; i < func.get_data().size(); i++)
 		{
-			if (!func.data[i])
+			if (!func.get_data()[i])
 			{
 				continue;
 			}
@@ -8023,7 +8037,7 @@ struct spu_fast : public spu_recompiler_base
 			*raw++ = 0x81;
 			*raw++ = 0xb9;
 			const u32 off = i * 4;
-			const u32 opc = func.data[i];
+			const u32 opc = func.get_data()[i];
 			std::memcpy(raw + 0, &off, 4);
 			std::memcpy(raw + 4, &opc, 4);
 			raw += 8;
@@ -8085,16 +8099,16 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x4c;
 		*raw++ = 0x8d;
 		*raw++ = 0x35;
-		const u32 epi_off = ::size32(func.data) * 16;
+		const u32 epi_off = ::size32(func.get_data()) * 16;
 		std::memcpy(raw, &epi_off, 4);
 		raw += 4;
 
 		// Instructions (each instruction occupies fixed number of bytes)
-		for (u32 i = 0; i < func.data.size(); i++)
+		for (u32 i = 0; i < func.get_data().size(); i++)
 		{
 			const u32 pos = m_pos + i * 4;
 
-			if (!func.data[i])
+			if (!func.get_data()[i])
 			{
 				// Save pc: mov [rbp + spu_thread::pc], r12d
 				*raw++ = 0x44;
@@ -8116,7 +8130,7 @@ struct spu_fast : public spu_recompiler_base
 			}
 
 			// Fix endianness
-			const spu_opcode_t op{std::bit_cast<be_t<u32>>(func.data[i])};
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(func.get_data()[i])};
 
 			switch (auto type = g_spu_itype.decode(op.opcode))
 			{
@@ -8263,7 +8277,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Rebuild trampoline if necessary
-		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
+		if (!m_spurt->rebuild_ubertrampoline(func.get_data()[0]))
 		{
 			return nullptr;
 		}
@@ -8550,9 +8564,9 @@ extern std::string format_spu_func_info(u32 addr, cpu_thread* spu)
 		u8 output[20];
 
 		sha1_starts(&ctx);
-		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.get_data().data()), func.get_data().size() * 4);
 		sha1_finish(&ctx, output);
-		fmt::append(info, "size=%d, end=0x%x, hash=%s", func.data.size(), addr + func.data.size() * 4, fmt::base57(output));
+		fmt::append(info, "size=%d, end=0x%x, hash=%s", func.get_data().size(), addr + func.get_data().size() * 4, fmt::base57(output));
 	}
 
 	return info;

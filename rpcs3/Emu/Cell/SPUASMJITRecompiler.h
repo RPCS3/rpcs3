@@ -297,4 +297,5 @@ public:
 	void FNMS(spu_opcode_t op);
 	void FMA(spu_opcode_t op);
 	void FMS(spu_opcode_t op);
+	void RPCS3_OPTIMIZER(spu_opcode_t op);
 };

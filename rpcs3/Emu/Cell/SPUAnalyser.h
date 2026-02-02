@@ -232,6 +232,8 @@ struct spu_itype
 		CLGTHI,
 		CLGT,
 		CLGTI, // compare_tag last
+
+		RPCS3_OPTIMIZER,
 	};
 
 	using enum type;
@@ -257,7 +259,7 @@ struct spu_itype
 	// Test for 4-op instruction
 	friend constexpr bool operator &(type value, quadrop_tag)
 	{
-		return value >= MPYA && value <= FMS;
+		return (value >= MPYA && value <= FMS) || value == RPCS3_OPTIMIZER;
 	}
 
 	// Test for xfloat instruction
@@ -519,6 +521,7 @@ struct spu_iflag
 		FCMEQ,
 		FCGT,
 		FCMGT,
+		RPCS3_OPTIMIZER,
 	};
 
 	// Enable address-of operator for spu_decoder<>
@@ -732,6 +735,7 @@ struct spu_iname
 	NAME(FMA);
 	NAME(FNMS);
 	NAME(FMS);
+	NAME(RPCS3_OPTIMIZER);
 };
 
 #undef NAME
