@@ -19,6 +19,7 @@
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
+#include "Input/pad_thread.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -400,6 +401,15 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	case gui::shortcuts::shortcut::gw_volume_down:
 	{
 		audio::change_volume(-5);
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_toggle_mouse_gyro:
+	{
+		if (auto* pad_thr = pad::get_pad_thread(true))
+		{
+			const bool mouse_gyro_enabled = pad_thr->get_mouse_gyro().toggle_enabled();
+			gui_log.notice("Mouse-based gyro emulation %s", mouse_gyro_enabled ? "enabled" : "disabled");
+		}
 		break;
 	}
 	default:
@@ -1216,6 +1226,16 @@ bool gs_frame::event(QEvent* ev)
 		// This will make the cursor visible again if it was hidden by the mouse idle timeout
 		handle_cursor(visibility(), false, false, true);
 	}
+
+	// Handle events for mouse-based gyro emulation.
+	if (Emu.IsRunning())
+	{
+		if (auto* pad_thr = pad::get_pad_thread(true))
+		{
+			pad_thr->get_mouse_gyro().handle_event(ev, *this);
+		}
+	}
+
 	return QWindow::event(ev);
 }
 

@@ -157,6 +157,7 @@ add_library(rpcs3_ui STATIC
     ../Input/hid_pad_handler.cpp
     ../Input/keyboard_pad_handler.cpp
     ../Input/mm_joystick_handler.cpp
+    ../Input/mouse_gyro_handler.cpp
     ../Input/pad_thread.cpp
     ../Input/product_info.cpp
     ../Input/ps_move_calibration.cpp
