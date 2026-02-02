@@ -579,7 +579,7 @@ namespace utils
 			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
 
-			int set_err = swr_alloc_set_opts2(&av.swr, &dst_channel_layout, dst_format,
+			const int set_err = swr_alloc_set_opts2(&av.swr, &dst_channel_layout, dst_format,
 				sample_rate, &stream->codecpar->ch_layout,
 				static_cast<AVSampleFormat>(stream->codecpar->format),
 				stream->codecpar->sample_rate, 0, nullptr);
