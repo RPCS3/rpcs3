@@ -33,7 +33,7 @@ namespace
 	}
 }
 
-void VKGSRender::reinitialize_swapchain()
+bool VKGSRender::reinitialize_swapchain()
 {
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
@@ -44,7 +44,7 @@ void VKGSRender::reinitialize_swapchain()
 	if (m_swapchain_dims.width == 0 || m_swapchain_dims.height == 0)
 	{
 		swapchain_unavailable = true;
-		return;
+		return false;
 	}
 
 	// NOTE: This operation will create a hard sync point
@@ -97,7 +97,7 @@ void VKGSRender::reinitialize_swapchain()
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
-		return;
+		return false;
 	}
 
 	// Re-initialize CPU frame contexts
@@ -135,6 +135,7 @@ void VKGSRender::reinitialize_swapchain()
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
+	return true;
 }
 
 void VKGSRender::present(vk::frame_context_t *ctx)
@@ -426,10 +427,31 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)
 	{
-		reinitialize_swapchain();
+		// Reinitializing the swapchain is a failable operation. However, not all failures are fatal (e.g minimized window).
+		// In the worst case, we can have the driver refuse to create the swapchain while we already deleted the previous one.
+		// In such scenarios, we have to retry a few times before giving up as we cannot proceed without a swapchain.
+		for (int i = 0; i < 10; ++i)
+		{
+			if (reinitialize_swapchain() || m_current_frame)
+			{
+				// If m_current_frame exists, then the initialization failure is non-fatal. Proceed as usual.
+				break;
+			}
+
+			if (Emu.IsStopped())
+			{
+				m_frame->flip(m_context);
+				rsx::thread::flip(info);
+				return;
+			}
+
+			std::this_thread::sleep_for(100ms);
+		}
 	}
 
 	m_profiler.start();
+
+	ensure(m_current_frame, "Invalid swapchain setup. Resizing the game window failed.");
 
 	if (m_current_frame == &m_aux_frame_context)
 	{
@@ -582,6 +604,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			rsx_log.warning("vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
+			ensure(m_current_frame, "Could not reinitialize swapchain after VK_ERROR_OUT_OF_DATE_KHR signal!");
 			continue;
 		default:
 			vk::die_with_error(status);
