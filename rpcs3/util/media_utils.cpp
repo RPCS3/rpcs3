@@ -575,15 +575,6 @@ namespace utils
 				return;
 			}
 
-			// Prepare resampler
-			av.swr = swr_alloc();
-			if (!av.swr)
-			{
-				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
-				return;
-			}
-
 			const int dst_channels = 2;
 			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
@@ -595,6 +586,13 @@ namespace utils
 			if (set_err < 0)
 			{
 				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, av_error_to_string(set_err));
+				has_error = true;
+				return;
+			}
+
+			if (!av.swr)
+			{
+				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
 				has_error = true;
 				return;
 			}
