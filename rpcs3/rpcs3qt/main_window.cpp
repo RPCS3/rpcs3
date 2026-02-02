@@ -265,22 +265,17 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Focus to search bar by default
 	ui->mw_searchbar->setFocus();
 
-	// Refresh gamelist first, then check for updates after it finishes
-	m_game_list_frame->Refresh(true);
-
 #ifdef RPCS3_UPDATE_SUPPORTED
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
 		const bool auto_accept   = !in_background && update_value == gui::update_auto;
-
-		// Defer update check until game list finishes loading
-		m_game_list_frame->AddRefreshedSlot([this, in_background, auto_accept](std::set<std::string>&)
-		{
-			m_updater.check_for_updates(true, in_background, auto_accept, this);
-		});
+		m_updater.check_for_updates(true, in_background, auto_accept, this);
 	}
 #endif
+
+	// Refresh gamelist last
+	m_game_list_frame->Refresh(true);
 
 	update_gui_pad_thread();
 

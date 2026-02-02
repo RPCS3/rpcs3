@@ -193,10 +193,18 @@ void downloader::handle_buffer_update(int size, int max) const
 		return;
 	}
 
+	// Prevent re-entrancy: processEvents() can trigger another handle_buffer_update
+	if (m_handling_buffer_update)
+	{
+		return;
+	}
+
 	if (m_progress_dialog)
 	{
+		m_handling_buffer_update = true;
 		m_progress_dialog->SetRange(0, max > 0 ? max : m_progress_dialog->maximum());
 		m_progress_dialog->SetValue(size);
 		QApplication::processEvents();
+		m_handling_buffer_update = false;
 	}
 }

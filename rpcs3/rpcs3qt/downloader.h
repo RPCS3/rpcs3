@@ -50,6 +50,7 @@ private:
 	progress_dialog* m_progress_dialog = nullptr;
 	atomic_t<bool> m_keep_progress_dialog_open = false;
 	QString m_progress_dialog_title;
+	mutable bool m_handling_buffer_update = false;
 
 	QThread* m_thread = nullptr;
 };
