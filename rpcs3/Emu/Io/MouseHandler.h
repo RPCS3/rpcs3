@@ -128,7 +128,7 @@ class MouseHandlerBase
 protected:
 	MouseInfo m_info{};
 	std::vector<Mouse> m_mice;
-	steady_clock::time_point last_update{};
+	steady_clock::time_point m_last_update{};
 
 	bool is_time_for_update(double elapsed_time_ms = 10.0); // 4-10 ms, let's use 10 for now
 
