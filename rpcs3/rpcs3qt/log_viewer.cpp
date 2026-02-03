@@ -325,20 +325,15 @@ void log_viewer::filter_log()
 
 	const auto add_line = [this, &result, &excluded_log_levels, &timestamp_regexp, &thread_regexp](QString& line)
 	{
-		bool exclude_line = false;
-
-		for (const QString& log_level_prefix : excluded_log_levels)
+		if (!line.isEmpty())
 		{
-			if (line.startsWith(log_level_prefix))
+			for (QStringView log_level_prefix : excluded_log_levels)
 			{
-				exclude_line = true;
-				break;
+				if (line.startsWith(log_level_prefix))
+				{
+					return;
+				}
 			}
-		}
-
-		if (exclude_line)
-		{
-			return;
 		}
 
 		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
