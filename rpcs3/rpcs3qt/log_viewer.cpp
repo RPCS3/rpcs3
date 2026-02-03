@@ -187,7 +187,10 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(filter, &QAction::triggered, this, [this]()
 	{
-		m_filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term);
+		bool ok = false;
+		QString filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term, &ok);
+		if (!ok) return;
+		m_filter_term = std::move(filter_term);
 		filter_log();
 	});
 
