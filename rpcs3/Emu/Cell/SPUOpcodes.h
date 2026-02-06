@@ -287,6 +287,7 @@ public:
 			{ 7, 0xd, GET(FNMS) },
 			{ 7, 0xe, GET(FMA) },
 			{ 7, 0xf, GET(FMS) },
+			{ 7, 0xa, GET(RPCS3_OPTIMIZER) },
 		};
 
 		for (auto& x : m_table)
