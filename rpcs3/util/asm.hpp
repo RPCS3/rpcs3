@@ -175,7 +175,7 @@ namespace utils
 	inline void pause()
 	{
 #if defined(ARCH_ARM64)
-		__asm__ volatile("yield");
+		__asm__ volatile("isb" ::: "memory");
 #elif defined(ARCH_X64)
 		_mm_pause();
 #else
