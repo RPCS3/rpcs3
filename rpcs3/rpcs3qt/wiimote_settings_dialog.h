@@ -14,4 +14,7 @@ private:
 	std::unique_ptr<Ui::wiimote_settings_dialog> ui;
 	void update_list();
 	void update_state();
+	void populate_mappings();
+	void apply_mappings();
+	void restore_defaults();
 };

@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include <vector>
+#include <mutex>
+#include <algorithm>
 
 class usb_device_guncon3 : public usb_device_emulated
 {

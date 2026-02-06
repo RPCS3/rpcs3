@@ -78,6 +78,105 @@
     </widget>
    </item>
    <item>
+    <widget class="QGroupBox" name="mappingGroupBox">
+     <property name="title">
+      <string>Button Mapping (GunCon3 &lt;- Wiimote)</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout_2">
+      <item row="0" column="0">
+       <widget class="QLabel" name="lb_trigger">
+        <property name="text">
+         <string>Trigger:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="cb_trigger"/>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="lb_a1">
+        <property name="text">
+         <string>A1 (Left Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="cb_a1"/>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="lb_a2">
+        <property name="text">
+         <string>A2 (Left Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="cb_a2"/>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="lb_c1">
+        <property name="text">
+         <string>C1 (Start - Left Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="cb_c1"/>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="lb_b1">
+        <property name="text">
+         <string>B1 (Right Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="cb_b1"/>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="lb_b2">
+        <property name="text">
+         <string>B2 (Right Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QComboBox" name="cb_b2"/>
+      </item>
+      <item row="6" column="0">
+       <widget class="QLabel" name="lb_b3">
+        <property name="text">
+         <string>B3 (Right Side):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="1">
+       <widget class="QComboBox" name="cb_b3"/>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="lb_a3">
+        <property name="text">
+         <string>A3 (Analog Button):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QComboBox" name="cb_a3"/>
+      </item>
+      <item row="8" column="0">
+       <widget class="QLabel" name="lb_c2">
+        <property name="text">
+         <string>C2 (Select - Analog Button):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="1">
+       <widget class="QComboBox" name="cb_c2"/>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="irGroupBox">
      <property name="title">
       <string>IR Sensor View (All Pointers)</string>
@@ -111,6 +210,13 @@
       <widget class="QPushButton" name="scanButton">
        <property name="text">
         <string>Refresh Scan</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="restoreDefaultsButton">
+       <property name="text">
+        <string>Restore Defaults</string>
        </property>
       </widget>
      </item>

@@ -3,6 +3,8 @@
 #include "MouseHandler.h"
 #include <cmath>
 #include <climits>
+#include <algorithm>
+#include <mutex>
 #include "Emu/IdManager.h"
 #include "Emu/Io/guncon3_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
@@ -250,23 +252,25 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		if (my_wiimote_index >= 0 && static_cast<size_t>(my_wiimote_index) < states.size())
 		{
 			const auto& ws = states[my_wiimote_index];
+			const auto map = wm->get_mapping();
 
-			if (ws.buttons & 0x0400)
-			{
-				gc.btn_trigger = 1;
-			}
+			auto is_pressed = [&](WiimoteButton btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };
+
+			if (is_pressed(map.trigger)) gc.btn_trigger = 1;
 
 			// Wiimote to GunCon3 Button Mapping
-			if (ws.buttons & 0x0800) gc.btn_a1 = 1;      // Wiimote A -> A1
-			if (ws.buttons & 0x1000) gc.btn_a2 = 1;      // Wiimote Minus -> A2
-			if (ws.buttons & 0x0010) gc.btn_c1 = 1;      // Wiimote Plus -> C1
-			if (ws.buttons & 0x0200) gc.btn_b1 = 1;      // Wiimote 1 -> B1
-			if (ws.buttons & 0x0100) gc.btn_b2 = 1;      // Wiimote 2 -> B2
-			if (ws.buttons & 0x8000) gc.btn_b3 = 1;      // Wiimote Home -> B3
-			if (ws.buttons & 0x0001) gc.btn_a3 = 1;      // Wiimote Left (D-pad) -> A3
-			if (ws.buttons & 0x0002) gc.btn_c2 = 1;      // Wiimote Right (D-pad)
-			if (ws.buttons & 0x0008) gc.btn_b1 = 1;      // D-pad Up -> B1 (Alt)
-			if (ws.buttons & 0x0004) gc.btn_b2 = 1;      // D-pad Down -> B2 (Alt)
+			if (is_pressed(map.a1)) gc.btn_a1 = 1;
+			if (is_pressed(map.a2)) gc.btn_a2 = 1;
+			if (is_pressed(map.a3)) gc.btn_a3 = 1;
+			if (is_pressed(map.b1)) gc.btn_b1 = 1;
+			if (is_pressed(map.b2)) gc.btn_b2 = 1;
+			if (is_pressed(map.b3)) gc.btn_b3 = 1;
+			if (is_pressed(map.c1)) gc.btn_c1 = 1;
+			if (is_pressed(map.c2)) gc.btn_c2 = 1;
+
+			// Secondary / Hardcoded Alts (if kept in mapping struct)
+			if (is_pressed(map.b1_alt)) gc.btn_b1 = 1;
+			if (is_pressed(map.b2_alt)) gc.btn_b2 = 1;
 
 			if (ws.ir[0].x < 1023)
 			{

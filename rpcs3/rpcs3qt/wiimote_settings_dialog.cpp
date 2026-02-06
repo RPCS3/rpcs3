@@ -13,13 +13,141 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 	ui->setupUi(this);
 	update_list();
 	connect(ui->scanButton, &QPushButton::clicked, this, [this] { update_list(); });
+	connect(ui->restoreDefaultsButton, &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
 
 	QTimer* timer = new QTimer(this);
 	connect(timer, &QTimer::timeout, this, &wiimote_settings_dialog::update_state);
 	timer->start(50);
+
+	populate_mappings();
 }
 
 wiimote_settings_dialog::~wiimote_settings_dialog() = default;
+
+void wiimote_settings_dialog::populate_mappings()
+{
+	auto* wm = WiimoteManager::get_instance();
+	if (!wm) return;
+
+	const QPair<QString, WiimoteButton> buttons[] = {
+		{ tr("None"), WiimoteButton::None },
+		{ tr("A"), WiimoteButton::A },
+		{ tr("B"), WiimoteButton::B },
+		{ tr("Plus (+)"), WiimoteButton::Plus },
+		{ tr("Minus (-)"), WiimoteButton::Minus },
+		{ tr("Home"), WiimoteButton::Home },
+		{ tr("1"), WiimoteButton::One },
+		{ tr("2"), WiimoteButton::Two },
+		{ tr("D-Pad Up"), WiimoteButton::Up },
+		{ tr("D-Pad Down"), WiimoteButton::Down },
+		{ tr("D-Pad Left"), WiimoteButton::Left },
+		{ tr("D-Pad Right"), WiimoteButton::Right },
+	};
+
+	QComboBox* boxes[] = {
+		ui->cb_trigger, ui->cb_a1, ui->cb_a2, ui->cb_c1,
+		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
+	};
+
+	WiimoteGunConMapping current = wm->get_mapping();
+	WiimoteButton* targets[] = {
+		&current.trigger, &current.a1, &current.a2, &current.c1,
+		&current.b1, &current.b2, &current.b3, &current.a3, &current.c2
+	};
+
+	for (int i = 0; i < 9; ++i)
+	{
+		boxes[i]->setMinimumWidth(150); // Make combo boxes wider for better readability
+
+		for (const auto& pair : buttons)
+		{
+			boxes[i]->addItem(pair.first, QVariant::fromValue(static_cast<u16>(pair.second)));
+		}
+
+		// Set current selection
+		int index = boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
+		if (index >= 0) boxes[i]->setCurrentIndex(index);
+
+		// Connect change signal
+		connect(boxes[i], QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+			apply_mappings();
+		});
+	}
+}
+
+void wiimote_settings_dialog::restore_defaults()
+{
+	auto* wm = WiimoteManager::get_instance();
+	if (!wm) return;
+
+	// Reset to default mapping
+	WiimoteGunConMapping default_map;
+	wm->set_mapping(default_map);
+
+	// Update UI
+	ui->cb_trigger->blockSignals(true);
+	ui->cb_a1->blockSignals(true);
+	ui->cb_a2->blockSignals(true);
+	ui->cb_c1->blockSignals(true);
+	ui->cb_b1->blockSignals(true);
+	ui->cb_b2->blockSignals(true);
+	ui->cb_b3->blockSignals(true);
+	ui->cb_a3->blockSignals(true);
+	ui->cb_c2->blockSignals(true);
+
+	auto set_box = [](QComboBox* box, WiimoteButton btn) {
+		int index = box->findData(QVariant::fromValue(static_cast<u16>(btn)));
+		if (index >= 0) box->setCurrentIndex(index);
+	};
+
+	set_box(ui->cb_trigger, default_map.trigger);
+	set_box(ui->cb_a1, default_map.a1);
+	set_box(ui->cb_a2, default_map.a2);
+	set_box(ui->cb_c1, default_map.c1);
+	set_box(ui->cb_b1, default_map.b1);
+	set_box(ui->cb_b2, default_map.b2);
+	set_box(ui->cb_b3, default_map.b3);
+	set_box(ui->cb_a3, default_map.a3);
+	set_box(ui->cb_c2, default_map.c2);
+
+	ui->cb_trigger->blockSignals(false);
+	ui->cb_a1->blockSignals(false);
+	ui->cb_a2->blockSignals(false);
+	ui->cb_c1->blockSignals(false);
+	ui->cb_b1->blockSignals(false);
+	ui->cb_b2->blockSignals(false);
+	ui->cb_b3->blockSignals(false);
+	ui->cb_a3->blockSignals(false);
+	ui->cb_c2->blockSignals(false);
+}
+
+void wiimote_settings_dialog::apply_mappings()
+{
+	auto* wm = WiimoteManager::get_instance();
+	if (!wm) return;
+
+	WiimoteGunConMapping map;
+	auto get_btn = [](QComboBox* box) {
+		return static_cast<WiimoteButton>(box->currentData().toUInt());
+	};
+
+	map.trigger = get_btn(ui->cb_trigger);
+	map.a1 = get_btn(ui->cb_a1);
+	map.a2 = get_btn(ui->cb_a2);
+	map.c1 = get_btn(ui->cb_c1);
+	map.b1 = get_btn(ui->cb_b1);
+	map.b2 = get_btn(ui->cb_b2);
+	map.b3 = get_btn(ui->cb_b3);
+	map.a3 = get_btn(ui->cb_a3);
+	map.c2 = get_btn(ui->cb_c2);
+
+	// Preserve alts or add UI for them later. For now, keep defaults or sync with main if matched
+	// To be safe, we can just leave alts as default Up/Down for now since they are D-Pad shortcuts
+	// Or we can reset them if the user maps Up/Down to something else to avoid conflict?
+	// For simplicity, let's keep defaults in the struct constructor.
+
+	wm->set_mapping(map);
+}
 
 void wiimote_settings_dialog::update_state()
 {

@@ -2,7 +2,9 @@
 #include "WiimoteManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Utilities/File.h"
 #include <algorithm>
+#include <sstream>
 
 // Nintendo
 static constexpr u16 VID_NINTENDO = 0x057e;
@@ -135,10 +137,94 @@ bool WiimoteDevice::update()
 
 static WiimoteManager* s_instance = nullptr;
 
+static std::string get_config_path()
+{
+	return fs::get_config_dir(true) + "wiimote.yml";
+}
+
+void WiimoteManager::load_config()
+{
+	fs::file f(get_config_path(), fs::read);
+	if (!f) return;
+
+	std::string line;
+	std::stringstream ss(f.to_string());
+	WiimoteGunConMapping map;
+
+	auto parse_btn = [](const std::string& val) -> WiimoteButton {
+		return static_cast<WiimoteButton>(std::strtoul(val.c_str(), nullptr, 0));
+	};
+
+	while (std::getline(ss, line))
+	{
+		auto pos = line.find(':');
+		if (pos == std::string::npos) continue;
+
+		std::string key = line.substr(0, pos);
+		std::string val = line.substr(pos + 1);
+
+		// Trim whitespace
+		key.erase(0, key.find_first_not_of(" \t"));
+		key.erase(key.find_last_not_of(" \t") + 1);
+		val.erase(0, val.find_first_not_of(" \t"));
+		val.erase(val.find_last_not_of(" \t") + 1);
+
+		if (key == "trigger") map.trigger = parse_btn(val);
+		else if (key == "a1") map.a1 = parse_btn(val);
+		else if (key == "a2") map.a2 = parse_btn(val);
+		else if (key == "a3") map.a3 = parse_btn(val);
+		else if (key == "b1") map.b1 = parse_btn(val);
+		else if (key == "b2") map.b2 = parse_btn(val);
+		else if (key == "b3") map.b3 = parse_btn(val);
+		else if (key == "c1") map.c1 = parse_btn(val);
+		else if (key == "c2") map.c2 = parse_btn(val);
+	}
+
+	std::unique_lock lock(m_mutex);
+	m_mapping = map;
+}
+
+void WiimoteManager::save_config()
+{
+	fs::file f(get_config_path(), fs::write + fs::create + fs::trunc);
+	if (!f) return;
+
+	std::stringstream ss;
+	// Helper to write lines
+	auto write_line = [&](const char* key, WiimoteButton btn) {
+		ss << key << ": " << static_cast<u16>(btn) << "\n";
+	};
+
+	{
+		std::shared_lock lock(m_mutex);
+		write_line("trigger", m_mapping.trigger);
+		write_line("a1", m_mapping.a1);
+		write_line("a2", m_mapping.a2);
+		write_line("a3", m_mapping.a3);
+		write_line("b1", m_mapping.b1);
+		write_line("b2", m_mapping.b2);
+		write_line("b3", m_mapping.b3);
+		write_line("c1", m_mapping.c1);
+		write_line("c2", m_mapping.c2);
+	}
+
+	f.write(ss.str());
+}
+
 WiimoteManager::WiimoteManager()
 {
 	if (!s_instance)
 		s_instance = this;
+
+	// Set default mapping explicitly to match user preference: C1=Plus, A3=Left
+	// (Struct default constructor might have different values if I didn't edit header defaults)
+	// Let's force it here before loading config.
+	m_mapping.c1 = WiimoteButton::Plus;
+	m_mapping.a3 = WiimoteButton::Left;
+	// Defaults for others from struct:
+	// a1=A, a2=Minus, etc.
+
+	load_config();
 }
 
 WiimoteManager::~WiimoteManager()
@@ -175,6 +261,21 @@ size_t WiimoteManager::get_device_count()
 {
 	std::shared_lock lock(m_mutex);
 	return m_devices.size();
+}
+
+void WiimoteManager::set_mapping(const WiimoteGunConMapping& mapping)
+{
+	{
+		std::unique_lock lock(m_mutex);
+		m_mapping = mapping;
+	}
+	save_config();
+}
+
+WiimoteGunConMapping WiimoteManager::get_mapping() const
+{
+	// shared_lock not strictly needed for trivial copy but good practice if it becomes complex
+	return m_mapping;
 }
 
 std::vector<WiimoteState> WiimoteManager::get_states()
