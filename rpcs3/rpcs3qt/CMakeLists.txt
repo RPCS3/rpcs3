@@ -6,6 +6,7 @@ add_library(rpcs3_ui STATIC
     breakpoint_list.cpp
     call_stack_list.cpp
     camera_settings_dialog.cpp
+    wiimote_settings_dialog.cpp
     cg_disasm_window.cpp
     cheat_manager.cpp
     clans_settings_dialog.cpp
@@ -125,6 +126,7 @@ add_library(rpcs3_ui STATIC
 
     about_dialog.ui
     camera_settings_dialog.ui
+    wiimote_settings_dialog.ui
     main_window.ui
     music_player_dialog.ui
     pad_led_settings_dialog.ui

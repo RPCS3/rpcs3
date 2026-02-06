@@ -458,6 +458,18 @@ struct AnalogSensor
 	{}
 };
 
+struct ir_point
+{
+	u16 x = 1023;
+	u16 y = 1023;
+	u16 size = 0;
+};
+
+struct ir_data
+{
+	std::array<ir_point, 4> points;
+};
+
 struct VibrateMotor
 {
 	bool is_large_motor = false;
@@ -519,6 +531,7 @@ struct Pad
 
 	std::vector<Button> m_buttons_external;
 	std::array<AnalogStick, 4> m_sticks_external{};
+	ir_data m_ir{};
 
 	std::vector<std::shared_ptr<Pad>> copilots;
 

@@ -256,6 +256,7 @@
      </widget>
      <addaction name="confPadsAct"/>
      <addaction name="menuMice"/>
+     <addaction name="confWiimoteAct"/>
      <addaction name="confCamerasAct"/>
      <addaction name="actionPS_Move_Tracker"/>
     </widget>
@@ -1423,6 +1424,11 @@
   <action name="confGunCon3Act">
    <property name="text">
     <string>GunCon 3</string>
+   </property>
+  </action>
+  <action name="confWiimoteAct">
+   <property name="text">
+    <string>Wiimotes</string>
    </property>
   </action>
   <action name="confTopShotEliteAct">

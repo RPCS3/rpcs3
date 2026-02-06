@@ -1,11 +1,15 @@
 #include "stdafx.h"
 #include "GunCon3.h"
 #include "MouseHandler.h"
+#include <cmath>
+#include <climits>
 #include "Emu/IdManager.h"
 #include "Emu/Io/guncon3_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
+#include "WiimoteManager.h"
 #include "Input/pad_thread.h"
+#include "Emu/RSX/Overlays/overlay_cursor.h"
 
 LOG_CHANNEL(guncon3_log);
 
@@ -127,6 +131,17 @@ usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8
 	: usb_device_emulated(location)
 	, m_controller_index(controller_index)
 {
+	{
+		std::lock_guard lock(s_instances_mutex);
+		s_instances.push_back(this);
+		// Sort instances by controller index (P1 < P2 < P3...)
+		// This ensures that the first available GunCon (e.g. at P3) takes the first Wiimote,
+		// and the second (e.g. at P4) takes the second Wiimote.
+		std::sort(s_instances.begin(), s_instances.end(), [](auto* a, auto* b) {
+			return a->m_controller_index < b->m_controller_index;
+		});
+	}
+
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor {
 			.bcdUSB             = 0x0110,
@@ -174,6 +189,11 @@ usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8
 
 usb_device_guncon3::~usb_device_guncon3()
 {
+	std::lock_guard lock(s_instances_mutex);
+	if (auto it = std::find(s_instances.begin(), s_instances.end(), this); it != s_instances.end())
+	{
+		s_instances.erase(it);
+	}
 }
 
 void usb_device_guncon3::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
@@ -206,6 +226,88 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 	GunCon3_data gc{};
 	gc.stick_ax = gc.stick_ay = gc.stick_bx = gc.stick_by = 0x7f;
+
+	if (auto* wm = WiimoteManager::get_instance())
+	{
+		auto states = wm->get_states();
+
+		// Determine which Wiimote to use based on our ordinal position among all GunCons
+		int my_wiimote_index = -1;
+		{
+			std::lock_guard lock(s_instances_mutex);
+			auto it = std::lower_bound(s_instances.begin(), s_instances.end(), this, [](auto* a, auto* b) {
+				return a->m_controller_index < b->m_controller_index;
+			});
+			// Since we sort by pointer adress/controller_index in add, and search by this ptr
+			// Actually lower_bound needs a value. std::find is safer for pointer identity.
+			auto found = std::find(s_instances.begin(), s_instances.end(), this);
+			if (found != s_instances.end())
+			{
+				my_wiimote_index = std::distance(s_instances.begin(), found);
+			}
+		}
+
+		if (my_wiimote_index >= 0 && static_cast<size_t>(my_wiimote_index) < states.size())
+		{
+			const auto& ws = states[my_wiimote_index];
+
+			if (ws.buttons & 0x0400)
+			{
+				gc.btn_trigger = 1;
+			}
+
+			// Wiimote to GunCon3 Button Mapping
+			if (ws.buttons & 0x0800) gc.btn_a1 = 1;      // Wiimote A -> A1
+			if (ws.buttons & 0x1000) gc.btn_a2 = 1;      // Wiimote Minus -> A2
+			if (ws.buttons & 0x0010) gc.btn_c1 = 1;      // Wiimote Plus -> C1
+			if (ws.buttons & 0x0200) gc.btn_b1 = 1;      // Wiimote 1 -> B1
+			if (ws.buttons & 0x0100) gc.btn_b2 = 1;      // Wiimote 2 -> B2
+			if (ws.buttons & 0x8000) gc.btn_b3 = 1;      // Wiimote Home -> B3
+			if (ws.buttons & 0x0001) gc.btn_a3 = 1;      // Wiimote Left (D-pad) -> A3
+			if (ws.buttons & 0x0002) gc.btn_c2 = 1;      // Wiimote Right (D-pad)
+			if (ws.buttons & 0x0008) gc.btn_b1 = 1;      // D-pad Up -> B1 (Alt)
+			if (ws.buttons & 0x0004) gc.btn_b2 = 1;      // D-pad Down -> B2 (Alt)
+
+			if (ws.ir[0].x < 1023)
+			{
+				// Only use the primary pointer to avoid jumping between multiple IR points
+				s32 raw_x = ws.ir[0].x;
+				s32 raw_y = ws.ir[0].y;
+
+				// Map to GunCon3 range (-32768..32767)
+				// X calculation (Right = 32767, Left = -32768)
+				s32 x_res = 32767 - (raw_x * 65535 / 1023);
+				// Y calculation (Top = 32767, Bottom = -32768)
+				// Swapping to inverted mapping as per user feedback
+				s32 y_res = 32767 - (raw_y * 65535 / 767);
+
+				gc.gun_x = static_cast<int16_t>(std::clamp(x_res, -32768, 32767));
+				gc.gun_y = static_cast<int16_t>(std::clamp(y_res, -32768, 32767));
+
+				// Draw the actual GunCon3 output to the overlay
+				// Mapping GunCon3 range back to virtual_width/height
+				s16 ax = static_cast<s16>((gc.gun_x + 32768) * rsx::overlays::overlay::virtual_width / 65535);
+				s16 ay = static_cast<s16>((32767 - gc.gun_y) * rsx::overlays::overlay::virtual_height / 65535);
+
+				if (g_cfg.io.show_move_cursor)
+				{
+					// Use my_wiimote_index for color/cursor selection (0=Red, 1=Green...)
+					rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + my_wiimote_index, ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
+				}
+
+				if (ws.ir[1].x < 1023)
+				{
+					// Calculate "Z" (distance) based on spread of first two points to emulate depth sensor
+					s32 dx = static_cast<s32>(ws.ir[0].x) - ws.ir[1].x;
+					s32 dy = static_cast<s32>(ws.ir[0].y) - ws.ir[1].y;
+					gc.gun_z = static_cast<int16_t>(std::sqrt(dx * dx + dy * dy));
+				}
+			}
+
+			guncon3_encode(&gc, buf, m_key.data());
+			return;
+		}
+	}
 
 	if (!is_input_allowed())
 	{
