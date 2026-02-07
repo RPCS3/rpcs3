@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include <vector>
+#include <mutex>
+#include <algorithm>
 
 class usb_device_guncon3 : public usb_device_emulated
 {
@@ -14,4 +17,7 @@ public:
 private:
 	u32 m_controller_index;
 	std::array<u8, 8> m_key{};
+
+	static inline std::vector<usb_device_guncon3*> s_instances;
+	static inline std::mutex s_instances_mutex;
 };

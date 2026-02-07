@@ -13,6 +13,7 @@
 #include "main_application.h"
 
 #include "Emu/System.h"
+#include "Emu/Io/WiimoteManager.h"
 #include "Input/raw_mouse_handler.h"
 
 #include <memory>
@@ -111,6 +112,7 @@ private:
 
 	std::deque<std::unique_ptr<QSoundEffect>> m_sound_effects{};
 
+	std::unique_ptr<wiimote_manager> m_wiimote_manager;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
