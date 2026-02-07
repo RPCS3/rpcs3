@@ -248,6 +248,13 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 	if (my_wiimote_index >= 0 && static_cast<size_t>(my_wiimote_index) < states.size())
 	{
 		const auto& ws = states[my_wiimote_index];
+		if (!ws.connected)
+		{
+			// Disconnected Wiimote, provide default neutral state for this GunCon
+			std::memcpy(buf, &gc, std::min<usz>(buf_size, sizeof(gc)));
+			return;
+		}
+
 		const auto map = wm->get_mapping();
 
 		auto is_pressed = [&](wiimote_button btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };

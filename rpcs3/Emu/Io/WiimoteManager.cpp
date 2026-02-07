@@ -16,38 +16,57 @@ static constexpr u16 VID_MAYFLASH = 0x0079;
 static constexpr u16 PID_DOLPHINBAR_START = 0x1800;
 static constexpr u16 PID_DOLPHINBAR_END = 0x1803;
 
-wiimote_device::wiimote_device(hid_device_info* info)
-	: m_path(info->path)
-	, m_serial(info->serial_number ? info->serial_number : L"")
+wiimote_device::wiimote_device()
 {
+	m_state.connected = false;
+}
+
+wiimote_device::~wiimote_device()
+{
+	close();
+}
+
+bool wiimote_device::open(hid_device_info* info)
+{
+	if (m_handle) return false;
+
+	m_path = info->path;
+	m_serial = info->serial_number ? info->serial_number : L"";
 	m_handle = hid_open_path(info->path);
+
 	if (m_handle)
 	{
 		// 1. Connectivity Test (Matching wiimote_test)
 		u8 status_req[] = { 0x15, 0x00 };
 		if (hid_write(m_handle, status_req, sizeof(status_req)) < 0)
 		{
-			hid_close(m_handle);
-			m_handle = nullptr;
-			return;
+			close();
+			return false;
 		}
 
 		// 2. Full Initialization
 		if (initialize_ir())
 		{
 			m_state.connected = true;
+			m_last_update = std::chrono::steady_clock::now();
+			return true;
 		}
-		else
-		{
-			hid_close(m_handle);
-			m_handle = nullptr;
-		}
+
+		close();
 	}
+	return false;
 }
 
-wiimote_device::~wiimote_device()
+void wiimote_device::close()
 {
-	if (m_handle) hid_close(m_handle);
+	if (m_handle)
+	{
+		hid_close(m_handle);
+		m_handle = nullptr;
+	}
+	m_state = {}; // Reset state including connected = false
+	m_path.clear();
+	m_serial.clear();
 }
 
 bool wiimote_device::initialize_ir()
@@ -101,11 +120,13 @@ bool wiimote_device::update()
 
 	u8 buf[22];
 	int res;
+	bool received = false;
 
 	// Fully drain the buffer until empty to ensure we have the most recent data.
 	// This avoids getting stuck behind a backlog of old reports (e.g. from before IR was enabled).
 	while ((res = hid_read_timeout(m_handle, buf, sizeof(buf), 0)) > 0)
 	{
+		received = true;
 		// All data reports (0x30-0x3F) carry buttons in the same location (first 2 bytes).
 		// We mask out accelerometer LSBs (bits 5,6 of both bytes).
 		if ((buf[0] & 0xF0) == 0x30)
@@ -133,7 +154,22 @@ bool wiimote_device::update()
 	}
 
 	// hid_read_timeout returns -1 on error (e.g. device disconnected).
-	if (res < 0) return false;
+	if (res < 0)
+	{
+		close();
+		return false;
+	}
+
+	if (received)
+	{
+		m_last_update = std::chrono::steady_clock::now();
+	}
+	else if (std::chrono::steady_clock::now() - m_last_update > std::chrono::seconds(2))
+	{
+		// No data for 2 seconds. Likely disconnected or powered off.
+		close();
+		return false;
+	}
 
 	return true;
 }
@@ -219,7 +255,11 @@ wiimote_manager::wiimote_manager()
 	if (!s_instance)
 		s_instance = this;
 
-
+	// Pre-initialize 4 Wiimote slots (standard for DolphinBar and typical local multiplayer)
+	for (int i = 0; i < 4; i++)
+	{
+		m_devices.push_back(std::make_unique<wiimote_device>());
+	}
 
 	load_config();
 }
@@ -300,36 +340,53 @@ void wiimote_manager::thread_proc()
 			auto scan_and_add = [&](u16 vid, u16 pid_start, u16 pid_end)
 			{
 				hid_device_info* devs = hid_enumerate(vid, 0);
-				hid_device_info* cur = devs;
-
-				while (cur)
+				for (hid_device_info* cur = devs; cur; cur = cur->next)
 				{
 					if (cur->product_id >= pid_start && cur->product_id <= pid_end)
 					{
-						bool already_owned = false;
+						std::unique_lock lock(m_mutex);
+
+						// 1. Check if this physical device is already connected to any slot
+						bool already_connected = false;
+						for (const auto& d : m_devices)
 						{
-							std::shared_lock lock(m_mutex);
-							for (const auto& d : m_devices)
+							if (d->get_state().connected && d->get_path() == cur->path)
 							{
-								if (d->get_path() == cur->path)
+								already_connected = true;
+								break;
+							}
+						}
+						if (already_connected) continue;
+
+						// 2. Determine target slot
+						int slot_idx = -1;
+						if (vid == VID_MAYFLASH)
+						{
+							// DolphinBar Mode 4: PIDs 0x1800-0x1803 correspond to Players 1-4
+							slot_idx = cur->product_id - PID_DOLPHINBAR_START;
+						}
+						else
+						{
+							// Generic Wiimote: Find first available slot
+							for (size_t i = 0; i < m_devices.size(); i++)
+							{
+								if (!m_devices[i]->get_state().connected)
 								{
-									already_owned = true;
+									slot_idx = static_cast<int>(i);
 									break;
 								}
 							}
 						}
 
-						if (!already_owned)
+						// 3. Connect to slot
+						if (slot_idx >= 0 && slot_idx < static_cast<int>(m_devices.size()))
 						{
-							auto dev = std::make_unique<wiimote_device>(cur);
-							if (dev->get_state().connected)
+							if (!m_devices[slot_idx]->get_state().connected)
 							{
-								std::unique_lock lock(m_mutex);
-								m_devices.push_back(std::move(dev));
+								m_devices[slot_idx]->open(cur);
 							}
 						}
 					}
-					cur = cur->next;
 				}
 				hid_free_enumeration(devs);
 			};
@@ -339,17 +396,19 @@ void wiimote_manager::thread_proc()
 			// Wiimote Plus
 			scan_and_add(VID_NINTENDO, PID_WIIMOTE_PLUS, PID_WIIMOTE_PLUS);
 			// Mayflash DolphinBar Mode 4 (Custom VID/PIDs)
-			// Supports up to 4 players (1800, 1801, 1802, 1803)
 			scan_and_add(VID_MAYFLASH, PID_DOLPHINBAR_START, PID_DOLPHINBAR_END);
 		}
 
 		// Update all devices at 100Hz
 		{
 			std::unique_lock lock(m_mutex);
-			m_devices.erase(std::remove_if(m_devices.begin(), m_devices.end(), [](const auto& d)
+			for (auto& d : m_devices)
 			{
-				return !const_cast<wiimote_device&>(*d).update();
-			}), m_devices.end());
+				if (d->get_state().connected)
+				{
+					d->update();
+				}
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));

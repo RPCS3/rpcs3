@@ -62,8 +62,11 @@ struct wiimote_state
 class wiimote_device
 {
 public:
-	wiimote_device(hid_device_info* info);
+	wiimote_device();
 	~wiimote_device();
+
+	bool open(hid_device_info* info);
+	void close();
 
 	bool update();
 	const wiimote_state& get_state() const { return m_state; }
@@ -75,6 +78,7 @@ private:
 	std::string m_path;
 	std::wstring m_serial;
 	wiimote_state m_state;
+	std::chrono::steady_clock::time_point m_last_update;
 
 	bool initialize_ir();
 };

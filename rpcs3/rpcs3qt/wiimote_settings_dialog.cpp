@@ -244,9 +244,12 @@ void wiimote_settings_dialog::update_list()
 	}
 	else
 	{
-		for (size_t i = 0; i < count; i++)
+		auto states = wm->get_states();
+		for (size_t i = 0; i < states.size(); i++)
 		{
-			ui->wiimoteList->addItem(tr("Wiimote #%1").arg(i + 1));
+			QString label = tr("Wiimote #%1").arg(i + 1);
+			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
+			ui->wiimoteList->addItem(label);
 		}
 		ui->wiimoteList->setCurrentRow(0);
 	}
