@@ -1220,9 +1220,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->padConnectionBox, emu_settings_type::PadConnection);
 	SubscribeTooltip(ui->padConnectionBox, tooltips.settings.pad_connection);
 
-	m_emu_settings->EnhanceCheckBox(ui->wiimoteScanBox, emu_settings_type::WiimoteScan);
-	SubscribeTooltip(ui->wiimoteScanBox, tooltips.settings.wiimote_scan);
-
 	m_emu_settings->EnhanceCheckBox(ui->showMoveCursorBox, emu_settings_type::ShowMoveCursor);
 	SubscribeTooltip(ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
 
