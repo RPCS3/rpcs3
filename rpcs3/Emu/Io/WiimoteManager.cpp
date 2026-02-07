@@ -55,37 +55,40 @@ bool wiimote_device::initialize_ir()
 	auto write_reg = [&](u32 addr, const std::vector<u8>& data) {
 		u8 buf[22] = {0};
 		buf[0] = 0x16; // Write register
-		buf[1] = 0x04;
+		buf[1] = 0x06; // Register Space + Request Acknowledgement
 		buf[2] = (addr >> 16) & 0xFF;
 		buf[3] = (addr >> 8) & 0xFF;
 		buf[4] = addr & 0xFF;
 		buf[5] = static_cast<u8>(data.size());
 		std::copy(data.begin(), data.end(), &buf[6]);
 		if (hid_write(m_handle, buf, sizeof(buf)) < 0) return false;
-		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		return true;
 	};
 
-	// 1. Enable IR logic / Pixel Clock
-	u8 ir_on1[] = { 0x13, 0x04 };
+	// 1. Enable IR logic / Pixel Clock (Requesting Acknowledgement for stability)
+	u8 ir_on1[] = { 0x13, 0x06 };
 	hid_write(m_handle, ir_on1, 2);
-	std::this_thread::sleep_for(std::chrono::milliseconds(20));
-	u8 ir_on2[] = { 0x1a, 0x04 };
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	u8 ir_on2[] = { 0x1a, 0x06 };
 	hid_write(m_handle, ir_on2, 2);
 	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-	// 2. Enable IR Camera (Matching wiimote_test order)
-	if (!write_reg(0xb00030, {0x08})) return false;
+	// 2. Enable IR Camera (Wii-style sequence)
+	if (!write_reg(0xb00030, {0x01})) return false;
 
-	// 3. Sensitivity Level 3 (Exactly matching wiimote_test)
+	// 3. Sensitivity Level 3 (Exactly matching wiimote_test / official levels)
 	if (!write_reg(0xb00000, {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00, 0x41})) return false;
 	if (!write_reg(0xb0001a, {0x40, 0x00})) return false;
 
 	// 4. IR Mode: Extended (3 bytes per point)
 	if (!write_reg(0xb00033, {0x03})) return false;
 
-	// 5. Reporting mode: Buttons + Accel + IR
-	u8 mode[] = { 0x12, 0x00, 0x33 };
+	// 5. Finalize IR Enable
+	if (!write_reg(0xb00030, {0x08})) return false;
+
+	// 6. Reporting mode: Buttons + Accel + IR (Continuous)
+	u8 mode[] = { 0x12, 0x04, 0x33 };
 	if (hid_write(m_handle, mode, sizeof(mode)) < 0) return false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
