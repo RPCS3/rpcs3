@@ -229,7 +229,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 	GunCon3_data gc{};
 	gc.stick_ax = gc.stick_ay = gc.stick_bx = gc.stick_by = 0x7f;
 
-	auto* wm = wiimote_manager::get_instance()
+	auto* wm = wiimote_manager::get_instance();
 	auto states = wm->get_states();
 
 	// Determine which Wiimote to use based on our ordinal position among all GunCons
