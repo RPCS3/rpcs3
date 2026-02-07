@@ -5,11 +5,19 @@ cd build || exit 1
 
 cd bin
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
-wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-macos-privateapi.tar
-tar -xvf MoltenVK-macos-privateapi.tar
-cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
-cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
-sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+if [ "$BUILD_MAC_KK" -eq 1 ]; then
+  cp "$WORKDIR/kosmickrisp/build/src/kosmickrisp/vulkan/libvulkan_kosmickrisp.dylib" "rpcs3.app/Contents/Frameworks/libvulkan_kosmickrisp.dylib"
+  cp "$WORKDIR/kosmickrisp/build/src/kosmickrisp/vulkan/kosmickrisp_mesa_icd.aarch64.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+  cp "$(realpath /opt/homebrew/lib/libSPIRV-Tools.dylib)" "rpcs3.app/Contents/Frameworks/libSPIRV-Tools.dylib"
+  install_name_tool -change "/opt/homebrew/opt/spirv-tools/lib/libSPIRV-Tools.dylib" "@rpath/libSPIRV-Tools.dylib" "rpcs3.app/Contents/Frameworks/libvulkan_kosmickrisp.dylib"
+  sed -i '' "s/\/opt\/homebrew\/lib\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+else
+  wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.1/MoltenVK-macos-privateapi.tar
+  tar -xvf MoltenVK-macos-privateapi.tar
+  cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
+  cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+  sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+fi
 
 cp "$(realpath $BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
 cp "$(realpath $BREW_PATH/opt/gcc/lib/gcc/current/libgcc_s.1.1.dylib)" "rpcs3.app/Contents/Frameworks/libgcc_s.1.1.dylib"
