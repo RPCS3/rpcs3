@@ -26,22 +26,22 @@ wiimote_settings_dialog::~wiimote_settings_dialog() = default;
 
 void wiimote_settings_dialog::populate_mappings()
 {
-	auto* wm = WiimoteManager::get_instance();
+	auto* wm = wiimote_manager::get_instance();
 	if (!wm) return;
 
-	const QPair<QString, WiimoteButton> buttons[] = {
-		{ tr("None"), WiimoteButton::None },
-		{ tr("A"), WiimoteButton::A },
-		{ tr("B"), WiimoteButton::B },
-		{ tr("Plus (+)"), WiimoteButton::Plus },
-		{ tr("Minus (-)"), WiimoteButton::Minus },
-		{ tr("Home"), WiimoteButton::Home },
-		{ tr("1"), WiimoteButton::One },
-		{ tr("2"), WiimoteButton::Two },
-		{ tr("D-Pad Up"), WiimoteButton::Up },
-		{ tr("D-Pad Down"), WiimoteButton::Down },
-		{ tr("D-Pad Left"), WiimoteButton::Left },
-		{ tr("D-Pad Right"), WiimoteButton::Right },
+	const QPair<QString, wiimote_button> buttons[] = {
+		{ tr("None"), wiimote_button::None },
+		{ tr("A"), wiimote_button::A },
+		{ tr("B"), wiimote_button::B },
+		{ tr("Plus (+)"), wiimote_button::Plus },
+		{ tr("Minus (-)"), wiimote_button::Minus },
+		{ tr("Home"), wiimote_button::Home },
+		{ tr("1"), wiimote_button::One },
+		{ tr("2"), wiimote_button::Two },
+		{ tr("D-Pad Up"), wiimote_button::Up },
+		{ tr("D-Pad Down"), wiimote_button::Down },
+		{ tr("D-Pad Left"), wiimote_button::Left },
+		{ tr("D-Pad Right"), wiimote_button::Right },
 	};
 
 	QComboBox* boxes[] = {
@@ -49,8 +49,8 @@ void wiimote_settings_dialog::populate_mappings()
 		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
 	};
 
-	WiimoteGunConMapping current = wm->get_mapping();
-	WiimoteButton* targets[] = {
+	wiimote_guncon_mapping current = wm->get_mapping();
+	wiimote_button* targets[] = {
 		&current.trigger, &current.a1, &current.a2, &current.c1,
 		&current.b1, &current.b2, &current.b3, &current.a3, &current.c2
 	};
@@ -77,11 +77,11 @@ void wiimote_settings_dialog::populate_mappings()
 
 void wiimote_settings_dialog::restore_defaults()
 {
-	auto* wm = WiimoteManager::get_instance();
+	auto* wm = wiimote_manager::get_instance();
 	if (!wm) return;
 
 	// Reset to default mapping
-	WiimoteGunConMapping default_map;
+	wiimote_guncon_mapping default_map;
 	wm->set_mapping(default_map);
 
 	// Update UI
@@ -95,7 +95,7 @@ void wiimote_settings_dialog::restore_defaults()
 	ui->cb_a3->blockSignals(true);
 	ui->cb_c2->blockSignals(true);
 
-	auto set_box = [](QComboBox* box, WiimoteButton btn) {
+	auto set_box = [](QComboBox* box, wiimote_button btn) {
 		int index = box->findData(QVariant::fromValue(static_cast<u16>(btn)));
 		if (index >= 0) box->setCurrentIndex(index);
 	};
@@ -123,12 +123,12 @@ void wiimote_settings_dialog::restore_defaults()
 
 void wiimote_settings_dialog::apply_mappings()
 {
-	auto* wm = WiimoteManager::get_instance();
+	auto* wm = wiimote_manager::get_instance();
 	if (!wm) return;
 
-	WiimoteGunConMapping map;
+	wiimote_guncon_mapping map;
 	auto get_btn = [](QComboBox* box) {
-		return static_cast<WiimoteButton>(box->currentData().toUInt());
+		return static_cast<wiimote_button>(box->currentData().toUInt());
 	};
 
 	map.trigger = get_btn(ui->cb_trigger);
@@ -152,7 +152,7 @@ void wiimote_settings_dialog::apply_mappings()
 void wiimote_settings_dialog::update_state()
 {
 	int index = ui->wiimoteList->currentRow();
-	auto* wm = WiimoteManager::get_instance();
+	auto* wm = wiimote_manager::get_instance();
 	if (!wm || index < 0)
 	{
 		ui->connectionStatus->setText(tr("N/A"));
@@ -230,7 +230,7 @@ void wiimote_settings_dialog::update_state()
 void wiimote_settings_dialog::update_list()
 {
 	ui->wiimoteList->clear();
-	auto* wm = WiimoteManager::get_instance();
+	auto* wm = wiimote_manager::get_instance();
 	if (!wm)
 	{
 		ui->wiimoteList->addItem(tr("Wiimote Manager not initialized."));

@@ -13,6 +13,7 @@
 #include "main_application.h"
 
 #include "Emu/System.h"
+#include "Emu/Io/WiimoteManager.h"
 #include "Input/raw_mouse_handler.h"
 
 #include <memory>
@@ -34,7 +35,6 @@ extern std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler; // Only used for 
 /** RPCS3 GUI Application Class
  * The main point of this class is to do application initialization, to hold the main and game windows and to initialize callbacks.
  */
-#include "Emu/Io/WiimoteManager.h"
 
 class gui_application : public QApplication, public main_application
 {
@@ -113,7 +113,7 @@ private:
 
 	std::deque<std::unique_ptr<QSoundEffect>> m_sound_effects{};
 
-	std::unique_ptr<WiimoteManager> m_wiimote_manager;
+	std::unique_ptr<wiimote_manager> m_wiimote_manager;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;

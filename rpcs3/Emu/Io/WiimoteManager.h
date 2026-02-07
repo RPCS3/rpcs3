@@ -11,14 +11,14 @@
 #include <shared_mutex>
 #include <chrono>
 
-struct WiimoteIRPoint
+struct wiimote_ir_point
 {
 	u16 x = 1023;
 	u16 y = 1023;
 	u8 size = 0;
 };
 
-enum class WiimoteButton : u16
+enum class wiimote_button : u16
 {
 	None = 0,
 	Left = 0x0001,
@@ -34,39 +34,39 @@ enum class WiimoteButton : u16
 	Home = 0x8000
 };
 
-struct WiimoteGunConMapping
+struct wiimote_guncon_mapping
 {
-	WiimoteButton trigger = WiimoteButton::B;
-	WiimoteButton a1 = WiimoteButton::A;
-	WiimoteButton a2 = WiimoteButton::Minus;
-	WiimoteButton a3 = WiimoteButton::Left;
-	WiimoteButton b1 = WiimoteButton::One;
-	WiimoteButton b2 = WiimoteButton::Two;
-	WiimoteButton b3 = WiimoteButton::Home;
-	WiimoteButton c1 = WiimoteButton::Plus;
-	WiimoteButton c2 = WiimoteButton::Right;
+	wiimote_button trigger = wiimote_button::B;
+	wiimote_button a1 = wiimote_button::A;
+	wiimote_button a2 = wiimote_button::Minus;
+	wiimote_button a3 = wiimote_button::Left;
+	wiimote_button b1 = wiimote_button::One;
+	wiimote_button b2 = wiimote_button::Two;
+	wiimote_button b3 = wiimote_button::Home;
+	wiimote_button c1 = wiimote_button::Plus;
+	wiimote_button c2 = wiimote_button::Right;
 
 	// Secondary mappings (optional, e.g. D-Pad acting as buttons)
-	WiimoteButton b1_alt = WiimoteButton::Up;
-	WiimoteButton b2_alt = WiimoteButton::Down;
+	wiimote_button b1_alt = wiimote_button::Up;
+	wiimote_button b2_alt = wiimote_button::Down;
 };
 
-struct WiimoteState
+struct wiimote_state
 {
 	u16 buttons = 0;
 	s16 acc_x = 0, acc_y = 0, acc_z = 0;
-	WiimoteIRPoint ir[4];
+	wiimote_ir_point ir[4];
 	bool connected = false;
 };
 
-class WiimoteDevice
+class wiimote_device
 {
 public:
-	WiimoteDevice(hid_device_info* info);
-	~WiimoteDevice();
+	wiimote_device(hid_device_info* info);
+	~wiimote_device();
 
 	bool update();
-	const WiimoteState& get_state() const { return m_state; }
+	const wiimote_state& get_state() const { return m_state; }
 	std::string get_path() const { return m_path; }
 	std::wstring get_serial() const { return m_serial; }
 
@@ -74,34 +74,34 @@ private:
 	hid_device* m_handle = nullptr;
 	std::string m_path;
 	std::wstring m_serial;
-	WiimoteState m_state;
+	wiimote_state m_state;
 
 	bool initialize_ir();
 };
 
-class WiimoteManager
+class wiimote_manager
 {
 public:
-	WiimoteManager();
-	~WiimoteManager();
+	wiimote_manager();
+	~wiimote_manager();
 
-	static WiimoteManager* get_instance();
+	static wiimote_manager* get_instance();
 
 	void start();
 	void stop();
 
-	std::vector<WiimoteState> get_states();
+	std::vector<wiimote_state> get_states();
 	size_t get_device_count();
 
-	void set_mapping(const WiimoteGunConMapping& mapping);
-	WiimoteGunConMapping get_mapping() const;
+	void set_mapping(const wiimote_guncon_mapping& mapping);
+	wiimote_guncon_mapping get_mapping() const;
 
 private:
 	std::thread m_thread;
 	atomic_t<bool> m_running{false};
-	std::vector<std::unique_ptr<WiimoteDevice>> m_devices;
+	std::vector<std::unique_ptr<wiimote_device>> m_devices;
 	shared_mutex m_mutex;
-	WiimoteGunConMapping m_mapping;
+	wiimote_guncon_mapping m_mapping;
 
 	void thread_proc();
 	void load_config();

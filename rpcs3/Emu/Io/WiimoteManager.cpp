@@ -16,7 +16,7 @@ static constexpr u16 VID_MAYFLASH = 0x0079;
 static constexpr u16 PID_DOLPHINBAR_START = 0x1800;
 static constexpr u16 PID_DOLPHINBAR_END = 0x1803;
 
-WiimoteDevice::WiimoteDevice(hid_device_info* info)
+wiimote_device::wiimote_device(hid_device_info* info)
 	: m_path(info->path)
 	, m_serial(info->serial_number ? info->serial_number : L"")
 {
@@ -45,12 +45,12 @@ WiimoteDevice::WiimoteDevice(hid_device_info* info)
 	}
 }
 
-WiimoteDevice::~WiimoteDevice()
+wiimote_device::~wiimote_device()
 {
 	if (m_handle) hid_close(m_handle);
 }
 
-bool WiimoteDevice::initialize_ir()
+bool wiimote_device::initialize_ir()
 {
 	auto write_reg = [&](u32 addr, const std::vector<u8>& data) {
 		u8 buf[22] = {0};
@@ -92,7 +92,7 @@ bool WiimoteDevice::initialize_ir()
 	return true;
 }
 
-bool WiimoteDevice::update()
+bool wiimote_device::update()
 {
 	if (!m_handle) return false;
 
@@ -135,24 +135,24 @@ bool WiimoteDevice::update()
 	return true;
 }
 
-static WiimoteManager* s_instance = nullptr;
+static wiimote_manager* s_instance = nullptr;
 
 static std::string get_config_path()
 {
 	return fs::get_config_dir(true) + "wiimote.yml";
 }
 
-void WiimoteManager::load_config()
+void wiimote_manager::load_config()
 {
 	fs::file f(get_config_path(), fs::read);
 	if (!f) return;
 
 	std::string line;
 	std::stringstream ss(f.to_string());
-	WiimoteGunConMapping map;
+	wiimote_guncon_mapping map;
 
-	auto parse_btn = [](const std::string& val) -> WiimoteButton {
-		return static_cast<WiimoteButton>(std::strtoul(val.c_str(), nullptr, 0));
+	auto parse_btn = [](const std::string& val) -> wiimote_button {
+		return static_cast<wiimote_button>(std::strtoul(val.c_str(), nullptr, 0));
 	};
 
 	while (std::getline(ss, line))
@@ -184,14 +184,14 @@ void WiimoteManager::load_config()
 	m_mapping = map;
 }
 
-void WiimoteManager::save_config()
+void wiimote_manager::save_config()
 {
 	fs::file f(get_config_path(), fs::write + fs::create + fs::trunc);
 	if (!f) return;
 
 	std::stringstream ss;
 	// Helper to write lines
-	auto write_line = [&](const char* key, WiimoteButton btn) {
+	auto write_line = [&](const char* key, wiimote_button btn) {
 		ss << key << ": " << static_cast<u16>(btn) << "\n";
 	};
 
@@ -211,7 +211,7 @@ void WiimoteManager::save_config()
 	f.write(ss.str());
 }
 
-WiimoteManager::WiimoteManager()
+wiimote_manager::wiimote_manager()
 {
 	if (!s_instance)
 		s_instance = this;
@@ -219,27 +219,27 @@ WiimoteManager::WiimoteManager()
 	// Set default mapping explicitly to match user preference: C1=Plus, A3=Left
 	// (Struct default constructor might have different values if I didn't edit header defaults)
 	// Let's force it here before loading config.
-	m_mapping.c1 = WiimoteButton::Plus;
-	m_mapping.a3 = WiimoteButton::Left;
+	m_mapping.c1 = wiimote_button::Plus;
+	m_mapping.a3 = wiimote_button::Left;
 	// Defaults for others from struct:
 	// a1=A, a2=Minus, etc.
 
 	load_config();
 }
 
-WiimoteManager::~WiimoteManager()
+wiimote_manager::~wiimote_manager()
 {
 	stop();
 	if (s_instance == this)
 		s_instance = nullptr;
 }
 
-WiimoteManager* WiimoteManager::get_instance()
+wiimote_manager* wiimote_manager::get_instance()
 {
 	return s_instance;
 }
 
-void WiimoteManager::start()
+void wiimote_manager::start()
 {
 	if (m_running) return;
 
@@ -247,23 +247,23 @@ void WiimoteManager::start()
 	if (hid_init() != 0) return;
 
 	m_running = true;
-	m_thread = std::thread(&WiimoteManager::thread_proc, this);
+	m_thread = std::thread(&wiimote_manager::thread_proc, this);
 }
 
-void WiimoteManager::stop()
+void wiimote_manager::stop()
 {
 	m_running = false;
 	if (m_thread.joinable()) m_thread.join();
 	hid_exit();
 }
 
-size_t WiimoteManager::get_device_count()
+size_t wiimote_manager::get_device_count()
 {
 	std::shared_lock lock(m_mutex);
 	return m_devices.size();
 }
 
-void WiimoteManager::set_mapping(const WiimoteGunConMapping& mapping)
+void wiimote_manager::set_mapping(const wiimote_guncon_mapping& mapping)
 {
 	{
 		std::unique_lock lock(m_mutex);
@@ -272,16 +272,16 @@ void WiimoteManager::set_mapping(const WiimoteGunConMapping& mapping)
 	save_config();
 }
 
-WiimoteGunConMapping WiimoteManager::get_mapping() const
+wiimote_guncon_mapping wiimote_manager::get_mapping() const
 {
 	// shared_lock not strictly needed for trivial copy but good practice if it becomes complex
 	return m_mapping;
 }
 
-std::vector<WiimoteState> WiimoteManager::get_states()
+std::vector<wiimote_state> wiimote_manager::get_states()
 {
 	std::shared_lock lock(m_mutex);
-	std::vector<WiimoteState> states;
+	std::vector<wiimote_state> states;
 	states.reserve(m_devices.size());
 
 	for (const auto& dev : m_devices)
@@ -292,7 +292,7 @@ std::vector<WiimoteState> WiimoteManager::get_states()
 }
 
 
-void WiimoteManager::thread_proc()
+void wiimote_manager::thread_proc()
 {
 	u32 counter = 0;
 	while (m_running)
@@ -324,7 +324,7 @@ void WiimoteManager::thread_proc()
 
 						if (!already_owned)
 						{
-							auto dev = std::make_unique<WiimoteDevice>(cur);
+							auto dev = std::make_unique<wiimote_device>(cur);
 							if (dev->get_state().connected)
 							{
 								std::unique_lock lock(m_mutex);
@@ -351,7 +351,7 @@ void WiimoteManager::thread_proc()
 			std::unique_lock lock(m_mutex);
 			m_devices.erase(std::remove_if(m_devices.begin(), m_devices.end(), [](const auto& d)
 			{
-				return !const_cast<WiimoteDevice&>(*d).update();
+				return !const_cast<wiimote_device&>(*d).update();
 			}), m_devices.end());
 		}
 
