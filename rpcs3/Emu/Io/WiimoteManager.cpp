@@ -219,13 +219,7 @@ wiimote_manager::wiimote_manager()
 	if (!s_instance)
 		s_instance = this;
 
-	// Set default mapping explicitly to match user preference: C1=Plus, A3=Left
-	// (Struct default constructor might have different values if I didn't edit header defaults)
-	// Let's force it here before loading config.
-	m_mapping.c1 = wiimote_button::Plus;
-	m_mapping.a3 = wiimote_button::Left;
-	// Defaults for others from struct:
-	// a1=A, a2=Minus, etc.
+
 
 	load_config();
 }
