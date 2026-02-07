@@ -78,9 +78,11 @@ private:
 	std::string m_path;
 	std::wstring m_serial;
 	wiimote_state m_state;
-	std::chrono::steady_clock::time_point m_last_update;
+	std::chrono::steady_clock::time_point m_last_ir_check;
 
 	bool initialize_ir();
+	bool verify_ir_health();
+	bool write_reg(u32 addr, const std::vector<u8>& data);
 };
 
 class wiimote_manager

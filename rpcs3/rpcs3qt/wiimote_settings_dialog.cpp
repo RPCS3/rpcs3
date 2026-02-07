@@ -12,11 +12,12 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 {
 	ui->setupUi(this);
 	update_list();
-	connect(ui->scanButton, &QPushButton::clicked, this, [this] { update_list(); });
 	connect(ui->restoreDefaultsButton, &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
 
+	// Timer updates both state AND device list (auto-refresh)
 	QTimer* timer = new QTimer(this);
 	connect(timer, &QTimer::timeout, this, &wiimote_settings_dialog::update_state);
+	connect(timer, &QTimer::timeout, this, &wiimote_settings_dialog::update_list);
 	timer->start(50);
 
 	populate_mappings();
@@ -229,28 +230,57 @@ void wiimote_settings_dialog::update_state()
 
 void wiimote_settings_dialog::update_list()
 {
-	ui->wiimoteList->clear();
 	auto* wm = wiimote_manager::get_instance();
 	if (!wm)
 	{
-		ui->wiimoteList->addItem(tr("Wiimote Manager not initialized."));
+		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("Wiimote Manager not initialized."))
+		{
+			ui->wiimoteList->clear();
+			ui->wiimoteList->addItem(tr("Wiimote Manager not initialized."));
+		}
 		return;
 	}
 
-	size_t count = wm->get_device_count();
-	if (count == 0)
+	auto states = wm->get_states();
+
+	// Only update if the list content actually changed (avoid flicker)
+	if (static_cast<size_t>(ui->wiimoteList->count()) != states.size())
 	{
-		ui->wiimoteList->addItem(tr("No Wiimotes found."));
-	}
-	else
-	{
-		auto states = wm->get_states();
+		int current_row = ui->wiimoteList->currentRow();
+		ui->wiimoteList->clear();
+
 		for (size_t i = 0; i < states.size(); i++)
 		{
 			QString label = tr("Wiimote #%1").arg(i + 1);
 			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
 			ui->wiimoteList->addItem(label);
 		}
-		ui->wiimoteList->setCurrentRow(0);
+
+		if (current_row >= 0 && current_row < ui->wiimoteList->count())
+		{
+			ui->wiimoteList->setCurrentRow(current_row);
+		}
+		else if (ui->wiimoteList->count() > 0)
+		{
+			ui->wiimoteList->setCurrentRow(0);
+		}
+	}
+	else
+	{
+		// Just update connection status labels without clearing
+		for (size_t i = 0; i < states.size(); i++)
+		{
+			QString label = tr("Wiimote #%1").arg(i + 1);
+			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
+
+			if (static_cast<int>(i) < ui->wiimoteList->count())
+			{
+				QListWidgetItem* item = ui->wiimoteList->item(static_cast<int>(i));
+				if (item && item->text() != label)
+				{
+					item->setText(label);
+				}
+			}
+		}
 	}
 }

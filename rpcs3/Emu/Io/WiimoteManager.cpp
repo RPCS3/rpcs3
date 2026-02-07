@@ -48,7 +48,7 @@ bool wiimote_device::open(hid_device_info* info)
 		if (initialize_ir())
 		{
 			m_state.connected = true;
-			m_last_update = std::chrono::steady_clock::now();
+			m_last_ir_check = std::chrono::steady_clock::now();
 			return true;
 		}
 
@@ -69,22 +69,23 @@ void wiimote_device::close()
 	m_serial.clear();
 }
 
+bool wiimote_device::write_reg(u32 addr, const std::vector<u8>& data)
+{
+	u8 buf[22] = {0};
+	buf[0] = 0x16; // Write register
+	buf[1] = 0x06; // Register Space + Request Acknowledgement
+	buf[2] = (addr >> 16) & 0xFF;
+	buf[3] = (addr >> 8) & 0xFF;
+	buf[4] = addr & 0xFF;
+	buf[5] = static_cast<u8>(data.size());
+	std::copy(data.begin(), data.end(), &buf[6]);
+	if (hid_write(m_handle, buf, sizeof(buf)) < 0) return false;
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	return true;
+}
+
 bool wiimote_device::initialize_ir()
 {
-	auto write_reg = [&](u32 addr, const std::vector<u8>& data) {
-		u8 buf[22] = {0};
-		buf[0] = 0x16; // Write register
-		buf[1] = 0x06; // Register Space + Request Acknowledgement
-		buf[2] = (addr >> 16) & 0xFF;
-		buf[3] = (addr >> 8) & 0xFF;
-		buf[4] = addr & 0xFF;
-		buf[5] = static_cast<u8>(data.size());
-		std::copy(data.begin(), data.end(), &buf[6]);
-		if (hid_write(m_handle, buf, sizeof(buf)) < 0) return false;
-		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		return true;
-	};
-
 	// 1. Enable IR logic / Pixel Clock (Requesting Acknowledgement for stability)
 	u8 ir_on1[] = { 0x13, 0x06 };
 	hid_write(m_handle, ir_on1, 2);
@@ -114,19 +115,53 @@ bool wiimote_device::initialize_ir()
 	return true;
 }
 
+bool wiimote_device::verify_ir_health()
+{
+	if (!m_handle) return false;
+
+	// Request device status to verify communication
+	u8 status_req[] = { 0x15, 0x00 };
+	if (hid_write(m_handle, status_req, sizeof(status_req)) < 0)
+	{
+		return false;
+	}
+
+	// Try to read a response within reasonable time
+	u8 buf[22];
+	int res = hid_read_timeout(m_handle, buf, sizeof(buf), 100);
+
+	// If we got a response, device is alive. If timeout or error, it's dead.
+	return res > 0;
+}
+
 bool wiimote_device::update()
 {
 	if (!m_handle) return false;
 
+	// Every 3 seconds, verify IR is still working
+	auto now = std::chrono::steady_clock::now();
+	if (now - m_last_ir_check > std::chrono::seconds(3))
+	{
+		m_last_ir_check = now;
+		if (!verify_ir_health())
+		{
+			// Device not responding - attempt to reinitialize IR
+			if (!initialize_ir())
+			{
+				// Failed to reinitialize - close and mark disconnected
+				close();
+				return false;
+			}
+		}
+	}
+
 	u8 buf[22];
 	int res;
-	bool received = false;
 
 	// Fully drain the buffer until empty to ensure we have the most recent data.
 	// This avoids getting stuck behind a backlog of old reports (e.g. from before IR was enabled).
 	while ((res = hid_read_timeout(m_handle, buf, sizeof(buf), 0)) > 0)
 	{
-		received = true;
 		// All data reports (0x30-0x3F) carry buttons in the same location (first 2 bytes).
 		// We mask out accelerometer LSBs (bits 5,6 of both bytes).
 		if ((buf[0] & 0xF0) == 0x30)
@@ -156,19 +191,12 @@ bool wiimote_device::update()
 	// hid_read_timeout returns -1 on error (e.g. device disconnected).
 	if (res < 0)
 	{
-		close();
-		return false;
-	}
-
-	if (received)
-	{
-		m_last_update = std::chrono::steady_clock::now();
-	}
-	else if (std::chrono::steady_clock::now() - m_last_update > std::chrono::seconds(2))
-	{
-		// No data for 2 seconds. Likely disconnected or powered off.
-		close();
-		return false;
+		// Device error - try to recover once before giving up
+		if (!initialize_ir())
+		{
+			close();
+			return false;
+		}
 	}
 
 	return true;
