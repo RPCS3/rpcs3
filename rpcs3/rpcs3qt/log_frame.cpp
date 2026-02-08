@@ -220,7 +220,7 @@ void log_frame::CreateAndConnectActions()
 	// I, for one, welcome our lambda overlord
 	// It's either this or a signal mapper
 	// Then, probably making a list of these actions so that it's easier to iterate to generate the mapper.
-	auto l_initAct = [this](QAction* act, logs::level logLevel)
+	const auto l_initAct = [this](QAction* act, logs::level logLevel)
 	{
 		act->setCheckable(true);
 
@@ -293,7 +293,7 @@ void log_frame::CreateAndConnectActions()
 
 		if (m_ansi_tty && !m_tty_ansi_highlighter)
 		{
-			m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
+			m_tty_ansi_highlighter = new AnsiHighlighter(m_tty);
 		}
 		else if (!m_ansi_tty && m_tty_ansi_highlighter)
 		{
@@ -602,6 +602,12 @@ void log_frame::RepaintTextColors()
 	html.replace(old_style, new_style);
 
 	m_log->document()->setHtml(html);
+
+	if (m_tty_ansi_highlighter)
+	{
+		m_tty_ansi_highlighter->update_colors(m_tty);
+		m_tty_ansi_highlighter->rehighlight();
+	}
 }
 
 void log_frame::UpdateUI()
