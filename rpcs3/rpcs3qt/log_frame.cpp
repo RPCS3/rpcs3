@@ -163,11 +163,6 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	CreateAndConnectActions();
 	LoadSettings();
 
-	if (m_ansi_tty)
-	{
-		m_tty_ansi_highlighter = new AnsiHighlighter(m_tty->document());
-	}
-
 	m_timer = new QTimer(this);
 	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
 }
