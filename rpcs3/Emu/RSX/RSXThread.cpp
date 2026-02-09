@@ -2321,17 +2321,35 @@ namespace rsx
 				}
 			}
 
-			if (rsx::is_int8_remapped_format(format))
+			if (const auto format_features = rsx::get_format_features(format); format_features != 0)
 			{
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
 				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
 				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
 				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
+				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP/BX2
+				// Games using mixed flags: (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
+				u32 argb8_signed = 0;
+				u32 unsigned_remap = 0;
+				u32 gamma = 0;
 
-				const u32 argb8_signed = tex.argb_signed(); // _SNROM
-				const u32 gamma = tex.gamma() & ~argb8_signed; // _SRGB
-				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~(gamma | argb8_signed) & 0xF); // _BX2
+				if (format_features & RSX_FORMAT_FEATURE_SIGNED_COMPONENTS)
+				{
+					argb8_signed = tex.argb_signed();
+				}
+
+				if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
+				{
+					gamma = tex.gamma() & ~(argb8_signed);
+				}
+
+				if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
+				{
+					// The renormalization flag applies to all channels
+					unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
+					unsigned_remap &= ~(argb8_signed | gamma);
+				}
+
 				u32 argb8_convert = gamma;
 
 				// The options are mutually exclusive
