@@ -210,12 +210,12 @@ bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSiz
 
 f64 FAudioBackend::GetCallbackFrameLen()
 {
-	constexpr f64 _10ms = 0.01;
+	constexpr f64 _20ms = 0.02;
 
 	if (m_instance == nullptr)
 	{
 		FAudio_.error("GetCallbackFrameLen() called uninitialized");
-		return _10ms;
+		return _20ms;
 	}
 
 	f64 min_latency{};
@@ -228,7 +228,7 @@ f64 FAudioBackend::GetCallbackFrameLen()
 		min_latency = static_cast<f64>(samples_per_q) / freq;
 	}
 
-	return std::max<f64>(min_latency, _10ms);
+	return std::max<f64>(min_latency, _20ms);
 }
 
 void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj, u32 BytesRequired)
