@@ -951,13 +951,16 @@ namespace np
 		{
 			thread_base::set_name("NP Trans Worker");
 
-			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
+			bool has_value = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout), [&]
+				{
+					return trans_ctx->result.has_value();
+				});
 			{
 				std::lock_guard lock_threads(this->mutex_async_transactions);
 				this->async_transactions.erase(req_id);
 			}
 
-			if (res == std::cv_status::timeout)
+			if (!has_value)
 			{
 				trans_ctx->result = SCE_NP_COMMUNITY_ERROR_TIMEOUT;
 				return;
