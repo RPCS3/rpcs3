@@ -252,7 +252,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 		// Reserved area
 		if (!load_and_check_reserved(*ar, advance))
 		{
-			sys_log.error("Potential failure to load savestate: padding buyes are not 0. %s", *ar);
+			sys_log.error("Potential failure to load savestate: padding bytes are not 0. %s", *ar);
 		}
 	}
 }
@@ -310,7 +310,7 @@ static void fixup_settings(const psf::registry* _psf)
 
 	if (g_cfg.net.net_active == np_internet_status::disabled && g_cfg.net.psn_status != np_psn_status::disabled)
 	{
-		sys_log.warning("Net status was set to disconnected so psn status was disabled");
+		sys_log.warning("Net status was set to disconnected so PSN status was disabled.");
 		g_cfg.net.psn_status.set(np_psn_status::disabled);
 	}
 }
@@ -3393,7 +3393,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			bool is_being_held_longer = false;
 
-			for (int i = 0; !*join_ended && thread_ctrl::state() != thread_state::aborting;)
+			for (int i = 0; !*join_ended && thread_ctrl::state() != thread_state::aborting; i++)
 			{
 				if (g_watchdog_hold_ctr)
 				{
@@ -4642,7 +4642,7 @@ game_boot_result Emulator::InsertDisc(const std::string& path)
 	else
 	{
 		// TODO: find out where other discs are mounted
-		sys_log.todo("Mounting non-ps2/ps3 disc in dev_bdvd. Is this correct? (path='%s')", disc_root);
+		sys_log.todo("Mounting non-PS2/PS3 disc in dev_bdvd. Is this correct? (path='%s')", disc_root);
 		ensure(vfs::mount("/dev_bdvd", disc_root));
 	}
 

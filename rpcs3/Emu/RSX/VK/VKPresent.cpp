@@ -33,7 +33,7 @@ namespace
 	}
 }
 
-void VKGSRender::reinitialize_swapchain()
+bool VKGSRender::reinitialize_swapchain()
 {
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
@@ -44,7 +44,7 @@ void VKGSRender::reinitialize_swapchain()
 	if (m_swapchain_dims.width == 0 || m_swapchain_dims.height == 0)
 	{
 		swapchain_unavailable = true;
-		return;
+		return false;
 	}
 
 	// NOTE: This operation will create a hard sync point
@@ -52,7 +52,7 @@ void VKGSRender::reinitialize_swapchain()
 	m_current_command_buffer->reset();
 	m_current_command_buffer->begin();
 
-	for (auto &ctx : frame_context_storage)
+	for (auto &ctx : m_frame_context_storage)
 	{
 		if (ctx.present_image == umax)
 			continue;
@@ -61,19 +61,54 @@ void VKGSRender::reinitialize_swapchain()
 		frame_context_cleanup(&ctx);
 	}
 
+	// NOTE: frame_context_cleanup alters the queued_frames structure.
+	while (!m_queued_frames.empty())
+	{
+		auto& frame = m_queued_frames.front();
+		if (!frame->swap_command_buffer)
+		{
+			// Drop it
+			m_queued_frames.pop_front();
+			continue;
+		}
+
+		frame_context_cleanup(frame);
+	}
+	ensure(m_queued_frames.empty());
+
 	// Discard the current upscaling pipeline if any
 	m_upscaler.reset();
 
 	// Drain all the queues
 	vkDeviceWaitIdle(*m_device);
 
+	// Reset frame context storage
+	for (auto& ctx : m_frame_context_storage)
+	{
+		ctx.destroy(*m_device);
+	}
+	m_current_frame = nullptr;
+	m_max_async_frames = 0;
+	m_current_queue_index = 0;
+	m_frame_context_storage.clear();
+
 	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(m_swapchain_dims.width, m_swapchain_dims.height))
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
-		return;
+		return false;
 	}
+
+	// Re-initialize CPU frame contexts
+	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_frame_context_storage.resize(m_max_async_frames);
+	for (auto& ctx : m_frame_context_storage)
+	{
+		ctx.init(*m_device);
+	}
+	m_current_queue_index = 0;
+	m_current_frame = &m_frame_context_storage[0];
 
 	// Prepare new swapchain images for use
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
@@ -100,6 +135,7 @@ void VKGSRender::reinitialize_swapchain()
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
+	return true;
 }
 
 void VKGSRender::present(vk::frame_context_t *ctx)
@@ -158,10 +194,10 @@ void VKGSRender::advance_queued_frames()
 	m_current_frame->tag_frame_end();
 
 	m_queued_frames.push_back(m_current_frame);
-	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
+	ensure(m_queued_frames.size() <= m_max_async_frames);
 
-	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
-	m_current_frame = &frame_context_storage[m_current_queue_index];
+	m_current_queue_index = (m_current_queue_index + 1) % m_max_async_frames;
+	m_current_frame = &m_frame_context_storage[m_current_queue_index];
 	m_current_frame->flags |= frame_context_state::dirty;
 
 	vk::advance_frame_counter();
@@ -391,14 +427,35 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)
 	{
-		reinitialize_swapchain();
+		// Reinitializing the swapchain is a failable operation. However, not all failures are fatal (e.g minimized window).
+		// In the worst case, we can have the driver refuse to create the swapchain while we already deleted the previous one.
+		// In such scenarios, we have to retry a few times before giving up as we cannot proceed without a swapchain.
+		for (int i = 0; i < 10; ++i)
+		{
+			if (reinitialize_swapchain() || m_current_frame)
+			{
+				// If m_current_frame exists, then the initialization failure is non-fatal. Proceed as usual.
+				break;
+			}
+
+			if (Emu.IsStopped())
+			{
+				m_frame->flip(m_context);
+				rsx::thread::flip(info);
+				return;
+			}
+
+			std::this_thread::sleep_for(100ms);
+		}
 	}
 
 	m_profiler.start();
 
+	ensure(m_current_frame, "Invalid swapchain setup. Resizing the game window failed.");
+
 	if (m_current_frame == &m_aux_frame_context)
 	{
-		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame = &m_frame_context_storage[m_current_queue_index];
 		if (m_current_frame->swap_command_buffer)
 		{
 			// Its possible this flip request is triggered by overlays and the flip queue is in undefined state
@@ -520,7 +577,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
-	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
+	u64 timeout = m_swapchain->get_swap_image_count() <= 2? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
 		switch (status)
@@ -547,6 +604,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			rsx_log.warning("vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			swapchain_unavailable = true;
 			reinitialize_swapchain();
+			ensure(m_current_frame, "Could not reinitialize swapchain after VK_ERROR_OUT_OF_DATE_KHR signal!");
 			continue;
 		default:
 			vk::die_with_error(status);
@@ -585,12 +643,128 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::framebuffer_holder* direct_fbo = nullptr;
 	rsx::simple_array<vk::viewable_image*> calibration_src;
 
+	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
+	const bool user_is_recording = (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame());
+	const bool need_media_capture = user_asked_for_screenshot || user_is_recording;
+
+	const auto render_overlays = [&](vk::framebuffer_holder* fbo, const areau& area)
+	{
+		if (!has_overlay) return;
+
+		// Lock to avoid modification during run-update chain
+		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
+		std::lock_guard lock(*m_overlay_manager);
+
+		for (const auto& view : m_overlay_manager->get_views())
+		{
+			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+		}
+	};
+
+	// WARNING: We have to do this here. We cannot touch the acquired image on the CB and then do a hard sync on it before it is submitted to the presentation engine.
+	// That introduces a WRITE_AFTER_PRESENT (from the previous present) when we later try to present on a different CB
+	if (image_to_flip && need_media_capture)
+	{
+		const usz sshot_size = buffer_height * buffer_width * 4;
+
+		vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+
+		VkBufferImageCopy copy_info{};
+		copy_info.bufferOffset = 0;
+		copy_info.bufferRowLength = 0;
+		copy_info.bufferImageHeight = 0;
+		copy_info.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy_info.imageSubresource.baseArrayLayer = 0;
+		copy_info.imageSubresource.layerCount = 1;
+		copy_info.imageSubresource.mipLevel = 0;
+		copy_info.imageOffset.x = 0;
+		copy_info.imageOffset.y = 0;
+		copy_info.imageOffset.z = 0;
+		copy_info.imageExtent.width = buffer_width;
+		copy_info.imageExtent.height = buffer_height;
+		copy_info.imageExtent.depth = 1;
+
+		vk::image* image_to_copy = image_to_flip;
+
+		if (g_cfg.video.record_with_overlays && has_overlay)
+		{
+			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+			single_target_pass = vk::get_renderpass(*m_device, key);
+			ensure(single_target_pass != VK_NULL_HANDLE);
+
+			if (!m_overlay_recording_img ||
+				m_overlay_recording_img->type() != image_to_flip->type() ||
+				m_overlay_recording_img->format() != image_to_flip->format() ||
+				m_overlay_recording_img->width() != image_to_flip->width() ||
+				m_overlay_recording_img->height() != image_to_flip->height() ||
+				m_overlay_recording_img->layers() != image_to_flip->layers())
+			{
+				m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+					0, VMM_ALLOCATION_POOL_UNDEFINED);
+			}
+
+			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+			const areai rect = areai(0, 0, buffer_width, buffer_height);
+			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect, 1);
+
+			image_to_flip->pop_layout(*m_current_command_buffer);
+			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { m_overlay_recording_img.get() });
+			sshot_fbo->add_ref();
+			render_overlays(sshot_fbo, areau(rect));
+			sshot_fbo->release();
+
+			image_to_copy = m_overlay_recording_img.get();
+		}
+
+		image_to_copy->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vk::copy_image_to_buffer(*m_current_command_buffer, image_to_copy, &sshot_vkbuf, copy_info);
+		image_to_copy->pop_layout(*m_current_command_buffer);
+
+		flush_command_queue(true);
+		const auto src = sshot_vkbuf.map(0, sshot_size);
+		std::vector<u8> sshot_frame(sshot_size);
+		memcpy(sshot_frame.data(), src, sshot_size);
+		sshot_vkbuf.unmap();
+
+		const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
+
+		if (user_asked_for_screenshot)
+		{
+			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
+		}
+		else
+		{
+			m_frame->present_frame(std::move(sshot_frame), buffer_width * 4, buffer_width, buffer_height, is_bgra);
+		}
+	}
+
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
 		VkClearColorValue clear_black {};
 		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		// Prevent WAW on transfer writes
+		vk::insert_image_memory_barrier(
+			*m_current_command_buffer,
+			target_image,
+			target_layout,
+			target_layout,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			subresource_range
+		);
 
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
@@ -614,21 +788,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_upscaler = std::make_unique<vk::bilinear_upscale_pass>();
 		}
 	}
-
-	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
-	const auto render_overlays = [&](vk::framebuffer_holder* fbo, const areau& area)
-	{
-		if (!has_overlay) return;
-
-		// Lock to avoid modification during run-update chain
-		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-		std::lock_guard lock(*m_overlay_manager);
-
-		for (const auto& view : m_overlay_manager->get_views())
-		{
-			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
-		}
-	};
 
 	if (image_to_flip)
 	{
@@ -693,90 +852,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
-
-		const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
-
-		if (user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
-		{
-			const usz sshot_size = buffer_height * buffer_width * 4;
-
-			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
-
-			VkBufferImageCopy copy_info {};
-			copy_info.bufferOffset                    = 0;
-			copy_info.bufferRowLength                 = 0;
-			copy_info.bufferImageHeight               = 0;
-			copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-			copy_info.imageSubresource.baseArrayLayer = 0;
-			copy_info.imageSubresource.layerCount     = 1;
-			copy_info.imageSubresource.mipLevel       = 0;
-			copy_info.imageOffset.x                   = 0;
-			copy_info.imageOffset.y                   = 0;
-			copy_info.imageOffset.z                   = 0;
-			copy_info.imageExtent.width               = buffer_width;
-			copy_info.imageExtent.height              = buffer_height;
-			copy_info.imageExtent.depth               = 1;
-
-			vk::image* image_to_copy = image_to_flip;
-
-			if (g_cfg.video.record_with_overlays && has_overlay)
-			{
-				const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-				single_target_pass = vk::get_renderpass(*m_device, key);
-				ensure(single_target_pass != VK_NULL_HANDLE);
-
-				if (!m_overlay_recording_img ||
-					m_overlay_recording_img->type() != image_to_flip->type() ||
-					m_overlay_recording_img->format() != image_to_flip->format() ||
-					m_overlay_recording_img->width() != image_to_flip->width() ||
-					m_overlay_recording_img->height() != image_to_flip->height() ||
-					m_overlay_recording_img->layers() != image_to_flip->layers())
-				{
-					m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-						image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT,
-						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-						0, VMM_ALLOCATION_POOL_UNDEFINED);
-				}
-
-				m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-				const areai rect = areai(0, 0, buffer_width, buffer_height);
-				vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect, 1);
-
-				image_to_flip->pop_layout(*m_current_command_buffer);
-				m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
-				vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { m_overlay_recording_img.get() });
-				sshot_fbo->add_ref();
-				render_overlays(sshot_fbo, areau(rect));
-				sshot_fbo->release();
-
-				image_to_copy = m_overlay_recording_img.get();
-			}
-
-			image_to_copy->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			vk::copy_image_to_buffer(*m_current_command_buffer, image_to_copy, &sshot_vkbuf, copy_info);
-			image_to_copy->pop_layout(*m_current_command_buffer);
-
-			flush_command_queue(true);
-			const auto src = sshot_vkbuf.map(0, sshot_size);
-			std::vector<u8> sshot_frame(sshot_size);
-			memcpy(sshot_frame.data(), src, sshot_size);
-			sshot_vkbuf.unmap();
-
-			const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
-
-			if (user_asked_for_screenshot)
-			{
-				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
-			}
-			else
-			{
-				m_frame->present_frame(std::move(sshot_frame), buffer_width * 4, buffer_width, buffer_height, is_bgra);
-			}
-		}
 	}
 
 	if (g_cfg.video.debug_overlay || has_overlay)
@@ -790,7 +865,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			barrier.oldLayout = target_layout;
 			barrier.image = target_image;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.subresourceRange = subresource_range;

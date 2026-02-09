@@ -293,7 +293,7 @@ namespace rpcn
 		ErrorType send_reset_token(std::string_view npid, std::string_view email);
 		ErrorType reset_password(std::string_view npid, std::string_view token, std::string_view password);
 		ErrorType delete_account();
-		bool add_friend(const std::string& friend_username);
+		std::optional<ErrorType> add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
 		u32 get_num_friends();
@@ -329,6 +329,7 @@ namespace rpcn
 		bool leave_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveRoomRequest* req);
 		bool search_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SearchRoomRequest* req);
 		bool get_roomdata_external_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataExternalListRequest* req);
+		bool get_room_member_data_external_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req);
 		bool get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req);
 		bool set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req);

@@ -134,7 +134,7 @@ jobs:
     runs-on: macos-14
     env:
       CCACHE_DIR: /tmp/ccache_dir
-      QT_VER: '6.10.1'
+      QT_VER: '6.10.2'
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '21'
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
@@ -213,9 +213,9 @@ jobs:
     env:
       COMPILER: msvc
       QT_VER_MAIN: '6'
-      QT_VER: '6.10.1'
+      QT_VER: '6.10.2'
       QT_VER_MSVC: 'msvc2022'
-      QT_DATE: '202511161843'
+      QT_DATE: '202601261212'
       LLVM_VER: '19.1.7'
       VULKAN_VER: '1.3.268.0'
       VULKAN_SDK_SHA: '8459ef49bd06b697115ddd3d97c9aec729e849cd775f5be70897718a9b3b9db5'

@@ -1,4 +1,3 @@
-
 // Protocol Buffers definition for np2_structs
 
 syntax = "proto3";
@@ -16,71 +15,61 @@ message uint16 {
   uint32 value = 1;
 }
 
-// SignalingAddr
+
 message SignalingAddr {
   bytes ip = 1;
   uint16 port = 2;
 }
 
-// MatchingSignalingInfo
 message MatchingSignalingInfo {
   string npid = 1;
   SignalingAddr addr = 2;
 }
 
-// Matching2SignalingInfo
 message Matching2SignalingInfo {
   uint16 member_id = 1;
   SignalingAddr addr = 2;
 }
 
-// BinAttr
 message BinAttr {
   uint16 id = 1;
   bytes data = 2;
 }
 
-// IntAttr
 message IntAttr {
   uint16 id = 1;
   uint32 num = 2;
 }
 
-// RoomMemberBinAttrInternal
 message RoomMemberBinAttrInternal {
   uint64 updateDate = 1;
   BinAttr data = 2;
 }
 
-// BinAttrInternal
 message BinAttrInternal {
   uint64 updateDate = 1;
   uint16 updateMemberId = 2;
   BinAttr data = 3;
 }
 
-// OptParam
 message OptParam {
   uint8 type = 1;
   uint8 flag = 2;
   uint16 hubMemberId = 3;
 }
 
-// GroupConfig
 message GroupConfig {
   uint32 slotNum = 1;
   bytes label = 2;
   bool withPassword = 3;
 }
 
-// UserInfo
 message UserInfo {
   string npId = 1;
   string onlineName = 2;
   string avatarUrl = 3;
 }
 
-// RoomMemberDataInternal
 message RoomMemberDataInternal {
   UserInfo userInfo = 1;
   uint64 joinDate = 2;
@@ -92,7 +81,6 @@ message RoomMemberDataInternal {
   repeated RoomMemberBinAttrInternal roomMemberBinAttrInternal = 8;
 }
 
-// RoomGroup
 message RoomGroup {
   uint8 groupId = 1;
   bool withPassword = 2;
@@ -101,7 +89,6 @@ message RoomGroup {
   uint32 curGroupMemberNum = 5;
 }
 
-// RoomDataInternal
 message RoomDataInternal {
   uint16 serverId = 1;
   uint32 worldId = 2;
@@ -116,7 +103,6 @@ message RoomDataInternal {
   repeated BinAttrInternal roomBinAttrInternal = 11;
 }
 
-// RoomDataExternal
 message RoomDataExternal {
   uint16 serverId = 1;
   uint32 worldId = 2;
@@ -137,31 +123,26 @@ message RoomDataExternal {
   repeated BinAttr roomBinAttrExternal = 17;
 }
 
-// IntSearchFilter
 message IntSearchFilter {
   uint8 searchOperator = 1;
   IntAttr attr = 2;
 }
 
-// BinSearchFilter
 message BinSearchFilter {
   uint8 searchOperator = 1;
   BinAttr attr = 2;
 }
 
-// PresenceOptionData
 message PresenceOptionData {
   bytes data = 1;
   uint32 len = 2;
 }
 
-// RoomGroupPasswordConfig
 message RoomGroupPasswordConfig {
   uint8 groupId = 1;
   bool withPassword = 2;
 }
 
-// SearchRoomRequest
 message SearchRoomRequest {
   int32 option = 1;
   uint32 worldId = 2;
@@ -175,14 +156,12 @@ message SearchRoomRequest {
   repeated uint16 attrId = 10;
 }
 
-// SearchRoomResponse
 message SearchRoomResponse {
   uint32 startIndex = 1;
   uint32 total = 2;
   repeated RoomDataExternal rooms = 3;
 }
 
-// CreateJoinRoomRequest
 message CreateJoinRoomRequest {
   uint32 worldId = 1;
   uint64 lobbyId = 2;
@@ -203,7 +182,12 @@ message CreateJoinRoomRequest {
   OptParam sigOptParam = 17;
 }
 
-// JoinRoomRequest
+// Reply on creating a room
+message CreateRoomResponse {
+  RoomDataInternal internal = 1;
+  OptParam opt_param = 2;
+}
+
 message JoinRoomRequest {
   uint64 roomId = 1;
   bytes roomPassword = 2;
@@ -213,30 +197,26 @@ message JoinRoomRequest {
   uint8 teamId = 6;
 }
 
-// JoinRoomResponse
 message JoinRoomResponse {
   RoomDataInternal room_data = 1;
   repeated Matching2SignalingInfo signaling_data = 2;
+  OptParam opt_param = 3;
 }
 
-// LeaveRoomRequest
 message LeaveRoomRequest {
   uint64 roomId = 1;
   PresenceOptionData optData = 2;
 }
 
-// GetRoomDataExternalListRequest
 message GetRoomDataExternalListRequest {
   repeated uint64 roomIds = 1;
   repeated uint16 attrIds = 2;
 }
 
-// GetRoomDataExternalListResponse
 message GetRoomDataExternalListResponse {
   repeated RoomDataExternal rooms = 1;
 }
 
-// SetRoomDataExternalRequest
 message SetRoomDataExternalRequest {
   uint64 roomId = 1;
   repeated IntAttr roomSearchableIntAttrExternal = 2;
@@ -244,7 +224,6 @@ message SetRoomDataExternalRequest {
   repeated BinAttr roomBinAttrExternal = 4;
 }
 
-// SetRoomDataInternalRequest
 message SetRoomDataInternalRequest {
   uint64 roomId = 1;
   uint32 flagFilter = 2;
@@ -255,14 +234,12 @@ message SetRoomDataInternalRequest {
   repeated uint16 ownerPrivilegeRank = 7;
 }
 
-// GetRoomMemberDataInternalRequest
 message GetRoomMemberDataInternalRequest {
   uint64 roomId = 1;
   uint16 memberId = 2;
   repeated uint16 attrId = 3;
 }
 
-// SetRoomMemberDataInternalRequest
 message SetRoomMemberDataInternalRequest {
   uint64 roomId = 1;
   uint16 memberId = 2;
@@ -270,40 +247,34 @@ message SetRoomMemberDataInternalRequest {
   repeated BinAttr roomMemberBinAttrInternal = 4;
 }
 
-// SetUserInfo
 message SetUserInfo {
   uint16 serverId = 1;
   repeated BinAttr userBinAttr = 2;
 }
 
-// GetRoomDataInternalRequest
 message GetRoomDataInternalRequest {
   uint64 roomId = 1;
   repeated uint16 attrId = 2;
 }
 
-// RoomMemberUpdateInfo
 message RoomMemberUpdateInfo {
   RoomMemberDataInternal roomMemberDataInternal = 1;
   uint8 eventCause = 2;
   PresenceOptionData optData = 3;
 }
 
-// NotificationUserJoinedRoom
 message NotificationUserJoinedRoom {
   uint64 room_id = 1;
   RoomMemberUpdateInfo update_info = 2;
   SignalingAddr signaling = 3;
 }
 
-// RoomUpdateInfo
 message RoomUpdateInfo {
   uint8 eventCause = 1;
   int32 errorCode = 2;
   PresenceOptionData optData = 3;
 }
 
-// RoomDataInternalUpdateInfo
 message RoomDataInternalUpdateInfo {
   RoomDataInternal newRoomDataInternal = 1;
   uint32 prevFlagAttr = 2;
@@ -312,7 +283,6 @@ message RoomDataInternalUpdateInfo {
   repeated uint16 newRoomBinAttrInternal = 5;
 }
 
-// RoomMemberDataInternalUpdateInfo
 message RoomMemberDataInternalUpdateInfo {
   RoomMemberDataInternal newRoomMemberDataInternal = 1;
   uint32 prevFlagAttr = 2;
@@ -320,7 +290,6 @@ message RoomMemberDataInternalUpdateInfo {
   repeated uint16 newRoomMemberBinAttrInternal = 4;
 }
 
-// GetPingInfoResponse
 message GetPingInfoResponse {
   uint16 serverId = 1;
   uint32 worldId = 2;
@@ -328,7 +297,6 @@ message GetPingInfoResponse {
   uint32 rtt = 4;
 }
 
-// SendRoomMessageRequest
 message SendRoomMessageRequest {
   uint64 roomId = 1;
   uint8 castType = 2;
@@ -337,7 +305,6 @@ message SendRoomMessageRequest {
   uint8 option = 5;
 }
 
-// RoomMessageInfo
 message RoomMessageInfo {
   bool filtered = 1;
   uint8 castType = 2;
@@ -346,7 +313,6 @@ message RoomMessageInfo {
   bytes msg = 5;
 }
 
-// MessageDetails
 message MessageDetails {
   string communicationId = 1;
   uint64 msgId = 2;
@@ -358,13 +324,11 @@ message MessageDetails {
   bytes data = 8;
 }
 
-// SendMessageRequest
 message SendMessageRequest {
   bytes message = 1;
   repeated string npids = 2;
 }
 
-// BoardInfo
 message BoardInfo {
   uint32 rankLimit = 1;
   uint32 updateMode = 2;
@@ -373,7 +337,6 @@ message BoardInfo {
   uint32 uploadSizeLimit = 5;
 }
 
-// RecordScoreRequest
 message RecordScoreRequest {
   uint32 boardId = 1;
   int32 pcId = 2;
@@ -382,7 +345,6 @@ message RecordScoreRequest {
   bytes data = 5;
 }
 
-// GetScoreRangeRequest
 message GetScoreRangeRequest {
   uint32 boardId = 1;
   uint32 startRank = 2;
@@ -391,13 +353,11 @@ message GetScoreRangeRequest {
   bool withGameInfo = 5;
 }
 
-// ScoreNpIdPcId
 message ScoreNpIdPcId {
   string npid = 1;
   int32 pcId = 2;
 }
 
-// GetScoreNpIdRequest
 message GetScoreNpIdRequest {
   uint32 boardId = 1;
   repeated ScoreNpIdPcId npids = 2;
@@ -405,7 +365,6 @@ message GetScoreNpIdRequest {
   bool withGameInfo = 4;
 }
 
-// GetScoreFriendsRequest
 message GetScoreFriendsRequest {
   uint32 boardId = 1;
   bool include_self = 2;
@@ -414,7 +373,6 @@ message GetScoreFriendsRequest {
   bool withGameInfo = 5;
 }
 
-// ScoreRankData
 message ScoreRankData {
   string npId = 1;
   string onlineName = 2;
@@ -425,12 +383,10 @@ message ScoreRankData {
   uint64 recordDate = 7;
 }
 
-// ScoreInfo
 message ScoreInfo {
   bytes data = 1;
 }
 
-// GetScoreResponse
 message GetScoreResponse {
   repeated ScoreRankData rankArray = 1;
   repeated string commentArray = 2;
@@ -439,27 +395,23 @@ message GetScoreResponse {
   uint32 totalRecord = 5;
 }
 
-// RecordScoreGameDataRequest
 message RecordScoreGameDataRequest {
   uint32 boardId = 1;
   int32 pcId = 2;
   int64 score = 3;
 }
 
-// GetScoreGameDataRequest
 message GetScoreGameDataRequest {
   uint32 boardId = 1;
   string npId = 2;
   int32 pcId = 3;
 }
 
-// TusUser
 message TusUser {
   bool vuser = 1;
   string npid = 2;
 }
 
-// TusVariable
 message TusVariable {
   string ownerId = 1;
   bool hasData = 2;
@@ -469,31 +421,26 @@ message TusVariable {
   int64 oldVariable = 6;
 }
 
-// TusVarResponse
 message TusVarResponse {
   repeated TusVariable vars = 1;
 }
 
-// TusSetMultiSlotVariableRequest
 message TusSetMultiSlotVariableRequest {
   TusUser user = 1;
   repeated int32 slotIdArray = 2;
   repeated int64 variableArray = 3;
 }
 
-// TusGetMultiSlotVariableRequest
 message TusGetMultiSlotVariableRequest {
   TusUser user = 1;
   repeated int32 slotIdArray = 2;
 }
 
-// TusGetMultiUserVariableRequest
 message TusGetMultiUserVariableRequest {
   repeated TusUser users = 1;
   int32 slotId = 2;
 }
 
-// TusGetFriendsVariableRequest
 message TusGetFriendsVariableRequest {
   int32 slotId = 1;
   bool includeSelf = 2;
@@ -501,7 +448,6 @@ message TusGetFriendsVariableRequest {
   uint32 arrayNum = 4;
 }
 
-// TusAddAndGetVariableRequest
 message TusAddAndGetVariableRequest {
   TusUser user = 1;
   int32 slotId = 2;
@@ -510,7 +456,6 @@ message TusAddAndGetVariableRequest {
   string isLastChangedAuthorId = 5;
 }
 
-// TusTryAndSetVariableRequest
 message TusTryAndSetVariableRequest {
   TusUser user = 1;
   int32 slotId = 2;
@@ -521,13 +466,11 @@ message TusTryAndSetVariableRequest {
   repeated int64 compareValue = 7;
 }
 
-// TusDeleteMultiSlotVariableRequest
 message TusDeleteMultiSlotVariableRequest {
   TusUser user = 1;
   repeated int32 slotIdArray = 2;
 }
 
-// TusSetDataRequest
 message TusSetDataRequest {
   TusUser user = 1;
   int32 slotId = 2;
@@ -537,7 +480,6 @@ message TusSetDataRequest {
   string isLastChangedAuthorId = 6;
 }
 
-// TusDataStatus
 message TusDataStatus {
   string ownerId = 1;
   bool hasData = 2;
@@ -546,36 +488,30 @@ message TusDataStatus {
   bytes info = 5;
 }
 
-// TusData
 message TusData {
   TusDataStatus status = 1;
   bytes data = 2;
 }
 
-// TusDataStatusResponse
 message TusDataStatusResponse {
   repeated TusDataStatus status = 1;
 }
 
-// TusGetDataRequest
 message TusGetDataRequest {
   TusUser user = 1;
   int32 slotId = 2;
 }
 
-// TusGetMultiSlotDataStatusRequest
 message TusGetMultiSlotDataStatusRequest {
   TusUser user = 1;
   repeated int32 slotIdArray = 2;
 }
 
-// TusGetMultiUserDataStatusRequest
 message TusGetMultiUserDataStatusRequest {
   repeated TusUser users = 1;
   int32 slotId = 2;
 }
 
-// TusGetFriendsDataStatusRequest
 message TusGetFriendsDataStatusRequest {
   int32 slotId = 1;
   bool includeSelf = 2;
@@ -583,13 +519,11 @@ message TusGetFriendsDataStatusRequest {
   uint32 arrayNum = 4;
 }
 
-// TusDeleteMultiSlotDataRequest
 message TusDeleteMultiSlotDataRequest {
   TusUser user = 1;
   repeated int32 slotIdArray = 2;
 }
 
-// SetPresenceRequest
 message SetPresenceRequest {
   string title = 1;
   string status = 2;
@@ -597,7 +531,6 @@ message SetPresenceRequest {
   bytes data = 4;
 }
 
-// MatchingSearchCondition
 message MatchingSearchCondition {
   uint32 attr_type = 1;
   uint32 attr_id = 2;
@@ -605,7 +538,6 @@ message MatchingSearchCondition {
   uint32 comp_value = 4;
 }
 
-// MatchingAttr
 message MatchingAttr {
   uint32 attr_type = 1;
   uint32 attr_id = 2;
@@ -613,7 +545,6 @@ message MatchingAttr {
   bytes data = 4;
 }
 
-// CreateRoomGUIRequest
 message CreateRoomGUIRequest {
   uint32 total_slots = 1;
   uint32 private_slots = 2;
@@ -622,13 +553,11 @@ message CreateRoomGUIRequest {
   repeated MatchingAttr game_attrs = 5;
 }
 
-// GUIUserInfo
 message GUIUserInfo {
   UserInfo info = 1;
   bool owner = 2;
 }
 
-// MatchingRoomStatus
 message MatchingRoomStatus {
   bytes id = 1;
   repeated GUIUserInfo members = 2;
@@ -636,7 +565,6 @@ message MatchingRoomStatus {
   bytes opt = 4;
 }
 
-// GetRoomListGUIRequest
 message GetRoomListGUIRequest {
   uint32 range_start = 1;
   uint32 range_max = 2;
@@ -644,44 +572,48 @@ message GetRoomListGUIRequest {
   repeated MatchingAttr attrs = 4;
 }
 
-// MatchingRoom
 message MatchingRoom {
   bytes id = 1;
   repeated MatchingAttr attr = 2;
 }
 
-// MatchingRoomList
 message MatchingRoomList {
   uint32 start = 1;
   uint32 total = 2;
   repeated MatchingRoom rooms = 3;
 }
 
-// MatchingGuiRoomId
 message MatchingGuiRoomId {
   bytes id = 1;
 }
 
-// SetRoomSearchFlagGUI
 message SetRoomSearchFlagGUI {
   bytes roomid = 1;
   bool stealth = 2;
 }
 
-// QuickMatchGUIRequest
 message QuickMatchGUIRequest {
   repeated MatchingSearchCondition conds = 1;
   uint32 available_num = 2;
 }
 
-// SearchJoinRoomGUIRequest
 message SearchJoinRoomGUIRequest {
   repeated MatchingSearchCondition conds = 1;
   repeated MatchingAttr attrs = 2;
 }
 
-// MatchingSearchJoinRoomInfo
 message MatchingSearchJoinRoomInfo {
   MatchingRoomStatus room = 1;
   repeated MatchingAttr attr = 2;
+}
+
+message RoomMemberDataExternal {
+  UserInfo userInfo = 1;
+  uint64 joinDate = 2;
+  uint8 role = 3;
+}
+
+message GetRoomMemberDataExternalListResponse
+{
+  repeated RoomMemberDataExternal members = 1;
 }

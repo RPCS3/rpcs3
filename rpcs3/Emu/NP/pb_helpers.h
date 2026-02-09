@@ -16,8 +16,10 @@ namespace np
 	void UserInfo_to_SceNpUserInfo(const np2_structs::UserInfo& user, SceNpUserInfo* user_info);
 	void UserInfo_to_SceNpUserInfo2(event_data& edata, const np2_structs::UserInfo& user, SceNpUserInfo2* user_info, bool include_onlinename, bool include_avatarurl);
 	void RoomDataExternal_to_SceNpMatching2RoomDataExternal(event_data& edata, const np2_structs::RoomDataExternal& room, SceNpMatching2RoomDataExternal* room_info, bool include_onlinename, bool include_avatarurl);
+	void RoomMemberDataExternal_to_SceNpMatching2RoomMemberDataExternal(event_data& edata, const np2_structs::RoomMemberDataExternal& member, SceNpMatching2RoomMemberDataExternal* member_info, bool include_onlinename, bool include_avatarurl);
 	void SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(event_data& edata, const np2_structs::SearchRoomResponse& resp, SceNpMatching2SearchRoomResponse* search_resp);
 	void GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(event_data& edata, const np2_structs::GetRoomDataExternalListResponse& resp, SceNpMatching2GetRoomDataExternalListResponse* get_resp, bool include_onlinename, bool include_avatarurl);
+	void GetRoomMemberDataExternalListResponse_to_SceNpMatching2GetRoomMemberDataExternalListResponse(event_data& edata, const np2_structs::GetRoomMemberDataExternalListResponse& resp, SceNpMatching2GetRoomMemberDataExternalListResponse* get_resp, bool include_onlinename, bool include_avatarurl);
 	u16 RoomDataInternal_to_SceNpMatching2RoomDataInternal(event_data& edata, const np2_structs::RoomDataInternal& resp, SceNpMatching2RoomDataInternal* room_resp, const SceNpId& npid, bool include_onlinename, bool include_avatarurl);
 	void RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(event_data& edata, const np2_structs::RoomMemberDataInternal& member_data, const SceNpMatching2RoomDataInternal* room_info, SceNpMatching2RoomMemberDataInternal* sce_member_data, bool include_onlinename, bool include_avatarurl);
 	void RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(event_data& edata, const np2_structs::RoomMemberUpdateInfo& resp, SceNpMatching2RoomMemberUpdateInfo* room_info, bool include_onlinename, bool include_avatarurl);
@@ -32,4 +34,5 @@ namespace np
 	void MatchingRoomList_to_SceNpMatchingRoomList(event_data& edata, const np2_structs::MatchingRoomList& resp, SceNpMatchingRoomList* room_list);
 	void MatchingSearchJoinRoomInfo_to_SceNpMatchingSearchJoinRoomInfo(event_data& edata, const np2_structs::MatchingSearchJoinRoomInfo& resp, SceNpMatchingSearchJoinRoomInfo* room_info);
 	void MatchingAttr_to_SceNpMatchingAttr(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::MatchingAttr>& attr_list, vm::bptr<SceNpMatchingAttr>& first_attr);
+	void OptParam_to_SceNpMatching2SignalingOptParam(const np2_structs::OptParam& resp, SceNpMatching2SignalingOptParam* opt_param);
 } // namespace np

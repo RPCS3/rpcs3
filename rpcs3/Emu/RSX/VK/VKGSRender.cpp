@@ -505,9 +505,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		m_occlusion_query_manager->set_control_flags(VK_QUERY_CONTROL_PRECISE_BIT, 0);
 	}
 
-	VkSemaphoreCreateInfo semaphore_info = {};
-	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
 	// VRAM allocation
 	// This first set is bound persistently, so grow notifications are enabled.
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
@@ -570,10 +567,13 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
 	}
 
-	for (auto &ctx : frame_context_storage)
+	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_frame_context_storage.resize(m_max_async_frames);
+	m_current_frame = &m_frame_context_storage[0];
+
+	for (auto& ctx : m_frame_context_storage)
 	{
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
+		ctx.init(*m_device);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -611,8 +611,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 
 	}
-
-	m_current_frame = &frame_context_storage[0];
 
 	m_texture_cache.initialize((*m_device), m_device->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
@@ -830,16 +828,17 @@ VKGSRender::~VKGSRender()
 	if (m_current_frame == &m_aux_frame_context)
 	{
 		// Return resources back to the owner
-		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame = &m_frame_context_storage[m_current_queue_index];
 		m_current_frame->grab_resources(m_aux_frame_context);
 	}
 
-	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
-	for (auto &ctx : frame_context_storage)
+	// CPU frame contexts
+	for (auto &ctx : m_frame_context_storage)
 	{
-		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
-		vkDestroySemaphore((*m_device), ctx.acquire_signal_semaphore, nullptr);
+		ctx.destroy(*m_device);
 	}
+	m_current_frame = nullptr;
+	m_frame_context_storage.clear();
 
 	// Textures
 	m_rtts.destroy();
@@ -1542,7 +1541,7 @@ std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data(
 	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value };
 }
 
-bool VKGSRender::release_GCM_label(u32 address, u32 args)
+bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
 	if (!backend_config.supports_host_gpu_labels)
 	{
@@ -1551,7 +1550,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 
-	if (host_ctx->texture_loads_completed())
+	if (type == NV4097_TEXTURE_READ_SEMAPHORE_RELEASE && host_ctx->texture_loads_completed())
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
@@ -1573,13 +1572,10 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	const auto release_event_id = host_ctx->on_label_acquire();
 
+	vk::insert_global_memory_barrier(*m_current_command_buffer);
+
 	if (host_ctx->has_unflushed_texture_loads())
 	{
-		if (vk::is_renderpass_open(*m_current_command_buffer))
-		{
-			vk::end_renderpass(*m_current_command_buffer);
-		}
-
 		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
 		flush_command_queue();
 	}

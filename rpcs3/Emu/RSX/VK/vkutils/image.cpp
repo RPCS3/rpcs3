@@ -207,6 +207,11 @@ namespace vk
 		return m_format_class;
 	}
 
+	std::string image::debug_name() const
+	{
+		return m_debug_name;
+	}
+
 	void image::push_layout(const command_buffer& cmd, VkImageLayout layout)
 	{
 		ensure(current_queue_family == VK_QUEUE_FAMILY_IGNORED || current_queue_family == cmd.get_queue_family());
@@ -304,6 +309,8 @@ namespace vk
 
 			_vkSetDebugUtilsObjectNameEXT(m_device, &name_info);
 		}
+
+		m_debug_name = name;
 	}
 
 	image_view::image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)
@@ -405,6 +412,14 @@ namespace vk
 		// Restore requested mapping
 		info.components = mapping;
 #endif
+
+		if (m_resource)
+		{
+			if (const auto name = m_resource->debug_name(); !name.empty())
+			{
+				set_debug_name(fmt::format("%p (%p) %s", value, m_resource->value, name));
+			}
+		}
 	}
 
 	viewable_image* viewable_image::clone()
@@ -486,6 +501,20 @@ namespace vk
 				gc->dispose(p.second);
 			}
 			views.clear();
+		}
+	}
+
+	void image_view::set_debug_name(std::string_view name)
+	{
+		if (g_render_device->get_debug_utils_support())
+		{
+			VkDebugUtilsObjectNameInfoEXT name_info{};
+			name_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+			name_info.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
+			name_info.objectHandle = reinterpret_cast<u64>(value);
+			name_info.pObjectName = name.data();
+
+			_vkSetDebugUtilsObjectNameEXT(m_device, &name_info);
 		}
 	}
 }

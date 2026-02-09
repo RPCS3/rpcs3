@@ -185,8 +185,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
-	QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Disable IPv6"));
-	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
+	// QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Enable IPv6(Experimental)"));
+	// checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Checked : Qt::Unchecked);
 
 	const auto update_npid_label = [label_npid]()
 	{
@@ -206,7 +206,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_buttons->setLayout(vbox_buttons);
 
 	vbox_global->addWidget(grp_buttons);
-	vbox_global->addWidget(checkbox_disable_ipv6);
+	// vbox_global->addWidget(checkbox_disable_ipv6);
 
 	setLayout(vbox_global);
 
@@ -359,11 +359,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
 
-	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
-	{
-		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
-		g_cfg_rpcn.save();
-	});
+	// connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
+	// {
+	// 	g_cfg_rpcn.set_ipv6_support(state == Qt::Checked);
+	// 	g_cfg_rpcn.save();
+	// });
 }
 
 void rpcn_account_dialog::refresh_combobox()
@@ -1262,13 +1262,10 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
-					if (!m_rpcn->add_friend(str_sel_friend))
-					{
-						QMessageBox::critical(this, tr("Error adding a friend!"), tr("An error occurred while trying to add a friend!"), QMessageBox::Ok);
-					}
-					else
+					if (add_friend_with_error_dialog(str_sel_friend))
 					{
 						QMessageBox::information(this, tr("Friend added!"), tr("You've successfully added a friend!"), QMessageBox::Ok);
+						return;
 					}
 				});
 
@@ -1304,11 +1301,8 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 			connect(send_friend_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
-					if (!m_rpcn->add_friend(str_sel_friend))
-					{
-						QMessageBox::critical(this, tr("Error sending a friend request!"), tr("An error occurred while trying to send a friend request!"), QMessageBox::Ok);
+					if (!add_friend_with_error_dialog(str_sel_friend))
 						return;
-					}
 
 					QString qstr_friend = QString::fromStdString(str_sel_friend);
 					add_update_list(m_lst_requests, qstr_friend, m_icon_request_sent, QVariant(false));
@@ -1341,11 +1335,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				QMessageBox::critical(this, tr("Error validating username!"), tr("The username you entered is invalid!"), QMessageBox::Ok);
 			}
 
-			if (!m_rpcn->add_friend(str_friend_username))
-			{
-				QMessageBox::critical(this, tr("Error adding friend!"), tr("An error occurred while adding a friend!"), QMessageBox::Ok);
-			}
-			else
+			if (add_friend_with_error_dialog(str_friend_username))
 			{
 				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_icon_request_sent, QVariant(false));
 				QMessageBox::information(this, tr("Friend added!"), tr("Friend was successfully added!"), QMessageBox::Ok);
@@ -1358,6 +1348,42 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 rpcn_friends_dialog::~rpcn_friends_dialog()
 {
 	m_rpcn->remove_friend_cb(friend_callback, this);
+}
+
+bool rpcn_friends_dialog::add_friend_with_error_dialog(const std::string& friend_username)
+{
+	QString err_msg;
+	const auto opt_error = m_rpcn->add_friend(friend_username);
+
+	if (opt_error.has_value())
+	{
+		const auto error = opt_error.value();
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			switch (error)
+			{
+			case rpcn::ErrorType::NotFound: err_msg = tr("The specified username does not exist."); break;
+			case rpcn::ErrorType::InvalidInput: err_msg = tr("You cannot add yourself as a friend."); break;
+			case rpcn::ErrorType::Blocked: err_msg = tr("You or the other user have the other blocked."); break;
+			case rpcn::ErrorType::AlreadyFriend: err_msg = tr("You are already friends with this user."); break;
+			case rpcn::ErrorType::DbFail: err_msg = tr("A database error occurred. Please try again later."); break;
+			default: err_msg = tr("An unexpected error occurred."); break;
+			}
+		}
+	}
+	else
+	{
+		err_msg = tr("Failed to send the friend request.");
+	}
+
+	if (!err_msg.isEmpty())
+	{
+		QMessageBox::critical(this, tr("Friend Request Failed"), err_msg, QMessageBox::Ok);
+		return false;
+	}
+
+	return true;
 }
 
 bool rpcn_friends_dialog::is_ok() const

@@ -159,8 +159,9 @@ private:
 	u64 m_texture_parameters_dynamic_offset = 0;
 	u64 m_stipple_array_dynamic_offset = 0;
 
-	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
-	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	std::vector<vk::frame_context_t> m_frame_context_storage;
+	u32 m_max_async_frames = 0u;
+	// Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	vk::frame_context_t m_aux_frame_context;
 
 	u32 m_current_queue_index = 0;
@@ -220,13 +221,14 @@ private:
 	void frame_context_cleanup(vk::frame_context_t *ctx);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
-	void reinitialize_swapchain();
+	bool reinitialize_swapchain();
 
 	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void begin_render_pass();
 	void close_render_pass();
 	VkRenderPass get_render_pass();
+	void invalidate_render_pass();
 
 	void update_draw_state();
 	void check_present_status();
@@ -252,7 +254,7 @@ public:
 	// Sync
 	void write_barrier(u32 address, u32 range) override;
 	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;

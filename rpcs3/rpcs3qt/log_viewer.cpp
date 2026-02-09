@@ -28,7 +28,8 @@ LOG_CHANNEL(gui_log, "GUI");
 log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
     : m_gui_settings(std::move(gui_settings))
 {
-	setWindowTitle(tr("Log Viewer"));
+	update_title();
+
 	setObjectName("log_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	setAttribute(Qt::WA_StyledBackground);
@@ -59,15 +60,33 @@ log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
 	connect(m_log_text, &QWidget::customContextMenuRequested, this, &log_viewer::show_context_menu);
 }
 
+void log_viewer::update_title()
+{
+	QString suffix;
+
+	if (!m_filter_term.isEmpty())
+	{
+		suffix = tr(" | Filter '%0'").arg(m_filter_term);
+	}
+
+	if (!m_exclude_term.isEmpty())
+	{
+		suffix += tr(" | Exclude '%0'").arg(m_exclude_term);
+	}
+
+	setWindowTitle(tr("Log Viewer%0").arg(suffix));
+}
+
 void log_viewer::show_context_menu(const QPoint& pos)
 {
 	QMenu menu;
-	QAction* clear  = new QAction(tr("&Clear"));
-	QAction* copy   = new QAction(tr("&Copy"));
-	QAction* open   = new QAction(tr("&Open log file"));
-	QAction* save   = new QAction(tr("&Save filtered log"));
-	QAction* filter = new QAction(tr("&Filter log"));
-	QAction* config = new QAction(tr("&Check config"));
+	QAction* clear   = new QAction(tr("&Clear"));
+	QAction* copy    = new QAction(tr("&Copy"));
+	QAction* open    = new QAction(tr("&Open log file"));
+	QAction* save    = new QAction(tr("&Save filtered log"));
+	QAction* filter  = new QAction(tr("&Filter log%0").arg(m_filter_term.isEmpty() ? "" : QString(" (%0)").arg(m_filter_term)));
+	QAction* exclude = new QAction(tr("&Exclude%0").arg(m_exclude_term.isEmpty() ? "" : QString(" (%0)").arg(m_exclude_term)));
+	QAction* config  = new QAction(tr("&Check config"));
 
 	QAction* timestamps = new QAction(tr("&Show Timestamps"));
 	timestamps->setCheckable(true);
@@ -91,7 +110,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QAction* trace_act = new QAction(tr("Trace"), log_level_acts);
 	log_level_acts->setExclusive(false);
 
-	auto init_action = [this](QAction* act, logs::level logLevel)
+	const auto init_action = [this](QAction* act, logs::level logLevel)
 	{
 		act->setCheckable(true);
 		act->setChecked(m_log_levels.test(static_cast<u32>(logLevel)));
@@ -120,6 +139,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addAction(open);
 	menu.addAction(config);
 	menu.addAction(filter);
+	menu.addAction(exclude);
 	menu.addAction(save);
 	menu.addSeparator();
 	menu.addAction(timestamps);
@@ -187,7 +207,22 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(filter, &QAction::triggered, this, [this]()
 	{
-		m_filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term);
+		bool ok = false;
+		QString filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term, &ok);
+		if (!ok) return;
+		m_filter_term = std::move(filter_term);
+		update_title();
+		filter_log();
+	});
+
+	connect(exclude, &QAction::triggered, this, [this]()
+	{
+		bool ok = false;
+		QString exclude_term = QInputDialog::getText(this, tr("Exclude"), tr("Enter text (comma separated)"), QLineEdit::EchoMode::Normal, m_exclude_term, &ok);
+		if (!ok) return;
+		m_exclude_term = std::move(exclude_term);
+		m_exclude_terms = m_exclude_term.split(',', Qt::SkipEmptyParts);
+		update_title();
 		filter_log();
 	});
 
@@ -309,7 +344,7 @@ void log_viewer::filter_log()
 	if (!m_log_levels.test(static_cast<u32>(logs::level::notice)))  excluded_log_levels.push_back("·! ");
 	if (!m_log_levels.test(static_cast<u32>(logs::level::trace)))   excluded_log_levels.push_back("·T ");
 
-	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_timestamps && m_show_threads && !m_last_actions_only)
+	if (m_filter_term.isEmpty() && m_exclude_terms.isEmpty() && excluded_log_levels.empty() && m_show_timestamps && m_show_threads && !m_last_actions_only)
 	{
 		set_text_and_keep_position(m_full_log);
 		return;
@@ -322,44 +357,49 @@ void log_viewer::filter_log()
 
 	const auto add_line = [this, &result, &excluded_log_levels, &timestamp_regexp, &thread_regexp](QString& line)
 	{
-		bool exclude_line = false;
-
-		for (const QString& log_level_prefix : excluded_log_levels)
+		if (!line.isEmpty())
 		{
-			if (line.startsWith(log_level_prefix))
+			for (QStringView log_level_prefix : excluded_log_levels)
 			{
-				exclude_line = true;
-				break;
+				if (line.startsWith(log_level_prefix))
+				{
+					return;
+				}
+			}
+
+			for (QStringView term : m_exclude_terms)
+			{
+				if (line.contains(term))
+				{
+					return;
+				}
 			}
 		}
 
-		if (exclude_line)
+		if (!m_filter_term.isEmpty() && !line.contains(m_filter_term))
 		{
 			return;
 		}
 
-		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
+		if (line.isEmpty())
 		{
-			if (line.isEmpty())
-			{
-				result += "\n";
-				return;
-			}
+			result += "\n";
+			return;
+		}
 
-			if (!m_show_timestamps)
-			{
-				line.remove(timestamp_regexp);
-			}
+		if (!m_show_timestamps)
+		{
+			line.remove(timestamp_regexp);
+		}
 
-			if (!m_show_threads)
-			{
-				line.remove(thread_regexp);
-			}
+		if (!m_show_threads)
+		{
+			line.remove(thread_regexp);
+		}
 
-			if (!line.isEmpty())
-			{
-				result += line + "\n";
-			}
+		if (!line.isEmpty())
+		{
+			result += line + "\n";
 		}
 	};
 
