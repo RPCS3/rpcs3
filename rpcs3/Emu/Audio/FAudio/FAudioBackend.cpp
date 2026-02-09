@@ -228,6 +228,8 @@ f64 FAudioBackend::GetCallbackFrameLen()
 		min_latency = static_cast<f64>(samples_per_q) / freq;
 	}
 
+	FAudio_.error("samples_per_q: %u, freq: %u, min_latency: %f", samples_per_q, freq, min_latency);
+
 	return std::max<f64>(min_latency, _10ms);
 }
 
