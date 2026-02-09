@@ -210,25 +210,29 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 	uvec4 mask;
 	vec4 convert;
 
-	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);
-	if (op_mask != 0u)
-	{
-		// Expand to signed normalized by decompressing the signal
-		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
-		convert = (rgba * 2.f - 1.f);
-		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
-	}
+	uint op_mask = control_bits & uint(SEXT_MASK);
+	uint ch_mask = 0xFu;
 
-	op_mask = control_bits & uint(SEXT_MASK);
 	if (op_mask != 0u)
 	{
 		// Sign-extend the input signal
 		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
 		convert = _sext_unorm8x4(rgba);
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+		ch_mask &= ~(op_mask >> SEXT_R_BIT);
 	}
 
-	op_mask = control_bits & uint(GAMMA_CTRL_MASK);
+	op_mask = control_bits & uint(SIGN_EXPAND_MASK) & (ch_mask << EXPAND_R_BIT);
+	if (op_mask != 0u)
+	{
+		// Expand to signed normalized by decompressing the signal
+		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
+		convert = (rgba * 2.f - 1.f);
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+		ch_mask &= ~(op_mask >> EXPAND_R_BIT);
+	}
+
+	op_mask = control_bits & uint(GAMMA_CTRL_MASK) & (ch_mask << GAMMA_R_BIT);
 	if (op_mask != 0u)
 	{
 		// Gamma correction
