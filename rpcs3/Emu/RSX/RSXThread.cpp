@@ -2361,6 +2361,8 @@ namespace rsx
 				argb8_convert |= (argb8_signed << texture_control_bits::SEXT_OFFSET);
 				argb8_convert |= (unsigned_remap << texture_control_bits::EXPAND_OFFSET);
 				texture_control |= argb8_convert;
+
+				texture_control |= format_features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 			}
 
 			current_fragment_program.texture_params[i].control = texture_control;

@@ -20,13 +20,30 @@ R"(
 #define SEXT_MASK        (SEXT_R_MASK | SEXT_G_MASK | SEXT_B_MASK | SEXT_A_MASK)
 #define FILTERED_MASK    (FILTERED_MAG_BIT | FILTERED_MIN_BIT)
 
+#define FORMAT_FEATURE_SIGNED                 (1 << FORMAT_FEATURE_SIGNED_BIT)
+#define FORMAT_FEATURE_GAMMA                  (1 << FORMAT_FEATURE_GAMMA_BIT)
+#define FORMAT_FEATURE_BIASED_RENORMALIZATION (1 << FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)
+#define FORMAT_FEATURE_MASK (FORMAT_FEATURE_SIGNED | FORMAT_FEATURE_GAMMA | FORMAT_FEATURE_BIASED_RENORMALIZATION)
+
 #ifdef _ENABLE_TEXTURE_EXPAND
+	// NOTE: BX2 expansion overrides GAMMA correction
 	uint _texture_flag_override = 0;
-	#define _enable_texture_expand() _texture_flag_override = SIGN_EXPAND_MASK
-	#define _disable_texture_expand() _texture_flag_override = 0
-	#define TEX_FLAGS(index) (TEX_PARAM(index).flags | _texture_flag_override)
+	uint _texture_flag_erase = 0;
+	#define _enable_texture_expand(index) \
+		do { \
+			if (_test_bit(TEX_PARAM(index).flags, FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)) { \
+				_texture_flag_override = SIGN_EXPAND_MASK; \
+				_texture_flag_erase = GAMMA_CTRL_MASK; \
+			} \
+		} while (false)
+	#define _disable_texture_expand() \
+		do { \
+			_texture_flag_override = 0; \
+			_texture_flag_erase = 0; \
+		} while (false)
+	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(FORMAT_FEATURE_MASK | _texture_flag_erase)) | _texture_flag_override)
 #else
-	#define TEX_FLAGS(index) TEX_PARAM(index).flags
+	#define TEX_FLAGS(index) (TEX_PARAM(index).flags & ~FORMAT_FEATURE_MASK)
 #endif
 
 #define TEX_NAME(index) tex##index
