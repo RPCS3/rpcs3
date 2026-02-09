@@ -2357,36 +2357,9 @@ namespace rsx
 				ensure((argb8_signed & unsigned_remap) == 0);
 				ensure((gamma & unsigned_remap) == 0);
 
-				// Helper function to apply a per-channel mask based on an input mask
-				const auto apply_sign_convert_mask = [&](u32 mask, u32 bit_offset)
-				{
-					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
-					// TODO: Replace this clusterfuck of texture control with matrix transformation
-					const auto remap_ctrl = (tex.remap() >> 8) & 0xAA;
-					if (remap_ctrl == 0xAA)
-					{
-						argb8_convert |= (mask & 0xFu) << bit_offset;
-						return;
-					}
-
-					if ((remap_ctrl & 0x03) == 0x02) argb8_convert |= (mask & 0x1u) << bit_offset;
-					if ((remap_ctrl & 0x0C) == 0x08) argb8_convert |= (mask & 0x2u) << bit_offset;
-					if ((remap_ctrl & 0x30) == 0x20) argb8_convert |= (mask & 0x4u) << bit_offset;
-					if ((remap_ctrl & 0xC0) == 0x80) argb8_convert |= (mask & 0x8u) << bit_offset;
-				};
-
-				if (argb8_signed)
-				{
-					// Apply integer sign extension from uint8 to sint8 and renormalize
-					apply_sign_convert_mask(argb8_signed, texture_control_bits::SEXT_OFFSET);
-				}
-
-				if (unsigned_remap)
-				{
-					// Apply sign expansion, compressed normal-map style (2n - 1)
-					apply_sign_convert_mask(unsigned_remap, texture_control_bits::EXPAND_OFFSET);
-				}
-
+				// NOTE: Hardware tests show that remapping bypasses the channel swizzles completely
+				argb8_convert |= (argb8_signed << texture_control_bits::SEXT_OFFSET);
+				argb8_convert |= (unsigned_remap << texture_control_bits::EXPAND_OFFSET);
 				texture_control |= argb8_convert;
 			}
 
