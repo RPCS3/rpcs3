@@ -56,6 +56,7 @@ constexpr u32 spu_decode(u32 inst)
 }
 
 std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op);
+std::tuple<u32, std::array<u32, 3>, u32> op_register_targets(u32 /*pc*/, spu_opcode_t op);
 
 // SPU decoder object. D provides functions. T is function pointer type returned.
 template <typename D, typename T = decltype(&D::UNK)>

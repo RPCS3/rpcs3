@@ -3951,6 +3951,15 @@ public:
 		erase_stores({args.value...});
 	}
 
+	// Debug breakpoint
+	void debugtrap()
+	{
+		const auto _rty = llvm::Type::getVoidTy(m_context);
+		const auto type = llvm::FunctionType::get(_rty, {}, false);
+		const auto func = llvm::cast<llvm::Function>(m_ir->GetInsertBlock()->getParent()->getParent()->getOrInsertFunction("llvm.debugtrap", type).getCallee());
+		m_ir->CreateCall(func);
+	}
+
 	template <typename T, typename U>
 	static auto pshufb(T&& a, U&& b)
 	{
