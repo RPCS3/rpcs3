@@ -8544,6 +8544,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
+			const u64 hash = loop_pc / 4 + read_from_ptr<be_t<u64>>(func_hash.data());
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";

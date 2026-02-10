@@ -495,7 +495,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
 
-const spu_decoder<spu_itype> s_spu_itype;
+const extern spu_decoder<spu_itype> g_spu_itype;
+const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 namespace vm
 {
@@ -598,7 +599,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 {
 	std::array<u32, 2> res{spu_branch_target(pc + 4), umax};
 
-	switch (const auto type = s_spu_itype.decode(op.opcode))
+	switch (const auto type = g_spu_itype.decode(op.opcode))
 	{
 	case spu_itype::BR:
 	case spu_itype::BRA:
@@ -637,6 +638,54 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	}
 
 	return res;
+}
+
+std::tuple<u32, std::array<u32, 3>, u32> op_register_targets(u32 /*pc*/, spu_opcode_t op)
+{
+	std::tuple<u32, std::array<u32, 3>, u32> result{u32{umax}, std::array<u32, 3>{128, 128, 128}, op.opcode};
+
+	const auto type = g_spu_itype.decode(op.opcode);
+
+	if (type & spu_itype::zregmod)
+	{
+		std::get<2>(result) = 0;
+		return result;
+	}
+
+	std::get<0>(result) = type & spu_itype::_quadrop ? op.rt4 : op.rt;
+
+	spu_opcode_t op_masked = op;
+
+	if (type & spu_itype::_quadrop)
+	{
+		op_masked.rt4 = 0;
+	}
+	else
+	{
+		op_masked.rt = 0;
+	}
+
+	std::get<2>(result) = op_masked.opcode;
+
+	if (auto iflags = g_spu_iflag.decode(op.opcode))
+	{
+		if (+iflags & +spu_iflag::use_ra)
+		{
+			std::get<1>(result)[0] = op.ra;
+		}
+
+		if (+iflags & +spu_iflag::use_rb)
+		{
+			std::get<1>(result)[1] = op.rb;
+		}
+
+		if (+iflags & +spu_iflag::use_rc)
+		{
+			std::get<1>(result)[2] = op.rc;
+		}
+	}
+
+	return result;
 }
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -988,7 +1037,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 					passed[i / 4] = true;
 
 					const spu_opcode_t op{_ref<u32>(i)};
-					const auto type = s_spu_itype.decode(op.opcode);
+					const auto type = g_spu_itype.decode(op.opcode);
 
 					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
 					{
@@ -3761,7 +3810,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 
 		const u32 addr0 = spu_branch_target(addr);
 		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr)};
-		const auto type = s_spu_itype.decode(op.opcode);
+		const auto type = g_spu_itype.decode(op.opcode);
 
 		if (type == spu_itype::UNK || !op.opcode)
 		{
@@ -3907,7 +3956,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
 				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
-				const spu_itype::type type0 = s_spu_itype.decode(op0);
+				const spu_itype::type type0 = g_spu_itype.decode(op0);
 
 				if (type0 == spu_itype::UNK || !op0)
 				{
@@ -6878,7 +6927,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 			const u32 op = read_from_ptr<be_t<u32>>(all_data, pc0 - 4);
 
 			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
-			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+			if (!op || op == 0x35000000u || g_spu_itype.decode(op) == spu_itype::UNK)
 			{
 				if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 					break;
