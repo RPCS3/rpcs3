@@ -10,6 +10,7 @@
 #include <thread>
 #include <shared_mutex>
 #include <chrono>
+#include <array>
 
 struct wiimote_ir_point
 {
@@ -54,8 +55,10 @@ struct wiimote_guncon_mapping
 struct wiimote_state
 {
 	u16 buttons = 0;
-	s16 acc_x = 0, acc_y = 0, acc_z = 0;
-	wiimote_ir_point ir[4];
+	s16 acc_x = 0;
+	s16 acc_y = 0;
+	s16 acc_z = 0;
+	std::array<wiimote_ir_point, 4> ir {};
 	bool connected = false;
 };
 
@@ -70,14 +73,14 @@ public:
 
 	bool update();
 	const wiimote_state& get_state() const { return m_state; }
-	std::string get_path() const { return m_path; }
-	std::wstring get_serial() const { return m_serial; }
+	const std::string& get_path() const { return m_path; }
+	const std::wstring& get_serial() const { return m_serial; }
 
 private:
 	hid_device* m_handle = nullptr;
 	std::string m_path;
 	std::wstring m_serial;
-	wiimote_state m_state;
+	wiimote_state m_state {};
 	std::chrono::steady_clock::time_point m_last_ir_check;
 
 	bool initialize_ir();
@@ -107,7 +110,7 @@ private:
 	atomic_t<bool> m_running{false};
 	std::vector<std::unique_ptr<wiimote_device>> m_devices;
 	shared_mutex m_mutex;
-	wiimote_guncon_mapping m_mapping;
+	wiimote_guncon_mapping m_mapping {};
 
 	void thread_proc();
 	void load_config();
