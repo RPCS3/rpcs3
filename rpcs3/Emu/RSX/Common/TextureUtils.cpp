@@ -1227,7 +1227,8 @@ namespace rsx
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			// Depth textures will hang the hardware if BX2 or GAMMA is active. ARGB8_SIGNED has no impact.
-			return 0;
+			// UNSIGNED_REMAP=BIASED works on all formats including the float variants.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
 
 		case CELL_GCM_TEXTURE_X16:
 		case CELL_GCM_TEXTURE_Y16_X16:

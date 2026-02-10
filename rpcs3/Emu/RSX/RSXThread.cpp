@@ -2323,7 +2323,6 @@ namespace rsx
 
 			if (const auto format_features = rsx::get_format_features(format); format_features != 0)
 			{
-				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
 				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
 				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
 				// This is a separate method of setting the format to signed mode without doing so per-channel
