@@ -315,6 +315,9 @@
     <ClCompile Include="Input\mm_joystick_handler.cpp">
       <Filter>Io\MMJoystick</Filter>
     </ClCompile>
+    <ClCompile Include="Input\wiimote_handler.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
     <ClCompile Include="Input\xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
@@ -897,6 +900,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_log_viewer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="Input\hid_instance.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
     <ClCompile Include="Input\hid_pad_handler.cpp">
       <Filter>Io</Filter>
     </ClCompile>
@@ -952,6 +958,15 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\wiimote_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_wiimote_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_wiimote_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\ps_move_tracker_dialog.cpp">
@@ -1280,6 +1295,9 @@
     <ClInclude Include="Input\ds4_pad_handler.h">
       <Filter>Io\DS4</Filter>
     </ClInclude>
+    <ClInclude Include="Input\wiimote_handler.h">
+      <Filter>Io</Filter>
+    </ClInclude>
     <ClInclude Include="Input\xinput_pad_handler.h">
       <Filter>Io\XInput</Filter>
     </ClInclude>
@@ -1394,6 +1412,9 @@
     <ClInclude Include="rpcs3qt\progress_dialog.h">
       <Filter>Gui\misc dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="Input\hid_instance.h">
+      <Filter>Io</Filter>
+    </ClInclude>
     <ClInclude Include="Input\hid_pad_handler.h">
       <Filter>Io</Filter>
     </ClInclude>
@@ -1407,6 +1428,9 @@
       <Filter>Io\camera</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_wiimote_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_ps_move_tracker_dialog.h">
@@ -1765,7 +1789,13 @@
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\wiimote_settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\wiimote_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\ps_move_tracker_dialog.ui">

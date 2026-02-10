@@ -401,7 +401,6 @@ target_sources(rpcs3_emu PRIVATE
     Io/GameTablet.cpp
     Io/GHLtar.cpp
     Io/GunCon3.cpp
-    Io/WiimoteManager.cpp
     Io/Infinity.cpp
     Io/interception.cpp
     Io/KamenRider.cpp

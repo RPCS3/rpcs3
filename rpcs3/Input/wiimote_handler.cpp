@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "WiimoteManager.h"
+#include "wiimote_handler.h"
 #include "Input/hid_instance.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -217,14 +217,14 @@ bool wiimote_device::update()
 	return true;
 }
 
-static wiimote_manager* s_instance = nullptr;
+static wiimote_handler* s_instance = nullptr;
 
 static std::string get_config_path()
 {
 	return fs::get_config_dir(true) + "wiimote.yml";
 }
 
-void wiimote_manager::load_config()
+void wiimote_handler::load_config()
 {
 	const std::string path = get_config_path();
 	fs::file f(path, fs::read);
@@ -260,7 +260,7 @@ void wiimote_manager::load_config()
 	m_mapping = map;
 }
 
-void wiimote_manager::save_config()
+void wiimote_handler::save_config()
 {
 	YAML::Node root;
 	{
@@ -281,7 +281,7 @@ void wiimote_manager::save_config()
 	fs::write_file(get_config_path(), fs::rewrite, emitter.c_str(), emitter.size());
 }
 
-wiimote_manager::wiimote_manager()
+wiimote_handler::wiimote_handler()
 {
 	if (!s_instance)
 		s_instance = this;
@@ -295,19 +295,19 @@ wiimote_manager::wiimote_manager()
 	load_config();
 }
 
-wiimote_manager::~wiimote_manager()
+wiimote_handler::~wiimote_handler()
 {
 	stop();
 	if (s_instance == this)
 		s_instance = nullptr;
 }
 
-wiimote_manager* wiimote_manager::get_instance()
+wiimote_handler* wiimote_handler::get_instance()
 {
 	return s_instance;
 }
 
-void wiimote_manager::start()
+void wiimote_handler::start()
 {
 	if (m_running) return;
 
@@ -315,22 +315,22 @@ void wiimote_manager::start()
 	if (!hid_instance::get_instance().initialize()) return;
 
 	m_running = true;
-	m_thread = std::thread(&wiimote_manager::thread_proc, this);
+	m_thread = std::thread(&wiimote_handler::thread_proc, this);
 }
 
-void wiimote_manager::stop()
+void wiimote_handler::stop()
 {
 	m_running = false;
 	if (m_thread.joinable()) m_thread.join();
 }
 
-size_t wiimote_manager::get_device_count()
+size_t wiimote_handler::get_device_count()
 {
 	std::shared_lock lock(m_mutex);
 	return m_devices.size();
 }
 
-void wiimote_manager::set_mapping(const wiimote_guncon_mapping& mapping)
+void wiimote_handler::set_mapping(const wiimote_guncon_mapping& mapping)
 {
 	{
 		std::unique_lock lock(m_mutex);
@@ -339,13 +339,13 @@ void wiimote_manager::set_mapping(const wiimote_guncon_mapping& mapping)
 	save_config();
 }
 
-wiimote_guncon_mapping wiimote_manager::get_mapping() const
+wiimote_guncon_mapping wiimote_handler::get_mapping() const
 {
 	// shared_lock not strictly needed for trivial copy but good practice if it becomes complex
 	return m_mapping;
 }
 
-std::vector<wiimote_state> wiimote_manager::get_states()
+std::vector<wiimote_state> wiimote_handler::get_states()
 {
 	std::shared_lock lock(m_mutex);
 	std::vector<wiimote_state> states;
@@ -359,7 +359,7 @@ std::vector<wiimote_state> wiimote_manager::get_states()
 }
 
 
-void wiimote_manager::thread_proc()
+void wiimote_handler::thread_proc()
 {
 	thread_ctrl::set_name("WiiMoteManager");
 

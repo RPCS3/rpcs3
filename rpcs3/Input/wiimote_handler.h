@@ -88,13 +88,13 @@ private:
 	bool write_reg(u32 addr, const std::vector<u8>& data);
 };
 
-class wiimote_manager
+class wiimote_handler
 {
 public:
-	wiimote_manager();
-	~wiimote_manager();
+	wiimote_handler();
+	~wiimote_handler();
 
-	static wiimote_manager* get_instance();
+	static wiimote_handler* get_instance();
 
 	void start();
 	void stop();

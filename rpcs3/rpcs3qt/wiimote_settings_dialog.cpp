@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "wiimote_settings_dialog.h"
 #include "Emu/System.h"
-#include "Emu/Io/WiimoteManager.h"
+#include "Input/wiimote_handler.h"
 #include <QTimer>
 #include <QPainter>
 #include <QPixmap>
@@ -27,7 +27,7 @@ wiimote_settings_dialog::~wiimote_settings_dialog() = default;
 
 void wiimote_settings_dialog::populate_mappings()
 {
-	auto* wm = wiimote_manager::get_instance();
+	auto* wm = wiimote_handler::get_instance();
 	if (!wm) return;
 
 	const QPair<QString, wiimote_button> buttons[] = {
@@ -78,7 +78,7 @@ void wiimote_settings_dialog::populate_mappings()
 
 void wiimote_settings_dialog::restore_defaults()
 {
-	auto* wm = wiimote_manager::get_instance();
+	auto* wm = wiimote_handler::get_instance();
 	if (!wm) return;
 
 	// Reset to default mapping
@@ -124,7 +124,7 @@ void wiimote_settings_dialog::restore_defaults()
 
 void wiimote_settings_dialog::apply_mappings()
 {
-	auto* wm = wiimote_manager::get_instance();
+	auto* wm = wiimote_handler::get_instance();
 	if (!wm) return;
 
 	wiimote_guncon_mapping map;
@@ -153,7 +153,7 @@ void wiimote_settings_dialog::apply_mappings()
 void wiimote_settings_dialog::update_state()
 {
 	int index = ui->wiimoteList->currentRow();
-	auto* wm = wiimote_manager::get_instance();
+	auto* wm = wiimote_handler::get_instance();
 	if (!wm || index < 0)
 	{
 		ui->connectionStatus->setText(tr("N/A"));
@@ -230,7 +230,7 @@ void wiimote_settings_dialog::update_state()
 
 void wiimote_settings_dialog::update_list()
 {
-	auto* wm = wiimote_manager::get_instance();
+	auto* wm = wiimote_handler::get_instance();
 	if (!wm)
 	{
 		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("Wiimote Manager not initialized."))

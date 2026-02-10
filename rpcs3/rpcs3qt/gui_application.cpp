@@ -127,8 +127,8 @@ bool gui_application::Init()
 	}
 
 	m_emu_settings = std::make_shared<emu_settings>();
-	m_wiimote_manager = std::make_unique<wiimote_manager>();
-	m_wiimote_manager->start();
+	m_wiimote_handler = std::make_unique<wiimote_handler>();
+	m_wiimote_handler->start();
 	m_gui_settings = std::make_shared<gui_settings>();
 	m_persistent_settings = std::make_shared<persistent_settings>();
 

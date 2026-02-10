@@ -174,6 +174,7 @@ add_library(rpcs3_ui STATIC
     ../Input/sdl_instance.cpp
     ../Input/sdl_pad_handler.cpp
     ../Input/skateboard_pad_handler.cpp
+    ../Input/wiimote_handler.cpp
     ../Input/xinput_pad_handler.cpp
 
     "../resources.qrc"
