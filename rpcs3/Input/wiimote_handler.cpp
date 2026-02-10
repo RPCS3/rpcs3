@@ -2,12 +2,10 @@
 #include "wiimote_handler.h"
 #include "Input/hid_instance.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Utilities/File.h"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
 #include <algorithm>
-#include <sstream>
 
 LOG_CHANNEL(wiimote_log, "Wiimote");
 
