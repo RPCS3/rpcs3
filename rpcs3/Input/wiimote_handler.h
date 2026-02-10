@@ -106,7 +106,7 @@ public:
 	wiimote_guncon_mapping get_mapping() const;
 
 private:
-	std::thread m_thread;
+	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	atomic_t<bool> m_running{false};
 	std::vector<std::unique_ptr<wiimote_device>> m_devices;
 	shared_mutex m_mutex;

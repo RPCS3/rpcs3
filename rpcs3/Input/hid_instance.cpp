@@ -1,10 +1,8 @@
 #include "stdafx.h"
 #include "hid_instance.h"
 #include "util/logs.hpp"
-#include "stdafx.h"
-#include "hid_instance.h"
-#include "util/logs.hpp"
 #include "Emu/System.h"
+#include "Utilities/Thread.h"
 
 #if defined(__APPLE__)
 #include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
@@ -42,11 +40,19 @@ bool hid_instance::initialize()
 
 #if defined(__APPLE__)
 	int error_code = 0;
-	Emu.BlockingCallFromMainThread([&error_code]()
+	if (thread_ctrl::is_main())
 	{
 		error_code = hid_init();
 		hid_darwin_set_open_exclusive(0);
-	}, false);
+	}
+	else
+	{
+		Emu.BlockingCallFromMainThread([&error_code]()
+		{
+			error_code = hid_init();
+			hid_darwin_set_open_exclusive(0);
+		}, false);
+	}
 #else
 	const int error_code = hid_init();
 #endif
@@ -58,4 +64,100 @@ bool hid_instance::initialize()
 
 	m_initialized = true;
 	return true;
+}
+
+hid_device_info* hid_instance::enumerate(u16 vid, u16 pid)
+{
+	hid_device_info* devs = nullptr;
+#if defined(__APPLE__)
+	if (thread_ctrl::is_main())
+	{
+		std::lock_guard lock(g_hid_mutex);
+		devs = hid_enumerate(vid, pid);
+	}
+	else
+	{
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			std::lock_guard lock(g_hid_mutex);
+			devs = hid_enumerate(vid, pid);
+		}, false);
+	}
+#else
+	std::lock_guard lock(g_hid_mutex);
+	devs = hid_enumerate(vid, pid);
+#endif
+	return devs;
+}
+
+void hid_instance::free_enumeration(hid_device_info* devs)
+{
+	if (!devs) return;
+
+#if defined(__APPLE__)
+	if (thread_ctrl::is_main())
+	{
+		std::lock_guard lock(g_hid_mutex);
+		hid_free_enumeration(devs);
+	}
+	else
+	{
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			std::lock_guard lock(g_hid_mutex);
+			hid_free_enumeration(devs);
+		}, false);
+	}
+#else
+	std::lock_guard lock(g_hid_mutex);
+	hid_free_enumeration(devs);
+#endif
+}
+
+hid_device* hid_instance::open_path(const char* path)
+{
+	hid_device* dev = nullptr;
+#if defined(__APPLE__)
+	if (thread_ctrl::is_main())
+	{
+		std::lock_guard lock(g_hid_mutex);
+		dev = hid_open_path(path);
+	}
+	else
+	{
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			std::lock_guard lock(g_hid_mutex);
+			dev = hid_open_path(path);
+		}, false);
+	}
+#else
+	std::lock_guard lock(g_hid_mutex);
+	dev = hid_open_path(path);
+#endif
+	return dev;
+}
+
+void hid_instance::close(hid_device* dev)
+{
+	if (!dev) return;
+
+#if defined(__APPLE__)
+	if (thread_ctrl::is_main())
+	{
+		std::lock_guard lock(g_hid_mutex);
+		hid_close(dev);
+	}
+	else
+	{
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			std::lock_guard lock(g_hid_mutex);
+			hid_close(dev);
+		}, false);
+	}
+#else
+	std::lock_guard lock(g_hid_mutex);
+	hid_close(dev);
+#endif
 }

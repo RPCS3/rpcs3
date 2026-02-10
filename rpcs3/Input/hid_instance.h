@@ -21,6 +21,11 @@ public:
 
 	bool initialize();
 
+	static hid_device_info* enumerate(u16 vid, u16 pid);
+	static void free_enumeration(hid_device_info* devs);
+	static hid_device* open_path(const char* path);
+	static void close(hid_device* dev);
+
 private:
 	bool m_initialized = false;
 	std::mutex m_hid_mutex;

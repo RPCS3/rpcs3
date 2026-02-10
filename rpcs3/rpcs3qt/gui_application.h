@@ -112,7 +112,6 @@ private:
 
 	std::deque<std::unique_ptr<QSoundEffect>> m_sound_effects{};
 
-	std::unique_ptr<wiimote_handler> m_wiimote_handler;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;

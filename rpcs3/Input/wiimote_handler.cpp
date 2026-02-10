@@ -37,7 +37,8 @@ bool wiimote_device::open(hid_device_info* info)
 
 	m_path = info->path;
 	m_serial = info->serial_number ? info->serial_number : L"";
-	m_handle = hid_open_path(info->path);
+
+	m_handle = hid_instance::open_path(info->path);
 
 	if (m_handle)
 	{
@@ -64,21 +65,9 @@ bool wiimote_device::open(hid_device_info* info)
 
 void wiimote_device::close()
 {
-	if (m_handle)
-	{
-#if defined(__APPLE__)
-		Emu.BlockingCallFromMainThread([this]()
-		{
-			if (m_handle)
-			{
-				hid_close(m_handle);
-			}
-		}, false);
-#else
-		hid_close(m_handle);
-#endif
-		m_handle = nullptr;
-	}
+	hid_instance::close(m_handle);
+	m_handle = nullptr;
+
 	m_state = {}; // Reset state including connected = false
 	m_path.clear();
 	m_serial.clear();
@@ -304,6 +293,14 @@ wiimote_handler::~wiimote_handler()
 
 wiimote_handler* wiimote_handler::get_instance()
 {
+	static std::mutex mtx;
+	std::lock_guard lock(mtx);
+
+	if (!s_instance)
+	{
+		s_instance = new wiimote_handler();
+		s_instance->start();
+	}
 	return s_instance;
 }
 
@@ -315,13 +312,13 @@ void wiimote_handler::start()
 	if (!hid_instance::get_instance().initialize()) return;
 
 	m_running = true;
-	m_thread = std::thread(&wiimote_handler::thread_proc, this);
+	m_thread = std::make_unique<named_thread<std::function<void()>>>("WiiMoteManager", [this]() { thread_proc(); });
 }
 
 void wiimote_handler::stop()
 {
 	m_running = false;
-	if (m_thread.joinable()) m_thread.join();
+	m_thread.reset();
 }
 
 size_t wiimote_handler::get_device_count()
@@ -371,66 +368,85 @@ void wiimote_handler::thread_proc()
 		{
 			const auto scan_and_add = [&](u16 vid, u16 pid_start, u16 pid_end)
 			{
-				std::lock_guard lock(g_hid_mutex);
-
-				hid_device_info* devs;
-#if defined(__APPLE__)
-				Emu.BlockingCallFromMainThread([&]()
+				struct info_t
 				{
-					devs = hid_enumerate(vid, 0);
-				}, false);
-#else
-				devs = hid_enumerate(vid, 0);
-#endif
+					std::string path;
+					u16 product_id;
+					std::wstring serial;
+				};
+				std::vector<info_t> candidates;
+
+				hid_device_info* devs = hid_instance::enumerate(vid, 0);
 				for (hid_device_info* cur = devs; cur; cur = cur->next)
 				{
 					if (cur->product_id >= pid_start && cur->product_id <= pid_end)
 					{
-						std::unique_lock lock(m_mutex);
+						candidates.push_back({cur->path, cur->product_id, cur->serial_number ? cur->serial_number : L""});
+					}
+				}
+				hid_instance::free_enumeration(devs);
 
-						// 1. Check if this physical device is already connected to any slot
+				for (const auto& candidate : candidates)
+				{
+					// 1. Check if this physical device is already connected to any slot
+					{
+						std::shared_lock lock(m_mutex);
 						bool already_connected = false;
 						for (const auto& d : m_devices)
 						{
-							if (d->get_state().connected && d->get_path() == cur->path)
+							if (d->get_state().connected && d->get_path() == candidate.path)
 							{
 								already_connected = true;
 								break;
 							}
 						}
 						if (already_connected) continue;
+					}
 
-						// 2. Determine target slot
-						int slot_idx = -1;
-						if (vid == VID_MAYFLASH)
+					// 2. Determine target slot
+					int slot_idx = -1;
+					if (vid == VID_MAYFLASH)
+					{
+						// DolphinBar Mode 4: PIDs 0x1800-0x1803 correspond to Players 1-4
+						slot_idx = candidate.product_id - PID_DOLPHINBAR_START;
+					}
+					else
+					{
+						// Generic Wiimote: Find first available slot
+						std::shared_lock lock(m_mutex);
+						for (size_t i = 0; i < m_devices.size(); i++)
 						{
-							// DolphinBar Mode 4: PIDs 0x1800-0x1803 correspond to Players 1-4
-							slot_idx = cur->product_id - PID_DOLPHINBAR_START;
-						}
-						else
-						{
-							// Generic Wiimote: Find first available slot
-							for (size_t i = 0; i < m_devices.size(); i++)
+							if (!m_devices[i]->get_state().connected)
 							{
-								if (!m_devices[i]->get_state().connected)
-								{
-									slot_idx = static_cast<int>(i);
-									break;
-								}
-							}
-						}
-
-						// 3. Connect to slot
-						if (slot_idx >= 0 && slot_idx < static_cast<int>(m_devices.size()))
-						{
-							if (!m_devices[slot_idx]->get_state().connected)
-							{
-								m_devices[slot_idx]->open(cur);
+								slot_idx = static_cast<int>(i);
+								break;
 							}
 						}
 					}
+
+					// 3. Connect to slot
+					if (slot_idx >= 0 && slot_idx < static_cast<int>(m_devices.size()))
+					{
+						bool already_connected = false;
+						{
+							std::shared_lock lock(m_mutex);
+							already_connected = m_devices[slot_idx]->get_state().connected;
+						}
+
+						if (!already_connected)
+						{
+							// Re-create a temporary info struct for open()
+							hid_device_info temp_info = {};
+							temp_info.path = const_cast<char*>(candidate.path.c_str());
+							temp_info.serial_number = const_cast<wchar_t*>(candidate.serial.c_str());
+							temp_info.product_id = candidate.product_id;
+
+							// We call open() without holding m_mutex to avoid deadlock with main thread
+							// wiimote_device::open() internally handles m_handle and connectivity state
+							m_devices[slot_idx]->open(&temp_info);
+						}
+					}
 				}
-				hid_free_enumeration(devs);
 			};
 
 			// Generic Wiimote / DolphinBar Mode 4 (Normal)
