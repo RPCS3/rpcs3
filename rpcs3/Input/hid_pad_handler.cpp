@@ -9,11 +9,6 @@
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
 #include "pad_thread.h"
-
-#if defined(__APPLE__)
-#include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
-#endif
-
 #include <algorithm>
 #include <memory>
 
