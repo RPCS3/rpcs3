@@ -258,16 +258,16 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 		const s32 raw_x = ws.ir[0].x;
 		const s32 raw_y = ws.ir[0].y;
 
-		const s32 x_res = 32767 - (raw_x * 65535 / 1023);
-		const s32 y_res = 32767 - (raw_y * 65535 / 767);
+		const s32 x_res = SHRT_MAX - (raw_x * USHRT_MAX / 1023);
+		const s32 y_res = SHRT_MAX - (raw_y * USHRT_MAX / 767);
 
-		gc.gun_x = static_cast<int16_t>(std::clamp(x_res, -32768, 32767));
-		gc.gun_y = static_cast<int16_t>(std::clamp(y_res, -32768, 32767));
+		gc.gun_x = static_cast<int16_t>(std::clamp(x_res, SHRT_MIN, SHRT_MAX));
+		gc.gun_y = static_cast<int16_t>(std::clamp(y_res, SHRT_MIN, SHRT_MAX));
 
 		if (g_cfg.io.show_move_cursor)
 		{
-			const s16 ax = static_cast<s16>((gc.gun_x + 32768) * rsx::overlays::overlay::virtual_width / 65535);
-			const s16 ay = static_cast<s16>((32767 - gc.gun_y) * rsx::overlays::overlay::virtual_height / 65535);
+			const s16 ax = static_cast<s16>((gc.gun_x + SHRT_MAX + 1) * rsx::overlays::overlay::virtual_width / USHRT_MAX);
+			const s16 ay = static_cast<s16>((SHRT_MAX - gc.gun_y) * rsx::overlays::overlay::virtual_height / USHRT_MAX);
 			rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + my_wiimote_index, ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
 		}
 
