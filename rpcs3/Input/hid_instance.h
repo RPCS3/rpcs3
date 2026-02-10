@@ -1,8 +1,11 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/logs.hpp"
 #include <mutex>
-#include <hidapi/hidapi.h>
+#include <hidapi.h>
+
+LOG_CHANNEL(hid_log, "HID");
 
 struct hid_instance
 {

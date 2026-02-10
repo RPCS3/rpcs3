@@ -3,7 +3,7 @@
 #include "util/types.hpp"
 #include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
-#include <hidapi/hidapi.h>
+#include <hidapi.h>
 #include <vector>
 #include <string>
 #include <memory>

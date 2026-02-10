@@ -1,13 +1,14 @@
 #include "stdafx.h"
 #include "hid_instance.h"
 #include "util/logs.hpp"
+#include "stdafx.h"
+#include "hid_instance.h"
+#include "util/logs.hpp"
 #include "Emu/System.h"
 
 #if defined(__APPLE__)
-#include <hidapi/hidapi_darwin.h>
+#include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
 #endif
-
-LOG_CHANNEL(hid_log, "HID");
 
 std::mutex g_hid_mutex;
 

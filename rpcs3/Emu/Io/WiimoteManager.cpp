@@ -5,6 +5,7 @@
 #include "Emu/system_config.h"
 #include "Utilities/File.h"
 #include "util/yaml.hpp"
+#include "util/logs.hpp"
 #include <algorithm>
 #include <sstream>
 
@@ -226,9 +227,10 @@ static std::string get_config_path()
 void wiimote_manager::load_config()
 {
 	const std::string path = get_config_path();
-	if (!fs::exists(path)) return;
+	fs::file f(path, fs::read);
+	if (!f) return;
 
-	auto [root, error] = yaml_load(fs::read_all_text(path));
+	auto [root, error] = yaml_load(f.to_string());
 	if (!error.empty())
 	{
 		wiimote_log.error("Failed to load wiimote config: %s", error);
@@ -240,14 +242,7 @@ void wiimote_manager::load_config()
 	{
 		if (root[key])
 		{
-			try
-			{
-				btn = static_cast<wiimote_button>(root[key].as<u16>());
-			}
-			catch (const YAML::Exception&)
-			{
-				wiimote_log.error("Invalid value for %s in wiimote config", key);
-			}
+			btn = static_cast<wiimote_button>(root[key].as<u16>(static_cast<u16>(btn)));
 		}
 	};
 
@@ -283,7 +278,7 @@ void wiimote_manager::save_config()
 
 	YAML::Emitter emitter;
 	emitter << root;
-	fs::write_all_text(get_config_path(), emitter.c_str());
+	fs::write_file(get_config_path(), fs::rewrite, emitter.c_str(), emitter.size());
 }
 
 wiimote_manager::wiimote_manager()
