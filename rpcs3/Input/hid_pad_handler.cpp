@@ -4,6 +4,7 @@
 #include "dualsense_pad_handler.h"
 #include "skateboard_pad_handler.h"
 #include "ps_move_handler.h"
+#include "hid_instance.h"
 #include "util/logs.hpp"
 #include "Utilities/Timer.h"
 #include "Emu/System.h"
@@ -16,80 +17,10 @@
 #include <algorithm>
 #include <memory>
 
-LOG_CHANNEL(hid_log, "HID");
-
 #ifdef ANDROID
 std::vector<android_usb_device> g_android_usb_devices;
 std::mutex g_android_usb_devices_mutex;
 #endif
-
-// Global mutex to allow "hid_enumerate()" and "hid_open_path()" are accessed by one thread at a time
-// (e.g. thread running "process()" and thread running enumerate_devices()).
-// It avoids the emulation crash in case the controller gets disconnected (e.g. due to inactivity)
-std::mutex g_hid_mutex;
-
-struct hid_instance
-{
-public:
-	hid_instance() = default;
-	~hid_instance()
-	{
-		std::lock_guard lock(m_hid_mutex);
-
-		// Only exit HIDAPI once on exit. HIDAPI uses a global state internally...
-		if (m_initialized)
-		{
-			hid_log.notice("Exiting HIDAPI...");
-
-			if (hid_exit() != 0)
-			{
-				hid_log.error("hid_exit failed!");
-			}
-		}
-	}
-
-	static hid_instance& get_instance()
-	{
-		static hid_instance instance {};
-		return instance;
-	}
-
-	bool initialize()
-	{
-		std::lock_guard lock(m_hid_mutex);
-
-		// Only init HIDAPI once. HIDAPI uses a global state internally...
-		if (m_initialized)
-		{
-			return true;
-		}
-
-		hid_log.notice("Initializing HIDAPI ...");
-
-#if defined(__APPLE__)
-		int error_code = 0;
-		Emu.BlockingCallFromMainThread([&error_code]()
-		{
-			error_code = hid_init();
-			hid_darwin_set_open_exclusive(0);
-		}, false);
-#else
-		const int error_code = hid_init();
-#endif
-		if (error_code != 0)
-		{
-			hid_log.fatal("hid_init error %d: %s", error_code, hid_error(nullptr));
-			return false;
-		}
-
-		m_initialized = true;
-		return true;
-	}
-
-private:
-	bool m_initialized = false;
-	std::mutex m_hid_mutex;
-};
 
 hid_device* HidDevice::open()
 {

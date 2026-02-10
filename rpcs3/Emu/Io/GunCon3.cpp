@@ -257,7 +257,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 		const auto map = wm->get_mapping();
 
-		auto is_pressed = [&](wiimote_button btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };
+		const auto is_pressed = [&](wiimote_button btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };
 
 		if (is_pressed(map.trigger)) gc.btn_trigger = 1;
 
@@ -278,26 +278,26 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		if (ws.ir[0].x < 1023)
 		{
 			// Only use the primary pointer to avoid jumping between multiple IR points
-			s32 raw_x = ws.ir[0].x;
-			s32 raw_y = ws.ir[0].y;
+			const s32 raw_x = ws.ir[0].x;
+			const s32 raw_y = ws.ir[0].y;
 
 			// Map to GunCon3 range (-32768..32767)
 			// X calculation (Right = 32767, Left = -32768)
-			s32 x_res = 32767 - (raw_x * 65535 / 1023);
+			const s32 x_res = 32767 - (raw_x * 65535 / 1023);
 			// Y calculation (Top = 32767, Bottom = -32768)
 			// Swapping to inverted mapping as per user feedback
-			s32 y_res = 32767 - (raw_y * 65535 / 767);
+			const s32 y_res = 32767 - (raw_y * 65535 / 767);
 
 			gc.gun_x = static_cast<int16_t>(std::clamp(x_res, -32768, 32767));
 			gc.gun_y = static_cast<int16_t>(std::clamp(y_res, -32768, 32767));
 
-			// Draw the actual GunCon3 output to the overlay
-			// Mapping GunCon3 range back to virtual_width/height
-			s16 ax = static_cast<s16>((gc.gun_x + 32768) * rsx::overlays::overlay::virtual_width / 65535);
-			s16 ay = static_cast<s16>((32767 - gc.gun_y) * rsx::overlays::overlay::virtual_height / 65535);
-
 			if (g_cfg.io.show_move_cursor)
 			{
+				// Draw the actual GunCon3 output to the overlay
+				// Mapping GunCon3 range back to virtual_width/height
+				const s16 ax = static_cast<s16>((gc.gun_x + 32768) * rsx::overlays::overlay::virtual_width / 65535);
+				const s16 ay = static_cast<s16>((32767 - gc.gun_y) * rsx::overlays::overlay::virtual_height / 65535);
+
 				// Use my_wiimote_index for color/cursor selection (0=Red, 1=Green...)
 				rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + my_wiimote_index, ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
 			}
@@ -305,8 +305,8 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 			if (ws.ir[1].x < 1023)
 			{
 				// Calculate "Z" (distance) based on spread of first two points to emulate depth sensor
-				s32 dx = static_cast<s32>(ws.ir[0].x) - ws.ir[1].x;
-				s32 dy = static_cast<s32>(ws.ir[0].y) - ws.ir[1].y;
+				const s32 dx = static_cast<s32>(ws.ir[0].x) - ws.ir[1].x;
+				const s32 dy = static_cast<s32>(ws.ir[0].y) - ws.ir[1].y;
 				gc.gun_z = static_cast<int16_t>(std::sqrt(dx * dx + dy * dy));
 			}
 		}

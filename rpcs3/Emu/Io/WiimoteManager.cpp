@@ -1,10 +1,14 @@
 #include "stdafx.h"
 #include "WiimoteManager.h"
+#include "Input/hid_instance.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/File.h"
+#include "util/yaml.hpp"
 #include <algorithm>
 #include <sstream>
+
+LOG_CHANNEL(wiimote_log, "Wiimote");
 
 // Nintendo
 static constexpr u16 VID_NINTENDO = 0x057e;
@@ -37,8 +41,8 @@ bool wiimote_device::open(hid_device_info* info)
 	if (m_handle)
 	{
 		// 1. Connectivity Test (Matching wiimote_test)
-		u8 status_req[] = { 0x15, 0x00 };
-		if (hid_write(m_handle, status_req, sizeof(status_req)) < 0)
+		constexpr std::array<u8, 2> status_req = { 0x15, 0x00 };
+		if (hid_write(m_handle, status_req.data(), status_req.size()) < 0)
 		{
 			close();
 			return false;
@@ -61,7 +65,17 @@ void wiimote_device::close()
 {
 	if (m_handle)
 	{
+#if defined(__APPLE__)
+		Emu.BlockingCallFromMainThread([this]()
+		{
+			if (m_handle)
+			{
+				hid_close(m_handle);
+			}
+		}, false);
+#else
 		hid_close(m_handle);
+#endif
 		m_handle = nullptr;
 	}
 	m_state = {}; // Reset state including connected = false
@@ -87,11 +101,11 @@ bool wiimote_device::write_reg(u32 addr, const std::vector<u8>& data)
 bool wiimote_device::initialize_ir()
 {
 	// 1. Enable IR logic / Pixel Clock (Requesting Acknowledgement for stability)
-	u8 ir_on1[] = { 0x13, 0x06 };
-	hid_write(m_handle, ir_on1, 2);
+	constexpr std::array<u8, 2> ir_on1 = { 0x13, 0x06 };
+	hid_write(m_handle, ir_on1.data(), ir_on1.size());
 	std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	u8 ir_on2[] = { 0x1a, 0x06 };
-	hid_write(m_handle, ir_on2, 2);
+	constexpr std::array<u8, 2> ir_on2 = { 0x1a, 0x06 };
+	hid_write(m_handle, ir_on2.data(), ir_on2.size());
 	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
 	// 2. Enable IR Camera (Wii-style sequence)
@@ -108,8 +122,8 @@ bool wiimote_device::initialize_ir()
 	if (!write_reg(0xb00030, {0x08})) return false;
 
 	// 6. Reporting mode: Buttons + Accel + IR (Continuous)
-	u8 mode[] = { 0x12, 0x04, 0x33 };
-	if (hid_write(m_handle, mode, sizeof(mode)) < 0) return false;
+	constexpr std::array<u8, 3> mode = { 0x12, 0x04, 0x33 };
+	if (hid_write(m_handle, mode.data(), mode.size()) < 0) return false;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 	return true;
@@ -120,15 +134,15 @@ bool wiimote_device::verify_ir_health()
 	if (!m_handle) return false;
 
 	// Request device status to verify communication
-	u8 status_req[] = { 0x15, 0x00 };
-	if (hid_write(m_handle, status_req, sizeof(status_req)) < 0)
+	constexpr std::array<u8, 2> status_req = { 0x15, 0x00 };
+	if (hid_write(m_handle, status_req.data(), status_req.size()) < 0)
 	{
 		return false;
 	}
 
 	// Try to read a response within reasonable time
 	u8 buf[22];
-	int res = hid_read_timeout(m_handle, buf, sizeof(buf), 100);
+	const int res = hid_read_timeout(m_handle, buf, sizeof(buf), 100);
 
 	// If we got a response, device is alive. If timeout or error, it's dead.
 	return res > 0;
@@ -139,7 +153,7 @@ bool wiimote_device::update()
 	if (!m_handle) return false;
 
 	// Every 3 seconds, verify IR is still working
-	auto now = std::chrono::steady_clock::now();
+	const auto now = std::chrono::steady_clock::now();
 	if (now - m_last_ir_check > std::chrono::seconds(3))
 	{
 		m_last_ir_check = now;
@@ -180,7 +194,7 @@ bool wiimote_device::update()
 			// Each IR point is 3 bytes in Extended report 0x33.
 			for (int j = 0; j < 4; j++)
 			{
-				u8* ir = &buf[6 + j * 3];
+				const u8* ir = &buf[6 + j * 3];
 				m_state.ir[j].x = (ir[0] | ((ir[2] & 0x30) << 4));
 				m_state.ir[j].y = (ir[1] | ((ir[2] & 0xC0) << 2));
 				m_state.ir[j].size = ir[2] & 0x0f;
@@ -211,41 +225,41 @@ static std::string get_config_path()
 
 void wiimote_manager::load_config()
 {
-	fs::file f(get_config_path(), fs::read);
-	if (!f) return;
+	const std::string path = get_config_path();
+	if (!fs::exists(path)) return;
 
-	std::string line;
-	std::stringstream ss(f.to_string());
+	auto [root, error] = yaml_load(fs::read_all_text(path));
+	if (!error.empty())
+	{
+		wiimote_log.error("Failed to load wiimote config: %s", error);
+		return;
+	}
+
 	wiimote_guncon_mapping map;
-
-	auto parse_btn = [](const std::string& val) -> wiimote_button {
-		return static_cast<wiimote_button>(std::strtoul(val.c_str(), nullptr, 0));
+	auto parse_btn = [&](const char* key, wiimote_button& btn)
+	{
+		if (root[key])
+		{
+			try
+			{
+				btn = static_cast<wiimote_button>(root[key].as<u16>());
+			}
+			catch (const YAML::Exception&)
+			{
+				wiimote_log.error("Invalid value for %s in wiimote config", key);
+			}
+		}
 	};
 
-	while (std::getline(ss, line))
-	{
-		auto pos = line.find(':');
-		if (pos == std::string::npos) continue;
-
-		std::string key = line.substr(0, pos);
-		std::string val = line.substr(pos + 1);
-
-		// Trim whitespace
-		key.erase(0, key.find_first_not_of(" \t"));
-		key.erase(key.find_last_not_of(" \t") + 1);
-		val.erase(0, val.find_first_not_of(" \t"));
-		val.erase(val.find_last_not_of(" \t") + 1);
-
-		if (key == "trigger") map.trigger = parse_btn(val);
-		else if (key == "a1") map.a1 = parse_btn(val);
-		else if (key == "a2") map.a2 = parse_btn(val);
-		else if (key == "a3") map.a3 = parse_btn(val);
-		else if (key == "b1") map.b1 = parse_btn(val);
-		else if (key == "b2") map.b2 = parse_btn(val);
-		else if (key == "b3") map.b3 = parse_btn(val);
-		else if (key == "c1") map.c1 = parse_btn(val);
-		else if (key == "c2") map.c2 = parse_btn(val);
-	}
+	parse_btn("trigger", map.trigger);
+	parse_btn("a1", map.a1);
+	parse_btn("a2", map.a2);
+	parse_btn("a3", map.a3);
+	parse_btn("b1", map.b1);
+	parse_btn("b2", map.b2);
+	parse_btn("b3", map.b3);
+	parse_btn("c1", map.c1);
+	parse_btn("c2", map.c2);
 
 	std::unique_lock lock(m_mutex);
 	m_mapping = map;
@@ -253,29 +267,23 @@ void wiimote_manager::load_config()
 
 void wiimote_manager::save_config()
 {
-	fs::file f(get_config_path(), fs::write + fs::create + fs::trunc);
-	if (!f) return;
-
-	std::stringstream ss;
-	// Helper to write lines
-	auto write_line = [&](const char* key, wiimote_button btn) {
-		ss << key << ": " << static_cast<u16>(btn) << "\n";
-	};
-
+	YAML::Node root;
 	{
 		std::shared_lock lock(m_mutex);
-		write_line("trigger", m_mapping.trigger);
-		write_line("a1", m_mapping.a1);
-		write_line("a2", m_mapping.a2);
-		write_line("a3", m_mapping.a3);
-		write_line("b1", m_mapping.b1);
-		write_line("b2", m_mapping.b2);
-		write_line("b3", m_mapping.b3);
-		write_line("c1", m_mapping.c1);
-		write_line("c2", m_mapping.c2);
+		root["trigger"] = static_cast<u16>(m_mapping.trigger);
+		root["a1"] = static_cast<u16>(m_mapping.a1);
+		root["a2"] = static_cast<u16>(m_mapping.a2);
+		root["a3"] = static_cast<u16>(m_mapping.a3);
+		root["b1"] = static_cast<u16>(m_mapping.b1);
+		root["b2"] = static_cast<u16>(m_mapping.b2);
+		root["b3"] = static_cast<u16>(m_mapping.b3);
+		root["c1"] = static_cast<u16>(m_mapping.c1);
+		root["c2"] = static_cast<u16>(m_mapping.c2);
 	}
 
-	f.write(ss.str());
+	YAML::Emitter emitter;
+	emitter << root;
+	fs::write_all_text(get_config_path(), emitter.c_str());
 }
 
 wiimote_manager::wiimote_manager()
@@ -308,8 +316,8 @@ void wiimote_manager::start()
 {
 	if (m_running) return;
 
-	// Note: hid_init() is not thread-safe. ideally should be called once at app startup.
-	if (hid_init() != 0) return;
+	// Note: initialize() is thread-safe and handles multiple calls.
+	if (!hid_instance::get_instance().initialize()) return;
 
 	m_running = true;
 	m_thread = std::thread(&wiimote_manager::thread_proc, this);
@@ -319,7 +327,6 @@ void wiimote_manager::stop()
 {
 	m_running = false;
 	if (m_thread.joinable()) m_thread.join();
-	hid_exit();
 }
 
 size_t wiimote_manager::get_device_count()
@@ -359,15 +366,27 @@ std::vector<wiimote_state> wiimote_manager::get_states()
 
 void wiimote_manager::thread_proc()
 {
+	thread_ctrl::set_name("WiiMoteManager");
+
 	u32 counter = 0;
 	while (m_running)
 	{
 		// Scan every 2 seconds
 		if (counter++ % 200 == 0)
 		{
-			auto scan_and_add = [&](u16 vid, u16 pid_start, u16 pid_end)
+			const auto scan_and_add = [&](u16 vid, u16 pid_start, u16 pid_end)
 			{
-				hid_device_info* devs = hid_enumerate(vid, 0);
+				std::lock_guard lock(g_hid_mutex);
+
+				hid_device_info* devs;
+#if defined(__APPLE__)
+				Emu.BlockingCallFromMainThread([&]()
+				{
+					devs = hid_enumerate(vid, 0);
+				}, false);
+#else
+				devs = hid_enumerate(vid, 0);
+#endif
 				for (hid_device_info* cur = devs; cur; cur = cur->next)
 				{
 					if (cur->product_id >= pid_start && cur->product_id <= pid_end)
