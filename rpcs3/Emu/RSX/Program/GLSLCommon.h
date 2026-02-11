@@ -40,6 +40,7 @@ namespace rsx
 		FF_SIGNED_BIT,
 		FF_BIASED_RENORM_BIT,
 		FF_GAMMA_BIT,
+		FF_16BIT_CHANNELS_BIT,
 
 		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
 		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),

@@ -23,7 +23,8 @@ R"(
 #define FORMAT_FEATURE_SIGNED                 (1 << FORMAT_FEATURE_SIGNED_BIT)
 #define FORMAT_FEATURE_GAMMA                  (1 << FORMAT_FEATURE_GAMMA_BIT)
 #define FORMAT_FEATURE_BIASED_RENORMALIZATION (1 << FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)
-#define FORMAT_FEATURE_MASK (FORMAT_FEATURE_SIGNED | FORMAT_FEATURE_GAMMA | FORMAT_FEATURE_BIASED_RENORMALIZATION)
+#define FORMAT_FEATURE_16BIT_CHANNELS         (1 << FORMAT_FEATURE_16BIT_CHANNELS_BIT)
+#define FORMAT_FEATURE_MASK (FORMAT_FEATURE_SIGNED | FORMAT_FEATURE_GAMMA | FORMAT_FEATURE_BIASED_RENORMALIZATION | FORMAT_FEATURE_16BIT_CHANNELS)
 
 #ifdef _ENABLE_TEXTURE_EXPAND
 	// NOTE: BX2 expansion overrides GAMMA correction
@@ -44,9 +45,9 @@ R"(
 			_texture_flag_erase = 0; \
 			_texture_bx2_active = false; \
 		} while (false)
-	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(FORMAT_FEATURE_MASK | _texture_flag_erase)) | _texture_flag_override)
+	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(_texture_flag_erase)) | _texture_flag_override)
 #else
-	#define TEX_FLAGS(index) (TEX_PARAM(index).flags & ~FORMAT_FEATURE_MASK)
+	#define TEX_FLAGS(index) (TEX_PARAM(index).flags)
 #endif
 
 #define TEX_NAME(index) tex##index
@@ -195,10 +196,19 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 vec4 _sext_unorm8x4(const in vec4 x)
 {
 	// TODO: Handle clamped sign-extension
-	const vec4 bits = floor(fma(x, vec4(255.f), vec4(0.5f)));
-	const bvec4 sign_check = lessThan(bits, vec4(128.f));
-	const vec4 ret = _select(bits - 256.f, bits, sign_check);
-	return ret / 127.f;
+	const uint shift = 32 - 8; // sext 8-bit value into 32-bit container
+	const uvec4 ubits = uvec4(floor(fma(x, vec4(255.f), vec4(0.5f))));
+	const ivec4 ibits = ivec4(ubits << shift);
+	return (ibits >> shift) / 127.f;
+}
+
+vec4 _sext_unorm16x4(const in vec4 x)
+{
+	// TODO: Handle clamped sign-extension
+	const uint shift = 32 - 16; // sext 16-bit value into 32-bit container
+	const uvec4 ubits = uvec4(floor(fma(x, vec4(65535.f), vec4(0.5f))));
+	const ivec4 ibits = ivec4(ubits << shift);
+	return (ibits >> shift) / 32767.f;
 }
 
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
@@ -237,7 +247,10 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 	{
 		// Sign-extend the input signal
 		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
-		convert = _sext_unorm8x4(rgba);
+		if (_test_bit(control_bits, FORMAT_FEATURE_16BIT_CHANNELS_BIT))
+			convert = _sext_unorm16x4(rgba);
+		else
+			convert = _sext_unorm8x4(rgba);
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 		ch_mask &= ~(op_mask >> SEXT_A_BIT);
 	}
@@ -262,7 +275,10 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 			convert = (rgba * 2.f - 1.f);
 		else
 #endif
-		convert = (floor(fma(rgba, vec4(255.f), vec4(0.5f))) - 128.f) / 127.f;
+		if (_test_bit(control_bits, FORMAT_FEATURE_16BIT_CHANNELS_BIT))
+			convert = (floor(fma(rgba, vec4(65535.f), vec4(0.5f))) - 32768.f) / 32767.f;
+		else
+			convert = (floor(fma(rgba, vec4(255.f), vec4(0.5f))) - 128.f) / 127.f;
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
