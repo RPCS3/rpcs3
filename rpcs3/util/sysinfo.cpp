@@ -462,7 +462,10 @@ bool utils::has_neon()
 		int val = 0;
 		size_t len = sizeof(val);
 		sysctlbyname("hw.optional.AdvSIMD", &val, &len, nullptr, 0);
-		return val != 0;
+		int val_legacy = 0;
+		size_t len_legacy = sizeof(val_legacy);
+		sysctlbyname("hw.optional.neon", &val_legacy, &len_legacy, nullptr, 0);
+		return val != 0 || val_legacy != 0;
 #elif defined(_WIN32)
 		return IsProcessorFeaturePresent(PF_ARM_VFP_32_REGISTERS_AVAILABLE) != 0;
 #endif
