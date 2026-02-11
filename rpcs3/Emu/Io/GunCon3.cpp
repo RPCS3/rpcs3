@@ -226,7 +226,7 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 		}
 	}
 
-	if (my_wiimote_index < 0 || static_cast<size_t>(my_wiimote_index) >= states.size())
+	if (my_wiimote_index < 0 || static_cast<usz>(my_wiimote_index) >= states.size())
 		return false;
 
 	const auto& ws = states[my_wiimote_index];

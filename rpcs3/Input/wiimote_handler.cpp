@@ -92,10 +92,10 @@ bool wiimote_device::initialize_ir()
 	// 1. Enable IR logic / Pixel Clock (Requesting Acknowledgement for stability)
 	constexpr std::array<u8, 2> ir_on1 = { 0x13, 0x06 };
 	hid_write(m_handle, ir_on1.data(), ir_on1.size());
-	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	thread_ctrl::wait_for(50'000);
 	constexpr std::array<u8, 2> ir_on2 = { 0x1a, 0x06 };
 	hid_write(m_handle, ir_on2.data(), ir_on2.size());
-	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	thread_ctrl::wait_for(50'000);
 
 	// 2. Enable IR Camera (Wii-style sequence)
 	if (!write_reg(0xb00030, {0x01})) return false;
@@ -113,7 +113,7 @@ bool wiimote_device::initialize_ir()
 	// 6. Reporting mode: Buttons + Accel + IR (Continuous)
 	constexpr std::array<u8, 3> mode = { 0x12, 0x04, 0x33 };
 	if (hid_write(m_handle, mode.data(), mode.size()) < 0) return false;
-	std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	thread_ctrl::wait_for(100'000);
 
 	return true;
 }
@@ -351,19 +351,30 @@ void wiimote_handler::thread_proc()
 				};
 				std::vector<info_t> candidates;
 
-				hid_device_info* devs = hid_instance::enumerate(vid, 0);
-				for (hid_device_info* cur = devs; cur; cur = cur->next)
+				hid_device_info* devs = nullptr;
 				{
-					for (const auto& range : ranges)
+					std::lock_guard lock(g_hid_mutex);
+#if defined(__APPLE__)
+					Emu.BlockingCallFromMainThread([&]()
 					{
-						if (cur->product_id >= range.first && cur->product_id <= range.second)
+#endif
+					devs = hid_enumerate(vid, 0);
+					for (hid_device_info* cur = devs; cur; cur = cur->next)
+					{
+						for (const auto& range : ranges)
 						{
-							candidates.push_back({cur->path, cur->product_id, cur->serial_number ? cur->serial_number : L""});
-							break;
+							if (cur->product_id >= range.first && cur->product_id <= range.second)
+							{
+								candidates.push_back({ cur->path, cur->product_id, cur->serial_number ? cur->serial_number : L"" });
+								break;
+							}
 						}
 					}
+					hid_free_enumeration(devs);
+#if defined(__APPLE__)
+					}, false);
+#endif
 				}
-				hid_instance::free_enumeration(devs);
 
 				for (const auto& candidate : candidates)
 				{

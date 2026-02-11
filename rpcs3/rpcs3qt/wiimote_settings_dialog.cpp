@@ -10,6 +10,12 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 	, ui(new Ui::wiimote_settings_dialog)
 {
 	ui->setupUi(this);
+
+	m_boxes = {
+		ui->cb_trigger, ui->cb_a1, ui->cb_a2, ui->cb_c1,
+		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
+	};
+
 	update_list();
 	connect(ui->restoreDefaultsButton, &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
 
@@ -29,8 +35,8 @@ void wiimote_settings_dialog::populate_mappings()
 	auto* wm = wiimote_handler::get_instance();
 	if (!wm) return;
 
-	const QPair<QString, wiimote_button> buttons[] = {
-		{ tr("None"), wiimote_button::None },
+	const std::array<std::pair<QString, wiimote_button>, 12> buttons = {
+		{ { tr("None"), wiimote_button::None },
 		{ tr("A"), wiimote_button::A },
 		{ tr("B"), wiimote_button::B },
 		{ tr("Plus (+)"), wiimote_button::Plus },
@@ -41,35 +47,33 @@ void wiimote_settings_dialog::populate_mappings()
 		{ tr("D-Pad Up"), wiimote_button::Up },
 		{ tr("D-Pad Down"), wiimote_button::Down },
 		{ tr("D-Pad Left"), wiimote_button::Left },
-		{ tr("D-Pad Right"), wiimote_button::Right },
-	};
-
-	QComboBox* boxes[] = {
-		ui->cb_trigger, ui->cb_a1, ui->cb_a2, ui->cb_c1,
-		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
+		{ tr("D-Pad Right"), wiimote_button::Right } }
 	};
 
 	wiimote_guncon_mapping current = wm->get_mapping();
-	wiimote_button* targets[] = {
+	const std::array<wiimote_button*, 9> targets = {
 		&current.trigger, &current.a1, &current.a2, &current.c1,
 		&current.b1, &current.b2, &current.b3, &current.a3, &current.c2
 	};
 
-	for (int i = 0; i < 9; ++i)
-	{
-		boxes[i]->setMinimumWidth(150); // Make combo boxes wider for better readability
+	ensure(m_boxes.size() == targets.size());
 
-		for (const auto& pair : buttons)
+	for (usz i = 0; i < m_boxes.size(); ++i)
+	{
+		m_boxes[i]->setMinimumWidth(150); // Make combo boxes wider for better readability
+
+		for (const auto& [name, btn] : buttons)
 		{
-			boxes[i]->addItem(pair.first, QVariant::fromValue(static_cast<u16>(pair.second)));
+			m_boxes[i]->addItem(name, QVariant::fromValue(static_cast<u16>(btn)));
 		}
 
 		// Set current selection
-		const int index = boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
-		if (index >= 0) boxes[i]->setCurrentIndex(index);
+		const int index = m_boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
+		if (index >= 0) m_boxes[i]->setCurrentIndex(index);
 
 		// Connect change signal
-		connect(boxes[i], QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+		connect(m_boxes[i], &QComboBox::currentIndexChanged, this, [this](int)
+		{
 			apply_mappings();
 		});
 	}
@@ -85,40 +89,22 @@ void wiimote_settings_dialog::restore_defaults()
 	wm->set_mapping(default_map);
 
 	// Update UI
-	ui->cb_trigger->blockSignals(true);
-	ui->cb_a1->blockSignals(true);
-	ui->cb_a2->blockSignals(true);
-	ui->cb_c1->blockSignals(true);
-	ui->cb_b1->blockSignals(true);
-	ui->cb_b2->blockSignals(true);
-	ui->cb_b3->blockSignals(true);
-	ui->cb_a3->blockSignals(true);
-	ui->cb_c2->blockSignals(true);
+	for (auto* box : m_boxes) box->blockSignals(true);
 
-	auto set_box = [](QComboBox* box, wiimote_button btn) {
-		int index = box->findData(QVariant::fromValue(static_cast<u16>(btn)));
-		if (index >= 0) box->setCurrentIndex(index);
+	const std::array<wiimote_button, 9> targets = {
+		default_map.trigger, default_map.a1, default_map.a2, default_map.c1,
+		default_map.b1, default_map.b2, default_map.b3, default_map.a3, default_map.c2
 	};
 
-	set_box(ui->cb_trigger, default_map.trigger);
-	set_box(ui->cb_a1, default_map.a1);
-	set_box(ui->cb_a2, default_map.a2);
-	set_box(ui->cb_c1, default_map.c1);
-	set_box(ui->cb_b1, default_map.b1);
-	set_box(ui->cb_b2, default_map.b2);
-	set_box(ui->cb_b3, default_map.b3);
-	set_box(ui->cb_a3, default_map.a3);
-	set_box(ui->cb_c2, default_map.c2);
+	ensure(m_boxes.size() == targets.size());
 
-	ui->cb_trigger->blockSignals(false);
-	ui->cb_a1->blockSignals(false);
-	ui->cb_a2->blockSignals(false);
-	ui->cb_c1->blockSignals(false);
-	ui->cb_b1->blockSignals(false);
-	ui->cb_b2->blockSignals(false);
-	ui->cb_b3->blockSignals(false);
-	ui->cb_a3->blockSignals(false);
-	ui->cb_c2->blockSignals(false);
+	for (usz i = 0; i < m_boxes.size(); ++i)
+	{
+		const int index = m_boxes[i]->findData(QVariant::fromValue(static_cast<u16>(targets[i])));
+		if (index >= 0) m_boxes[i]->setCurrentIndex(index);
+	}
+
+	for (auto* box : m_boxes) box->blockSignals(false);
 }
 
 void wiimote_settings_dialog::apply_mappings()
@@ -127,24 +113,17 @@ void wiimote_settings_dialog::apply_mappings()
 	if (!wm) return;
 
 	wiimote_guncon_mapping map;
-	auto get_btn = [](QComboBox* box) {
-		return static_cast<wiimote_button>(box->currentData().toUInt());
+	const std::array<wiimote_button*, 9> targets = {
+		&map.trigger, &map.a1, &map.a2, &map.c1,
+		&map.b1, &map.b2, &map.b3, &map.a3, &map.c2
 	};
 
-	map.trigger = get_btn(ui->cb_trigger);
-	map.a1 = get_btn(ui->cb_a1);
-	map.a2 = get_btn(ui->cb_a2);
-	map.c1 = get_btn(ui->cb_c1);
-	map.b1 = get_btn(ui->cb_b1);
-	map.b2 = get_btn(ui->cb_b2);
-	map.b3 = get_btn(ui->cb_b3);
-	map.a3 = get_btn(ui->cb_a3);
-	map.c2 = get_btn(ui->cb_c2);
+	ensure(m_boxes.size() == targets.size());
 
-	// Preserve alts or add UI for them later. For now, keep defaults or sync with main if matched
-	// To be safe, we can just leave alts as default Up/Down for now since they are D-Pad shortcuts
-	// Or we can reset them if the user maps Up/Down to something else to avoid conflict?
-	// For simplicity, let's keep defaults in the struct constructor.
+	for (usz i = 0; i < m_boxes.size(); ++i)
+	{
+		*targets[i] = static_cast<wiimote_button>(m_boxes[i]->currentData().toUInt());
+	}
 
 	wm->set_mapping(map);
 }

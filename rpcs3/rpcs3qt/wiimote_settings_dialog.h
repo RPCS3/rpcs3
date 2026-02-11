@@ -12,6 +12,7 @@ public:
 
 private:
 	std::unique_ptr<Ui::wiimote_settings_dialog> ui;
+	std::vector<QComboBox*> m_boxes;
 	void update_list();
 	void update_state();
 	void populate_mappings();
