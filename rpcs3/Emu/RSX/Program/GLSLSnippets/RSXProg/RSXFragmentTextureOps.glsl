@@ -29,17 +29,20 @@ R"(
 	// NOTE: BX2 expansion overrides GAMMA correction
 	uint _texture_flag_override = 0;
 	uint _texture_flag_erase = 0;
+	bool _texture_bx2_active = false;
 	#define _enable_texture_expand(index) \
 		do { \
 			if (_test_bit(TEX_PARAM(index).flags, FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)) { \
 				_texture_flag_override = SIGN_EXPAND_MASK; \
 				_texture_flag_erase = GAMMA_CTRL_MASK; \
+				_texture_bx2_active = true; \
 			} \
 		} while (false)
 	#define _disable_texture_expand() \
 		do { \
 			_texture_flag_override = 0; \
 			_texture_flag_erase = 0; \
+			_texture_bx2_active = false; \
 		} while (false)
 	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(FORMAT_FEATURE_MASK | _texture_flag_erase)) | _texture_flag_override)
 #else
@@ -200,7 +203,7 @@ vec4 _sext_unorm8x4(const in vec4 x)
 
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 {
-	if (control_bits == 0)
+	if ((control_bits & ~FORMAT_FEATURE_MASK) == 0u)
 	{
 		return rgba;
 	}
@@ -254,7 +257,12 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 	{
 		// Expand to signed normalized by decompressing the signal
 		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
-		convert = (rgba * 2.f - 1.f);
+#ifdef _ENABLE_TEXTURE_EXPAND
+		if (_texture_bx2_active)
+			convert = (rgba * 2.f - 1.f);
+		else
+#endif
+		convert = (floor(fma(rgba, vec4(255.f), vec4(0.5f))) - 128.f) / 127.f;
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
