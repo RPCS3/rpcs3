@@ -2,8 +2,7 @@
 #include "wiimote_handler.h"
 #include "Input/hid_instance.h"
 #include "Emu/System.h"
-#include "Utilities/File.h"
-#include "util/yaml.hpp"
+#include "Emu/Io/wiimote_config.h"
 #include "util/logs.hpp"
 #include <algorithm>
 #include <initializer_list>
@@ -208,66 +207,44 @@ bool wiimote_device::update()
 
 static wiimote_handler* s_instance = nullptr;
 
-static std::string get_config_path()
-{
-	return fs::get_config_dir(true) + "wiimote.yml";
-}
-
 void wiimote_handler::load_config()
 {
-	const std::string path = get_config_path();
-	fs::file f(path, fs::read);
-	if (!f) return;
-
-	auto [root, error] = yaml_load(f.to_string());
-	if (!error.empty())
+	auto& cfg = get_wiimote_config();
+	if (cfg.load())
 	{
-		wiimote_log.error("Failed to load wiimote config: %s", error);
-		return;
+		std::unique_lock lock(m_mutex);
+		m_mapping.trigger = static_cast<wiimote_button>(cfg.mapping.trigger.get());
+		m_mapping.a1 = static_cast<wiimote_button>(cfg.mapping.a1.get());
+		m_mapping.a2 = static_cast<wiimote_button>(cfg.mapping.a2.get());
+		m_mapping.a3 = static_cast<wiimote_button>(cfg.mapping.a3.get());
+		m_mapping.b1 = static_cast<wiimote_button>(cfg.mapping.b1.get());
+		m_mapping.b2 = static_cast<wiimote_button>(cfg.mapping.b2.get());
+		m_mapping.b3 = static_cast<wiimote_button>(cfg.mapping.b3.get());
+		m_mapping.c1 = static_cast<wiimote_button>(cfg.mapping.c1.get());
+		m_mapping.c2 = static_cast<wiimote_button>(cfg.mapping.c2.get());
+		m_mapping.b1_alt = static_cast<wiimote_button>(cfg.mapping.b1_alt.get());
+		m_mapping.b2_alt = static_cast<wiimote_button>(cfg.mapping.b2_alt.get());
 	}
-
-	wiimote_guncon_mapping map;
-	auto parse_btn = [&](const char* key, wiimote_button& btn)
-	{
-		if (root[key])
-		{
-			btn = static_cast<wiimote_button>(root[key].as<u16>(static_cast<u16>(btn)));
-		}
-	};
-
-	parse_btn("trigger", map.trigger);
-	parse_btn("a1", map.a1);
-	parse_btn("a2", map.a2);
-	parse_btn("a3", map.a3);
-	parse_btn("b1", map.b1);
-	parse_btn("b2", map.b2);
-	parse_btn("b3", map.b3);
-	parse_btn("c1", map.c1);
-	parse_btn("c2", map.c2);
-
-	std::unique_lock lock(m_mutex);
-	m_mapping = map;
 }
 
 void wiimote_handler::save_config()
 {
-	YAML::Node root;
 	{
 		std::shared_lock lock(m_mutex);
-		root["trigger"] = static_cast<u16>(m_mapping.trigger);
-		root["a1"] = static_cast<u16>(m_mapping.a1);
-		root["a2"] = static_cast<u16>(m_mapping.a2);
-		root["a3"] = static_cast<u16>(m_mapping.a3);
-		root["b1"] = static_cast<u16>(m_mapping.b1);
-		root["b2"] = static_cast<u16>(m_mapping.b2);
-		root["b3"] = static_cast<u16>(m_mapping.b3);
-		root["c1"] = static_cast<u16>(m_mapping.c1);
-		root["c2"] = static_cast<u16>(m_mapping.c2);
+		auto& cfg = get_wiimote_config();
+		cfg.mapping.trigger.set(static_cast<u16>(m_mapping.trigger));
+		cfg.mapping.a1.set(static_cast<u16>(m_mapping.a1));
+		cfg.mapping.a2.set(static_cast<u16>(m_mapping.a2));
+		cfg.mapping.a3.set(static_cast<u16>(m_mapping.a3));
+		cfg.mapping.b1.set(static_cast<u16>(m_mapping.b1));
+		cfg.mapping.b2.set(static_cast<u16>(m_mapping.b2));
+		cfg.mapping.b3.set(static_cast<u16>(m_mapping.b3));
+		cfg.mapping.c1.set(static_cast<u16>(m_mapping.c1));
+		cfg.mapping.c2.set(static_cast<u16>(m_mapping.c2));
+		cfg.mapping.b1_alt.set(static_cast<u16>(m_mapping.b1_alt));
+		cfg.mapping.b2_alt.set(static_cast<u16>(m_mapping.b2_alt));
 	}
-
-	YAML::Emitter emitter;
-	emitter << root;
-	fs::write_file(get_config_path(), fs::rewrite, emitter.c_str(), emitter.size());
+	get_wiimote_config().save();
 }
 
 wiimote_handler::wiimote_handler()
@@ -321,7 +298,7 @@ void wiimote_handler::stop()
 	m_thread.reset();
 }
 
-size_t wiimote_handler::get_device_count()
+usz wiimote_handler::get_device_count()
 {
 	std::shared_lock lock(m_mutex);
 	return m_devices.size();
@@ -358,10 +335,8 @@ std::vector<wiimote_state> wiimote_handler::get_states()
 
 void wiimote_handler::thread_proc()
 {
-	thread_ctrl::set_name("WiiMoteManager");
-
 	u32 counter = 0;
-	while (m_running)
+	while (m_running && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Scan every 2 seconds
 		if (counter++ % 200 == 0)
@@ -418,7 +393,7 @@ void wiimote_handler::thread_proc()
 					{
 						// Generic Wiimote: Find first available slot
 						std::shared_lock lock(m_mutex);
-						for (size_t i = 0; i < m_devices.size(); i++)
+						for (usz i = 0; i < m_devices.size(); i++)
 						{
 							if (!m_devices[i]->get_state().connected)
 							{
@@ -471,6 +446,6 @@ void wiimote_handler::thread_proc()
 			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		thread_ctrl::wait_for(10'000);
 	}
 }

@@ -42,19 +42,11 @@ bool hid_instance::initialize()
 
 #if defined(__APPLE__)
 	int error_code = 0;
-	if (thread_ctrl::is_main())
+	Emu.BlockingCallFromMainThread([&error_code]()
 	{
 		error_code = hid_init();
 		hid_darwin_set_open_exclusive(0);
-	}
-	else
-	{
-		Emu.BlockingCallFromMainThread([&error_code]()
-		{
-			error_code = hid_init();
-			hid_darwin_set_open_exclusive(0);
-		}, false);
-	}
+	}, false);
 #else
 	const int error_code = hid_init();
 #endif
@@ -72,14 +64,12 @@ hid_device_info* hid_instance::enumerate(u16 vid, u16 pid)
 {
 	std::lock_guard lock(g_hid_mutex);
 #if defined(__APPLE__)
-	if (!thread_ctrl::is_main())
-	{
-		hid_device_info* devs = nullptr;
-		Emu.BlockingCallFromMainThread([&]() { devs = hid_enumerate(vid, pid); }, false);
-		return devs;
-	}
-#endif
+	hid_device_info* devs = nullptr;
+	Emu.BlockingCallFromMainThread([&]() { devs = hid_enumerate(vid, pid); }, false);
+	return devs;
+#else
 	return hid_enumerate(vid, pid);
+#endif
 }
 
 void hid_instance::free_enumeration(hid_device_info* devs)
@@ -88,13 +78,10 @@ void hid_instance::free_enumeration(hid_device_info* devs)
 
 	std::lock_guard lock(g_hid_mutex);
 #if defined(__APPLE__)
-	if (!thread_ctrl::is_main())
-	{
-		Emu.BlockingCallFromMainThread([&]() { hid_free_enumeration(devs); }, false);
-		return;
-	}
-#endif
+	Emu.BlockingCallFromMainThread([&]() { hid_free_enumeration(devs); }, false);
+#else
 	hid_free_enumeration(devs);
+#endif
 }
 
 hid_device* hid_instance::open_path(const char* path)
@@ -117,11 +104,8 @@ void hid_instance::close(hid_device* dev)
 
 	std::lock_guard lock(g_hid_mutex);
 #if defined(__APPLE__)
-	if (!thread_ctrl::is_main())
-	{
-		Emu.BlockingCallFromMainThread([&]() { hid_close(dev); }, false);
-		return;
-	}
-#endif
+	Emu.BlockingCallFromMainThread([&]() { hid_close(dev); }, false);
+#else
 	hid_close(dev);
+#endif
 }

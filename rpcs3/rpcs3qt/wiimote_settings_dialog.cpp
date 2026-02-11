@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "wiimote_settings_dialog.h"
-#include "Emu/System.h"
 #include "Input/wiimote_handler.h"
 #include <QTimer>
 #include <QPainter>
@@ -66,7 +65,7 @@ void wiimote_settings_dialog::populate_mappings()
 		}
 
 		// Set current selection
-		int index = boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
+		const int index = boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
 		if (index >= 0) boxes[i]->setCurrentIndex(index);
 
 		// Connect change signal
@@ -162,8 +161,8 @@ void wiimote_settings_dialog::update_state()
 		return;
 	}
 
-	auto states = wm->get_states();
-	if (static_cast<size_t>(index) >= states.size())
+	const auto states = wm->get_states();
+	if (static_cast<usz>(index) >= states.size())
 	{
 		ui->connectionStatus->setText(tr("N/A"));
 		ui->buttonState->setText(tr("N/A"));
@@ -215,8 +214,8 @@ void wiimote_settings_dialog::update_state()
 
 			// Map 0..1023 X and 0..767 Y to pixmap coordinates
 			// Wiimote X/Y are inverted relative to pointing direction
-			float x = ((1023 - state.ir[i].x) / 1023.0f) * pixmap.width();
-			float y = (state.ir[i].y / 767.0f) * pixmap.height();
+			const float x = ((1023 - state.ir[i].x) / 1023.0f) * pixmap.width();
+			const float y = (state.ir[i].y / 767.0f) * pixmap.height();
 
 			painter.setPen(colors[i]);
 			painter.setBrush(colors[i]);
@@ -241,15 +240,15 @@ void wiimote_settings_dialog::update_list()
 		return;
 	}
 
-	auto states = wm->get_states();
+	const auto states = wm->get_states();
 
 	// Only update if the list content actually changed (avoid flicker)
-	if (static_cast<size_t>(ui->wiimoteList->count()) != states.size())
+	if (static_cast<usz>(ui->wiimoteList->count()) != states.size())
 	{
-		int current_row = ui->wiimoteList->currentRow();
+		const int current_row = ui->wiimoteList->currentRow();
 		ui->wiimoteList->clear();
 
-		for (size_t i = 0; i < states.size(); i++)
+		for (usz i = 0; i < states.size(); i++)
 		{
 			QString label = tr("Wiimote #%1").arg(i + 1);
 			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
@@ -268,7 +267,7 @@ void wiimote_settings_dialog::update_list()
 	else
 	{
 		// Just update connection status labels without clearing
-		for (size_t i = 0; i < states.size(); i++)
+		for (usz i = 0; i < states.size(); i++)
 		{
 			QString label = tr("Wiimote #%1").arg(i + 1);
 			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";

@@ -100,7 +100,7 @@ public:
 	void stop();
 
 	std::vector<wiimote_state> get_states();
-	size_t get_device_count();
+	usz get_device_count();
 
 	void set_mapping(const wiimote_guncon_mapping& mapping);
 	wiimote_guncon_mapping get_mapping() const;
