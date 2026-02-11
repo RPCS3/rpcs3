@@ -25,8 +25,41 @@ namespace
 {
 	static NEVER_INLINE void emit_data(YAML::Emitter& out, const YAML::Node& node)
 	{
-		// TODO
-		out << node;
+		if (!node || node.IsNull())
+		{
+			// I chose to output a null when nothing is present so that recursive YAML Value calls can be matched to a null value instead of nothing
+			out << YAML::Null;
+			return;
+		}
+		if (node.IsMap())
+		{
+			std::vector<std::string> keys;
+			keys.reserve(node.size());
+			// generate vector of strings to be sorted using the as function from YAML documentation
+			for (const auto& pair : node)
+			{
+				keys.push_back(pair.first.as<std::string>());
+			}
+			std::sort(keys.begin(), keys.end());
+			// recursively generate sorted maps
+			// alternative implementations could have stops at specified recursion levels or maybe just the first two levels would be sorted
+			out << YAML::BeginMap;
+			for (const std::string& key : keys)
+			{
+				out << YAML::Key << key;
+				out << YAML::Value;
+				emit_data(out, node[key]);
+			}
+			out << YAML::EndMap;
+		}
+		// alternatively: an else statement could be used however I wanted to follow a similar format to the += operator so the YAML Undefined class can be ignored
+		else if (node.IsScalar() || node.IsSequence())
+		{
+			out << node;
+		}
+		// this exists to preserve the same functionality as before where Undefined nodes would still be output, can be removed or consolidated with the else if branch 
+		else
+			out << node;
 	}
 
 	// Incrementally load YAML
