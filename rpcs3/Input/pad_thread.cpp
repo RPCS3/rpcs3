@@ -81,6 +81,9 @@ void pad_thread::Init()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
 
+	// Reset mouse-based gyro state
+	m_mouse_gyro.clear();
+
 	// Cache old settings if possible
 	std::array<pad_setting, CELL_PAD_MAX_PORT_NUM> pad_settings;
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
@@ -606,6 +609,10 @@ void pad_thread::operator()()
 		if (Emu.IsRunning())
 		{
 			update_pad_states();
+
+			// Apply mouse-based gyro emulation.
+			// Intentionally bound to Player 1 only.
+			m_mouse_gyro.apply_gyro(m_pads[0]);
 		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
@@ -624,15 +631,18 @@ void pad_thread::operator()()
 				if (!pad->is_connected())
 					continue;
 
-				for (const auto& button : pad->m_buttons)
+				for (const Button& button : pad->m_buttons)
 				{
 					if (button.m_pressed && (
-						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-						button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-						button.m_outKeyCode == CELL_PAD_CTRL_START ||
-						button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
+						(button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && (
+							button.m_outKeyCode == CELL_PAD_CTRL_START ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SELECT)) ||
+						(button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2 && (
+							button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE))
+						))
 					{
 						any_button_pressed = true;
 						break;
@@ -669,7 +679,7 @@ void pad_thread::operator()()
 					break;
 				}
 
-				for (const auto& button : pad->m_buttons)
+				for (const Button& button : pad->m_buttons)
 				{
 					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
 					{
@@ -728,7 +738,7 @@ void pad_thread::operator()()
 				if (!pad->is_connected())
 					continue;
 
-				for (const auto& button : pad->m_buttons)
+				for (const Button& button : pad->m_buttons)
 				{
 					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_START && button.m_pressed)
 					{

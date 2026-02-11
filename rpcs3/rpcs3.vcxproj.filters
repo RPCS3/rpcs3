@@ -1272,6 +1272,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_context_menu.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="Input\mouse_gyro_handler.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1510,6 +1513,9 @@
     </ClInclude>
     <ClInclude Include="Input\sdl_camera_video_sink.h">
       <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\mouse_gyro_handler.h">
+      <Filter>Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

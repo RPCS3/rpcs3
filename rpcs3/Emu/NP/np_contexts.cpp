@@ -46,7 +46,7 @@ error_code generic_async_transaction_context::wait_for_completion()
 		return *result;
 	}
 
-	completion_cond.wait(lock);
+	completion_cond.wait(lock, [this] { return result.has_value(); });
 
 	return *result;
 }
