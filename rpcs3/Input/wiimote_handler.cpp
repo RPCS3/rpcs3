@@ -351,14 +351,8 @@ void wiimote_handler::thread_proc()
 				};
 				std::vector<info_t> candidates;
 
-				hid_device_info* devs = nullptr;
+				hid_instance::enumerate_devices(vid, 0, [&](hid_device_info* devs)
 				{
-					std::lock_guard lock(g_hid_mutex);
-#if defined(__APPLE__)
-					Emu.BlockingCallFromMainThread([&]()
-					{
-#endif
-					devs = hid_enumerate(vid, 0);
 					for (hid_device_info* cur = devs; cur; cur = cur->next)
 					{
 						for (const auto& range : ranges)
@@ -370,11 +364,7 @@ void wiimote_handler::thread_proc()
 							}
 						}
 					}
-					hid_free_enumeration(devs);
-#if defined(__APPLE__)
-					}, false);
-#endif
-				}
+				});
 
 				for (const auto& candidate : candidates)
 				{

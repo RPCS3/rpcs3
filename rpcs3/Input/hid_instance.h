@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include <mutex>
+#include <functional>
 #include <hidapi.h>
 
 struct hid_instance
@@ -18,8 +19,8 @@ public:
 
 	bool initialize();
 
-	static hid_device_info* enumerate(u16 vid, u16 pid);
-	static void free_enumeration(hid_device_info* devs);
+	static void enumerate_devices(u16 vid, u16 pid, std::function<void(hid_device_info*)> callback);
+
 	static hid_device* open_path(const char* path);
 	static void close(hid_device* dev);
 

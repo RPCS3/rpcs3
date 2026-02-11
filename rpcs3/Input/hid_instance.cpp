@@ -60,26 +60,19 @@ bool hid_instance::initialize()
 	return true;
 }
 
-hid_device_info* hid_instance::enumerate(u16 vid, u16 pid)
+void hid_instance::enumerate_devices(u16 vid, u16 pid, std::function<void(hid_device_info*)> callback)
 {
 	std::lock_guard lock(g_hid_mutex);
 #if defined(__APPLE__)
-	hid_device_info* devs = nullptr;
-	Emu.BlockingCallFromMainThread([&]() { devs = hid_enumerate(vid, pid); }, false);
-	return devs;
+	Emu.BlockingCallFromMainThread([&]()
+	{
+		hid_device_info* devs = hid_enumerate(vid, pid);
+		callback(devs);
+		hid_free_enumeration(devs);
+	}, false);
 #else
-	return hid_enumerate(vid, pid);
-#endif
-}
-
-void hid_instance::free_enumeration(hid_device_info* devs)
-{
-	if (!devs) return;
-
-	std::lock_guard lock(g_hid_mutex);
-#if defined(__APPLE__)
-	Emu.BlockingCallFromMainThread([&]() { hid_free_enumeration(devs); }, false);
-#else
+	hid_device_info* devs = hid_enumerate(vid, pid);
+	callback(devs);
 	hid_free_enumeration(devs);
 #endif
 }
