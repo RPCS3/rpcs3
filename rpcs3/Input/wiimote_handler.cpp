@@ -6,6 +6,8 @@
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
 #include <algorithm>
+#include <initializer_list>
+#include <vector>
 
 LOG_CHANNEL(wiimote_log, "Wiimote");
 
@@ -364,7 +366,7 @@ void wiimote_handler::thread_proc()
 		// Scan every 2 seconds
 		if (counter++ % 200 == 0)
 		{
-			const auto scan_and_add = [&](u16 vid, u16 pid_start, u16 pid_end)
+			const auto scan_and_add = [&](u16 vid, std::initializer_list<std::pair<u16, u16>> ranges)
 			{
 				struct info_t
 				{
@@ -377,9 +379,13 @@ void wiimote_handler::thread_proc()
 				hid_device_info* devs = hid_instance::enumerate(vid, 0);
 				for (hid_device_info* cur = devs; cur; cur = cur->next)
 				{
-					if (cur->product_id >= pid_start && cur->product_id <= pid_end)
+					for (const auto& range : ranges)
 					{
-						candidates.push_back({cur->path, cur->product_id, cur->serial_number ? cur->serial_number : L""});
+						if (cur->product_id >= range.first && cur->product_id <= range.second)
+						{
+							candidates.push_back({cur->path, cur->product_id, cur->serial_number ? cur->serial_number : L""});
+							break;
+						}
 					}
 				}
 				hid_instance::free_enumeration(devs);
@@ -447,12 +453,10 @@ void wiimote_handler::thread_proc()
 				}
 			};
 
-			// Generic Wiimote / DolphinBar Mode 4 (Normal)
-			scan_and_add(VID_NINTENDO, PID_WIIMOTE, PID_WIIMOTE);
-			// Wiimote Plus
-			scan_and_add(VID_NINTENDO, PID_WIIMOTE_PLUS, PID_WIIMOTE_PLUS);
+			// Generic Wiimote / Wiimote Plus / DolphinBar Mode 4 (Normal)
+			scan_and_add(VID_NINTENDO, {{PID_WIIMOTE, PID_WIIMOTE}, {PID_WIIMOTE_PLUS, PID_WIIMOTE_PLUS}});
 			// Mayflash DolphinBar Mode 4 (Custom VID/PIDs)
-			scan_and_add(VID_MAYFLASH, PID_DOLPHINBAR_START, PID_DOLPHINBAR_END);
+			scan_and_add(VID_MAYFLASH, {{PID_DOLPHINBAR_START, PID_DOLPHINBAR_END}});
 		}
 
 		// Update all devices at 100Hz

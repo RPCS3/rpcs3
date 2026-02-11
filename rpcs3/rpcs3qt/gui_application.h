@@ -13,7 +13,6 @@
 #include "main_application.h"
 
 #include "Emu/System.h"
-#include "Input/wiimote_handler.h"
 #include "Input/raw_mouse_handler.h"
 
 #include <memory>

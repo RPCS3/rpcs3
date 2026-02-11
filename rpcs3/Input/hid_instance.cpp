@@ -8,6 +8,8 @@
 #include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
 #endif
 
+LOG_CHANNEL(hid_log, "HID");
+
 std::mutex g_hid_mutex;
 
 hid_instance::~hid_instance()
@@ -68,96 +70,58 @@ bool hid_instance::initialize()
 
 hid_device_info* hid_instance::enumerate(u16 vid, u16 pid)
 {
-	hid_device_info* devs = nullptr;
-#if defined(__APPLE__)
-	if (thread_ctrl::is_main())
-	{
-		std::lock_guard lock(g_hid_mutex);
-		devs = hid_enumerate(vid, pid);
-	}
-	else
-	{
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			std::lock_guard lock(g_hid_mutex);
-			devs = hid_enumerate(vid, pid);
-		}, false);
-	}
-#else
 	std::lock_guard lock(g_hid_mutex);
-	devs = hid_enumerate(vid, pid);
+#if defined(__APPLE__)
+	if (!thread_ctrl::is_main())
+	{
+		hid_device_info* devs = nullptr;
+		Emu.BlockingCallFromMainThread([&]() { devs = hid_enumerate(vid, pid); }, false);
+		return devs;
+	}
 #endif
-	return devs;
+	return hid_enumerate(vid, pid);
 }
 
 void hid_instance::free_enumeration(hid_device_info* devs)
 {
 	if (!devs) return;
 
-#if defined(__APPLE__)
-	if (thread_ctrl::is_main())
-	{
-		std::lock_guard lock(g_hid_mutex);
-		hid_free_enumeration(devs);
-	}
-	else
-	{
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			std::lock_guard lock(g_hid_mutex);
-			hid_free_enumeration(devs);
-		}, false);
-	}
-#else
 	std::lock_guard lock(g_hid_mutex);
-	hid_free_enumeration(devs);
+#if defined(__APPLE__)
+	if (!thread_ctrl::is_main())
+	{
+		Emu.BlockingCallFromMainThread([&]() { hid_free_enumeration(devs); }, false);
+		return;
+	}
 #endif
+	hid_free_enumeration(devs);
 }
 
 hid_device* hid_instance::open_path(const char* path)
 {
-	hid_device* dev = nullptr;
-#if defined(__APPLE__)
-	if (thread_ctrl::is_main())
-	{
-		std::lock_guard lock(g_hid_mutex);
-		dev = hid_open_path(path);
-	}
-	else
-	{
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			std::lock_guard lock(g_hid_mutex);
-			dev = hid_open_path(path);
-		}, false);
-	}
-#else
 	std::lock_guard lock(g_hid_mutex);
-	dev = hid_open_path(path);
+#if defined(__APPLE__)
+	if (!thread_ctrl::is_main())
+	{
+		hid_device* dev = nullptr;
+		Emu.BlockingCallFromMainThread([&]() { dev = hid_open_path(path); }, false);
+		return dev;
+	}
 #endif
-	return dev;
+	return hid_open_path(path);
 }
 
 void hid_instance::close(hid_device* dev)
 {
 	if (!dev) return;
 
-#if defined(__APPLE__)
-	if (thread_ctrl::is_main())
-	{
-		std::lock_guard lock(g_hid_mutex);
-		hid_close(dev);
-	}
-	else
-	{
-		Emu.BlockingCallFromMainThread([&]()
-		{
-			std::lock_guard lock(g_hid_mutex);
-			hid_close(dev);
-		}, false);
-	}
-#else
 	std::lock_guard lock(g_hid_mutex);
-	hid_close(dev);
+#if defined(__APPLE__)
+	if (!thread_ctrl::is_main())
+	{
+		Emu.BlockingCallFromMainThread([&]() { hid_close(dev); }, false);
+		return;
+	}
 #endif
+	hid_close(dev);
 }

@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <memory>
 
+LOG_CHANNEL(hid_log, "HID");
+
 #ifdef ANDROID
 std::vector<android_usb_device> g_android_usb_devices;
 std::mutex g_android_usb_devices_mutex;
