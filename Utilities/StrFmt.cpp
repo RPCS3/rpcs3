@@ -67,6 +67,62 @@ std::wstring utf8_to_wchar(std::string_view src)
 	return converter.from_bytes(src.data());
 #endif
 }
+
+std::string sanitize_utf8(std::string_view src)
+{
+	if (src.empty())
+	{
+		return {};
+	}
+
+	std::string res;
+	res.reserve(src.size());
+
+	for (usz i = 0; i < src.size();)
+	{
+		const u8 c = static_cast<u8>(src[i]);
+		s32 len = 0;
+
+		if (c < 0x80)
+			len = 1;
+		else if ((c & 0xE0) == 0xC0)
+			len = 2;
+		else if ((c & 0xF0) == 0xE0)
+			len = 3;
+		else if ((c & 0xF8) == 0xF0)
+			len = 4;
+
+		bool valid = len > 0 && (i + len <= src.size());
+
+		if (valid)
+		{
+			for (s32 j = 1; j < len; ++j)
+			{
+				if ((static_cast<u8>(src[i + j]) & 0xC0) != 0x80)
+				{
+					valid = false;
+					break;
+				}
+			}
+		}
+
+		if (valid)
+		{
+			// Check for overlong encodings or invalid codepoints if strictness is required,
+			// but for basic filesystem compat, ensuring valid sequence structure is usually enough.
+			res.append(src.substr(i, len));
+			i += len;
+		}
+		else
+		{
+			res += '_';
+			i++;
+		}
+	}
+
+	return res;
+}
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #elif defined(__clang__)
@@ -569,19 +625,18 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 	if (std::string_view full_func{loc.function_name() ? loc.function_name() : ""}; !full_func.empty())
 	{
 		// Remove useless disambiguators
-		std::string func = fmt::replace_all(std::string(full_func), {
-			{"struct ", ""},
-			{"class ", ""},
-			{"enum ", ""},
-			{"typename ", ""},
+		std::string func = fmt::replace_all(std::string(full_func), {{"struct ", ""},
+																		{"class ", ""},
+																		{"enum ", ""},
+																		{"typename ", ""},
 #ifdef _MSC_VER
-			{"__cdecl ", ""},
+																		{"__cdecl ", ""},
 #endif
-			{"unsigned long long", "ullong"},
-			//{"unsigned long", "ulong"}, // ullong
-			{"unsigned int", "uint"},
-			{"unsigned short", "ushort"},
-			{"unsigned char", "uchar"}});
+																		{"unsigned long long", "ullong"},
+																		//{"unsigned long", "ulong"}, // ullong
+																		{"unsigned int", "uint"},
+																		{"unsigned short", "ushort"},
+																		{"unsigned char", "uchar"}});
 
 		// Remove function argument signature for long names
 		for (usz index = func.find_first_of('('); index != umax && func.size() >= 100u; index = func.find_first_of('(', index))
@@ -671,7 +726,7 @@ namespace fmt
 	}
 
 	struct cfmt_src;
-}
+} // namespace fmt
 
 // Temporary implementation
 struct fmt::cfmt_src
@@ -714,14 +769,16 @@ struct fmt::cfmt_src
 	usz type(usz extra) const
 	{
 // Hack: use known function pointers to determine type
-#define TYPE(type) \
-		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+#define TYPE(type)                                                \
+	if (sup[extra].fmt_string == &fmt_class_string<type>::format) \
+		return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
 		TYPE(schar);
 		TYPE(short);
-		if constexpr (std::is_signed_v<char>) TYPE(char);
+		if constexpr (std::is_signed_v<char>)
+			TYPE(char);
 		TYPE(long);
 		TYPE(s128);
 
@@ -732,14 +789,14 @@ struct fmt::cfmt_src
 		return 0;
 	}
 
-	static constexpr usz size_char  = 1;
+	static constexpr usz size_char = 1;
 	static constexpr usz size_short = 2;
-	static constexpr usz size_int   = 0;
-	static constexpr usz size_long  = sizeof(ulong);
+	static constexpr usz size_int = 0;
+	static constexpr usz size_long = sizeof(ulong);
 	static constexpr usz size_llong = sizeof(ullong);
-	static constexpr usz size_size  = sizeof(usz);
-	static constexpr usz size_max   = sizeof(std::uintmax_t);
-	static constexpr usz size_diff  = sizeof(std::ptrdiff_t);
+	static constexpr usz size_size = sizeof(usz);
+	static constexpr usz size_max = sizeof(std::uintmax_t);
+	static constexpr usz size_diff = sizeof(std::ptrdiff_t);
 };
 
 void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept

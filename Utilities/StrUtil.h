@@ -37,6 +37,9 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
 // Convert float to string locale independent
 bool try_to_string(std::string* out, const f64& value);
 
+// Sanitize string to be valid UTF-8
+std::string sanitize_utf8(std::string_view src);
+
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);
 
@@ -106,8 +109,7 @@ namespace fmt
 		return src;
 	}
 
-	static inline
-	std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
+	static inline std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
 	{
 		if (list.empty())
 			return src;
@@ -177,7 +179,7 @@ namespace fmt
 		std::string result;
 		result.reserve(total);
 
-		auto it  = source.begin();
+		auto it = source.begin();
 		auto end = source.end();
 
 		for (--end; it != end; ++it)
@@ -202,7 +204,8 @@ namespace fmt
 		usz total = (sources.size() - 1) * separator.size();
 		for (const auto& s : sources)
 		{
-			if (s.empty()) continue;
+			if (s.empty())
+				continue;
 			total += s.size() + (s.size() - 1) * separator.size();
 		}
 
@@ -266,4 +269,4 @@ namespace fmt
 			return hash_type{}(str);
 		}
 	};
-}
+} // namespace fmt
