@@ -12,6 +12,12 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <unistd.h>
+#endif
+
 LOG_CHANNEL(cellNetCtl);
 
 template <>
@@ -208,7 +214,40 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
 	{
-		memcpy(info->ether_addr.data, nph.get_ether_addr().data(), 6);
+		const auto& ether = nph.get_ether_addr();
+
+		// Check if MAC address is valid (non-zero)
+		if (ether[0] == 0 && ether[1] == 0 && ether[2] == 0 &&
+		    ether[3] == 0 && ether[4] == 0 && ether[5] == 0)
+		{
+			cellNetCtl.error("MAC address is all zeros - generating fallback");
+
+			// Generate a fallback locally-administered MAC based on a simple hash
+			char hostname[256] = {};
+			if (gethostname(hostname, sizeof(hostname) - 1) != 0)
+			{
+				std::strcpy(hostname, "rpcs3");
+			}
+
+			u64 hash = 0;
+			for (const char* p = hostname; *p; ++p)
+				hash = hash * 31 + static_cast<u8>(*p);
+
+			info->ether_addr.data[0] = 0x02;  // Locally administered, unicast
+			info->ether_addr.data[1] = static_cast<u8>((hash >> 0) & 0xff);
+			info->ether_addr.data[2] = static_cast<u8>((hash >> 8) & 0xff);
+			info->ether_addr.data[3] = static_cast<u8>((hash >> 16) & 0xff);
+			info->ether_addr.data[4] = static_cast<u8>((hash >> 24) & 0xff);
+			info->ether_addr.data[5] = static_cast<u8>((hash >> 32) & 0xff);
+
+			cellNetCtl.notice("Generated fallback MAC: %02x:%02x:%02x:%02x:%02x:%02x",
+				info->ether_addr.data[0], info->ether_addr.data[1], info->ether_addr.data[2],
+				info->ether_addr.data[3], info->ether_addr.data[4], info->ether_addr.data[5]);
+		}
+		else
+		{
+			memcpy(info->ether_addr.data, ether.data(), 6);
+		}
 		return CELL_OK;
 	}
 

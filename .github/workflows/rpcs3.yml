@@ -116,8 +116,6 @@ jobs:
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
   Mac_Build:
-    # Only run push event on master branch of main repo, but run all PRs
-    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
       matrix:
@@ -328,7 +326,6 @@ jobs:
 
   Windows_Build_Clang:
     # Only run push event on master branch of main repo, but run all PRs
-    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
       matrix:
