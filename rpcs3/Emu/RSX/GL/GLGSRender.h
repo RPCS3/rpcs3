@@ -206,7 +206,7 @@ public:
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 	// DMA
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 	void enqueue_host_context_write(u32 offset, u32 size, const void* data);
 	void on_guest_texture_read();
 

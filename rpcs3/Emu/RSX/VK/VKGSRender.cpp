@@ -1541,7 +1541,7 @@ std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data(
 	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value };
 }
 
-bool VKGSRender::release_GCM_label(u32 address, u32 args)
+bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
 	if (!backend_config.supports_host_gpu_labels)
 	{
@@ -1550,7 +1550,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 
-	if (host_ctx->texture_loads_completed())
+	if (type == NV4097_TEXTURE_READ_SEMAPHORE_RELEASE && host_ctx->texture_loads_completed())
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
@@ -1572,13 +1572,10 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	const auto release_event_id = host_ctx->on_label_acquire();
 
+	vk::insert_global_memory_barrier(*m_current_command_buffer);
+
 	if (host_ctx->has_unflushed_texture_loads())
 	{
-		if (vk::is_renderpass_open(*m_current_command_buffer))
-		{
-			vk::end_renderpass(*m_current_command_buffer);
-		}
-
 		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
 		flush_command_queue();
 	}

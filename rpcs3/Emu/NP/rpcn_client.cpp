@@ -1467,7 +1467,7 @@ namespace rpcn
 		return error;
 	}
 
-	bool rpcn_client::add_friend(const std::string& friend_username)
+	std::optional<ErrorType> rpcn_client::add_friend(const std::string& friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
@@ -1478,19 +1478,18 @@ namespace rpcn
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::AddFriend, req_id, data, packet_data))
 		{
-			return false;
+			return std::nullopt;
 		}
 
 		vec_stream reply(packet_data);
-		auto error = static_cast<ErrorType>(reply.get<u8>());
+		const auto error = static_cast<ErrorType>(reply.get<u8>());
 
-		if (error != rpcn::ErrorType::NoError)
-		{
-			return false;
-		}
+		if (error == ErrorType::NoError)
+			rpcn_log.success("add_friend(\"%s\") succeeded", friend_username);
+		else
+			rpcn_log.error("add_friend(\"%s\") failed with error: %s", error);
 
-		rpcn_log.success("You have successfully added \"%s\" as a friend", friend_username);
-		return true;
+		return error;
 	}
 
 	bool rpcn_client::remove_friend(const std::string& friend_username)
