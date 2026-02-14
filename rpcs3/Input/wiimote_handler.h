@@ -102,6 +102,8 @@ public:
 	void start();
 	void stop();
 
+	bool is_running() const { return m_running; }
+
 	std::vector<wiimote_state> get_states();
 	usz get_device_count();
 

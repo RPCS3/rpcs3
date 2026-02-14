@@ -3,6 +3,7 @@
 #include "MouseHandler.h"
 #include "Emu/IdManager.h"
 #include "Emu/Io/guncon3_config.h"
+#include "Emu/Io/wiimote_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/overlay_cursor.h"
@@ -212,11 +213,14 @@ extern bool is_input_allowed();
 
 bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 {
+	if (!get_wiimote_config().use_for_guncon.get())
+		return false;
+
 	auto* wm = wiimote_handler::get_instance();
 	auto states = wm->get_states();
 
 	// Determine which Wiimote to use based on our ordinal position among all GunCons
-	int my_wiimote_index = -1;
+	s64 my_wiimote_index = -1;
 	{
 		std::lock_guard lock(s_instances_mutex);
 		auto found = std::find(s_instances.begin(), s_instances.end(), this);

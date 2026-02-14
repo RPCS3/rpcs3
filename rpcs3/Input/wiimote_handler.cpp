@@ -213,17 +213,17 @@ void wiimote_handler::load_config()
 	if (cfg.load())
 	{
 		std::unique_lock lock(m_mutex);
-		m_mapping.trigger = static_cast<wiimote_button>(cfg.mapping.trigger.get());
-		m_mapping.a1 = static_cast<wiimote_button>(cfg.mapping.a1.get());
-		m_mapping.a2 = static_cast<wiimote_button>(cfg.mapping.a2.get());
-		m_mapping.a3 = static_cast<wiimote_button>(cfg.mapping.a3.get());
-		m_mapping.b1 = static_cast<wiimote_button>(cfg.mapping.b1.get());
-		m_mapping.b2 = static_cast<wiimote_button>(cfg.mapping.b2.get());
-		m_mapping.b3 = static_cast<wiimote_button>(cfg.mapping.b3.get());
-		m_mapping.c1 = static_cast<wiimote_button>(cfg.mapping.c1.get());
-		m_mapping.c2 = static_cast<wiimote_button>(cfg.mapping.c2.get());
-		m_mapping.b1_alt = static_cast<wiimote_button>(cfg.mapping.b1_alt.get());
-		m_mapping.b2_alt = static_cast<wiimote_button>(cfg.mapping.b2_alt.get());
+		m_mapping.trigger = cfg.mapping.trigger.get();
+		m_mapping.a1 = cfg.mapping.a1.get();
+		m_mapping.a2 = cfg.mapping.a2.get();
+		m_mapping.a3 = cfg.mapping.a3.get();
+		m_mapping.b1 = cfg.mapping.b1.get();
+		m_mapping.b2 = cfg.mapping.b2.get();
+		m_mapping.b3 = cfg.mapping.b3.get();
+		m_mapping.c1 = cfg.mapping.c1.get();
+		m_mapping.c2 = cfg.mapping.c2.get();
+		m_mapping.b1_alt = cfg.mapping.b1_alt.get();
+		m_mapping.b2_alt = cfg.mapping.b2_alt.get();
 	}
 }
 
@@ -232,17 +232,17 @@ void wiimote_handler::save_config()
 	{
 		std::shared_lock lock(m_mutex);
 		auto& cfg = get_wiimote_config();
-		cfg.mapping.trigger.set(static_cast<u16>(m_mapping.trigger));
-		cfg.mapping.a1.set(static_cast<u16>(m_mapping.a1));
-		cfg.mapping.a2.set(static_cast<u16>(m_mapping.a2));
-		cfg.mapping.a3.set(static_cast<u16>(m_mapping.a3));
-		cfg.mapping.b1.set(static_cast<u16>(m_mapping.b1));
-		cfg.mapping.b2.set(static_cast<u16>(m_mapping.b2));
-		cfg.mapping.b3.set(static_cast<u16>(m_mapping.b3));
-		cfg.mapping.c1.set(static_cast<u16>(m_mapping.c1));
-		cfg.mapping.c2.set(static_cast<u16>(m_mapping.c2));
-		cfg.mapping.b1_alt.set(static_cast<u16>(m_mapping.b1_alt));
-		cfg.mapping.b2_alt.set(static_cast<u16>(m_mapping.b2_alt));
+		cfg.mapping.trigger.set(m_mapping.trigger);
+		cfg.mapping.a1.set(m_mapping.a1);
+		cfg.mapping.a2.set(m_mapping.a2);
+		cfg.mapping.a3.set(m_mapping.a3);
+		cfg.mapping.b1.set(m_mapping.b1);
+		cfg.mapping.b2.set(m_mapping.b2);
+		cfg.mapping.b3.set(m_mapping.b3);
+		cfg.mapping.c1.set(m_mapping.c1);
+		cfg.mapping.c2.set(m_mapping.c2);
+		cfg.mapping.b1_alt.set(m_mapping.b1_alt);
+		cfg.mapping.b2_alt.set(m_mapping.b2_alt);
 	}
 	get_wiimote_config().save();
 }

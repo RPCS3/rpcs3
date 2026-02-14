@@ -1,29 +1,32 @@
 #pragma once
 
 #include "Utilities/Config.h"
+#include "Input/wiimote_handler.h"
 
-struct cfg_wiimote final : cfg::node
+struct cfg_wiimote : cfg::node
 {
 	cfg_wiimote();
 	bool load();
 	void save() const;
 
+	cfg::_bool use_for_guncon{ this, "UseForGunCon", true };
+
 	struct node_mapping : cfg::node
 	{
 		node_mapping(cfg::node* _parent) : cfg::node(_parent, "Mapping") {}
 
-		cfg::uint<0, 0xFFFF> trigger{ this, "Trigger", 0x0400 };
-		cfg::uint<0, 0xFFFF> a1{ this, "A1", 0x0800 };
-		cfg::uint<0, 0xFFFF> a2{ this, "A2", 0x1000 };
-		cfg::uint<0, 0xFFFF> a3{ this, "A3", 0x0001 };
-		cfg::uint<0, 0xFFFF> b1{ this, "B1", 0x0200 };
-		cfg::uint<0, 0xFFFF> b2{ this, "B2", 0x0100 };
-		cfg::uint<0, 0xFFFF> b3{ this, "B3", 0x8000 };
-		cfg::uint<0, 0xFFFF> c1{ this, "C1", 0x0010 };
-		cfg::uint<0, 0xFFFF> c2{ this, "C2", 0x0002 };
+		cfg::_enum<wiimote_button> trigger{ this, "Trigger", wiimote_button::B };
+		cfg::_enum<wiimote_button> a1{ this, "A1", wiimote_button::A };
+		cfg::_enum<wiimote_button> a2{ this, "A2", wiimote_button::Minus };
+		cfg::_enum<wiimote_button> a3{ this, "A3", wiimote_button::Left };
+		cfg::_enum<wiimote_button> b1{ this, "B1", wiimote_button::One };
+		cfg::_enum<wiimote_button> b2{ this, "B2", wiimote_button::Two };
+		cfg::_enum<wiimote_button> b3{ this, "B3", wiimote_button::Home };
+		cfg::_enum<wiimote_button> c1{ this, "C1", wiimote_button::Plus };
+		cfg::_enum<wiimote_button> c2{ this, "C2", wiimote_button::Right };
 
-		cfg::uint<0, 0xFFFF> b1_alt{ this, "B1_Alt", 0x0008 };
-		cfg::uint<0, 0xFFFF> b2_alt{ this, "B2_Alt", 0x0004 };
+		cfg::_enum<wiimote_button> b1_alt{ this, "B1_Alt", wiimote_button::Up };
+		cfg::_enum<wiimote_button> b2_alt{ this, "B2_Alt", wiimote_button::Down };
 	} mapping{ this };
 
 	const std::string path;

@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "wiimote_settings_dialog.h"
 #include "Input/wiimote_handler.h"
+#include "Emu/Io/wiimote_config.h"
 #include <QTimer>
 #include <QPainter>
 #include <QPixmap>
+#include <QCheckBox>
+#include <QPushButton>
 
 wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 	: QDialog(parent)
@@ -16,8 +19,18 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
 	};
 
+	if (auto* use_guncon = findChild<QCheckBox*>( "useForGunCon"))
+	{
+		use_guncon->setChecked(get_wiimote_config().use_for_guncon.get());
+		connect(use_guncon, &QCheckBox::toggled, this, [](bool checked)
+		{
+			get_wiimote_config().use_for_guncon.set(checked);
+			get_wiimote_config().save();
+		});
+	}
+
 	update_list();
-	connect(ui->restoreDefaultsButton, &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
+	connect(ui->buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
 
 	// Timer updates both state AND device list (auto-refresh)
 	QTimer* timer = new QTimer(this);
@@ -88,6 +101,10 @@ void wiimote_settings_dialog::restore_defaults()
 	const wiimote_guncon_mapping default_map {};
 	wm->set_mapping(default_map);
 
+	get_wiimote_config().use_for_guncon.set(true);
+	if (auto* use_guncon = findChild<QCheckBox*>( "useForGunCon"))
+		use_guncon->setChecked(true);
+
 	// Update UI
 	for (auto* box : m_boxes) box->blockSignals(true);
 
@@ -132,16 +149,9 @@ void wiimote_settings_dialog::update_state()
 {
 	const int index = ui->wiimoteList->currentRow();
 	auto* wm = wiimote_handler::get_instance();
-	if (!wm || index < 0)
-	{
-		ui->connectionStatus->setText(tr("N/A"));
-		ui->buttonState->setText(tr("N/A"));
-		ui->irData->setText(tr("N/A"));
-		return;
-	}
+	const auto states = wm && wm->is_running() ? wm->get_states() : std::vector<wiimote_state>{};
 
-	const auto states = wm->get_states();
-	if (static_cast<usz>(index) >= states.size())
+	if (!wm || !wm->is_running() || index < 0 || static_cast<usz>(index) >= states.size())
 	{
 		ui->connectionStatus->setText(tr("N/A"));
 		ui->buttonState->setText(tr("N/A"));
@@ -153,17 +163,18 @@ void wiimote_settings_dialog::update_state()
 	ui->connectionStatus->setText(state.connected ? tr("Connected") : tr("Disconnected"));
 
 	QStringList pressed_buttons;
-	if (state.buttons & 0x0001) pressed_buttons << tr("Left");
-	if (state.buttons & 0x0002) pressed_buttons << tr("Right");
-	if (state.buttons & 0x0004) pressed_buttons << tr("Down");
-	if (state.buttons & 0x0008) pressed_buttons << tr("Up");
-	if (state.buttons & 0x0010) pressed_buttons << tr("Plus");
-	if (state.buttons & 0x0100) pressed_buttons << tr("2");
-	if (state.buttons & 0x0200) pressed_buttons << tr("1");
-	if (state.buttons & 0x0400) pressed_buttons << tr("B");
-	if (state.buttons & 0x0800) pressed_buttons << tr("A");
-	if (state.buttons & 0x1000) pressed_buttons << tr("Minus");
-	if (state.buttons & 0x8000) pressed_buttons << tr("Home");
+	const auto is_pressed = [&](wiimote_button btn) { return (state.buttons & static_cast<u16>(btn)) != 0; };
+	if (is_pressed(wiimote_button::Left)) pressed_buttons << tr("Left");
+	if (is_pressed(wiimote_button::Right)) pressed_buttons << tr("Right");
+	if (is_pressed(wiimote_button::Down)) pressed_buttons << tr("Down");
+	if (is_pressed(wiimote_button::Up)) pressed_buttons << tr("Up");
+	if (is_pressed(wiimote_button::Plus)) pressed_buttons << tr("Plus");
+	if (is_pressed(wiimote_button::Two)) pressed_buttons << tr("2");
+	if (is_pressed(wiimote_button::One)) pressed_buttons << tr("1");
+	if (is_pressed(wiimote_button::B)) pressed_buttons << tr("B");
+	if (is_pressed(wiimote_button::A)) pressed_buttons << tr("A");
+	if (is_pressed(wiimote_button::Minus)) pressed_buttons << tr("Minus");
+	if (is_pressed(wiimote_button::Home)) pressed_buttons << tr("Home");
 
 	QString button_text = QString("0x%1").arg(state.buttons, 4, 16, QChar('0')).toUpper();
 	if (!pressed_buttons.isEmpty())
@@ -173,15 +184,32 @@ void wiimote_settings_dialog::update_state()
 	ui->buttonState->setText(button_text);
 
 	QString ir_text;
-	QPixmap pixmap(ui->irVisual->size());
+	const int w = ui->irVisual->width();
+	const int h = ui->irVisual->height();
+	QPixmap pixmap(w, h);
 	pixmap.fill(Qt::black);
 	QPainter painter(&pixmap);
 	painter.setRenderHint(QPainter::Antialiasing);
 
-	// Draw center crosshair
+	// Calculate 4:3 drawing area (Wiimote IR space is 1024x768)
+	int draw_w, draw_h;
+	if (w * 3 > h * 4) // wider than 4:3
+	{
+		draw_h = h;
+		draw_w = h * 4 / 3;
+	}
+	else
+	{
+		draw_w = w;
+		draw_h = w * 3 / 4;
+	}
+	const int offset_x = (w - draw_w) / 2;
+	const int offset_y = (h - draw_h) / 2;
+
+	// Draw center crosshair in the 4:3 area
 	painter.setPen(QPen(Qt::darkGray, 1, Qt::DashLine));
-	painter.drawLine(pixmap.width() / 2, 0, pixmap.width() / 2, pixmap.height());
-	painter.drawLine(0, pixmap.height() / 2, pixmap.width(), pixmap.height() / 2);
+	painter.drawLine(offset_x + draw_w / 2, offset_y, offset_x + draw_w / 2, offset_y + draw_h);
+	painter.drawLine(offset_x, offset_y + draw_h / 2, offset_x + draw_w, offset_y + draw_h / 2);
 
 	static const std::array<QColor, MAX_WIIMOTE_IR_POINTS> colors = { Qt::red, Qt::green, Qt::blue, Qt::yellow };
 
@@ -191,10 +219,9 @@ void wiimote_settings_dialog::update_state()
 		{
 			ir_text += QString("[%1: %2, %3] ").arg(i).arg(state.ir[i].x).arg(state.ir[i].y);
 
-			// Map 0..1023 X and 0..767 Y to pixmap coordinates
-			// Wiimote X/Y are inverted relative to pointing direction
-			const float x = ((1023 - state.ir[i].x) / 1023.0f) * pixmap.width();
-			const float y = (state.ir[i].y / 767.0f) * pixmap.height();
+			// Map 0..1023 X and 0..767 Y to 4:3 drawing area
+			const float x = offset_x + ((1023.0f - state.ir[i].x) / 1023.0f) * draw_w;
+			const float y = offset_y + (state.ir[i].y / 767.0f) * draw_h;
 
 			painter.setPen(colors[i]);
 			painter.setBrush(colors[i]);
@@ -209,7 +236,7 @@ void wiimote_settings_dialog::update_state()
 void wiimote_settings_dialog::update_list()
 {
 	auto* wm = wiimote_handler::get_instance();
-	if (!wm)
+	if (!wm || !wm->is_running())
 	{
 		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("Wiimote Manager not initialized."))
 		{
@@ -221,7 +248,17 @@ void wiimote_settings_dialog::update_list()
 
 	const auto states = wm->get_states();
 
-	// Only update if the list content actually changed (avoid flicker)
+	if (states.empty())
+	{
+		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("No Wiimotes found."))
+		{
+			ui->wiimoteList->clear();
+			ui->wiimoteList->addItem(tr("No Wiimotes found."));
+		}
+		return;
+	}
+
+	// Only update if the list count changed (avoid flicker)
 	if (static_cast<usz>(ui->wiimoteList->count()) != states.size())
 	{
 		const int current_row = ui->wiimoteList->currentRow();
@@ -251,13 +288,9 @@ void wiimote_settings_dialog::update_list()
 			QString label = tr("Wiimote #%1").arg(i + 1);
 			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
 
-			if (static_cast<int>(i) < ui->wiimoteList->count())
+			if (QListWidgetItem* item = ui->wiimoteList->item(static_cast<int>(i)); item && item->text() != label)
 			{
-				QListWidgetItem* item = ui->wiimoteList->item(static_cast<int>(i));
-				if (item && item->text() != label)
-				{
-					item->setText(label);
-				}
+				item->setText(label);
 			}
 		}
 	}
