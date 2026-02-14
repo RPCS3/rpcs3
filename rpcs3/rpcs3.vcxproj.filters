@@ -1298,6 +1298,9 @@
     <ClInclude Include="Input\wiimote_handler.h">
       <Filter>Io</Filter>
     </ClInclude>
+    <ClInclude Include="Input\wiimote_types.h">
+      <Filter>Io</Filter>
+    </ClInclude>
     <ClInclude Include="Input\xinput_pad_handler.h">
       <Filter>Io\XInput</Filter>
     </ClInclude>

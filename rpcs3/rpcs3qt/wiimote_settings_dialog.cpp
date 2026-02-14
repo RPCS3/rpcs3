@@ -19,15 +19,12 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 		ui->cb_b1, ui->cb_b2, ui->cb_b3, ui->cb_a3, ui->cb_c2
 	};
 
-	if (auto* use_guncon = findChild<QCheckBox*>( "useForGunCon"))
+	ui->useForGunCon->setChecked(get_wiimote_config().use_for_guncon.get());
+	connect(ui->useForGunCon, &QCheckBox::toggled, this, [](bool checked)
 	{
-		use_guncon->setChecked(get_wiimote_config().use_for_guncon.get());
-		connect(use_guncon, &QCheckBox::toggled, this, [](bool checked)
-		{
-			get_wiimote_config().use_for_guncon.set(checked);
-			get_wiimote_config().save();
-		});
-	}
+		get_wiimote_config().use_for_guncon.set(checked);
+		get_wiimote_config().save();
+	});
 
 	update_list();
 	connect(ui->buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
@@ -40,8 +37,6 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 
 	populate_mappings();
 }
-
-wiimote_settings_dialog::~wiimote_settings_dialog() = default;
 
 void wiimote_settings_dialog::populate_mappings()
 {
@@ -102,8 +97,7 @@ void wiimote_settings_dialog::restore_defaults()
 	wm->set_mapping(default_map);
 
 	get_wiimote_config().use_for_guncon.set(true);
-	if (auto* use_guncon = findChild<QCheckBox*>( "useForGunCon"))
-		use_guncon->setChecked(true);
+	ui->useForGunCon->setChecked(true);
 
 	// Update UI
 	for (auto* box : m_boxes) box->blockSignals(true);
@@ -188,7 +182,7 @@ void wiimote_settings_dialog::update_state()
 	const int w = ui->irVisual->width();
 	const int h = ui->irVisual->height();
 	QPixmap pixmap(w, h);
-	pixmap.fill(Qt::black);
+	pixmap.fill(Qt::transparent);
 	QPainter painter(&pixmap);
 	painter.setRenderHint(QPainter::Antialiasing);
 

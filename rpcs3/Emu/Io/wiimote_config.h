@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Utilities/Config.h"
-#include "Input/wiimote_handler.h"
+#include "Input/wiimote_types.h"
 
 struct cfg_wiimote : cfg::node
 {
