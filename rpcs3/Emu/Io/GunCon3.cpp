@@ -1,17 +1,16 @@
 #include "stdafx.h"
 #include "GunCon3.h"
 #include "MouseHandler.h"
-#include <cmath>
-#include <climits>
-#include <algorithm>
-#include <mutex>
 #include "Emu/IdManager.h"
 #include "Emu/Io/guncon3_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_cursor.h"
 #include "Input/wiimote_handler.h"
 #include "Input/pad_thread.h"
-#include "Emu/RSX/Overlays/overlay_cursor.h"
+#include <cmath>
+#include <climits>
+#include <algorithm>
 
 LOG_CHANNEL(guncon3_log);
 
@@ -139,7 +138,8 @@ usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8
 		// Sort instances by controller index (P1 < P2 < P3...)
 		// This ensures that the first available GunCon (e.g. at P3) takes the first Wiimote,
 		// and the second (e.g. at P4) takes the second Wiimote.
-		std::sort(s_instances.begin(), s_instances.end(), [](auto* a, auto* b) {
+		std::sort(s_instances.begin(), s_instances.end(), [](auto* a, auto* b)
+		{
 			return a->m_controller_index < b->m_controller_index;
 		});
 	}

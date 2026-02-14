@@ -85,7 +85,7 @@ void wiimote_settings_dialog::restore_defaults()
 	if (!wm) return;
 
 	// Reset to default mapping
-	wiimote_guncon_mapping default_map;
+	const wiimote_guncon_mapping default_map {};
 	wm->set_mapping(default_map);
 
 	// Update UI
@@ -112,7 +112,7 @@ void wiimote_settings_dialog::apply_mappings()
 	auto* wm = wiimote_handler::get_instance();
 	if (!wm) return;
 
-	wiimote_guncon_mapping map;
+	wiimote_guncon_mapping map {};
 	const std::array<wiimote_button*, 9> targets = {
 		&map.trigger, &map.a1, &map.a2, &map.c1,
 		&map.b1, &map.b2, &map.b3, &map.a3, &map.c2
@@ -130,7 +130,7 @@ void wiimote_settings_dialog::apply_mappings()
 
 void wiimote_settings_dialog::update_state()
 {
-	int index = ui->wiimoteList->currentRow();
+	const int index = ui->wiimoteList->currentRow();
 	auto* wm = wiimote_handler::get_instance();
 	if (!wm || index < 0)
 	{
@@ -152,27 +152,27 @@ void wiimote_settings_dialog::update_state()
 	const auto& state = states[index];
 	ui->connectionStatus->setText(state.connected ? tr("Connected") : tr("Disconnected"));
 
-	QStringList pressedButtons;
-	if (state.buttons & 0x0001) pressedButtons << tr("Left");
-	if (state.buttons & 0x0002) pressedButtons << tr("Right");
-	if (state.buttons & 0x0004) pressedButtons << tr("Down");
-	if (state.buttons & 0x0008) pressedButtons << tr("Up");
-	if (state.buttons & 0x0010) pressedButtons << tr("Plus");
-	if (state.buttons & 0x0100) pressedButtons << tr("2");
-	if (state.buttons & 0x0200) pressedButtons << tr("1");
-	if (state.buttons & 0x0400) pressedButtons << tr("B");
-	if (state.buttons & 0x0800) pressedButtons << tr("A");
-	if (state.buttons & 0x1000) pressedButtons << tr("Minus");
-	if (state.buttons & 0x8000) pressedButtons << tr("Home");
+	QStringList pressed_buttons;
+	if (state.buttons & 0x0001) pressed_buttons << tr("Left");
+	if (state.buttons & 0x0002) pressed_buttons << tr("Right");
+	if (state.buttons & 0x0004) pressed_buttons << tr("Down");
+	if (state.buttons & 0x0008) pressed_buttons << tr("Up");
+	if (state.buttons & 0x0010) pressed_buttons << tr("Plus");
+	if (state.buttons & 0x0100) pressed_buttons << tr("2");
+	if (state.buttons & 0x0200) pressed_buttons << tr("1");
+	if (state.buttons & 0x0400) pressed_buttons << tr("B");
+	if (state.buttons & 0x0800) pressed_buttons << tr("A");
+	if (state.buttons & 0x1000) pressed_buttons << tr("Minus");
+	if (state.buttons & 0x8000) pressed_buttons << tr("Home");
 
-	QString buttonText = QString("0x%1").arg(state.buttons, 4, 16, QChar('0')).toUpper();
-	if (!pressedButtons.isEmpty())
+	QString button_text = QString("0x%1").arg(state.buttons, 4, 16, QChar('0')).toUpper();
+	if (!pressed_buttons.isEmpty())
 	{
-		buttonText += " (" + pressedButtons.join(", ") + ")";
+		button_text += " (" + pressed_buttons.join(", ") + ")";
 	}
-	ui->buttonState->setText(buttonText);
+	ui->buttonState->setText(button_text);
 
-	QString irText;
+	QString ir_text;
 	QPixmap pixmap(ui->irVisual->size());
 	pixmap.fill(Qt::black);
 	QPainter painter(&pixmap);
@@ -183,13 +183,13 @@ void wiimote_settings_dialog::update_state()
 	painter.drawLine(pixmap.width() / 2, 0, pixmap.width() / 2, pixmap.height());
 	painter.drawLine(0, pixmap.height() / 2, pixmap.width(), pixmap.height() / 2);
 
-	static const QColor colors[] = { Qt::red, Qt::green, Qt::blue, Qt::yellow };
+	static const std::array<QColor, 4> colors = { Qt::red, Qt::green, Qt::blue, Qt::yellow };
 
-	for (int i = 0; i < 4; ++i)
+	for (usz i = 0; i < state.ir.size(); ++i)
 	{
 		if (state.ir[i].size > 0 && state.ir[i].x < 1023 && state.ir[i].y < 1023)
 		{
-			irText += QString("[%1: %2, %3] ").arg(i).arg(state.ir[i].x).arg(state.ir[i].y);
+			ir_text += QString("[%1: %2, %3] ").arg(i).arg(state.ir[i].x).arg(state.ir[i].y);
 
 			// Map 0..1023 X and 0..767 Y to pixmap coordinates
 			// Wiimote X/Y are inverted relative to pointing direction
@@ -203,7 +203,7 @@ void wiimote_settings_dialog::update_state()
 		}
 	}
 	ui->irVisual->setPixmap(pixmap);
-	ui->irData->setText(irText.isEmpty() ? tr("No IR data") : irText);
+	ui->irData->setText(ir_text.isEmpty() ? tr("No IR data") : ir_text);
 }
 
 void wiimote_settings_dialog::update_list()
