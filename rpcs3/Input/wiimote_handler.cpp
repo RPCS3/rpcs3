@@ -181,7 +181,7 @@ bool wiimote_device::update()
 			m_state.acc_z = (buf[5] << 2) | ((buf[2] >> 6) & 1);
 
 			// Each IR point is 3 bytes in Extended report 0x33.
-			for (int j = 0; j < 4; j++)
+			for (usz j = 0; j < MAX_WIIMOTES; j++)
 			{
 				const u8* ir = &buf[6 + j * 3];
 				m_state.ir[j].x = (ir[0] | ((ir[2] & 0x30) << 4));
@@ -252,8 +252,8 @@ wiimote_handler::wiimote_handler()
 	if (!s_instance)
 		s_instance = this;
 
-	// Pre-initialize 4 Wiimote slots (standard for DolphinBar and typical local multiplayer)
-	for (int i = 0; i < 4; i++)
+	// Pre-initialize Wiimote slots (standard for DolphinBar and typical local multiplayer)
+	for (usz i = 0; i < MAX_WIIMOTES; i++)
 	{
 		m_devices.push_back(std::make_unique<wiimote_device>());
 	}

@@ -12,6 +12,8 @@
 #include <chrono>
 #include <array>
 
+static constexpr usz MAX_WIIMOTES = 4;
+
 struct wiimote_ir_point
 {
 	u16 x = 1023;
@@ -58,7 +60,7 @@ struct wiimote_state
 	s16 acc_x = 0;
 	s16 acc_y = 0;
 	s16 acc_z = 0;
-	std::array<wiimote_ir_point, 4> ir {};
+	std::array<wiimote_ir_point, MAX_WIIMOTES> ir {};
 	bool connected = false;
 };
 

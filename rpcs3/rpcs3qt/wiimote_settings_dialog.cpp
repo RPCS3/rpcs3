@@ -183,7 +183,7 @@ void wiimote_settings_dialog::update_state()
 	painter.drawLine(pixmap.width() / 2, 0, pixmap.width() / 2, pixmap.height());
 	painter.drawLine(0, pixmap.height() / 2, pixmap.width(), pixmap.height() / 2);
 
-	static const std::array<QColor, 4> colors = { Qt::red, Qt::green, Qt::blue, Qt::yellow };
+	static const std::array<QColor, MAX_WIIMOTES> colors = { Qt::red, Qt::green, Qt::blue, Qt::yellow };
 
 	for (usz i = 0; i < state.ir.size(); ++i)
 	{
