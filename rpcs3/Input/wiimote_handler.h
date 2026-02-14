@@ -13,6 +13,7 @@
 #include <array>
 
 static constexpr usz MAX_WIIMOTES = 4;
+static constexpr usz MAX_WIIMOTE_IR_POINTS = 4;
 
 struct wiimote_ir_point
 {
@@ -60,7 +61,7 @@ struct wiimote_state
 	s16 acc_x = 0;
 	s16 acc_y = 0;
 	s16 acc_z = 0;
-	std::array<wiimote_ir_point, MAX_WIIMOTES> ir {};
+	std::array<wiimote_ir_point, MAX_WIIMOTE_IR_POINTS> ir {};
 	bool connected = false;
 };
 

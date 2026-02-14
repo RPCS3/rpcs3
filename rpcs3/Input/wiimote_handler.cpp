@@ -181,7 +181,7 @@ bool wiimote_device::update()
 			m_state.acc_z = (buf[5] << 2) | ((buf[2] >> 6) & 1);
 
 			// Each IR point is 3 bytes in Extended report 0x33.
-			for (usz j = 0; j < MAX_WIIMOTES; j++)
+			for (usz j = 0; j < MAX_WIIMOTE_IR_POINTS; j++)
 			{
 				const u8* ir = &buf[6 + j * 3];
 				m_state.ir[j].x = (ir[0] | ((ir[2] & 0x30) << 4));
