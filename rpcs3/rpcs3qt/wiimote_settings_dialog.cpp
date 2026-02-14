@@ -238,10 +238,12 @@ void wiimote_settings_dialog::update_list()
 	auto* wm = wiimote_handler::get_instance();
 	if (!wm || !wm->is_running())
 	{
-		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("Wiimote Manager not initialized."))
+		const QString text = tr("Wiimote Manager not initialized.");
+
+		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != text)
 		{
 			ui->wiimoteList->clear();
-			ui->wiimoteList->addItem(tr("Wiimote Manager not initialized."));
+			ui->wiimoteList->addItem(text);
 		}
 		return;
 	}
@@ -250,10 +252,11 @@ void wiimote_settings_dialog::update_list()
 
 	if (states.empty())
 	{
-		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != tr("No Wiimotes found."))
+		const QString text = tr("No Wiimotes found.");
+		if (ui->wiimoteList->count() != 1 || ui->wiimoteList->item(0)->text() != text)
 		{
 			ui->wiimoteList->clear();
-			ui->wiimoteList->addItem(tr("No Wiimotes found."));
+			ui->wiimoteList->addItem(text);
 		}
 		return;
 	}
