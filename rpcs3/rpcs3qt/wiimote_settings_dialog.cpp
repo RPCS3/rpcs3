@@ -149,9 +149,10 @@ void wiimote_settings_dialog::update_state()
 {
 	const int index = ui->wiimoteList->currentRow();
 	auto* wm = wiimote_handler::get_instance();
-	const auto states = wm && wm->is_running() ? wm->get_states() : std::vector<wiimote_state>{};
+	const auto running = wm && wm->is_running();
+	const auto states = running ? wm->get_states() : std::vector<wiimote_state>{};
 
-	if (!wm || !wm->is_running() || index < 0 || static_cast<usz>(index) >= states.size())
+	if (!running || index < 0 || static_cast<usz>(index) >= states.size())
 	{
 		ui->connectionStatus->setText(tr("N/A"));
 		ui->buttonState->setText(tr("N/A"));
