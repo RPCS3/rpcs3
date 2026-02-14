@@ -265,8 +265,8 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 		const s32 x_res = SHRT_MAX - (raw_x * USHRT_MAX / 1023);
 		const s32 y_res = SHRT_MAX - (raw_y * USHRT_MAX / 767);
 
-		gc.gun_x = static_cast<int16_t>(std::clamp(x_res, SHRT_MIN, SHRT_MAX));
-		gc.gun_y = static_cast<int16_t>(std::clamp(y_res, SHRT_MIN, SHRT_MAX));
+		gc.gun_x = static_cast<s16>(std::clamp(x_res, SHRT_MIN, SHRT_MAX));
+		gc.gun_y = static_cast<s16>(std::clamp(y_res, SHRT_MIN, SHRT_MAX));
 
 		if (g_cfg.io.show_move_cursor)
 		{
@@ -279,7 +279,7 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 		{
 			const s32 dx = static_cast<s32>(ws.ir[0].x) - ws.ir[1].x;
 			const s32 dy = static_cast<s32>(ws.ir[0].y) - ws.ir[1].y;
-			gc.gun_z = static_cast<int16_t>(std::sqrt(dx * dx + dy * dy));
+			gc.gun_z = static_cast<s16>(std::sqrt(dx * dx + dy * dy));
 		}
 	}
 
