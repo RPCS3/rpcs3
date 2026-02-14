@@ -286,13 +286,13 @@ void wiimote_settings_dialog::update_list()
 	}
 	else
 	{
-		// Just update connection status labels without clearing
-		for (usz i = 0; i < states.size(); i++)
+		for (usz i = 0; i < std::min(static_cast<usz>(ui->wiimoteList->count()), states.size()); i++)
 		{
+			QListWidgetItem* item = ui->wiimoteList->item(static_cast<int>(i));
+			if (!item) continue;
 			QString label = tr("Wiimote #%1").arg(i + 1);
 			if (!states[i].connected) label += " (" + tr("Disconnected") + ")";
-
-			if (QListWidgetItem* item = ui->wiimoteList->item(static_cast<int>(i)); item && item->text() != label)
+			if (item->text() != label)
 			{
 				item->setText(label);
 			}
