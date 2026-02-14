@@ -1011,7 +1011,12 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline T exchange(T& dest, T value)
 	{
 		__atomic_thread_fence(__ATOMIC_ACQ_REL);
+		// GCC has recently started thinking using this instrinsic is breaking strict aliasing rules
+		// TODO: remove if this ever get fixed in GCC
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		return std::bit_cast<T>(__sync_lock_test_and_set(reinterpret_cast<u128*>(&dest), std::bit_cast<u128>(value)));
+		#pragma GCC diagnostic pop
 	}
 
 	static inline void store(T& dest, T value)
