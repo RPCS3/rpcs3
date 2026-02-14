@@ -16,6 +16,7 @@ CONFIGURE_ARGS="
 	-DUSE_SYSTEM_LIBPNG=ON
  	-DUSE_SYSTEM_LIBUSB=ON
 	-DUSE_SYSTEM_OPENCV=ON
+	-DUSE_SYSTEM_OPENAL=ON
 "
 
 # base Clang workaround (missing clang-scan-deps)
