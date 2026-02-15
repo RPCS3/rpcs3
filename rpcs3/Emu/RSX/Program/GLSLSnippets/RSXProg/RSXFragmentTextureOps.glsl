@@ -34,7 +34,7 @@ R"(
 	#define _enable_texture_expand(index) \
 		do { \
 			if (_test_bit(TEX_PARAM(index).flags, FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)) { \
-				_texture_flag_override = SIGN_EXPAND_MASK; \
+				_texture_flag_override = SIGN_EXPAND_MASK & (_get_bits(TEX_PARAM(index).remap, 16, 4) << EXPAND_A_BIT); \
 				_texture_flag_erase = GAMMA_CTRL_MASK; \
 				_texture_bx2_active = true; \
 			} \

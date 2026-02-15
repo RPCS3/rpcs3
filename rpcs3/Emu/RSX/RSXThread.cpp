@@ -2366,15 +2366,19 @@ namespace rsx
 
 				if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
 				{
-					// Tests show this is applied post-readout. It's a property of the final value stored in the register and is not remapped. It overwrites even constant channels (REMAP_ZERO | REMAP_ONE)
+					// Tests show this is applied post-readout. It's a property of the final value stored in the register and is not remapped.
+					// NOTE: GAMMA correction has no algorithmic effect on constants (0 and 1) so we need not mask it out for correctness.
 					gamma = tex.gamma() & ~(argb8_signed);
 				}
 
 				if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
 				{
 					// The renormalization flag applies to all channels. It is weaker than the other flags.
-					unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
-					unsigned_remap &= ~(argb8_signed | gamma);
+					// This applies on input and is subject to remap overrides
+					if (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED)
+					{
+						unsigned_remap = remap_channel_bits(texture_remap, 0xF) & ~(argb8_signed | gamma);
+					}
 				}
 
 				u32 argb8_convert = gamma;
@@ -2390,6 +2394,13 @@ namespace rsx
 				texture_control |= argb8_convert;
 
 				texture_control |= format_features << texture_control_bits::FORMAT_FEATURES_OFFSET;
+
+				if (current_fp_metadata.has_tex_bx2_conv)
+				{
+					const u32 remap_hi = remap_channel_bits(texture_remap, 0xFu);
+					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
+					current_fragment_program.texture_params[i].remap |= (remap_hi << 16u);
+				}
 			}
 
 			current_fragment_program.texture_params[i].control = texture_control;
