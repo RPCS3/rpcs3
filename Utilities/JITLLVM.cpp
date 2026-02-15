@@ -688,6 +688,30 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		mem = std::make_unique<MemoryManager1>(std::move(symbols_cement));
 	}
 
+	std::vector<std::string> attributes;
+
+#if defined(ARCH_ARM64)
+	if (utils::has_sha3())
+		attributes.push_back("+sha3");
+	else
+		attributes.push_back("-sha3");
+
+	if (utils::has_dotprod())
+		attributes.push_back("+dotprod");
+	else
+		attributes.push_back("-dotprod");
+
+	if (utils::has_sve())
+		attributes.push_back("+sve");
+	else
+		attributes.push_back("-sve");
+
+	if (utils::has_sve2())
+		attributes.push_back("+sve2");
+	else
+		attributes.push_back("-sve2");
+#endif
+
 	{
 		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
@@ -699,6 +723,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			//.setCodeModel(llvm::CodeModel::Large)
 #endif
 			.setRelocationModel(llvm::Reloc::Model::PIC_)
+			.setMAttrs(attributes)
 			.setMCPU(m_cpu)
 			.create());
 	}
