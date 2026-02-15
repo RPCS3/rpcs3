@@ -2332,19 +2332,47 @@ namespace rsx
 				u32 unsigned_remap = 0;
 				u32 gamma = 0;
 
+				auto remap_channel_bits = [](const rsx::texture_channel_remap_t& remap, u32 bits) -> u32
+				{
+					if (!bits || remap.encoded == RSX_TEXTURE_REMAP_IDENTITY) [[ likely ]]
+					{
+						return bits;
+					}
+
+					u32 result = 0;
+					for (u8 channel = 0; channel < 4; ++channel)
+					{
+						switch (remap.control_map[channel])
+						{
+						case CELL_GCM_TEXTURE_REMAP_REMAP:
+							if (bits & (1u << remap.channel_map[channel]))
+							{
+								result |= (1u << channel);
+							}
+							break;
+						default:
+							break;
+						}
+					}
+					return result;
+				};
+
+				const auto texture_remap = tex.decoded_remap();
 				if (format_features & RSX_FORMAT_FEATURE_SIGNED_COMPONENTS)
 				{
-					argb8_signed = tex.argb_signed();
+					// Tests show this is applied pre-readout. It's just a property of the incoming bytes and is therefore subject to remap.
+					argb8_signed = remap_channel_bits(texture_remap, tex.argb_signed());
 				}
 
 				if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
 				{
+					// Tests show this is applied post-readout. It's a property of the final value stored in the register and is not remapped. It overwrites even constant channels (REMAP_ZERO | REMAP_ONE)
 					gamma = tex.gamma() & ~(argb8_signed);
 				}
 
 				if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
 				{
-					// The renormalization flag applies to all channels
+					// The renormalization flag applies to all channels. It is weaker than the other flags.
 					unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
 					unsigned_remap &= ~(argb8_signed | gamma);
 				}
