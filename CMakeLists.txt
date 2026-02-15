@@ -76,7 +76,7 @@ if(IS_MULTI_CONFIG)
     set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only avaliable with single-config generator" FORCE)
 else()
     if(NOT CMAKE_BUILD_TYPE)
-        message(STATUS "No build type selected, default to Release")
+    message(STATUS "No build type selected, default to Release")
         set(CMAKE_BUILD_TYPE "Release")
     endif()
 endif()
@@ -86,50 +86,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug" AND NOT MSVC)
 endif()
 
 if(MSVC)
-    option(USE_MSVC_STATIC_CRT "Use static MSVC C runtime" OFF)
-
-    # TODO(cjj19970505@live.cn)
-    # DiscordRPC binary in 3rdparty is compiled /MT
-    # So theoretically we should enable DiscordRPC in Release and static CRT build
-    # since we might encounter some rumtime issues when more than one CRT version are presented.
-    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
-    # Add other DiscordRPC binaries(compiled with /MTd, /MD, /MDd) or compile it from source may address this issue.
-    if(NOT IS_MULTI_CONFIG)
-        if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
-            set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
-        endif()
-    endif()
-
-    if(USE_MSVC_STATIC_CRT)
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    else()
-        # though doc ( https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_RUNTIME_LIBRARY.html )
-        # says if that property is not set then CMake uses the default value MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
-        # to select a MSVC runtime library.
-        # But yaml-cpp set /MT(d) if CMAKE_MSVC_RUNTIME_LIBRARY is undefined
-        # So we have to define it explicitly
-        set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    endif()
-
-    # TODO(cjj19970505@live.cn)
-    # offical QT uses dynamic CRT.
-    # When building our lib with static CRT and debug build type
-    # and linking with Qt with dynamic CRT and debug build,
-    # error is encountered in runtime (which is expected).
-    # But building our lib with static CRT and release build type,
-    # and linking with Qt with dynamic CRT and release build seems to be working,
-    # which is the same config with VS solution.
-    # (though technically it might still have some hidden errors).
-    # So we allow static CRT in both relase and debug build, but prompt warning in debug build.
-    # For more info:
-    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
-    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
-    if(USE_MSVC_STATIC_CRT)
-        if(IS_MULTI_CONFIG OR CMAKE_BUILD_TYPE MATCHES "Debug")
-            message(AUTHOR_WARNING "Debug build currently can not work with static CRT.")
-        endif()
-    endif()
-    add_compile_options(/MP)
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/MP>")
 endif()
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -142,7 +99,7 @@ if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
 endif()
 
 if(MSVC)
-    add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
+    add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/wd4530;/utf-8>") # C++ exception handler used, but unwind semantics are not enabled
 endif()
 
 add_subdirectory(3rdparty)
@@ -159,10 +116,6 @@ endif()
 string(FIND "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}" "-flto" FOUND_LTO)
 if (NOT FOUND_LTO EQUAL -1)
     message(FATAL_ERROR "RPCS3 doesn't support building with LTO, use -DDISABLE_LTO=TRUE to force-disable it")
-endif()
-
-if(NOT WIN32)
-    add_compile_options(-pthread)
 endif()
 
 ## Look for Gamemode if its installed on Linux

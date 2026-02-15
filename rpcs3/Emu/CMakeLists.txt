@@ -639,6 +639,9 @@ if(TARGET 3rdparty_vulkan)
     endif()
 endif()
 
+if(NOT WIN32)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
 find_package(Threads REQUIRED)
 
 target_link_libraries(rpcs3_emu
