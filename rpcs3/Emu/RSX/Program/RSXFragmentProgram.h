@@ -54,6 +54,14 @@ union OPDEST
 		u32                  : 9;
 		u32 write_mask       : 4;
 	};
+
+	static OPDEST from_be32(u32 be_word)
+	{
+		const u32 _hex =
+			((be_word & 0x00FF00FF) << 8) |
+			((be_word & 0xFF00FF00) >> 8);
+		return OPDEST{ .HEX = _hex };
+	}
 };
 
 union SRC0
