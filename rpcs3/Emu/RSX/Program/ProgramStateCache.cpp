@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ProgramStateCache.h"
+#include "FragmentProgramDecompiler.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/Core/RSXDriverState.h"
 #include "util/sysinfo.hpp"
@@ -637,58 +638,51 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	while (true)
 	{
 		const auto inst = v128::loadu(instBuffer, index);
+		const auto d0 = OPDEST::from_be32(inst._u32[0]);
+		const auto opcode = static_cast<rsx::assembler::FP_opcode>(d0.opcode);
 
-		// Check for opcode high bit which indicates a branch instructions (opcode 0x40...0x45)
-		if (inst._u32[2] & (1 << 23))
+		switch (opcode)
 		{
+		case RSX_FP_OPCODE_TEX:
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXP:
+		case RSX_FP_OPCODE_TXPBEM:
+		case RSX_FP_OPCODE_TXD:
+		case RSX_FP_OPCODE_TXB:
+		case RSX_FP_OPCODE_TXL:
+			result.referenced_textures_mask |= (1 << d0.tex_num);
+			result.has_tex_bx2_conv |= !!d0.exp_tex;
+			break;
+		case RSX_FP_OPCODE_PK4:
+		case RSX_FP_OPCODE_UP4:
+		case RSX_FP_OPCODE_PK2:
+		case RSX_FP_OPCODE_UP2:
+		case RSX_FP_OPCODE_PKB:
+		case RSX_FP_OPCODE_UPB:
+		case RSX_FP_OPCODE_PK16:
+		case RSX_FP_OPCODE_UP16:
+		case RSX_FP_OPCODE_PKG:
+		case RSX_FP_OPCODE_UPG:
+			result.has_pack_instructions = true;
+			break;
+		case RSX_FP_OPCODE_BRK:
+		case RSX_FP_OPCODE_CAL:
+		case RSX_FP_OPCODE_IFE:
+		case RSX_FP_OPCODE_LOOP:
+		case RSX_FP_OPCODE_REP:
+		case RSX_FP_OPCODE_RET:
 			// NOTE: Jump instructions are not yet proved to work outside of loops and if/else blocks
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
+			break;
 		}
-		else
-		{
-			const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
-			if (opcode)
-			{
-				switch (opcode)
-				{
-				case RSX_FP_OPCODE_TEX:
-				case RSX_FP_OPCODE_TEXBEM:
-				case RSX_FP_OPCODE_TXP:
-				case RSX_FP_OPCODE_TXPBEM:
-				case RSX_FP_OPCODE_TXD:
-				case RSX_FP_OPCODE_TXB:
-				case RSX_FP_OPCODE_TXL:
-				{
-					//Bits 17-20 of word 1, swapped within u16 sections
-					//Bits 16-23 are swapped into the upper 8 bits (24-31)
-					const u32 tex_num = (inst._u32[0] >> 25) & 15;
-					result.referenced_textures_mask |= (1 << tex_num);
-					break;
-				}
-				case RSX_FP_OPCODE_PK4:
-				case RSX_FP_OPCODE_UP4:
-				case RSX_FP_OPCODE_PK2:
-				case RSX_FP_OPCODE_UP2:
-				case RSX_FP_OPCODE_PKB:
-				case RSX_FP_OPCODE_UPB:
-				case RSX_FP_OPCODE_PK16:
-				case RSX_FP_OPCODE_UP16:
-				case RSX_FP_OPCODE_PKG:
-				case RSX_FP_OPCODE_UPG:
-				{
-					result.has_pack_instructions = true;
-					break;
-				}
-				}
-			}
 
-			if (is_any_src_constant(inst))
-			{
-				//Instruction references constant, skip one slot occupied by data
-				index++;
-				result.program_constants_buffer_length += 16;
-			}
+		if (rsx::assembler::FP::get_operand_count(opcode) > 0 &&
+			is_any_src_constant(inst))
+		{
+			// Instruction references constant, skip one slot occupied by data
+			index++;
+			result.program_constants_buffer_length += 16;
 		}
 
 		index++;
