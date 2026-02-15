@@ -194,6 +194,7 @@
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
+    <ClCompile Include="Input\mouse_gyro_handler.cpp" />
     <ClCompile Include="Input\ps_move_calibration.cpp" />
     <ClCompile Include="Input\ps_move_config.cpp" />
     <ClCompile Include="Input\ps_move_tracker.cpp" />
@@ -1079,6 +1080,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
+    <ClInclude Include="Input\mouse_gyro_handler.h" />
     <ClInclude Include="Input\ps_move_calibration.h" />
     <ClInclude Include="Input\ps_move_config.h" />
     <ClInclude Include="Input\ps_move_tracker.h" />

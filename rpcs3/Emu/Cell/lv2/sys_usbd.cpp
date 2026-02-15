@@ -556,6 +556,8 @@ usb_handler_thread::usb_handler_thread()
 
 	switch (g_cfg.audio.microphone_type)
 	{
+		case microphone_handler::null:
+			break;
 		case microphone_handler::standard:
 			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Logitech));
 			break;

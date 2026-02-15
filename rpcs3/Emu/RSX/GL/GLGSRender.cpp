@@ -1351,7 +1351,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	}
 }
 
-bool GLGSRender::release_GCM_label(u32 address, u32 args)
+bool GLGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
 	if (!backend_config.supports_host_gpu_labels)
 	{
@@ -1360,7 +1360,7 @@ bool GLGSRender::release_GCM_label(u32 address, u32 args)
 
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 
-	if (host_ctx->texture_loads_completed())
+	if (type == NV4097_TEXTURE_READ_SEMAPHORE_RELEASE && host_ctx->texture_loads_completed())
 	{
 		// We're about to poll waiting for GPU state, ensure the context is still valid.
 		gl::check_state();
