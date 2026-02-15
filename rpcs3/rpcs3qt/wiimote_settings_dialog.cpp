@@ -23,11 +23,15 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 	connect(ui->useForGunCon, &QCheckBox::toggled, this, [](bool checked)
 	{
 		get_wiimote_config().use_for_guncon.set(checked);
-		get_wiimote_config().save();
 	});
 
 	update_list();
 	connect(ui->buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &wiimote_settings_dialog::restore_defaults);
+
+	connect(this, &QDialog::finished, this, []()
+	{
+		get_wiimote_config().save();
+	});
 
 	// Timer updates both state AND device list (auto-refresh)
 	QTimer* timer = new QTimer(this);
@@ -40,8 +44,7 @@ wiimote_settings_dialog::wiimote_settings_dialog(QWidget* parent)
 
 void wiimote_settings_dialog::populate_mappings()
 {
-	auto* wm = wiimote_handler::get_instance();
-	if (!wm) return;
+	const auto& cfg = get_wiimote_config().guncon_mapping;
 
 	const std::array<std::pair<QString, wiimote_button>, 12> buttons = {
 		{ { tr("None"), wiimote_button::None },
@@ -58,10 +61,9 @@ void wiimote_settings_dialog::populate_mappings()
 		{ tr("D-Pad Right"), wiimote_button::Right } }
 	};
 
-	wiimote_guncon_mapping current = wm->get_mapping();
-	const std::array<wiimote_button*, 9> targets = {
-		&current.trigger, &current.a1, &current.a2, &current.c1,
-		&current.b1, &current.b2, &current.b3, &current.a3, &current.c2
+	const std::array<wiimote_button, 9> targets = {
+		cfg.trigger.get(), cfg.a1.get(), cfg.a2.get(), cfg.c1.get(),
+		cfg.b1.get(), cfg.b2.get(), cfg.b3.get(), cfg.a3.get(), cfg.c2.get()
 	};
 
 	ensure(m_boxes.size() == targets.size());
@@ -76,7 +78,7 @@ void wiimote_settings_dialog::populate_mappings()
 		}
 
 		// Set current selection
-		const int index = m_boxes[i]->findData(QVariant::fromValue(static_cast<u16>(*targets[i])));
+		const int index = m_boxes[i]->findData(QVariant::fromValue(static_cast<u16>(targets[i])));
 		if (index >= 0) m_boxes[i]->setCurrentIndex(index);
 
 		// Connect change signal
@@ -89,22 +91,18 @@ void wiimote_settings_dialog::populate_mappings()
 
 void wiimote_settings_dialog::restore_defaults()
 {
-	auto* wm = wiimote_handler::get_instance();
-	if (!wm) return;
-
 	// Reset to default mapping
-	const wiimote_guncon_mapping default_map {};
-	wm->set_mapping(default_map);
+	get_wiimote_config().from_default();
 
-	get_wiimote_config().use_for_guncon.set(true);
-	ui->useForGunCon->setChecked(true);
+	ui->useForGunCon->setChecked(get_wiimote_config().use_for_guncon.get());
 
 	// Update UI
 	for (auto* box : m_boxes) box->blockSignals(true);
 
+	const auto& cfg = get_wiimote_config().guncon_mapping;
 	const std::array<wiimote_button, 9> targets = {
-		default_map.trigger, default_map.a1, default_map.a2, default_map.c1,
-		default_map.b1, default_map.b2, default_map.b3, default_map.a3, default_map.c2
+		cfg.trigger.get(), cfg.a1.get(), cfg.a2.get(), cfg.c1.get(),
+		cfg.b1.get(), cfg.b2.get(), cfg.b3.get(), cfg.a3.get(), cfg.c2.get()
 	};
 
 	ensure(m_boxes.size() == targets.size());
@@ -120,23 +118,18 @@ void wiimote_settings_dialog::restore_defaults()
 
 void wiimote_settings_dialog::apply_mappings()
 {
-	auto* wm = wiimote_handler::get_instance();
-	if (!wm) return;
-
-	wiimote_guncon_mapping map {};
-	const std::array<wiimote_button*, 9> targets = {
-		&map.trigger, &map.a1, &map.a2, &map.c1,
-		&map.b1, &map.b2, &map.b3, &map.a3, &map.c2
+	auto& cfg = get_wiimote_config().guncon_mapping;
+	const std::array<cfg::_enum<wiimote_button>*, 9> targets = {
+		&cfg.trigger, &cfg.a1, &cfg.a2, &cfg.c1,
+		&cfg.b1, &cfg.b2, &cfg.b3, &cfg.a3, &cfg.c2
 	};
 
 	ensure(m_boxes.size() == targets.size());
 
 	for (usz i = 0; i < m_boxes.size(); ++i)
 	{
-		*targets[i] = static_cast<wiimote_button>(m_boxes[i]->currentData().toUInt());
+		targets[i]->set(static_cast<wiimote_button>(m_boxes[i]->currentData().toUInt()));
 	}
-
-	wm->set_mapping(map);
 }
 
 void wiimote_settings_dialog::update_state()

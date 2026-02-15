@@ -237,24 +237,24 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 	if (!ws.connected)
 		return false;
 
-	const auto map = wm->get_mapping();
+	const auto& map = get_wiimote_config().guncon_mapping;
 	const auto is_pressed = [&](wiimote_button btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };
 
-	if (is_pressed(map.trigger)) gc.btn_trigger = 1;
+	if (is_pressed(map.trigger.get())) gc.btn_trigger = 1;
 
 	// Wiimote to GunCon3 Button Mapping
-	if (is_pressed(map.a1)) gc.btn_a1 = 1;
-	if (is_pressed(map.a2)) gc.btn_a2 = 1;
-	if (is_pressed(map.a3)) gc.btn_a3 = 1;
-	if (is_pressed(map.b1)) gc.btn_b1 = 1;
-	if (is_pressed(map.b2)) gc.btn_b2 = 1;
-	if (is_pressed(map.b3)) gc.btn_b3 = 1;
-	if (is_pressed(map.c1)) gc.btn_c1 = 1;
-	if (is_pressed(map.c2)) gc.btn_c2 = 1;
+	if (is_pressed(map.a1.get())) gc.btn_a1 = 1;
+	if (is_pressed(map.a2.get())) gc.btn_a2 = 1;
+	if (is_pressed(map.a3.get())) gc.btn_a3 = 1;
+	if (is_pressed(map.b1.get())) gc.btn_b1 = 1;
+	if (is_pressed(map.b2.get())) gc.btn_b2 = 1;
+	if (is_pressed(map.b3.get())) gc.btn_b3 = 1;
+	if (is_pressed(map.c1.get())) gc.btn_c1 = 1;
+	if (is_pressed(map.c2.get())) gc.btn_c2 = 1;
 
 	// Secondary / Hardcoded Alts
-	if (is_pressed(map.b1_alt)) gc.btn_b1 = 1;
-	if (is_pressed(map.b2_alt)) gc.btn_b2 = 1;
+	if (is_pressed(map.b1_alt.get())) gc.btn_b1 = 1;
+	if (is_pressed(map.b2_alt.get())) gc.btn_b2 = 1;
 
 	if (ws.ir[0].x < 1023)
 	{

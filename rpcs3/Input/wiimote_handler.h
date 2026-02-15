@@ -65,17 +65,11 @@ public:
 	std::vector<wiimote_state> get_states();
 	usz get_device_count();
 
-	void set_mapping(const wiimote_guncon_mapping& mapping);
-	wiimote_guncon_mapping get_mapping() const;
-
 private:
 	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	atomic_t<bool> m_running{false};
 	std::vector<std::unique_ptr<wiimote_device>> m_devices;
 	shared_mutex m_mutex;
-	wiimote_guncon_mapping m_mapping {};
 
 	void thread_proc();
-	void load_config();
-	void save_config();
 };

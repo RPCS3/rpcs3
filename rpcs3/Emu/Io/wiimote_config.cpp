@@ -44,14 +44,14 @@ bool cfg_wiimote::load()
 {
 	if (fs::file f{path, fs::read})
 	{
-		return this->cfg::node::from_string(f.to_string());
+		return cfg::node::from_string(f.to_string());
 	}
 	return false;
 }
 
 void cfg_wiimote::save() const
 {
-	if (!this->cfg::node::save(path))
+	if (!cfg::node::save(path))
 	{
 		wiimote_log.error("Failed to save wiimote config to '%s'", path);
 	}

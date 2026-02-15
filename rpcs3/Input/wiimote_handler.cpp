@@ -207,46 +207,6 @@ bool wiimote_device::update()
 
 static wiimote_handler* s_instance = nullptr;
 
-void wiimote_handler::load_config()
-{
-	auto& cfg = get_wiimote_config();
-	if (cfg.load())
-	{
-		std::unique_lock lock(m_mutex);
-		m_mapping.trigger = cfg.mapping.trigger.get();
-		m_mapping.a1 = cfg.mapping.a1.get();
-		m_mapping.a2 = cfg.mapping.a2.get();
-		m_mapping.a3 = cfg.mapping.a3.get();
-		m_mapping.b1 = cfg.mapping.b1.get();
-		m_mapping.b2 = cfg.mapping.b2.get();
-		m_mapping.b3 = cfg.mapping.b3.get();
-		m_mapping.c1 = cfg.mapping.c1.get();
-		m_mapping.c2 = cfg.mapping.c2.get();
-		m_mapping.b1_alt = cfg.mapping.b1_alt.get();
-		m_mapping.b2_alt = cfg.mapping.b2_alt.get();
-	}
-}
-
-void wiimote_handler::save_config()
-{
-	{
-		std::shared_lock lock(m_mutex);
-		auto& cfg = get_wiimote_config();
-		cfg.mapping.trigger.set(m_mapping.trigger);
-		cfg.mapping.a1.set(m_mapping.a1);
-		cfg.mapping.a2.set(m_mapping.a2);
-		cfg.mapping.a3.set(m_mapping.a3);
-		cfg.mapping.b1.set(m_mapping.b1);
-		cfg.mapping.b2.set(m_mapping.b2);
-		cfg.mapping.b3.set(m_mapping.b3);
-		cfg.mapping.c1.set(m_mapping.c1);
-		cfg.mapping.c2.set(m_mapping.c2);
-		cfg.mapping.b1_alt.set(m_mapping.b1_alt);
-		cfg.mapping.b2_alt.set(m_mapping.b2_alt);
-	}
-	get_wiimote_config().save();
-}
-
 wiimote_handler::wiimote_handler()
 {
 	if (!s_instance)
@@ -258,7 +218,7 @@ wiimote_handler::wiimote_handler()
 		m_devices.push_back(std::make_unique<wiimote_device>());
 	}
 
-	load_config();
+	get_wiimote_config().load();
 }
 
 wiimote_handler::~wiimote_handler()
@@ -302,21 +262,6 @@ usz wiimote_handler::get_device_count()
 {
 	std::shared_lock lock(m_mutex);
 	return m_devices.size();
-}
-
-void wiimote_handler::set_mapping(const wiimote_guncon_mapping& mapping)
-{
-	{
-		std::unique_lock lock(m_mutex);
-		m_mapping = mapping;
-	}
-	save_config();
-}
-
-wiimote_guncon_mapping wiimote_handler::get_mapping() const
-{
-	// shared_lock not strictly needed for trivial copy but good practice if it becomes complex
-	return m_mapping;
 }
 
 std::vector<wiimote_state> wiimote_handler::get_states()

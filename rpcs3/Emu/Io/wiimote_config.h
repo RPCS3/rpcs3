@@ -11,9 +11,9 @@ struct cfg_wiimote : cfg::node
 
 	cfg::_bool use_for_guncon{ this, "UseForGunCon", true };
 
-	struct node_mapping : cfg::node
+	struct node_guncon_mapping : cfg::node
 	{
-		node_mapping(cfg::node* _parent) : cfg::node(_parent, "Mapping") {}
+		node_guncon_mapping(cfg::node* _parent) : cfg::node(_parent, "GunCon Mapping") {}
 
 		cfg::_enum<wiimote_button> trigger{ this, "Trigger", wiimote_button::B };
 		cfg::_enum<wiimote_button> a1{ this, "A1", wiimote_button::A };
@@ -27,7 +27,7 @@ struct cfg_wiimote : cfg::node
 
 		cfg::_enum<wiimote_button> b1_alt{ this, "B1_Alt", wiimote_button::Up };
 		cfg::_enum<wiimote_button> b2_alt{ this, "B2_Alt", wiimote_button::Down };
-	} mapping{ this };
+	} guncon_mapping{ this };
 
 	const std::string path;
 };

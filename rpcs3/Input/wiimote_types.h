@@ -27,19 +27,3 @@ enum class wiimote_button : u16
 	Minus = 0x1000,
 	Home = 0x8000
 };
-
-struct wiimote_guncon_mapping
-{
-	wiimote_button trigger = wiimote_button::B;
-	wiimote_button a1 = wiimote_button::A;
-	wiimote_button a2 = wiimote_button::Minus;
-	wiimote_button a3 = wiimote_button::Left;
-	wiimote_button b1 = wiimote_button::One;
-	wiimote_button b2 = wiimote_button::Two;
-	wiimote_button b3 = wiimote_button::Home;
-	wiimote_button c1 = wiimote_button::Plus;
-	wiimote_button c2 = wiimote_button::Right;
-
-	wiimote_button b1_alt = wiimote_button::Up;
-	wiimote_button b2_alt = wiimote_button::Down;
-};
