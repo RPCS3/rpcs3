@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 # Resource/dependency URLs
-CCACHE_URL="https://github.com/ccache/ccache/releases/download/v4.11.2/ccache-4.11.2-windows-x86_64.zip"
+CCACHE_URL="https://github.com/ccache/ccache/releases/download/v4.12.3/ccache-4.12.3-windows-x86_64.zip"
 
 DEP_URLS="         \
     $CCACHE_URL"
