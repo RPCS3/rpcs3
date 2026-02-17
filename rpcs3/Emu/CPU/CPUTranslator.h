@@ -3090,6 +3090,9 @@ protected:
 	// For now, setting this flag will speed up SPU verification
 	// but I will remove this later with explicit parralelism - Whatcookie
 	bool m_use_avx = true;
+
+	// ARMv8 SDOT/UDOT
+	bool m_use_dotprod = false;
 #else
 	// Allow FMA
 	bool m_use_fma = false;
@@ -3655,6 +3658,40 @@ public:
 #else
 		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128), {data0, data1, data2});
 #endif
+		return result;
+	}
+
+template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> udot(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+
+		// ARM hardware requires the multipliers to be treated as 16-byte vectors
+		//const auto op1 = bitcast(data1, get_type<u8[16]>());
+		//const auto op2 = bitcast(data2, get_type<u8[16]>());
+
+		// Use the variadic get_intrinsic to resolve the overloaded AArch64 intrinsic
+		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_udot), {data0, data1, data2});
+		return result;
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> sdot(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+
+		//const auto op1 = bitcast(data1, get_type<u8[16]>());
+		//const auto op2 = bitcast(data2, get_type<u8[16]>());
+
+		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_sdot), {data0, data1, data2});
 		return result;
 	}
 

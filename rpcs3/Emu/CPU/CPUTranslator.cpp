@@ -201,6 +201,13 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_vnni = true;
 		m_use_gfni = true;
 	}
+
+#ifdef ARCH_ARM64
+	if (utils::has_dotprod())
+	{
+		m_use_dotprod = true;
+	}
+#endif
 }
 
 llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
