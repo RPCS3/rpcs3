@@ -2802,12 +2802,9 @@ public:
 		std::string& llvm_log = function_log;
 		raw_string_ostream out(llvm_log);
 
-		if (g_cfg.core.spu_debug)
-		{
-			fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
-			out << *_module; // print IR
-			out << "\n\n";
-		}
+		fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
+		out << *_module; // print IR
+		out << "\n\n";
 
 		if (verifyModule(*_module, &out))
 		{
@@ -3274,12 +3271,9 @@ public:
 		std::string llvm_log;
 		raw_string_ostream out(llvm_log);
 
-		if (g_cfg.core.spu_debug)
-		{
-			fmt::append(llvm_log, "LLVM IR (interpreter):\n");
-			out << *_module; // print IR
-			out << "\n\n";
-		}
+		fmt::append(llvm_log, "LLVM IR (interpreter):\n");
+		out << *_module; // print IR
+		out << "\n\n";
 
 		if (verifyModule(*_module, &out))
 		{
