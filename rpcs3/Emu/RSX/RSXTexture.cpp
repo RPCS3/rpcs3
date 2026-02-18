@@ -6,6 +6,11 @@
 #include "Emu/system_config.h"
 #include "util/simd.hpp"
 
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+
 #if defined(ARCH_ARM64)
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
