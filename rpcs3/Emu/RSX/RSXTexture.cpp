@@ -4,6 +4,15 @@
 #include "rsx_utils.h"
 
 #include "Emu/system_config.h"
+#include "util/simd.hpp"
+
+#if defined(ARCH_ARM64)
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+#undef FORCE_INLINE
+#include "Emu/CPU/sse2neon.h"
+#endif
 
 namespace rsx
 {
@@ -291,7 +300,69 @@ namespace rsx
 
 	u32 fragment_texture::border_color() const
 	{
-		return registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
+		const u32 raw = registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
+		const u32 sext = argb_signed();
+
+		if (!sext) [[ likely ]]
+		{
+			return raw;
+		}
+
+		// Border color is broken on PS3. The SNORM behavior is completely broken and behaves like BIASED renormalization instead.
+		// To solve the mismatch, we need to first do a bit expansion on the value then store it as sign extended. The second part is a natural part of numbers on a binary system, so we only need to do the former.
+		static constexpr u32 expand4_lut[16] =
+		{
+			0x00000000u, // 0000
+			0xFF000000u, // 0001
+			0x00FF0000u, // 0010
+			0xFFFF0000u, // 0011
+			0x0000FF00u, // 0100
+			0xFF00FF00u, // 0101
+			0x00FFFF00u, // 0110
+			0xFFFFFF00u, // 0111
+			0x000000FFu, // 1000
+			0xFF0000FFu, // 1001
+			0x00FF00FFu, // 1010
+			0xFFFF00FFu, // 1011
+			0x0000FFFFu, // 1100
+			0xFF00FFFFu, // 1101
+			0x00FFFFFFu, // 1110
+			0xFFFFFFFFu  // 1111
+		};
+
+		// Bit pattern expand and reverse BE -> LE using LUT
+		const u32 mask = expand4_lut[sext];
+
+		// Now we perform the compensation operation
+		// BIAS operation = (V - 128 / 127)
+
+		// Load
+		const __m128i _0 = _mm_setzero_si128();
+		const __m128i _128 = _mm_set1_epi32(128);
+		const __m128i _127 = _mm_set1_epi32(127);
+		const __m128i _255 = _mm_set1_epi32(255);
+
+		const auto be_raw = be_t<u32>(raw);
+		__m128i v = _mm_cvtsi32_si128(static_cast<u32>(be_raw));
+		v = _mm_unpacklo_epi8(v, _0);
+		v = _mm_unpacklo_epi16(v, _0); // [ 0, 64, 255, 128 ]
+
+		// Conversion: x = (y - 128)
+		v = _mm_sub_epi32(v, _128);  // [ -128, -64, 127, 0 ]
+
+		// Convert to signed encoding (reverse sext)
+		v = _mm_slli_epi32(v, 24);
+		v = _mm_srli_epi32(v, 24);
+
+		// Pack down
+		v = _mm_packs_epi32(v, _0);
+		v = _mm_packus_epi16(v, _0);
+
+		// Read
+		const u32 conv = _mm_cvtsi128_si32(v);
+
+		// Merge
+		return (conv & mask) | (raw & ~mask);
 	}
 
 	color4f fragment_texture::remapped_border_color() const
