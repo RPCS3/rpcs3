@@ -3661,6 +3661,7 @@ public:
 		return result;
 	}
 
+#ifdef ARCH_ARM64
 template <typename T1, typename T2, typename T3>
 	value_t<u32[4]> udot(T1 a, T2 b, T3 c)
 	{
@@ -3670,11 +3671,6 @@ template <typename T1, typename T2, typename T3>
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
 
-		// ARM hardware requires the multipliers to be treated as 16-byte vectors
-		//const auto op1 = bitcast(data1, get_type<u8[16]>());
-		//const auto op2 = bitcast(data2, get_type<u8[16]>());
-
-		// Use the variadic get_intrinsic to resolve the overloaded AArch64 intrinsic
 		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_udot), {data0, data1, data2});
 		return result;
 	}
@@ -3688,12 +3684,24 @@ template <typename T1, typename T2, typename T3>
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
 
-		//const auto op1 = bitcast(data1, get_type<u8[16]>());
-		//const auto op2 = bitcast(data2, get_type<u8[16]>());
-
 		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_sdot), {data0, data1, data2});
 		return result;
 	}
+	
+template <typename T1, typename T2>
+	auto addp(T1 a, T2 b)
+	{
+		using T_vector = typename is_llvm_expr<T1>::type;
+		const auto data1 = a.eval(m_ir);
+		const auto data2 = b.eval(m_ir);
+
+		const auto func = get_intrinsic<T_vector>(llvm::Intrinsic::aarch64_neon_addp);
+
+		value_t<T_vector> result;
+		result.value = m_ir->CreateCall(func, {data1, data2});
+		return result;
+	}
+#endif
 
 	template <typename T1, typename T2>
 	value_t<u8[16]> vpermb(T1 a, T2 b)
