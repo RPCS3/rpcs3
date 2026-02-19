@@ -398,12 +398,11 @@ namespace fs
 	class windows_file final : public file_base
 	{
 		HANDLE m_handle;
-		atomic_t<u64> m_pos;
+		atomic_t<u64> m_pos {0};
 
 	public:
 		windows_file(HANDLE handle)
 			: m_handle(handle)
-			, m_pos(0)
 		{
 		}
 
@@ -417,10 +416,10 @@ namespace fs
 
 		stat_t get_stat() override
 		{
-			FILE_BASIC_INFO basic_info;
+			FILE_BASIC_INFO basic_info {};
 			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
 
-			stat_t info;
+			stat_t info {};
 			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
@@ -441,7 +440,7 @@ namespace fs
 
 		bool trunc(u64 length) override
 		{
-			FILE_END_OF_FILE_INFO _eof;
+			FILE_END_OF_FILE_INFO _eof {};
 			_eof.EndOfFile.QuadPart = length;
 
 			if (!SetFileInformationByHandle(m_handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
@@ -563,6 +562,7 @@ namespace fs
 
 		u64 size() override
 		{
+			// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
 			LARGE_INTEGER size;
 			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
 
@@ -579,7 +579,7 @@ namespace fs
 			file_id id{"windows_file"};
 			id.data.resize(sizeof(FILE_ID_INFO));
 
-			FILE_ID_INFO info;
+			FILE_ID_INFO info {};
 
 			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
 			{
@@ -625,7 +625,7 @@ namespace fs
 			struct ::stat file_info;
 			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
 
-			stat_t info;
+			stat_t info {};
 			info.is_directory = S_ISDIR(file_info.st_mode);
 			info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 			info.size = file_info.st_size;
@@ -1652,6 +1652,16 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
+		g_tls_error = to_error(GetLastError());
+		return;
+	}
+
+	// Check if the handle is actually valid.
+	// This can fail on empty mounted drives (e.g. with ERROR_NOT_READY or ERROR_INVALID_FUNCTION).
+	BY_HANDLE_FILE_INFORMATION info;
+	if (!GetFileInformationByHandle(handle, &info))
+	{
+		CloseHandle(handle);
 		g_tls_error = to_error(GetLastError());
 		return;
 	}
