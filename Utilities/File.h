@@ -66,13 +66,13 @@ namespace fs
 	// File attributes (TODO)
 	struct stat_t
 	{
-		bool is_directory;
-		bool is_symlink;
-		bool is_writable;
-		u64 size;
-		s64 atime;
-		s64 mtime;
-		s64 ctime;
+		bool is_directory = false;
+		bool is_symlink = false;
+		bool is_writable = false;
+		u64 size = 0;
+		s64 atime = 0;
+		s64 mtime = 0;
+		s64 ctime = 0;
 
 		using enable_bitcopy = std::true_type;
 
