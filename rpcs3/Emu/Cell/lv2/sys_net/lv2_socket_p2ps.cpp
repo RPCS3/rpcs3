@@ -112,7 +112,6 @@ public:
 
 				// reply is late, increases rtt
 				auto& msg       = it->second;
-				const auto addr = msg.dst_addr.sin_addr.s_addr;
 				rtt_info rtt    = rtts[msg.sock_id];
 				// Only increases rtt once per loop(in case a big number of packets are sent at once)
 				if (!rtt_increased.count(msg.sock_id))
@@ -120,7 +119,7 @@ public:
 					rtt.num_retries += 1;
 					// Increases current rtt by 10%
 					rtt.rtt_time += (rtt.rtt_time / 10);
-					rtts[addr] = rtt;
+					rtts[msg.sock_id] = rtt;
 
 					rtt_increased.emplace(msg.sock_id);
 				}
@@ -625,7 +624,7 @@ std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2ps:
 	sys_net_sockaddr ps3_addr{};
 	auto* paddr = reinterpret_cast<sys_net_sockaddr_in_p2p*>(&ps3_addr);
 
-	lv2_socket_p2ps* sock_client = reinterpret_cast<lv2_socket_p2ps*>(idm::check_unlocked<lv2_socket>(p2ps_client));
+	auto sock_client = static_cast<shared_ptr<lv2_socket_p2ps>>(idm::get_unlocked<lv2_socket>(p2ps_client));
 	{
 		std::lock_guard lock(sock_client->mutex);
 		paddr->sin_family = SYS_NET_AF_INET;
