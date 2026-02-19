@@ -17,6 +17,7 @@ CONFIGURE_ARGS="
  	-DUSE_SYSTEM_LIBUSB=ON
 	-DUSE_SYSTEM_OPENCV=ON
 	-DCMAKE_LINKER_TYPE=lld-devel
+	-DCMAKE_C_USING_LINKER_lld-devel=-fuse-ld=lld-devel
 "
 
 # base Clang workaround (missing clang-scan-deps)
