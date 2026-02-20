@@ -256,6 +256,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Checkboxes
 
+	m_emu_settings->EnhanceCheckBox(ui->spuOptimizer, emu_settings_type::SPUOptimizer);
+	SubscribeTooltip(ui->spuOptimizer, tooltips.settings.spu_optimizer);
+
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 

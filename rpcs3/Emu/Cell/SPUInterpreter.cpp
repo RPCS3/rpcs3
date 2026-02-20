@@ -3133,6 +3133,7 @@ struct spu_interpreter_t
 	IT FMA;
 	IT FNMS;
 	IT FMS;
+	IT RPCS3_OPTIMIZER;
 };
 
 spu_interpreter_rt_base::spu_interpreter_rt_base() noexcept

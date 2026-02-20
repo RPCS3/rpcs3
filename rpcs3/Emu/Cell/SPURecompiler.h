@@ -57,11 +57,23 @@ struct spu_program
 	// Address of the data in LS
 	u32 lower_bound;
 
-	// Program data with intentionally wrong endianness (on LE platform opcode values are swapped)
-	std::vector<u32> data;
+private:
+	// Original program data with intentionally wrong endianness (on LE platform opcode values are swapped)
+	std::vector<u32> m_data;
+
+	// Optimized program data (may contain RPCS3_OPTIMIZER pseudo-instructions)
+	std::vector<u32> m_optimized_data;
+
+public:
+	const std::vector<u32>& get_data() const noexcept { return m_data; }
+	const std::vector<u32>& get_optimized_data() const noexcept;
+
+	// Mutable access to original data (for building/analysis)
+	std::vector<u32>& data() noexcept { return m_data; }
+	// Mutable access to optimized data (for optimizer)
+	std::vector<u32>& optimized_data() noexcept;
 
 	bool operator==(const spu_program& rhs) const noexcept;
-
 	bool operator<(const spu_program& rhs) const noexcept;
 };
 
