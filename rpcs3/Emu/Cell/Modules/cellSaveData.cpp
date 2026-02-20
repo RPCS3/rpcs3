@@ -876,34 +876,21 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Sort the entries
 		{
-			const u32 order = setList->sortOrder;
-			const u32 type = setList->sortType;
-
-			std::sort(save_entries.begin(), save_entries.end(), [order, type](const SaveDataEntry& entry1, const SaveDataEntry& entry2) -> bool
+			std::sort(save_entries.begin(), save_entries.end(), [setList](const SaveDataEntry& entry1, const SaveDataEntry& entry2) -> bool
 			{
-				const bool mtime_lower = entry1.mtime < entry2.mtime;
-				const bool mtime_equal = entry1.mtime == entry2.mtime;
-				const bool subtitle_lower = entry1.subtitle < entry2.subtitle;
-				const bool subtitle_equal = entry1.subtitle == entry2.subtitle;
-				const bool revert_order = order == CELL_SAVEDATA_SORTORDER_DESCENT;
+				const bool asc = setList->sortOrder == CELL_SAVEDATA_SORTORDER_ASCENT;
 
-				if (type == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
+				if (setList->sortType == CELL_SAVEDATA_SORTTYPE_MODIFIEDTIME)
 				{
-					if (mtime_equal)
-					{
-						return subtitle_lower != revert_order;
-					}
-
-					return mtime_lower != revert_order;
+					if (entry1.mtime == entry2.mtime)
+						return asc ? entry1.subtitle < entry2.subtitle : entry2.subtitle < entry1.subtitle;
+					return asc ? entry1.mtime < entry2.mtime : entry2.mtime < entry1.mtime;
 				}
-				else if (type == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+				else if (setList->sortType == CELL_SAVEDATA_SORTTYPE_SUBTITLE)
 				{
-					if (subtitle_equal)
-					{
-						return mtime_lower != revert_order;
-					}
-
-					return subtitle_lower != revert_order;
+					if (entry1.subtitle == entry2.subtitle)
+						return asc ? entry1.mtime < entry2.mtime : entry2.mtime < entry1.mtime;
+					return asc ? entry1.subtitle < entry2.subtitle : entry2.subtitle < entry1.subtitle;
 				}
 
 				ensure(false);
@@ -2559,7 +2546,7 @@ error_code cellSaveDataListImport(ppu_thread& /*ppu*/, PSetList setList, u32 max
 error_code cellSaveDataListExport(ppu_thread& /*ppu*/, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {
 	cellSaveData.todo("cellSaveDataListExport(setList=*0x%x, maxSizeKB=%d, funcDone=*0x%x, container=0x%x, userdata=*0x%x)", setList, maxSizeKB, funcDone, container, userdata);
-	
+
 	if (const auto ecode = savedata_check_args(SAVEDATA_OP_LIST_EXPORT, CELL_SAVEDATA_VERSION_OLD, vm::null, CELL_SAVEDATA_ERRDIALOG_NONE,
 		setList, vm::null, vm::null, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone))
 	{
