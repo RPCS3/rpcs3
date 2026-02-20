@@ -1462,7 +1462,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 	struct all_info_t
 	{
 		CellVdecPicItem picItem;
-		std::aligned_union_t<0, CellVdecAvcInfo, CellVdecDivxInfo, CellVdecMpeg2Info> picInfo;
+		std::variant<CellVdecAvcInfo, CellVdecDivxInfo, CellVdecMpeg2Info> picInfo;
 	};
 
 	AVFrame* frame{};
