@@ -41,7 +41,7 @@ namespace np
 			return;
 		}
 
-		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
+		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", np::npid_to_string(notif_data->roomMemberDataInternal->userInfo.npId), notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
 		// We initiate signaling if necessary
@@ -98,7 +98,7 @@ namespace np
 			return;
 		}
 
-		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
+		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", np::npid_to_string(notif_data->roomMemberDataInternal->userInfo.npId), notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
 		if (room_event_cb)
@@ -204,7 +204,7 @@ namespace np
 			return;
 		}
 
-		rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", notif_data->newRoomMemberDataInternal->userInfo.npId.handle.data, notif_data->newRoomMemberDataInternal->memberId, room_id);
+		rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", np::npid_to_string(notif_data->newRoomMemberDataInternal->userInfo.npId), notif_data->newRoomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->newRoomMemberDataInternal.get_ptr());
 
 		if (room_event_cb)

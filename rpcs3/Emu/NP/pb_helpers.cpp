@@ -263,7 +263,7 @@ namespace np
 		for (u32 i = 0; i < room_info->memberList.membersNum; i++)
 		{
 			SceNpMatching2RoomMemberDataInternal* sce_member = &room_info->memberList.members[i];
-			if (strcmp(sce_member->userInfo.npId.handle.data, npid.handle.data) == 0)
+			if (strncmp(sce_member->userInfo.npId.handle.data, npid.handle.data, 16) == 0)
 			{
 				room_info->memberList.me = room_info->memberList.members + i;
 				edata.add_relocation<SceNpMatching2RoomMemberDataInternal>(room_info->memberList.me);
