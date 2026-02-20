@@ -896,7 +896,7 @@ namespace rpcn
 					return error_and_disconnect("Failed to send all the bytes");
 				}
 
-				res = 0;
+				continue;
 			}
 			n_sent += res;
 		}
@@ -1055,6 +1055,8 @@ namespace rpcn
 				found = found->ai_next;
 			}
 
+			freeaddrinfo(addr_info);
+
 			if (!found_ipv4)
 			{
 				rpcn_log.error("connect: Failed to find IPv4 for %s", host);
@@ -1156,7 +1158,7 @@ namespace rpcn
 		if (!connected || terminate)
 		{
 			state = rpcn_state::failure_other;
-			return true;
+			return false;
 		}
 
 		if (received_version != RPCN_PROTOCOL_VERSION)
