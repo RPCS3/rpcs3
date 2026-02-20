@@ -2318,7 +2318,7 @@ namespace rpcn
 	{
 		np2_structs::GetScoreGameDataRequest pb_req;
 		pb_req.set_boardid(board_id);
-		pb_req.set_npid(reinterpret_cast<const char*>(npid.handle.data));
+		pb_req.set_npid(np::npid_to_string(npid));
 		pb_req.set_pcid(pc_id);
 
 		std::string serialized;

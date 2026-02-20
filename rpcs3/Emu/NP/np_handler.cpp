@@ -1361,7 +1361,7 @@ namespace np
 
 	player_history& np_handler::get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp)
 	{
-		std::string npid_str = std::string(npid.handle.data);
+		std::string npid_str = np::npid_to_string(npid);
 
 		if (!players_history.contains(npid_str))
 		{
@@ -1641,7 +1641,7 @@ namespace np
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
-		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(npid.handle.data));
+		auto friend_infos = rpcn->get_friend_presence_by_npid(np::npid_to_string(npid));
 		if (!friend_infos)
 		{
 			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
