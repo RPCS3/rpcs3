@@ -54,7 +54,7 @@ namespace np
 			const u16 member_id = notif_data->roomMemberDataInternal->memberId;
 			const SceNpId& npid = notif_data->roomMemberDataInternal->userInfo.npId;
 
-			rpcn_log.notice("Join notification told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid.handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
+			rpcn_log.notice("Join notification told to connect to member(%d=%s) of room(%d): %s:%d", member_id, np::npid_to_string(npid), room_id, ip_to_string(addr_p2p), port_p2p);
 
 			// Attempt Signaling
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
