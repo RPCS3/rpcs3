@@ -1024,7 +1024,7 @@ namespace np
 			}
 		}
 
-		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
+		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, np::npid_to_string(from->userId), static_cast<char*>(from->name.data), *size);
 
 		return CELL_OK;
 	}

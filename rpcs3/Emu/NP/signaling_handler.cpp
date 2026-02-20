@@ -256,9 +256,7 @@ void signaling_handler::process_incoming_messages()
 			addr.s_addr = op_addr;
 			char ip_str[16];
 			inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
-			std::string_view npid(sp->npid.handle.data);
-
-			sign_log.trace("SP %s from %s:%d(npid: %s)", sp->command, ip_str, op_port, npid);
+			sign_log.trace("SP %s from %s:%d(npid: %s)", sp->command, ip_str, op_port, np::npid_to_string(sp->npid));
 		}
 
 		bool reply = false, schedule_repeat = false;
@@ -675,9 +673,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 {
 	u32 conn_id;
 
-	char npid_buf[17]{};
-	memcpy(npid_buf, sp->npid.handle.data, 16);
-	std::string npid(npid_buf);
+	std::string npid = np::npid_to_string(sp->npid);
 
 	if (!npid_to_conn_id.contains(npid))
 		return nullptr;
