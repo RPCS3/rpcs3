@@ -1756,7 +1756,7 @@ namespace rpcn
 				{
 					continue;
 				}
-				pb_req.add_alloweduser(req->allowedUser[i].handle.data);
+				pb_req.add_alloweduser(np::npid_to_string(req->allowedUser[i]));
 			}
 		}
 
@@ -1768,7 +1768,7 @@ namespace rpcn
 				{
 					continue;
 				}
-				pb_req.add_blockeduser(req->blockedUser[i].handle.data);
+				pb_req.add_blockeduser(np::npid_to_string(req->blockedUser[i]));
 			}
 		}
 
@@ -2267,7 +2267,7 @@ namespace rpcn
 		for (usz i = 0; i < npids.size(); i++)
 		{
 			auto* npid_entry = pb_req.add_npids();
-			npid_entry->set_npid(static_cast<const char*>(npids[i].first.handle.data));
+			npid_entry->set_npid(np::npid_to_string(npids[i].first));
 			npid_entry->set_pcid(npids[i].second);
 		}
 
@@ -2318,7 +2318,7 @@ namespace rpcn
 	{
 		np2_structs::GetScoreGameDataRequest pb_req;
 		pb_req.set_boardid(board_id);
-		pb_req.set_npid(reinterpret_cast<const char*>(npid.handle.data));
+		pb_req.set_npid(np::npid_to_string(npid));
 		pb_req.set_pcid(pc_id);
 
 		std::string serialized;
@@ -2414,7 +2414,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 		}
 
@@ -2443,7 +2443,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 
 			if (option->compareValue)
@@ -2499,7 +2499,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 		}
 

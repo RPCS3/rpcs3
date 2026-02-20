@@ -464,7 +464,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -656,7 +656,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -674,7 +674,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -832,7 +832,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -850,7 +850,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -868,7 +868,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -902,7 +902,7 @@ namespace clan
 		clan.append_child("id").text().set(clan_id);
 
 		pugi::xml_node role = clan.append_child("onlinename");
-		role.text().set(nph.get_npid().handle.data);
+		role.text().set(np::npid_to_string(nph.get_npid()).c_str());
 
 		pugi::xml_node description = clan.append_child("description");
 		description.text().set(info.description);
@@ -990,7 +990,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_document response = pugi::xml_document();
@@ -1008,7 +1008,7 @@ namespace clan
 		clan.append_child("ticket").text().set(ticket.c_str());
 		clan.append_child("id").text().set(clan_id);
 
-		const std::string jid_str = fmt::format(JID_FORMAT, np_id.handle.data);
+		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
 		clan.append_child("jid").text().set(jid_str.c_str());
 
 		pugi::xml_node role_node = clan.append_child("role");
