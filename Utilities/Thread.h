@@ -4,6 +4,7 @@
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
 
+#include <thread>
 #include <string>
 
 // Hardware core layout
