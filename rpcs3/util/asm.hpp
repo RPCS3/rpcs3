@@ -6,7 +6,7 @@
 #include <functional>
 
 #ifdef ARCH_X64
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #include <intrin.h>
 #else
 #include <immintrin.h>
@@ -66,10 +66,12 @@ namespace utils
 
 	constexpr u32 popcnt128(const u128& v)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		return std::popcount(v.lo) + std::popcount(v.hi);
 #else
-		return std::popcount(v);
+		const u64 lo = static_cast<u64>(v);
+    	const u64 hi = static_cast<u64>(v >> 64);
+    	return static_cast<u32>(std::popcount(lo) + std::popcount(hi));
 #endif
 	}
 
@@ -98,7 +100,7 @@ namespace utils
 
 	inline s64 div128(s64 high, s64 low, s64 divisor, s64* remainder = nullptr)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		s64 rem = 0;
 		s64 r = _div128(high, low, divisor, &rem);
 
@@ -120,7 +122,7 @@ namespace utils
 
 	inline u64 udiv128(u64 high, u64 low, u64 divisor, u64* remainder = nullptr)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		u64 rem = 0;
 		u64 r = _udiv128(high, low, divisor, &rem);
 
@@ -140,7 +142,7 @@ namespace utils
 		return r;
 	}
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 	inline u128 operator/(u128 lhs, u64 rhs)
 	{
 		u64 rem = 0;
@@ -150,25 +152,33 @@ namespace utils
 
 	constexpr u32 ctz128(u128 arg)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		if (!arg.lo)
 			return std::countr_zero(arg.hi) + 64u;
 		else
 			return std::countr_zero(arg.lo);
 #else
-		return std::countr_zero(arg);
+	    const u64 hi = static_cast<u64>(arg >> 64);
+	    if (hi != 0)
+	        return static_cast<u32>(std::countr_zero(hi));
+	    const u64 lo = static_cast<u64>(arg);
+	    return static_cast<u32>(std::countr_zero(lo) + 64u);
 #endif
 	}
 
 	constexpr u32 clz128(u128 arg)
 	{
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 		if (arg.hi)
 			return std::countl_zero(arg.hi);
 		else
 			return std::countl_zero(arg.lo) + 64;
 #else
-		return std::countl_zero(arg);
+	    const u64 hi = static_cast<u64>(arg >> 64);
+	    if (hi != 0)
+	        return static_cast<u32>(std::countl_zero(hi));
+	    const u64 lo = static_cast<u64>(arg);
+	    return static_cast<u32>(std::countl_zero(lo) + 64u);
 #endif
 	}
 
@@ -304,6 +314,6 @@ namespace utils
 
 using utils::busy_wait;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 using utils::operator/;
 #endif

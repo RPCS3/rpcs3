@@ -1,0 +1,27 @@
+{
+  "name": "rpcs3",
+  "version-string": "1.0",
+  "builtin-baseline": "7c45dcccbe6463539a6b92c264258043d267c8f6",
+  "dependencies": [
+    "curl",
+    {
+      "name": "ffmpeg",
+      "features": [
+        "avcodec",
+        "avformat",
+        "swscale",
+        "swresample"
+      ]
+    },
+    "libpng",
+    "opencv",
+    "protobuf",
+    "qtbase",
+    "qtmultimedia",
+    "qtsvg",
+    "qttools",
+    "qttranslations",
+    "vulkan",
+    "zlib"
+  ]
+}
