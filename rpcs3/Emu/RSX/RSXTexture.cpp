@@ -315,6 +315,7 @@ namespace rsx
 
 		// Border color is broken on PS3. The SNORM behavior is completely broken and behaves like BIASED renormalization instead.
 		// To solve the mismatch, we need to first do a bit expansion on the value then store it as sign extended. The second part is a natural part of numbers on a binary system, so we only need to do the former.
+		// Note that the input color is in BE order (BGRA) so we reverse the mask to match.
 		static constexpr u32 expand4_lut[16] =
 		{
 			0x00000000u, // 0000
@@ -335,7 +336,7 @@ namespace rsx
 			0xFFFFFFFFu  // 1111
 		};
 
-		// Bit pattern expand and reverse BE -> LE using LUT
+		// Bit pattern expand
 		const u32 mask = expand4_lut[sext];
 
 		// Now we perform the compensation operation
@@ -344,16 +345,14 @@ namespace rsx
 		// Load
 		const __m128i _0 = _mm_setzero_si128();
 		const __m128i _128 = _mm_set1_epi32(128);
-		const __m128i _127 = _mm_set1_epi32(127);
-		const __m128i _255 = _mm_set1_epi32(255);
 
-		const auto be_raw = be_t<u32>(raw);
-		__m128i v = _mm_cvtsi32_si128(static_cast<u32>(be_raw));
+		// Explode the bytes.
+		__m128i v = _mm_cvtsi32_si128(raw);
 		v = _mm_unpacklo_epi8(v, _0);
-		v = _mm_unpacklo_epi16(v, _0); // [ 0, 64, 255, 128 ]
+		v = _mm_unpacklo_epi16(v, _0);
 
 		// Conversion: x = (y - 128)
-		v = _mm_sub_epi32(v, _128);  // [ -128, -64, 127, 0 ]
+		v = _mm_sub_epi32(v, _128);
 
 		// Convert to signed encoding (reverse sext)
 		v = _mm_slli_epi32(v, 24);
