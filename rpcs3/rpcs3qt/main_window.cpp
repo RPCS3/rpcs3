@@ -33,6 +33,7 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "wiimote_settings_dialog.h"
 #include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
 #include "shortcut_utils.h"
@@ -2990,6 +2991,12 @@ void main_window::CreateConnects()
 	{
 		camera_settings_dialog* dlg = new camera_settings_dialog(this);
 		dlg->open();
+	});
+
+	connect(ui->confWiimoteAct, &QAction::triggered, this, [this]()
+	{
+		wiimote_settings_dialog* dlg = new wiimote_settings_dialog(this);
+		dlg->show();
 	});
 
 	const auto open_rpcn_settings = [this]

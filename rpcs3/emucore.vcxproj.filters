@@ -957,6 +957,9 @@
     <ClCompile Include="Emu\Io\GunCon3.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\wiimote_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\Buzz.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2588,6 +2591,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\wiimote_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\topshotelite_config.h">
