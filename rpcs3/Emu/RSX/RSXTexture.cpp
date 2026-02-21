@@ -2,6 +2,8 @@
 #include "RSXTexture.h"
 
 #include "rsx_utils.h"
+#include "Common/TextureUtils.h"
+#include "Program/GLSLCommon.h"
 
 #include "Emu/system_config.h"
 #include "util/simd.hpp"
@@ -61,6 +63,65 @@ namespace rsx
 	u8 fragment_texture::format() const
 	{
 		return ((registers[NV4097_SET_TEXTURE_FORMAT + (m_index * 8)] >> 8) & 0xff);
+	}
+
+	texture_format_ex fragment_texture::format_ex() const
+	{
+		const auto format_bits = format();
+		const auto base_format = format_bits & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+		const auto format_features = rsx::get_format_features(base_format);
+		if (format_features == 0)
+		{
+			return { format_bits };
+		}
+
+		// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
+		// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
+		// This is a separate method of setting the format to signed mode without doing so per-channel
+		// Precedence = SNORM > GAMMA > UNSIGNED_REMAP/BX2
+		// Games using mixed flags: (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
+		u32 argb_signed_ = 0;
+		u32 unsigned_remap_ = 0;
+		u32 gamma_ = 0;
+
+		if (format_features & RSX_FORMAT_FEATURE_SIGNED_COMPONENTS)
+		{
+			// Tests show this is applied pre-readout. It's just a property of the incoming bytes and is therefore subject to remap.
+			argb_signed_ = decoded_remap().shuffle_mask_bits(argb_signed());
+		}
+
+		if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
+		{
+			// Tests show this is applied post-readout. It's a property of the final value stored in the register and is not remapped.
+			// NOTE: GAMMA correction has no algorithmic effect on constants (0 and 1) so we need not mask it out for correctness.
+			gamma_ = gamma() & ~(argb_signed_);
+		}
+
+		if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
+		{
+			// The renormalization flag applies to all channels. It is weaker than the other flags.
+			// This applies on input and is subject to remap overrides
+			if (unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED)
+			{
+				unsigned_remap_ = decoded_remap().shuffle_mask_bits(0xFu) & ~(argb_signed_ | gamma_);
+			}
+		}
+
+		u32 format_convert = gamma_;
+
+		// The options are mutually exclusive
+		ensure((argb_signed_ & gamma_) == 0);
+		ensure((argb_signed_ & unsigned_remap_) == 0);
+		ensure((gamma_ & unsigned_remap_) == 0);
+
+		// NOTE: Hardware tests show that remapping bypasses the channel swizzles completely
+		format_convert |= (argb_signed_ << texture_control_bits::SEXT_OFFSET);
+		format_convert |= (unsigned_remap_ << texture_control_bits::EXPAND_OFFSET);
+
+		texture_format_ex result { format_bits };
+		result.features = format_features;
+		result.texel_remap_control = format_convert;
+		return result;
 	}
 
 	bool fragment_texture::is_compressed_format() const
