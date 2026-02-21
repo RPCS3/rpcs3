@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_cond.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -1916,8 +1917,8 @@ error_code _CellDmuxCoreOpQueryAttr(vm::cptr<CellDmuxPamfSpecificInfo> pamfSpeci
 	return CELL_OK;
 }
 
-error_code DmuxPamfContext::open(ppu_thread& ppu, const CellDmuxPamfResource& res, const DmuxCb<DmuxNotifyDemuxDone>& notify_dmux_done, const DmuxCb<DmuxNotifyProgEndCode>& notify_prog_end_code,
-	const DmuxCb<DmuxNotifyFatalErr>& notify_fatal_err, vm::bptr<DmuxPamfContext>& handle)
+error_code DmuxPamfContext::open(ppu_thread& ppu, const CellDmuxPamfResource& res, vm::cptr<CellDmuxResourceSpurs> res_spurs, const DmuxCb<DmuxNotifyDemuxDone>& notify_dmux_done,
+	const DmuxCb<DmuxNotifyProgEndCode>& notify_prog_end_code, const DmuxCb<DmuxNotifyFatalErr>& notify_fatal_err, vm::bptr<DmuxPamfContext>& handle)
 {
 	if (res.ppuThreadPriority >= 0xc00u || res.ppuThreadStackSize < 0x1000u || res.spuThreadPriority >= 0x100u || res.numOfSpus != 1u || !res.memAddr || res.memSize < sizeof(DmuxPamfContext) + 0xe7b)
 	{
@@ -1966,6 +1967,13 @@ error_code DmuxPamfContext::open(ppu_thread& ppu, const CellDmuxPamfResource& re
 	_this->cmd_queue_addr__ = _this.ptr(&DmuxPamfContext::cmd_queue);
 
 	ensure(std::snprintf(_this->spurs_taskset_name, sizeof(_this->spurs_taskset_name), "_libdmux_pamf_%08x", _this.addr()) == 22);
+
+	_this->use_existing_spurs = !!res_spurs;
+
+	if (!res_spurs && g_fxo->get<lv2_memory_container>().take(0x40000) != 0x40000)
+	{
+		return CELL_DMUX_PAMF_ERROR_FATAL;
+	}
 
 	_this->cmd_queue.init(_this->cmd_queue_buffer);
 	_this->cmd_result_queue.init(_this->cmd_result_queue_buffer);
@@ -2032,7 +2040,7 @@ error_code _CellDmuxCoreOpOpen(ppu_thread& ppu, vm::cptr<CellDmuxPamfSpecificInf
 	const auto prog_end_code_func = vm::bptr<DmuxNotifyProgEndCode>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(dmuxPamfNotifyProgEndCode)));
 	const auto fatal_err_func = vm::bptr<DmuxNotifyFatalErr>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(dmuxPamfNotifyFatalErr)));
 
-	const error_code ret = DmuxPamfContext::open(ppu, res, { demux_done_func, _handle }, { prog_end_code_func, _handle }, { fatal_err_func, _handle }, _handle->demuxer);
+	const error_code ret = DmuxPamfContext::open(ppu, res, demuxerResourceSpurs, { demux_done_func, _handle }, { prog_end_code_func, _handle }, { fatal_err_func, _handle }, _handle->demuxer);
 
 	*handle = _handle;
 
@@ -2047,6 +2055,11 @@ error_code DmuxPamfContext::close(ppu_thread& ppu)
 	}
 
 	ensure(idm::remove<dmux_pamf_spu_thread>(hle_spu_thread_id));
+
+	if (!use_existing_spurs)
+	{
+		g_fxo->get<lv2_memory_container>().free(0x40000);
+	}
 
 	if (sys_cond_destroy(ppu, cond) != CELL_OK
 		|| sys_mutex_destroy(ppu, mutex) != CELL_OK)

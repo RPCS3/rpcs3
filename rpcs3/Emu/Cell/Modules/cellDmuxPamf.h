@@ -961,7 +961,8 @@ public:
 
 	void exec(ppu_thread& ppu);
 
-	static error_code open(ppu_thread& ppu, const CellDmuxPamfResource& res, const DmuxCb<DmuxNotifyDemuxDone>& notify_dmux_done, const DmuxCb<DmuxNotifyProgEndCode>& notify_prog_end_code, const DmuxCb<DmuxNotifyFatalErr>& notify_fatal_err, vm::bptr<DmuxPamfContext>& handle);
+	static error_code open(ppu_thread& ppu, const CellDmuxPamfResource& res, vm::cptr<CellDmuxResourceSpurs> res_spurs, const DmuxCb<DmuxNotifyDemuxDone>& notify_dmux_done,
+		const DmuxCb<DmuxNotifyProgEndCode>& notify_prog_end_code, const DmuxCb<DmuxNotifyFatalErr>& notify_fatal_err, vm::bptr<DmuxPamfContext>& handle);
 	error_code create_thread(ppu_thread& ppu);
 	error_code close(ppu_thread& ppu);
 	error_code reset_stream(ppu_thread& ppu);
