@@ -2048,6 +2048,12 @@ error_code DmuxPamfContext::close(ppu_thread& ppu)
 
 	ensure(idm::remove<dmux_pamf_spu_thread>(hle_spu_thread_id));
 
+	if (sys_cond_destroy(ppu, cond) != CELL_OK
+		|| sys_mutex_destroy(ppu, mutex) != CELL_OK)
+	{
+		return CELL_DMUX_PAMF_ERROR_FATAL;
+	}
+
 	return CELL_OK;
 }
 
