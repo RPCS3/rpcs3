@@ -3603,6 +3603,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		default:
 		{
+			if (type & spu_itype::zregmod)
+			{
+				break;
+			}
+
 			// Unconst
 			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 			m_regmod[pos / 4] = op_rt;
