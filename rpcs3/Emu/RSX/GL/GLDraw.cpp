@@ -2,6 +2,7 @@
 #include "GLGSRender.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
+#include "../Program/GLSLCommon.h"
 
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
@@ -315,6 +316,8 @@ void GLGSRender::load_texture_env()
 
 				if (sampler_state->validate())
 				{
+					sampler_state->format_ex = tex.format_ex();
+
 					if (m_textures_dirty[i])
 					{
 						m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
@@ -324,12 +327,17 @@ void GLGSRender::load_texture_env()
 						m_graphics_state |= rsx::fragment_program_state_dirty;
 					}
 
-					if (const auto texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-						sampler_state->format_class != rsx::classify_format(texture_format) &&
-						(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
+					const auto texture_format = sampler_state->format_ex.format();
+					// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
+					// If accurate graphics are desired, force a bitcast to COLOR as a workaround.
+					const bool is_depth_reconstructed = sampler_state->format_class != rsx::classify_format(texture_format) &&
+						(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8);
+					// SNORM conversion required in shader. Do not interpolate to avoid introducing discontinuities due to how negative numbers work
+					const bool is_snorm = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) != 0;
+
+					if (is_depth_reconstructed || is_snorm)
 					{
 						// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
-						// If accurate graphics are desired, force a bitcast to COLOR as a workaround.
 						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 					}
