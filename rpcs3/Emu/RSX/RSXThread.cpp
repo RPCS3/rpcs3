@@ -2326,7 +2326,7 @@ namespace rsx
 				texture_control |= format_ex.texel_remap_control;
 				texture_control |= format_ex.features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 
-				if (current_fp_metadata.has_tex_bx2_conv)
+				if (current_fp_metadata.bx2_texture_reads_mask)
 				{
 					const u32 remap_hi = tex.decoded_remap().shuffle_mask_bits(0xFu);
 					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
