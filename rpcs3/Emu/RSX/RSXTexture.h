@@ -4,6 +4,8 @@
 
 namespace rsx
 {
+	struct texture_format_ex;
+
 	class fragment_texture
 	{
 	protected:
@@ -33,6 +35,7 @@ namespace rsx
 		// cubemap as a separate dimension.
 		rsx::texture_dimension_extended get_extended_texture_dimension() const;
 		u8 format() const;
+		texture_format_ex format_ex() const;
 		bool is_compressed_format() const;
 		u16 mipmap() const;
 
