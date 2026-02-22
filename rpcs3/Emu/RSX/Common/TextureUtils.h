@@ -147,6 +147,9 @@ namespace rsx
 		bool valid() const { return format_bits != 0; }
 		u32 format() const { return format_bits & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); }
 
+		bool hw_SNORM_possible() const { return (texel_remap_control & SEXT_MASK) == SEXT_MASK; }
+		bool hw_SRGB_possible() const { return (texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK; }
+
 	//private:
 		u32 format_bits = 0;
 		u32 features = 0;
