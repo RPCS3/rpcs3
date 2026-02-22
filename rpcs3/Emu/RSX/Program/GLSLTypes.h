@@ -9,7 +9,7 @@ namespace glsl
 		glsl_compute_program = 2,
 
 		// Meta
-		glsl_invalid_program = 0xff
+		glsl_invalid_program = 7
 	};
 
 	enum glsl_rules : unsigned char

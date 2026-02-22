@@ -1192,7 +1192,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		if (dst.exp_tex)
 		{
 			properties.has_exp_tex_op = true;
-			AddCode("_enable_texture_expand();");
+			AddCode("_enable_texture_expand($_i);");
 		}
 
 		// Shadow proj

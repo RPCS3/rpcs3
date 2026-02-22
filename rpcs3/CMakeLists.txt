@@ -8,7 +8,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 include(ConfigureCompiler)
 include(CheckFunctionExists)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     add_compile_definitions(DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")

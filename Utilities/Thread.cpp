@@ -8,7 +8,6 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
-#include <thread>
 #include <cfenv>
 
 #ifdef ARCH_ARM64

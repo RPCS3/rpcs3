@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "../Common/BufferUtils.h"
+#include "../Program/GLSLCommon.h"
 #include "../rsx_methods.h"
 
 #include "VKAsyncScheduler.h"
@@ -275,7 +276,7 @@ void VKGSRender::load_texture_env()
 
 	auto get_border_color = [&](const rsx::Texture auto& tex)
 	{
-		return  m_device->get_custom_border_color_support().require_border_color_remap
+		return m_device->get_custom_border_color_support().require_border_color_remap
 			? tex.remapped_border_color()
 			: rsx::decode_border_color(tex.border_color());
 	};
@@ -307,6 +308,8 @@ void VKGSRender::load_texture_env()
 
 			if (sampler_state->validate())
 			{
+				sampler_state->format_ex = tex.format_ex();
+
 				if (sampler_state->is_cyclic_reference)
 				{
 					check_for_cyclic_refs |= true;
@@ -324,7 +327,7 @@ void VKGSRender::load_texture_env()
 				f32 min_lod = 0.f, max_lod = 0.f;
 				f32 lod_bias = 0.f;
 
-				const u32 texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+				const u32 texture_format = sampler_state->format_ex.format();
 				VkBool32 compare_enabled = VK_FALSE;
 				VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER;
 
@@ -350,7 +353,8 @@ void VKGSRender::load_texture_env()
 				if (sampler_state->format_class == RSX_FORMAT_CLASS_COLOR) [[likely]]
 				{
 					// Most PS3-like formats can be linearly filtered without problem
-					can_sample_linear = true;
+					// Exclude textures that require SNORM conversion however
+					can_sample_linear = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) == 0;
 				}
 				else if (sampler_state->format_class != rsx::classify_format(texture_format) &&
 					(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))

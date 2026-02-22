@@ -89,6 +89,13 @@ namespace np
 		// npid->reserved[0] = 1;
 	}
 
+	std::string npid_to_string(const SceNpId& npid)
+	{
+		char npid_str[17]{};
+		std::memcpy(npid_str, npid.handle.data, 16);
+		return std::string(npid_str);
+	}
+
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name)
 	{
 		memset(&online_name, 0, sizeof(online_name));

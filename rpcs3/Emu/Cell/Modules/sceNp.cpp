@@ -1199,7 +1199,7 @@ error_code _sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32
 		.msgFeatures = {},
 		.data = std::vector<u8>(static_cast<const u8*>(data.get_ptr()), static_cast<const u8*>(data.get_ptr()) + size)};
 	std::set<std::string> npids;
-	npids.insert(std::string(to->handle.data));
+	npids.insert(np::npid_to_string(*to));
 
 	nph.send_message(msg_data, npids);
 
@@ -1228,7 +1228,7 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d, npids: *0x%x", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count, msg->npids);
 		for (u32 i = 0; i < msg->count && msg->npids; i++)
 		{
-			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, static_cast<char*>(&msg->npids[i].handle.data[0]));
+			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, np::npid_to_string(msg->npids[i]));
 		}
 		sceNp.notice("sceNpBasicSendMessageGui: subject: %s", msg->subject);
 		sceNp.notice("sceNpBasicSendMessageGui: body: %s", msg->body);
@@ -1398,7 +1398,7 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 	{
 		for (u32 i = 0; i < msg->count; i++)
 		{
-			npids.insert(std::string(msg->npids[i].handle.data));
+			npids.insert(np::npid_to_string(msg->npids[i]));
 		}
 	}
 
@@ -7144,7 +7144,7 @@ error_code sceNpUtilCanonicalizeNpIdForPsp(vm::ptr<SceNpId> npId)
 
 error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	sceNp.trace("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1 ? id1->handle.data : "", id2, id2 ? id2->handle.data : "");
+	sceNp.trace("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1 ? np::npid_to_string(*id1) : std::string(), id2, id2 ? np::npid_to_string(*id2) : std::string());
 
 	if (!id1 || !id2)
 	{

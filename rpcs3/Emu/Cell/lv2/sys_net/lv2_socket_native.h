@@ -70,6 +70,10 @@ private:
 	s32 so_reuseaddr = 0;
 	s32 so_reuseport = 0;
 #endif
+	// Those values come from FreeBSD
+	s32 min_ttl = 1;
+	s32 max_ttl = 64;
+
 	u16 bound_port = 0;
 	bool feign_tcp_conn_failure = false; // Savestate load related
 };
