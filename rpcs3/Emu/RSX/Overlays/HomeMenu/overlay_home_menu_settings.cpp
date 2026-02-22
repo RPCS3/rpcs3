@@ -44,7 +44,7 @@ namespace rsx
 			add_dropdown(&g_cfg.video.output_scaling, localized_string_id::HOME_MENU_SETTINGS_VIDEO_OUTPUT_SCALING);
 			if (g_cfg.video.renderer == video_renderer::vulkan && g_cfg.video.output_scaling == output_scaling_mode::fsr)
 			{
-				add_unsigned_slider(&g_cfg.video.vk.rcas_sharpening_intensity, localized_string_id::HOME_MENU_SETTINGS_VIDEO_RCAS_SHARPENING, " %", 1);
+				add_unsigned_slider(&g_cfg.video.rcas_sharpening_intensity, localized_string_id::HOME_MENU_SETTINGS_VIDEO_RCAS_SHARPENING, " %", 1);
 			}
 
 			add_checkbox(&g_cfg.video.stretch_to_display_area, localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY);
