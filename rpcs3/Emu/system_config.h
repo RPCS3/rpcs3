@@ -61,7 +61,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
 		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
-		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "XFloat Accuracy", xfloat_accuracy::approximate, false };
+		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "SPU XFloat Accuracy", xfloat_accuracy::approximate, false };
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool precise_spu_verification{ this, "Precise SPU Verification", false }; // Disables use of xorsum based spu verification if enabled.
