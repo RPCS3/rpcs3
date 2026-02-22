@@ -334,16 +334,51 @@ void GLGSRender::load_texture_env()
 			continue;
 		}
 
+		if (!is_sampler_dirty)
+		{
+			if (sampler_state->format_class != previous_format_class)
+			{
+				// Host details changed but RSX is not aware
+				m_graphics_state |= rsx::fragment_program_state_dirty;
+			}
+
+			if (m_fs_sampler_states[i])
+			{
+				// Nothing to change, use cached sampler
+				continue;
+			}
+		}
+
 		sampler_state->format_ex = tex.format_ex();
 
-		if (is_sampler_dirty)
+		if (sampler_state->format_ex.texel_remap_control &&
+			sampler_state->image_handle &&
+			sampler_state->upload_context == rsx::texture_upload_context::shader_read) [[ unlikely ]]
 		{
-			m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
+			// Check if we need to override the view format
+			const auto gl_format = sampler_state->image_handle->view_format();
+			GLenum format_override = gl_format;
+			rsx::flags32_t flags_to_erase = 0u;
+
+			if (sampler_state->format_ex.hw_SNORM_possible())
+			{
+				format_override = gl::get_compatible_snorm_format(gl_format);
+				flags_to_erase = rsx::texture_control_bits::SEXT_MASK;
+			}
+			else if (sampler_state->format_ex.hw_SRGB_possible())
+			{
+				format_override = gl::get_compatible_srgb_format(gl_format);
+				flags_to_erase = rsx::texture_control_bits::GAMMA_CTRL_MASK;
+			}
+
+			if (format_override != GL_NONE && format_override != gl_format)
+			{
+				sampler_state->image_handle = sampler_state->image_handle->as(format_override);
+				sampler_state->format_ex.texel_remap_control &= (~flags_to_erase);
+			}
 		}
-		else if (sampler_state->format_class != previous_format_class)
-		{
-			m_graphics_state |= rsx::fragment_program_state_dirty;
-		}
+
+		m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 
 		const auto texture_format = sampler_state->format_ex.format();
 		// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
