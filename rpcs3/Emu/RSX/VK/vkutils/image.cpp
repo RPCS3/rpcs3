@@ -463,7 +463,7 @@ namespace vk
 		return result;
 	}
 
-	image_view* viewable_image::get_view(VkFormat format, const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
+	image_view* viewable_image::get_view(const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
 	{
 		u32 remap_encoding = remap.encoded;
 		if (remap_encoding == VK_REMAP_IDENTITY)
@@ -482,7 +482,7 @@ namespace vk
 		if (found != views.end())
 		{
 			ensure(found->second->info.subresourceRange.aspectMask & mask);
-			return found->second->as(format);
+			return found->second.get();
 		}
 
 		VkComponentMapping real_mapping;
@@ -506,7 +506,7 @@ namespace vk
 		const VkImageSubresourceRange range = { aspect() & mask, 0, info.mipLevels, 0, info.arrayLayers };
 		ensure(range.aspectMask);
 
-		auto view = std::make_unique<vk::image_view>(*g_render_device, this, format, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
+		auto view = std::make_unique<vk::image_view>(*g_render_device, this, format(), VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 		auto result = view.get();
 		views.emplace(storage_key, std::move(view));
 		return result;
