@@ -274,11 +274,11 @@ void VKGSRender::load_texture_env()
 		return false;
 	};
 
-	auto get_border_color = [&](const rsx::Texture auto& tex)
+	auto get_border_color = [&](const rsx::Texture auto& tex, bool remap_colorspace)
 	{
 		return m_device->get_custom_border_color_support().require_border_color_remap
-			? tex.remapped_border_color()
-			: rsx::decode_border_color(tex.border_color());
+			? tex.remapped_border_color(remap_colorspace)
+			: rsx::decode_border_color(tex.border_color(remap_colorspace));
 	};
 
 	std::lock_guard lock(m_sampler_mutex);
@@ -394,9 +394,30 @@ void VKGSRender::load_texture_env()
 
 		// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
 		// Check the device properties to determine whether to pre-swizzle the colors or not.
-		const auto border_color = rsx::is_border_clamped_texture(tex)
-			? vk::border_color_t(get_border_color(tex))
-			: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+		const bool sext_conv_required = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) != 0;
+		vk::border_color_t border_color(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+
+		if (rsx::is_border_clamped_texture(tex))
+		{
+			auto color_value = get_border_color(tex, sext_conv_required);
+			if (const auto snorm_mask = tex.argb_signed();
+				!sext_conv_required && snorm_mask)
+			{
+				// Convert the border color in host space (2N - 1)
+				// HW does the conversion in integer space as (x - 128) / 127 which introduces a biasing error.
+				const float bias_v = 128.f / 255.f;
+				const float scale_v = 255.f / 127.f;
+
+				color4f scale{ 1.f }, bias{ 0.f };
+				if (snorm_mask & 1) { scale.a = scale_v; bias.a = -bias_v; }
+				if (snorm_mask & 2) { scale.r = scale_v; bias.r = -bias_v; }
+				if (snorm_mask & 4) { scale.g = scale_v; bias.g = -bias_v; }
+				if (snorm_mask & 8) { scale.b = scale_v; bias.b = -bias_v; }
+				color_value = (color_value + bias) * scale;
+			}
+
+			border_color = color_value;
+		}
 
 		// Check if non-point filtering can even be used on this format
 		bool can_sample_linear;
@@ -404,7 +425,7 @@ void VKGSRender::load_texture_env()
 		{
 			// Most PS3-like formats can be linearly filtered without problem
 			// Exclude textures that require SNORM conversion however
-			can_sample_linear = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) == 0;
+			can_sample_linear = !sext_conv_required;
 		}
 		else if (sampler_state->format_class != rsx::classify_format(texture_format) &&
 			(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
@@ -554,7 +575,7 @@ void VKGSRender::load_texture_env()
 		// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
 		// Check the device properties to determine whether to pre-swizzle the colors or not.
 		const auto border_color = is_border_clamped_texture(tex)
-			? vk::border_color_t(get_border_color(tex))
+			? vk::border_color_t(get_border_color(tex, false))
 			: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 
 		if (vs_sampler_handles[i] &&
