@@ -2674,14 +2674,14 @@
                <item>
                 <widget class="QCheckBox" name="readDepth">
                  <property name="text">
-                  <string>Read Depth Buffers</string>
+                  <string>Read Depth Buffer</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QCheckBox" name="dumpDepth">
                  <property name="text">
-                  <string>Write Depth Buffers</string>
+                  <string>Write Depth Buffer</string>
                  </property>
                 </widget>
                </item>
