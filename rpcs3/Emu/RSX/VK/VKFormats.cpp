@@ -253,15 +253,6 @@ namespace vk
 			return VK_FORMAT_R8G8B8A8_SRGB;
 		case VK_FORMAT_B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_SRGB;
-		// 16-bit
-		case VK_FORMAT_R16_UNORM:
-		case VK_FORMAT_R16G16_UNORM:
-			return VK_FORMAT_UNDEFINED; // No match
-		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-		case VK_FORMAT_R5G6B5_UNORM_PACK16:
-		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return VK_FORMAT_UNDEFINED; // No match
 		// DXT
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
@@ -269,14 +260,7 @@ namespace vk
 			return VK_FORMAT_BC2_SRGB_BLOCK;
 		case VK_FORMAT_BC3_UNORM_BLOCK:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
-		// Depth
-		case VK_FORMAT_D16_UNORM:
-		case VK_FORMAT_D32_SFLOAT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return VK_FORMAT_UNDEFINED; // Unsupported
 		default:
-			rsx_log.error("[SRGB_FMT] Unexpected VkFormat 0x%x", static_cast<int>(rgb_format));
 			return VK_FORMAT_UNDEFINED;
 		}
 	}
@@ -299,24 +283,7 @@ namespace vk
 			return VK_FORMAT_R16_SNORM;
 		case VK_FORMAT_R16G16_UNORM:
 			return VK_FORMAT_R16G16_SNORM;
-		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-		case VK_FORMAT_R5G6B5_UNORM_PACK16:
-		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return VK_FORMAT_UNDEFINED; // No match
-		// DXT
-		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-		case VK_FORMAT_BC2_UNORM_BLOCK:
-		case VK_FORMAT_BC3_UNORM_BLOCK:
-			return VK_FORMAT_UNDEFINED; // No match
-		// Depth
-		case VK_FORMAT_D16_UNORM:
-		case VK_FORMAT_D32_SFLOAT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return VK_FORMAT_UNDEFINED; // Unsupported
 		default:
-			rsx_log.error("[SEXT_FMT] Unexpected VkFormat 0x%x", static_cast<int>(rgb_format));
 			return VK_FORMAT_UNDEFINED;
 		}
 	}
