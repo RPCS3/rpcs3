@@ -47,7 +47,7 @@ namespace vk
 		const memory_type_info& memory_type,
 		u32 access_flags,
 		VkImageType image_type,
-		VkFormat format,
+		const VkFormatEx& format,
 		u32 width, u32 height, u32 depth,
 		u32 mipmaps, u32 layers,
 		VkSampleCountFlagBits samples,
@@ -59,7 +59,6 @@ namespace vk
 		rsx::format_class format_class)
 		: m_device(dev)
 	{
-		info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		info.imageType = image_type;
 		info.format = format;
 		info.extent = { width, height, depth };
@@ -84,6 +83,16 @@ namespace vk
 			info.pQueueFamilyIndices = concurrency_queue_families.data();
 		}
 
+		VkImageFormatListCreateInfo format_list = { .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO };
+		if (format.is_mutable())
+		{
+			info.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+
+			format_list.pViewFormats = format.pViewFormats;
+			format_list.viewFormatCount = format.viewFormatCount;
+			info.pNext = &format_list;
+		}
+
 		create_impl(dev, access_flags, memory_type, allocation_pool);
 		m_storage_aspect = get_aspect_flags(format);
 
@@ -100,6 +109,7 @@ namespace vk
 		}
 
 		m_format_class = format_class;
+		info.pNext = nullptr;
 	}
 
 	// TODO: Ctor that uses a provided memory heap
