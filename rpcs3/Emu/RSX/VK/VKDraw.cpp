@@ -345,7 +345,9 @@ void VKGSRender::load_texture_env()
 
 		if (sampler_state->format_ex.texel_remap_control &&
 			sampler_state->image_handle &&
-			sampler_state->upload_context == rsx::texture_upload_context::shader_read) [[ unlikely ]]
+			sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
+			(current_fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
+			g_cfg.video.use_hardware_texel_remapping) [[ unlikely ]]
 		{
 			// Check if we need to override the view format
 			const auto vk_format = sampler_state->image_handle->format();

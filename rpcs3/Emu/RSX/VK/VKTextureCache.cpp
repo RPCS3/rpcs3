@@ -1153,7 +1153,8 @@ namespace vk
 		const bool upload_async = rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute;
 		rsx::flags32_t create_flags = 0;
 
-		if (context == rsx::texture_upload_context::shader_read)
+		if (context == rsx::texture_upload_context::shader_read &&
+			g_cfg.video.use_hardware_texel_remapping)
 		{
 			create_flags |= texture_create_flags::mutable_format;
 		}
