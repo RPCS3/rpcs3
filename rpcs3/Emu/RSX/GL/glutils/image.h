@@ -353,7 +353,10 @@ namespace gl
 		GLenum m_aspect_flags = 0;
 		texture* m_image_data = nullptr;
 
-		GLenum component_swizzle[4] {};
+		GLenum component_swizzle[4]{};
+
+		std::unordered_map<GLenum, std::unique_ptr<texture_view>> m_subviews;
+		texture_view* m_root_view = nullptr;
 
 		texture_view() = default;
 
@@ -394,6 +397,8 @@ namespace gl
 		}
 
 		virtual ~texture_view();
+
+		texture_view* as(GLenum format);
 
 		GLuint id() const
 		{
