@@ -321,23 +321,53 @@ void VKGSRender::load_texture_env()
 			continue;
 		}
 
-		sampler_state->format_ex = tex.format_ex();
-
 		if (sampler_state->is_cyclic_reference)
 		{
 			check_for_cyclic_refs |= true;
 		}
 
-		if (!is_sampler_dirty && sampler_state->format_class != previous_format_class)
+		if (!is_sampler_dirty)
 		{
-			// Host details changed but RSX is not aware
-			m_graphics_state |= rsx::fragment_program_state_dirty;
+			if (sampler_state->format_class != previous_format_class)
+			{
+				// Host details changed but RSX is not aware
+				m_graphics_state |= rsx::fragment_program_state_dirty;
+			}
+
+			if (fs_sampler_handles[i])
+			{
+				// Nothing to change, use cached sampler
+				continue;
+			}
 		}
 
-		if (!is_sampler_dirty && fs_sampler_handles[i])
+		sampler_state->format_ex = tex.format_ex();
+
+		if (sampler_state->format_ex.texel_remap_control &&
+			sampler_state->image_handle &&
+			sampler_state->upload_context == rsx::texture_upload_context::shader_read) [[ unlikely ]]
 		{
-			// Nothing to change, use cached sampler
-			continue;
+			// Check if we need to override the view format
+			const auto vk_format = sampler_state->image_handle->format();
+			VkFormat format_override = vk_format;;
+			rsx::flags32_t flags_to_erase = 0u;
+
+			if (sampler_state->format_ex.hw_SNORM_possible())
+			{
+				format_override = vk::get_compatible_snorm_format(vk_format);
+				flags_to_erase = rsx::texture_control_bits::SEXT_MASK;
+			}
+			else if (sampler_state->format_ex.hw_SRGB_possible())
+			{
+				format_override = vk::get_compatible_srgb_format(vk_format);
+				flags_to_erase = rsx::texture_control_bits::GAMMA_CTRL_MASK;
+			}
+
+			if (format_override != VK_FORMAT_UNDEFINED && format_override != vk_format)
+			{
+				sampler_state->image_handle = sampler_state->image_handle->as(format_override);
+				sampler_state->format_ex.texel_remap_control &= (~flags_to_erase);
+			}
 		}
 
 		VkFilter mag_filter;
