@@ -84,23 +84,25 @@ namespace gl
 			// Therefore, we pass the raw value here, and the texture view will handle the rest for us.
 			const bool sext_conv_required = (sampled_image->format_ex.texel_remap_control & rsx::SEXT_MASK) != 0;
 			const auto encoded_color = tex.border_color(sext_conv_required);
-			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
+			const auto host_features = sampled_image->format_ex.host_features;
+
+			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color ||
+				get_parameteri(GL_TEXTURE_BORDER_VALUES_NV) != host_features)
 			{
 				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
-				auto border_color = rsx::decode_border_color(encoded_color);
+				m_propertiesi[GL_TEXTURE_BORDER_VALUES_NV] = host_features;
 
-				if (const auto snorm_mask = tex.argb_signed();
-					!sext_conv_required && tex.argb_signed()) [[ unlikely ]]
+				auto border_color = rsx::decode_border_color(encoded_color);
+				if (sampled_image->format_ex.host_snorm_format_active()) [[ unlikely ]]
 				{
 					// Hardware SNORM is active
-					ensure(sampled_image->format_ex.hw_SNORM_possible());
-
 					// Convert the border color in host space (2N - 1)
 					// HW does the conversion in integer space as (x - 128) / 127 which introduces a biasing error.
 					const float bias_v = 128.f / 255.f;
 					const float scale_v = 255.f / 127.f;
 
 					color4f scale{ 1.f }, bias{ 0.f };
+					const auto snorm_mask = tex.argb_signed();
 					if (snorm_mask & 1) { scale.a = scale_v; bias.a = -bias_v; }
 					if (snorm_mask & 2) { scale.r = scale_v; bias.r = -bias_v; }
 					if (snorm_mask & 4) { scale.g = scale_v; bias.g = -bias_v; }

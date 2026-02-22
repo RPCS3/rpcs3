@@ -353,22 +353,26 @@ void VKGSRender::load_texture_env()
 			const auto vk_format = sampler_state->image_handle->format();
 			VkFormat format_override = vk_format;;
 			rsx::flags32_t flags_to_erase = 0u;
+			rsx::flags32_t host_flags_to_set = 0u;
 
 			if (sampler_state->format_ex.hw_SNORM_possible())
 			{
 				format_override = vk::get_compatible_snorm_format(vk_format);
 				flags_to_erase = rsx::texture_control_bits::SEXT_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SNORM;
 			}
 			else if (sampler_state->format_ex.hw_SRGB_possible())
 			{
 				format_override = vk::get_compatible_srgb_format(vk_format);
 				flags_to_erase = rsx::texture_control_bits::GAMMA_CTRL_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SRGB;
 			}
 
 			if (format_override != VK_FORMAT_UNDEFINED && format_override != vk_format)
 			{
 				sampler_state->image_handle = sampler_state->image_handle->as(format_override);
 				sampler_state->format_ex.texel_remap_control &= (~flags_to_erase);
+				sampler_state->format_ex.host_features |= host_flags_to_set;
 			}
 		}
 
@@ -400,8 +404,7 @@ void VKGSRender::load_texture_env()
 		if (rsx::is_border_clamped_texture(tex))
 		{
 			auto color_value = get_border_color(tex, sext_conv_required);
-			if (const auto snorm_mask = tex.argb_signed();
-				!sext_conv_required && snorm_mask)
+			if (sampler_state->format_ex.host_snorm_format_active())
 			{
 				// Convert the border color in host space (2N - 1)
 				// HW does the conversion in integer space as (x - 128) / 127 which introduces a biasing error.
@@ -409,6 +412,7 @@ void VKGSRender::load_texture_env()
 				const float scale_v = 255.f / 127.f;
 
 				color4f scale{ 1.f }, bias{ 0.f };
+				const auto snorm_mask = tex.argb_signed();
 				if (snorm_mask & 1) { scale.a = scale_v; bias.a = -bias_v; }
 				if (snorm_mask & 2) { scale.r = scale_v; bias.r = -bias_v; }
 				if (snorm_mask & 4) { scale.g = scale_v; bias.g = -bias_v; }
