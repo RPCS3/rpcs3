@@ -299,95 +299,114 @@ void GLGSRender::load_texture_env()
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		if (!fs_sampler_state[i])
+		{
 			fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+		}
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.fragment_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
-		if (m_samplers_dirty || m_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+		if (!m_samplers_dirty &&
+			!m_textures_dirty[i] &&
+			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
-			if (tex.enabled())
-			{
-				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
+			continue;
+		}
 
-				if (sampler_state->validate())
-				{
-					sampler_state->format_ex = tex.format_ex();
+		const bool is_sampler_dirty = m_textures_dirty[i];
+		m_textures_dirty[i] = false;
 
-					if (m_textures_dirty[i])
-					{
-						m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
-					}
-					else if (sampler_state->format_class != previous_format_class)
-					{
-						m_graphics_state |= rsx::fragment_program_state_dirty;
-					}
+		if (!tex.enabled())
+		{
+			*sampler_state = {};
+			continue;
+		}
 
-					const auto texture_format = sampler_state->format_ex.format();
-					// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
-					// If accurate graphics are desired, force a bitcast to COLOR as a workaround.
-					const bool is_depth_reconstructed = sampler_state->format_class != rsx::classify_format(texture_format) &&
-						(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8);
-					// SNORM conversion required in shader. Do not interpolate to avoid introducing discontinuities due to how negative numbers work
-					const bool is_snorm = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) != 0;
+		*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
+		if (!sampler_state->validate())
+		{
+			continue;
+		}
 
-					if (is_depth_reconstructed || is_snorm)
-					{
-						// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
-						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-						m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-					}
-				}
-			}
-			else
-			{
-				*sampler_state = {};
-			}
+		sampler_state->format_ex = tex.format_ex();
 
-			m_textures_dirty[i] = false;
+		if (is_sampler_dirty)
+		{
+			m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
+		}
+		else if (sampler_state->format_class != previous_format_class)
+		{
+			m_graphics_state |= rsx::fragment_program_state_dirty;
+		}
+
+		const auto texture_format = sampler_state->format_ex.format();
+		// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
+		// If accurate graphics are desired, force a bitcast to COLOR as a workaround.
+		const bool is_depth_reconstructed = sampler_state->format_class != rsx::classify_format(texture_format) &&
+			(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8);
+		// SNORM conversion required in shader. Do not interpolate to avoid introducing discontinuities due to how negative numbers work
+		const bool is_snorm = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) != 0;
+
+		if (is_depth_reconstructed || is_snorm)
+		{
+			// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
+			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 	}
 
 	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		if (!vs_sampler_state[i])
+		{
 			vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+		}
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.vertex_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+		if (!m_samplers_dirty &&
+			!m_vertex_textures_dirty[i] &&
+			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
-			if (rsx::method_registers.vertex_textures[i].enabled())
-			{
-				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
+			continue;
+		}
 
-				if (sampler_state->validate())
-				{
-					if (m_vertex_textures_dirty[i])
-					{
-						m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
-					}
-					else if (sampler_state->format_class != previous_format_class)
-					{
-						m_graphics_state |= rsx::vertex_program_state_dirty;
-					}
-				}
-			}
-			else
-			{
-				*sampler_state = {};
-			}
+		const bool is_sampler_dirty = m_vertex_textures_dirty[i];
+		m_vertex_textures_dirty[i] = false;
 
-			m_vertex_textures_dirty[i] = false;
+		if (!tex.enabled())
+		{
+			*sampler_state = {};
+			continue;
+		}
+
+		*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
+
+		if (!sampler_state->validate())
+		{
+			continue;
+		}
+
+		if (m_vertex_textures_dirty[i])
+		{
+			m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
+		}
+		else if (sampler_state->format_class != previous_format_class)
+		{
+			m_graphics_state |= rsx::vertex_program_state_dirty;
 		}
 	}
 
@@ -402,7 +421,9 @@ void GLGSRender::bind_texture_env()
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		gl::texture_view* view = nullptr;
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
@@ -442,21 +463,25 @@ void GLGSRender::bind_texture_env()
 	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		gl::texture_view* view = nullptr;
 
 		if (rsx::method_registers.vertex_textures[i].enabled() &&
 			sampler_state->validate())
 		{
-			if (sampler_state->image_handle) [[likely]]
+			if (view = sampler_state->image_handle; !view)
 			{
-				sampler_state->image_handle->bind(cmd, GL_VERTEX_TEXTURES_START + i);
+				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 			}
-			else
-			{
-				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind(cmd, GL_VERTEX_TEXTURES_START + i);
-			}
+		}
+
+		if (view) [[likely]]
+		{
+			view->bind(cmd, GL_VERTEX_TEXTURES_START + i);
 		}
 		else
 		{
