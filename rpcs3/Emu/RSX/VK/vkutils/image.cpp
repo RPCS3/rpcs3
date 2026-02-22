@@ -482,7 +482,7 @@ namespace vk
 		if (found != views.end())
 		{
 			ensure(found->second->info.subresourceRange.aspectMask & mask);
-			return found->second.get();
+			return found->second->as(format);
 		}
 
 		VkComponentMapping real_mapping;
