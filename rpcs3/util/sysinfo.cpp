@@ -16,9 +16,15 @@
 #else
 #include <unistd.h>
 #include <sys/resource.h>
-#ifndef __APPLE__
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#else
 #include <sys/utsname.h>
 #include <errno.h>
+#if defined(ARCH_ARM64) && defined(__linux__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
 #endif
 #endif
 
@@ -444,6 +450,103 @@ u32 utils::get_rep_movsb_threshold()
 	return g_value;
 }
 
+#ifdef ARCH_ARM64
+
+bool utils::has_neon()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.AdvSIMD", &val, &len, nullptr, 0);
+		int val_legacy = 0;
+		size_t len_legacy = sizeof(val_legacy);
+		sysctlbyname("hw.optional.neon", &val_legacy, &len_legacy, nullptr, 0);
+		return val != 0 || val_legacy != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_VFP_32_REGISTERS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sha3()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_SHA3) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SHA3", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_dotprod()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_ASIMDDP) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_DotProd", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sve()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SVE", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sve2()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_SVE2) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SVE2", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+#endif
+
 std::string utils::get_cpu_brand()
 {
 #if defined(ARCH_X64)
@@ -496,6 +599,17 @@ std::string utils::get_system_info()
 	{
 		fmt::append(result, " | TSC: Disabled");
 	}
+#ifdef ARCH_ARM64
+
+	if (has_neon())
+	{
+		result += " | Neon";
+	}
+	else
+	{
+		fmt::throw_exception("Neon support not present");
+	}
+#else
 
 	if (has_avx())
 	{
@@ -562,6 +676,7 @@ std::string utils::get_system_info()
 	{
 		result += " | TSX disabled via microcode";
 	}
+#endif
 
 	return result;
 }

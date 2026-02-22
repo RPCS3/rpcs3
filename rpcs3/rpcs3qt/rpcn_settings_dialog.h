@@ -121,6 +121,7 @@ public:
 private:
 	void add_update_list(QListWidget* list, const QString& name, const QIcon& icon, const QVariant& data);
 	void remove_list(QListWidget* list, const QString& name);
+	bool add_friend_with_error_dialog(const std::string& friend_username);
 
 private Q_SLOTS:
 	void add_update_friend(const QString& name, bool status);

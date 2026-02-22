@@ -221,7 +221,7 @@ private:
 	void frame_context_cleanup(vk::frame_context_t *ctx);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
-	void reinitialize_swapchain();
+	bool reinitialize_swapchain();
 
 	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
 
@@ -254,7 +254,7 @@ public:
 	// Sync
 	void write_barrier(u32 address, u32 range) override;
 	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;

@@ -184,12 +184,37 @@ GlslHighlighter::GlslHighlighter(QTextDocument* parent) : Highlighter(parent)
 	commentEndExpression = QRegularExpression("\\*/");
 }
 
-AnsiHighlighter::AnsiHighlighter(QTextDocument* parent) : Highlighter(parent)
+AnsiHighlighter::AnsiHighlighter(QPlainTextEdit* text_edit)
+	: Highlighter(text_edit ? text_edit->document() : nullptr)
 {
-	m_escape_format.setForeground(Qt::darkGray);
-	m_escape_format.setFontItalic(true);
+	update_colors(text_edit);
+}
 
-	m_foreground_color = gui::utils::get_foreground_color();
+void AnsiHighlighter::update_colors(QPlainTextEdit* text_edit)
+{
+	m_foreground_color = gui::utils::get_foreground_color(text_edit);
+	m_background_color = gui::utils::get_background_color(text_edit);
+
+	m_foreground_colors[30] = gui::utils::adjust_color_for_background(Qt::black, m_background_color);
+	m_foreground_colors[31] = gui::utils::adjust_color_for_background(Qt::red, m_background_color);
+	m_foreground_colors[32] = gui::utils::adjust_color_for_background(Qt::darkGreen, m_background_color);
+	m_foreground_colors[33] = gui::utils::adjust_color_for_background(Qt::darkYellow, m_background_color);
+	m_foreground_colors[34] = gui::utils::adjust_color_for_background(Qt::darkBlue, m_background_color);
+	m_foreground_colors[35] = gui::utils::adjust_color_for_background(Qt::darkMagenta, m_background_color);
+	m_foreground_colors[36] = gui::utils::adjust_color_for_background(Qt::darkCyan, m_background_color);
+	m_foreground_colors[37] = gui::utils::adjust_color_for_background(Qt::lightGray, m_background_color);
+	m_foreground_colors[39] = m_foreground_color;
+	m_foreground_colors[90] = gui::utils::adjust_color_for_background(Qt::darkGray, m_background_color);
+	m_foreground_colors[91] = gui::utils::adjust_color_for_background(Qt::red, m_background_color);
+	m_foreground_colors[92] = gui::utils::adjust_color_for_background(Qt::green, m_background_color);
+	m_foreground_colors[93] = gui::utils::adjust_color_for_background(Qt::yellow, m_background_color);
+	m_foreground_colors[94] = gui::utils::adjust_color_for_background(Qt::blue, m_background_color);
+	m_foreground_colors[95] = gui::utils::adjust_color_for_background(Qt::magenta, m_background_color);
+	m_foreground_colors[96] = gui::utils::adjust_color_for_background(Qt::cyan, m_background_color);
+	m_foreground_colors[97] = gui::utils::adjust_color_for_background(Qt::white, m_background_color);
+
+	m_escape_format.setForeground(gui::utils::adjust_color_for_background(Qt::darkGray, m_background_color));
+	m_escape_format.setFontItalic(true);
 }
 
 void AnsiHighlighter::highlightBlock(const QString& text)
@@ -235,39 +260,26 @@ void AnsiHighlighter::highlightBlock(const QString& text)
 					if (!ok) continue;
 					switch (code)
 					{
-						case 0:
-							current_format = QTextCharFormat();
-							current_format.setForeground(m_foreground_color);
-							break;
-						case 1:
-							current_format.setFontWeight(QFont::Bold);
-							break;
-						case 3:
-							current_format.setFontItalic(true);
-							break;
-						case 4:
-							current_format.setFontUnderline(true);
-							break;
-						case 30: current_format.setForeground(Qt::black); break;
-						case 31: current_format.setForeground(Qt::red); break;
-						case 32: current_format.setForeground(Qt::darkGreen); break;
-						case 33: current_format.setForeground(Qt::darkYellow); break;
-						case 34: current_format.setForeground(Qt::darkBlue); break;
-						case 35: current_format.setForeground(Qt::darkMagenta); break;
-						case 36: current_format.setForeground(Qt::darkCyan); break;
-						case 37: current_format.setForeground(Qt::lightGray); break;
-						case 39: current_format.setForeground(m_foreground_color); break;
-						case 90: current_format.setForeground(Qt::darkGray); break;
-						case 91: current_format.setForeground(Qt::red); break;
-						case 92: current_format.setForeground(Qt::green); break;
-						case 93: current_format.setForeground(Qt::yellow); break;
-						case 94: current_format.setForeground(Qt::blue); break;
-						case 95: current_format.setForeground(Qt::magenta); break;
-						case 96: current_format.setForeground(Qt::cyan); break;
-						case 97: current_format.setForeground(Qt::white); break;
+					case 0:
+						current_format = QTextCharFormat();
+						current_format.setForeground(m_foreground_color);
+						break;
+					case 1:
+						current_format.setFontWeight(QFont::Bold);
+						break;
+					case 3:
+						current_format.setFontItalic(true);
+						break;
+					case 4:
+						current_format.setFontUnderline(true);
+						break;
+					default:
 						// Background and extended colors not yet handled
-						default:
-							break;
+						if (const auto it = m_foreground_colors.find(code); it != m_foreground_colors.cend())
+						{
+							current_format.setForeground(it->second);
+						}
+						break;
 					}
 				}
 			}
@@ -278,5 +290,7 @@ void AnsiHighlighter::highlightBlock(const QString& text)
 
 	// Apply remaining format
 	if (pos < text.length())
+	{
 		setFormat(pos, text.length() - pos, current_format);
+	}
 }

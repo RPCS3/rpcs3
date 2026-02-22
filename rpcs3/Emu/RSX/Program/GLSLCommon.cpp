@@ -337,21 +337,21 @@ namespace glsl
 			// Declare special texture control flags
 			program_common::define_glsl_constants<rsx::texture_control_bits>(OS,
 			{
-				{ "GAMMA_R_BIT " , rsx::texture_control_bits::GAMMA_R },
-				{ "GAMMA_G_BIT " , rsx::texture_control_bits::GAMMA_G },
-				{ "GAMMA_B_BIT " , rsx::texture_control_bits::GAMMA_B },
-				{ "GAMMA_A_BIT " , rsx::texture_control_bits::GAMMA_A },
-				{ "EXPAND_R_BIT" , rsx::texture_control_bits::EXPAND_R },
-				{ "EXPAND_G_BIT" , rsx::texture_control_bits::EXPAND_G },
-				{ "EXPAND_B_BIT" , rsx::texture_control_bits::EXPAND_B },
-				{ "EXPAND_A_BIT" , rsx::texture_control_bits::EXPAND_A },
-				{ "SEXT_R_BIT" , rsx::texture_control_bits::SEXT_R },
-				{ "SEXT_G_BIT" , rsx::texture_control_bits::SEXT_G },
-				{ "SEXT_B_BIT" , rsx::texture_control_bits::SEXT_B },
-				{ "SEXT_A_BIT" , rsx::texture_control_bits::SEXT_A },
-				{ "WRAP_S_BIT", rsx::texture_control_bits::WRAP_S },
-				{ "WRAP_T_BIT", rsx::texture_control_bits::WRAP_T },
-				{ "WRAP_R_BIT", rsx::texture_control_bits::WRAP_R },
+				{ "GAMMA_R_BIT ", rsx::texture_control_bits::GAMMA_R },
+				{ "GAMMA_G_BIT ", rsx::texture_control_bits::GAMMA_G },
+				{ "GAMMA_B_BIT ", rsx::texture_control_bits::GAMMA_B },
+				{ "GAMMA_A_BIT ", rsx::texture_control_bits::GAMMA_A },
+				{ "EXPAND_R_BIT", rsx::texture_control_bits::EXPAND_R },
+				{ "EXPAND_G_BIT", rsx::texture_control_bits::EXPAND_G },
+				{ "EXPAND_B_BIT", rsx::texture_control_bits::EXPAND_B },
+				{ "EXPAND_A_BIT", rsx::texture_control_bits::EXPAND_A },
+				{ "SEXT_R_BIT",   rsx::texture_control_bits::SEXT_R },
+				{ "SEXT_G_BIT",   rsx::texture_control_bits::SEXT_G },
+				{ "SEXT_B_BIT",   rsx::texture_control_bits::SEXT_B },
+				{ "SEXT_A_BIT",   rsx::texture_control_bits::SEXT_A },
+				{ "WRAP_S_BIT",   rsx::texture_control_bits::WRAP_S },
+				{ "WRAP_T_BIT",   rsx::texture_control_bits::WRAP_T },
+				{ "WRAP_R_BIT",   rsx::texture_control_bits::WRAP_R },
 
 				{ "ALPHAKILL    ", rsx::texture_control_bits::ALPHAKILL },
 				{ "RENORMALIZE  ", rsx::texture_control_bits::RENORMALIZE },
@@ -360,7 +360,12 @@ namespace glsl
 				{ "FILTERED_MAG_BIT", rsx::texture_control_bits::FILTERED_MAG },
 				{ "FILTERED_MIN_BIT", rsx::texture_control_bits::FILTERED_MIN },
 				{ "INT_COORDS_BIT  ", rsx::texture_control_bits::UNNORMALIZED_COORDS },
-				{ "CLAMP_COORDS_BIT", rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT }
+				{ "CLAMP_COORDS_BIT", rsx::texture_control_bits::CLAMP_TEXCOORDS_BIT },
+
+				{ "FORMAT_FEATURE_SIGNED_BIT", rsx::texture_control_bits::FF_SIGNED_BIT },
+				{ "FORMAT_FEATURE_GAMMA_BIT",  rsx::texture_control_bits::FF_GAMMA_BIT },
+				{ "FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT", rsx::texture_control_bits::FF_BIASED_RENORM_BIT },
+				{ "FORMAT_FEATURE_16BIT_CHANNELS_BIT", rsx::texture_control_bits::FF_16BIT_CHANNELS_BIT }
 			});
 
 			if (props.require_texture_expand)

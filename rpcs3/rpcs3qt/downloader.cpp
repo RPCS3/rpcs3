@@ -99,7 +99,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 	// The downloader's signals are expected to be disconnected and customized before start is called.
 	// Therefore we need to (re)connect its signal(s) here and not in the constructor.
-	connect(this, &downloader::signal_buffer_update, this, &downloader::handle_buffer_update);
+	connect(this, &downloader::signal_buffer_update, this, &downloader::handle_buffer_update, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
 
 	if (show_progress_dialog)
 	{
@@ -169,7 +169,7 @@ usz downloader::update_buffer(char* data, usz size)
 	const auto old_size = m_curl_buf.size();
 	const auto new_size = old_size + size;
 	m_curl_buf.resize(static_cast<int>(new_size));
-	memcpy(m_curl_buf.data() + old_size, data, size);
+	std::memcpy(m_curl_buf.data() + old_size, data, size);
 
 	int max = 0;
 
@@ -197,6 +197,5 @@ void downloader::handle_buffer_update(int size, int max) const
 	{
 		m_progress_dialog->SetRange(0, max > 0 ? max : m_progress_dialog->maximum());
 		m_progress_dialog->SetValue(size);
-		QApplication::processEvents();
 	}
 }

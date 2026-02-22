@@ -4,6 +4,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
+#include "Emu/RSX/Host/MM.h"
 
 #include "context_accessors.define.h"
 
@@ -581,9 +582,11 @@ namespace rsx
 			const u16 out_h = REGS(ctx)->blit_engine_output_height();
 
 			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			const u32 read_length = src.pitch * src.height;
+			const u32 write_length = dst.pitch * dst.clip_height;
 			auto res = ::rsx::reservation_lock<true>(
-				dst.rsx_address, dst.pitch * dst.clip_height,
-				src.rsx_address, src.pitch * src.height);
+				dst.rsx_address, write_length,
+				src.rsx_address, read_length);
 
 			if (!g_cfg.video.force_cpu_blit_processing &&
 				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
@@ -592,6 +595,14 @@ namespace rsx
 				// HW-accelerated blit
 				return;
 			}
+
+			// Conservative MM flush
+			rsx::simple_array<utils::address_range64> flush_mm_ranges =
+			{
+				utils::address_range64::start_length(reinterpret_cast<u64>(dst.pixels), write_length),
+				utils::address_range64::start_length(reinterpret_cast<u64>(src.pixels), read_length)
+			};
+			rsx::mm_flush(flush_mm_ranges);
 
 			std::vector<u8> mirror_tmp;
 			bool src_is_temp = false;
@@ -619,7 +630,7 @@ namespace rsx
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
-			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
+			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, write_length));
 			std::vector<u8> tmp;
 
 			if (tiled_region)

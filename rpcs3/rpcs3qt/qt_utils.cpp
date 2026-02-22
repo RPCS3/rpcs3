@@ -173,19 +173,43 @@ namespace gui
 			}
 			return res;
 		}
-		
-		QColor get_foreground_color()
+
+		QColor get_foreground_color(QWidget* widget)
 		{
+			if (widget)
+			{
+				widget->ensurePolished();
+				return widget->palette().color(QPalette::ColorRole::WindowText);
+			}
+
 			QLabel dummy_color;
 			dummy_color.ensurePolished();
 			return dummy_color.palette().color(QPalette::ColorRole::WindowText);
 		}
 
-		QColor get_background_color()
+		QColor get_background_color(QWidget* widget)
 		{
+			if (widget)
+			{
+				widget->ensurePolished();
+				return widget->palette().color(QPalette::ColorRole::Window);
+			}
+
 			QLabel dummy_color;
 			dummy_color.ensurePolished();
 			return dummy_color.palette().color(QPalette::ColorRole::Window);
+		}
+
+		QColor adjust_color_for_background(const QColor& fg, const QColor& bg)
+		{
+			const int diff = fg.lightness() - bg.lightness();
+
+			if (std::abs(diff) >= 40)
+			{
+				return fg;
+			}
+
+			return (bg.lightness() < 128) ? fg.lighter(180) : fg.darker(180);
 		}
 
 		QColor get_label_color(const QString& object_name, const QColor& fallback_light, const QColor& fallback_dark, QPalette::ColorRole color_role)

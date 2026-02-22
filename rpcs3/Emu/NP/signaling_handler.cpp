@@ -256,9 +256,7 @@ void signaling_handler::process_incoming_messages()
 			addr.s_addr = op_addr;
 			char ip_str[16];
 			inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
-			std::string_view npid(sp->npid.handle.data);
-
-			sign_log.trace("SP %s from %s:%d(npid: %s)", sp->command, ip_str, op_port, npid);
+			sign_log.trace("SP %s from %s:%d(npid: %s)", sp->command, ip_str, op_port, np::npid_to_string(sp->npid));
 		}
 
 		bool reply = false, schedule_repeat = false;
@@ -426,9 +424,10 @@ void signaling_handler::operator()()
 			if (sig.sig_info->time_last_msg_recvd < now - 60s && cmd != signal_info)
 			{
 				// We had no connection to opponent for 60 seconds, consider the connection dead
+				auto retire_info = sig.sig_info;
 				sign_log.notice("Timeout disconnection");
-				update_si_status(sig.sig_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TIMEOUT);
-				retire_packet(sig.sig_info, signal_ping); // Retire ping packet if necessary
+				update_si_status(retire_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TIMEOUT);
+				retire_packet(retire_info, signal_ping); // Retire ping packet if necessary
 				break; // qpackets has been emptied of all packets for this user so we're requeuing
 			}
 
@@ -674,9 +673,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 {
 	u32 conn_id;
 
-	char npid_buf[17]{};
-	memcpy(npid_buf, sp->npid.handle.data, 16);
-	std::string npid(npid_buf);
+	std::string npid = np::npid_to_string(sp->npid);
 
 	if (!npid_to_conn_id.contains(npid))
 		return nullptr;
@@ -784,7 +781,7 @@ void signaling_handler::send_information_packets(u32 addr, u16 port, const SceNp
 
 u32 signaling_handler::get_always_conn_id(const SceNpId& npid)
 {
-	std::string npid_str(reinterpret_cast<const char*>(npid.handle.data));
+	std::string npid_str = np::npid_to_string(npid);
 	if (npid_to_conn_id.contains(npid_str))
 		return ::at32(npid_to_conn_id, npid_str);
 
@@ -810,9 +807,8 @@ u32 signaling_handler::init_sig1(const SceNpId& npid)
 		sig_peers[conn_id]->conn_status = SCE_NP_SIGNALING_CONN_STATUS_PENDING;
 
 		// Request peer infos from RPCN
-		std::string npid_str(reinterpret_cast<const char*>(npid.handle.data));
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-		nph.req_sign_infos(npid_str, conn_id);
+		nph.req_sign_infos(np::npid_to_string(npid), conn_id);
 	}
 
 	return conn_id;
@@ -839,7 +835,7 @@ std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId& npid)
 {
 	std::lock_guard lock(data_mutex);
 
-	std::string npid_str(reinterpret_cast<const char*>(npid.handle.data));
+	std::string npid_str = np::npid_to_string(npid);
 	if (npid_to_conn_id.contains(npid_str))
 		return ::at32(npid_to_conn_id, npid_str);
 

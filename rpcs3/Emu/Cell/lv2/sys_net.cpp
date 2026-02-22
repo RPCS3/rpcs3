@@ -992,7 +992,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
 	}
 
-	if (addr && addrlen < 8)
+	if (addr && addrlen < sizeof(sys_net_sockaddr))
 	{
 		sys_net.error("sys_net_bnet_sendto(s=%d): bad addrlen (%u)", s, addrlen);
 		return -SYS_NET_EINVAL;

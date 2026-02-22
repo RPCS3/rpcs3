@@ -9,6 +9,8 @@
 
 namespace rsx
 {
+	using flags32_t = u32;
+
 	enum texture_upload_context : u32
 	{
 		shader_read = 1,
@@ -125,6 +127,32 @@ namespace rsx
 
 	using namespace format_class_;
 
+	enum format_features : u8
+	{
+		RSX_FORMAT_FEATURE_SIGNED_COMPONENTS    = (1 << 0),
+		RSX_FORMAT_FEATURE_BIASED_NORMALIZATION = (1 << 1),
+		RSX_FORMAT_FEATURE_GAMMA_CORRECTION     = (1 << 2),
+		RSX_FORMAT_FEATURE_16BIT_CHANNELS       = (1 << 3),  // Complements RSX_FORMAT_FEATURE_SIGNED_COMPONENTS
+	};
+
+	using enum format_features;
+
+	struct texture_format_ex
+	{
+		texture_format_ex() = default;
+		texture_format_ex(u32 bits)
+			: format_bits(bits)
+		{}
+
+		bool valid() const { return format_bits != 0; }
+		u32 format() const { return format_bits & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); }
+
+	//private:
+		u32 format_bits = 0;
+		u32 features = 0;
+		u32 texel_remap_control = 0;
+	};
+
 	// Sampled image descriptor
 	class sampled_image_descriptor_base
 	{
@@ -167,6 +195,7 @@ namespace rsx
 		u64 surface_cache_tag = 0;
 
 		texcoord_xform_t texcoord_xform;
+		texture_format_ex format_ex;
 	};
 
 	struct typeless_xfer
@@ -257,7 +286,12 @@ namespace rsx
 	u8 get_format_sample_count(rsx::surface_antialiasing antialias);
 	u32 get_max_depth_value(rsx::surface_depth_format2 format);
 	bool is_depth_stencil_format(rsx::surface_depth_format2 format);
-	bool is_int8_remapped_format(u32 format); // Returns true if the format is treated as INT8 by the RSX remapper.
+
+	/**
+	* Format feature support. There is not simple format to determine what is supported here, results are from hw tests
+	* Returns a bitmask of supported features.
+	*/
+	rsx::flags32_t get_format_features(u32 texture_format);
 
 	/**
 	 * Returns number of texel rows encoded in one pitch-length line of bytes

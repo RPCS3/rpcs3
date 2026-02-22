@@ -23,6 +23,7 @@ private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
 
 private:
+	void update_title();
 	void set_text_and_keep_position(const QString& text);
 	void filter_log();
 	bool is_valid_file(const QMimeData& md, bool save = false);
@@ -30,6 +31,8 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_path_last;
 	QString m_filter_term;
+	QString m_exclude_term;
+	QStringList m_exclude_terms;
 	QString m_full_log;
 	QPlainTextEdit* m_log_text;
 	LogHighlighter* m_log_highlighter;

@@ -310,7 +310,7 @@ namespace np
 			if (npid_res != CELL_OK)
 				continue;
 
-			rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>(npid_p2p->handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
+			rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, np::npid_to_string(*npid_p2p), room_id, ip_to_string(addr_p2p), port_p2p);
 
 			// Attempt Signaling
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -951,13 +951,16 @@ namespace np
 		{
 			thread_base::set_name("NP Trans Worker");
 
-			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
+			bool has_value = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout), [&]
+				{
+					return trans_ctx->result.has_value();
+				});
 			{
 				std::lock_guard lock_threads(this->mutex_async_transactions);
 				this->async_transactions.erase(req_id);
 			}
 
-			if (res == std::cv_status::timeout)
+			if (!has_value)
 			{
 				trans_ctx->result = SCE_NP_COMMUNITY_ERROR_TIMEOUT;
 				return;

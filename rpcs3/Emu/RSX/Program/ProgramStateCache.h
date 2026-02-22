@@ -59,6 +59,7 @@ namespace program_hash_util
 
 			bool has_pack_instructions;
 			bool has_branch_instructions;
+			bool has_tex_bx2_conv;
 			bool is_nop_shader;           // Does this affect Z-pass testing???
 		};
 
