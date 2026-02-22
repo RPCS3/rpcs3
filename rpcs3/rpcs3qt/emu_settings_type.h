@@ -315,7 +315,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::FsrSharpeningStrength,      { "Video", "FidelityFX CAS Sharpening Intensity"}},
 
 	// Vulkan
-	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
+	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming"}},
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
 	{ emu_settings_type::ExclusiveFullscreenMode,             { "Video", "Vulkan", "Exclusive Fullscreen Mode"}},
 	{ emu_settings_type::UseReBAR,                            { "Video", "Vulkan", "Use Re-BAR for GPU uploads"}},
