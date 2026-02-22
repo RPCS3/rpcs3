@@ -5,6 +5,7 @@
 
 #include "commands.h"
 #include "device.h"
+#include "ex.h"
 #include "memory.h"
 #include "unique_resource.h"
 
@@ -46,14 +47,14 @@ namespace vk
 		VkComponentMapping native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		u32 current_queue_family = VK_QUEUE_FAMILY_IGNORED;
-		VkImageCreateInfo info = {};
+		VkImageCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 		std::shared_ptr<vk::memory_block> memory;
 
 		image(const vk::render_device& dev,
 			const memory_type_info& memory_type,
 			u32 access_flags,
 			VkImageType image_type,
-			VkFormat format,
+			const VkFormatEx& format,
 			u32 width, u32 height, u32 depth,
 			u32 mipmaps, u32 layers,
 			VkSampleCountFlagBits samples,
