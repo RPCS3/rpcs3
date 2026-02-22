@@ -333,10 +333,10 @@ namespace vk
 		create_impl();
 	}
 
-	image_view::image_view(VkDevice dev, vk::image* resource, VkImageViewType view_type, const VkComponentMapping& mapping, const VkImageSubresourceRange& range)
+	image_view::image_view(VkDevice dev, vk::image* resource, VkFormat format, VkImageViewType view_type, const VkComponentMapping& mapping, const VkImageSubresourceRange& range)
 		: m_device(dev), m_resource(resource)
 	{
-		info.format = resource->info.format;
+		info.format = format == VK_FORMAT_UNDEFINED ? resource->format() : format;
 		info.image = resource->value;
 		info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		info.components = mapping;
@@ -377,6 +377,33 @@ namespace vk
 	image_view::~image_view()
 	{
 		vkDestroyImageView(m_device, value, nullptr);
+	}
+
+	image_view* image_view::as(VkFormat format)
+	{
+		if (this->format() == format)
+		{
+			return this;
+		}
+
+		auto self = this->m_root_view
+			? this->m_root_view
+			: this;
+
+		if (auto found = self->m_subviews.find(format);
+			found != self->m_subviews.end())
+		{
+			return found->second.get();
+		}
+
+		// Create a derived
+		auto view = std::make_unique<image_view>(m_device, info.image, info.viewType, format, info.components, info.subresourceRange);
+		view->m_resource = self->m_resource;
+		view->m_root_view = self;
+
+		auto ret = view.get();
+		self->m_subviews.emplace(format, std::move(view));
+		return ret;
 	}
 
 	u32 image_view::encoded_component_map() const
@@ -436,7 +463,7 @@ namespace vk
 		return result;
 	}
 
-	image_view* viewable_image::get_view(const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
+	image_view* viewable_image::get_view(VkFormat format, const rsx::texture_channel_remap_t& remap, VkImageAspectFlags mask)
 	{
 		u32 remap_encoding = remap.encoded;
 		if (remap_encoding == VK_REMAP_IDENTITY)
@@ -479,7 +506,7 @@ namespace vk
 		const VkImageSubresourceRange range = { aspect() & mask, 0, info.mipLevels, 0, info.arrayLayers };
 		ensure(range.aspectMask);
 
-		auto view = std::make_unique<vk::image_view>(*g_render_device, this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
+		auto view = std::make_unique<vk::image_view>(*g_render_device, this, format, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 		auto result = view.get();
 		views.emplace(storage_key, std::move(view));
 		return result;
