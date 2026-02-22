@@ -80,8 +80,8 @@ namespace rsx
 		u16 height() const;
 
 		// Border Color
-		u32 border_color() const;
-		color4f remapped_border_color() const;
+		u32 border_color(bool apply_colorspace_remapping = false) const;
+		color4f remapped_border_color(bool apply_colorspace_remapping = false) const;
 
 		u16 depth() const;
 		u32 pitch() const;
@@ -136,8 +136,8 @@ namespace rsx
 		u16 height() const;
 
 		// Border Color
-		u32 border_color() const;
-		color4f remapped_border_color() const;
+		u32 border_color(bool = false) const;
+		color4f remapped_border_color(bool = false) const;
 
 		u16 depth() const;
 		u32 pitch() const;
