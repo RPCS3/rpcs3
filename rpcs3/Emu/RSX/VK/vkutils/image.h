@@ -150,16 +150,8 @@ namespace vk
 		using image::image;
 
 		virtual image_view* get_view(
-			VkFormat format,
 			const rsx::texture_channel_remap_t& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
-
-		image_view* get_view(
-			const rsx::texture_channel_remap_t& remap,
-			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
-		{
-			return get_view(info.format, remap, mask);
-		}
 
 		void set_native_component_layout(VkComponentMapping new_layout);
 	};
