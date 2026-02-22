@@ -127,6 +127,7 @@ public:
 		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
 		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
 		const QString num_ppu_threads              = tr("Affects maximum amount of PPU threads running concurrently, the value of 1 has very low compatibility with games.\n2 is the default, if unsure do not modify this setting.");
+		const QString disable_hw_texel_remapping   = tr("Disables use of hardware-native color-space remapping formats such as _sRGB and _SNORM suffixes.\nDisabling this option increases accuracy compared to PS3 but can also introduce some noise due to how the software emulation works.");
 
 		// emulator
 

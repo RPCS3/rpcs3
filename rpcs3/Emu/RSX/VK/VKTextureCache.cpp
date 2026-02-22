@@ -1154,7 +1154,7 @@ namespace vk
 		rsx::flags32_t create_flags = 0;
 
 		if (context == rsx::texture_upload_context::shader_read &&
-			g_cfg.video.use_hardware_texel_remapping)
+			!g_cfg.video.disable_hardware_texel_remapping)
 		{
 			create_flags |= texture_create_flags::mutable_format;
 		}

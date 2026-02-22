@@ -355,7 +355,7 @@ void GLGSRender::load_texture_env()
 			sampler_state->image_handle &&
 			sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
 			(current_fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
-			g_cfg.video.use_hardware_texel_remapping) [[ unlikely ]]
+			!g_cfg.video.disable_hardware_texel_remapping) [[ unlikely ]]
 		{
 			// Check if we need to override the view format
 			const auto gl_format = sampler_state->image_handle->view_format();
