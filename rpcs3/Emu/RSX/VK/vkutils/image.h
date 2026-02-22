@@ -112,11 +112,14 @@ namespace vk
 		image_view(VkDevice dev, VkImageViewCreateInfo create_info);
 
 		image_view(VkDevice dev, vk::image* resource,
+			VkFormat format = VK_FORMAT_UNDEFINED,
 			VkImageViewType view_type = VK_IMAGE_VIEW_TYPE_MAX_ENUM,
 			const VkComponentMapping& mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
 			const VkImageSubresourceRange& range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 		~image_view();
+
+		vk::image_view* as(VkFormat new_format);
 
 		u32 encoded_component_map() const;
 		vk::image* image() const;
@@ -124,9 +127,14 @@ namespace vk
 		image_view(const image_view&) = delete;
 		image_view(image_view&&) = delete;
 
+		VkFormat format() const { return info.format; }
+
 	private:
+		std::unordered_map<VkFormat, std::unique_ptr<vk::image_view>> m_subviews;
+
 		VkDevice m_device;
 		vk::image* m_resource = nullptr;
+		vk::image_view* m_root_view = nullptr;
 
 		void create_impl();
 		void set_debug_name(std::string_view name);
@@ -141,8 +149,17 @@ namespace vk
 	public:
 		using image::image;
 
-		virtual image_view* get_view(const rsx::texture_channel_remap_t& remap,
+		virtual image_view* get_view(
+			VkFormat format,
+			const rsx::texture_channel_remap_t& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT);
+
+		image_view* get_view(
+			const rsx::texture_channel_remap_t& remap,
+			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
+		{
+			return get_view(info.format, remap, mask);
+		}
 
 		void set_native_component_layout(VkComponentMapping new_layout);
 	};
