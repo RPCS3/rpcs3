@@ -137,6 +137,22 @@ namespace rsx
 
 	using enum format_features;
 
+	struct texture_format_ex
+	{
+		texture_format_ex() = default;
+		texture_format_ex(u32 bits)
+			: format_bits(bits)
+		{}
+
+		bool valid() const { return format_bits != 0; }
+		u32 format() const { return format_bits & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); }
+
+	//private:
+		u32 format_bits = 0;
+		u32 features = 0;
+		u32 texel_remap_control = 0;
+	};
+
 	// Sampled image descriptor
 	class sampled_image_descriptor_base
 	{
@@ -179,6 +195,7 @@ namespace rsx
 		u64 surface_cache_tag = 0;
 
 		texcoord_xform_t texcoord_xform;
+		texture_format_ex format_ex;
 	};
 
 	struct typeless_xfer
