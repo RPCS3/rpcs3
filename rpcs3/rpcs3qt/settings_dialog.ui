@@ -473,7 +473,7 @@
                <item>
                 <widget class="QGroupBox" name="gb_antiAliasing">
                  <property name="title">
-                  <string>Anti-Aliasing</string>
+                  <string>Anti-Aliasing (MSAA)</string>
                  </property>
                  <layout class="QVBoxLayout" name="gb_antiAliasing_layout">
                   <item>
