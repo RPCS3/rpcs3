@@ -147,8 +147,8 @@ namespace rsx
 		bool valid() const { return format_bits != 0; }
 		u32 format() const { return format_bits & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); }
 
-		bool hw_SNORM_possible() const { return (texel_remap_control & SEXT_MASK) == SEXT_MASK; }
-		bool hw_SRGB_possible() const { return (texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK; }
+		bool hw_SNORM_possible() const;
+		bool hw_SRGB_possible() const;
 
 	//private:
 		u32 format_bits = 0;
@@ -295,6 +295,12 @@ namespace rsx
 	* Returns a bitmask of supported features.
 	*/
 	rsx::flags32_t get_format_features(u32 texture_format);
+
+	/**
+	 * Returns a channel mask in ARGB that can be SNORM-converted
+	 * Some formats have a hardcoded constant in one lane which we cannot SNORM-interpret in hardware.
+	 */
+	u32 get_host_format_snorm_mask(u32 format);
 
 	/**
 	 * Returns number of texel rows encoded in one pitch-length line of bytes
