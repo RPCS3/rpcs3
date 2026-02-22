@@ -408,6 +408,11 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_TEXTURE_ALPHA_KILL");
 			}
 
+			if (props.require_color_format_convert)
+			{
+				enabled_options.push_back("_ENABLE_FORMAT_CONVERSION");
+			}
+
 			program_common::define_glsl_switches(OS, enabled_options);
 			enabled_options.clear();
 
