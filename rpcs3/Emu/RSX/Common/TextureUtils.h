@@ -135,6 +135,12 @@ namespace rsx
 		RSX_FORMAT_FEATURE_16BIT_CHANNELS       = (1 << 3),  // Complements RSX_FORMAT_FEATURE_SIGNED_COMPONENTS
 	};
 
+	enum host_format_features : u8
+	{
+		RSX_HOST_FORMAT_FEATURE_SNORM = (1 << 0),
+		RSX_HOST_FORMAT_FEATURE_SRGB  = (1 << 1),
+	};
+
 	using enum format_features;
 
 	struct texture_format_ex
@@ -150,10 +156,14 @@ namespace rsx
 		bool hw_SNORM_possible() const;
 		bool hw_SRGB_possible() const;
 
+		bool host_snorm_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SNORM; }
+		bool host_srgb_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SRGB; }
+
 	//private:
 		u32 format_bits = 0;
 		u32 features = 0;
 		u32 texel_remap_control = 0;
+		u32 host_features = 0;
 	};
 
 	// Sampled image descriptor

@@ -361,22 +361,26 @@ void GLGSRender::load_texture_env()
 			const auto gl_format = sampler_state->image_handle->view_format();
 			GLenum format_override = gl_format;
 			rsx::flags32_t flags_to_erase = 0u;
+			rsx::flags32_t host_flags_to_set = 0u;
 
 			if (sampler_state->format_ex.hw_SNORM_possible())
 			{
 				format_override = gl::get_compatible_snorm_format(gl_format);
 				flags_to_erase = rsx::texture_control_bits::SEXT_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SNORM;
 			}
 			else if (sampler_state->format_ex.hw_SRGB_possible())
 			{
 				format_override = gl::get_compatible_srgb_format(gl_format);
 				flags_to_erase = rsx::texture_control_bits::GAMMA_CTRL_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SRGB;
 			}
 
 			if (format_override != GL_NONE && format_override != gl_format)
 			{
 				sampler_state->image_handle = sampler_state->image_handle->as(format_override);
 				sampler_state->format_ex.texel_remap_control &= (~flags_to_erase);
+				sampler_state->format_ex.host_features |= host_flags_to_set;
 			}
 		}
 
