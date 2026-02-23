@@ -121,6 +121,7 @@ namespace rsx
 		texture_format_ex result { format_bits };
 		result.features = format_features;
 		result.texel_remap_control = format_convert;
+		result.encoded_remap = remap();
 		return result;
 	}
 

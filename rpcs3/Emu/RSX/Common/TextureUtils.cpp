@@ -854,7 +854,8 @@ namespace rsx
 
 	bool texture_format_ex::hw_SRGB_possible() const
 	{
-		return (texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
+		return encoded_remap == RSX_TEXTURE_REMAP_IDENTITY &&
+			(texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
 	}
 
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture)

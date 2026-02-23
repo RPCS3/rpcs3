@@ -165,12 +165,14 @@ namespace rsx
 		{
 			return this->format_bits == that.format_bits &&
 				this->features == that.features &&
-				this->host_features == that.host_features;
+				this->host_features == that.host_features &&
+				this->encoded_remap == that.encoded_remap;
 		}
 
 	//private:
 		u32 format_bits = 0;
 		u32 features = 0;
+		u32 encoded_remap = 0;
 		u32 texel_remap_control = 0;
 		u32 host_features = 0;
 	};
