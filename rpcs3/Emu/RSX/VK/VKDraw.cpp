@@ -559,15 +559,18 @@ void VKGSRender::load_texture_env()
 			check_for_cyclic_refs |= true;
 		}
 
-		if (!is_sampler_dirty && sampler_state->format_class != previous_format_class)
+		if (!is_sampler_dirty)
 		{
-			// Host details changed but RSX is not aware
-			m_graphics_state |= rsx::vertex_program_state_dirty;
-		}
+			if (sampler_state->format_class != previous_format_class)
+			{
+				// Host details changed but RSX is not aware
+				m_graphics_state |= rsx::vertex_program_state_dirty;
+			}
 
-		if (!is_sampler_dirty && vs_sampler_handles[i])
-		{
-			continue;
+			if (vs_sampler_handles[i])
+			{
+				continue;
+			}
 		}
 
 		const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);

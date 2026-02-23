@@ -441,7 +441,7 @@ void GLGSRender::load_texture_env()
 			continue;
 		}
 
-		if (m_vertex_textures_dirty[i])
+		if (is_sampler_dirty)
 		{
 			m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 		}
