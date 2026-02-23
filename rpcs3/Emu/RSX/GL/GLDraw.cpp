@@ -342,7 +342,7 @@ void GLGSRender::load_texture_env()
 				m_graphics_state |= rsx::fragment_program_state_dirty;
 			}
 
-			if (m_fs_sampler_states[i])
+			if (sampler_state->format_ex)
 			{
 				// Nothing to change, use cached sampler
 				continue;
