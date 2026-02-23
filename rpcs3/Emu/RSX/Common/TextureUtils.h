@@ -159,6 +159,15 @@ namespace rsx
 		bool host_snorm_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SNORM; }
 		bool host_srgb_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SRGB; }
 
+		operator bool() const { return valid(); }
+
+		bool operator == (const texture_format_ex& that) const
+		{
+			return this->format_bits == that.format_bits &&
+				this->features == that.features &&
+				this->host_features == that.host_features;
+		}
+
 	//private:
 		u32 format_bits = 0;
 		u32 features = 0;

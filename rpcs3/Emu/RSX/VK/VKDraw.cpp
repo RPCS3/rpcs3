@@ -334,7 +334,7 @@ void VKGSRender::load_texture_env()
 				m_graphics_state |= rsx::fragment_program_state_dirty;
 			}
 
-			if (fs_sampler_handles[i])
+			if (sampler_state->format_ex)
 			{
 				// Nothing to change, use cached sampler
 				continue;
