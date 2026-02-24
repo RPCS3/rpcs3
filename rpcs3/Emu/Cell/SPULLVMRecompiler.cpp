@@ -6286,11 +6286,59 @@ public:
 
 	void CEQI(spu_opcode_t op)
 	{
+		// CEQHI following a comparison instruction (compare-equal negation)
+		if (!m_interp_magn && !op.si10 && match_vr<s32[4]>(op.ra, [&](auto c, auto MT)
+		{
+			using VT = typename decltype(MT)::type;
+			using VT_HALF = s16[8];
+
+			if (auto [ok, a, b] = match_expr(c, bitcast<VT>(sext<VT_HALF>(match<VT_HALF>() == match<VT_HALF>())) << 16 >> 16); ok && m_block->block_wide_reg_store_elimination)
+			{
+				set_vr(op.rt, bitcast<VT>(sext<VT_HALF>(a != b)) << 16 >> 16);
+				return true;
+			}
+
+			if (auto [ok, a, b] = match_expr(c, sext<VT>(MT == MT)); ok)
+			{
+				set_vr(op.rt, sext<VT>(a != b));
+				return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+
 		set_vr(op.rt, sext<s32[4]>(get_vr(op.ra) == get_imm(op.si10)));
 	}
 
 	void CEQHI(spu_opcode_t op)
 	{
+		// CEQHI following a comparison instruction (compare-equal negation)
+		if (!m_interp_magn && !op.si10 && match_vr<s16[8]>(op.ra, [&](auto c, auto MT)
+		{
+			using VT = typename decltype(MT)::type;
+			using VT_HALF = s8[16];
+
+			if (auto [ok, a, b] = match_expr(c, bitcast<VT>(sext<VT_HALF>(match<VT_HALF>() == match<VT_HALF>())) << 8 >> 8); ok && m_block->block_wide_reg_store_elimination)
+			{
+				set_vr(op.rt, bitcast<VT>(sext<VT_HALF>(a != b)) << 8 >> 8);
+				return true;
+			}
+
+			if (auto [ok, a, b] = match_expr(c, sext<VT>(match<VT>() == match<VT>())); ok)
+			{
+				set_vr(op.rt, sext<VT>(a != b));
+				return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+
 		set_vr(op.rt, sext<s16[8]>(get_vr<u16[8]>(op.ra) == get_imm<u16[8]>(op.si10)));
 	}
 
