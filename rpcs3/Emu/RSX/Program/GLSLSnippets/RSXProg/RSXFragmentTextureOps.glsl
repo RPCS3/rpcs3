@@ -46,7 +46,7 @@ R"(
 			_texture_bx2_active = false; \
 		} while (false)
 	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(_texture_flag_erase)) | _texture_flag_override)
-#elif defined(_ENABLE_TEXTURE_ALPHA_KILL) || defined(_ENABLE_FORMAT_CONVERSION)
+#elif defined(_ENABLE_TEXTURE_ALPHA_KILL) || defined(_ENABLE_FORMAT_CONVERSION) || defined(_ENABLE_DEPTH_FORMAT_RECONSTRUCTION)
 	#define TEX_FLAGS(index) (TEX_PARAM(index).flags)
 #else
 	#define TEX_FLAGS(index) 0
