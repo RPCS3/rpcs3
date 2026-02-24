@@ -23,7 +23,7 @@ namespace vk
 			break;
 		case VK_IMAGE_TYPE_2D:
 			longest_dim = std::max(info.extent.width, info.extent.height);
-			dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
+			dim_limit = (info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
 			break;
 		case VK_IMAGE_TYPE_3D:
 			longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
@@ -360,7 +360,7 @@ namespace vk
 				info.viewType = VK_IMAGE_VIEW_TYPE_1D;
 				break;
 			case VK_IMAGE_TYPE_2D:
-				if (resource->info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+				if (resource->info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
 					info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 				else if (resource->info.arrayLayers == 1)
 					info.viewType = VK_IMAGE_VIEW_TYPE_2D;
