@@ -621,7 +621,7 @@ error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 por
 
 	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
-	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != 3)
+	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != SYS_EVENT_PORT_IPC)
 	{
 		sys_event.error("sys_event_port_create(): unknown port type (%d)", port_type);
 		return CELL_EINVAL;
@@ -675,8 +675,9 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 	std::lock_guard lock(id_manager::g_mutex);
 
 	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
+	auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
 
-	if (!port || !idm::check_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
+	if (!port || !queue)
 	{
 		return CELL_ESRCH;
 	}
@@ -691,7 +692,7 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 		return CELL_EISCONN;
 	}
 
-	port->queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
+	port->queue = std::move(queue);
 
 	return CELL_OK;
 }

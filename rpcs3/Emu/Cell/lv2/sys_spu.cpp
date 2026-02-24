@@ -437,7 +437,7 @@ struct spu_limits_t
 		raw_spu_count += spu_thread::g_raw_spu_ctr;
 
 		// physical_spus_count >= spu_limit returns EBUSY, not EINVAL!
-		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || physical_spus_count > spu_limit || controllable_spu_count > spu_limit)
+		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || controllable_spu_count > spu_limit)
 		{
 			return false;
 		}
