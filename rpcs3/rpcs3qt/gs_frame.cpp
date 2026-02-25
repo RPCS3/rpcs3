@@ -151,6 +151,9 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 gs_frame::~gs_frame()
 {
 	g_user_asked_for_screenshot = false;
+	g_user_asked_for_recording = false;
+	g_user_asked_for_frame_capture = false;
+	g_user_asked_for_fullscreen = false;
 	pad::g_home_menu_requested = false;
 
 	// Save active screen to gui settings
