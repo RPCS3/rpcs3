@@ -30,23 +30,23 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.8"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.9"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: clang
             UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
             UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux"
           - os: ubuntu-24.04
-            docker_img: "rpcs3/rpcs3-ci-jammy:1.8"
+            docker_img: "rpcs3/rpcs3-ci-jammy:1.9"
             build_sh: "/rpcs3/.ci/build-linux.sh"
             compiler: gcc
           - os: ubuntu-24.04-arm
-            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.8"
+            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.9"
             build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
             compiler: clang
             UPLOAD_COMMIT_HASH: a1d35836e8d45bfc6f63c26f0a3e5d46ef622fe1
             UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux-arm64"
           - os: ubuntu-24.04-arm
-            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.8"
+            docker_img: "rpcs3/rpcs3-ci-jammy-aarch64:1.9"
             build_sh: "/rpcs3/.ci/build-linux-aarch64.sh"
             compiler: gcc
     name: RPCS3 Linux ${{ matrix.os }} ${{ matrix.compiler }}
