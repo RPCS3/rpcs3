@@ -12,6 +12,8 @@
 
 extern atomic_t<bool> g_user_asked_for_recording;
 
+atomic_t<bool> g_user_asked_for_fullscreen = false;
+
 namespace rsx
 {
 	namespace overlays
@@ -80,7 +82,7 @@ namespace rsx
 					if (btn != pad_button::cross) return page_navigation::stay;
 
 					rsx_log.notice("User selected trophies in home menu");
-					Emu.CallFromMainThread([trop_name = std::move(trop_name)]()
+					Emu.CallFromMainThread([trop_name]()
 					{
 						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 						{
@@ -108,6 +110,17 @@ namespace rsx
 				rsx_log.notice("User selected recording in home menu");
 				g_user_asked_for_recording = true;
 				return page_navigation::exit;
+			});
+
+			std::unique_ptr<overlay_element> fullscreen = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN));
+			add_item(fullscreen, [](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross)
+					return page_navigation::stay;
+
+				rsx_log.notice("User selected toggle fullscreen in home menu");
+				g_user_asked_for_fullscreen = true;
+				return page_navigation::stay; // No need to exit
 			});
 
 			add_page(std::make_shared<home_menu_savestate>(x, y, width, height, use_separators, this));
