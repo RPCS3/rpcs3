@@ -205,12 +205,12 @@ void gs_frame::update_shortcuts()
 	}
 }
 
-void gs_frame::paintEvent(QPaintEvent *event)
+void gs_frame::paintEvent(QPaintEvent* event)
 {
 	Q_UNUSED(event)
 }
 
-void gs_frame::showEvent(QShowEvent *event)
+void gs_frame::showEvent(QShowEvent* event)
 {
 	// We have to calculate new window positions, since the frame is only known once the window was created.
 	// We will try to find the originally requested dimensions if possible by moving the frame.
@@ -805,7 +805,7 @@ f64 gs_frame::client_display_rate()
 	return rate;
 }
 
-void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
+void gs_frame::flip(draw_context_t /*context*/, bool /*skip_frame*/)
 {
 	static Timer fps_t;
 
