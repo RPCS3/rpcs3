@@ -189,7 +189,12 @@ namespace rsx
 			update_selection();
 		}
 
-		int list_view::get_selected_index() const
+		u16 list_view::get_elements_count() const
+		{
+			return m_elements_count;
+		}
+
+		s32 list_view::get_selected_index() const
 		{
 			return m_selected_entry;
 		}
