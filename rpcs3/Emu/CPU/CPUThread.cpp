@@ -206,11 +206,7 @@ struct cpu_prof
 				// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
 				if (type_id == 2)
 				{
-					fmt::append(results, "\n\t[%s", fmt::base57(be_t<u64>{name}));
-					results.resize(results.size() - 4);
-
-					// Print chunk address from lowest 16 bits
-					fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
+					fmt::append(results, "\n\t[%s]: %.4f%% (%u)", spu_block_hash{name}, _frac * 100., count);
 				}
 				else
 				{

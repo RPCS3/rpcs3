@@ -7391,6 +7391,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;
+	be_t<u64> hash_start{};
 
 	if (!result.data.empty())
 	{
@@ -7401,6 +7402,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
+		std::memcpy(&hash_start, output, sizeof(hash_start));
 	}
 	else
 	{
@@ -7413,7 +7415,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	{
 		if (m_block_info[bb.first / 4])
 		{
-			fmt::append(out, "A: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block");
+			fmt::append(out, "A: [0x%05x] %s  [%s]\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block", spu_block_hash{(hash_start & -65536) + bb.first / 4});
 
 			fmt::append(out, "\t F: 0x%05x\n", bb.second.func);
 
