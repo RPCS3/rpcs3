@@ -170,8 +170,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		{
 			if (auto cpu = get_current_cpu_thread())
 			{
-				cpu->state += cpu_flag::again;
-				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again + cpu_flag::exit;
 			}
 
 			sys_event.warning("Ignored event!");
