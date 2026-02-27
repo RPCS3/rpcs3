@@ -308,6 +308,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
+		for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+		{
+			if (cpu->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return CELL_EAGAIN;
+			}
+		}
+
 		if (!queue.events.empty())
 		{
 			// Copy events for logging, does not empty
@@ -319,17 +328,6 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		if (!head)
 		{
 			qlock.unlock();
-		}
-		else
-		{
-			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
-			{
-				if (cpu->state & cpu_flag::again)
-				{
-					ppu.state += cpu_flag::again;
-					return CELL_EAGAIN;
-				}
-			}
 		}
 
 		return {};

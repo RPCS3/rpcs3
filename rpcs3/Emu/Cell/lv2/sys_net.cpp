@@ -563,37 +563,34 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		return not_an_error(result);
 	}
 
-	if (!sock.ret)
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+		if (is_stopped(state))
 		{
-			if (is_stopped(state))
-			{
-				return {};
-			}
-
-			if (state & cpu_flag::signal)
-			{
-				break;
-			}
-
-			ppu.state.wait(state);
+			return {};
 		}
 
-		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
+		if (state & cpu_flag::signal)
 		{
-			return -SYS_NET_EINTR;
+			break;
 		}
 
-		if (result)
-		{
-			if (result < 0)
-			{
-				return sys_net_error{result};
-			}
+		ppu.state.wait(state);
+	}
 
-			return not_an_error(result);
+	if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
+	{
+		return -SYS_NET_EINTR;
+	}
+
+	if (result)
+	{
+		if (result < 0)
+		{
+			return sys_net_error{result};
 		}
+
+		return not_an_error(result);
 	}
 
 	return CELL_OK;
@@ -1295,7 +1292,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
 			{
-				signaled += sock->poll(fds_buf[i], _fds[i]);
+				sock->poll(fds_buf[i], _fds[i]);
 #ifdef _WIN32
 				connecting[i] = sock->is_connecting();
 #endif
@@ -1303,7 +1300,6 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 			else
 			{
 				fds_buf[i].revents |= SYS_NET_POLLNVAL;
-				signaled++;
 			}
 		}
 
@@ -1536,9 +1532,9 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		for (s32 i = 0; i < nfds; i++)
 		{
 			bool sig = false;
-			if (_fds[i].revents & (POLLIN | POLLHUP | POLLERR))
+			if ((_fds[i].revents & (POLLIN | POLLHUP | POLLERR)) && _readfds.bit(i))
 				sig = true, rread.set(i);
-			if (_fds[i].revents & (POLLOUT | POLLERR))
+			if ((_fds[i].revents & (POLLOUT | POLLERR)) && _writefds.bit(i))
 				sig = true, rwrite.set(i);
 
 			if (sig)

@@ -305,6 +305,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 		{
 			// Join and notify thread (it is detached from IDM now so it must be done explicitly now)
 			*ptr = thread_state::finished;
+			return CELL_OK;
 		}
 
 		return result;
