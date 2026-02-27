@@ -382,7 +382,7 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos)
 {
-	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() & 0xfff'ffff) + (size & 0xfff'ffff); region == region_end && ((region >> 28) == 0 || region >= 0xC))
+	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() + size) >> 28; region == region_end && region == 0)
 	{
 		// Optimize reads from safe memory
 		return (opt_pos == umax ? file.read(buf.get_ptr(), size) : file.read_at(opt_pos, buf.get_ptr(), size));
@@ -1391,7 +1391,8 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 			// Add additional entries for split file candidates (while ends with .66600)
 			while (mp.mp != &g_mp_sys_dev_hdd1 && data.back().name.ends_with(".66600"))
 			{
-				data.emplace_back(data.back()).name.resize(data.back().name.size() - 6);
+				fs::dir_entry copy = data.back();
+				data.emplace_back(copy).name.resize(copy.name.size() - 6);
 			}
 		}
 
@@ -2147,6 +2148,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		sys_fs.notice("sys_fs_fcntl(0xc0000006): %s", vpath);
 
 		// Check only mountpoint
+		vpath = vpath.substr(0, vpath.find_first_of('\0'));
 		vpath = vpath.substr(0, vpath.find_first_of("/", 1));
 
 		// Some mountpoints seem to be handled specially
@@ -2635,8 +2637,6 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 {
-	lv2_obj::sleep(ppu);
-
 	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
 
 	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
@@ -2661,8 +2661,6 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 
 error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 {
-	lv2_obj::sleep(ppu);
-
 	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
 
 	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
@@ -2902,14 +2900,6 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 		case fs::error::noent:
 		{
 			// Try to locate split files
-
-			for (u32 i = 66601; i <= 66699; i++)
-			{
-				if (mp != &g_mp_sys_dev_hdd1 && !fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
-				{
-					break;
-				}
-			}
 
 			if (fs::get_stat(local_path + ".66600", info) && !info.is_directory)
 			{
