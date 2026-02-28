@@ -7,6 +7,7 @@
 #include "Common/unordered_map.hpp"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
+#include "Emu/Memory/vm.h"
 #include "Emu/RSX/Program/RSXVertexProgram.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
 #include "Overlays/Shaders/shader_loading_dialog.h"
@@ -493,7 +494,15 @@ namespace rsx
 
 			FORCE_INLINE u64 hash(u32 local_addr, u32 data_length) const
 			{
-				return u64(local_addr) | (u64(data_length) << 32);
+				// Solves texture corruption issues in BLJM60292, BLJM60414 due to wrong vertex data reuse.
+				// Hashing only the first 64bit of the vertex data for efficiency.
+				u64 hash = rpcs3::fnv_seed;
+				hash = rpcs3::hash64(hash, u64(local_addr) | (u64(data_length) << 32));
+				if (data_length >= 64)
+				{
+					hash = rpcs3::hash64(hash, u64(vm::read64(local_addr)));
+				}
+				return hash;
 			}
 
 		public:
