@@ -71,6 +71,8 @@ namespace utils
 
 	std::string get_firmware_version();
 
+	std::pair<u64, u64> get_memory_usage();
+
 	struct OS_version
 	{
 		std::string type;
