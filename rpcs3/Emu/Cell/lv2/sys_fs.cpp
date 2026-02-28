@@ -900,7 +900,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::noent: return {CELL_ENOENT};
-		default: sys_fs.error("lv2_file::open(): unknown error %s", error);
+		default: sys_fs.error("lv2_file::open(): unknown error %s", error); break;
 		}
 
 		return {CELL_EIO};
