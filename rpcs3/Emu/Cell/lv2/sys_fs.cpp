@@ -382,10 +382,12 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos)
 {
-	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() + size) >> 28; region == region_end && region == 0)
+	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() + size) >> 28;
+		size < u32{umax} && region == region_end && (region == 0 || region == 0xD) && vm::check_addr(buf.addr(), vm::page_writable, static_cast<u32>(size)))
 	{
 		// Optimize reads from safe memory
-		return (opt_pos == umax ? file.read(buf.get_ptr(), size) : file.read_at(opt_pos, buf.get_ptr(), size));
+		const auto buf_ptr = vm::get_super_ptr(buf.addr());
+		return (opt_pos == umax ? file.read(buf_ptr, size) : file.read_at(opt_pos, buf_ptr, size));
 	}
 
 	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
@@ -412,6 +414,14 @@ u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt
 
 u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 {
+	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() + size) >> 28;
+		size < u32{umax} && region == region_end && (region == 0 || region == 0xD) && vm::check_addr(buf.addr(), vm::page_readable, static_cast<u32>(size)))
+	{
+		// Optimize writes from safe memory
+		const auto buf_ptr = vm::get_super_ptr(buf.addr());
+		return file.write(buf_ptr, size);
+	}
+
 	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
 	std::vector<uchar> local_buf(std::min<u64>(size, 65536));
 
