@@ -111,7 +111,7 @@ namespace np
 	}
 
 	ticket::ticket(std::vector<u8>&& raw_data)
-		: raw_data(raw_data)
+		: raw_data(std::move(raw_data))
 	{
 		parse();
 	}
@@ -387,7 +387,7 @@ namespace np
 			return;
 		}
 
-		if (nodes[0].id != 0x3000 && nodes[1].id != 0x3002)
+		if (nodes[0].id != 0x3000 || nodes[1].id != 0x3002)
 		{
 			ticket_log.error("The 2 blobs ids are incorrect");
 			return;
@@ -1467,14 +1467,13 @@ namespace np
 
 		if (all_history)
 		{
+			if (index >= players_history.size())
+				return false;
+
 			auto it = players_history.begin();
 			std::advance(it, index);
-
-			if (it != players_history.end())
-			{
-				string_to_npid(it->first, *npid);
-				return true;
-			}
+			string_to_npid(it->first, *npid);
+			return true;
 		}
 		else
 		{

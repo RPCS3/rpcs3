@@ -1026,14 +1026,14 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 
 	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager.mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
 	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle, true);
 
 	if (error)
 	{
@@ -1184,9 +1184,9 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 	for (u32 id = 0; id < count_; id++)
 	{
 		if (tropusr->GetTrophyUnlockState(id))
-			flags->flag_bits[id / 32] |= 1 << (id % 32);
+			flags->flag_bits[id / 32] |= 1u << (id % 32);
 		else
-			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
+			flags->flag_bits[id / 32] &= ~(1u << (id % 32));
 	}
 
 	return CELL_OK;
