@@ -671,19 +671,19 @@ bool dmux_pamf_base::process_next_pack()
 	case state::initial:
 	{
 		// Search for the next pack start code or prog end code
-		std::span<const u8, PACK_SIZE> pack{ static_cast<const u8*>(nullptr), PACK_SIZE }; // This initial value is not used, can't be default constructed
+		std::span<const u8> pack;
 
 		for (;;)
 		{
-			if (stream->empty())
+			if (stream->size() < PACK_STUFFING_LENGTH_OFFSET + sizeof(u8))
 			{
 				stream.reset();
 				demux_done_notified = on_demux_done();
 				return true;
 			}
 
-			pack = stream->subspan<0, PACK_SIZE>();
-			stream = stream->subspan<PACK_SIZE>();
+			pack = stream->first(std::min<usz>(stream->size(), PACK_SIZE));
+			stream = stream->subspan(std::min<usz>(stream->size(), PACK_SIZE));
 
 			// If the input stream is a raw elementary stream, skip everything MPEG-PS related and go straight to elementary stream parsing
 			if (raw_es)
@@ -719,6 +719,14 @@ bool dmux_pamf_base::process_next_pack()
 
 		// Skip over pack header
 		const u8 pack_stuffing_length = read_from_ptr<u8>(pack.subspan<PACK_STUFFING_LENGTH_OFFSET>()) & 0x7;
+
+		// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
+		if (PACK_STUFFING_LENGTH_OFFSET + sizeof(u8) + pack_stuffing_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > pack.size())
+		{
+			cellDmuxPamf.error("Invalid pack stuffing length");
+			return false;
+		}
+
 		std::span<const u8> current_pes_packet = pack.subspan(PACK_STUFFING_LENGTH_OFFSET + sizeof(u8) + pack_stuffing_length);
 
 		if (read_from_ptr<be_t<u32>>(current_pes_packet) >> 8 != PACKET_START_CODE_PREFIX)
@@ -785,10 +793,8 @@ bool dmux_pamf_base::process_next_pack()
 			return false;
 		}
 
-		// The size of the stream is not checked here because if coming from a pack header, it is guaranteed that there is enough space,
-		// and if coming from a system header or private stream 2, it was already checked above
-		const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
-		const u8 pes_header_data_length = read_from_ptr<u8>(current_pes_packet.begin() + PES_HEADER_DATA_LENGTH_OFFSET) + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8);
+		const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+		const u8 pes_header_data_length = read_from_ptr<u8>(current_pes_packet.begin(), PES_HEADER_DATA_LENGTH_OFFSET) + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8);
 
 		// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 		if (pes_packet_length > current_pes_packet.size() || pes_packet_length <= pes_header_data_length)
