@@ -205,13 +205,10 @@ bool wiimote_device::update()
 	return true;
 }
 
-static wiimote_handler* s_instance = nullptr;
+static std::unique_ptr<wiimote_handler> s_instance;
 
 wiimote_handler::wiimote_handler()
 {
-	if (!s_instance)
-		s_instance = this;
-
 	// Pre-initialize Wiimote slots (standard for DolphinBar and typical local multiplayer)
 	for (usz i = 0; i < MAX_WIIMOTES; i++)
 	{
@@ -224,8 +221,6 @@ wiimote_handler::wiimote_handler()
 wiimote_handler::~wiimote_handler()
 {
 	stop();
-	if (s_instance == this)
-		s_instance = nullptr;
 }
 
 wiimote_handler* wiimote_handler::get_instance()
@@ -235,10 +230,10 @@ wiimote_handler* wiimote_handler::get_instance()
 
 	if (!s_instance)
 	{
-		s_instance = new wiimote_handler();
+		s_instance = std::make_unique<wiimote_handler>();
 		s_instance->start();
 	}
-	return s_instance;
+	return s_instance.get();
 }
 
 void wiimote_handler::start()
