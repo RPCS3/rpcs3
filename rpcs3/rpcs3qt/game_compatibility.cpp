@@ -69,7 +69,7 @@ void game_compatibility::handle_download_canceled()
 
 bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)
 {
-	const int return_code = json_data["return_code"].toInt();
+	const int return_code = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)
 	{
@@ -78,15 +78,10 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 			std::string error_message;
 			switch (return_code)
 			{
-			case -1:
-				error_message = "Server Error - Internal Error";
-				break;
-			case -2:
-				error_message = "Server Error - Maintenance Mode";
-				break;
-			default:
-				error_message = "Server Error - Unknown Error";
-				break;
+			case -1: error_message = "Server Error - Internal Error"; break;
+			case -2: error_message = "Server Error - Maintenance Mode"; break;
+			case -255: error_message = "Server Error - Return code not found"; break;
+			default: error_message = "Server Error - Unknown Error"; break;
 			}
 			compat_log.error("%s: return code %d", error_message, return_code);
 			Q_EMIT DownloadError(QString::fromStdString(error_message) + " " + QString::number(return_code));

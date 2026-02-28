@@ -1184,9 +1184,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 
 		if (return_code != -1)
-			patch_log.error("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.error("Patch download error: %s, return code: %d", error_message, return_code);
 		else
-			patch_log.warning("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.warning("Patch download error: %s, return code: %d", error_message, return_code);
 
 		return false;
 	}
