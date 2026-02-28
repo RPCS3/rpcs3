@@ -41,12 +41,54 @@
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
       if not exist "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)" mkdir "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
       cd "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" -DCMAKE_SYSTEM_VERSION=10.0 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=$(WindowsTargetPlatformVersion) -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -Dprotobuf_INSTALL=ON -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON -Dprotobuf_BUILD_PROTOC_BINARIES=OFF -Dprotobuf_BUILD_LIBPROTOC=OFF -Dprotobuf_BUILD_LIBUPB=OFF -Dprotobuf_ALLOW_CCACHE=ON -Dprotobuf_FORCE_FETCH_DEPENDENCIES=ON -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=ON "$(SolutionDir)3rdparty\protobuf\protobuf"
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        -DCMAKE_CXX_STANDARD=20 ^
+        -DCMAKE_BUILD_TYPE="Release" ^
+        -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" ^
+        -DCMAKE_SYSTEM_VERSION=10.0 ^
+        -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=$(WindowsTargetPlatformVersion) ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+        -Dprotobuf_INSTALL=ON ^
+        -Dprotobuf_BUILD_TESTS=OFF ^
+        -Dprotobuf_BUILD_CONFORMANCE=OFF ^
+        -Dprotobuf_BUILD_EXAMPLES=OFF ^
+        -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON ^
+        -Dprotobuf_BUILD_PROTOC_BINARIES=OFF ^
+        -Dprotobuf_BUILD_LIBPROTOC=OFF ^
+        -Dprotobuf_BUILD_LIBUPB=OFF ^
+        -Dprotobuf_ALLOW_CCACHE=ON ^
+        -Dprotobuf_FORCE_FETCH_DEPENDENCIES=ON ^
+        -Dprotobuf_WITH_ZLIB=OFF ^
+        -Dprotobuf_MSVC_STATIC_RUNTIME=ON ^
+        "$(SolutionDir)3rdparty\protobuf\protobuf"
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
       if not exist "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)" mkdir "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
       cd "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_CXX_STANDARD=20 -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" -DCMAKE_SYSTEM_VERSION=10.0 -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=$(WindowsTargetPlatformVersion) -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebugDLL -Dprotobuf_INSTALL=ON -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_BUILD_CONFORMANCE=OFF -Dprotobuf_BUILD_EXAMPLES=OFF -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON -Dprotobuf_BUILD_PROTOC_BINARIES=OFF -Dprotobuf_BUILD_LIBPROTOC=OFF -Dprotobuf_BUILD_LIBUPB=OFF -Dprotobuf_ALLOW_CCACHE=ON -Dprotobuf_FORCE_FETCH_DEPENDENCIES=ON -Dprotobuf_WITH_ZLIB=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF "$(SolutionDir)3rdparty\protobuf\protobuf"
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        -DCMAKE_CXX_STANDARD=20 ^
+        -DCMAKE_BUILD_TYPE="Debug" ^
+        -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" ^
+        -DCMAKE_SYSTEM_VERSION=10.0 ^
+        -DCMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION=$(WindowsTargetPlatformVersion) ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebugDLL ^
+        -Dprotobuf_INSTALL=ON ^
+        -Dprotobuf_BUILD_TESTS=OFF ^
+        -Dprotobuf_BUILD_CONFORMANCE=OFF ^
+        -Dprotobuf_BUILD_EXAMPLES=OFF ^
+        -Dprotobuf_BUILD_PROTOBUF_BINARIES=ON ^
+        -Dprotobuf_BUILD_PROTOC_BINARIES=OFF ^
+        -Dprotobuf_BUILD_LIBPROTOC=OFF ^
+        -Dprotobuf_BUILD_LIBUPB=OFF ^
+        -Dprotobuf_ALLOW_CCACHE=ON ^
+        -Dprotobuf_FORCE_FETCH_DEPENDENCIES=ON ^
+        -Dprotobuf_WITH_ZLIB=OFF ^
+        -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ^
+        "$(SolutionDir)3rdparty\protobuf\protobuf"
     </CmakeDebugCLI>
     <CmakeCleanCLI>
       echo Cleaning..
