@@ -308,7 +308,7 @@ u32 dmux_pamf_base::video_stream<avc>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in cache
 		for (; cache_idx < static_cast<s32>(cache.size()); cache_idx++)
 		{
-			if (const be_t<u32> code = read_from_ptr<be_t<u32>>(buf.data() + cache_idx);
+			if (const be_t<u32> code = read_from_ptr<be_t<u32>>(buf.data(), cache_idx);
 				(avc && code == AVC_AU_DELIMITER) || (!avc && (code == M2V_PIC_START || code == M2V_SEQUENCE_HEADER || code == M2V_SEQUENCE_END)))
 			{
 				if (current_au.state != access_unit::state::none && (avc || current_au.state != access_unit::state::m2v_sequence))
@@ -438,7 +438,7 @@ u32 dmux_pamf_base::audio_stream<ac3>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in cache
 		for (; cache_idx <= static_cast<s32>(cache.size() + std::min(sizeof(u16) - 1, stream.size()) - sizeof(u16)); cache_idx++)
 		{
-			if (const be_t<u16> tmp = read_from_ptr<be_t<u16>>(buf.data() + cache_idx); current_au.size_info_offset != 0)
+			if (const be_t<u16> tmp = read_from_ptr<be_t<u16>>(buf.data(), cache_idx); current_au.size_info_offset != 0)
 			{
 				if (--current_au.size_info_offset == 0)
 				{
@@ -521,7 +521,7 @@ u32 dmux_pamf_base::user_data_stream::parse_stream_header(std::span<const u8> pe
 			return umax;
 		}
 
-		au_size_unk = read_from_ptr<be_t<u32>>(pes_packet_data.begin() + 2) - sizeof(u32);
+		au_size_unk = read_from_ptr<be_t<u32>>(pes_packet_data.begin(), 2) - sizeof(u32);
 		return 10;
 	}
 
@@ -718,7 +718,7 @@ bool dmux_pamf_base::process_next_pack()
 		}
 
 		// Skip over pack header
-		const u8 pack_stuffing_length = read_from_ptr<u8>(pack.subspan<PACK_STUFFING_LENGTH_OFFSET>()) & 0x7;
+		const u8 pack_stuffing_length = read_from_ptr<bf_t<u8, 0, 3>>(pack, PACK_STUFFING_LENGTH_OFFSET);
 
 		// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 		if (PACK_STUFFING_LENGTH_OFFSET + sizeof(u8) + pack_stuffing_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > pack.size())
@@ -729,7 +729,7 @@ bool dmux_pamf_base::process_next_pack()
 
 		std::span<const u8> current_pes_packet = pack.subspan(PACK_STUFFING_LENGTH_OFFSET + sizeof(u8) + pack_stuffing_length);
 
-		if (read_from_ptr<be_t<u32>>(current_pes_packet) >> 8 != PACKET_START_CODE_PREFIX)
+		if (read_from_ptr<bf_t<be_t<u32>, 8, 24>>(current_pes_packet) != PACKET_START_CODE_PREFIX)
 		{
 			cellDmuxPamf.error("Invalid start code after pack header");
 			return false;
@@ -738,7 +738,7 @@ bool dmux_pamf_base::process_next_pack()
 		// Skip over system header if present
 		if (read_from_ptr<be_t<u32>>(current_pes_packet) == SYSTEM_HEADER)
 		{
-			const u32 system_header_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+			const u32 system_header_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
 
 			// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 			if (system_header_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > current_pes_packet.size())
@@ -763,7 +763,7 @@ bool dmux_pamf_base::process_next_pack()
 				// A system header is optionally followed by a private stream 2
 				// The first two bytes of the stream are the stream id of a video stream. The next access unit of that stream is a random access point/keyframe
 
-				const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+				const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
 
 				// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 				if (pes_packet_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > current_pes_packet.size())
@@ -772,7 +772,7 @@ bool dmux_pamf_base::process_next_pack()
 					return false;
 				}
 
-				if (const u8 channel = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + PES_PACKET_LENGTH_OFFSET + sizeof(u16)) & 0xf;
+				if (const u8 channel = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET + sizeof(u16)) & 0xf;
 					elementary_stream::is_enabled(elementary_streams[0][channel]))
 				{
 					elementary_streams[0][channel]->set_rap();
@@ -818,23 +818,23 @@ bool dmux_pamf_base::process_next_pack()
 
 		if (elementary_stream::is_enabled(elementary_streams[type_idx][channel]))
 		{
-			const s8 pts_dts_flag = read_from_ptr<s8>(current_pes_packet.begin() + PTS_DTS_FLAG_OFFSET);
+			const s8 pts_dts_flag = read_from_ptr<s8>(current_pes_packet.begin(), PTS_DTS_FLAG_OFFSET);
 
 			if (pts_dts_flag < 0)
 			{
 				// The timestamps should be unsigned, but are sign-extended from s32 to u64 on LLE. They probably forgot about integer promotion
-				const s32 PTS_32_30 = read_from_ptr<u8>(current_pes_packet.begin() + 9) >> 1;
-				const s32 PTS_29_15 = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + 10) >> 1;
-				const s32 PTS_14_0 = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + 12) >> 1;
+				const s32 PTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet.begin(), 9);
+				const s32 PTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 10);
+				const s32 PTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 12);
 
 				elementary_streams[type_idx][channel]->set_pts(PTS_32_30 << 30 | PTS_29_15 << 15 | PTS_14_0); // Bit 32 is discarded
 			}
 
 			if (pts_dts_flag & 0x40)
 			{
-				const s32 DTS_32_30 = read_from_ptr<u8>(current_pes_packet.begin() + 14) >> 1;
-				const s32 DTS_29_15 = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + 15) >> 1;
-				const s32 DTS_14_0 = read_from_ptr<be_t<u16>>(current_pes_packet.begin() + 17) >> 1;
+				const s32 DTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet.begin(), 14);
+				const s32 DTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 15);
+				const s32 DTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 17);
 
 				elementary_streams[type_idx][channel]->set_dts(DTS_32_30 << 30 | DTS_29_15 << 15 | DTS_14_0); // Bit 32 is discarded
 			}
@@ -1273,16 +1273,7 @@ void DmuxPamfContext::run_spu_thread()
 
 void DmuxPamfContext::exec(ppu_thread& ppu)
 {
-	// These are repeated a lot in this function, in my opinion using defines here makes it more readable
-#define SEND_FATAL_ERR_AND_CONTINUE()\
-	savestate = dmux_pamf_state::sending_fatal_err;\
-	callback(ppu, notify_fatal_err, _this, CELL_OK); /* LLE uses CELL_OK as error code */\
-	if (ppu.state & cpu_flag::again)\
-	{\
-		return;\
-	}\
-	continue
-
+	// This is repeated a lot in this function, in my opinion using a define here makes it more readable
 #define RETURN_ON_CPU_FLAG_AGAIN()\
 	if (ppu.state & cpu_flag::again)\
 		return
@@ -1308,13 +1299,17 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 	case dmux_pamf_state::demux_done_cond_signal: goto label16_demux_done_cond_signal_state;
 	case dmux_pamf_state::resuming_demux_mutex_lock: goto label17_resuming_demux_mutex_lock_state;
 	case dmux_pamf_state::resuming_demux_waiting_for_spu: goto label18_resuming_demux_waiting_for_spu_state;
-	case dmux_pamf_state::sending_fatal_err:
-		callback(ppu, notify_fatal_err, _this, CELL_OK);
-		RETURN_ON_CPU_FLAG_AGAIN();
+	case dmux_pamf_state::sending_fatal_err: ; // Handled below
 	}
 
 	for (;;)
 	{
+		if (savestate == dmux_pamf_state::sending_fatal_err)
+		{
+			callback(ppu, notify_fatal_err, _this, CELL_OK);
+			RETURN_ON_CPU_FLAG_AGAIN();
+		}
+
 		savestate = dmux_pamf_state::initial;
 
 		stream_reset_started = false;
@@ -1427,7 +1422,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 		{
 			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			RETURN_ON_CPU_FLAG_AGAIN();
@@ -1441,7 +1437,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			{
 				if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 				{
-					SEND_FATAL_ERR_AND_CONTINUE();
+					savestate = dmux_pamf_state::sending_fatal_err;
+					continue;
 				}
 
 				break;
@@ -1468,7 +1465,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 				if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 				{
-					SEND_FATAL_ERR_AND_CONTINUE();
+					savestate = dmux_pamf_state::sending_fatal_err;
+					continue;
 				}
 
 				break;
@@ -1486,14 +1484,15 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (!is_raw_es && dmuxPamfStreamIdToTypeChannel(event.au_found.stream_id, event.au_found.private_stream_id).first == DMUX_PAMF_STREAM_TYPE_INDEX_LPCM)
 			{
-				es->au_specific_info[0] = read_from_ptr<u8>(event.au_found.stream_header_buf) >> 4;
-				es->au_specific_info[1] = read_from_ptr<u8>(event.au_found.stream_header_buf) & 0xf;
-				es->au_specific_info[2] = read_from_ptr<u8>(&event.au_found.stream_header_buf[1]) >> 6;
+				es->au_specific_info[0] = read_from_ptr<bf_t<u8, 4, 4>>(event.au_found.stream_header_buf);
+				es->au_specific_info[1] = read_from_ptr<bf_t<u8, 0, 4>>(event.au_found.stream_header_buf);
+				es->au_specific_info[2] = read_from_ptr<bf_t<u8, 6, 2>>(event.au_found.stream_header_buf, 1);
 			}
 
 			if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			if (callback(ppu, es->notify_au_found, es->_this, au_info) != CELL_OK)
@@ -1518,7 +1517,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 				if (set_au_reset<false>(ppu) != CELL_OK)
 				{
-					SEND_FATAL_ERR_AND_CONTINUE();
+					savestate = dmux_pamf_state::sending_fatal_err;
+					continue;
 				}
 
 				RETURN_ON_CPU_FLAG_AGAIN();
@@ -1536,7 +1536,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			RETURN_ON_CPU_FLAG_AGAIN();
@@ -1551,7 +1552,9 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 				if (sys_cond_signal_all(ppu, cond) != CELL_OK)
 				{
 					sys_mutex_unlock(ppu, mutex);
-					SEND_FATAL_ERR_AND_CONTINUE();
+
+					savestate = dmux_pamf_state::sending_fatal_err;
+					continue;
 				}
 
 				RETURN_ON_CPU_FLAG_AGAIN();
@@ -1559,7 +1562,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			break;
@@ -1573,7 +1577,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 		{
 			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			RETURN_ON_CPU_FLAG_AGAIN();
@@ -1583,7 +1588,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			if (valid)
@@ -1607,7 +1613,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 		{
 			ensure(event_queue.pop());
 
-			SEND_FATAL_ERR_AND_CONTINUE();
+			savestate = dmux_pamf_state::sending_fatal_err;
+			continue;
 		}
 		default:
 			fmt::throw_exception("Invalid event");
@@ -1624,7 +1631,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 
 			RETURN_ON_CPU_FLAG_AGAIN();
@@ -1650,7 +1658,8 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 
 			if (sys_mutex_unlock(ppu, mutex) != CELL_OK)
 			{
-				SEND_FATAL_ERR_AND_CONTINUE();
+				savestate = dmux_pamf_state::sending_fatal_err;
+				continue;
 			}
 		}
 
