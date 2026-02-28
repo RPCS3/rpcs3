@@ -8,6 +8,7 @@
 #include "Emu/NP/vport0.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
+#include <atomic>
 
 LOG_CHANNEL(sys_net);
 
@@ -36,11 +37,78 @@ namespace sys_net_helpers
 
 		return true;
 	}
+
+	bool is_psas_lan_beacon(const u8* data, usz size)
+	{
+		return is_psas_lan_beacon_impl(data, size);
+	}
+
+	bool is_psas_lan_beacon_payload(const u8* data, usz size)
+	{
+		return is_psas_lan_payload_impl(data, size);
+	}
+
+	bool is_psas_lan_mode_enabled()
+	{
+		return s_psas_lan_mode_enabled.load(std::memory_order_relaxed);
+	}
+
+	void detect_psas_lan_beacon(const u8* data, usz size)
+	{
+		if (!is_psas_lan_beacon_impl(data, size) && !is_psas_lan_payload_impl(data, size))
+		{
+			return;
+		}
+
+		if (!s_psas_lan_mode_enabled.exchange(true, std::memory_order_relaxed))
+		{
+			sys_net.notice("Detected PSASBR P2P traffic");
+		}
+	}
 } // namespace sys_net_helpers
+
+namespace
+{
+	std::atomic<bool> s_psas_lan_mode_enabled = false;
+
+	bool is_psas_lan_beacon_impl(const u8* data, usz size)
+	{
+		if (!data || size < 27)
+		{
+			return false;
+		}
+
+		if (data[0] != 0xFF || data[1] != 0x83 || data[2] != 0x03)
+		{
+			return false;
+		}
+
+		if (data[11] != 0x45 || data[12] != 0x71 || data[13] != 0x29 || data[14] != 0x00)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	bool is_psas_lan_payload_impl(const u8* data, usz size)
+	{
+		if (!data || size < 8)
+		{
+			return false;
+		}
+
+		return data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x00 && data[3] == 0x00 &&
+			data[4] == 0x08 && data[5] == 0x45 && data[6] == 0x71 && data[7] == 0x29;
+	}
+} // namespace for PSASBR beacon helpers
 
 nt_p2p_port::nt_p2p_port(u16 port)
 	: port(port)
 {
+	// Reset the detection for PSASBR in each new P2P port lifecycle
+	s_psas_lan_mode_enabled.store(false, std::memory_order_relaxed);
+
 	const bool is_ipv6 = np::is_ipv6_supported();
 
 	// Creates and bind P2P Socket
@@ -233,49 +301,135 @@ bool nt_p2p_port::recv_data()
 	const u16 vport_flags = *reinterpret_cast<le_t<u16>*>(p2p_recv_data.data() + sizeof(u16) + sizeof(u16));
 	std::vector<u8> p2p_data(recv_res - VPORT_P2P_HEADER_SIZE);
 	memcpy(p2p_data.data(), p2p_recv_data.data() + VPORT_P2P_HEADER_SIZE, p2p_data.size());
+	constexpr u16 known_p2p_flags = P2P_FLAG_P2P | P2P_FLAG_P2PS;
+	const bool has_unknown_flags = (vport_flags & ~known_p2p_flags) != 0;
+
+	const auto dispatch_datagram_to_vport = [&](u16 local_vport, u16 remote_vport, const std::vector<u8>& data_to_dispatch) -> bool
+	{
+		if (!bound_p2p_vports.contains(local_vport))
+		{
+			return false;
+		}
+
+		sys_net_sockaddr_in_p2p p2p_addr{};
+
+		p2p_addr.sin_len    = sizeof(sys_net_sockaddr_in);
+		p2p_addr.sin_family = SYS_NET_AF_INET;
+		p2p_addr.sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+		p2p_addr.sin_vport  = remote_vport;
+		p2p_addr.sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+
+		auto& bound_sockets = ::at32(bound_p2p_vports, local_vport);
+
+		for (auto it = bound_sockets.begin(); it != bound_sockets.end();)
+		{
+			s32 sock_id = *it;
+			const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock)
+				{
+					ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
+					auto& sock_p2p = reinterpret_cast<lv2_socket_p2p&>(sock);
+
+					sock_p2p.handle_new_data(p2p_addr, data_to_dispatch);
+				});
+
+			if (!sock)
+			{
+				sys_net.error("Socket %d found in bound_p2p_vports didn't exist!", sock_id);
+				it = bound_sockets.erase(it);
+				if (bound_sockets.empty())
+				{
+					bound_p2p_vports.erase(local_vport);
+					break;
+				}
+			}
+			else
+			{
+				it++;
+			}
+		}
+
+		return true;
+	};
 
 	if (vport_flags & P2P_FLAG_P2P)
 	{
 		std::lock_guard lock(bound_p2p_vports_mutex);
-		if (bound_p2p_vports.contains(dst_vport))
+
+		if (has_unknown_flags)
 		{
-			sys_net_sockaddr_in_p2p p2p_addr{};
+			// The P2P traffic does not have expected data. Need to handle it differently
+			// This snippet handles the game PlayStation All-Stars Battle Royale
+			std::vector<u8> raw_data(recv_res);
+			memcpy(raw_data.data(), p2p_recv_data.data(), raw_data.size());
 
-			p2p_addr.sin_len    = sizeof(sys_net_sockaddr_in);
-			p2p_addr.sin_family = SYS_NET_AF_INET;
-			p2p_addr.sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr);
-			p2p_addr.sin_vport  = src_vport;
-			p2p_addr.sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			sys_net_helpers::detect_psas_lan_beacon(raw_data.data(), raw_data.size());
 
-			auto& bound_sockets = ::at32(bound_p2p_vports, dst_vport);
-
-			for (auto it = bound_sockets.begin(); it != bound_sockets.end();)
+			if (!sys_net_helpers::is_psas_lan_mode_enabled())
 			{
-				s32 sock_id = *it;
-				const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock)
-					{
-						ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
-						auto& sock_p2p = reinterpret_cast<lv2_socket_p2p&>(sock);
+				// It's not being detected as PSASBR LAN data, and it's not known traffic either, ignore
+				sys_net.notice("Received P2P packet with unknown flags(vport_flags=0x%x)", vport_flags);
+				return true;
+			}
 
-						sock_p2p.handle_new_data(p2p_addr, p2p_data);
-					});
+			const auto bswap16 = [](u16 v) -> u16
+			{
+				return static_cast<u16>((v >> 8) | (v << 8));
+			};
 
-				if (!sock)
+			const auto read_be16 = [](const u8* p) -> u16
+			{
+				return static_cast<u16>((static_cast<u16>(p[0]) << 8) | p[1]);
+			};
+
+			// PSASBR framing always starts with 0xFF83
+			// We need to read correctly the vports, strip the header and dispatch the data to the game
+			if (recv_res >= VPORT_P2P_HEADER_SIZE && p2p_recv_data[0] == 0xFF && p2p_recv_data[1] == 0x83)
+			{
+				const u16 framed_remote_vport = read_be16(p2p_recv_data.data() + 2);
+				const u16 framed_local_vport  = read_be16(p2p_recv_data.data() + 4);
+
+				if (framed_local_vport)
 				{
-					sys_net.error("Socket %d found in bound_p2p_vports didn't exist!", sock_id);
-					it = bound_sockets.erase(it);
-					if (bound_sockets.empty())
+					std::vector<u8> framed_payload(recv_res - VPORT_P2P_HEADER_SIZE);
+					memcpy(framed_payload.data(), p2p_recv_data.data() + VPORT_P2P_HEADER_SIZE, framed_payload.size());
+
+					if (dispatch_datagram_to_vport(framed_local_vport, framed_remote_vport, framed_payload))
 					{
-						bound_p2p_vports.erase(dst_vport);
-						break;
+						// sys_net.notice("----- PSAS RAW FRAMING -----");
+						return true;
 					}
-				}
-				else
-				{
-					it++;
 				}
 			}
 
+			// Some packets fail the dispatch above. Unsure what's different, but so far I can tell it's packets reporting
+			// Player count in a lobby, which are also broadcasted
+			// I've encountered a bug where entering multiple times a lobby fills players slots with phantom clients
+			// Causing the game to eventually crash when trying to navigate the menu. It's not consistent, but it can happen
+			// Take these packets and dispatch them to all vports
+			// This *might* fix the bug, but needs more testing. At worst it doesn't do anything at all
+			const u16 src_vport_be         = bswap16(src_vport);
+			const u16 guessed_remote_vport = src_vport_be ? src_vport_be : src_vport;
+			std::vector<u16> local_vports;
+			local_vports.reserve(bound_p2p_vports.size());
+			for (const auto& [local_vport, _] : bound_p2p_vports)
+			{
+				local_vports.push_back(local_vport);
+			}
+
+			for (const u16 local_vport : local_vports)
+			{
+				if (dispatch_datagram_to_vport(local_vport, guessed_remote_vport, raw_data))
+				{
+					// sys_net.notice("----- PSAS PLAYER COUNT DATA -----");
+				}
+			}
+
+			return true;
+		} // End of section dealing with PlayStation All-Stars Battle Royale
+
+		// Keep the original behaviour when dealing with normal P2P traffic to not potentially break other games in P2P
+		if (dispatch_datagram_to_vport(dst_vport, src_vport, p2p_data))
+		{
 			return true;
 		}
 	}

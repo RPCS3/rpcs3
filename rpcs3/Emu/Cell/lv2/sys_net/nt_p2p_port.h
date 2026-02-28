@@ -40,6 +40,10 @@ struct signaling_message
 namespace sys_net_helpers
 {
 	bool all_reusable(const std::set<s32>& sock_ids);
+	bool is_psas_lan_beacon(const u8* data, usz size);
+	bool is_psas_lan_beacon_payload(const u8* data, usz size);
+	bool is_psas_lan_mode_enabled();
+	void detect_psas_lan_beacon(const u8* data, usz size);
 }
 
 struct nt_p2p_port

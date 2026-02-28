@@ -285,6 +285,63 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	inet_ntop(AF_INET, &native_addr.sin_addr, ip_str, sizeof(ip_str));
 	sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
+	int native_flags = 0;
+	if (flags & SYS_NET_MSG_WAITALL)
+	{
+		native_flags |= MSG_WAITALL;
+	}
+
+	// --------- SECTION SPECIFIC TO PLAYSTATION ALL-STARS BATTLE ROYALE LAN MODE
+	const u16 local_vport = vport;
+	sys_net_helpers::detect_psas_lan_beacon(buf.data(), buf.size());
+
+	const bool psas_mode_enabled    = sys_net_helpers::is_psas_lan_mode_enabled();
+	const bool is_psas_payload      = sys_net_helpers::is_psas_lan_beacon_payload(buf.data(), buf.size());
+	const bool is_psas_wire_beacon  = sys_net_helpers::is_psas_lan_beacon(buf.data(), buf.size());
+	const bool has_psas_raw_header  = buf.size() >= 2 && buf[0] == 0xFF && buf[1] == 0x83;
+	const bool use_raw_psas_frame  = is_psas_payload || is_psas_wire_beacon || (psas_mode_enabled && (has_psas_raw_header || (local_vport == 1000 && p2p_vport == 1000)));
+
+	if (use_raw_psas_frame)
+	{
+		std::vector<u8> raw_psas;
+		raw_psas.reserve(buf.size() + VPORT_P2P_HEADER_SIZE);
+		const bool payload_is_preframed = has_psas_raw_header;
+
+		if (!payload_is_preframed)
+		{
+			// Manually build the RAW framing to be sent
+			// [0xFF83][src_vport_be][dst_vport_be][app_payload...]
+			raw_psas.push_back(0xFF);
+			raw_psas.push_back(0x83);
+			raw_psas.push_back(static_cast<u8>((vport >> 8) & 0xFF));
+			raw_psas.push_back(static_cast<u8>(vport & 0xFF));
+			raw_psas.push_back(static_cast<u8>((p2p_vport >> 8) & 0xFF));
+			raw_psas.push_back(static_cast<u8>(p2p_vport & 0xFF));
+			raw_psas.insert(raw_psas.end(), buf.begin(), buf.end());
+		}
+		else
+		{
+			// This may never happen actually...
+			raw_psas = buf;
+		}
+
+		auto native_result = np::sendto_possibly_ipv6(native_socket, reinterpret_cast<const char*>(raw_psas.data()), ::size32(raw_psas), &native_addr, native_flags);
+
+		if (native_result >= 0)
+		{
+			return {payload_is_preframed ? native_result : std::max<s32>(native_result - VPORT_P2P_HEADER_SIZE, 0l)};
+		}
+
+		s32 result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
+		if (result)
+		{
+			return {-result};
+		}
+
+		return std::nullopt;
+	} // --------- END OF PSASBR SPECIFIC SECTION
+
 	std::vector<u8> p2p_data(buf.size() + VPORT_P2P_HEADER_SIZE);
 	const le_t<u16> p2p_vport_le = p2p_vport;
 	const le_t<u16> src_vport_le = vport;
@@ -293,12 +350,6 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	memcpy(p2p_data.data() + sizeof(u16), &src_vport_le, sizeof(u16));
 	memcpy(p2p_data.data() + sizeof(u16) + sizeof(u16), &p2p_flags_le, sizeof(u16));
 	memcpy(p2p_data.data() + VPORT_P2P_HEADER_SIZE, buf.data(), buf.size());
-
-	int native_flags = 0;
-	if (flags & SYS_NET_MSG_WAITALL)
-	{
-		native_flags |= MSG_WAITALL;
-	}
 
 	auto native_result = np::sendto_possibly_ipv6(native_socket, reinterpret_cast<const char*>(p2p_data.data()), ::size32(p2p_data), &native_addr, native_flags);
 
