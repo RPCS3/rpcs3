@@ -58,6 +58,10 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
 		fmt::throw_exception("Error setsockopt SO_RCVBUF on P2P socket: %s", get_last_error(true));
 
+	optval = 1;
+	if (setsockopt(p2p_socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
+		fmt::throw_exception("Error setsockopt SO_BROADCAST on P2P socket: %s", get_last_error(true));
+
 	int ret_bind = 0;
 	const u16 be_port = std::bit_cast<u16, be_t<u16>>(port);
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
