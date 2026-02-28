@@ -228,6 +228,14 @@ INSTANTIATE_TEST_SUITE_P(Instance, DmuxPamfInvalidStream, Values
 	[]() consteval { auto pack = AVC_SINGLE_PACK_STREAM; pack[0x118] = 0x00; pack[0x119] = 0x03; pack[0x11c] = 0x00; return pack; }()                         // PES packet header size too large
 ));
 
+// Since the "pack stuffing length" field only has a size of three bits, this can only occur if the stream is not a multiple of 0x800 bytes large.
+// Like the other invalid streams above, LLE does not check for this
+TEST_F(DmuxPamfTest, InvalidPackStuffingLength)
+{
+	demuxer.set_stream({ AVC_SINGLE_PACK_STREAM.cbegin(), AVC_SINGLE_PACK_STREAM.cbegin() + 0x16 }, false);
+	EXPECT_FALSE(demuxer.process_next_pack());
+}
+
 // Tests if the program end code is properly detected and the corresponding event is fired
 TEST_F(DmuxPamfTest, ProgEnd)
 {
