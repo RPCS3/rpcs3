@@ -21,6 +21,8 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#include "spu_optimizer.h"
+
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -1549,13 +1551,19 @@ public:
 
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
-		if (_func.data.empty() && m_interp_magn)
+		if (_func.get_data().empty() && m_interp_magn)
 		{
 			return compile_interpreter();
 		}
 
+		if (g_cfg.core.spu_optimizer)
+		{
+			// Run optimizer (writes to optimized_data)
+			spu_optimizer::spu_optimizer optimizer(_func);
+		}
+
 		const u32 start0 = _func.entry_point;
-		const usz func_size = _func.data.size();
+		const usz func_size = _func.get_data().size();
 
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -1589,7 +1597,8 @@ public:
 			u8 output[20];
 
 			sha1_starts(&ctx);
-			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+			// Use original data for hash so runtime lookups match LS content
+			sha1_update(&ctx, reinterpret_cast<const u8*>(func.get_data().data()), func.get_data().size() * 4);
 			sha1_finish(&ctx, output);
 
 			m_hash.clear();
@@ -1600,13 +1609,17 @@ public:
 			m_hash_start = hash_start;
 		}
 
-		spu_log.notice("Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
+		spu_log.notice("Building function 0x%x... (size %u, %s)", func.entry_point, func.get_data().size(), m_hash);
 
 		m_pos = func.lower_bound;
 		m_base = func.entry_point;
-		m_size = ::size32(func.data) * 4;
+		m_size = ::size32(func.get_data()) * 4;
 		const u32 start = m_pos;
 		const u32 end = start + m_size;
+
+		// Use original data for verification against LS, optimized data for compilation
+		const std::vector<u32>& verify_data = func.get_data();
+		const std::vector<u32>& optimized_data = func.get_optimized_data();
 
 		m_pp_id = 0;
 
@@ -1624,7 +1637,7 @@ public:
 			}
 		}
 
-		for (u32 data : func.data)
+		for (u32 data : func.get_data())
 		{
 			const spu_opcode_t op{std::bit_cast<be_t<u32>>(data)};
 
@@ -1693,16 +1706,16 @@ public:
 			// Disable check (unsafe)
 			m_ir->CreateBr(label_body);
 		}
-		else if (func.data.size() == 1)
+		else if (verify_data.size() == 1)
 		{
 			const auto pu32 = _ptr(m_lsptr, m_base_pc);
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(func.data[0]));
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(verify_data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
-		else if (func.data.size() == 2)
+		else if (verify_data.size() == 2)
 		{
 			const auto pu64 = _ptr(m_lsptr, m_base_pc);
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(verify_data[1]) << 32 | verify_data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else
@@ -1712,7 +1725,7 @@ public:
 			// Skip holes at the beginning (giga only)
 			for (u32 j = start; j < end; j += 4)
 			{
-				if (!func.data[(j - start) / 4])
+				if (!verify_data[(j - start) / 4])
 				{
 					starta += 4;
 				}
@@ -1768,7 +1781,7 @@ public:
 					{
 						const u32 k = j + i * 4;
 
-						if (k < start || k >= end || !func.data[(k - start) / 4])
+						if (k < start || k >= end || !verify_data[(k - start) / 4])
 						{
 							indices[i] = 16;
 							holes      = true;
@@ -1815,13 +1828,13 @@ public:
 				// Create the checksum
 				u32 checksum[16] = {0};
 
-				for (u32 j = 0; j < func.data.size(); j += 16) // Process 16 elements per iteration
+				for (u32 j = 0; j < verify_data.size(); j += 16) // Process 16 elements per iteration
 				{
 					for (u32 i = 0; i < 16; i++)
 					{
-						if (j + i < func.data.size())
+						if (j + i < verify_data.size())
 						{
-							checksum[i] += func.data[j + i];
+							checksum[i] += verify_data[j + i];
 						}
 					}
 				}
@@ -1855,7 +1868,7 @@ public:
 					{
 						const u32 k = j + i * 4;
 
-						if (k < start || k >= end || !func.data[(k - start) / 4])
+						if (k < start || k >= end || !verify_data[(k - start) / 4])
 						{
 							indices[i] = elements;
 							holes      = true;
@@ -1901,7 +1914,7 @@ public:
 					for (u32 i = 0; i < elements; i++)
 					{
 						const u32 k = j + i * 4;
-						words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
+						words[i] = k >= start && k < end ? verify_data[(k - start) / 4] : 0;
 					}
 
 					vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::ArrayRef(words, elements)));
@@ -2174,7 +2187,7 @@ public:
 						break;
 					}
 
-					const u32 op = std::bit_cast<be_t<u32>>(func.data[(m_pos - start) / 4]);
+					const u32 op = std::bit_cast<be_t<u32>>(optimized_data[(m_pos - start) / 4]);
 
 					if (!op)
 					{
@@ -2186,7 +2199,7 @@ public:
 					if (m_pos + 4 >= end)
 						m_next_op = 0;
 					else
-						m_next_op = func.data[(m_pos - start) / 4 + 1];
+						m_next_op = optimized_data[(m_pos - start) / 4 + 1];
 
 					switch (m_inst_attrs[(m_pos - start) / 4])
 					{
@@ -2853,7 +2866,7 @@ public:
 		add_loc->compiled = fn;
 
 		// Rebuild trampoline if necessary
-		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
+		if (!m_spurt->rebuild_ubertrampoline(func.get_data()[0]))
 		{
 			if (auto& cache = g_fxo->get<spu_cache>())
 			{
@@ -6914,237 +6927,7 @@ public:
 			}
 		});
 
-		if (m_use_avx512)
-		{
-			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
-			{
-				const auto div = value<f32[4]>(ci->getOperand(0));
-				const auto the_one = value<f32[4]>(ci->getOperand(1));
-
-				const auto div_result = the_one / div;
-
-				return vfixupimmps(div_result, div_result, splat<u32[4]>(0x00220088u), 0, 0xff);
-			});
-		}
-		else
-		{
-			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
-			{
-				const auto div = value<f32[4]>(ci->getOperand(0));
-				const auto the_one = value<f32[4]>(ci->getOperand(1));
-
-				const auto div_result = the_one / div;
-
-				// from ps3 hardware testing: Inf => NaN and NaN => Zero
-				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
-				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
-				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
-
-				const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
-				const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
-				return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
-			});
-		}
-
-
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
-		static const auto MT = match<f32[4]>();
-
-		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
-		{
-			auto match_fnms = [&](f32 float_value)
-			{
-				auto res = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(float_value)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value)));
-			};
-
-			auto match_fm_half = [&]()
-			{
-				auto res = match_expr(a, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(a, fm(fsplat<f32[4]>(0.5), MT));
-				if (std::get<0>(res))
-					return res;
-
-				res = match_expr(b, fm(MT, fsplat<f32[4]>(0.5)));
-				if (std::get<0>(res))
-					return res;
-
-				return match_expr(b, fm(fsplat<f32[4]>(0.5), MT));
-			};
-
-
-			if (auto [ok_fnma, a1, b1] = match_fnms(float_value); ok_fnma)
-			{
-				if (auto [ok_fm2, fm_half_mul] = match_fm_half(); ok_fm2 && fm_half_mul.eq(b1))
-				{
-					if (fm_half_mul.eq(b1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}
-						}
-					}
-					else if (fm_half_mul.eq(a1))
-					{
-						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
-							{
-								erase_stores(a, b, c, a3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}
-						}
-						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(b1))
-						{
-							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
-							{
-								erase_stores(a, b, c, b3);
-								set_vr(op.rt4, fsqrt(fabs(src)));
-								return true;
-							}
-						}
-					}
-				}
-			}
-
-			return false;
-		};
-
-		if (check_sqrt_pattern_for_float(1.0f))
-			return;
-
-		if (check_sqrt_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		auto check_accurate_reciprocal_pattern_for_float = [&](f32 float_value) -> bool
-		{
-			// FMA(FNMS(div, spu_re(div), float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(FNMS(spu_re(div), div, float_value), spu_re(div), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.rb == op.rc)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(div, spu_re(div), float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			// FMA(spu_re(div), FNMS(spu_re(div), div, float_value), spu_re(div))
-			if (auto [ok_fnms, div] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms && op.ra == op.rc)
-			{
-				if (auto [ok_re] = match_expr(a, spu_re(div)); ok_re)
-				{
-					erase_stores(a, b, c);
-					set_vr(op.rt4, re_accurate(div, fsplat<f32[4]>(float_value)));
-					return true;
-				}
-			}
-
-			return false;
-		};
-
-		if (check_accurate_reciprocal_pattern_for_float(1.0f))
-			return;
-
-		if (check_accurate_reciprocal_pattern_for_float(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1)))
-			return;
-
-		// NFS Most Wanted doesn't like this
-		if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::relaxed)
-		{
-			// Those patterns are not safe vs non optimization as inaccuracy from spu_re will spread with early fm before the accuracy is improved
-
-			// Match division (fast)
-			// FMA(FNMS(fm(diva<*> spu_re(divb)), divb, diva), spu_re(divb), fm(diva<*> spu_re(divb)))
-			if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
-			{
-				if (auto [ok_fm, fm1, fm2] = match_expr(c, fm(MT, MT)); ok_fm && ((fm1.eq(diva) && fm2.eq(b)) || (fm1.eq(b) && fm2.eq(diva))))
-				{
-					if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
-					{
-						erase_stores(b, c);
-						set_vr(op.rt4, diva / divb);
-						return;
-					}
-				}
-			}
-
-			// FMA(spu_re(divb), FNMS(fm(diva <*> spu_re(divb)), divb, diva), fm(diva <*> spu_re(divb)))
-			if (auto [ok_fnma, divb, diva] = match_expr(b, fnms(c, MT, MT)); ok_fnma)
-			{
-				if (auto [ok_fm, fm1, fm2] = match_expr(c, fm(MT, MT)); ok_fm && ((fm1.eq(diva) && fm2.eq(a)) || (fm1.eq(a) && fm2.eq(diva))))
-				{
-					if (auto [ok_re] = match_expr(a, spu_re(divb)); ok_re)
-					{
-						erase_stores(a, c);
-						set_vr(op.rt4, diva / divb);
-						return;
-					}
-				}
-			}
-		}
-
-		// Not all patterns can be simplified because of block scope
-		// Those todos don't necessarily imply a missing pattern
-
-		if (auto [ok_re, mystery] = match_expr(a, spu_re(MT)); ok_re)
-		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_re(a) found in FMA", m_hash, m_pos);
-		}
-
-		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
-		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_re(b) found in FMA", m_hash, m_pos);
-		}
-
-		if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
-		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found in FMA", m_hash, m_pos);
-		}
-
 		set_vr(op.rt4, fma(a, b, c));
 	}
 
@@ -8526,6 +8309,98 @@ public:
 		}
 
 		BR(op);
+	}
+
+	void RPCS3_OPTIMIZER(spu_opcode_t op)
+	{
+		// Custom optimizer instruction encoding:
+		// For single-source ops (variants 0-3):
+		//   rt4 (bits 21-27): destination GPR
+		//   ra (bits 7-13): source GPR
+		//   rc (bits 0-6): variant ID
+		// For two-source ops (variant 4+):
+		//   rt4 (bits 21-27): destination GPR
+		//   rb (bits 14-20): second source GPR (divb)
+		//   ra (bits 7-13): first source GPR (diva)
+		//   rc (bits 0-6): variant ID
+
+		const u32 variant = op.rc;
+
+		if (m_use_avx512)
+		{
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{
+				const auto div = value<f32[4]>(ci->getOperand(0));
+				const auto the_one = value<f32[4]>(ci->getOperand(1));
+
+				const auto div_result = the_one / div;
+
+				return vfixupimmps(div_result, div_result, splat<u32[4]>(0x00220088u), 0, 0xff);
+			});
+		}
+		else
+		{
+			register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+			{
+				const auto div = value<f32[4]>(ci->getOperand(0));
+				const auto the_one = value<f32[4]>(ci->getOperand(1));
+
+				const auto div_result = the_one / div;
+
+				// from ps3 hardware testing: Inf => NaN and NaN => Zero
+				const auto result_and = bitcast<u32[4]>(div_result) & 0x7fffffffu;
+				const auto result_cmp_inf = sext<s32[4]>(result_and == splat<u32[4]>(0x7F800000u));
+				const auto result_cmp_nan = sext<s32[4]>(result_and <= splat<u32[4]>(0x7F800000u));
+
+				const auto and_mask = bitcast<u32[4]>(result_cmp_nan) & splat<u32[4]>(0xFFFFFFFFu);
+				const auto or_mask = bitcast<u32[4]>(result_cmp_inf) & splat<u32[4]>(0xFFFFFFFu);
+				return bitcast<f32[4]>((bitcast<u32[4]>(div_result) & and_mask) | or_mask);
+			});
+		}
+
+		spu_log.warning("Hit RPCS3_OPTIMIZER variant %d!", variant);
+
+		switch (variant)
+		{
+		case 0:
+		{
+			// Accurate reciprocal with 1.0f: 1.0f / src
+			const auto src = get_vr<f32[4]>(op.ra);
+			set_vr(op.rt4, re_accurate(src, fsplat<f32[4]>(1.0f)));
+			break;
+		}
+		case 1:
+		{
+			// Accurate reciprocal with 1.0f + 1 ULP
+			const auto src = get_vr<f32[4]>(op.ra);
+			set_vr(op.rt4, re_accurate(src, fsplat<f32[4]>(std::bit_cast<f32>(std::bit_cast<u32>(1.0f) + 1))));
+			break;
+		}
+		case 2:
+		{
+			// Accurate sqrt with 1.0f
+			const auto src = get_vr<f32[4]>(op.ra);
+			set_vr(op.rt4, fsqrt(fabs(src)));
+			break;
+		}
+		case 3:
+		{
+			// Accurate sqrt with 1.0f + 1 ULP (same result, constant only affects intermediate precision)
+			const auto src = get_vr<f32[4]>(op.ra);
+			set_vr(op.rt4, fsqrt(fabs(src)));
+			break;
+		}
+		case 4:
+		{
+			// Fast division: diva / divb
+			const auto diva = get_vr<f32[4]>(op.ra);
+			const auto divb = get_vr<f32[4]>(op.rb);
+			set_vr(op.rt4, diva / divb);
+			break;
+		}
+		default:
+			fmt::throw_exception("Unknown RPCS3_OPTIMIZER variant: %u", variant);
+		}
 	}
 
 	void set_link(spu_opcode_t op)
