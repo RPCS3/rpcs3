@@ -1,11 +1,14 @@
 #include <QApplication>
 #include <QThread>
+#include <QJsonObject>
 
 #include "downloader.h"
 #include "curl_handle.h"
 #include "progress_dialog.h"
 
 #include "util/logs.hpp"
+
+#include <thread>
 
 LOG_CHANNEL(network_log, "NET");
 
@@ -31,7 +34,7 @@ downloader::~downloader()
 	}
 }
 
-void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size)
+void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size, bool check_return_code, bool again)
 {
 	network_log.notice("Starting download from URL: %s", url);
 
@@ -48,6 +51,21 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_keep_progress_dialog_open = keep_progress_dialog_open;
 	m_curl_buf.clear();
 	m_curl_abort = false;
+
+	if (again)
+	{
+		m_download_attempts++;
+
+		if (m_progress_dialog && m_download_attempts > 1)
+		{
+			handle_buffer_update(0, 100);
+			m_progress_dialog->setLabelText(tr("Please wait... Trying again"));
+		}
+	}
+	else
+	{
+		m_download_attempts = 1;
+	}
 
 	CURLcode err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_URL, %s) error: %s", url, curl_easy_strerror(err));
@@ -77,7 +95,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		}
 	});
 
-	connect(m_thread, &QThread::finished, this, [this]()
+	connect(m_thread, &QThread::finished, this, [=, this]()
 	{
 		if (m_curl_abort)
 		{
@@ -93,6 +111,21 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		if (m_curl_success)
 		{
 			network_log.notice("Download finished");
+
+			if (check_return_code && m_download_attempts < 3)
+			{
+				const QJsonObject json_data = QJsonDocument::fromJson(m_curl_buf).object();
+				const int return_code = json_data["return_code"].toInt(-255);
+
+				if (return_code == -255)
+				{
+					network_log.error("Error during download. Trying to download again (attempts=%d, return_code=%d)", m_download_attempts, return_code);
+					std::this_thread::sleep_for(500ms); // Wait for a little while
+					start(url, follow_location, show_progress_dialog, progress_dialog_title, keep_progress_dialog_open, expected_size, check_return_code, true);
+					return;
+				}
+			}
+
 			Q_EMIT signal_download_finished(m_curl_buf);
 		}
 	});
