@@ -847,6 +847,17 @@ namespace rsx
 		}
 	}
 
+	bool texture_format_ex::hw_SNORM_possible() const
+	{
+		return (texel_remap_control & SEXT_MASK) == (get_host_format_snorm_mask(format()) << SEXT_OFFSET);
+	}
+
+	bool texture_format_ex::hw_SRGB_possible() const
+	{
+		return encoded_remap == RSX_TEXTURE_REMAP_IDENTITY &&
+			(texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
+	}
+
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture)
 	{
 		return get_subresources_layout_impl(texture);
@@ -1253,6 +1264,32 @@ namespace rsx
 			return 0;
 		}
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
+	}
+
+	/**
+	 * Returns a channel mask in ARGB that can be SNORM-converted
+	 * Some formats have a hardcoded constant in one lane which we cannot SNORM-interpret in hardware.
+	 */
+	u32 get_host_format_snorm_mask(u32 format)
+	{
+		switch (format)
+		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			// Hardcoded alpha formats
+			return 0b1110;
+
+		case CELL_GCM_TEXTURE_X16:
+			// This one is a mess. X and Z are hardcoded. Not supported.
+			// Fall through instead of throw
+		default:
+			return 0b1111;
+		}
 	}
 
 	/**

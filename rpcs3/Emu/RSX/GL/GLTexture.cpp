@@ -266,6 +266,44 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
+	GLenum get_compatible_snorm_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_R8:
+			return GL_R8_SNORM;
+		case GL_RG8:
+			return GL_RG8_SNORM;
+		case GL_RGBA8:
+			return GL_RGBA8_SNORM;
+		case GL_R16:
+			return GL_R16_SNORM;
+		case GL_RG16:
+			return GL_RG16_SNORM;
+		case GL_RGBA16:
+			return GL_RGBA16_SNORM;
+		default:
+			return GL_NONE;
+		}
+	}
+
+	GLenum get_compatible_srgb_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_RGBA8:
+			return GL_SRGB8_ALPHA8_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		default:
+			return GL_NONE;
+		}
+	}
+
 	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
 	{
 		if (!pack_info.swap_bytes)

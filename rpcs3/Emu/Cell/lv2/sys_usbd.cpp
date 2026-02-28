@@ -1173,11 +1173,15 @@ error_code sys_usbd_get_device_list(ppu_thread& ppu, u32 handle, vm::ptr<UsbInte
 		return CELL_EINVAL;
 
 	// TODO: was std::min<s32>
-	u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh.handled_devices));
+	const u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh.handled_devices));
+	u32 index = 0;
 
-	for (u32 index = 0; index < i_tocopy; index++)
+	for (const auto& [_, device] : usbh.handled_devices)
 	{
-		device_list[index] = usbh.handled_devices[index].first;
+		if (index == i_tocopy)
+			break;
+		
+		device_list[index++] = device.first;
 	}
 
 	return not_an_error(i_tocopy);
@@ -1409,7 +1413,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 
 		if (is_stopped(state))
 		{
-			std::lock_guard lock(usbh.mutex);
+			std::lock_guard lock(usbh.mutex_sq);
 
 			for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
 			{
@@ -1587,7 +1591,7 @@ error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_tran
 
 	std::lock_guard lock(usbh.mutex);
 
-	if (!usbh.is_init)
+	if (!usbh.is_init || id_transfer >= MAX_SYS_USBD_TRANSFERS)
 		return CELL_EINVAL;
 
 	const auto status = usbh.get_transfer_status(id_transfer);
@@ -1607,7 +1611,7 @@ error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle,
 
 	std::lock_guard lock(usbh.mutex);
 
-	if (!usbh.is_init)
+	if (!usbh.is_init || id_transfer >= MAX_SYS_USBD_TRANSFERS)
 		return CELL_EINVAL;
 
 	const auto status = usbh.get_isochronous_transfer_status(id_transfer);

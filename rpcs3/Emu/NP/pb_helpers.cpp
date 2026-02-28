@@ -532,8 +532,8 @@ namespace np
 
 		if (!mi.msg().empty())
 		{
-			sce_mi->msgLen     = ::narrow<u32>(mi.msg().size());
-			auto* ptr_msg_data = static_cast<u8*>(edata.allocate<void>(mi.msg().size(), sce_mi->msg));
+			sce_mi->msgLen     = ::size32(mi.msg());
+			auto* ptr_msg_data = static_cast<u8*>(edata.allocate<void>(::size32(mi.msg()), sce_mi->msg));
 			memcpy(ptr_msg_data, mi.msg().data(), mi.msg().size());
 		}
 	}
@@ -575,8 +575,8 @@ namespace np
 
 		if (!resp.opt().empty())
 		{
-			room_status->opt_len = ::narrow<u32>(resp.opt().size());
-			u8* opt_data         = static_cast<u8*>(edata.allocate<void>(resp.opt().size(), room_status->opt));
+			room_status->opt_len = ::size32(resp.opt());
+			u8* opt_data         = static_cast<u8*>(edata.allocate<void>(::size32(resp.opt()), room_status->opt));
 
 			memcpy(opt_data, resp.opt().data(), resp.opt().size());
 		}
@@ -604,8 +604,8 @@ namespace np
 				cur_attr->id   = attr.attr_id();
 				if (!attr.data().empty())
 				{
-					cur_attr->value.data.size = ::narrow<u32>(attr.data().size());
-					u8* data_ptr              = static_cast<u8*>(edata.allocate<void>(attr.data().size(), cur_attr->value.data.ptr));
+					cur_attr->value.data.size = ::size32(attr.data());
+					u8* data_ptr              = static_cast<u8*>(edata.allocate<void>(::size32(attr.data()), cur_attr->value.data.ptr));
 					memcpy(data_ptr, attr.data().data(), attr.data().size());
 				}
 				else

@@ -318,6 +318,34 @@ namespace gl
 		}
 	}
 
+	texture_view* texture_view::as(GLenum format)
+	{
+		if (format == this->m_view_format)
+		{
+			return this;
+		}
+
+		auto self = m_root_view ? m_root_view : this;
+		if (auto found = self->m_subviews.find(format);
+			found != self->m_subviews.end())
+		{
+			return found->second.get();
+		}
+
+		GLenum swizzle_argb[4] =
+		{
+			component_swizzle[3],
+			component_swizzle[0],
+			component_swizzle[1],
+			component_swizzle[2],
+		};
+
+		auto view = std::make_unique<texture_view>(m_image_data, m_target, format, swizzle_argb, m_aspect_flags);
+		auto ret = view.get();
+		self->m_subviews.emplace(format, std::move(view));
+		return ret;
+	}
+
 	void texture_view::bind(gl::command_context& cmd, GLuint layer) const
 	{
 		cmd->bind_texture(layer, m_target, m_id);

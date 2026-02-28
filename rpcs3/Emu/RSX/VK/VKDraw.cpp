@@ -263,7 +263,7 @@ void VKGSRender::load_texture_env()
 {
 	// Load textures
 	bool check_for_cyclic_refs = false;
-	auto check_surface_cache_sampler = [&](auto descriptor, const auto& tex)
+	auto check_surface_cache_sampler_valid = [&](auto descriptor, const auto& tex)
 	{
 		if (!m_texture_cache.test_if_descriptor_expired(*m_current_command_buffer, m_rtts, descriptor, tex))
 		{
@@ -274,11 +274,11 @@ void VKGSRender::load_texture_env()
 		return false;
 	};
 
-	auto get_border_color = [&](const rsx::Texture auto& tex)
+	auto get_border_color = [&](const rsx::Texture auto& tex, bool remap_colorspace)
 	{
 		return m_device->get_custom_border_color_support().require_border_color_remap
-			? tex.remapped_border_color()
-			: rsx::decode_border_color(tex.border_color());
+			? tex.remapped_border_color(remap_colorspace)
+			: rsx::decode_border_color(tex.border_color(remap_colorspace));
 	};
 
 	std::lock_guard lock(m_sampler_mutex);
@@ -286,242 +286,319 @@ void VKGSRender::load_texture_env()
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		if (!fs_sampler_state[i])
+		{
 			fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+		}
 
 		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.fragment_textures[i];
 		const auto previous_format_class = fs_sampler_state[i]->format_class;
 
-		if (m_samplers_dirty || m_textures_dirty[i] || !check_surface_cache_sampler(sampler_state, tex))
+		if (!m_samplers_dirty &&
+			!m_textures_dirty[i] &&
+			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
-			if (tex.enabled())
+			continue;
+		}
+
+		const bool is_sampler_dirty = m_textures_dirty[i];
+		m_textures_dirty[i] = false;
+
+		if (!tex.enabled())
+		{
+			*sampler_state = {};
+			continue;
+		}
+
+		*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+		if (!sampler_state->validate())
+		{
+			continue;
+		}
+
+		if (sampler_state->is_cyclic_reference)
+		{
+			check_for_cyclic_refs |= true;
+		}
+
+		if (!is_sampler_dirty)
+		{
+			if (sampler_state->format_class != previous_format_class)
 			{
-				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+				// Host details changed but RSX is not aware
+				m_graphics_state |= rsx::fragment_program_state_dirty;
+			}
+
+			if (sampler_state->format_ex)
+			{
+				// Nothing to change, use cached sampler
+				continue;
+			}
+		}
+
+		sampler_state->format_ex = tex.format_ex();
+
+		if (sampler_state->format_ex.texel_remap_control &&
+			sampler_state->image_handle &&
+			sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
+			(current_fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
+			!g_cfg.video.disable_hardware_texel_remapping) [[ unlikely ]]
+		{
+			// Check if we need to override the view format
+			const auto vk_format = sampler_state->image_handle->format();
+			VkFormat format_override = vk_format;;
+			rsx::flags32_t flags_to_erase = 0u;
+			rsx::flags32_t host_flags_to_set = 0u;
+
+			if (sampler_state->format_ex.hw_SNORM_possible())
+			{
+				format_override = vk::get_compatible_snorm_format(vk_format);
+				flags_to_erase = rsx::texture_control_bits::SEXT_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SNORM;
+			}
+			else if (sampler_state->format_ex.hw_SRGB_possible())
+			{
+				format_override = vk::get_compatible_srgb_format(vk_format);
+				flags_to_erase = rsx::texture_control_bits::GAMMA_CTRL_MASK;
+				host_flags_to_set = rsx::RSX_HOST_FORMAT_FEATURE_SRGB;
+			}
+
+			if (format_override != VK_FORMAT_UNDEFINED && format_override != vk_format)
+			{
+				sampler_state->image_handle = sampler_state->image_handle->as(format_override);
+				sampler_state->format_ex.texel_remap_control &= (~flags_to_erase);
+				sampler_state->format_ex.host_features |= host_flags_to_set;
+			}
+		}
+
+		VkFilter mag_filter;
+		vk::minification_filter min_filter;
+		f32 min_lod = 0.f, max_lod = 0.f;
+		f32 lod_bias = 0.f;
+
+		const u32 texture_format = sampler_state->format_ex.format();
+		VkBool32 compare_enabled = VK_FALSE;
+		VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER;
+
+		if (texture_format >= CELL_GCM_TEXTURE_DEPTH24_D8 && texture_format <= CELL_GCM_TEXTURE_DEPTH16_FLOAT)
+		{
+			compare_enabled = VK_TRUE;
+			depth_compare_mode = vk::get_compare_func(tex.zfunc(), true);
+		}
+
+		const f32 af_level = vk::max_aniso(tex.max_aniso());
+		const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
+		const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
+		const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
+
+		// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
+		// Check the device properties to determine whether to pre-swizzle the colors or not.
+		const bool sext_conv_required = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) != 0;
+		vk::border_color_t border_color(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+
+		if (rsx::is_border_clamped_texture(tex))
+		{
+			auto color_value = get_border_color(tex, sext_conv_required);
+			if (sampler_state->format_ex.host_snorm_format_active())
+			{
+				// Convert the border color in host space (2N - 1)
+				// HW does the conversion in integer space as (x - 128) / 127 which introduces a biasing error.
+				const float bias_v = 128.f / 255.f;
+				const float scale_v = 255.f / 127.f;
+
+				color4f scale{ 1.f }, bias{ 0.f };
+				const auto snorm_mask = tex.argb_signed();
+				if (snorm_mask & 1) { scale.a = scale_v; bias.a = -bias_v; }
+				if (snorm_mask & 2) { scale.r = scale_v; bias.r = -bias_v; }
+				if (snorm_mask & 4) { scale.g = scale_v; bias.g = -bias_v; }
+				if (snorm_mask & 8) { scale.b = scale_v; bias.b = -bias_v; }
+				color_value = (color_value + bias) * scale;
+			}
+
+			border_color = color_value;
+		}
+
+		// Check if non-point filtering can even be used on this format
+		bool can_sample_linear;
+		if (sampler_state->format_class == RSX_FORMAT_CLASS_COLOR) [[likely]]
+		{
+			// Most PS3-like formats can be linearly filtered without problem
+			// Exclude textures that require SNORM conversion however
+			can_sample_linear = !sext_conv_required;
+		}
+		else if (sampler_state->format_class != rsx::classify_format(texture_format) &&
+			(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
+		{
+			// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking
+			can_sample_linear = false;
+		}
+		else
+		{
+			// Not all GPUs support linear filtering of depth formats
+			const auto vk_format = sampler_state->image_handle ? sampler_state->image_handle->image()->format() :
+				vk::get_compatible_sampler_format(m_device->get_formats_support(), sampler_state->external_subresource_desc.gcm_format);
+
+			can_sample_linear = m_device->get_format_properties(vk_format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+		}
+
+		const auto mipmap_count = tex.get_exact_mipmap_count();
+		min_filter = vk::get_min_filter(tex.min_filter());
+
+		if (can_sample_linear)
+		{
+			mag_filter = vk::get_mag_filter(tex.mag_filter());
+		}
+		else
+		{
+			mag_filter = VK_FILTER_NEAREST;
+			min_filter.filter = VK_FILTER_NEAREST;
+		}
+
+		if (min_filter.sample_mipmaps && mipmap_count > 1)
+		{
+			f32 actual_mipmaps;
+			if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
+			{
+				actual_mipmaps = static_cast<f32>(mipmap_count);
+			}
+			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+			{
+				// Clamp min and max lod
+				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
 			}
 			else
 			{
-				*sampler_state = {};
+				actual_mipmaps = 1.f;
 			}
 
-			if (sampler_state->validate())
+			if (actual_mipmaps > 1.f)
 			{
-				sampler_state->format_ex = tex.format_ex();
+				min_lod = tex.min_lod();
+				max_lod = tex.max_lod();
+				lod_bias = tex.bias();
 
-				if (sampler_state->is_cyclic_reference)
+				min_lod = std::min(min_lod, actual_mipmaps - 1.f);
+				max_lod = std::min(max_lod, actual_mipmaps - 1.f);
+
+				if (min_filter.mipmap_mode == VK_SAMPLER_MIPMAP_MODE_NEAREST)
 				{
-					check_for_cyclic_refs |= true;
-				}
-
-				if (!m_textures_dirty[i] && sampler_state->format_class != previous_format_class)
-				{
-					// Host details changed but RSX is not aware
-					m_graphics_state |= rsx::fragment_program_state_dirty;
-				}
-
-				bool replace = !fs_sampler_handles[i];
-				VkFilter mag_filter;
-				vk::minification_filter min_filter;
-				f32 min_lod = 0.f, max_lod = 0.f;
-				f32 lod_bias = 0.f;
-
-				const u32 texture_format = sampler_state->format_ex.format();
-				VkBool32 compare_enabled = VK_FALSE;
-				VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER;
-
-				if (texture_format >= CELL_GCM_TEXTURE_DEPTH24_D8 && texture_format <= CELL_GCM_TEXTURE_DEPTH16_FLOAT)
-				{
-					compare_enabled = VK_TRUE;
-					depth_compare_mode = vk::get_compare_func(tex.zfunc(), true);
-				}
-
-				const f32 af_level = vk::max_aniso(tex.max_aniso());
-				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
-				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
-				const auto wrap_r = vk::vk_wrap_mode(tex.wrap_r());
-
-				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
-				// Check the device properties to determine whether to pre-swizzle the colors or not.
-				const auto border_color = rsx::is_border_clamped_texture(tex)
-					? vk::border_color_t(get_border_color(tex))
-					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
-
-				// Check if non-point filtering can even be used on this format
-				bool can_sample_linear;
-				if (sampler_state->format_class == RSX_FORMAT_CLASS_COLOR) [[likely]]
-				{
-					// Most PS3-like formats can be linearly filtered without problem
-					// Exclude textures that require SNORM conversion however
-					can_sample_linear = (sampler_state->format_ex.texel_remap_control & rsx::texture_control_bits::SEXT_MASK) == 0;
-				}
-				else if (sampler_state->format_class != rsx::classify_format(texture_format) &&
-					(texture_format == CELL_GCM_TEXTURE_A8R8G8B8 || texture_format == CELL_GCM_TEXTURE_D8R8G8B8))
-				{
-					// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking
-					can_sample_linear = false;
-				}
-				else
-				{
-					// Not all GPUs support linear filtering of depth formats
-					const auto vk_format = sampler_state->image_handle ? sampler_state->image_handle->image()->format() :
-						vk::get_compatible_sampler_format(m_device->get_formats_support(), sampler_state->external_subresource_desc.gcm_format);
-
-					can_sample_linear = m_device->get_format_properties(vk_format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
-				}
-
-				const auto mipmap_count = tex.get_exact_mipmap_count();
-				min_filter = vk::get_min_filter(tex.min_filter());
-
-				if (can_sample_linear)
-				{
-					mag_filter = vk::get_mag_filter(tex.mag_filter());
-				}
-				else
-				{
-					mag_filter = VK_FILTER_NEAREST;
-					min_filter.filter = VK_FILTER_NEAREST;
-				}
-
-				if (min_filter.sample_mipmaps && mipmap_count > 1)
-				{
-					f32 actual_mipmaps;
-					if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
-					{
-						actual_mipmaps = static_cast<f32>(mipmap_count);
-					}
-					else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
-					{
-						// Clamp min and max lod
-						actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
-					}
-					else
-					{
-						actual_mipmaps = 1.f;
-					}
-
-					if (actual_mipmaps > 1.f)
-					{
-						min_lod = tex.min_lod();
-						max_lod = tex.max_lod();
-						lod_bias = tex.bias();
-
-						min_lod = std::min(min_lod, actual_mipmaps - 1.f);
-						max_lod = std::min(max_lod, actual_mipmaps - 1.f);
-
-						if (min_filter.mipmap_mode == VK_SAMPLER_MIPMAP_MODE_NEAREST)
-						{
-							// Round to nearest 0.5 to work around some broken games
-							// Unlike openGL, sampler parameters cannot be dynamically changed on vulkan, leading to many permutations
-							lod_bias = std::floor(lod_bias * 2.f + 0.5f) * 0.5f;
-						}
-					}
-					else
-					{
-						min_lod = max_lod = lod_bias = 0.f;
-						min_filter.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-					}
-				}
-
-				if (fs_sampler_handles[i] && m_textures_dirty[i])
-				{
-					if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-						min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode))
-					{
-						replace = true;
-					}
-				}
-
-				if (replace)
-				{
-					fs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
-						*m_device,
-						fs_sampler_handles[i],
-						wrap_s, wrap_t, wrap_r,
-						false,
-						lod_bias, af_level, min_lod, max_lod,
-						min_filter.filter, mag_filter, min_filter.mipmap_mode,
-						border_color, compare_enabled, depth_compare_mode);
+					// Round to nearest 0.5 to work around some broken games
+					// Unlike openGL, sampler parameters cannot be dynamically changed on vulkan, leading to many permutations
+					lod_bias = std::floor(lod_bias * 2.f + 0.5f) * 0.5f;
 				}
 			}
-
-			m_textures_dirty[i] = false;
+			else
+			{
+				min_lod = max_lod = lod_bias = 0.f;
+				min_filter.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+			}
 		}
+
+		if (fs_sampler_handles[i] &&
+			fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+				min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode))
+		{
+			continue;
+		}
+
+		fs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
+			*m_device,
+			fs_sampler_handles[i],
+			wrap_s, wrap_t, wrap_r,
+			false,
+			lod_bias, af_level, min_lod, max_lod,
+			min_filter.filter, mag_filter, min_filter.mipmap_mode,
+			border_color, compare_enabled, depth_compare_mode);
 	}
 
 	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		if (!vs_sampler_state[i])
+		{
 			vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+		}
 
 		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 		const auto& tex = rsx::method_registers.vertex_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] || !check_surface_cache_sampler(sampler_state, tex))
+		if (!m_samplers_dirty &&
+			!m_vertex_textures_dirty[i] &&
+			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
-			if (rsx::method_registers.vertex_textures[i].enabled())
-			{
-				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
-			}
-			else
-			{
-				*sampler_state = {};
-			}
-
-			if (sampler_state->validate())
-			{
-				if (sampler_state->is_cyclic_reference || sampler_state->external_subresource_desc.do_not_cache)
-				{
-					check_for_cyclic_refs |= true;
-				}
-
-				if (!m_vertex_textures_dirty[i] && sampler_state->format_class != previous_format_class)
-				{
-					// Host details changed but RSX is not aware
-					m_graphics_state |= rsx::vertex_program_state_dirty;
-				}
-
-				bool replace = !vs_sampler_handles[i];
-				const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);
-				const auto min_lod = tex.min_lod();
-				const auto max_lod = tex.max_lod();
-				const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
-				const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
-
-				// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
-				// Check the device properties to determine whether to pre-swizzle the colors or not.
-				const auto border_color = is_border_clamped_texture(tex)
-					? vk::border_color_t(get_border_color(tex))
-					: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
-
-				if (vs_sampler_handles[i])
-				{
-					if (!vs_sampler_handles[i]->matches(wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-						unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
-					{
-						replace = true;
-					}
-				}
-
-				if (replace)
-				{
-					vs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
-						*m_device,
-						vs_sampler_handles[i],
-						wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-						unnormalized_coords,
-						0.f, 1.f, min_lod, max_lod,
-						VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color);
-				}
-			}
-
-			m_vertex_textures_dirty[i] = false;
+			continue;
 		}
+
+		const bool is_sampler_dirty = m_vertex_textures_dirty[i];
+		m_vertex_textures_dirty[i] = false;
+
+		if (!rsx::method_registers.vertex_textures[i].enabled())
+		{
+			*sampler_state = {};
+			continue;
+		}
+
+		*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+		if (!sampler_state->validate())
+		{
+			continue;
+		}
+
+		if (sampler_state->is_cyclic_reference || sampler_state->external_subresource_desc.do_not_cache)
+		{
+			check_for_cyclic_refs |= true;
+		}
+
+		if (!is_sampler_dirty)
+		{
+			if (sampler_state->format_class != previous_format_class)
+			{
+				// Host details changed but RSX is not aware
+				m_graphics_state |= rsx::vertex_program_state_dirty;
+			}
+
+			if (vs_sampler_handles[i])
+			{
+				continue;
+			}
+		}
+
+		const VkBool32 unnormalized_coords = !!(tex.format() & CELL_GCM_TEXTURE_UN);
+		const auto min_lod = tex.min_lod();
+		const auto max_lod = tex.max_lod();
+		const auto wrap_s = vk::vk_wrap_mode(tex.wrap_s());
+		const auto wrap_t = vk::vk_wrap_mode(tex.wrap_t());
+
+		// NOTE: In vulkan, the border color can bypass the sample swizzle stage.
+		// Check the device properties to determine whether to pre-swizzle the colors or not.
+		const auto border_color = is_border_clamped_texture(tex)
+			? vk::border_color_t(get_border_color(tex, false))
+			: vk::border_color_t(VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
+
+		if (vs_sampler_handles[i] &&
+			vs_sampler_handles[i]->matches(wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+				unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
+		{
+			continue;
+		}
+
+		vs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
+			*m_device,
+			vs_sampler_handles[i],
+			wrap_s, wrap_t, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			unnormalized_coords,
+			0.f, 1.f, min_lod, max_lod,
+			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color);
 	}
 
 	m_samplers_dirty.store(false);
@@ -557,7 +634,9 @@ bool VKGSRender::bind_texture_env()
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		vk::image_view* view = nullptr;
 		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
@@ -627,7 +706,9 @@ bool VKGSRender::bind_texture_env()
 	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
+		{
 			continue;
+		}
 
 		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{

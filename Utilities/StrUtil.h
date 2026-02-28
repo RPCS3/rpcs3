@@ -13,13 +13,13 @@ std::string wchar_to_utf8(std::wstring_view src);
 std::string utf16_to_utf8(std::u16string_view src);
 std::u16string utf8_to_utf16(std::string_view src);
 
-// Copy null-terminated string from a std::string or a char array to a char array with truncation
-template <typename D, typename T>
+// Copy null-terminated string from a std::basic_string or a char array to a char array with truncation
+template <typename D, typename T> requires requires (D& d, T& t) { std::declval<decltype(&t[0])&>() = &d[0]; }
 inline void strcpy_trunc(D&& dst, const T& src)
 {
 	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
-	std::memcpy(std::data(dst), std::data(src), count);
-	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
+	std::copy_n(std::data(src), count, std::data(dst));
+	std::fill_n(std::data(dst) + count, std::size(dst) - count, std::remove_cvref_t<decltype(dst[0])>{});
 }
 
 // Convert string to signed integer

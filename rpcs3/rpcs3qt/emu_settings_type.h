@@ -108,6 +108,7 @@ enum class emu_settings_type
 	DisableAsyncHostMM,
 	UseReBAR,
 	RecordWithOverlays,
+	DisableHWTexelRemapping,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -312,6 +313,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::ForceHwMSAAResolve,         { "Video", "Force Hardware MSAA Resolve"}},
 	{ emu_settings_type::DisableAsyncHostMM,         { "Video", "Disable Asynchronous Memory Manager"}},
 	{ emu_settings_type::RecordWithOverlays,         { "Video", "Record With Overlays"}},
+	{ emu_settings_type::DisableHWTexelRemapping,    { "Video", "Disable Hardware ColorSpace Remapping"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},

@@ -34,7 +34,8 @@ namespace rsx
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
-			int get_selected_index() const;
+			u16 get_elements_count() const;
+			s32 get_selected_index() const;
 			bool get_cancel_only() const;
 			const overlay_element* get_selected_entry() const;
 

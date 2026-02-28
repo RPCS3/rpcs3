@@ -244,8 +244,16 @@ namespace vk
 	{
 		switch (rgb_format)
 		{
+		// 8-bit
+		case VK_FORMAT_R8_UNORM:
+			return VK_FORMAT_R8_SRGB;
+		case VK_FORMAT_R8G8_UNORM:
+			return VK_FORMAT_R8G8_SRGB;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_SRGB;
 		case VK_FORMAT_B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_SRGB;
+		// DXT
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
 		case VK_FORMAT_BC2_UNORM_BLOCK:
@@ -253,7 +261,30 @@ namespace vk
 		case VK_FORMAT_BC3_UNORM_BLOCK:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
 		default:
-			return rgb_format;
+			return VK_FORMAT_UNDEFINED;
+		}
+	}
+
+	VkFormat get_compatible_snorm_format(VkFormat rgb_format)
+	{
+		switch (rgb_format)
+		{
+		// 8-bit
+		case VK_FORMAT_R8_UNORM:
+			return VK_FORMAT_R8_SNORM;
+		case VK_FORMAT_R8G8_UNORM:
+			return VK_FORMAT_R8G8_SNORM;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_SNORM;
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return VK_FORMAT_B8G8R8A8_SNORM;
+		// 16-bit
+		case VK_FORMAT_R16_UNORM:
+			return VK_FORMAT_R16_SNORM;
+		case VK_FORMAT_R16G16_UNORM:
+			return VK_FORMAT_R16G16_SNORM;
+		default:
+			return VK_FORMAT_UNDEFINED;
 		}
 	}
 
