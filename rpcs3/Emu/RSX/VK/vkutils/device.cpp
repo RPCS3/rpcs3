@@ -839,6 +839,71 @@ namespace vk
 		// Useful for debugging different VRAM configurations
 		const u64 vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
 		memory_map.device_local_total_bytes = std::min(memory_map.device_local_total_bytes, vram_allocation_limit);
+
+		// Runtime validation for external_memory_host - some drivers advertise but don't fully support it
+		if (pgpu->optional_features_support.external_memory_host)
+		{
+			bool validation_passed = false;
+			constexpr usz test_size = 4096;
+			void* test_ptr = nullptr;
+
+#ifdef _WIN32
+			test_ptr = _aligned_malloc(test_size, test_size);
+#else
+			if (posix_memalign(&test_ptr, test_size, test_size) != 0)
+			{
+				test_ptr = nullptr;
+			}
+#endif
+
+			VkBuffer test_buffer = VK_NULL_HANDLE;
+
+			if (test_ptr)
+			{
+				VkBufferCreateInfo buffer_info{};
+				buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+				buffer_info.size = test_size;
+				buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+				buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+				VkExternalMemoryBufferCreateInfoKHR external_info{};
+				external_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR;
+				external_info.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT;
+				buffer_info.pNext = &external_info;
+
+				if (vkCreateBuffer(dev, &buffer_info, nullptr, &test_buffer) == VK_SUCCESS &&
+					test_buffer != VK_NULL_HANDLE &&
+					_vkGetMemoryHostPointerPropertiesEXT)
+				{
+					VkMemoryHostPointerPropertiesEXT memory_properties{};
+					memory_properties.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT;
+
+					if (_vkGetMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, test_ptr, &memory_properties) == VK_SUCCESS &&
+						memory_properties.memoryTypeBits != 0)
+					{
+						validation_passed = true;
+						rsx_log.notice("VK_EXT_external_memory_host validation passed");
+					}
+				}
+			}
+
+			if (test_buffer != VK_NULL_HANDLE)
+			{
+				vkDestroyBuffer(dev, test_buffer, nullptr);
+			}
+
+#ifdef _WIN32
+			if (test_ptr) _aligned_free(test_ptr);
+#else
+			if (test_ptr) free(test_ptr);
+#endif
+
+			if (!validation_passed)
+			{
+				rsx_log.warning("VK_EXT_external_memory_host validation failed - disabling feature");
+				pgpu->optional_features_support.external_memory_host = false;
+			}
+		}
 	}
 
 	void render_device::destroy()
