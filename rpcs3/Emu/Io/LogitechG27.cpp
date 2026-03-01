@@ -945,17 +945,6 @@ static u8 sdl_to_logitech_g27_pedal(std::map<u64, std::vector<SDL_Joystick*>>& j
 	return unsigned_avg * 0xFF / 0xFFFF;
 }
 
-static inline void set_bit(u8* buf, int bit_num, bool set)
-{
-	const int byte_num = bit_num / 8;
-	bit_num %= 8;
-	const u8 mask = 1 << bit_num;
-	if (set)
-		buf[byte_num] = buf[byte_num] | mask;
-	else
-		buf[byte_num] = buf[byte_num] & (~mask);
-}
-
 void usb_device_logitech_g27::transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	DFEX_data data{};
