@@ -1489,7 +1489,7 @@ namespace rpcn
 		if (error == ErrorType::NoError)
 			rpcn_log.success("add_friend(\"%s\") succeeded", friend_username);
 		else
-			rpcn_log.error("add_friend(\"%s\") failed with error: %s", error);
+			rpcn_log.error("add_friend(\"%s\") failed with error: %s", friend_username, error);
 
 		return error;
 	}
@@ -3085,7 +3085,7 @@ namespace rpcn
 		}
 		case NotificationType::FriendPresenceChanged:
 		{
-			const std::string username = vdata.get_string(true);
+			const std::string username = vdata.get_string(false);
 			SceNpCommunicationId pr_com_id = vdata.get_com_id();
 			std::string pr_title = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
 			std::string pr_status = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);
