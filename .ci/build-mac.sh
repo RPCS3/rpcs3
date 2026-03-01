@@ -13,6 +13,16 @@ export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export HOMEBREW_NO_INSTALL_CLEANUP=1
+
+if [ "$BUILD_MAC_KK" -eq 1 ]; then
+  git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
+  brew install meson libclc spirv-llvm-translator spirv-tools
+  pip3 install mako packaging pyyaml --break-system-packages
+  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+  meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
+  ninja -C build; cd ../
+fi
+
 brew install -f --overwrite --quiet ccache "llvm@$LLVM_COMPILER_VER"
 brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
 if [ "$AARCH64" -eq 1 ]; then
