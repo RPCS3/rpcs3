@@ -147,11 +147,16 @@ if (NOT ANDROID)
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
-            COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
+            )
+        get_target_property(WINDEPLOYQT_EXECUTABLE Qt6::windeployqt IMPORTED_LOCATION) 
+        add_custom_command(TARGET rpcs3 POST_BUILD
+            COMMAND ${WINDEPLOYQT_EXECUTABLE} --no-compiler-runtime --no-opengl-sw --no-patchqt
                 --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
-                --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
-                --translationdir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/translations,$<TARGET_FILE_DIR:rpcs3>/share/qt6/translations>"
-                --verbose 0 "$<TARGET_FILE:rpcs3>")
+                --plugindir "$<IF:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>,$<TARGET_FILE_DIR:rpcs3>/qt6/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
+                --translationdir "$<IF:$<CXX_COMPILER_FRONTEND_VARIANT:MSVC>,$<TARGET_FILE_DIR:rpcs3>/qt6/translations,$<TARGET_FILE_DIR:rpcs3>/share/qt6/translations>"
+                --verbose 0
+                $<TARGET_FILE:rpcs3>
+            )
     endif()
 
     # Unix installation

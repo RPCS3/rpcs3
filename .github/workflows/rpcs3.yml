@@ -10,6 +10,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  packages: write
+  
 concurrency:
   group: ${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
@@ -326,7 +329,8 @@ jobs:
           path: ${{ env.DEPS_CACHE_DIR }}
           key: ${{ steps.restore-dependencies-cache.outputs.cache-primary-key }}
 
-  Windows_Build_Clang:
+
+  Windows_Build_MSYS2:
     # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
@@ -435,8 +439,124 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
+  Windows_Build_CLANG-CL:
+    # Only run push event on master branch of main repo, but run all PRs
+    if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: clang-cl
+            llvmver: 19.1.7
+            arch: win64
+
+    env:
+      CCACHE_DIR: 'C:\ccache'
+      VCPKG_TRIPLET: x64-windows
+      VCPKG_BUILD_TYPE: release
+      VCPKG_ROOT: "${{github.workspace}}/vcpkg"
+      VCPKG_BINARY_SOURCES: 'clear;nuget,https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json,readwrite'
+      X_VCPKG_NUGET_ID: "GitHub"
+      X_VCPKG_NUGET_USER: "${{ github.actor }}"
+      X_VCPKG_NUGET_PASSWORD: "${{ secrets.GITHUB_TOKEN }}"
+      NUGET_CREDENTIALPROVIDERS_AUTODETECT: 'false'
+      VCPKG_MAX_CONCURRENCY: '1'
+    name: RPCS3 Windows Clang (Clang-CL)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Clone and bootstrap vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+
+      - name: 'Setup NuGet Credentials for vcpkg'
+        shell: pwsh
+        run: |
+          dotnet nuget locals all --clear        
+          $configPath = "${{ github.workspace }}\nuget.config"
+          dotnet new nugetconfig --force --output "${{ github.workspace }}"
+          dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" `
+            --name "GitHub" `
+            --username "${{ github.actor }}" `
+            --password "${{ secrets.GITHUB_TOKEN }}" `
+            --store-password-in-clear-text `
+            --configfile "$configPath"
+          echo "VCPKG_NUGET_CONFIG=$configPath" >> $env:GITHUB_ENV
+
+      - name: Restore LLVM Cache
+        uses: actions/cache/restore@main
+        id: llvm-cache
+        with:
+          path: ./llvm-${{ matrix.llvmver }}
+          key: ${{ runner.os }}-llvm-dl-cache-${{ hashFiles('**/llvm-${{ matrix.llvmver }}') }}
+          restore-keys: ${{ runner.os }}-clang-dl-cache-
+
+      - name: Add LLVM
+        shell: pwsh
+        run: |
+          if (!(Test-Path -Path D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\)) {
+            rm -r llvm-*
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/llvm-${{ matrix.llvmver }}/llvm-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
+            curl -fsSLO https://github.com/vovkos/llvm-package-windows/releases/download/clang-${{ matrix.llvmver }}/clang-${{ matrix.llvmver }}-windows-amd64-msvc17-msvcrt.7z
+            7z x llvm-*.7z
+            mv llvm* llvm-${{ matrix.llvmver }}
+            rm llvm-*.7z
+            7z x clang-*.7z
+            Copy-Item -Path "D:\a\rpcs3\rpcs3\clang*\*" -Destination "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}" -Recurse -Force
+            rm -r clang*
+          }
+          Add-Content -Path $env:GITHUB_PATH -Value "D:\a\rpcs3\rpcs3\llvm-${{ matrix.llvmver }}\bin"
+
+      - name: Save LLVM Cache
+        if: ${{ github.ref == 'refs/heads/master' }}
+        uses: actions/cache/save@main
+        with:
+          path: ./llvm-${{ matrix.llvmver }}
+          key: ${{ steps.llvm-cache.outputs.cache-primary-key }}
+
+      - name: Restore build Ccache
+        uses: actions/cache/restore@main
+        id: restore-build-ccache
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-ccache-${{ matrix.compiler }}-${{ runner.arch }}-
+
+      - name: install DIA SDK
+        run: |
+          mkdir -p "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional" || true
+          cp -r "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/DIA SDK" "C:/Program Files (x86)/Microsoft Visual Studio/2019/Professional/DIA SDK"
+          "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" amd64
+
+      - name: Build RPCS3
+        run: |
+          .ci/build-windows-clang-cl.sh
+          .ci/setup-windows-ci-vars.sh ${{ matrix.arch }} ${{ matrix.compiler }}
+          .ci/deploy-windows-${{ matrix.compiler }}.sh
+
+      - name: Save build Ccache
+        if: github.ref == 'refs/heads/master'
+        uses: actions/cache/save@main
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3 for Windows (${{ runner.arch }}, ${{ matrix.compiler }})
+          path: ${{ env.BUILD_ARTIFACTSTAGINGDIRECTORY }}
+          compression-level: 0
+          if-no-files-found: error
+
   FreeBSD_Build:
-      # Only run push event on master branch of main repo, but run all PRs
+    # Only run push event on master branch of main repo, but run all PRs
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
