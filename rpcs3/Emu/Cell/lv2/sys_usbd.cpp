@@ -56,6 +56,8 @@ cfg_guncon3 g_cfg_guncon3;
 cfg_topshotelite g_cfg_topshotelite;
 cfg_topshotfearmaster g_cfg_topshotfearmaster;
 
+extern atomic_t<bool> libusbd_active;
+
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 {
@@ -661,7 +663,7 @@ void usb_handler_thread::operator()()
 		u64 delay = 1'000;
 
 		// Process fake transfers
-		if (!fake_transfers.empty())
+		if (libusbd_active && !fake_transfers.empty())
 		{
 			std::lock_guard lock_tf(mutex_transfers);
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
