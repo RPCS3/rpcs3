@@ -306,7 +306,7 @@ namespace rsx
 			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 		}
 
-		void set_aa_control(context* ctx, u32 reg, u32 arg)
+		void set_aa_control(context* ctx, u32 /*reg*/, u32 arg)
 		{
 			const auto latch = REGS(ctx)->latch;
 			if (arg == latch)
