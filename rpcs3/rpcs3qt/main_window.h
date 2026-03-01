@@ -50,6 +50,9 @@ class main_window : public QMainWindow
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
 
+	QString last_pkg_path_postponed_due_to_missing_rap;
+	QString last_rap_file_needed_for_pkg;
+
 	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
