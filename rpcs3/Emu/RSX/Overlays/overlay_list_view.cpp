@@ -18,8 +18,8 @@ namespace rsx
 			m_cancel_btn              = std::make_unique<image_button>(120, 20);
 			m_highlight_box           = std::make_unique<overlay_element>(width, 0);
 
-			m_scroll_indicator_top->set_size(width, 40);
-			m_scroll_indicator_bottom->set_size(width, 40);
+			m_scroll_indicator_top->set_size(width, 10);
+			m_scroll_indicator_bottom->set_size(width, 10);
 			m_accept_btn->set_size(120, 30);
 			m_cancel_btn->set_size(120, 30);
 
@@ -37,7 +37,7 @@ namespace rsx
 				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			m_scroll_indicator_bottom->set_pos(0, height - 40);
+			m_scroll_indicator_bottom->set_pos(0, height - 10);
 			m_accept_btn->set_pos(30, height + 20);
 
 			if (can_deny)
@@ -199,6 +199,37 @@ namespace rsx
 			return m_selected_entry;
 		}
 
+		void list_view::hide_prompt_buttons(bool hidden)
+		{
+			m_accept_btn->set_visible(!hidden);
+			m_cancel_btn->set_visible(!hidden);
+
+			if (m_deny_btn)
+			{
+				m_deny_btn->set_visible(!hidden);
+			}
+
+			refresh();
+		}
+
+		void list_view::hide_scroll_indicators(bool hidden)
+		{
+			m_scroll_indicator_top->set_visible(!hidden);
+			m_scroll_indicator_bottom->set_visible(!hidden);
+			m_highlight_box->set_visible(!hidden);
+
+			refresh();
+		}
+
+		void list_view::disable_selection_pulse(bool disabled)
+		{
+			m_highlight_box->pulse_effect_enabled = !disabled;
+			m_highlight_box->set_sinus_offset(1.5f);
+			m_highlight_box->refresh();
+
+			refresh();
+		}
+
 		void list_view::set_cancel_only(bool cancel_only)
 		{
 			if (cancel_only)
@@ -209,7 +240,7 @@ namespace rsx
 				m_cancel_btn->set_pos(x + 180, y + h + 20);
 
 			m_cancel_only = cancel_only;
-			m_is_compiled = false;
+			refresh();
 		}
 
 		bool list_view::get_cancel_only() const
@@ -233,27 +264,39 @@ namespace rsx
 
 		compiled_resource& list_view::get_compiled()
 		{
-			if (!is_compiled())
+			if (is_compiled())
 			{
-				auto& compiled = vertical_layout::get_compiled();
-				compiled.add(m_highlight_box->get_compiled());
-				compiled.add(m_scroll_indicator_top->get_compiled());
-				compiled.add(m_scroll_indicator_bottom->get_compiled());
-				compiled.add(m_cancel_btn->get_compiled());
-
-				if (!m_cancel_only)
-				{
-					compiled.add(m_accept_btn->get_compiled());
-
-					if (m_deny_btn)
-					{
-						compiled.add(m_deny_btn->get_compiled());
-					}
-				}
-
-				compiled_resources = compiled;
+				return compiled_resources;
 			}
 
+			compiled_resources.clear();
+
+			if (!is_visible())
+			{
+				m_is_compiled = true;
+				return compiled_resources;
+			}
+
+			auto& compiled = vertical_layout::get_compiled();
+			compiled.add(m_highlight_box->get_compiled());
+			compiled.add(m_scroll_indicator_top->get_compiled());
+			compiled.add(m_scroll_indicator_bottom->get_compiled());
+			compiled.add(m_cancel_btn->get_compiled());
+
+			if (m_cancel_only)
+			{
+				m_is_compiled = true;
+				return compiled_resources;
+			}
+
+			compiled.add(m_accept_btn->get_compiled());
+
+			if (m_deny_btn)
+			{
+				compiled.add(m_deny_btn->get_compiled());
+			}
+
+			m_is_compiled = true;
 			return compiled_resources;
 		}
 	} // namespace overlays

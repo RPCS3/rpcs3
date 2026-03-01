@@ -153,6 +153,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_compile_notification.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_tabs.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp" />
@@ -714,6 +715,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_tabs.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h" />
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\CFG.h" />

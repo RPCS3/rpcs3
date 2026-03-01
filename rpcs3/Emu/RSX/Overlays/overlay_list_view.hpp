@@ -39,6 +39,10 @@ namespace rsx
 			bool get_cancel_only() const;
 			const overlay_element* get_selected_entry() const;
 
+			void hide_prompt_buttons(bool hidden = true);
+			void hide_scroll_indicators(bool hidden = true);
+			void disable_selection_pulse(bool disabled = true);
+
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
 
