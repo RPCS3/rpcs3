@@ -7,6 +7,7 @@
 #include "Common/unordered_map.hpp"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
+#include "Emu/Memory/vm.h"
 #include "Emu/RSX/Program/RSXVertexProgram.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
 #include "Overlays/Shaders/shader_loading_dialog.h"
@@ -478,6 +479,7 @@ namespace rsx
 			uptr local_address;
 			u32 offset_in_heap;
 			u32 data_length;
+			u64 fingerprint;
 		};
 
 		// A weak vertex cache with no data checks or memory range locks
@@ -502,11 +504,14 @@ namespace rsx
 			{
 				const auto key = hash(local_addr, data_length);
 				const auto found = vertex_ranges.find(key);
-				if (found == vertex_ranges.end())
+
+				// Solves texture corruption issues in BLJM60292, BLJM60414 due to wrong vertex data reuse
+				// by checking first 8 bytes to avoid aliasing
+				if (found == vertex_ranges.end() ||
+				   (data_length >= 8 && (found->second.fingerprint != u64(vm::read64(local_addr)))))
 				{
 					return nullptr;
 				}
-
 				return std::addressof(found->second);
 			}
 
@@ -516,7 +521,12 @@ namespace rsx
 				v.data_length = data_length;
 				v.local_address = local_addr;
 				v.offset_in_heap = offset_in_heap;
+				v.fingerprint = 0;
 
+				if (data_length>=8)
+				{
+					v.fingerprint = u64(vm::read64(local_addr));
+				}
 				const auto key = hash(local_addr, data_length);
 				vertex_ranges[key] = v;
 			}
