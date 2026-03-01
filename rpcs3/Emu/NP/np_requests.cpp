@@ -191,7 +191,7 @@ namespace np
 		case rpcn::ErrorType::RoomGroupMaxSlotMismatch: error_code = SCE_NP_MATCHING2_SERVER_ERROR_MAX_OVER_SLOT_GROUP; break;
 		case rpcn::ErrorType::RoomPasswordMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_PASSWORD; break;
 		case rpcn::ErrorType::RoomGroupNoJoinLabel: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_JOIN_GROUP_LABEL; break;
-		default: fmt::throw_exception("Unexpected error in reply to CreateRoom: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to CreateRoom: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -262,7 +262,7 @@ namespace np
 		case rpcn::ErrorType::RoomPasswordMismatch: error_code = SCE_NP_MATCHING2_SERVER_ERROR_PASSWORD_MISMATCH; break;
 		case rpcn::ErrorType::RoomGroupFull: error_code = SCE_NP_MATCHING2_SERVER_ERROR_GROUP_FULL; break;
 		case rpcn::ErrorType::RoomGroupJoinLabelNotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_GROUP; break;
-		default: fmt::throw_exception("Unexpected error in reply to JoinRoom: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to JoinRoom: %s", error);
 		}
 
 		if (error_code != 0)
@@ -348,7 +348,7 @@ namespace np
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break; // Unsure if this should return another error(missing user in room has no appropriate error code)
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to LeaveRoom: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to LeaveRoom: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -447,7 +447,7 @@ namespace np
 
 	u32 np_handler::get_room_member_data_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomMemberDataExternalListRequest* req)
 	{
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, true);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomMemberDataExternalList, true);
 
 		if (!get_rpcn()->get_room_member_data_external_list(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 		{
@@ -465,12 +465,17 @@ namespace np
 		if (!cb_info_opt)
 			return;
 
-		ensure(error == rpcn::ErrorType::NoError, "Unexpected error in GetRoomMemberDataExternalList reply");
-
-		if (error == rpcn::ErrorType::RoomMissing)
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError:
+			break;
+		case rpcn::ErrorType::RoomMissing:
 		{
 			cb_info_opt->queue_callback(req_id, 0, SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM, 0);
 			return;
+		}
+		default:
+			fmt::throw_exception("Unexpected error in GetRoomMemberDataExternalList reply: %s", error);
 		}
 
 		const auto resp = reply.get_protobuf<np2_structs::GetRoomMemberDataExternalListResponse>();
@@ -518,7 +523,7 @@ namespace np
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
-		default: fmt::throw_exception("Unexpected error in reply to SetRoomDataExternal: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to SetRoomDataExternal: %s", error);
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
@@ -550,7 +555,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -606,7 +611,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetRoomDataInternal: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to SetRoomDataInternal: %s", error);
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
@@ -640,7 +645,7 @@ namespace np
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetRoomMemberDataInternal: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to GetRoomMemberDataInternal: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -694,7 +699,7 @@ namespace np
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER; break;
 		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
-		default: fmt::throw_exception("Unexpected error in reply to SetRoomMemberDataInternal: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to SetRoomMemberDataInternal: %s", error);
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
@@ -723,7 +728,7 @@ namespace np
 		switch (error)
 		{
 		case rpcn::ErrorType::NoError: break;
-		default: fmt::throw_exception("Unexpected error in reply to SetUserInfo: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to SetUserInfo: %s", error);
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, 0, 0);
@@ -755,7 +760,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
-		default: fmt::throw_exception("Unexpected error in reply to PingRoomOwner: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to PingRoomOwner: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -803,7 +808,7 @@ namespace np
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
 		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
-		default: fmt::throw_exception("Unexpected error in reply to SendRoomMessage: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to SendRoomMessage: %s", error);
 		}
 
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
@@ -841,7 +846,7 @@ namespace np
 			rpcn_log.error("Signaling information was requested for a user that doesn't exist or is not online");
 			return;
 		}
-		default: fmt::throw_exception("Unexpected error in reply to RequestSignalingInfos: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to RequestSignalingInfos: %s", error);
 		}
 
 		const auto resp = reply.get_protobuf<np2_structs::SignalingAddr>();
@@ -861,9 +866,7 @@ namespace np
 
 		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList, false);
 		auto cb_info_opt = take_pending_request(req_id);
-
-		if (!cb_info_opt)
-			return true;
+		ensure (cb_info_opt);
 
 		const u32 event_key = get_event_key();
 
@@ -920,19 +923,19 @@ namespace np
 		ensure(!reply.is_error(), "Malformed reply to RequestTicket command");
 
 		auto incoming_ticket = ticket(std::move(ticket_raw));
-		
+
 		// Clans: check if ticket belongs to the clan service.
 		//        If so, hijack the ticket and cache it for future use.
 		if (incoming_ticket.get_service_id() == CLANS_SERVICE_ID)
 		{
-			clan_ticket = incoming_ticket;
+			clan_ticket = std::move(incoming_ticket);
 			clan_ticket_ready.store(1);
 			clan_ticket_ready.notify_all();
-			
+
 			return;
 		}
 
-		current_ticket = incoming_ticket;
+		current_ticket = std::move(incoming_ticket);
 		auto ticket_size = static_cast<s32>(current_ticket.size());
 
 		if (manager_cb)
@@ -1017,7 +1020,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::NotFound: error_code = SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_BOARD_MASTER_NOT_FOUND; break;
-		default: fmt::throw_exception("Unexpected error in reply to GetBoardInfos: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to GetBoardInfos: %s", error);
 		}
 
 		if (error_code != CELL_OK)
@@ -1091,7 +1094,7 @@ namespace np
 			score_trans->wake_cond.notify_one();
 			return;
 		}
-		default: fmt::throw_exception("Unexpected error in reply_record_score: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply_record_score: %s", error);
 		}
 
 		auto tmp_rank = reply.get<u32>();
@@ -1154,7 +1157,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_STORE_NOT_FOUND); break;
 		case rpcn::ErrorType::ScoreInvalid: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SCORE); break;
 		case rpcn::ErrorType::ScoreHasData: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_GAME_DATA_ALREADY_EXISTS); break;
-		default: fmt::throw_exception("Unexpected error in reply to RecordScoreData: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to RecordScoreData: %s", error);
 		}
 	}
 
@@ -1207,7 +1210,7 @@ namespace np
 		{
 		case rpcn::ErrorType::NoError: break;
 		case rpcn::ErrorType::NotFound: score_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND); return;
-		default: fmt::throw_exception("Unexpected error in reply to GetScoreData: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to GetScoreData: %s", error);
 		}
 
 		auto* tdata = std::get_if<tdata_get_score_data>(&score_trans->tdata);
@@ -1287,7 +1290,7 @@ namespace np
 		switch (error)
 		{
 		case rpcn::ErrorType::NoError: break;
-		default: fmt::throw_exception("Unexpected error in GetScoreResponse: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in GetScoreResponse: %s", error);
 		}
 
 		const auto resp = reply.get_protobuf<np2_structs::GetScoreResponse>();
@@ -1476,7 +1479,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED); break;
 		case rpcn::ErrorType::Unauthorized: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN); break;
 		case rpcn::ErrorType::CondFail: trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED); break;
-		default: fmt::throw_exception("Unexpected error in handle_tus_no_data: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in handle_tus_no_data: %s", error);
 		}
 	}
 
@@ -1499,7 +1502,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
 		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
 		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-		default: fmt::throw_exception("Unexpected error in handle_TusVarResponse: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in handle_TusVarResponse: %s", error);
 		}
 
 		const auto resp = reply.get_protobuf<np2_structs::TusVarResponse>();
@@ -1555,7 +1558,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
 		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
 		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-		default: fmt::throw_exception("Unexpected error in handle_TusVariable: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in handle_TusVariable: %s", error);
 		}
 
 		auto pb_var = reply.get_protobuf<np2_structs::TusVariable>();
@@ -1603,7 +1606,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
 		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
 		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-		default: fmt::throw_exception("Unexpected error in handle_TusDataStatusResponse: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in handle_TusDataStatusResponse: %s", error);
 		}
 
 		const auto resp = reply.get_protobuf<np2_structs::TusDataStatusResponse>();
@@ -1803,7 +1806,7 @@ namespace np
 		if (!tdata)
 		{
 			trans_ctx->tdata = tdata_tus_get_data{.recvSize = recvSize, .dataStatus = dataStatus, .data = data};
-			const u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+			const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
 			get_rpcn()->tus_get_data(req_id, trans_ctx->communicationId, targetNpId, slotId, vuser);
 			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 			return;
@@ -1844,7 +1847,7 @@ namespace np
 		case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
 		case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
 		case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
-		default: fmt::throw_exception("Unexpected error in reply to TusGetData: %d", static_cast<u8>(error));
+		default: fmt::throw_exception("Unexpected error in reply to TusGetData: %s", error);
 		}
 
 		auto pb_data = reply.get_protobuf<np2_structs::TusData>();
@@ -1870,6 +1873,7 @@ namespace np
 			data_status->data = tdata->data;
 			data_status->dataSize = ::narrow<u32>(pb_data->data().size());
 			data_status->info.infoSize = ::narrow<u32>(pb_status.info().size());
+			memcpy(data_status->info.data, pb_data->status().info().data(), std::min(pb_data->status().info().size(), sizeof(data_status->info.data)));
 
 			const u32 to_copy = std::min<u32>(data_status->dataSize, tdata->recvSize);
 			memcpy(data, pb_data->data().data(), to_copy);

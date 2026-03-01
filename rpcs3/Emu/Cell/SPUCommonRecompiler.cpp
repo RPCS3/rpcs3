@@ -1176,108 +1176,6 @@ void spu_cache::initialize(bool build_existing_cache)
 	if ((g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm) && !func_list.empty())
 	{
 		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
-
-		if (g_cfg.core.spu_debug)
-		{
-			std::string dump;
-			dump.reserve(10'000'000);
-
-			std::map<std::span<u8>, spu_program*, span_less<u8>> sorted;
-
-			for (auto&& f : func_list)
-			{
-				// Interpret as a byte string
-				std::span<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
-
-				sorted[data] = &f;
-			}
-
-			std::unordered_set<u32> depth_n;
-
-			u32 n_max = 0;
-
-			for (auto&& [bytes, f] : sorted)
-			{
-				{
-					sha1_context ctx;
-					u8 output[20];
-
-					sha1_starts(&ctx);
-					sha1_update(&ctx, bytes.data(), bytes.size());
-					sha1_finish(&ctx, output);
-					fmt::append(dump, "\n\t[%s] ", fmt::base57(output));
-				}
-
-				u32 depth_m = 0;
-
-				for (auto&& [data, f2] : sorted)
-				{
-					u32 depth = 0;
-
-					if (f2 == f)
-					{
-						continue;
-					}
-
-					for (u32 i = 0; i < bytes.size(); i++)
-					{
-						if (i < data.size() && data[i] == bytes[i])
-						{
-							depth++;
-						}
-						else
-						{
-							break;
-						}
-					}
-
-					depth_n.emplace(depth);
-					depth_m = std::max(depth, depth_m);
-				}
-
-				fmt::append(dump, "c=%06d,d=%06d ", depth_n.size(), depth_m);
-
-				bool sk = false;
-
-				for (u32 i = 0; i < std::min<usz>(bytes.size(), std::max<usz>(256, depth_m)); i++)
-				{
-					if (depth_m == i)
-					{
-						dump += '|';
-						sk = true;
-					}
-
-					fmt::append(dump, "%02x", bytes[i]);
-
-					if (i % 4 == 3)
-					{
-						if (sk)
-						{
-							sk = false;
-						}
-						else
-						{
-							dump += ' ';
-						}
-
-						dump += ' ';
-					}
-				}
-
-				fmt::append(dump, "\n\t%49s", "");
-
-				for (u32 i = 0; i < std::min<usz>(f->data.size(), std::max<usz>(64, utils::aligned_div<u32>(depth_m, 4))); i++)
-				{
-					fmt::append(dump, "%-10s", g_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
-				}
-
-				n_max = std::max(n_max, ::size32(depth_n));
-
-				depth_n.clear();
-			}
-
-			spu_log.notice("SPU Cache Dump (max_c=%d): %s", n_max, dump);
-		}
 	}
 
 	// Initialize global cache instance
@@ -3705,6 +3603,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		default:
 		{
+			if (type & spu_itype::zregmod)
+			{
+				break;
+			}
+
 			// Unconst
 			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 			m_regmod[pos / 4] = op_rt;
@@ -7488,6 +7391,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;
+	be_t<u64> hash_start{};
 
 	if (!result.data.empty())
 	{
@@ -7498,6 +7402,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
+		std::memcpy(&hash_start, output, sizeof(hash_start));
 	}
 	else
 	{
@@ -7510,7 +7415,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 	{
 		if (m_block_info[bb.first / 4])
 		{
-			fmt::append(out, "A: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block");
+			fmt::append(out, "A: [0x%05x] %s  [%s]\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block", spu_block_hash{(hash_start & -65536) + bb.first / 4});
 
 			fmt::append(out, "\t F: 0x%05x\n", bb.second.func);
 

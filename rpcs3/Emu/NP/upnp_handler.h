@@ -13,7 +13,7 @@ public:
 	~upnp_handler();
 
 	void upnp_enable();
-	void add_port_redir(std::string_view addr, u16 internal_port, std::string_view protocol);
+	void add_port_redir(const std::string& addr, u16 internal_port, std::string_view protocol);
 	void remove_port_redir(u16 internal_port, std::string_view protocol);
 
 	bool is_active() const;

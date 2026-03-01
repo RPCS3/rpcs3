@@ -135,9 +135,9 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		}
 
 		if (return_code != -1)
-			update_log.error("Update error: %s return code: %d", error_message, return_code);
+			update_log.error("Update error: %s, return code: %d", error_message, return_code);
 		else
-			update_log.warning("Update error: %s return code: %d", error_message, return_code);
+			update_log.warning("Update error: %s, return code: %d", error_message, return_code);
 
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
 		if (!automatic && return_code == -1)

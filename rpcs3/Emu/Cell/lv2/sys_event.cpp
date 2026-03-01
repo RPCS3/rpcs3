@@ -170,8 +170,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		{
 			if (auto cpu = get_current_cpu_thread())
 			{
-				cpu->state += cpu_flag::again;
-				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again + cpu_flag::exit;
 			}
 
 			sys_event.warning("Ignored event!");
@@ -309,6 +308,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
+		for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+		{
+			if (cpu->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return CELL_EAGAIN;
+			}
+		}
+
 		if (!queue.events.empty())
 		{
 			// Copy events for logging, does not empty
@@ -320,17 +328,6 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		if (!head)
 		{
 			qlock.unlock();
-		}
-		else
-		{
-			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
-			{
-				if (cpu->state & cpu_flag::again)
-				{
-					ppu.state += cpu_flag::again;
-					return CELL_EAGAIN;
-				}
-			}
 		}
 
 		return {};
