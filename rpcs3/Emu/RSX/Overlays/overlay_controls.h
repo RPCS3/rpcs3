@@ -219,6 +219,8 @@ namespace rsx
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
 			virtual void set_selected(bool selected) { static_cast<void>(selected); }
+			virtual void set_visible(bool visible) { this->visible = visible; m_is_compiled = false; }
+			virtual bool is_visible() const { return visible; }
 
 		protected:
 			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
@@ -233,6 +235,7 @@ namespace rsx
 			bool auto_resize = true;
 
 			virtual overlay_element* add_element(std::unique_ptr<overlay_element>&, int = -1) = 0;
+			void clear_items();
 
 			layout_container();
 
@@ -320,7 +323,7 @@ namespace rsx
 		struct label : public overlay_element
 		{
 			label() = default;
-			label(const std::string& text);
+			label(std::string_view text);
 
 			bool auto_resize(bool grow_only = false, u16 limit_w = -1, u16 limit_h = -1);
 		};
