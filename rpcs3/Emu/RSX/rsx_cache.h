@@ -479,6 +479,7 @@ namespace rsx
 			uptr local_address;
 			u32 offset_in_heap;
 			u32 data_length;
+			u64 fingerprint;
 		};
 
 		// A weak vertex cache with no data checks or memory range locks
@@ -494,15 +495,7 @@ namespace rsx
 
 			FORCE_INLINE u64 hash(u32 local_addr, u32 data_length) const
 			{
-				// Solves texture corruption issues in BLJM60292, BLJM60414 due to wrong vertex data reuse.
-				// Hashing only the first 64bit of the vertex data for efficiency.
-				u64 hash = rpcs3::fnv_seed;
-				hash = rpcs3::hash64(hash, u64(local_addr) | (u64(data_length) << 32));
-				if (data_length >= 64)
-				{
-					hash = rpcs3::hash64(hash, u64(vm::read64(local_addr)));
-				}
-				return hash;
+				return u64(local_addr) | (u64(data_length) << 32);
 			}
 
 		public:
@@ -511,11 +504,14 @@ namespace rsx
 			{
 				const auto key = hash(local_addr, data_length);
 				const auto found = vertex_ranges.find(key);
-				if (found == vertex_ranges.end())
+
+				// Solves texture corruption issues in BLJM60292, BLJM60414 due to wrong vertex data reuse
+				// by checking first 8 bytes to avoid aliasing
+				if (found == vertex_ranges.end() ||
+				   (data_length >= 8 && (found->second.fingerprint != u64(vm::read64(local_addr)))))
 				{
 					return nullptr;
 				}
-
 				return std::addressof(found->second);
 			}
 
@@ -525,7 +521,12 @@ namespace rsx
 				v.data_length = data_length;
 				v.local_address = local_addr;
 				v.offset_in_heap = offset_in_heap;
+				v.fingerprint = 0;
 
+				if (data_length>=8)
+				{
+					v.fingerprint = u64(vm::read64(local_addr));
+				}
 				const auto key = hash(local_addr, data_length);
 				vertex_ranges[key] = v;
 			}
