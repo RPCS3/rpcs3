@@ -938,19 +938,31 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	bool precompile_caches = false;
 	bool create_desktop_shortcuts = false;
 	bool create_app_shortcut = false;
+	bool canceled = false;
 
 	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
 	// Let the user choose the packages to install and select the order in which they shall be installed.
 	pkg_install_dialog dlg(file_paths, compat, this);
-	connect(&dlg, &QDialog::accepted, this, [&]()
+	connect(&dlg, &QDialog::finished, this, [&](int result)
 	{
+		if (result != QDialog::Accepted)
+		{
+			canceled = true;
+			return;
+		}
+
 		packages = dlg.get_paths_to_install();
 		precompile_caches = dlg.precompile_caches();
 		create_desktop_shortcuts = dlg.create_desktop_shortcuts();
 		create_app_shortcut = dlg.create_app_shortcut();
 	});
 	dlg.exec();
+
+	if (canceled)
+	{
+		return false;
+	}
 
 	if (!from_boot)
 	{
