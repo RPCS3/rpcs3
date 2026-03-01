@@ -195,7 +195,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 
 	if (dec.decoder.m_size == 0)
 	{
-		return CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA;
+		return {CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "m_size=0"};
 	}
 
 	const u64 size_left = dec.decoder.m_size - dec.read_pos;
@@ -227,34 +227,32 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	const u64 size_to_read = std::min(reqSize, size_left);
 	*readSize = size_to_read;
 
-	if (size_to_read == 0)
+	if (size_to_read > 0)
 	{
-		return CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA; // TODO: speculative
-	}
+		std::memcpy(buf.get_ptr(), &dec.decoder.data[dec.read_pos], size_to_read);
 
-	std::memcpy(buf.get_ptr(), &dec.decoder.data[dec.read_pos], size_to_read);
-
-	if (size_to_read < reqSize)
-	{
-		// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
-		std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + size_to_read, 0, reqSize - size_to_read);
-	}
-
-	dec.read_pos += size_to_read;
-
-	s64 start_time_ms = 0;
-
-	if (!dec.decoder.timestamps_ms.empty())
-	{
-		start_time_ms = dec.decoder.timestamps_ms.front().second;
-
-		while (dec.decoder.timestamps_ms.size() > 1 && dec.read_pos >= ::at32(dec.decoder.timestamps_ms, 1).first)
+		if (size_to_read < reqSize)
 		{
-			dec.decoder.timestamps_ms.pop_front();
+			// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
+			std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + size_to_read, 0, reqSize - size_to_read);
 		}
-	}
 
-	*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
+		dec.read_pos += size_to_read;
+
+		s64 start_time_ms = 0;
+
+		if (!dec.decoder.timestamps_ms.empty())
+		{
+			start_time_ms = dec.decoder.timestamps_ms.front().second;
+
+			while (dec.decoder.timestamps_ms.size() > 1 && dec.read_pos >= ::at32(dec.decoder.timestamps_ms, 1).first)
+			{
+				dec.decoder.timestamps_ms.pop_front();
+			}
+		}
+
+		*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
+	}
 
 	switch (*position)
 	{
@@ -275,11 +273,15 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	}
 	default:
 	{
+		if (size_to_read == 0)
+		{
+			return {CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "size_to_read=0"}; // TODO: speculative
+		}
 		break;
 	}
 	}
 
-	cellMusicDecode.trace("cell_music_decode_read(size_to_read=%d, samples=%d, start_time_ms=%d)", size_to_read, size_to_read / sizeof(u64), start_time_ms);
+	cellMusicDecode.trace("cell_music_decode_read(size_to_read=%d, samples=%d, start_time_ms=%d)", size_to_read, size_to_read / sizeof(u64), *startTime);
 
 	return CELL_OK;
 }
