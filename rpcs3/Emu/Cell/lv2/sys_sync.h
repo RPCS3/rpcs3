@@ -453,6 +453,7 @@ public:
 
 	// Can be called before the actual sleep call in order to move it out of mutex scope
 	static void prepare_for_sleep(cpu_thread& cpu);
+	static ppu_thread* get_running_ppu(u32 index);
 
 	struct notify_all_t
 	{
