@@ -193,6 +193,7 @@
     <ClCompile Include="Input\camera_video_sink.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
     <ClCompile Include="Input\gui_pad_thread.cpp" />
+    <ClCompile Include="Input\hid_instance.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="Input\mouse_gyro_handler.cpp" />
     <ClCompile Include="Input\ps_move_calibration.cpp" />
@@ -234,6 +235,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_camera_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_wiimote_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_ps_move_tracker_dialog.cpp">
@@ -539,6 +543,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_wiimote_settings_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_ps_move_tracker_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -825,6 +832,7 @@
     <ClCompile Include="rpcs3qt\breakpoint_list.cpp" />
     <ClCompile Include="rpcs3qt\call_stack_list.cpp" />
     <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\wiimote_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\gui_game_info.cpp" />
     <ClCompile Include="rpcs3qt\permissions.cpp" />
     <ClCompile Include="rpcs3qt\ps_move_tracker_dialog.cpp" />
@@ -943,6 +951,7 @@
     <ClCompile Include="rpcs3qt\save_data_dialog.cpp" />
     <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp" />
     <ClCompile Include="rpcs3qt\settings_dialog.cpp" />
+    <ClCompile Include="Input\wiimote_handler.cpp" />
     <ClCompile Include="Input\xinput_pad_handler.cpp" />
     <ClCompile Include="util\console.cpp" />
     <ClCompile Include="\rpcs3qt\*.cpp" />
@@ -968,6 +977,7 @@
     <ClInclude Include="Input\dualsense_pad_handler.h" />
     <ClInclude Include="Input\evdev_joystick_handler.h" />
     <ClInclude Include="Input\gui_pad_thread.h" />
+    <ClInclude Include="Input\hid_instance.h" />
     <ClInclude Include="Input\hid_pad_handler.h" />
     <ClInclude Include="Input\keyboard_pad_handler.h" />
     <CustomBuild Include="rpcs3qt\gs_frame.h">
@@ -1149,6 +1159,7 @@
     <ClInclude Include="module_verifier.hpp" />
     <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h" />
+    <ClInclude Include="QTGeneratedFiles\ui_wiimote_settings_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_ps_move_tracker_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_main_window.h" />
     <ClInclude Include="QTGeneratedFiles\ui_music_player_dialog.h" />
@@ -1214,6 +1225,16 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\protobuf\protobuf\src" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\protobuf\protobuf\src" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia"</Command>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\wiimote_settings_dialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
@@ -2021,6 +2042,8 @@
     </CustomBuild>
     <ClInclude Include="rpcs3qt\trophy_notification_helper.h" />
     <ClInclude Include="rpcs3qt\user_account.h" />
+    <ClInclude Include="Input\wiimote_handler.h" />
+    <ClInclude Include="Input\wiimote_types.h" />
     <ClInclude Include="Input\xinput_pad_handler.h" />
     <ClInclude Include="util\console.h" />
     <ClInclude Include="\rpcs3qt\*.h" />
@@ -2163,6 +2186,16 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\QTGeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\uic.exe" -o ".\QTGeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\QTGeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\wiimote_settings_dialog.ui">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
