@@ -169,18 +169,18 @@ public:
 	static const u32 id_count = 1023;
 	SAVESTATE_INIT_POS(34);
 
-	ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec);
+	ElementaryStream(Demuxer* dmux, vm::ptr<void> addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, vm::ptr<void> cbArg, u32 spec);
 
 	Demuxer* dmux;
 	const u32 id = idm::last_id();
-	const u32 memAddr;
+	const vm::ptr<void> memAddr;
 	const u32 memSize;
 	const u32 fidMajor;
 	const u32 fidMinor;
 	const u32 sup1;
 	const u32 sup2;
 	const vm::ptr<CellDmuxCbEsMsg> cbFunc;
-	const u32 cbArg;
+	const vm::ptr<void> cbArg;
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
@@ -208,13 +208,13 @@ public:
 	const u32 memAddr;
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
-	const u32 cbArg;
+	const vm::ptr<void> cbArg;
 	volatile bool is_finished = false;
 	volatile bool is_closed = false;
 	atomic_t<bool> is_running = false;
 	atomic_t<bool> is_working = false;
 
-	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
+	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, vm::ptr<void> arg)
 		: ppu_thread({}, "", 0)
 		, memAddr(addr)
 		, memSize(size)
@@ -755,11 +755,11 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	is_ok = true;
 }
 
-ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: put(utils::align(addr, 128))
+ElementaryStream::ElementaryStream(Demuxer* dmux, vm::ptr<void> addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, vm::ptr<void> cbArg, u32 spec)
+	: put(utils::align(addr.addr(), 128))
 	, dmux(dmux)
-	, memAddr(utils::align(addr, 128))
-	, memSize(size - (addr - memAddr))
+	, memAddr(vm::ptr<void>::make(utils::align(addr.addr(), 128)))
+	, memSize(size - (addr.addr() - memAddr.addr()))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
 	, sup1(sup1)
@@ -788,9 +788,9 @@ bool ElementaryStream::is_full(u32 space)
 		{
 			return first - put < space + 128;
 		}
-		else if (put + space + 128 > memAddr + memSize)
+		else if (put + space + 128 > memAddr.addr() + memSize)
 		{
-			return first - memAddr < space + 128;
+			return first - memAddr.addr() < space + 128;
 		}
 		else
 		{
@@ -816,35 +816,35 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		std::lock_guard lock(m_mutex);
 		ensure(!is_full(size));
 
-		if (put + size + 128 > memAddr + memSize)
+		if (put + size + 128 > memAddr.addr() + memSize)
 		{
-			put = memAddr;
+			put = memAddr.addr();
 		}
 
 		std::memcpy(vm::base(put + 128), raw_data.data(), size);
 		raw_data.erase(raw_data.begin(), raw_data.begin() + size);
 
 		auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
-		info->auAddr = put + 128;
+		info->auAddr.set(put + 128);
 		info->auSize = size;
 		info->dts.lower = static_cast<u32>(dts);
 		info->dts.upper = static_cast<u32>(dts >> 32);
 		info->pts.lower = static_cast<u32>(pts);
 		info->pts.upper = static_cast<u32>(pts >> 32);
 		info->isRap = rap;
-		info->reserved = 0;
+		info->auMaxSize = 0;
 		info->userData = userdata;
 
 		auto spec = vm::ptr<u32>::make(put + u32{sizeof(CellDmuxAuInfoEx)});
 		*spec = specific;
 
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);
-		inf->auAddr = put + 128;
+		inf->auAddr.set(put + 128);
 		inf->auSize = size;
-		inf->dtsLower = static_cast<u32>(dts);
-		inf->dtsUpper = static_cast<u32>(dts >> 32);
-		inf->ptsLower = static_cast<u32>(pts);
-		inf->ptsUpper = static_cast<u32>(pts >> 32);
+		inf->dts.lower = static_cast<u32>(dts);
+		inf->dts.upper = static_cast<u32>(dts >> 32);
+		inf->pts.lower = static_cast<u32>(pts);
+		inf->pts.upper = static_cast<u32>(pts >> 32);
 		inf->auMaxSize = 0; // ?????
 		inf->userData = userdata;
 
@@ -927,7 +927,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 void ElementaryStream::reset()
 {
 	std::lock_guard lock(m_mutex);
-	put = memAddr;
+	put = memAddr.addr();
 	entries.clear();
 	put_count = 0;
 	got_count = 0;
