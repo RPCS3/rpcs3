@@ -1369,6 +1369,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->emptyHdd0Tmp, emu_settings_type::EmptyHdd0Tmp);
 	SubscribeTooltip(ui->emptyHdd0Tmp, tooltips.settings.empty_hdd0_tmp);
 
+	m_emu_settings->EnhanceCheckBox(ui->emulatePS3HDDMode, emu_settings_type::EmulatePS3HDDMode);
+	m_emu_settings->EnhanceSpinBox(ui->hddBaseLatencyUs, emu_settings_type::HDDBaseLatencyUs, "", tr("us", "HDD base latency unit"));
+	m_emu_settings->EnhanceSpinBox(ui->hddRandomExtraLatencyUs, emu_settings_type::HDDRandomExtraLatencyUs, "", tr("us", "HDD random extra latency unit"));
+	m_emu_settings->EnhanceSpinBox(ui->hddReadMBS, emu_settings_type::HDDReadMBS, "", tr("MB/s", "HDD read throughput unit"));
+	m_emu_settings->EnhanceSpinBox(ui->hddWriteMBS, emu_settings_type::HDDWriteMBS, "", tr("MB/s", "HDD write throughput unit"));
+	m_emu_settings->EnhanceSpinBox(ui->hddQueueDepth, emu_settings_type::HDDQueueDepth);
+
+	const auto set_hdd_emulation_controls_enabled = [this](bool enabled)
+	{
+		ui->hddBaseLatencyUs->setEnabled(enabled);
+		ui->hddRandomExtraLatencyUs->setEnabled(enabled);
+		ui->hddReadMBS->setEnabled(enabled);
+		ui->hddWriteMBS->setEnabled(enabled);
+		ui->hddQueueDepth->setEnabled(enabled);
+	};
+
+	set_hdd_emulation_controls_enabled(ui->emulatePS3HDDMode->isChecked());
+	connect(ui->emulatePS3HDDMode, &QCheckBox::checkStateChanged, this, [set_hdd_emulation_controls_enabled](Qt::CheckState state)
+	{
+		set_hdd_emulation_controls_enabled(state == Qt::CheckState::Checked);
+	});
+
 	m_emu_settings->EnhanceCheckBox(ui->enableCacheClearing, emu_settings_type::LimitCacheSize);
 	SubscribeTooltip(ui->gb_DiskCacheClearing, tooltips.settings.limit_cache_size);
 	if (game)

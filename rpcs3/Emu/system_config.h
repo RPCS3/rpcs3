@@ -107,6 +107,12 @@ struct cfg_root : cfg::node
 		cfg::_bool limit_cache_size{ this, "Limit disk cache size", false };
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
 		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
+		cfg::_bool emulate_ps3_hdd_mode{ this, "Emulate PS3 HDD Mode", false };
+		cfg::uint<0, 1000000> hdd_base_latency_us{ this, "HDD Base Latency (us)", 0 };
+		cfg::uint<0, 1000000> hdd_random_extra_latency_us{ this, "HDD Random Extra Latency (us)", 0 };
+		cfg::uint<1, 10000> hdd_read_mb_s{ this, "HDD Read Throughput (MB/s)", 10000 };
+		cfg::uint<1, 10000> hdd_write_mb_s{ this, "HDD Write Throughput (MB/s)", 10000 };
+		cfg::uint<1, 64> hdd_queue_depth{ this, "HDD Queue Depth", 32 };
 
 	} vfs{ this };
 
