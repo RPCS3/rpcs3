@@ -217,6 +217,12 @@ enum class emu_settings_type
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
+	EmulatePS3HDDMode,
+	HDDBaseLatencyUs,
+	HDDRandomExtraLatencyUs,
+	HDDReadMBS,
+	HDDWriteMBS,
+	HDDQueueDepth,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
@@ -429,6 +435,12 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::EmptyHdd0Tmp,          { "VFS", "Empty /dev_hdd0/tmp/"}},
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
+	{ emu_settings_type::EmulatePS3HDDMode,     { "VFS", "Emulate PS3 HDD Mode"}},
+	{ emu_settings_type::HDDBaseLatencyUs,      { "VFS", "HDD Base Latency (us)"}},
+	{ emu_settings_type::HDDRandomExtraLatencyUs, { "VFS", "HDD Random Extra Latency (us)"}},
+	{ emu_settings_type::HDDReadMBS,            { "VFS", "HDD Read Throughput (MB/s)"}},
+	{ emu_settings_type::HDDWriteMBS,           { "VFS", "HDD Write Throughput (MB/s)"}},
+	{ emu_settings_type::HDDQueueDepth,         { "VFS", "HDD Queue Depth"}},
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},

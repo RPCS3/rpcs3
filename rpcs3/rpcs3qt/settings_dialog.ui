@@ -2119,6 +2119,122 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_hddEmulation">
+              <property name="title">
+               <string>HDD Emulation</string>
+              </property>
+              <layout class="QFormLayout" name="gb_hddEmulation_layout">
+               <item row="0" column="0" colspan="2">
+                <widget class="QCheckBox" name="emulatePS3HDDMode">
+                 <property name="text">
+                  <string>Emulate PS3 HDD mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="0">
+                <widget class="QLabel" name="label_hddBaseLatencyUs">
+                 <property name="text">
+                  <string>Base latency:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QSpinBox" name="hddBaseLatencyUs">
+                 <property name="maximum">
+                  <number>1000000</number>
+                 </property>
+                 <property name="suffix">
+                  <string> us</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
+                <widget class="QLabel" name="label_hddRandomExtraLatencyUs">
+                 <property name="text">
+                  <string>Random extra latency:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QSpinBox" name="hddRandomExtraLatencyUs">
+                 <property name="maximum">
+                  <number>1000000</number>
+                 </property>
+                 <property name="suffix">
+                  <string> us</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="0">
+                <widget class="QLabel" name="label_hddReadMBS">
+                 <property name="text">
+                  <string>Read throughput:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="1">
+                <widget class="QSpinBox" name="hddReadMBS">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>10000</number>
+                 </property>
+                 <property name="value">
+                  <number>10000</number>
+                 </property>
+                 <property name="suffix">
+                  <string> MB/s</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="0">
+                <widget class="QLabel" name="label_hddWriteMBS">
+                 <property name="text">
+                  <string>Write throughput:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="4" column="1">
+                <widget class="QSpinBox" name="hddWriteMBS">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>10000</number>
+                 </property>
+                 <property name="value">
+                  <number>10000</number>
+                 </property>
+                 <property name="suffix">
+                  <string> MB/s</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="0">
+                <widget class="QLabel" name="label_hddQueueDepth">
+                 <property name="text">
+                  <string>Queue depth:</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="5" column="1">
+                <widget class="QSpinBox" name="hddQueueDepth">
+                 <property name="minimum">
+                  <number>1</number>
+                 </property>
+                 <property name="maximum">
+                  <number>64</number>
+                 </property>
+                 <property name="value">
+                  <number>32</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="systemTabRightVerticalSpacer">
               <property name="orientation">
                <enum>Qt::Orientation::Vertical</enum>
