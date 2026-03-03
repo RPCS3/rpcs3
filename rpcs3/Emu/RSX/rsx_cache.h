@@ -517,6 +517,7 @@ namespace rsx
 					vertex_ranges.erase(key);
 					return nullptr;
 				}
+
 				return std::addressof(found->second);
 			}
 
@@ -526,15 +527,12 @@ namespace rsx
 				v.data_length = data_length;
 				v.local_address = local_addr;
 				v.offset_in_heap = offset_in_heap;
-				v.fingerprint = 0;
 
-				if (data_length >= 8)
+				if (auto sudo_ptr = vm::get_super_ptr<char>(local_addr); data_length >= 8)
 				{
-					// Uses get_super_ptr to access vm memory safely
-					// and bless to avoid endian conversion and circumvent compiler strict aliasing rules.
-					auto sudo_ptr = vm::get_super_ptr<char>(local_addr);
 					v.fingerprint = *utils::bless<u64>(sudo_ptr);
 				}
+
 				const auto key = hash(local_addr, data_length);
 				vertex_ranges[key] = v;
 			}
