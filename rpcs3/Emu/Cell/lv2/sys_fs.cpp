@@ -17,8 +17,248 @@
 #include <filesystem>
 #include <span>
 #include <shared_mutex>
+#include <condition_variable>
+#include <cmath>
+#include <random>
 
 LOG_CHANNEL(sys_fs);
+
+namespace
+{
+enum class hdd_io_op
+{
+	read,
+	write,
+	lseek,
+	sync,
+};
+
+struct hdd_io_shape_profile
+{
+	u32 fixed_latency_us = 1500;
+	u32 random_latency_us = 2000;
+	u64 read_bytes_per_sec = 48ull * 1024 * 1024;
+	u64 write_bytes_per_sec = 24ull * 1024 * 1024;
+	u32 max_in_flight = 4;
+	bool include_dev_hdd1 = false;
+};
+
+class hdd_io_shaper
+{
+public:
+	class scoped_request
+	{
+	public:
+		scoped_request() = default;
+		explicit scoped_request(hdd_io_shaper* owner)
+			: m_owner(owner)
+		{
+		}
+
+		scoped_request(const scoped_request&) = delete;
+		scoped_request& operator=(const scoped_request&) = delete;
+
+		scoped_request(scoped_request&& rhs) noexcept
+			: m_owner(std::exchange(rhs.m_owner, nullptr))
+		{
+		}
+
+		scoped_request& operator=(scoped_request&& rhs) noexcept
+		{
+			if (this != &rhs)
+			{
+				release();
+				m_owner = std::exchange(rhs.m_owner, nullptr);
+			}
+
+			return *this;
+		}
+
+		~scoped_request()
+		{
+			release();
+		}
+
+		explicit operator bool() const
+		{
+			return m_owner != nullptr;
+		}
+
+	private:
+		void release()
+		{
+			if (!m_owner)
+			{
+				return;
+			}
+
+			std::lock_guard lock(m_owner->m_mutex);
+			m_owner->m_in_flight--;
+			m_owner->m_cv.notify_one();
+			m_owner = nullptr;
+		}
+
+		hdd_io_shaper* m_owner = nullptr;
+	};
+
+	hdd_io_shaper()
+		: m_read_tokens(m_profile.read_bytes_per_sec)
+		, m_write_tokens(m_profile.write_bytes_per_sec)
+		, m_last_refill_us(get_system_time())
+	{
+	}
+
+	scoped_request acquire_request(bool enabled)
+	{
+		if (!enabled)
+		{
+			return {};
+		}
+
+		std::unique_lock lock(m_mutex);
+		m_cv.wait(lock, [&]()
+		{
+			return m_in_flight < m_profile.max_in_flight;
+		});
+
+		m_in_flight++;
+		return scoped_request{this};
+	}
+
+	u64 get_delay_us(hdd_io_op op, u64 bytes)
+	{
+		const u64 now_us = get_system_time();
+		std::lock_guard lock(m_mutex);
+
+		refill_tokens(now_us);
+
+		u64 delay_us = m_profile.fixed_latency_us;
+
+		if (m_profile.random_latency_us)
+		{
+			delay_us += std::uniform_int_distribution<u32>(0, m_profile.random_latency_us)(m_rng);
+		}
+
+		delay_us += get_bucket_delay_us(op, bytes);
+		return delay_us;
+	}
+
+	const hdd_io_shape_profile& profile() const
+	{
+		return m_profile;
+	}
+
+private:
+	void refill_tokens(u64 now_us)
+	{
+		const u64 elapsed_us = now_us - m_last_refill_us;
+		m_last_refill_us = now_us;
+
+		if (m_profile.read_bytes_per_sec)
+		{
+			m_read_tokens = std::min<double>(m_profile.read_bytes_per_sec, m_read_tokens + static_cast<double>(elapsed_us) * m_profile.read_bytes_per_sec / 1'000'000.0);
+		}
+
+		if (m_profile.write_bytes_per_sec)
+		{
+			m_write_tokens = std::min<double>(m_profile.write_bytes_per_sec, m_write_tokens + static_cast<double>(elapsed_us) * m_profile.write_bytes_per_sec / 1'000'000.0);
+		}
+	}
+
+	u64 get_bucket_delay_us(hdd_io_op op, u64 bytes)
+	{
+		double* tokens = nullptr;
+		u64 rate = 0;
+
+		switch (op)
+		{
+		case hdd_io_op::read:
+			tokens = &m_read_tokens;
+			rate = m_profile.read_bytes_per_sec;
+			break;
+		case hdd_io_op::write:
+			tokens = &m_write_tokens;
+			rate = m_profile.write_bytes_per_sec;
+			break;
+		case hdd_io_op::lseek:
+		case hdd_io_op::sync:
+			return 0;
+		}
+
+		if (!rate || !bytes)
+		{
+			return 0;
+		}
+
+		if (*tokens >= static_cast<double>(bytes))
+		{
+			*tokens -= static_cast<double>(bytes);
+			return 0;
+		}
+
+		const double deficit = static_cast<double>(bytes) - *tokens;
+		*tokens = 0.0;
+		return static_cast<u64>(std::ceil(deficit * 1'000'000.0 / static_cast<double>(rate)));
+	}
+
+	const hdd_io_shape_profile m_profile{};
+	std::mutex m_mutex;
+	std::condition_variable m_cv;
+	u32 m_in_flight = 0;
+	double m_read_tokens = 0.0;
+	double m_write_tokens = 0.0;
+	u64 m_last_refill_us = 0;
+	std::minstd_rand m_rng{0x5ce3u};
+};
+
+hdd_io_shaper g_hdd_io_shaper;
+
+bool should_shape_hdd_io(const lv2_file& file)
+{
+	if (!g_cfg.vfs.emulate_ps3_hdd_mode)
+	{
+		return false;
+	}
+
+	if (file.mp->root == "/dev_hdd0")
+	{
+		return true;
+	}
+
+	if (g_hdd_io_shaper.profile().include_dev_hdd1 && file.mp->root == "/dev_hdd1")
+	{
+		return true;
+	}
+
+	return false;
+}
+
+void apply_hdd_io_delay(ppu_thread& ppu, hdd_io_op op, u64 bytes, const lv2_file& file)
+{
+	if (!should_shape_hdd_io(file))
+	{
+		return;
+	}
+
+	static atomic_t<bool> logged_profile = false;
+	if (!logged_profile.exchange(true))
+	{
+		const auto& profile = g_hdd_io_shaper.profile();
+		sys_fs.notice("HDD I/O shaping active on /dev_hdd0%s (fixed=%uus random<=%uus read=%u KiB/s write=%u KiB/s qd=%u)",
+			profile.include_dev_hdd1 ? ", /dev_hdd1" : "", profile.fixed_latency_us, profile.random_latency_us,
+			profile.read_bytes_per_sec / 1024, profile.write_bytes_per_sec / 1024, profile.max_in_flight);
+	}
+
+	const u64 delay_us = g_hdd_io_shaper.get_delay_us(op, bytes);
+	sys_fs.trace("sys_fs HDD shape: op=%u path=%s bytes=0x%llx delay=%llu us", static_cast<u32>(op), file.name.data(), bytes, delay_us);
+
+	if (delay_us)
+	{
+		thread_ctrl::wait_for(delay_us);
+		ppu.check_state();
+	}
+}
+}
 
 lv2_fs_mount_point g_mp_sys_dev_usb{"/dev_usb", "CELL_FS_FAT", "CELL_FS_IOS:USB_MASS_STORAGE", 512, 0x100, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_dvd{"/dev_ps2disc", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA1_BDVD_DRIVE", 2048, 0x100, 32768, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_usb};
@@ -1135,6 +1375,8 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		lv2_obj::sleep(ppu);
 	}
 
+	auto shape_ticket = g_hdd_io_shaper.acquire_request(should_shape_hdd_io(*file));
+
 	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
@@ -1151,6 +1393,8 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
 	lock.unlock();
+
+	apply_hdd_io_delay(ppu, hdd_io_op::read, read_bytes, *file);
 	ppu.check_state();
 
 	*nread = read_bytes;
@@ -1214,6 +1458,8 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		return CELL_EROFS;
 	}
 
+	auto shape_ticket = g_hdd_io_shaper.acquire_request(should_shape_hdd_io(*file));
+
 	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
@@ -1240,6 +1486,8 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	const u64 written = file->op_write(buf, nbytes);
 	lock.unlock();
+
+	apply_hdd_io_delay(ppu, hdd_io_op::write, written, *file);
 	ppu.check_state();
 
 	*nwrite = written;
@@ -2613,6 +2861,8 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 		return CELL_EBADF;
 	}
 
+	auto shape_ticket = g_hdd_io_shaper.acquire_request(should_shape_hdd_io(*file));
+
 	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
@@ -2639,6 +2889,8 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 	}
 
 	lock.unlock();
+
+	apply_hdd_io_delay(ppu, hdd_io_op::lseek, 0, *file);
 	ppu.check_state();
 
 	*pos = result;
@@ -2658,7 +2910,9 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 
 	lv2_obj::sleep(ppu);
 
-	std::lock_guard lock(file->mp->mutex);
+	auto shape_ticket = g_hdd_io_shaper.acquire_request(should_shape_hdd_io(*file));
+
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -2666,6 +2920,9 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 	}
 
 	file->file.sync();
+	lock.unlock();
+
+	apply_hdd_io_delay(ppu, hdd_io_op::sync, 0, *file);
 	return CELL_OK;
 }
 
@@ -2682,7 +2939,9 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 
 	lv2_obj::sleep(ppu);
 
-	std::lock_guard lock(file->mp->mutex);
+	auto shape_ticket = g_hdd_io_shaper.acquire_request(should_shape_hdd_io(*file));
+
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -2690,6 +2949,9 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 	}
 
 	file->file.sync();
+	lock.unlock();
+
+	apply_hdd_io_delay(ppu, hdd_io_op::sync, 0, *file);
 	return CELL_OK;
 }
 
