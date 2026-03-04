@@ -1616,6 +1616,7 @@ public:
 		}
 
 		m_tracker.set_image_data(m_camera_info.buffer.get_ptr(), m_camera_info.bytesize, m_camera_info.width, m_camera_info.height, m_camera_info.format);
+		m_framenumber++; // using framenumber instead of timestamp since the timestamp could be identical
 		return true;
 	}
 
@@ -1648,6 +1649,7 @@ public:
 		}
 
 		auto& gem = g_fxo->get<gem_config>();
+		u64 last_framenumber = 0;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -1661,6 +1663,13 @@ public:
 				{
 					break;
 				}
+			}
+
+			if (std::exchange(last_framenumber, m_framenumber.load()) == last_framenumber)
+			{
+				cellGem.warning("Tracker woke up without new frame. Skipping processing (framenumber=%d)", last_framenumber);
+				tracker_done();
+				continue;
 			}
 
 			m_busy.release(true);
@@ -1754,6 +1763,7 @@ public:
 private:
 	atomic_t<u32> m_wake_up_tracker = 0;
 	atomic_t<u32> m_tracker_done = 0;
+	atomic_t<u64> m_framenumber = 0;
 	atomic_t<bool> m_busy = false;
 	ps_move_tracker<false> m_tracker{};
 	CellCameraInfoEx m_camera_info{};
@@ -3876,12 +3886,14 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 
 	gem.camera_frame = camera_frame.addr();
 
-	if (!tracker.set_image(gem.camera_frame))
+	const bool image_set = tracker.set_image(gem.camera_frame);
+
+	tracker.wake_up_tracker();
+
+	if (!image_set)
 	{
 		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
-
-	tracker.wake_up_tracker();
 
 	return CELL_OK;
 }
