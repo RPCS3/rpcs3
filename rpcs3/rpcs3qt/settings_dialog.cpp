@@ -23,13 +23,13 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
-#include "Emu/NP/rpcn_countries.h"
+#include "log_level_dialog.h"
 
+#include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-
 #include "Emu/Audio/audio_device_enumerator.h"
 
 #include "Loader/PSF.h"
@@ -2495,6 +2495,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Log levels
+	SubscribeTooltip(ui->gb_log_levels, tooltips.settings.vulkan_async_scheduler);
+	connect(ui->pb_log_levels, &QAbstractButton::clicked, this, [this]()
+	{
+		log_level_dialog* dlg = new log_level_dialog(this, m_emu_settings);
+		dlg->open();
+	});
 
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::cfg_geometry).toByteArray()))
 	{

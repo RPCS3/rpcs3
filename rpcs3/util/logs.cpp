@@ -202,7 +202,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.release(level::notice);
+			pair.second->enabled.release(level::_default);
 		}
 	}
 
@@ -271,18 +271,17 @@ namespace logs
 		}
 	}
 
-	std::vector<std::string> get_channels()
+	std::set<std::string> get_channels()
 	{
-		std::vector<std::string> result;
+		std::set<std::string> result;
 
 		std::lock_guard lock(g_mutex);
 
 		for (auto&& p : get_logger()->channels)
 		{
-			// Copy names removing duplicates
-			if (result.empty() || result.back() != p.first)
+			if (!p.first.empty())
 			{
-				result.push_back(p.first);
+				result.insert(p.first);
 			}
 		}
 
