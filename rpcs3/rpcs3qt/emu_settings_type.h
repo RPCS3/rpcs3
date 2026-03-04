@@ -217,6 +217,9 @@ enum class emu_settings_type
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
+
+	// Log
+	Log,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
@@ -434,4 +437,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},
 	{ emu_settings_type::CompatibleEmulationSavestateMode,    { "Savestate", "Compatible Savestate Mode" }},
 	{ emu_settings_type::StartSavestatePaused,                { "Savestate", "Start Paused" }},
+
+	// Logs
+	{ emu_settings_type::Log, { "Log" }},
 };
