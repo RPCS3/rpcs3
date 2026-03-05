@@ -34,7 +34,7 @@ downloader::~downloader()
 	}
 }
 
-void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size, bool check_return_code, bool again)
+void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, bool check_return_code, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size, bool again)
 {
 	network_log.notice("Starting download from URL: %s", url);
 
@@ -121,7 +121,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 				{
 					network_log.error("Error during download. Trying to download again (attempts=%d, return_code=%d)", m_download_attempts, return_code);
 					std::this_thread::sleep_for(500ms); // Wait for a little while
-					start(url, follow_location, show_progress_dialog, progress_dialog_title, keep_progress_dialog_open, expected_size, check_return_code, true);
+					start(url, follow_location, show_progress_dialog, check_return_code, progress_dialog_title, keep_progress_dialog_open, expected_size, true);
 					return;
 				}
 			}
