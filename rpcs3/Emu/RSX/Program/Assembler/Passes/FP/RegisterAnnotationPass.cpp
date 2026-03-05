@@ -31,14 +31,14 @@ namespace rsx::assembler::FP
 		switch (dst.prec)
 		{
 		case RSX_FP_PRECISION_REAL:
-		case RSX_FP_PRECISION_UNKNOWN:
+		// case RSX_FP_PRECISION_UNKNOWN: // Unreachable
 			break;
 		case RSX_FP_PRECISION_HALF:
 			if (!src0.fp16) return false;
 			break;
 		case RSX_FP_PRECISION_FIXED12:
 		case RSX_FP_PRECISION_FIXED9:
-		case RSX_FP_PRECISION_SATURATE:
+		// case RSX_FP_PRECISION_SATURATE: // Unreachable
 			return false;
 		}
 
