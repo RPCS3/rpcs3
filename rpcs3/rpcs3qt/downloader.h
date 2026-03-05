@@ -21,7 +21,7 @@ public:
 	explicit downloader(QWidget* parent = nullptr);
 	~downloader();
 
-	void start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1, bool check_return_code = true, bool again = false);
+	void start(const std::string& url, bool follow_location, bool show_progress_dialog, bool check_return_code, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1, bool again = false);
 	usz update_buffer(char* data, usz size);
 
 	void update_progress_dialog(const QString& title) const;

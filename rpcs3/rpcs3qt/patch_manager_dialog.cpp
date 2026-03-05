@@ -1163,7 +1163,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 		}
 	}
 
-	m_downloader->start(url, true, !m_download_automatic, tr("Downloading latest patches"));
+	m_downloader->start(url, true, !m_download_automatic, true, tr("Downloading latest patches"));
 }
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
