@@ -5,6 +5,7 @@
 #include "Emu/localized_string.h"
 
 #include <memory>
+#include <span>
 
 // Definitions for common UI controls and their routines
 namespace rsx
@@ -39,6 +40,9 @@ namespace rsx
 			image_info_base() {}
 			virtual ~image_info_base() {}
 			virtual const u8* get_data() const = 0;
+			virtual usz size_bytes() const { return static_cast<usz>(w * h * bpp); }
+
+			std::span<const u8> as_span() const { return { get_data(), size_bytes() }; }
 		};
 
 		struct image_info : public image_info_base
@@ -56,6 +60,7 @@ namespace rsx
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+			usz size_bytes() const override { return data_grey.size(); }
 		};
 
 		struct resource_config

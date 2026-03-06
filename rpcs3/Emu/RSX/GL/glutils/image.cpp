@@ -175,7 +175,7 @@ namespace gl
 		m_id = GL_NONE;
 	}
 
-	void texture::copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
+	void texture::copy_from(const rsx::io_buffer& src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 	{
 		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
@@ -185,30 +185,30 @@ namespace gl
 		{
 		case GL_TEXTURE_1D:
 		{
-			DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, level, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+			DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, level, region.x, region.width, static_cast<GLenum>(format), static_cast<GLenum>(type), src.data());
 			break;
 		}
 		case GL_TEXTURE_2D:
 		{
-			DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+			DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, level, region.x, region.y, region.width, region.height, static_cast<GLenum>(format), static_cast<GLenum>(type), src.data());
 			break;
 		}
 		case GL_TEXTURE_3D:
 		case GL_TEXTURE_2D_ARRAY:
 		{
-			DSA_CALL(TextureSubImage3D, m_id, target_, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+			DSA_CALL(TextureSubImage3D, m_id, target_, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src.data());
 			break;
 		}
 		case GL_TEXTURE_CUBE_MAP:
 		{
 			if (get_driver_caps().ARB_direct_state_access_supported)
 			{
-				glTextureSubImage3D(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src);
+				glTextureSubImage3D(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth, static_cast<GLenum>(format), static_cast<GLenum>(type), src.data());
 			}
 			else
 			{
 				rsx_log.warning("Cubemap upload via texture::copy_from is halfplemented!");
-				auto ptr = static_cast<const u8*>(src);
+				auto ptr = static_cast<const u8*>(src.data());
 				const auto end = std::min(6u, region.z + region.depth);
 				for (unsigned face = region.z; face < end; ++face)
 				{
@@ -221,22 +221,25 @@ namespace gl
 		}
 	}
 
-	void texture::copy_from(buffer& buf, u32 gl_format_type, u32 offset, u32 length)
+	void texture::copy_from(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 	{
 		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
-		if (get_target() != target::textureBuffer)
-			fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
+		buf.bind(buffer::target::pixel_unpack);
 
-		DSA_CALL(TextureBufferRange, m_id, GL_TEXTURE_BUFFER, gl_format_type, buf.id(), offset, length);
+		const rsx::io_buffer src{ reinterpret_cast<void*>(static_cast<uintptr_t>(offset)), buf.size() - offset };
+		copy_from(src, format, type, level, region, pixel_settings);
 	}
 
 	void texture::copy_from(buffer_view& view)
 	{
-		copy_from(*view.value(), view.format(), view.offset(), view.range());
+		if (get_target() != target::textureBuffer)
+			fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
+
+		DSA_CALL(TextureBufferRange, m_id, GL_TEXTURE_BUFFER, view.format(), view.value()->id(), view.offset(), view.range());
 	}
 
-	void texture::copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
+	void texture::copy_to(const rsx::io_buffer& dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 	{
 		ensure(m_samples <= 1, "Transfer operations are unsupported on multisampled textures.");
 
@@ -247,14 +250,14 @@ namespace gl
 			region.width == m_width && region.height == m_height && region.depth == m_depth)
 		{
 			if (caps.ARB_direct_state_access_supported)
-				glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);
+				glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst.size<GLsizei>(), dst.data());
 			else
-				glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
+				glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst.data());
 		}
 		else if (caps.ARB_direct_state_access_supported)
 		{
 			glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
-				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst);
+				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst.data());
 		}
 		else
 		{
@@ -267,6 +270,16 @@ namespace gl
 			const coord3u region2 = { {0, 0, 0}, region.size };
 			tmp.copy_to(dst, format, type, 0, region2, pixel_settings);
 		}
+	}
+
+	void texture::copy_to(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const
+	{
+		ensure(offset < buf.size(), "PBO write is out of range");
+
+		buf.bind(buffer::target::pixel_pack);
+
+		const rsx::io_buffer dst{ reinterpret_cast<void*>(static_cast<uintptr_t>(offset)), buf.size() - offset };
+		copy_to(dst, format, type, level, region, pixel_settings);
 	}
 
 	void texture_view::create(texture* data, GLenum target, GLenum sized_format, const subresource_range& range, const GLenum* argb_swizzle)
