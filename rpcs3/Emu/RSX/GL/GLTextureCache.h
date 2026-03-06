@@ -48,7 +48,7 @@ namespace gl
 
 		void init_buffer(const gl::texture* src)
 		{
-			const u32 vram_size = src->pitch() * src->height();
+			const u32 vram_size = std::max(src->pitch() * src->height(), get_section_size());
 			const u32 buffer_size = utils::align(vram_size, 4096);
 
 			if (pbo)
@@ -148,7 +148,7 @@ namespace gl
 			}
 		}
 
-		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& /*src_area*/, const utils::address_range32& /*valid_range*/, u32 pitch)
+		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& src_area, const utils::address_range32& valid_range, u32 pitch)
 		{
 			init_buffer(src);
 			glGetError();
@@ -164,6 +164,20 @@ namespace gl
 
 			real_pitch = src->pitch();
 			rsx_pitch = pitch;
+
+			const coord3u src_rgn =
+			{
+				{ static_cast<u32>(src_area.x1), static_cast<u32>(src_area.y1), 0 },
+				{ static_cast<u32>(src_area.width()), static_cast<u32>(src_area.height()), 1 }
+			};
+
+			u32 pbo_offset = 0;
+			if (valid_range.valid())
+			{
+				const u32 section_base = get_section_base();
+				pbo_offset = valid_range.start - section_base;
+				ensure(valid_range.start >= section_base && pbo_offset <= pbo.size());
+			}
 
 			bool use_driver_pixel_transform = true;
 			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
@@ -193,14 +207,14 @@ namespace gl
 							mem_info.image_size_in_bytes *= 2;
 						}
 
-						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, { {}, src->size3D() }, &mem_info);
+						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, src_rgn, &mem_info);
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
 						real_pitch = pack_info.size * src->width();
 						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
-						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
+						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), pbo_offset, data_length);
 					}
 					else
 					{
@@ -225,7 +239,7 @@ namespace gl
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
 
-				src->copy_to(nullptr, format, type, pack_settings);
+				src->copy_to(reinterpret_cast<void*>(pbo_offset), format, type, 0, src_rgn, pack_settings);
 			}
 
 			if (auto error = glGetError())
