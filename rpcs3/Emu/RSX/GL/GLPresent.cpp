@@ -132,7 +132,8 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
-		flip_image->copy_from(vm::base(info->address), static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);
+		const rsx::io_buffer read_buf = { vm::base(info->address), range.length() };
+		flip_image->copy_from(read_buf, static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);
 		image = flip_image.get();
 	}
 	else if (image->get_internal_format() != static_cast<gl::texture::internal_format>(expected_format))
@@ -368,7 +369,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			tex->copy_to(sshot_frame.data(), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
 
 			m_sshot_tex.reset();
 

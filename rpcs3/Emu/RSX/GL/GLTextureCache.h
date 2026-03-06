@@ -233,13 +233,11 @@ namespace gl
 					pack_unpack_swap_bytes = false;
 				}
 
-				pbo.bind(buffer::target::pixel_pack);
-
 				pixel_pack_settings pack_settings;
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
 
-				src->copy_to(reinterpret_cast<void*>(pbo_offset), format, type, 0, src_rgn, pack_settings);
+				src->copy_to(pbo, pbo_offset, format, type, 0, src_rgn, pack_settings);
 			}
 
 			if (auto error = glGetError())

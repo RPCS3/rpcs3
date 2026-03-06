@@ -4,6 +4,7 @@
 
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
+#include "Emu/RSX/Common/io_buffer.h"
 
 //using enum rsx::format_class;
 using namespace ::rsx::format_class_;
@@ -321,22 +322,24 @@ namespace gl
 		}
 
 		// Data management
-		void copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
+		void copy_from(const rsx::io_buffer& src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
 
-		void copy_from(buffer& buf, u32 gl_format_type, u32 offset, u32 length);
+		void copy_from(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
 
 		void copy_from(buffer_view& view);
 
-		void copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
+		void copy_to(const rsx::io_buffer& dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
+
+		void copy_to(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
 
 		// Convenience wrappers
-		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
+		void copy_from(const rsx::io_buffer& src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
 		{
 			const coord3u region = { {}, size3D() };
 			copy_from(src, format, type, 0, region, pixel_settings);
 		}
 
-		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
+		void copy_to(const rsx::io_buffer& dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
 			const coord3u region = { {}, size3D() };
 			copy_to(dst, format, type, 0, region, pixel_settings);
