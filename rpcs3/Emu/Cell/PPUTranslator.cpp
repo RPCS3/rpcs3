@@ -553,7 +553,9 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			std::unordered_set<u32> passed_targets{target_last};
 
 			// Try to follow unconditional branches as long as there is no infinite loop
-			while (true)
+			// !! Triggers compilation issues in Asura's Wrath in other parts of the code
+			// !! See https://github.com/RPCS3/rpcs3/issues/18287
+			while (false)
 			{
 				const ppu_opcode_t op{*ensure(m_info.get_ptr<u32>(target_last))};
 				const ppu_itype::type itype = g_ppu_itype.decode(op.opcode);
