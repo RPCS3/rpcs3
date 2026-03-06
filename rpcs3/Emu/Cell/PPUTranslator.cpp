@@ -550,11 +550,10 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		else if (_target >= caddr && _target <= cend)
 		{
 			u32 target_last = static_cast<u32>(_target);
-
 			std::unordered_set<u32> passed_targets{target_last};
 
 			// Try to follow unconditional branches as long as there is no infinite loop
-			while (target_last != _target)
+			while (true)
 			{
 				const ppu_opcode_t op{*ensure(m_info.get_ptr<u32>(target_last))};
 				const ppu_itype::type itype = g_ppu_itype.decode(op.opcode);
@@ -1304,7 +1303,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 		if (!m_use_fma && data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
-			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			ppu_log.notice("LLVM: VMADDFP with +0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
 	}
