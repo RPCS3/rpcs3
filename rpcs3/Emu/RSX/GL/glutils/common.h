@@ -76,6 +76,26 @@ namespace gl
 		}
 	};
 
+	template <GLenum Ns>
+	struct named_object
+	{
+	protected:
+		GLuint m_id = GL_NONE;
+		std::string m_name = "Unnamed";
+
+	public:
+		void set_name(std::string_view name)
+		{
+			m_name = name.data();
+			glObjectLabel(Ns, m_id, name.length(), name.data());
+		}
+
+		std::string_view name() const
+		{
+			return m_name;
+		}
+	};
+
 	// Very useful util when capturing traces with RenderDoc
 	static inline void push_debug_label(const char* label)
 	{
