@@ -354,8 +354,9 @@ u32 dmux_pamf_base::video_stream<avc>::parse_stream(std::span<const u8> stream)
 	{
 		au_chunk.data = { au_chunk_begin, stream_it };
 		std::copy_n(cache.begin(), cache_idx, std::back_inserter(au_chunk.cached_data));
-		cache.erase(cache.begin(), cache.begin() + cache_idx);
 	}
+
+	cache.erase(cache.begin(), cache.begin() + cache_idx);
 
 	// Cache the end of the stream if an access unit wasn't completed. There could be the beginning of a delimiter in the last three bytes
 	if (current_au.state != access_unit::state::complete)
@@ -499,8 +500,9 @@ u32 dmux_pamf_base::audio_stream<ac3>::parse_stream(std::span<const u8> stream)
 	{
 		au_chunk.data = { au_chunk_begin, stream_it };
 		std::copy_n(cache.begin(), cache_idx, std::back_inserter(au_chunk.cached_data));
-		cache.erase(cache.begin(), cache.begin() + cache_idx);
 	}
+
+	cache.erase(cache.begin(), cache.begin() + cache_idx);
 
 	// Cache the end of the stream if an access unit wasn't completed. There could be the beginning of a delimiter in the last three bytes
 	if (current_au.state != access_unit::state::complete && current_au.state != access_unit::state::size_mismatch)
