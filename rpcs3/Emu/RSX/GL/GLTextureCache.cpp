@@ -179,6 +179,10 @@ namespace gl
 			auto components = get_component_mapping(gcm_format, rsx::component_order::default_);
 			dst->set_native_component_layout(components);
 		}
+		else
+		{
+			dst->set_native_component_layout(src->get_native_component_layout());
+		}
 
 		return dst->get_view(remap);
 	}
