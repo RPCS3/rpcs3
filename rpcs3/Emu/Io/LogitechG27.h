@@ -38,10 +38,7 @@ struct logitech_g27_ffb_slot
 	logitech_g27_ffb_state state = logitech_g27_ffb_state::inactive;
 	u64 last_update = 0;
 	SDL_HapticEffect last_effect {};
-
-	// TODO switch to SDL_HapticEffectID when it becomes available in a future SDL release
-	// Match the return of SDL_CreateHapticEffect for now
-	int effect_id = -1;
+	SDL_HapticEffectID effect_id = -1;
 };
 
 struct sdl_mapping

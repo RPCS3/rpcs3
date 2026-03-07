@@ -3,7 +3,7 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
+#include <set>
 #include <initializer_list>
 #include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
@@ -20,6 +20,8 @@ namespace logs
 		warning = 5,
 		notice = 6,
 		trace = 7, // Lowest severity (usually disabled)
+
+		_default = notice
 	};
 
 	struct channel;
@@ -163,7 +165,7 @@ namespace logs
 		registerer(channel& _ch);
 	};
 
-	// Log level control: set all channels to level::notice
+	// Log level control: set all channels to default level::notice
 	void reset();
 
 	// Log level control: set all channels to level::always
@@ -179,7 +181,7 @@ namespace logs
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map);
 
 	// Get all registered log channels
-	std::vector<std::string> get_channels();
+	std::set<std::string> get_channels();
 
 	// Helper: no additional name specified
 	consteval const char* make_channel_name(const char* name, const char* alt = nullptr)

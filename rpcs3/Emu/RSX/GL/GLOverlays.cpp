@@ -223,7 +223,7 @@ namespace gl
 	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
 	{
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
-		tex->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
+		tex->copy_from(desc->as_span(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		const GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -308,7 +308,7 @@ namespace gl
 		const std::vector<u8>& glyph_data = font->get_glyph_data();
 
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, 1, GL_R8, RSX_FORMAT_CLASS_COLOR);
-		tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
+		tex->copy_from(std::span<const u8>(glyph_data), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 		GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -332,7 +332,7 @@ namespace gl
 
 			if (dirty)
 			{
-				view->image()->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
+				view->image()->copy_from(desc->as_span(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 			}
 
 			return view;

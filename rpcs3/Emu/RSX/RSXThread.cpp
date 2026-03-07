@@ -2315,6 +2315,7 @@ namespace rsx
 				case CELL_GCM_TEXTURE_R5G6B5:
 				case CELL_GCM_TEXTURE_R6G5B5:
 					texture_control |= (1 << texture_control_bits::RENORMALIZE);
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 					break;
 				default:
 					break;
@@ -2326,8 +2327,15 @@ namespace rsx
 				texture_control |= format_ex.texel_remap_control;
 				texture_control |= format_ex.features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 
-				if (current_fp_metadata.has_tex_bx2_conv)
+				if (format_ex.texel_remap_control)
 				{
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+				}
+
+				if (current_fp_metadata.bx2_texture_reads_mask)
+				{
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+
 					const u32 remap_hi = tex.decoded_remap().shuffle_mask_bits(0xFu);
 					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
 					current_fragment_program.texture_params[i].remap |= (remap_hi << 16u);

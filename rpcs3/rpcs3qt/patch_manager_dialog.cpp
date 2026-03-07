@@ -1163,7 +1163,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 		}
 	}
 
-	m_downloader->start(url, true, !m_download_automatic, tr("Downloading latest patches"));
+	m_downloader->start(url, true, !m_download_automatic, true, tr("Downloading latest patches"));
 }
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
@@ -1184,9 +1184,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 
 		if (return_code != -1)
-			patch_log.error("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.error("Patch download error: %s, return code: %d", error_message, return_code);
 		else
-			patch_log.warning("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.warning("Patch download error: %s, return code: %d", error_message, return_code);
 
 		return false;
 	}

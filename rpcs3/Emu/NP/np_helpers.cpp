@@ -20,7 +20,7 @@ namespace np
 		return std::string(ip_str);
 	}
 
-	std::string ether_to_string(std::array<u8, 6>& ether)
+	std::string ether_to_string(const std::array<u8, 6>& ether)
 	{
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
@@ -110,7 +110,7 @@ namespace np
 
 	bool is_valid_npid(const SceNpId& npid)
 	{
-		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return std::isalnum(c) || c == '-' || c == '_' || c == 0; } )
+		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == 0; } )
 			|| npid.handle.data[16] != 0
 			|| !std::all_of(npid.handle.dummy, npid.handle.dummy + 3, [](char val) { return val == 0; }) )
 		{

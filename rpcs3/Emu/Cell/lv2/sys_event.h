@@ -7,7 +7,6 @@
 #include <deque>
 
 class cpu_thread;
-class spu_thrread;
 
 // Event Queue Type
 enum : u32

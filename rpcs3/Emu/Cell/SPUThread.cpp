@@ -164,7 +164,7 @@ void fmt_class_string<spu_block_hash>::format(std::string& out, u64 arg)
 	out.resize(out.size() - 4);
 
 	// Print chunk address from lowest 16 bits
-	fmt::append(out, "...chunk-0x%05x", (arg & 0xffff) * 4);
+	fmt::append(out, "-0x%05x", (arg & 0xffff) * 4);
 }
 
 enum class spu_block_hash_short : u64{};

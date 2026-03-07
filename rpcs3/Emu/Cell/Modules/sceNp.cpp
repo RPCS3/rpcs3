@@ -871,7 +871,7 @@ error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 	}
 
 	// Convert time to milliseconds
-	s64 msec = *sec * 1000ll + *nsec / 1000ll;
+	s64 msec = *sec * 1000ll + *nsec / 1'000'000ll;
 
 	// Return the remaining time in microseconds
 	if (npd.activate_time != 0 && msec < npd.activate_time)
@@ -4242,19 +4242,16 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 	}
 
 	const auto& ticket = nph.get_ticket();
-	*bufferSize = static_cast<u32>(ticket.size());
 
 	if (!buffer)
 	{
+		*bufferSize = static_cast<u32>(ticket.size());
 		return CELL_OK;
 	}
 
-	if (*bufferSize < ticket.size())
-	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
-	}
-
-	memcpy(buffer.get_ptr(), ticket.data(), ticket.size());
+	const u32 size_read = std::min(::size32(ticket), static_cast<u32>(*bufferSize));
+	std::memcpy(buffer.get_ptr(), ticket.data(), size_read);
+	*bufferSize = size_read;
 
 	return CELL_OK;
 }
@@ -5676,7 +5673,7 @@ error_code scenp_score_record_score(s32 transId, SceNpScoreBoardId boardId, SceN
 	else
 	{
 		data = &gameInfo->nativeData[0];
-		data_size = 64;
+		data_size = sizeof(gameInfo->nativeData);
 	}
 
 	nph.record_score(trans_ctx, boardId, score, scoreComment, data, data_size, tmpRank, async);

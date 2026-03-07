@@ -266,6 +266,44 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
+	GLenum get_compatible_snorm_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_R8:
+			return GL_R8_SNORM;
+		case GL_RG8:
+			return GL_RG8_SNORM;
+		case GL_RGBA8:
+			return GL_RGBA8_SNORM;
+		case GL_R16:
+			return GL_R16_SNORM;
+		case GL_RG16:
+			return GL_RG16_SNORM;
+		case GL_RGBA16:
+			return GL_RGBA16_SNORM;
+		default:
+			return GL_NONE;
+		}
+	}
+
+	GLenum get_compatible_srgb_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_RGBA8:
+			return GL_SRGB8_ALPHA8_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		default:
+			return GL_NONE;
+		}
+	}
+
 	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
 	{
 		if (!pack_info.swap_bytes)
@@ -325,8 +363,7 @@ namespace gl
 				}
 			}
 
-			dst->bind(buffer::target::pixel_pack);
-			src->copy_to(reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset)), static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+			src->copy_to(*dst, dst_offset, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
 			return false;
 		};
 
@@ -573,9 +610,8 @@ namespace gl
 			}
 
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
-			transfer_buf->bind(buffer::target::pixel_unpack);
 
-			dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
+			dst->copy_from(*transfer_buf, out_offset, static_cast<texture::format>(unpack_info.format),
 				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
 		}
 	}
@@ -674,7 +710,6 @@ namespace gl
 			pixel_buffer_layout mem_layout;
 
 			std::span<std::byte> dst_buffer = staging_buffer;
-			void* out_pointer = staging_buffer.data();
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size = staging_buffer.size();
 
@@ -693,8 +728,6 @@ namespace gl
 					g_compute_decode_buffer.remove();
 					g_compute_decode_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
 				}
-
-				out_pointer = nullptr;
 			}
 
 			for (const rsx::subresource_layout& layout : input_layouts)
@@ -829,7 +862,7 @@ namespace gl
 				else
 				{
 					unpack_settings.swap_bytes(op.require_swap);
-					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
+					dst->copy_from(staging_buffer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
 			}
 		}
@@ -1118,9 +1151,7 @@ namespace gl
 			// Start pack operation
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
-
-			g_typeless_transfer_buffer.get().bind(buffer::target::pixel_pack);
-			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
+			src->copy_to(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
@@ -1128,8 +1159,7 @@ namespace gl
 			pixel_unpack_settings unpack_settings{};
 			unpack_settings.swap_bytes(unpack_info.swap_bytes);
 
-			g_typeless_transfer_buffer.get().bind(buffer::target::pixel_unpack);
-			dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
+			dst->copy_from(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		}
 	}

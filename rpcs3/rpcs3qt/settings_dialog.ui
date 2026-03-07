@@ -265,7 +265,7 @@
            </layout>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
+           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0">
             <item>
              <widget class="QGroupBox" name="gb_spu_threads">
               <property name="sizePolicy">
@@ -2321,9 +2321,9 @@
              </item>
              <item>
               <widget class="QCheckBox" name="enable_clans">
-                <property name="text">
-                 <string>Enable Clans</string>
-                </property>
+               <property name="text">
+                <string>Enable Clans</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -4317,6 +4317,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="disableHardwareTexelRemapping">
+               <property name="text">
+                <string>Disable Hardware ColorSpace Remapping</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="verticalSpacerDebugGPU">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>
@@ -4460,7 +4467,7 @@
           </item>
           <item>
            <widget class="QWidget" name="debug_more_stuff" native="true">
-            <layout class="QVBoxLayout" name="debug_more_stuff_layout" stretch="0,0,0,0,0,1">
+            <layout class="QVBoxLayout" name="debug_more_stuff_layout" stretch="0,0,0,0,0,0,1">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -4534,6 +4541,22 @@
                <layout class="QVBoxLayout" name="gb_vksched_layout">
                 <item>
                  <widget class="QComboBox" name="vulkansched"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_log_levels">
+               <property name="title">
+                <string>Log Levels</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_log_levels_layout">
+                <item>
+                 <widget class="QPushButton" name="pb_log_levels">
+                  <property name="text">
+                   <string>Configure</string>
+                  </property>
+                 </widget>
                 </item>
                </layout>
               </widget>

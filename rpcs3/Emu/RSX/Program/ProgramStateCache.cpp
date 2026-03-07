@@ -651,7 +651,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		case RSX_FP_OPCODE_TXB:
 		case RSX_FP_OPCODE_TXL:
 			result.referenced_textures_mask |= (1 << d0.tex_num);
-			result.has_tex_bx2_conv |= !!d0.exp_tex;
+			result.bx2_texture_reads_mask |= ((d0.exp_tex ? 1u : 0u) << d0.tex_num);
 			break;
 		case RSX_FP_OPCODE_PK4:
 		case RSX_FP_OPCODE_UP4:
@@ -674,6 +674,8 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			// NOTE: Jump instructions are not yet proved to work outside of loops and if/else blocks
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
+			break;
+		default:
 			break;
 		}
 

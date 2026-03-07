@@ -1275,6 +1275,9 @@
     <ClCompile Include="Input\mouse_gyro_handler.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\log_level_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1516,6 +1519,9 @@
     </ClInclude>
     <ClInclude Include="Input\mouse_gyro_handler.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\log_level_dialog.h">
+      <Filter>Gui\settings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

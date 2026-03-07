@@ -256,7 +256,7 @@ namespace gui
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
 	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  update_on);
 
-	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          false);
+	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          true);
 	const gui_save gs_disableKbHotkeys  = gui_save(gs_frame, "disableKbHotkeys",      false);
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
 	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);

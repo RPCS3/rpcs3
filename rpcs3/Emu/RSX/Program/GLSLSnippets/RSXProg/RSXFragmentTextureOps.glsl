@@ -46,8 +46,10 @@ R"(
 			_texture_bx2_active = false; \
 		} while (false)
 	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(_texture_flag_erase)) | _texture_flag_override)
-#else
+#elif defined(_ENABLE_TEXTURE_ALPHA_KILL) || defined(_ENABLE_FORMAT_CONVERSION) || defined(_ENABLE_DEPTH_FORMAT_RECONSTRUCTION)
 	#define TEX_FLAGS(index) (TEX_PARAM(index).flags)
+#else
+	#define TEX_FLAGS(index) 0
 #endif
 
 #define TEX_NAME(index) tex##index
@@ -193,6 +195,8 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 
 #endif // _EMULATE_SHADOW
 
+#ifdef _ENABLE_FORMAT_CONVERSION
+
 vec4 _sext_unorm8x4(const in vec4 x)
 {
 	// TODO: Handle clamped sign-extension
@@ -284,5 +288,28 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 
 	return rgba;
 }
+
+#elif defined(_ENABLE_TEXTURE_ALPHA_KILL)
+
+vec4 _process_texel(in vec4 rgba, const in uint control_bits)
+{
+	if (_test_bit(control_bits, ALPHAKILL))
+	{
+		// Alphakill
+		if (rgba.a < 0.000001)
+		{
+			_kill();
+			return rgba;
+		}
+	}
+
+	return rgba;
+}
+
+#else
+
+#define _process_texel(rgba, control) rgba
+
+#endif // _ENABLE_FORMAT_CONVERSION
 
 )"

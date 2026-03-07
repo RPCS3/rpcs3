@@ -97,7 +97,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64
 	// Look for unmapped space
 	if (const auto area = vm::find_map(0x10000000, 0x10000000, 2 | (flag & SYS_MEMORY_PAGE_SIZE_MASK)))
 	{
-		sys_vm.warning("sys_vm_memory_map(): Found VM 0x%x area (vsize=0x%x)", addr, vsize);
+		sys_vm.warning("sys_vm_memory_map(): Found VM 0x%x area (vsize=0x%x)", area->addr, vsize);
 
 		// Alloc all memory (shall not fail)
 		ensure(area->alloc(static_cast<u32>(vsize)));

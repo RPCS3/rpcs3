@@ -51,6 +51,7 @@ LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
 
+extern atomic_t<bool> g_user_asked_for_fullscreen;
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
@@ -150,6 +151,9 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 gs_frame::~gs_frame()
 {
 	g_user_asked_for_screenshot = false;
+	g_user_asked_for_recording = false;
+	g_user_asked_for_frame_capture = false;
+	g_user_asked_for_fullscreen = false;
 	pad::g_home_menu_requested = false;
 
 	// Save active screen to gui settings
@@ -201,12 +205,12 @@ void gs_frame::update_shortcuts()
 	}
 }
 
-void gs_frame::paintEvent(QPaintEvent *event)
+void gs_frame::paintEvent(QPaintEvent* event)
 {
 	Q_UNUSED(event)
 }
 
-void gs_frame::showEvent(QShowEvent *event)
+void gs_frame::showEvent(QShowEvent* event)
 {
 	// We have to calculate new window positions, since the frame is only known once the window was created.
 	// We will try to find the originally requested dimensions if possible by moving the frame.
@@ -801,7 +805,7 @@ f64 gs_frame::client_display_rate()
 	return rate;
 }
 
-void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
+void gs_frame::flip(draw_context_t /*context*/, bool /*skip_frame*/)
 {
 	static Timer fps_t;
 
@@ -838,6 +842,14 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		Emu.CallFromMainThread([this]()
 		{
 			toggle_recording();
+		});
+	}
+
+	if (g_user_asked_for_fullscreen.exchange(false))
+	{
+		Emu.CallFromMainThread([this]()
+		{
+			toggle_fullscreen();
 		});
 	}
 }

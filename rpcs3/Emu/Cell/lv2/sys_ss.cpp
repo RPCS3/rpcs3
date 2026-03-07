@@ -24,7 +24,7 @@ struct lv2_update_manager
 
 		// For example, 4.90 should be converted to 0x4900000000000
 		std::erase(version_str, '.');
-		if (std::from_chars(version_str.data(), version_str.data() + version_str.size(), system_sw_version, 16).ec != std::errc{})
+		if (std::from_chars(version_str.data(), version_str.data() + version_str.size(), system_sw_version, 16).ec == std::errc{})
 			system_sw_version <<= 40;
 		else
 			system_sw_version = 0;
@@ -79,6 +79,7 @@ struct lv2_update_manager
 
 		if (malloc_set.count(addr))
 		{
+			malloc_set.erase(addr);
 			return vm::dealloc(addr, vm::main);
 		}
 

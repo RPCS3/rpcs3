@@ -1004,7 +1004,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 
 			// Check address
 			// TODO: The address of use should be extracted from analyser instead
-			if (fstub && fstub >= _module.segs[0].addr && fstub <= _module.segs[0].addr + _module.segs[0].size)
+			if (fstub && fstub >= _module.segs[0].addr && fstub < _module.segs[0].addr + _module.segs[0].size)
 			{
 				nid_to_use_addr.emplace(fnid, fstub);
 			}
@@ -1895,7 +1895,7 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 	}
 	else
 	{
-		ppu_loader.error("Library %s: PRX library info not found");
+		ppu_loader.error("Library: PRX library info not found");
 	}
 
 	prx->start.set(prx->specials[0xbc9a0086]);
@@ -3192,7 +3192,7 @@ bool ppu_load_rel_exec(const ppu_rel_object& elf)
 
 	for (const auto& s : elf.shdrs)
 	{
-		if (s.sh_type != sec_type::sht_progbits)
+		if (s.sh_type == sec_type::sht_progbits)
 		{
 			memsize = utils::align<u32>(memsize + vm::cast(s.sh_size), 128);
 		}

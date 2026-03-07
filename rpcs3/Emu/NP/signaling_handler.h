@@ -133,7 +133,7 @@ private:
 
 	signaling_packet sig_packet{};
 
-	std::map<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
+	std::multimap<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
 
 	u32 cur_conn_id = 1;
 	std::unordered_map<std::string, u32> npid_to_conn_id;               // (npid, conn_id)

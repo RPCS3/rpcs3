@@ -121,6 +121,7 @@ namespace rsx
 		texture_format_ex result { format_bits };
 		result.features = format_features;
 		result.texel_remap_control = format_convert;
+		result.encoded_remap = remap();
 		return result;
 	}
 
@@ -364,11 +365,15 @@ namespace rsx
 		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
-	u32 fragment_texture::border_color() const
+	u32 fragment_texture::border_color(bool apply_colorspace_remapping) const
 	{
 		const u32 raw = registers[NV4097_SET_TEXTURE_BORDER_COLOR + (m_index * 8)];
-		const u32 sext = argb_signed();
+		if (!apply_colorspace_remapping) [[ likely ]]
+		{
+			return raw;
+		}
 
+		const u32 sext = argb_signed();
 		if (!sext) [[ likely ]]
 		{
 			return raw;
@@ -430,9 +435,9 @@ namespace rsx
 		return (conv & mask) | (raw & ~mask);
 	}
 
-	color4f fragment_texture::remapped_border_color() const
+	color4f fragment_texture::remapped_border_color(bool apply_colorspace_remapping) const
 	{
-		color4f base_color = rsx::decode_border_color(border_color());
+		color4f base_color = rsx::decode_border_color(border_color(apply_colorspace_remapping));
 		if (remap() == RSX_TEXTURE_REMAP_IDENTITY)
 		{
 			return base_color;
@@ -571,14 +576,14 @@ namespace rsx
 		return dimension() != rsx::texture_dimension::dimension1d ? ((registers[NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT + (m_index * 8)]) & 0xffff) : 1;
 	}
 
-	u32 vertex_texture::border_color() const
+	u32 vertex_texture::border_color(bool) const
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR + (m_index * 8)];
 	}
 
-	color4f vertex_texture::remapped_border_color() const
+	color4f vertex_texture::remapped_border_color(bool) const
 	{
-		return rsx::decode_border_color(border_color());
+		return rsx::decode_border_color(border_color(false));
 	}
 
 	u16 vertex_texture::depth() const

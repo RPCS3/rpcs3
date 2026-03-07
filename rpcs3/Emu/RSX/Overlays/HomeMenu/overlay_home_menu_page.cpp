@@ -215,12 +215,24 @@ namespace rsx
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
 			{
+				if (!is_auto_repeat && get_selected_index() <= 0)
+				{
+					select_entry(get_elements_count() - 1);
+					break;
+				}
+
 				select_previous();
 				break;
 			}
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
 			{
+				if (!is_auto_repeat && get_selected_index() >= (get_elements_count() - 1))
+				{
+					select_entry(0);
+					break;
+				}
+
 				select_next();
 				break;
 			}

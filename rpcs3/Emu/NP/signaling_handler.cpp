@@ -774,6 +774,7 @@ void signaling_handler::send_information_packets(u32 addr, u16 port, const SceNp
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_info;
 
+	retire_packet(si, signal_info);
 	send_signaling_packet(sent_packet, addr, port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_INFO_DELAY);
 	wake_up();
