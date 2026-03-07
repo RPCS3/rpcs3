@@ -745,6 +745,7 @@ namespace gl
 
 			gl::upload_texture(cmd, section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
+			section->get_raw_texture()->set_name(fmt::format("Raw Texture @0x%x", rsx_range.start));
 			section->last_write_tag = rsx::get_shared_tag();
 			return section;
 		}

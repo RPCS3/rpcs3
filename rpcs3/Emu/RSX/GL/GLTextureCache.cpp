@@ -152,6 +152,8 @@ namespace gl
 			dst = data.get();
 			dst->properties_encoding = match_key;
 			m_temporary_surfaces.emplace_back(std::move(data));
+
+			dst->set_name(fmt::format("[Temp View] id=%u, fmt=0x%x", dst->id(), gcm_format));
 		}
 
 		dst->add_ref();

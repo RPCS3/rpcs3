@@ -411,7 +411,7 @@ namespace gl
 		auto result = view.get();
 		views.emplace(key, std::move(view));
 
-		result->set_name(fmt::format("%s_%x", name(), remap.encoded));
+		result->set_name(fmt::format("%s, remap=%x", name(), remap.encoded));
 		return result;
 	}
 
