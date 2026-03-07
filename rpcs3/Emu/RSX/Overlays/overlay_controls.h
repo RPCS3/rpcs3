@@ -60,7 +60,6 @@ namespace rsx
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
-			usz size_bytes() const override { return data_grey.size(); }
 		};
 
 		struct resource_config
