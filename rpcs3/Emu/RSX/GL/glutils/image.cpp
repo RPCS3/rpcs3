@@ -410,6 +410,8 @@ namespace gl
 		auto view = std::make_unique<texture_view>(this, swizzle, aspect_flags);
 		auto result = view.get();
 		views.emplace(key, std::move(view));
+
+		result->set_name(fmt::format("%s_%x", name(), remap.encoded));
 		return result;
 	}
 

@@ -59,7 +59,7 @@ namespace gl
 		GLuint num_layers;
 	};
 
-	class texture
+	class texture : public named_object<GL_TEXTURE>
 	{
 		friend class texture_view;
 
@@ -181,7 +181,6 @@ namespace gl
 		};
 
 	protected:
-		GLuint m_id = GL_NONE;
 		GLuint m_width = 0;
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
@@ -346,10 +345,9 @@ namespace gl
 		}
 	};
 
-	class texture_view
+	class texture_view : public named_object<GL_TEXTURE>
 	{
 	protected:
-		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
 		GLenum m_view_format = 0;
@@ -465,6 +463,7 @@ namespace gl
 
 	class viewable_image : public texture
 	{
+	protected:
 		std::unordered_map<u64, std::unique_ptr<texture_view>> views;
 
 	public:
