@@ -56,6 +56,8 @@ namespace rsx
 				m_time_display.auto_resize();
 				last_time = std::move(new_time);
 			}
+
+			m_main_menu.update(timestamp_us);
 		}
 
 		void home_menu_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
@@ -88,6 +90,11 @@ namespace rsx
 					std::string path = page->title;
 					for (home_menu_page* parent = page->parent; parent; parent = parent->parent)
 					{
+						if (parent->title.empty())
+						{
+							break;
+						}
+
 						path = parent->title + "  >  " + path;
 					}
 					m_description.set_text(path);

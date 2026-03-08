@@ -28,9 +28,9 @@ namespace rsx
 
 			void update_selection();
 
-			void select_entry(s32 entry);
-			void select_next(u16 count = 1);
-			void select_previous(u16 count = 1);
+			virtual void select_entry(s32 entry);
+			virtual void select_next(u16 count = 1);
+			virtual void select_previous(u16 count = 1);
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
