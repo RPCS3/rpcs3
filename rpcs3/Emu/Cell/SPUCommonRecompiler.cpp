@@ -3958,6 +3958,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							block.reg_maybe_float.set(reg);
 						}
 
+						if (type == spu_itype::SHUFB && reg == op.rc)
+						{
+							block.reg_maybe_shuffle_mask.set(reg);
+						}
+
 						block.reg_use[reg]++;
 
 						if (reg_save != reg && block.reg_save_dom[reg])
