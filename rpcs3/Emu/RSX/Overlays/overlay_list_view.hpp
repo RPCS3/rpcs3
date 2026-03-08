@@ -45,6 +45,7 @@ namespace rsx
 
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
+			void set_size(u16 w, u16 h) override;
 
 			compiled_resource& get_compiled() override;
 		};

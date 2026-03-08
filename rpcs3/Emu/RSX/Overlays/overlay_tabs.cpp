@@ -54,6 +54,16 @@ namespace rsx::overlays
 		reflow_layout();
 	}
 
+	void tabbed_container::set_headers_background_color(const color4f& color)
+	{
+		if (!m_tab_headers)
+		{
+			reflow_layout();
+		}
+
+		m_tab_headers->back_color = color;
+	}
+
 	void tabbed_container::set_headers_pulse_effect(bool pulse)
 	{
 		if (!m_tab_headers)
@@ -87,6 +97,7 @@ namespace rsx::overlays
 			auto ptr = horizontal_layout::add_element(tab_headers);
 			m_tab_headers = ensure(dynamic_cast<list_view*>(ptr));
 			m_tab_headers->set_pos(x, y);
+			m_tab_headers->advance_pos = 16;
 			m_tab_headers->hide_prompt_buttons();
 			m_tab_headers->back_color.a = 0.95f;
 		}

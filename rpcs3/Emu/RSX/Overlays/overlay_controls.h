@@ -235,6 +235,22 @@ namespace rsx
 			bool auto_resize = true;
 
 			virtual overlay_element* add_element(std::unique_ptr<overlay_element>&, int = -1) = 0;
+
+			template<typename T>
+				requires std::is_base_of_v<overlay_element, T>
+			T* add_element(std::unique_ptr<T>& ptr, int offset = -1)
+			{
+				auto _ptr = ensure(dynamic_cast<overlay_element*>(ptr.release()));
+				std::unique_ptr<overlay_element> e{ _ptr };
+				return static_cast<T*>(add_element(e, offset));
+			}
+
+			overlay_element* add_element()
+			{
+				auto ptr = std::make_unique<overlay_element>();
+				return add_element(ptr);
+			}
+
 			void clear_items();
 
 			layout_container();
@@ -252,6 +268,7 @@ namespace rsx
 
 		struct vertical_layout : public layout_container
 		{
+			using layout_container::add_element;
 			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override;
 			compiled_resource& get_compiled() override;
 			u16 get_scroll_offset_px() override;
@@ -259,9 +276,17 @@ namespace rsx
 
 		struct horizontal_layout : public layout_container
 		{
+			using layout_container::add_element;
 			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override;
 			compiled_resource& get_compiled() override;
 			u16 get_scroll_offset_px() override;
+		};
+
+		struct box_layout : public layout_container
+		{
+			using layout_container::add_element;
+			overlay_element* add_element(std::unique_ptr<overlay_element>& item, int offset = -1) override;
+			u16 get_scroll_offset_px() override { return 0; }
 		};
 
 		// Controls
