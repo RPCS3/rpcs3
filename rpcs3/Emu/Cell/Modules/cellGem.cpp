@@ -1883,21 +1883,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->pos[2] = controller.distance_mm;
 	gem_state->pos[3] = 0.f;
 
-	// TODO: calculate handle position based on our world coordinate and the angles
-	gem_state->handle_pos[0] = camera_x;
-	gem_state->handle_pos[1] = camera_y;
-	gem_state->handle_pos[2] = controller.distance_mm + 10.0f;
-	gem_state->handle_pos[3] = 0.f;
-
 	// Calculate orientation
-	if (g_cfg.io.move == move_handler::real || (g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
-	{
-		gem_state->quat[0] = move_data.quaternion.x();
-		gem_state->quat[1] = move_data.quaternion.y();
-		gem_state->quat[2] = move_data.quaternion.z();
-		gem_state->quat[3] = move_data.quaternion.w();
-	}
-	else
+	ps_move_data::vect<4> quat = move_data.quaternion;
+
+	if (g_cfg.io.move != move_handler::real && !(g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
 	{
 		const f32 max_angle_per_side_h = g_cfg.io.fake_move_rotation_cone_h / 2.0f;
 		const f32 max_angle_per_side_v = g_cfg.io.fake_move_rotation_cone_v / 2.0f;
@@ -1911,17 +1900,27 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		const f32 cy = std::cos(yaw * 0.5f);
 		const f32 sy = std::sin(yaw * 0.5f);
 
-		const f32 q_x = sr * cp * cy - cr * sp * sy;
-		const f32 q_y = cr * sp * cy + sr * cp * sy;
-		const f32 q_z = cr * cp * sy - sr * sp * cy;
-		const f32 q_w = cr * cp * cy + sr * sp * sy;
-
-		gem_state->quat[0] = q_x;
-		gem_state->quat[1] = q_y;
-		gem_state->quat[2] = q_z;
-		gem_state->quat[3] = q_w;
+		quat.x() = sr * cp * cy - cr * sp * sy;
+		quat.y() = cr * sp * cy + sr * cp * sy;
+		quat.z() = cr * cp * sy - sr * sp * cy;
+		quat.w() = cr * cp * cy + sr * sp * sy;
 	}
 
+	gem_state->quat[0] = quat.x();
+	gem_state->quat[1] = quat.y();
+	gem_state->quat[2] = quat.z();
+	gem_state->quat[3] = quat.w();
+
+	// Calculate handle position based on our world coordinate and the current orientation
+	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, -45.f}); // handle is ~45 mm below sphere
+	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
+
+	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
+	gem_state->handle_pos[1] = gem_state->pos[1] - offset_world.y(); // Flip y offset
+	gem_state->handle_pos[2] = gem_state->pos[2] + offset_world.z();
+	gem_state->handle_pos[3] = 0.f;
+
+	// Calculate velocity
 	if constexpr (!ps_move_data::use_imu_for_velocity)
 	{
 		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
@@ -1930,6 +1929,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		{
 			gem_state->vel[i] = move_data.vel_world[i];
 			gem_state->accel[i] = move_data.accel_world[i];
+
+			// TODO: maybe this also needs to be adjusted depending on the orientation
+			gem_state->handle_vel[i] = gem_state->vel[i];
+			gem_state->handle_accel[i] = gem_state->accel[i];
 		}
 	}
 
