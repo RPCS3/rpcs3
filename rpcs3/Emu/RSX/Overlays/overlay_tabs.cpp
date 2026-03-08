@@ -3,10 +3,11 @@
 
 namespace rsx::overlays
 {
-	tabbed_container::tabbed_container(u16 header_width)
+	tabbed_container::tabbed_container(u16 w, u16 h, u16 header_width)
 		: m_headers_width(header_width)
 	{
 		auto_resize = false;
+		set_size(w, h);
 	}
 
 	overlay_element* tabbed_container::add_element(std::unique_ptr<overlay_element>& item, int offset)
@@ -119,6 +120,12 @@ namespace rsx::overlays
 	u32 tabbed_container::get_selected_idx() const
 	{
 		return m_selected_idx;
+	}
+
+	void tabbed_container::toggle_selection_mode()
+	{
+		m_is_in_tab_selection_mode = !m_is_in_tab_selection_mode;
+		set_headers_pulse_effect(m_is_in_tab_selection_mode);
 	}
 
 	compiled_resource& tabbed_container::get_compiled()
