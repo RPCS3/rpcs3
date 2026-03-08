@@ -108,6 +108,12 @@ namespace rsx
 			m_entries.push_back(std::move(element));
 		}
 
+		void home_menu_page::add_item(std::string_view title, std::function<page_navigation(pad_button)> callback)
+		{
+			std::unique_ptr<overlay_element> title_element = std::make_unique<home_menu_entry>(title.data(), w);
+			add_item(title_element, callback);
+		}
+
 		void home_menu_page::apply_layout(bool center_vertically)
 		{
 			if (!m_items.empty())
@@ -308,40 +314,41 @@ namespace rsx
 
 		compiled_resource& home_menu_page::get_compiled()
 		{
-			if (!is_compiled() || (m_message_box && !m_message_box->is_compiled()))
+			if (m_message_box && !m_message_box->is_compiled())
 			{
 				m_is_compiled = false;
-
-				if (home_menu_page* page = get_current_page(false))
-				{
-					compiled_resources = page->get_compiled();
-				}
-				else if (visible)
-				{
-					compiled_resources = list_view::get_compiled();
-
-					if (m_message_box && m_message_box->visible)
-					{
-						compiled_resources.add(m_message_box->get_compiled());
-					}
-					else
-					{
-						if (show_reset_button())
-						{
-							compiled_resources.add(m_reset_btn.get_compiled());
-						}
-
-						if (m_config_changed && *m_config_changed)
-						{
-							compiled_resources.add(m_save_btn.get_compiled());
-							compiled_resources.add(m_discard_btn.get_compiled());
-						}
-					}
-				}
-
-				m_is_compiled = true;
 			}
 
+			if (is_compiled())
+			{
+				return compiled_resources;
+			}
+
+			if (home_menu_page* page = get_current_page(false))
+			{
+				compiled_resources = page->get_compiled();
+			}
+			else if (is_visible())
+			{
+				compiled_resources = list_view::get_compiled();
+
+				if (m_message_box && m_message_box->is_visible())
+				{
+					compiled_resources.add(m_message_box->get_compiled());
+				}
+				else if (m_config_changed && *m_config_changed)
+				{
+					if (show_reset_button())
+					{
+						compiled_resources.add(m_reset_btn.get_compiled());
+					}
+
+					compiled_resources.add(m_save_btn.get_compiled());
+					compiled_resources.add(m_discard_btn.get_compiled());
+				}
+			}
+
+			m_is_compiled = true;
 			return compiled_resources;
 		}
 	}

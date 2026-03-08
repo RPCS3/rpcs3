@@ -24,6 +24,7 @@ namespace rsx
 			void on_activate();
 			void on_deactivate();
 
+			virtual void update(u64 timestamp_us) {}
 			virtual bool show_reset_button() const { return false; }
 
 			bool is_current_page = false;
@@ -34,8 +35,9 @@ namespace rsx
 			std::shared_ptr<bool> m_config_changed;
 
 		protected:
-			void add_page(std::shared_ptr<home_menu_page> page);
-			void add_item(std::unique_ptr<overlay_element>& element, std::function<page_navigation(pad_button)> callback);
+			virtual void add_page(std::shared_ptr<home_menu_page> page);
+			virtual void add_item(std::unique_ptr<overlay_element>& element, std::function<page_navigation(pad_button)> callback);
+			virtual void add_item(std::string_view, std::function<page_navigation(pad_button)> callback);
 			void apply_layout(bool center_vertically = true);
 			void show_dialog(const std::string& text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
 

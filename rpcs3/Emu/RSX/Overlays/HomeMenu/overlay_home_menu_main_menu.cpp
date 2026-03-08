@@ -19,7 +19,7 @@ namespace rsx
 	namespace overlays
 	{
 		home_menu_main_menu::home_menu_main_menu(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
-			: home_menu_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_TITLE))
+			: home_menu_page(x, y, width, height, use_separators, parent, "")
 		{
 			is_current_page = true;
 
@@ -28,8 +28,15 @@ namespace rsx
 
 			m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
 
-			std::unique_ptr<overlay_element> resume = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESUME), width);
-			add_item(resume, [](pad_button btn) -> page_navigation
+			m_sidebar = std::make_unique<list_view>(350, height, false);
+			m_sidebar->set_pos(x, y);
+			m_sidebar->hide_prompt_buttons();
+			m_sidebar->back_color = color4f(0.15f, 0.15f, 0.15f, 0.85f);
+
+			m_sliding_animation.duration_sec = 0.5f;
+			m_sliding_animation.type = animation_type::ease_in_out_cubic;
+
+			add_item(get_localized_string(localized_string_id::HOME_MENU_RESUME), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -41,8 +48,7 @@ namespace rsx
 
 			if (rsx::overlays::friends_list_dialog::rpcn_configured())
 			{
-				std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS), width);
-				add_item(friends, [](pad_button btn) -> page_navigation
+				add_item(get_localized_string(localized_string_id::HOME_MENU_FRIENDS), [](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -76,8 +82,7 @@ namespace rsx
 			}
 			if (!trop_name.empty())
 			{
-				std::unique_ptr<overlay_element> trophies = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TROPHIES), width);
-				add_item(trophies, [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
+				add_item(get_localized_string(localized_string_id::HOME_MENU_TROPHIES), [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -93,8 +98,7 @@ namespace rsx
 				});
 			}
 
-			std::unique_ptr<overlay_element> screenshot = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), width);
-			add_item(screenshot, [](pad_button btn) -> page_navigation
+			add_item(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -102,8 +106,7 @@ namespace rsx
 				return page_navigation::exit_for_screenshot;
 			});
 
-			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING), width);
-			add_item(recording, [](pad_button btn) -> page_navigation
+			add_item(get_localized_string(localized_string_id::HOME_MENU_RECORDING), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -112,8 +115,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			std::unique_ptr<overlay_element> fullscreen = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN), width);
-			add_item(fullscreen, [](pad_button btn) -> page_navigation
+			add_item(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross)
 					return page_navigation::stay;
@@ -125,8 +127,7 @@ namespace rsx
 
 			add_page(std::make_shared<home_menu_savestate>(x, y, width, height, use_separators, this));
 
-			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART), width);
-			add_item(restart, [](pad_button btn) -> page_navigation
+			add_item(get_localized_string(localized_string_id::HOME_MENU_RESTART), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -141,8 +142,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			std::unique_ptr<overlay_element> exit_game = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME), width);
-			add_item(exit_game, [](pad_button btn) -> page_navigation
+			add_item(get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -155,6 +155,78 @@ namespace rsx
 			});
 
 			apply_layout();
+		}
+
+		void home_menu_main_menu::add_sidebar_entry(std::string_view title)
+		{
+			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(title.data());
+			label_widget->set_size(m_sidebar->w, 60);
+			label_widget->set_font("Arial", 18);
+			label_widget->back_color.a = 0.f;
+			label_widget->set_padding(16, 4, 16, 4);
+			m_sidebar->add_entry(label_widget);
+		}
+
+		void home_menu_main_menu::add_item(std::string_view title, std::function<page_navigation(pad_button)> callback)
+		{
+			add_sidebar_entry(title);
+			home_menu_page::add_item(title, callback);
+		}
+
+		void home_menu_main_menu::add_page(std::shared_ptr<home_menu_page> page)
+		{
+			add_sidebar_entry(page->title);
+			home_menu_page::add_page(page);
+		}
+
+		void home_menu_main_menu::select_entry(s32 entry)
+		{
+			m_sidebar->select_entry(entry);
+			list_view::select_entry(entry);
+		}
+
+		void home_menu_main_menu::select_next(u16 count)
+		{
+			m_sidebar->select_next(count);
+			list_view::select_next(count);
+		}
+
+		void home_menu_main_menu::select_previous(u16 count)
+		{
+			m_sidebar->select_previous(count);
+			list_view::select_previous(count);
+		}
+
+		void home_menu_main_menu::update(u64 timestamp_us)
+		{
+			if (m_animation_timer == 0)
+			{
+				m_animation_timer = timestamp_us;
+				m_sliding_animation.current = { -f32(m_sidebar->x + m_sidebar->w), 0, 0 };
+				m_sliding_animation.end = {};
+				m_sliding_animation.active = true;
+				m_sliding_animation.update(0);
+				return;
+			}
+
+			if (m_sliding_animation.active)
+			{
+				m_sliding_animation.update(timestamp_us);
+			}
+		}
+
+		compiled_resource& home_menu_main_menu::get_compiled()
+		{
+			m_is_compiled = true;
+
+			if (home_menu_page* page = get_current_page(false))
+			{
+				return page->get_compiled();
+			}
+
+			compiled_resources = m_sidebar->get_compiled();
+			m_sliding_animation.apply(compiled_resources);
+			return compiled_resources;
 		}
 	}
 }
