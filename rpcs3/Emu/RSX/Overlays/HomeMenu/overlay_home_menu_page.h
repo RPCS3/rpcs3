@@ -18,7 +18,11 @@ namespace rsx
 			page_navigation handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms);
 
 			void translate(s16 _x, s16 _y) override;
+			void set_size(u16 _w, u16 _h) override;
 			compiled_resource& get_compiled() override;
+
+			void on_activate();
+			void on_deactivate();
 
 			virtual bool show_reset_button() const { return false; }
 

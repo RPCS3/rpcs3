@@ -5,14 +5,14 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_entry::home_menu_entry(const std::string& text)
+		home_menu_entry::home_menu_entry(const std::string& text, u16 width)
 		{
 			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> padding    = std::make_unique<spacer>();
 			std::unique_ptr<overlay_element> title      = std::make_unique<label>(text);
 
 			padding->set_size(1, 1);
-			title->set_size(overlay::virtual_width - 2 * menu_entry_margin, menu_entry_height);
+			title->set_size(width, menu_entry_height);
 			title->set_font("Arial", 16);
 			title->set_wrap_text(true);
 			title->align_text(text_align::center);

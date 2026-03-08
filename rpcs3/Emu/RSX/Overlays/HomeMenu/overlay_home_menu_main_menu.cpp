@@ -28,7 +28,7 @@ namespace rsx
 
 			m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
 
-			std::unique_ptr<overlay_element> resume = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESUME));
+			std::unique_ptr<overlay_element> resume = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESUME), width);
 			add_item(resume, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
@@ -41,7 +41,7 @@ namespace rsx
 
 			if (rsx::overlays::friends_list_dialog::rpcn_configured())
 			{
-				std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
+				std::unique_ptr<overlay_element> friends = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_FRIENDS), width);
 				add_item(friends, [](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
@@ -76,7 +76,7 @@ namespace rsx
 			}
 			if (!trop_name.empty())
 			{
-				std::unique_ptr<overlay_element> trophies = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TROPHIES));
+				std::unique_ptr<overlay_element> trophies = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TROPHIES), width);
 				add_item(trophies, [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
@@ -93,7 +93,7 @@ namespace rsx
 				});
 			}
 
-			std::unique_ptr<overlay_element> screenshot = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT));
+			std::unique_ptr<overlay_element> screenshot = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), width);
 			add_item(screenshot, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
@@ -102,7 +102,7 @@ namespace rsx
 				return page_navigation::exit_for_screenshot;
 			});
 
-			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
+			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING), width);
 			add_item(recording, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
@@ -112,7 +112,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			std::unique_ptr<overlay_element> fullscreen = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN));
+			std::unique_ptr<overlay_element> fullscreen = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN), width);
 			add_item(fullscreen, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross)
@@ -125,7 +125,7 @@ namespace rsx
 
 			add_page(std::make_shared<home_menu_savestate>(x, y, width, height, use_separators, this));
 
-			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART));
+			std::unique_ptr<overlay_element> restart = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RESTART), width);
 			add_item(restart, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
@@ -141,7 +141,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			std::unique_ptr<overlay_element> exit_game = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME));
+			std::unique_ptr<overlay_element> exit_game = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME), width);
 			add_item(exit_game, [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
