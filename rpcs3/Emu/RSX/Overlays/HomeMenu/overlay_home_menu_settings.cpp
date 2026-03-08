@@ -9,15 +9,85 @@ namespace rsx
 		home_menu_settings::home_menu_settings(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS))
 		{
-			add_page(std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, this));
-			add_page(std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, this));
+			m_tabs = std::make_unique<tabbed_container>(width, height, 350);
+			m_tabs->set_pos(x, y);
 
-			apply_layout();
+			add_page(std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
+			add_page(std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
+
+			//apply_layout();
+
+			// Select the first item
+			m_tabs->set_selected_tab(0);
+		}
+
+		void home_menu_settings::add_page(std::shared_ptr<home_menu_page> page)
+		{
+			auto panel = std::static_pointer_cast<overlay_element>(page);
+			page->on_deactivate();
+			m_tabs->add_tab(page->title, panel);
+		}
+
+		page_navigation home_menu_settings::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
+		{
+			if (!m_tabs->is_in_selection_mode())
+			{
+				auto page = ensure(dynamic_cast<home_menu_page*>(m_tabs->get_selected()));
+				const auto nav_action = page->handle_button_press(button_press, is_auto_repeat, auto_repeat_interval_ms);
+				switch (nav_action)
+				{
+				case page_navigation::exit:
+					m_tabs->toggle_selection_mode();
+					page->on_deactivate();
+					return page_navigation::stay;
+				default:
+					return nav_action;
+				}
+			}
+
+			const auto prev_tab = m_tabs->get_selected_idx();
+			auto next_tab = prev_tab;
+
+			switch (button_press)
+			{
+			case pad_button::dpad_up:
+			case pad_button::ls_up:
+				next_tab = (prev_tab > 0)
+					? (prev_tab - 1)
+					: (m_tabs->tab_count() - 1);
+				break;
+			case pad_button::dpad_down:
+			case pad_button::ls_down:
+				next_tab = ((prev_tab + 1) >= m_tabs->tab_count())
+					? 0
+					: prev_tab + 1;
+				break;
+			case pad_button::cross:
+				m_tabs->toggle_selection_mode();
+				ensure(dynamic_cast<home_menu_page*>(m_tabs->get_selected()))->on_activate();
+				return page_navigation::stay;
+			case pad_button::circle:
+				return page_navigation::exit;
+			}
+
+			if (prev_tab != next_tab)
+			{
+				m_tabs->set_selected_tab(next_tab);
+			}
+			return page_navigation::stay;
+		}
+
+		compiled_resource& home_menu_settings::get_compiled()
+		{
+			// TODO: Caching
+			compiled_resources = home_menu_page::get_compiled();
+			compiled_resources.add(m_tabs->get_compiled());
+			return compiled_resources;
 		}
 
 		home_menu_settings_audio::home_menu_settings_audio(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
@@ -32,7 +102,7 @@ namespace rsx
 			add_checkbox(&g_cfg.audio.enable_time_stretching, localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING);
 			add_signed_slider(&g_cfg.audio.time_stretching_threshold, localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING_THRESHOLD, " %", 1);
 
-			apply_layout();
+			apply_layout(false);
 		}
 
 		home_menu_settings_video::home_menu_settings_video(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "overlay_home_menu_page.h"
+#include "../overlay_tabs.h"
+
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
@@ -13,8 +15,13 @@ namespace rsx
 		public:
 			home_menu_settings(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 
+			page_navigation handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms) override;
+			compiled_resource& get_compiled() override;
+
 		private:
-			std::vector<std::shared_ptr<home_menu_page>> m_settings_pages;
+			void add_page(std::shared_ptr<home_menu_page> page) override;
+
+			std::unique_ptr<tabbed_container> m_tabs;
 		};
 
 		struct home_menu_settings_page : public home_menu_page
