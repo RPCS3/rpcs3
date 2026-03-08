@@ -4007,14 +4007,7 @@
                <item>
                 <widget class="QCheckBox" name="cb_show_exit_game">
                  <property name="text">
-                  <string>Show Exit Game Dialog</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="cb_show_boot_game">
-                 <property name="text">
-                  <string>Show Boot Game Dialog</string>
+                  <string>Show Exit Game Confirmation</string>
                  </property>
                 </widget>
                </item>
