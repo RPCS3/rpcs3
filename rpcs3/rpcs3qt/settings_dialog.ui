@@ -182,22 +182,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="checkboxes">
-              <property name="title">
-               <string>Additional Settings</string>
-              </property>
-              <layout class="QVBoxLayout" name="checkboxes_layout">
-               <item>
-                <widget class="QCheckBox" name="spuLoopDetection">
-                 <property name="text">
-                  <string>Enable SPU loop detection</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gb_max_preempt_count">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -2460,6 +2444,13 @@
                 <widget class="QCheckBox" name="enableSpuEventsBusyLoop">
                  <property name="text">
                   <string>Enable SPU Events Busy Loop</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="spuLoopDetection">
+                 <property name="text">
+                  <string>Enable SPU loop detection</string>
                  </property>
                 </widget>
                </item>
