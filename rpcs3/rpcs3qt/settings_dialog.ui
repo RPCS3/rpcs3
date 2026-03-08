@@ -2464,13 +2464,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="ppuNJFixup">
-                 <property name="text">
-                  <string>PPU Non-Java Mode Fixup</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="llvmPrecompilation">
                  <property name="text">
                   <string>PPU/SPU LLVM Precompilation</string>
@@ -4394,6 +4387,13 @@
               <widget class="QCheckBox" name="accuratePPUNJ">
                <property name="text">
                 <string>Accurate PPU Non-Java Mode</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="ppuNJFixup">
+               <property name="text">
+                <string>PPU Non-Java Mode Fixup</string>
                </property>
               </widget>
              </item>
