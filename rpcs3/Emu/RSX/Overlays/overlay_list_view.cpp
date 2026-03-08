@@ -262,6 +262,19 @@ namespace rsx
 			}
 		}
 
+		void list_view::set_size(u16 w, u16 h)
+		{
+			vertical_layout::set_size(w, h);
+
+			m_scroll_indicator_top->w = w;
+			m_scroll_indicator_bottom->w = w;
+			m_highlight_box->w = w;
+
+			m_scroll_indicator_top->refresh();
+			m_scroll_indicator_bottom->refresh();
+			m_highlight_box->refresh();
+		}
+
 		compiled_resource& list_view::get_compiled()
 		{
 			if (is_compiled())

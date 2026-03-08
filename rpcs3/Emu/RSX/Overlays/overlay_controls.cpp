@@ -860,8 +860,8 @@ namespace rsx
 						continue;
 					}
 
-					const s32 item_x_limit = s32{item->x} + item->w - scroll_offset_value - w;
-					const s32 item_x_base = s32{item->x} - scroll_offset_value - w;
+					const s32 item_x_limit = s32{item->x} + item->w - scroll_offset_value - x;
+					const s32 item_x_base = s32{item->x} - scroll_offset_value - x;
 
 					if (item_x_base > w)
 					{
@@ -897,6 +897,19 @@ namespace rsx
 		u16 horizontal_layout::get_scroll_offset_px()
 		{
 			return scroll_offset_value;
+		}
+
+		overlay_element* box_layout::add_element(std::unique_ptr<overlay_element>& item, int offset)
+		{
+			if (offset < 0)
+			{
+				m_items.push_back(std::move(item));
+				return m_items.back().get();
+			}
+
+			overlay_element* result = item.get();
+			m_items.insert(m_items.begin() + offset, std::move(item));
+			return result;
 		}
 
 		compiled_resource& image_view::get_compiled()

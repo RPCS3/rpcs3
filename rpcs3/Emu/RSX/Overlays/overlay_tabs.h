@@ -15,6 +15,7 @@ namespace rsx::overlays
 
 		virtual void set_size(u16 _w, u16 _h) override;
 		virtual void set_headers_width(u16 size);
+		void set_headers_background_color(const color4f& color);
 
 		overlay_element* set_selected_tab(u32 index);
 		overlay_element* get_selected() const;
