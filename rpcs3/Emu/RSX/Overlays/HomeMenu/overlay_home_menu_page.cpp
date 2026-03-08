@@ -40,6 +40,16 @@ namespace rsx
 			set_pos(x, y);
 		}
 
+		void home_menu_page::on_activate()
+		{
+			hide_scroll_indicators(false);
+		}
+
+		void home_menu_page::on_deactivate()
+		{
+			hide_scroll_indicators(true);
+		}
+
 		void home_menu_page::set_current_page(home_menu_page* page)
 		{
 			if (page)
@@ -79,7 +89,7 @@ namespace rsx
 		void home_menu_page::add_page(std::shared_ptr<home_menu_page> page)
 		{
 			ensure(page);
-			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(page->title);
+			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(page->title, w);
 			m_pages.push_back(page);
 
 			add_item(elem, [this, page](pad_button btn) -> page_navigation
@@ -100,6 +110,13 @@ namespace rsx
 
 		void home_menu_page::apply_layout(bool center_vertically)
 		{
+			if (!m_items.empty())
+			{
+				m_entries = std::move(m_items);
+			}
+
+			clear_items();
+
 			// Center vertically if necessary
 			if (center_vertically)
 			{
@@ -118,6 +135,7 @@ namespace rsx
 
 			for (auto& entry : m_entries)
 			{
+				entry->set_pos(0, 0);
 				add_entry(entry);
 			}
 		}
@@ -275,6 +293,19 @@ namespace rsx
 			m_reset_btn.translate(_x, _y);
 		}
 
+		void home_menu_page::set_size(u16 _w, u16 _h)
+		{
+			const auto prev_w = w;
+			list_view::set_size(_w, _h);
+
+			for (auto& entry : m_items)
+			{
+				entry->set_size(_w, entry->h);
+			}
+
+			apply_layout();
+		}
+
 		compiled_resource& home_menu_page::get_compiled()
 		{
 			if (!is_compiled() || (m_message_box && !m_message_box->is_compiled()))
@@ -285,7 +316,7 @@ namespace rsx
 				{
 					compiled_resources = page->get_compiled();
 				}
-				else
+				else if (visible)
 				{
 					compiled_resources = list_view::get_compiled();
 

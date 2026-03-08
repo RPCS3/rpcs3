@@ -25,7 +25,7 @@ namespace rsx
 		struct home_menu_entry : horizontal_layout
 		{
 		public:
-			home_menu_entry(const std::string& text);
+			home_menu_entry(const std::string& text, u16 width);
 		};
 
 		template <typename T, typename C>
