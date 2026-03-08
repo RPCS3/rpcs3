@@ -67,7 +67,6 @@ u32 sys_gamepad_ycon_is_gem(vm::ptr<u8> in, vm::ptr<u8> out)
 // syscall(621,packet_id,u8 *in,u8 *out) Talk:LV2_Functions_and_Syscalls#Syscall_621_.280x26D.29 gamepad_if usage
 u32 sys_gamepad_ycon_if(u8 packet_id, vm::ptr<u8> in, vm::ptr<u8> out)
 {
-
 	switch (packet_id)
 	{
 	case 0:

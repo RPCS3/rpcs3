@@ -919,7 +919,7 @@ error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm
 
 	if (!check_dev_num(dev_num))
 	{
-		return CELL_CAMERA_ERROR_PARAM;
+		return { CELL_CAMERA_ERROR_PARAM, "dev_num=%d", dev_num };
 	}
 
 	if (g_cfg.io.camera == camera_handler::null)
@@ -935,7 +935,7 @@ error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm
 
 	if (!arg1)
 	{
-		return CELL_CAMERA_ERROR_PARAM;
+		return { CELL_CAMERA_ERROR_PARAM, "arg1=null" };
 	}
 
 	if (error_code error = check_resolution(dev_num))
@@ -952,7 +952,7 @@ error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm
 
 	if (!attr_name) // invalid attributes don't have a name
 	{
-		return CELL_CAMERA_ERROR_PARAM;
+		return { CELL_CAMERA_ERROR_PARAM, "attrib=0x%x", attrib };
 	}
 
 	if (arg1)
@@ -983,7 +983,7 @@ error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 
 	if (!check_dev_num(dev_num))
 	{
-		return CELL_CAMERA_ERROR_PARAM;
+		return { CELL_CAMERA_ERROR_PARAM, "dev_num=%d", dev_num };
 	}
 
 	if (g_cfg.io.camera == camera_handler::null)
@@ -1004,7 +1004,7 @@ error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 
 	if (!attr_name) // invalid attributes don't have a name
 	{
-		return CELL_CAMERA_ERROR_PARAM;
+		return { CELL_CAMERA_ERROR_PARAM, "attrib=0x%x", attrib };
 	}
 
 	g_camera.set_attr(attrib, arg1, arg2);
