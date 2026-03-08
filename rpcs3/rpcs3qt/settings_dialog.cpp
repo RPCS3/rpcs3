@@ -2177,7 +2177,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_global_pad_navigation, tooltips.settings.global_navigation);
 		ui->cb_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_enabled).toBool());
 		ui->cb_global_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_global).toBool());
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 		connect(ui->cb_pad_navigation, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::nav_enabled, checked);
@@ -2186,9 +2185,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_gui_settings->SetValue(gui::nav_global, checked);
 		});
-#else
-		ui->gb_gui_pad_input->setEnabled(false);
-#endif
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
