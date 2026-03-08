@@ -742,6 +742,9 @@ protected:
 		// Set if register is used in floating pont instruction
 		std::bitset<s_reg_max> reg_maybe_float{};
 
+		// Set if register is used as shuffle mask
+		std::bitset<s_reg_max> reg_maybe_shuffle_mask{};
+
 		// Number of times registers are used (before modified)
 		std::array<u32, s_reg_max> reg_use{};
 

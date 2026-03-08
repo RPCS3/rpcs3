@@ -567,6 +567,32 @@ struct llvm_placeholder_t
 	}
 };
 
+template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
+struct llvm_place_stealer_t
+{
+	// TODO: placeholder extracting actual constant values (u64, f64, vector, etc)
+
+	using type = T;
+
+	static constexpr bool is_ok = true;
+
+	llvm::Value* eval(llvm::IRBuilder<>*) const
+	{
+		return nullptr;
+	}
+
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
+	{
+		if (value && value->getType() == llvm_value_t<T>::get_type(value->getContext()))
+		{
+			return {};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
 template <typename T, bool ForceSigned = false>
 struct llvm_const_int
 {
@@ -3223,6 +3249,12 @@ public:
 
 	template <typename T>
 	static llvm_placeholder_t<T> match()
+	{
+		return {};
+	}
+
+	template <typename T>
+	static llvm_place_stealer_t<T> match_stealer()
 	{
 		return {};
 	}
