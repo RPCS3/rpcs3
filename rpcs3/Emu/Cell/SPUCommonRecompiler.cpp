@@ -3933,7 +3933,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			const auto type = g_spu_itype.decode(op.opcode);
 
-			u8 reg_save = 255;
+			u8 reg_save = s_reg_max;
 
 			if (type == spu_itype::STQD && op.ra == s_reg_sp && !block.reg_mod[op.rt] && !block.reg_use[op.rt])
 			{
@@ -3953,7 +3953,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					// Register reg use only if it happens before reg mod
 					if (!block.reg_mod[reg])
 					{
-						block.reg_use.set(reg);
+						if (type & spu_itype::floating)
+						{
+							block.reg_maybe_float.set(reg);
+						}
+
+						block.reg_use[reg]++;
 
 						if (reg_save != reg && block.reg_save_dom[reg])
 						{
@@ -3970,7 +3975,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
 				{
 					if (!block.reg_mod[reg])
-						block.reg_use.set(reg);
+						block.reg_use[reg]++;
 				}
 			}
 
@@ -4024,7 +4029,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						if (i == s_reg_lr || (i >= 2 && i < s_reg_80) || i > s_reg_127)
 						{
 							if (!block.reg_mod[i])
-								block.reg_use.set(i);
+								block.reg_use[i]++;
 
 							if (!is_tail)
 							{
@@ -6353,9 +6358,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (!reduced_loop->loop_dicts.test(i))
 					{
-						if (b.reg_use.test(i) || (!b.reg_mod.test(i) && b2.reg_use.test(i)))
+						if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
 						{
-							if ((b.reg_use.test(i) && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+							if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
 							{
 								reduced_loop->is_constant_expression = false;
 								reduced_loop->loop_writes.set(i);
@@ -7032,9 +7037,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 						if (!reduced_loop->loop_dicts.test(i))
 						{
-							if (b.reg_use.test(i) || (!b.reg_mod.test(i) && b2.reg_use.test(i)))
+							if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
 							{
-								if ((b.reg_use.test(i) && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+								if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
 								{
 									reduced_loop->is_constant_expression = false;
 									reduced_loop->loop_writes.set(i);

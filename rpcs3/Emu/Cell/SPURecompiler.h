@@ -739,8 +739,11 @@ protected:
 		// Set if the initial register value in this block may be xfloat
 		std::bitset<s_reg_max> reg_maybe_xf{};
 
-		// Bit mask of the registers used (before modified)
-		std::bitset<s_reg_max> reg_use{};
+		// Set if register is used in floating pont instruction
+		std::bitset<s_reg_max> reg_maybe_float{};
+
+		// Number of times registers are used (before modified)
+		std::array<u32, s_reg_max> reg_use{};
 
 		// Bit mask of the trivial (u32 x 4) constant value resulting in this block
 		std::bitset<s_reg_max> reg_const{};
