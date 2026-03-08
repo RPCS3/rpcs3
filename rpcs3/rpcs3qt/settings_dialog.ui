@@ -4014,14 +4014,7 @@
                <item>
                 <widget class="QCheckBox" name="cb_show_pkg_install">
                  <property name="text">
-                  <string>Show PKG Installation Dialog</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="cb_show_pup_install">
-                 <property name="text">
-                  <string>Show PUP Installation Dialog</string>
+                  <string>Show PKG/PUP Installation Result</string>
                  </property>
                 </widget>
                </item>
