@@ -158,6 +158,15 @@ struct spu_itype
 		CUFLT,
 		FRDS, // xfloat_tag last
 
+		CFLTS,
+		CFLTU,
+		FCEQ,
+		FCMEQ,
+		FCGT,
+		FCMGT, // floating_tag last
+		FSCRWR,
+		FSCRRD,
+
 		DFA,
 		DFS,
 		DFM,
@@ -167,20 +176,11 @@ struct spu_itype
 		DFNMA,
 		FESD,
 
-		CFLTS,
-		CFLTU,
-		FCEQ,
-		FCMEQ,
-		FCGT,
-		FCMGT,
-		FSCRWR,
-		FSCRRD,
-
 		DFCEQ,
 		DFCMEQ,
 		DFCGT,
 		DFCMGT,
-		DFTSV, // floating_tag last
+		DFTSV,
 
 		SHLH, // shiftrot_tag first
 		SHLHI,
@@ -248,10 +248,10 @@ struct spu_itype
 		return value >= BR && value <= BISL;
 	}
 
-	// Test for floating point instruction
+	// Test for floating point instruction (32-bit float)
 	friend constexpr bool operator &(type value, floating_tag)
 	{
-		return value >= FMA && value <= DFTSV;
+		return value >= FMA && value <= FCMGT;
 	}
 
 	// Test for 4-op instruction
