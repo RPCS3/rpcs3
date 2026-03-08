@@ -2415,13 +2415,6 @@
               </property>
               <layout class="QVBoxLayout" name="gb_advanced_core_layout">
                <item>
-                <widget class="QCheckBox" name="accurateDFMA">
-                 <property name="text">
-                  <string>Accurate DFMA</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="accurateRSXAccess">
                  <property name="text">
                   <string>Accurate RSX Reservation Access</string>
@@ -4334,6 +4327,13 @@
              <string>Core</string>
             </property>
             <layout class="QVBoxLayout" name="gb_debug_core_layout">
+             <item>
+              <widget class="QCheckBox" name="accurateDFMA">
+               <property name="text">
+                <string>Accurate DFMA</string>
+               </property>
+              </widget>
+             </item>
              <item>
               <widget class="QCheckBox" name="alwaysStart">
                <property name="text">
