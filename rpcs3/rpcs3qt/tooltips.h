@@ -216,8 +216,7 @@ public:
 		const QString tty_limit          = tr("Sets the maximum amount of blocks that the TTY can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.");
 		const QString stylesheets        = tr("Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.");
 		const QString show_welcome       = tr("Shows the initial welcome screen upon starting RPCS3.");
-		const QString show_exit_game     = tr("Shows a confirmation dialog when the game window is being closed.");
-		const QString show_boot_game     = tr("Shows a confirmation dialog when a game was booted while another game is running.");
+		const QString show_exit_game     = tr("Shows a confirmation dialog when the game window is being closed and when a game was booted while another game is running.");
 		const QString show_pkg_install   = tr("Shows a dialog when packages were installed successfully.");
 		const QString show_pup_install   = tr("Shows a dialog when firmware was installed successfully.");
 		const QString show_obsolete_cfg  = tr("Shows a dialog when obsolete settings were found.");
