@@ -148,7 +148,7 @@ namespace gl
 			}
 		}
 
-		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& src_area, const utils::address_range32& valid_range, u32 pitch)
+		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& src_area, const utils::address_range32& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
 			glGetError();
