@@ -22,6 +22,13 @@ namespace gl
 	legacy_ring_buffer g_upload_transfer_buffer;
 	scratch_ring_buffer g_compute_decode_buffer;
 	scratch_ring_buffer g_deswizzle_scratch_buffer;
+	blitter g_blitter;
+
+	void init_global_texture_resources()
+	{
+		g_blitter.init();
+		g_hw_blitter = &g_blitter;
+	}
 
 	void destroy_global_texture_resources()
 	{
@@ -29,6 +36,8 @@ namespace gl
 		g_upload_transfer_buffer.remove();
 		g_compute_decode_buffer.remove();
 		g_deswizzle_scratch_buffer.remove();
+		g_blitter.destroy();
+		g_hw_blitter = nullptr;
 	}
 
 	template <typename WordType, bool SwapBytes>
