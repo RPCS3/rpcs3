@@ -171,14 +171,6 @@ namespace gl
 				{ static_cast<u32>(src_area.width()), static_cast<u32>(src_area.height()), 1 }
 			};
 
-			u32 pbo_offset = 0;
-			if (valid_range.valid())
-			{
-				const u32 section_base = get_section_base();
-				pbo_offset = valid_range.start - section_base;
-				ensure(valid_range.start >= section_base && pbo_offset <= pbo.size());
-			}
-
 			bool use_driver_pixel_transform = true;
 			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
 			{
@@ -214,7 +206,7 @@ namespace gl
 
 						real_pitch = pack_info.size * src->width();
 						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
-						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), pbo_offset, data_length);
+						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
 					}
 					else
 					{
@@ -237,7 +229,7 @@ namespace gl
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
 
-				src->copy_to(pbo, pbo_offset, format, type, 0, src_rgn, pack_settings);
+				src->copy_to(pbo, 0, format, type, 0, src_rgn, pack_settings);
 			}
 
 			if (auto error = glGetError())
