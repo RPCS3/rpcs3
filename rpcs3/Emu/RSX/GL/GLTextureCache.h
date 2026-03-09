@@ -186,7 +186,7 @@ namespace gl
 
 						pack_info.format = static_cast<GLenum>(format);
 						pack_info.type = static_cast<GLenum>(type);
-						pack_info.size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
+						pack_info.block_size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
 						pack_info.swap_bytes = true;
 
 						mem_info.image_size_in_texels = src->width() * src->height();
@@ -204,8 +204,8 @@ namespace gl
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-						real_pitch = pack_info.size * src->width();
-						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
+						real_pitch = pack_info.block_size * src->width();
+						const u64 data_length = pack_info.block_size * mem_info.image_size_in_texels;
 						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
 					}
 					else
