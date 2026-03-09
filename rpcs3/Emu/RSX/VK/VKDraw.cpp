@@ -635,7 +635,14 @@ bool VKGSRender::bind_texture_env()
 	{
 		if (!(textures_ref & 1))
 		{
+			// Unused TIU
 			continue;
+		}
+
+		if (m_fs_binding_table->ftex_location[i] == umax)
+		{
+			// Corrupt shader table
+			break;
 		}
 
 		vk::image_view* view = nullptr;
@@ -707,7 +714,14 @@ bool VKGSRender::bind_texture_env()
 	{
 		if (!(textures_ref & 1))
 		{
+			// Unused TIU
 			continue;
+		}
+
+		if (m_vs_binding_table->vtex_location[i] == umax)
+		{
+			// Corrupt shader
+			break;
 		}
 
 		if (!rsx::method_registers.vertex_textures[i].enabled())
