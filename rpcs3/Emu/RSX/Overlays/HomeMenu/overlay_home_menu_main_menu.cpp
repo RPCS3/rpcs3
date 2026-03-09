@@ -26,12 +26,10 @@ namespace rsx
 			m_message_box = std::make_shared<home_menu_message_box>(x, y, width, height);
 			m_message_box->visible = false;
 
-			m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
-
 			m_sidebar = std::make_unique<list_view>(350, height, false);
 			m_sidebar->set_pos(x, y);
 			m_sidebar->hide_prompt_buttons();
-			m_sidebar->back_color = color4f(0.15f, 0.15f, 0.15f, 0.85f);
+			m_sidebar->back_color = color4f(0.15f, 0.15f, 0.15f, 0.95f);
 
 			m_sliding_animation.duration_sec = 0.5f;
 			m_sliding_animation.type = animation_type::ease_in_out_cubic;

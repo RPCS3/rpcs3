@@ -20,6 +20,12 @@ namespace rsx
 				m_message_box = parent->m_message_box;
 				m_config_changed = parent->m_config_changed;
 			}
+			else
+			{
+				m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
+				m_message_box = std::make_shared<home_menu_message_box>(x, y, width, height);
+				m_message_box->visible = false;
+			}
 
 			m_reset_btn.set_image_resource(resource_config::standard_image_resource::select);
 			m_save_btn.set_image_resource(resource_config::standard_image_resource::square);
@@ -123,19 +129,23 @@ namespace rsx
 
 			clear_items();
 
-			// Center vertically if necessary
-			if (center_vertically)
+			usz total_height = 0;
+
+			for (auto& entry : m_entries)
 			{
-				usz total_height = 0;
+				total_height += entry->h;
+			}
 
-				for (auto& entry : m_entries)
-				{
-					total_height += entry->h;
-				}
-
-				if (total_height < h)
+			// Center vertically if necessary
+			if (total_height < h)
+			{
+				if (center_vertically)
 				{
 					advance_pos = (h - ::narrow<u16>(total_height)) / 2;
+				}
+				else
+				{
+					advance_pos = menu_entry_margin;
 				}
 			}
 
@@ -144,6 +154,8 @@ namespace rsx
 				entry->set_pos(0, 0);
 				add_entry(entry);
 			}
+
+			refresh();
 		}
 
 		void home_menu_page::show_dialog(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
@@ -294,9 +306,10 @@ namespace rsx
 		void home_menu_page::translate(s16 _x, s16 _y)
 		{
 			list_view::translate(_x, _y);
-			m_save_btn.translate(_x, _y);
-			m_discard_btn.translate(_x, _y);
-			m_reset_btn.translate(_x, _y);
+
+			m_reset_btn.set_pos(x + w - 3 * (30 + 120), y + h + 20);
+			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
+			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
 		}
 
 		void home_menu_page::set_size(u16 _w, u16 _h)
@@ -308,6 +321,10 @@ namespace rsx
 			{
 				entry->set_size(_w, entry->h);
 			}
+
+			m_reset_btn.set_pos(x + w - 3 * (30 + 120), y + h + 20);
+			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
+			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
 
 			apply_layout();
 		}
