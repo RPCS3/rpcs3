@@ -372,7 +372,10 @@ namespace gl
 				}
 			}
 
-			src->copy_to(*dst, dst_offset, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+			pixel_pack_settings pack_settings{};
+			if (pack_info.alignment) pack_settings.alignment(pack_info.alignment);
+			if (pack_info.row_length) pack_settings.row_length(pack_info.row_length);
+			src->copy_to(*dst, dst_offset, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, pack_settings);
 			return false;
 		};
 
@@ -620,8 +623,11 @@ namespace gl
 
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 
+			pixel_unpack_settings unpack_settings{};
+			if (unpack_info.alignment) unpack_settings.alignment(unpack_info.alignment);
+			if (unpack_info.format) unpack_settings.row_length(unpack_info.row_length);
 			dst->copy_from(*transfer_buf, out_offset, static_cast<texture::format>(unpack_info.format),
-				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
+				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, unpack_settings);
 		}
 	}
 
