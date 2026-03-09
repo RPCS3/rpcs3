@@ -2922,16 +2922,16 @@
               </property>
               <layout class="QVBoxLayout" name="gb_emu_settings_layout">
                <item>
-                <widget class="QCheckBox" name="exitOnStop">
+                <widget class="QCheckBox" name="enableGamemode">
                  <property name="text">
-                  <string>Exit RPCS3 when process finishes</string>
+                  <string>Enable GameMode</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="pauseOnFocusLoss">
+                <widget class="QCheckBox" name="exitOnStop">
                  <property name="text">
-                  <string>Pause emulation on RPCS3 focus loss</string>
+                  <string>Exit RPCS3 when process finishes</string>
                  </property>
                 </widget>
                </item>
@@ -2950,72 +2950,16 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="pauseOnFocusLoss">
+                 <property name="text">
+                  <string>Pause emulation on RPCS3 focus loss</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="preventDisplaySleep">
                  <property name="text">
                   <string>Prevent display sleep while running games</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showTrophyPopups">
-                 <property name="text">
-                  <string>Show trophy popups</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showRpcnPopups">
-                 <property name="text">
-                  <string>Show RPCN popups</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showShaderCompilationHint">
-                 <property name="text">
-                  <string>Show shader compilation hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showPPUCompilationHint">
-                 <property name="text">
-                  <string>Show PPU compilation hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
-                 <property name="text">
-                  <string>Show autosave/autoload hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
-                 <property name="text">
-                  <string>Show analog limiter toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
-                 <property name="text">
-                  <string>Show pressure intensity toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
-                 <property name="text">
-                  <string>Show mouse and keyboard toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showCaptureHints">
-                 <property name="text">
-                  <string>Show capture hints</string>
                  </property>
                 </widget>
                </item>
@@ -3033,17 +2977,82 @@
                  </property>
                 </widget>
                </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_overlay_settings">
+              <property name="title">
+               <string>Overlay Settings</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_overlay_settings_layout">
                <item>
                 <widget class="QCheckBox" name="recordWithOverlays">
                  <property name="text">
-                  <string>Record with overlays</string>
+                  <string>Record and screenshot with overlays</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="enableGamemode">
+                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
                  <property name="text">
-                  <string>Enable GameMode</string>
+                  <string>Show analog limiter toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
+                 <property name="text">
+                  <string>Show autosave/autoload hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showCaptureHints">
+                 <property name="text">
+                  <string>Show capture hints</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
+                 <property name="text">
+                  <string>Show mouse and keyboard toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showRpcnPopups">
+                 <property name="text">
+                  <string>Show netplay popups</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
+                 <property name="text">
+                  <string>Show pressure intensity toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showPPUCompilationHint">
+                 <property name="text">
+                  <string>Show PPU compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showShaderCompilationHint">
+                 <property name="text">
+                  <string>Show shader compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showTrophyPopups">
+                 <property name="text">
+                  <string>Show trophy popups</string>
                  </property>
                 </widget>
                </item>
