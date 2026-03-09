@@ -8,6 +8,18 @@ namespace gl
 {
 	blitter* g_hw_blitter = nullptr;
 
+	void blitter::init()
+	{
+		blit_src.create();
+		blit_dst.create();
+	}
+
+	void blitter::destroy()
+	{
+		blit_dst.remove();
+		blit_src.remove();
+	}
+
 	void blitter::copy_image(gl::command_context&, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const
 	{
 		ensure(src_level == 0);
@@ -146,6 +158,9 @@ namespace gl
 
 			gl::fbo::attachment dst_att{ blit_dst, static_cast<fbo::attachment::type>(attachment) };
 			dst_att = *real_dst;
+
+			blit_src.check();
+			blit_dst.check();
 
 			blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
 
