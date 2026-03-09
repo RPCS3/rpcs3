@@ -40,7 +40,7 @@ namespace rsx
 			image_info_base() {}
 			virtual ~image_info_base() {}
 			virtual const u8* get_data() const = 0;
-			virtual usz size_bytes() const { return static_cast<usz>(w * h * bpp); }
+			virtual usz size_bytes() const { return static_cast<usz>(w * h * 4); } // UI images get converted to RGBA8
 
 			std::span<const u8> as_span() const { return { get_data(), size_bytes() }; }
 		};
