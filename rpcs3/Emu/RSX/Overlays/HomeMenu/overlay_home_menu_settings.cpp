@@ -53,6 +53,10 @@ namespace rsx
 			const auto prev_tab = m_tabs->get_selected_idx();
 			auto next_tab = prev_tab;
 
+			page_navigation action = page_navigation::stay;
+			sound_effect sound = sound_effect::cursor;
+			bool do_play_sound = !is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default;
+
 			switch (button_press)
 			{
 			case pad_button::dpad_up:
@@ -68,18 +72,31 @@ namespace rsx
 					: prev_tab + 1;
 				break;
 			case pad_button::cross:
+				sound = sound_effect::accept;
 				m_tabs->toggle_selection_mode();
 				ensure(dynamic_cast<home_menu_page*>(m_tabs->get_selected()))->on_activate();
-				return page_navigation::stay;
+				break;
 			case pad_button::circle:
-				return page_navigation::exit;
+				action = page_navigation::exit;
+				sound = sound_effect::cancel;
+				break;
+			default:
+				do_play_sound = false;
+				break;
 			}
 
 			if (prev_tab != next_tab)
 			{
 				m_tabs->set_selected_tab(next_tab);
 			}
-			return page_navigation::stay;
+
+			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
+			if (do_play_sound)
+			{
+				play_sound(sound);
+			}
+
+			return action;
 		}
 
 		compiled_resource& home_menu_settings::get_compiled()
