@@ -36,6 +36,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_checkbox>(setting, localized_text);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
@@ -76,6 +77,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_dropdown<T>>(setting, localized_text);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
@@ -149,6 +151,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
@@ -194,6 +197,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
 				{
@@ -246,6 +250,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{

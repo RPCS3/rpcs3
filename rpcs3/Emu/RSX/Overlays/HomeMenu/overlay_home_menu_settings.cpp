@@ -9,8 +9,9 @@ namespace rsx
 		home_menu_settings::home_menu_settings(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS))
 		{
-			m_tabs = std::make_unique<tabbed_container>(width, height, 350);
+			m_tabs = std::make_unique<tabbed_container>(width, height, 300);
 			m_tabs->set_pos(x, y);
+			m_tabs->set_headers_background_color({ 0.25f, 0.25f, 0.25f, 0.95f });
 
 			add_page(std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
 			add_page(std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
@@ -20,8 +21,6 @@ namespace rsx
 			add_page(std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
 			add_page(std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
 
-			//apply_layout();
-
 			// Select the first item
 			m_tabs->set_selected_tab(0);
 		}
@@ -30,6 +29,7 @@ namespace rsx
 		{
 			auto panel = std::static_pointer_cast<overlay_element>(page);
 			page->on_deactivate();
+			page->hide_prompt_buttons();
 			m_tabs->add_tab(page->title, panel);
 		}
 
@@ -102,7 +102,7 @@ namespace rsx
 			add_checkbox(&g_cfg.audio.enable_time_stretching, localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING);
 			add_signed_slider(&g_cfg.audio.time_stretching_threshold, localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING_THRESHOLD, " %", 1);
 
-			apply_layout(false);
+			apply_layout();
 		}
 
 		home_menu_settings_video::home_menu_settings_video(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
