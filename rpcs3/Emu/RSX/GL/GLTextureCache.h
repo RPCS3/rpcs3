@@ -431,9 +431,7 @@ namespace gl
 			using gl::viewable_image::viewable_image;
 		};
 
-		blitter m_hw_blitter;
 		std::vector<std::unique_ptr<temporary_image_t>> m_temporary_surfaces;
-
 		const u32 max_cached_image_pool_size = 256;
 
 	private:
@@ -815,16 +813,11 @@ namespace gl
 		using baseclass::texture_cache;
 
 		void initialize()
-		{
-			m_hw_blitter.init();
-			g_hw_blitter = &m_hw_blitter;
-		}
+		{}
 
 		void destroy() override
 		{
 			clear();
-			g_hw_blitter = nullptr;
-			m_hw_blitter.destroy();
 		}
 
 		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override
@@ -870,7 +863,7 @@ namespace gl
 
 		bool blit(gl::command_context& cmd, const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
-			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, m_hw_blitter);
+			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, *g_hw_blitter);
 
 			if (result.succeeded)
 			{

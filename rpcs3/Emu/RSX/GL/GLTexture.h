@@ -86,5 +86,6 @@ namespace gl
 		extern std::unique_ptr<texture> g_vis_texture;
 	}
 
+	void init_global_texture_resources();
 	void destroy_global_texture_resources();
 }
