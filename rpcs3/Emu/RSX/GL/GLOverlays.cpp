@@ -551,7 +551,8 @@ namespace gl
 		const pixel_buffer_layout& layout)
 	{
 		const u32 bpp = dst->image()->pitch() / dst->image()->width();
-		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		const u32 aligned_width = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		const u32 row_length = layout.row_length ? layout.row_length : aligned_width;
 
 		program_handle.uniforms["src_pitch"] = row_length;
 		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;

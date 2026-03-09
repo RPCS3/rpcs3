@@ -16,9 +16,11 @@ namespace gl
 	{
 		GLenum format;
 		GLenum type;
-		u8     size;
+		u32    row_length;
+		u8     block_size;
 		bool   swap_bytes;
 		u8     alignment;
+		u8     reserved;
 	};
 
 	struct image_memory_requirements

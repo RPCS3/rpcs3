@@ -340,7 +340,7 @@ namespace gl
 
 	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = region.width;
+		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
@@ -390,14 +390,14 @@ namespace gl
 
 	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = region.width;
+		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
 		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
-		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
+		m_program.uniforms["block_width"] = static_cast<u32>(layout.block_size);
 
 		auto data_view = src->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY), gl::image_aspect::color);
 

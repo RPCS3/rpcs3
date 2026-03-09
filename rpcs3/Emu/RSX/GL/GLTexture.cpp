@@ -166,42 +166,42 @@ namespace gl
 		case texture::internal_format::compressed_rgba_s3tc_dxt1:
 		case texture::internal_format::compressed_rgba_s3tc_dxt3:
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
-			return { GL_RGBA, GL_UNSIGNED_BYTE, 1, false };
+			return { .format = GL_RGBA, .type = GL_UNSIGNED_BYTE, .block_size = 1, .swap_bytes = false };
 		case texture::internal_format::r8:
-			return { GL_RED, GL_UNSIGNED_BYTE, 1, false };
+			return { .format = GL_RED, .type = GL_UNSIGNED_BYTE, .block_size = 1, .swap_bytes = false };
 		case texture::internal_format::r16:
-			return { GL_RED, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RED, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::r32f:
-			return { GL_RED, GL_FLOAT, 4, true };
+			return { .format = GL_RED, .type = GL_FLOAT, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::rg8:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RG, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rg16:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RG, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rg16f:
-			return { GL_RG, GL_HALF_FLOAT, 2, true };
+			return { .format = GL_RG, .type = GL_HALF_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgb565:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_6_5, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgb5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_5_5_1, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::bgr5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_1_5_5_5_REV, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgba4:
-			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
+			return { .format = GL_BGRA, .type = GL_UNSIGNED_SHORT_4_4_4_4, .block_size = 2, .swap_bytes = false };
 		case texture::internal_format::rgba8:
-			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return { .format = GL_RGBA, .type = GL_UNSIGNED_INT_8_8_8_8_REV, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::bgra8:
-			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return { .format = GL_BGRA, .type = GL_UNSIGNED_INT_8_8_8_8_REV, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::rgba16f:
-			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
+			return { .format = GL_RGBA, .type = GL_HALF_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgba32f:
-			return { GL_RGBA, GL_FLOAT, 4, true };
+			return { .format = GL_RGBA, .type = GL_FLOAT, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::depth16:
-			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_DEPTH_COMPONENT, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::depth32f:
-			return { GL_DEPTH_COMPONENT, GL_FLOAT, 2, true };
+			return { .format = GL_DEPTH_COMPONENT, .type = GL_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
-			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
+			return { .format = GL_DEPTH_STENCIL, .type = GL_UNSIGNED_INT_24_8, .block_size = 4, .swap_bytes = true };
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
@@ -320,7 +320,7 @@ namespace gl
 			return nullptr;
 		}
 
-		switch (pack_info.size)
+		switch (pack_info.block_size)
 		{
 		case 1:
 			return nullptr;
@@ -780,7 +780,7 @@ namespace gl
 					mem_layout.swap_bytes = op.require_swap;
 					mem_layout.format = gl_format;
 					mem_layout.type = gl_type;
-					mem_layout.size = block_size_in_bytes;
+					mem_layout.block_size = block_size_in_bytes;
 
 					// 2. Upload memory to GPU
 					if (!op.require_deswizzle)
@@ -1061,7 +1061,7 @@ namespace gl
 				skip_transform = (pack_info.format == unpack_info.format &&
 					pack_info.type == unpack_info.type &&
 					pack_info.swap_bytes == unpack_info.swap_bytes &&
-					pack_info.size == unpack_info.size);
+					pack_info.block_size == unpack_info.block_size);
 			}
 
 			if (skip_transform) [[likely]]
@@ -1142,7 +1142,7 @@ namespace gl
 				if (src->aspect() & image_aspect::depth)
 				{
 					// Source is depth, modify unpack rule
-					if (pack_info.size == 4 && unpack_info.size == 4)
+					if (pack_info.block_size == 4 && unpack_info.block_size == 4)
 					{
 						unpack_info.swap_bytes = !unpack_info.swap_bytes;
 					}
@@ -1150,7 +1150,7 @@ namespace gl
 				else
 				{
 					// Dest is depth, modify pack rule
-					if (pack_info.size == 4 && unpack_info.size == 4)
+					if (pack_info.block_size == 4 && unpack_info.block_size == 4)
 					{
 						pack_info.swap_bytes = !pack_info.swap_bytes;
 					}
