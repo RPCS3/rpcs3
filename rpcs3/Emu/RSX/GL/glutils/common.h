@@ -87,7 +87,7 @@ namespace gl
 		void set_name(std::string_view name)
 		{
 			m_name = name.data();
-			glObjectLabel(Ns, m_id, name.length(), name.data());
+			glObjectLabel(Ns, m_id, static_cast<GLsizei>(name.length()), name.data());
 		}
 
 		std::string_view name() const
@@ -97,9 +97,9 @@ namespace gl
 	};
 
 	// Very useful util when capturing traces with RenderDoc
-	static inline void push_debug_label(const char* label)
+	static inline void push_debug_label(std::string_view label)
 	{
-		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
+		glInsertEventMarkerEXT(static_cast<GLsizei>(label.size()), label.data());
 	}
 
 	// Checks if GL state is still valid
