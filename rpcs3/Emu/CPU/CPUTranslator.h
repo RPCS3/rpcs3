@@ -3647,7 +3647,14 @@ public:
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
+
+#if LLVM_VERSION_MAJOR >= 22
+		// LLVM 22+ changed the intrinsic signature from v4i32 to v16i8 for operands 2 and 3
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128),
+			{data0, m_ir->CreateBitCast(data1, get_type<u8[16]>()), m_ir->CreateBitCast(data2, get_type<u8[16]>())});
+#else
 		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128), {data0, data1, data2});
+#endif
 		return result;
 	}
 
