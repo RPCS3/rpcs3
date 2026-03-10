@@ -1491,13 +1491,6 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 			gameid_token_value = gameinfo->info.serial;
 		}
 
-#ifdef __linux__
-		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%%%RPCS3_VFS%%%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-		                                                                               : fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
-#else
-		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%RPCS3_VFS%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-		                                                                               : fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
-#endif
 		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
 
 		if (!fs::create_path(target_icon_dir))
@@ -1507,7 +1500,11 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 			continue;
 		}
 
-		for (const gui::utils::shortcut_location& location : locations)
+		const bool is_vsh = gameinfo->info.path.starts_with(dev_flash);
+		const std::string cli_arg_token = is_vsh ? "RPCS3_VFS" : "RPCS3_GAMEID";
+		const std::string cli_arg_value = is_vsh ? ("dev_flash/" + gameinfo->info.path.substr(dev_flash.size())) : gameid_token_value;
+
+		for (gui::utils::shortcut_location location : locations)
 		{
 			std::string destination;
 
@@ -1519,12 +1516,22 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 			case gui::utils::shortcut_location::applications:
 				destination = "application menu";
 				break;
+			case gui::utils::shortcut_location::steam:
+				destination = "Steam";
+				break;
 #ifdef _WIN32
 			case gui::utils::shortcut_location::rpcs3_shortcuts:
 				destination = "/games/shortcuts/";
 				break;
 #endif
 			}
+
+#ifdef __linux__
+			const std::string percent = location == gui::utils::shortcut_location::steam ? "%" : "%%";
+#else
+			const std::string percent = "%";
+#endif
+			const std::string target_cli_args = fmt::format("--no-gui \"%s%s%s:%s\"", percent, cli_arg_token, percent, cli_arg_value);
 
 			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->icon_in_archive ? gameinfo->info.path : "", gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
 			{

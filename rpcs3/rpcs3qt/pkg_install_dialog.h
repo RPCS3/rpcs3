@@ -22,6 +22,7 @@ public:
 	bool precompile_caches() const { return m_precompile_caches; }
 	bool create_desktop_shortcuts() const { return m_create_desktop_shortcuts; }
 	bool create_app_shortcut() const { return m_create_app_shortcut; }
+	bool create_steam_shortcut() const { return m_create_steam_shortcut; }
 
 private:
 	void update_info(QLabel* installation_info, QDialogButtonBox* buttons) const;
@@ -31,4 +32,5 @@ private:
 	bool m_precompile_caches = false;
 	bool m_create_desktop_shortcuts = false;
 	bool m_create_app_shortcut = false;
+	bool m_create_steam_shortcut = false;
 };
