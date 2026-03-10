@@ -35,6 +35,10 @@ namespace rsx::overlays::home_menu
 			return "screenshot.png";
 		case fa_icon::video_camera:
 			return "video-camera.png";
+		case fa_icon::friends:
+			return "user-group-solid.png";
+		case fa_icon::trophy:
+			return "trophy-solid.png";
 		}
 	}
 

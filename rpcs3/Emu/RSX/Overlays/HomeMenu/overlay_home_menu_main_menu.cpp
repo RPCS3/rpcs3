@@ -46,7 +46,7 @@ namespace rsx
 
 			if (rsx::overlays::friends_list_dialog::rpcn_configured())
 			{
-				add_item(home_menu::fa_icon::settings, get_localized_string(localized_string_id::HOME_MENU_FRIENDS), [](pad_button btn) -> page_navigation
+				add_item(home_menu::fa_icon::friends, get_localized_string(localized_string_id::HOME_MENU_FRIENDS), [](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -80,7 +80,7 @@ namespace rsx
 			}
 			if (!trop_name.empty())
 			{
-				add_item(home_menu::fa_icon::settings, get_localized_string(localized_string_id::HOME_MENU_TROPHIES), [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
+				add_item(home_menu::fa_icon::trophy, get_localized_string(localized_string_id::HOME_MENU_TROPHIES), [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
