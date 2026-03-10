@@ -1,10 +1,18 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "qt_video_source.h"
 
 #include "Loader/ISO.h"
 
+#include <QAudioOutput>
 #include <QFile>
+
+static video_source* s_audio_source = nullptr;
+static std::unique_ptr<QMediaPlayer> s_audio_player = nullptr;
+static std::unique_ptr<QAudioOutput> s_audio_output = nullptr;
+static std::unique_ptr<QBuffer> s_audio_buffer = nullptr;
+static std::unique_ptr<QByteArray> s_audio_data = nullptr;
 
 qt_video_source::qt_video_source()
 	: video_source()
@@ -19,6 +27,11 @@ qt_video_source::~qt_video_source()
 void qt_video_source::set_video_path(const std::string& video_path)
 {
 	m_video_path = QString::fromStdString(video_path);
+}
+
+void qt_video_source::set_audio_path(const std::string& audio_path)
+{
+	m_audio_path = QString::fromStdString(audio_path);
 }
 
 void qt_video_source::set_iso_path(const std::string& iso_path)
@@ -89,7 +102,6 @@ void qt_video_source::init_movie()
 			m_video_buffer = std::make_unique<QBuffer>(&m_video_data);
 			m_video_buffer->open(QIODevice::ReadOnly);
 			m_movie = std::make_unique<QMovie>(m_video_buffer.get());
-
 		}
 
 		if (!m_movie->isValid())
@@ -179,6 +191,8 @@ void qt_video_source::start_movie()
 		m_media_player->play();
 	}
 
+	start_audio();
+
 	m_active = true;
 }
 
@@ -196,6 +210,71 @@ void qt_video_source::stop_movie()
 	m_media_player.reset();
 	m_video_buffer.reset();
 	m_video_data.clear();
+
+	stop_audio();
+}
+
+void qt_video_source::start_audio()
+{
+	if (m_audio_path.isEmpty() || s_audio_source == this) return;
+
+	if (!s_audio_player)
+	{
+		s_audio_output = std::make_unique<QAudioOutput>();
+		s_audio_player = std::make_unique<QMediaPlayer>();
+		s_audio_player->setAudioOutput(s_audio_output.get());
+	}
+
+	if (m_iso_path.empty())
+	{
+		s_audio_player->setSource(QUrl::fromLocalFile(m_audio_path));
+	}
+	else
+	{
+		iso_archive archive(m_iso_path);
+		auto audio_file = archive.open(m_audio_path.toStdString());
+		const auto audio_size = audio_file.size();
+		if (audio_size == 0) return;
+
+		std::unique_ptr<QByteArray> old_audio_data = std::move(s_audio_data);
+		s_audio_data = std::make_unique<QByteArray>(audio_size, 0);
+		audio_file.read(s_audio_data->data(), audio_size);
+
+		if (!s_audio_buffer)
+		{
+			s_audio_buffer = std::make_unique<QBuffer>();
+		}
+
+		s_audio_buffer->setBuffer(s_audio_data.get());
+		s_audio_buffer->open(QIODevice::ReadOnly);
+		s_audio_player->setSourceDevice(s_audio_buffer.get());
+
+		if (old_audio_data)
+		{
+			old_audio_data.reset();
+		}
+	}
+
+	s_audio_output->setVolume(g_cfg.audio.volume.get() / 100.0f);
+	s_audio_player->play();
+	s_audio_source = this;
+}
+
+void qt_video_source::stop_audio()
+{
+	if (s_audio_source != this) return;
+
+	s_audio_source = nullptr;
+
+	if (s_audio_player)
+	{
+		s_audio_player->stop();
+		s_audio_player.reset();
+	}
+
+	s_audio_output.reset();
+	s_audio_buffer.reset();
+	s_audio_data.reset();
 }
 
 QPixmap qt_video_source::get_movie_image(const QVideoFrame& frame) const
@@ -285,6 +364,14 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path)
 			notify_update();
 		};
 		m_qt_video_source->set_video_path(path);
+	});
+}
+
+void qt_video_source_wrapper::set_audio_path(const std::string& audio_path)
+{
+	Emu.CallFromMainThread([this, path = audio_path]()
+	{
+		// TODO
 	});
 }
 

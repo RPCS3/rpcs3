@@ -637,6 +637,12 @@ void game_list_frame::OnParsingFinished()
 			game.has_hover_pam = true;
 		}
 
+		if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
+		{
+			game.info.audio_path = std::move(audio_path);
+			game.has_audio_file = true;
+		}
+
 		const QString serial = QString::fromStdString(game.info.serial);
 
 		m_games_mutex.lock();
