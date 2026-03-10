@@ -299,11 +299,23 @@ void game_list_table::populate(
 			}
 		});
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
+		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam || game->has_audio_file))
 		{
-			icon_item->set_video_path(game->info.movie_path);
+			bool check_iso = false;
 
-			if (!fs::exists(game->info.movie_path) && is_file_iso(game->info.path))
+			if (game->has_hover_gif || game->has_hover_pam)
+			{
+				icon_item->set_video_path(game->info.movie_path);
+				check_iso |= !fs::exists(game->info.movie_path);
+			}
+
+			if (game->has_audio_file)
+			{
+				icon_item->set_audio_path(game->info.audio_path);
+				check_iso |= !fs::exists(game->info.audio_path);
+			}
+
+			if (check_iso && is_file_iso(game->info.path))
 			{
 				icon_item->set_iso_path(game->info.path);
 			}
