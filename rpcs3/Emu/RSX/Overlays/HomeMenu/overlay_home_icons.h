@@ -7,7 +7,8 @@ namespace rsx::overlays::home_menu
 {
 	enum class fa_icon
 	{
-		home = 0,
+		none = 0,
+		home,
 		settings,
 		back,
 		floppy,
