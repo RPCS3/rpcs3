@@ -38,7 +38,7 @@ namespace rsx
 			virtual void add_page(std::shared_ptr<home_menu_page> page);
 			virtual void add_item(std::unique_ptr<overlay_element>& element, std::function<page_navigation(pad_button)> callback);
 			virtual void add_item(std::string_view, std::function<page_navigation(pad_button)> callback);
-			void apply_layout(bool center_vertically = false);
+			virtual void apply_layout(bool center_vertically = false);
 			void show_dialog(const std::string& text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
 
 			std::vector<std::shared_ptr<home_menu_page>> m_pages;
