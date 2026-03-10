@@ -40,12 +40,7 @@ namespace rsx::overlays::home_menu
 
 	void load_icon(fa_icon icon)
 	{
-		if (!g_icons_cache.empty())
-		{
-			return;
-		}
-
-		const std::string image_path = fmt::format("%s/Icons/ui/home/%s", fs::get_config_dir(), fa_icon_to_filename(icon));
+		const std::string image_path = fmt::format("%s/Icons/ui/home/32/%s", fs::get_config_dir(), fa_icon_to_filename(icon));
 		g_icons_cache[icon] = std::make_unique<image_info>(image_path);
 	}
 
