@@ -711,6 +711,11 @@ namespace rsx
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
+
+			if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+			{
+				m_overlay_manager->start_audio(audio_path);
+			}
 		}
 
 		if (!_ar)
@@ -1099,6 +1104,11 @@ namespace rsx
 		if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 		{
 			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
+
+		if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+		{
+			manager->stop_audio();
 		}
 
 		while (!test_stopped())
