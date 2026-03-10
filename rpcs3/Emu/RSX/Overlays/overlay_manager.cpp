@@ -167,6 +167,23 @@ namespace rsx
 			}
 		}
 
+		void display_manager::start_audio(const std::string& audio_path)
+		{
+			if (audio_path.empty())
+			{
+				m_audio_player.reset();
+				return;
+			}
+
+			m_audio_player = std::make_unique<audio_player>(audio_path);
+			m_audio_player->set_active(true);
+		}
+
+		void display_manager::stop_audio()
+		{
+			m_audio_player.reset();
+		}
+
 		void display_manager::on_overlay_activated(const std::shared_ptr<overlay>& /*item*/)
 		{
 			// TODO: Internal management, callbacks, etc

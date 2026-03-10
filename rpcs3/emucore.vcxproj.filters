@@ -1411,6 +1411,9 @@
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_audio.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2832,6 +2835,9 @@
     </ClInclude>
     <ClInclude Include="Loader\ISO.h">
       <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
