@@ -938,10 +938,10 @@ namespace rsx
 			// Make padding work for images (treat them as the content instead of the 'background')
 			auto& verts = cmd_img.verts;
 
-			verts[0] += vertex(padding_left, padding_bottom, 0, 0);
-			verts[1] += vertex(-padding_right, padding_bottom, 0, 0);
-			verts[2] += vertex(padding_left, -padding_top, 0, 0);
-			verts[3] += vertex(-padding_right, -padding_top, 0, 0);
+			verts[0] += vertex(padding_left, padding_top, 0, 0);
+			verts[1] += vertex(-padding_right, padding_top, 0, 0);
+			verts[2] += vertex(padding_left, -padding_bottom, 0, 0);
+			verts[3] += vertex(-padding_right, -padding_bottom, 0, 0);
 
 			m_is_compiled = true;
 			return compiled_resources;
