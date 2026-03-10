@@ -4,6 +4,8 @@
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
+#include "overlay_home_icons.h"
+
 namespace rsx
 {
 	namespace overlays
@@ -25,7 +27,7 @@ namespace rsx
 		struct home_menu_entry : horizontal_layout
 		{
 		public:
-			home_menu_entry(const std::string& text, u16 width);
+			home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width);
 		};
 
 		template <typename T, typename C>

@@ -92,10 +92,10 @@ namespace rsx
 			return nullptr;
 		}
 
-		void home_menu_page::add_page(std::shared_ptr<home_menu_page> page)
+		void home_menu_page::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
 		{
 			ensure(page);
-			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(page->title, w);
+			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(icon, page->title, w);
 			m_pages.push_back(page);
 
 			add_item(elem, [this, page](pad_button btn) -> page_navigation
@@ -114,9 +114,9 @@ namespace rsx
 			m_entries.push_back(std::move(element));
 		}
 
-		void home_menu_page::add_item(std::string_view title, std::function<page_navigation(pad_button)> callback)
+		void home_menu_page::add_item(home_menu::fa_icon icon, std::string_view title, std::function<page_navigation(pad_button)> callback)
 		{
-			std::unique_ptr<overlay_element> title_element = std::make_unique<home_menu_entry>(title.data(), w);
+			std::unique_ptr<overlay_element> title_element = std::make_unique<home_menu_entry>(icon, title.data(), w);
 			add_item(title_element, callback);
 		}
 
