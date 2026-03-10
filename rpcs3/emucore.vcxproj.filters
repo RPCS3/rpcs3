@@ -1417,6 +1417,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_tabs.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2844,6 +2847,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_tabs.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
