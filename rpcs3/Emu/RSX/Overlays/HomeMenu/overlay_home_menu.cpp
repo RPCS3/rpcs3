@@ -21,7 +21,7 @@ namespace rsx
 			m_allow_input_on_pause = true;
 
 			m_dim_background.set_size(virtual_width, virtual_height);
-			m_dim_background.back_color.a = 0.5f;
+			m_dim_background.back_color.a = 0.85f;
 
 			m_description.set_font("Arial", 20);
 			m_description.set_pos(20, 37);

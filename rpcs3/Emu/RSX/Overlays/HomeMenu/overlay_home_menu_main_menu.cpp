@@ -26,10 +26,10 @@ namespace rsx
 			m_message_box = std::make_shared<home_menu_message_box>(x, y, width, height);
 			m_message_box->visible = false;
 
-			m_sidebar = std::make_unique<list_view>(350, height, false);
-			m_sidebar->set_pos(x, y);
+			m_sidebar = std::make_unique<list_view>(350, overlay::virtual_height, false);
+			m_sidebar->set_pos(0, 0);
 			m_sidebar->hide_prompt_buttons();
-			m_sidebar->back_color = color4f(0.15f, 0.15f, 0.15f, 0.95f);
+			m_sidebar->back_color = color4f(0.05f, 0.05f, 0.05f, 0.95f);
 
 			m_sliding_animation.duration_sec = 0.5f;
 			m_sliding_animation.type = animation_type::ease_in_out_cubic;
@@ -155,11 +155,44 @@ namespace rsx
 			apply_layout();
 		}
 
+		void home_menu_main_menu::apply_layout(bool center_vertically)
+		{
+			home_menu_page::apply_layout(center_vertically);
+
+			if (m_sidebar->get_elements_count() == 0)
+			{
+				return;
+			}
+
+			auto sidebar_items = std::move(m_sidebar->m_items);
+			m_sidebar->clear_items();
+
+			u16 combined_height = 0;
+			std::for_each(
+				sidebar_items.begin(),
+				sidebar_items.end(),
+				[&](auto& entry)
+				{
+					combined_height += entry->h + m_sidebar->pack_padding;
+					entry->set_pos(0, 0);
+				});
+
+			if (combined_height < overlay::virtual_height)
+			{
+				m_sidebar->advance_pos = (overlay::virtual_height - combined_height) / 2;
+			}
+
+			for (auto& entry : sidebar_items)
+			{
+				m_sidebar->add_entry(entry);
+			}
+		}
+
 		void home_menu_main_menu::add_sidebar_entry(std::string_view title)
 		{
 			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(title.data());
 			label_widget->set_size(m_sidebar->w, 60);
-			label_widget->set_font("Arial", 18);
+			label_widget->set_font("Arial", 14);
 			label_widget->back_color.a = 0.f;
 			label_widget->set_padding(16, 4, 16, 4);
 			m_sidebar->add_entry(label_widget);

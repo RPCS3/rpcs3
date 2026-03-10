@@ -19,6 +19,8 @@ namespace rsx
 			void update(u64 timestamp_us) override;
 
 		private:
+			void apply_layout(bool center_vertically = false) override;
+
 			void add_page(std::shared_ptr<home_menu_page> page) override;
 			void add_item(std::string_view title, std::function<page_navigation(pad_button)> callback) override;
 
