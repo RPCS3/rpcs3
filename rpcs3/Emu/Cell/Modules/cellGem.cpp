@@ -1609,12 +1609,6 @@ public:
 			return false;
 		}
 
-		if (!m_camera_info.bytesize)
-		{
-			cellGem.error("gem_tracker: unexpected image size: %d", m_camera_info.bytesize);
-			return false;
-		}
-
 		m_tracker.set_image_data(m_camera_info.buffer.get_ptr(), m_camera_info.bytesize, m_camera_info.width, m_camera_info.height, m_camera_info.format);
 		m_framenumber++; // using framenumber instead of timestamp since the timestamp could be identical
 		return true;
