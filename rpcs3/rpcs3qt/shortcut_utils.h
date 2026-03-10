@@ -6,6 +6,7 @@ namespace gui::utils
 	{
 		desktop,
 		applications,
+		steam,
 #ifdef _WIN32
 		rpcs3_shortcuts,
 #endif

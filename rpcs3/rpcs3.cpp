@@ -131,7 +131,7 @@ std::set<std::string> get_one_drive_paths()
 		do
 		{
 			path_buffer.resize(path_buffer.size() + MAX_PATH);
-			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
+			DWORD buffer_size = static_cast<DWORD>((path_buffer.size() - 1) * sizeof(wchar_t));
 			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
 		}
 		while (status == ERROR_MORE_DATA);

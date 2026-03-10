@@ -1093,7 +1093,7 @@ void debugger_frame::UpdateUnitList()
 			idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
 		}
 
-		m_hw_ppu_idx = cpu_list.size() + 1; // Account for NoThreadString thread
+		m_hw_ppu_idx = ::size32(cpu_list) + 1; // Account for NoThreadString thread
 
 		for (u32 i = 0; i < g_cfg.core.ppu_threads + 0u; i++)
 		{

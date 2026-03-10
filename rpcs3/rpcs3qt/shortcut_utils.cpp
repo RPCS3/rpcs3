@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "shortcut_utils.h"
+#include "steam_utils.h"
 #include "qt_utils.h"
 #include "Emu/VFS.h"
 #include "Utilities/File.h"
@@ -29,6 +30,25 @@
 #include <QStandardPaths>
 
 LOG_CHANNEL(sys_log, "SYS");
+
+template <>
+void fmt_class_string<gui::utils::shortcut_location>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gui::utils::shortcut_location value)
+	{
+		switch (value)
+		{
+		case gui::utils::shortcut_location::desktop: return "desktop";
+		case gui::utils::shortcut_location::applications: return "applications";
+		case gui::utils::shortcut_location::steam: return "steam";
+#ifdef _WIN32
+		case gui::utils::shortcut_location::rpcs3_shortcuts: return "rpcs3";
+#endif
+		}
+
+		return unknown;
+	});
+}
 
 namespace gui::utils
 {
@@ -109,6 +129,7 @@ namespace gui::utils
 		}
 
 		std::string link_path;
+		bool append_rpcs3 = false;
 
 		switch (location)
 		{
@@ -117,6 +138,13 @@ namespace gui::utils
 			break;
 		case shortcut_location::applications:
 			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
+			append_rpcs3 = true;
+			break;
+		case shortcut_location::steam:
+#ifdef __APPLE__
+			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
+			append_rpcs3 = true;
+#endif
 			break;
 #ifdef _WIN32
 		case shortcut_location::rpcs3_shortcuts:
@@ -126,13 +154,13 @@ namespace gui::utils
 #endif
 		}
 
-		if (!fs::is_dir(link_path) && !fs::create_dir(link_path))
+		if (!link_path.empty() && !fs::is_dir(link_path) && !fs::create_dir(link_path))
 		{
 			sys_log.error("Failed to create shortcut. Folder does not exist: %s", link_path);
 			return false;
 		}
 
-		if (location == shortcut_location::applications)
+		if (append_rpcs3)
 		{
 			link_path += "/RPCS3";
 
@@ -144,6 +172,29 @@ namespace gui::utils
 		}
 
 #ifdef _WIN32
+		const std::string working_dir{fs::get_executable_dir()};
+		const std::string rpcs3_path{fs::get_executable_path()};
+		std::string target_icon_path;
+
+		if (!src_icon_path.empty() && !target_icon_dir.empty())
+		{
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
+			{
+				sys_log.error("Failed to create shortcut: .ico creation failed");
+				return false;
+			}
+		}
+
+		if (location == shortcut_location::steam)
+		{
+			sys_log.notice("Creating %s shortcut with arguments '%s' and icon path '%s'", location, target_cli_args, target_icon_path);
+			steam_shortcut steam_sc{};
+			steam_sc.add_shortcut(simple_name, rpcs3_path, working_dir, target_cli_args, target_icon_path);
+			return steam_sc.write_file();
+		}
+
+		sys_log.notice("Creating %s shortcut '%s' with arguments '%s' and .ico dir '%s'", location, link_path, target_cli_args, target_icon_dir);
+
 		const auto str_error = [](HRESULT hr) -> std::string
 		{
 			_com_error err(hr);
@@ -152,8 +203,6 @@ namespace gui::utils
 		};
 
 		fmt::append(link_path, "/%s.lnk", simple_name);
-
-		sys_log.notice("Creating shortcut '%s' with arguments '%s' and .ico dir '%s'", link_path, target_cli_args, target_icon_dir);
 
 		// https://stackoverflow.com/questions/3906974/how-to-programmatically-create-a-shortcut-using-win32
 		HRESULT res = CoInitialize(NULL);
@@ -176,9 +225,6 @@ namespace gui::utils
 		res = CoCreateInstance(__uuidof(ShellLink), NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pShellLink));
 		if (FAILED(res))
 			return cleanup(false, "CoCreateInstance failed");
-
-		const std::string working_dir{ fs::get_executable_dir() };
-		const std::string rpcs3_path{ working_dir + "rpcs3.exe" };
 
 		const std::wstring w_target_file = utf8_to_wchar(rpcs3_path);
 		res = pShellLink->SetPath(w_target_file.c_str());
@@ -206,12 +252,8 @@ namespace gui::utils
 				return cleanup(false, fmt::format("SetDescription failed (%s)", str_error(res)));
 		}
 
-		if (!src_icon_path.empty() && !target_icon_dir.empty())
+		if (!target_icon_path.empty())
 		{
-			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
-				return cleanup(false, ".ico creation failed");
-
 			const std::wstring w_icon_path = utf8_to_wchar(target_icon_path);
 			res = pShellLink->SetIconLocation(w_icon_path.c_str(), 0);
 			if (FAILED(res))
@@ -241,9 +283,10 @@ namespace gui::utils
 		return cleanup(true, {});
 
 #elif defined(__APPLE__)
+
 		fmt::append(link_path, "/%s.app", simple_name);
 
-		sys_log.notice("Creating shortcut '%s' with arguments '%s'", link_path, target_cli_args);
+		sys_log.notice("Creating %s shortcut '%s' with arguments '%s'", location, link_path, target_cli_args);
 
 		const std::string contents_dir = link_path + "/Contents/";
 		const std::string macos_dir = contents_dir + "MacOS/";
@@ -320,9 +363,10 @@ namespace gui::utils
 		}
 		plist_file.close();
 
+		std::string target_icon_path;
 		if (!src_icon_path.empty())
 		{
-			std::string target_icon_path = resources_dir;
+			target_icon_path = resources_dir;
 			if (!create_square_shortcut_icon_file(path, src_icon_path, resources_dir, target_icon_path, 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
@@ -330,10 +374,16 @@ namespace gui::utils
 			}
 		}
 
+		if (location == shortcut_location::steam)
+		{
+			steam_shortcut steam_sc{};
+			steam_sc.add_shortcut(simple_name, launcher_path, macos_dir, ""/*target_cli_args are already in the launcher*/, target_icon_path);
+			return steam_sc.write_file();
+		}
+
 		return true;
 
 #else
-
 		const std::string exe_path = fs::get_executable_path();
 		if (exe_path.empty())
 		{
@@ -341,9 +391,28 @@ namespace gui::utils
 			return false;
 		}
 
+		std::string target_icon_path;
+		if (!src_icon_path.empty() && !target_icon_dir.empty())
+		{
+			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
+			{
+				// Error is logged in create_square_shortcut_icon_file
+				return false;
+			}
+		}
+
+		if (location == shortcut_location::steam)
+		{
+			sys_log.notice("Creating %s shortcut with arguments '%s' and icon path '%s'", location, target_cli_args, target_icon_path);
+			const std::string working_dir{fs::get_executable_dir()};
+			steam_shortcut steam_sc{};
+			steam_sc.add_shortcut(simple_name, exe_path, working_dir, target_cli_args, target_icon_path);
+			return steam_sc.write_file();
+		}
+
 		fmt::append(link_path, "/%s.desktop", simple_name);
 
-		sys_log.notice("Creating shortcut '%s' for '%s' with arguments '%s'", link_path, exe_path, target_cli_args);
+		sys_log.notice("Creating %s shortcut '%s' for '%s' with arguments '%s'", location, link_path, exe_path, target_cli_args);
 
 		std::string file_content;
 		fmt::append(file_content, "[Desktop Entry]\n");
@@ -360,15 +429,8 @@ namespace gui::utils
 			fmt::append(file_content, "Comment=%s\n", QString::fromStdString(description).simplified());
 		}
 
-		if (!src_icon_path.empty() && !target_icon_dir.empty())
+		if (!target_icon_path.empty())
 		{
-			std::string target_icon_path;
-			if (!create_square_shortcut_icon_file(path, src_icon_path, target_icon_dir, target_icon_path, 512))
-			{
-				// Error is logged in create_square_shortcut_icon_file
-				return false;
-			}
-
 			fmt::append(file_content, "Icon=%s\n", target_icon_path);
 		}
 
@@ -438,7 +500,8 @@ namespace gui::utils
 
 		std::vector<shortcut_location> locations = {
 			shortcut_location::desktop,
-			shortcut_location::applications
+			shortcut_location::applications,
+			shortcut_location::steam,
 		};
 #ifdef _WIN32
 		locations.push_back(shortcut_location::rpcs3_shortcuts);
@@ -457,6 +520,18 @@ namespace gui::utils
 				link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
 				link_path += "/RPCS3";
 				break;
+			case shortcut_location::steam:
+			{
+				const std::string exe_path = fs::get_executable_path();
+				const std::string working_dir = fs::get_executable_dir();
+				steam_shortcut steam_sc{};
+				steam_sc.remove_shortcut(simple_name, exe_path, working_dir);
+				if (!steam_sc.write_file())
+				{
+					sys_log.error("Failed to remove steam shortcut for '%s'", simple_name);
+				}
+				continue;
+			}
 #ifdef _WIN32
 			case shortcut_location::rpcs3_shortcuts:
 				link_path = rpcs3::utils::get_games_shortcuts_dir();
