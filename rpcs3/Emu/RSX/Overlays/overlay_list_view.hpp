@@ -32,6 +32,15 @@ namespace rsx
 			virtual void select_next(u16 count = 1);
 			virtual void select_previous(u16 count = 1);
 
+			template<typename T>
+				requires std::is_base_of_v<overlay_element, T>
+			void add_entry(std::unique_ptr<T>& ptr)
+			{
+				auto _ptr = ensure(dynamic_cast<overlay_element*>(ptr.release()));
+				std::unique_ptr<overlay_element> e{ _ptr };
+				add_entry(e);
+			}
+
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
 			u16 get_elements_count() const;
