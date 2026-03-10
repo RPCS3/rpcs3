@@ -3,6 +3,7 @@
 #include "numbered_widget_item.h"
 #include "richtext_item_delegate.h"
 #include "qt_utils.h"
+#include "steam_utils.h"
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
@@ -194,6 +195,17 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	vbox->addWidget(precompile_check);
 	vbox->addWidget(desk_check);
 	vbox->addWidget(quick_check);
+
+	if (gui::utils::steam_shortcut::steam_installed())
+	{
+		const bool steam_running = gui::utils::steam_shortcut::is_steam_running();
+		QCheckBox* steam_check = new QCheckBox(steam_running ? tr("Add Steam Shortcut(s) (Steam must be closed)") : tr("Add Steam shortcut(s)"));
+		connect(steam_check, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state){ m_create_steam_shortcut = state != Qt::CheckState::Unchecked; });
+		steam_check->setEnabled(!steam_running);
+
+		vbox->addWidget(steam_check);
+	}
+
 	vbox->addWidget(installation_info);
 	vbox->addWidget(buttons);
 
