@@ -6,11 +6,15 @@
 namespace rsx::overlays::home_menu
 {
 	std::unordered_map<fa_icon, std::unique_ptr<image_info>> g_icons_cache;
+	std::mutex g_icons_cache_lock;
 
 	static const char* fa_icon_to_filename(fa_icon icon)
 	{
 		switch (icon)
 		{
+		default:
+		case fa_icon::none:
+			return "";
 		case fa_icon::home:
 			return "home.png";
 		case fa_icon::settings:
@@ -47,6 +51,13 @@ namespace rsx::overlays::home_menu
 
 	const image_info* get_icon(fa_icon icon)
 	{
+		if (icon == fa_icon::none)
+		{
+			return nullptr;
+		}
+
+		std::lock_guard lock(g_icons_cache_lock);
+
 		auto found = g_icons_cache.find(icon);
 		if (found != g_icons_cache.end())
 		{
