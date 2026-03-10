@@ -34,7 +34,7 @@ namespace rsx
 			m_sliding_animation.duration_sec = 0.5f;
 			m_sliding_animation.type = animation_type::ease_in_out_cubic;
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_RESUME), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::back, get_localized_string(localized_string_id::HOME_MENU_RESUME), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -42,11 +42,11 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			add_page(std::make_shared<home_menu_settings>(x, y, width, height, use_separators, this));
+			add_page(home_menu::fa_icon::settings, std::make_shared<home_menu_settings>(x, y, width, height, use_separators, this));
 
 			if (rsx::overlays::friends_list_dialog::rpcn_configured())
 			{
-				add_item(get_localized_string(localized_string_id::HOME_MENU_FRIENDS), [](pad_button btn) -> page_navigation
+				add_item(home_menu::fa_icon::settings, get_localized_string(localized_string_id::HOME_MENU_FRIENDS), [](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -80,7 +80,7 @@ namespace rsx
 			}
 			if (!trop_name.empty())
 			{
-				add_item(get_localized_string(localized_string_id::HOME_MENU_TROPHIES), [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
+				add_item(home_menu::fa_icon::settings, get_localized_string(localized_string_id::HOME_MENU_TROPHIES), [trop_name = std::move(trop_name)](pad_button btn) -> page_navigation
 				{
 					if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -96,7 +96,7 @@ namespace rsx
 				});
 			}
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::screenshot, get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -104,7 +104,7 @@ namespace rsx
 				return page_navigation::exit_for_screenshot;
 			});
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_RECORDING), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::video_camera, get_localized_string(localized_string_id::HOME_MENU_RECORDING), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -113,7 +113,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::maximize, get_localized_string(localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross)
 					return page_navigation::stay;
@@ -123,9 +123,9 @@ namespace rsx
 				return page_navigation::stay; // No need to exit
 			});
 
-			add_page(std::make_shared<home_menu_savestate>(x, y, width, height, use_separators, this));
+			add_page(home_menu::fa_icon::floppy, std::make_shared<home_menu_savestate>(x, y, width, height, use_separators, this));
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_RESTART), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::restart, get_localized_string(localized_string_id::HOME_MENU_RESTART), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -140,7 +140,7 @@ namespace rsx
 				return page_navigation::exit;
 			});
 
-			add_item(get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME), [](pad_button btn) -> page_navigation
+			add_item(home_menu::fa_icon::poweroff, get_localized_string(localized_string_id::HOME_MENU_EXIT_GAME), [](pad_button btn) -> page_navigation
 			{
 				if (btn != pad_button::cross) return page_navigation::stay;
 
@@ -188,26 +188,44 @@ namespace rsx
 			}
 		}
 
-		void home_menu_main_menu::add_sidebar_entry(std::string_view title)
+		void home_menu_main_menu::add_sidebar_entry(home_menu::fa_icon icon, std::string_view title)
 		{
 			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(title.data());
 			label_widget->set_size(m_sidebar->w, 60);
-			label_widget->set_font("Arial", 14);
+			label_widget->set_font("Arial", 16);
 			label_widget->back_color.a = 0.f;
 			label_widget->set_padding(16, 4, 16, 4);
-			m_sidebar->add_entry(label_widget);
+
+			if (icon == home_menu::fa_icon::none)
+			{
+				m_sidebar->add_entry(label_widget);
+				return;
+			}
+
+			auto icon_info = ensure(home_menu::get_icon(icon));
+			auto icon_view = std::make_unique<image_view>();
+			icon_view->set_raw_image(icon_info);
+			icon_view->set_size(42, 60);
+			icon_view->set_padding(18, 0, 18, 18);
+
+			auto box = std::make_unique<horizontal_layout>();
+			box->set_size(0, 16);
+			box->set_padding(1);
+			box->add_element(icon_view);
+			box->add_element(label_widget);
+			m_sidebar->add_entry(box);
 		}
 
-		void home_menu_main_menu::add_item(std::string_view title, std::function<page_navigation(pad_button)> callback)
+		void home_menu_main_menu::add_item(home_menu::fa_icon icon, std::string_view title, std::function<page_navigation(pad_button)> callback)
 		{
-			add_sidebar_entry(title);
-			home_menu_page::add_item(title, callback);
+			add_sidebar_entry(icon, title);
+			home_menu_page::add_item(home_menu::fa_icon::none, title, callback);
 		}
 
-		void home_menu_main_menu::add_page(std::shared_ptr<home_menu_page> page)
+		void home_menu_main_menu::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
 		{
-			add_sidebar_entry(page->title);
-			home_menu_page::add_page(page);
+			add_sidebar_entry(icon, page->title);
+			home_menu_page::add_page(home_menu::fa_icon::none, page);
 		}
 
 		void home_menu_main_menu::select_entry(s32 entry)

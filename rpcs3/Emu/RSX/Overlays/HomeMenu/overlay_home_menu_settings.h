@@ -19,7 +19,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			void add_page(std::shared_ptr<home_menu_page> page) override;
+			void add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page) override;
 
 			std::unique_ptr<tabbed_container> m_tabs;
 		};

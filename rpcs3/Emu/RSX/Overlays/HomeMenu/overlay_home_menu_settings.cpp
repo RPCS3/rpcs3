@@ -13,19 +13,19 @@ namespace rsx
 			m_tabs->set_pos(x, y);
 			m_tabs->set_headers_background_color({ 0.25f, 0.25f, 0.25f, 0.95f });
 
-			add_page(std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
-			add_page(std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
 
 			// Select the first item
 			m_tabs->set_selected_tab(0);
 		}
 
-		void home_menu_settings::add_page(std::shared_ptr<home_menu_page> page)
+		void home_menu_settings::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
 		{
 			auto panel = std::static_pointer_cast<overlay_element>(page);
 			page->on_deactivate();
