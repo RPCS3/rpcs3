@@ -35,7 +35,7 @@ namespace rsx
 		{
 			int w = 0, h = 0, channels = 0;
 			int bpp = 0;
-			bool dirty = false;
+			mutable bool dirty = false;
 
 			image_info_base() {}
 			virtual ~image_info_base() {}
@@ -108,7 +108,7 @@ namespace rsx
 
 				u8 texture_ref = image_resource_id::none;
 				font* font_ref = nullptr;
-				void* external_data_ref = nullptr;
+				const void* external_data_ref = nullptr;
 
 				u8 blur_strength = 0;
 
@@ -314,7 +314,7 @@ namespace rsx
 		{
 		protected:
 			u8 image_resource_ref = image_resource_id::none;
-			void* external_ref = nullptr;
+			const void* external_ref = nullptr;
 
 			// Strength of blur effect
 			u8 blur_strength = 0;
@@ -325,7 +325,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 			void set_image_resource(u8 resource_id);
-			void set_raw_image(image_info_base* raw_image);
+			void set_raw_image(const image_info_base* raw_image);
 			void clear_image();
 			void set_blur_strength(u8 strength);
 		};
