@@ -770,8 +770,8 @@ namespace gem
 					if constexpr (use_gain)
 					{
 						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
-						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
-						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
 					}
 					else
 					{
@@ -822,8 +822,8 @@ namespace gem
 					if constexpr (use_gain)
 					{
 						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
-						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
-						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
 					}
 					else
 					{
@@ -881,9 +881,9 @@ namespace gem
 
 		const u8* src_data = video_data_in.data();
 		const u8 alpha = vc.alpha;
-		const f32 gain_r = vc.gain * vc.blue_gain;
+		const f32 gain_r = vc.gain * vc.red_gain;
 		const f32 gain_g = vc.gain * vc.green_gain;
-		const f32 gain_b = vc.gain * vc.red_gain;
+		const f32 gain_b = vc.gain * vc.blue_gain;
 
 		// Only RAW8 should be relevant for cellGem unless I'm mistaken
 		if (input_format == CELL_CAMERA_RAW8)
