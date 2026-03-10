@@ -148,7 +148,7 @@ namespace gl
 			}
 		}
 
-		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& src_area, const utils::address_range32& /*valid_range*/, u32 pitch)
+		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& src_area, const utils::address_range32& valid_range, u32 pitch)
 		{
 			init_buffer(src);
 			glGetError();
@@ -171,6 +171,14 @@ namespace gl
 				{ static_cast<u32>(src_area.width()), static_cast<u32>(src_area.height()), 1 }
 			};
 
+			u32 pbo_offset = 0;
+			if (valid_range.valid())
+			{
+				const u32 section_base = get_section_base();
+				pbo_offset = valid_range.start - section_base;
+				ensure(valid_range.start >= section_base && pbo_offset <= pbo.size());
+			}
+
 			bool use_driver_pixel_transform = true;
 			if (get_driver_caps().ARB_compute_shader_supported) [[likely]]
 			{
@@ -188,9 +196,10 @@ namespace gl
 						pack_info.type = static_cast<GLenum>(type);
 						pack_info.block_size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
 						pack_info.swap_bytes = true;
+						pack_info.row_length = rsx_pitch / pack_info.block_size;
 
-						mem_info.image_size_in_texels = src->width() * src->height();
-						mem_info.image_size_in_bytes = src->pitch() * src->height();
+						mem_info.image_size_in_texels = pack_info.row_length * src_area.height();
+						mem_info.image_size_in_bytes = rsx_pitch * src_area.height();
 						mem_info.memory_required = 0;
 
 						if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
@@ -200,13 +209,15 @@ namespace gl
 						}
 
 						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, src_rgn, &mem_info);
+						real_pitch = rsx_pitch;
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-						real_pitch = pack_info.block_size * src->width();
-						const u64 data_length = pack_info.block_size * mem_info.image_size_in_texels;
-						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), 0, data_length);
+						const u64 data_length = mem_info.image_size_in_bytes - rsx_pitch + (src_area.width() * pack_info.block_size);
+						ensure(data_length + pbo_offset <= static_cast<u64>(pbo.size()), "Memory allocation cannot fit image contents. Report to developers.");
+
+						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), pbo_offset, data_length);
 					}
 					else
 					{
@@ -225,11 +236,16 @@ namespace gl
 					pack_unpack_swap_bytes = false;
 				}
 
+				const auto bpp = src->pitch() / src->width();
+				real_pitch = rsx_pitch;
+				ensure((real_pitch % bpp) == 0);
+
 				pixel_pack_settings pack_settings;
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+				pack_settings.row_length(rsx_pitch / bpp);
 
-				src->copy_to(pbo, 0, format, type, 0, src_rgn, pack_settings);
+				src->copy_to(pbo, pbo_offset, format, type, 0, src_rgn, pack_settings);
 			}
 
 			if (auto error = glGetError())
@@ -270,6 +286,7 @@ namespace gl
 			gl::texture* target_texture = vram_texture;
 			u32 transfer_width = width;
 			u32 transfer_height = height;
+			u32 transfer_x = 0, transfer_y = 0;
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
@@ -315,7 +332,35 @@ namespace gl
 				}
 			}
 
-			dma_transfer(cmd, target_texture, {}, {}, rsx_pitch);
+			const auto valid_range = get_confirmed_range();
+			if (const auto section_range = get_section_range(); section_range != valid_range)
+			{
+				if (const auto offset = (valid_range.start - get_section_base()))
+				{
+					transfer_y = offset / rsx_pitch;
+					transfer_x = (offset % rsx_pitch) / rsx::get_format_block_size_in_bytes(gcm_format);
+
+					ensure(transfer_width >= transfer_x);
+					ensure(transfer_height >= transfer_y);
+					transfer_width -= transfer_x;
+					transfer_height -= transfer_y;
+				}
+
+				if (const auto tail = (section_range.end - valid_range.end))
+				{
+					const auto row_count = tail / rsx_pitch;
+
+					ensure(transfer_height >= row_count);
+					transfer_height -= row_count;
+				}
+			}
+
+			areai src_area;
+			src_area.x1 = static_cast<s32>(transfer_x);
+			src_area.y1 = static_cast<s32>(transfer_y);
+			src_area.x2 = s32(transfer_x + transfer_width);
+			src_area.y2 = s32(transfer_y + transfer_height);
+			dma_transfer(cmd, target_texture, src_area, valid_range, rsx_pitch);
 		}
 
 		/**
