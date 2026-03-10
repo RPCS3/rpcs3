@@ -689,6 +689,8 @@ gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_conte
 			static_cast<GLenum>(get_internal_format()),
 			format_class()
 		));
+
+		resolve_surface->set_name(fmt::format("MSAA_Resolve_%u@0x%x", resolve_surface->id(), base_addr));
 	}
 
 	return static_cast<gl::viewable_image*>(resolve_surface.get());

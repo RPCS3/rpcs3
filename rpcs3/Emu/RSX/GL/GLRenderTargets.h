@@ -160,6 +160,7 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_, samples,
 			static_cast<GLenum>(format.internal_format), RSX_FORMAT_CLASS_COLOR));
 
+		result->set_name(fmt::format("RTV_%u@0x%x", result->id(), address));
 		result->set_aa_mode(antialias);
 		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
@@ -203,6 +204,7 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(width_, height_, samples,
 			static_cast<GLenum>(format.internal_format), rsx::classify_format(surface_depth_format)));
 
+		result->set_name(fmt::format("DSV_%u@0x%x", result->id(), address));
 		result->set_aa_mode(antialias);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_depth_format);
@@ -238,6 +240,7 @@ struct gl_render_target_traits
 			sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			sink->format_info = ref->format_info;
 
+			sink->set_name(fmt::format("SINK_%u@0x%x", sink->id(), address));
 			sink->set_spp(ref->get_spp());
 			sink->set_native_pitch(static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x);
 			sink->set_rsx_pitch(ref->get_rsx_pitch());
@@ -325,6 +328,7 @@ struct gl_render_target_traits
 		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(fmt.swizzle.a), static_cast<GLenum>(fmt.swizzle.r), static_cast<GLenum>(fmt.swizzle.g), static_cast<GLenum>(fmt.swizzle.b) };
 		surface->set_native_component_layout(native_layout);
 		surface->set_format(format);
+		surface->set_name(fmt::format("RTV_%u@0x%x", surface->id(), address));
 
 		int_invalidate_surface_contents(cmd, surface, address, pitch);
 	}
@@ -338,6 +342,7 @@ struct gl_render_target_traits
 		usz pitch)
 	{
 		surface->set_format(format);
+		surface->set_name(fmt::format("DSV_%u@0x%x", surface->id(), address));
 		int_invalidate_surface_contents(cmd, surface, address, pitch);
 	}
 
