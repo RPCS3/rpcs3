@@ -845,6 +845,53 @@ namespace gem
 			debayer_raw8_impl<false>(src, dst, alpha, gain_r, gain_g, gain_b);
 	}
 
+	template <bool use_gain>
+	static inline void debayer_raw8_downscale_impl(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
+	{
+		constexpr u32 in_pitch = 640;
+		constexpr u32 out_pitch = 320 * 4;
+
+		// Simple debayer
+		for (s32 y = 0; y < 240; y++)
+		{
+			const u8* src0 = src + y * 2 * in_pitch;
+			const u8* src1 = src0 + in_pitch;
+
+			u8* dst0 = dst + y * out_pitch;
+
+			for (s32 x = 0; x < 320; x++, dst0 += 4, src0 += 2, src1 += 2)
+			{
+				const u8 b  = src0[0];
+				const u8 g0 = src0[1];
+				const u8 g1 = src1[0];
+				const u8 r  = src1[1];
+				const u8 g  = (g0 + g1) >> 1;
+
+				if constexpr (use_gain)
+				{
+					dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+					dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+				}
+				else
+				{
+					dst0[0] = r;
+					dst0[1] = g;
+					dst0[2] = b;
+				}
+				dst0[3] = alpha;
+			}
+		}
+	}
+
+	static void debayer_raw8_downscale(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
+	{
+		if (gain_r != 1.0f || gain_g != 1.0f || gain_b != 1.0f)
+			debayer_raw8_downscale_impl<true>(src, dst, alpha, gain_r, gain_g, gain_b);
+		else
+			debayer_raw8_downscale_impl<false>(src, dst, alpha, gain_r, gain_g, gain_b);
+	}
+
 	bool convert_image_format(CellCameraFormat input_format, const CellGemVideoConvertAttribute& vc,
 	                          const std::vector<u8>& video_data_in, u32 width, u32 height,
 	                          u8* video_data_out, u32 video_data_out_size, u8* buffer_memory,
@@ -1183,34 +1230,7 @@ namespace gem
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-				const u32 out_pitch = width * 4 / 2;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = src_data + y * in_pitch;
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst0 = video_data_out + (y / 2) * out_pitch;
-					u8* dst1 = dst0 + out_pitch;
-
-					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 4, dst1 += 4)
-					{
-						const u8 b  = src0[0];
-						const u8 g0 = src0[1];
-						const u8 g1 = src1[0];
-						const u8 r  = src1[1];
-
-						const u8 top[4] = { r, g0, b, alpha };
-						const u8 bottom[4] = { r, g1, b, alpha };
-
-						// Top-Left
-						std::memcpy(dst0, top, 4);
-
-						// Bottom-Left Pixel
-						std::memcpy(dst1, bottom, 4);
-					}
-				}
+				debayer_raw8_downscale(src_data, video_data_out, alpha, gain_r, gain_g, gain_b);
 				break;
 			}
 			case CELL_CAMERA_RGBA:
