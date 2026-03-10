@@ -335,7 +335,11 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path)
 {
 	Emu.CallFromMainThread([this, path = video_path]()
 	{
-		m_qt_video_source = std::make_unique<qt_video_source>();
+		if (!m_qt_video_source)
+		{
+			m_qt_video_source = std::make_unique<qt_video_source>();
+		}
+
 		m_qt_video_source->m_image_change_callback = [this](const QVideoFrame& frame)
 		{
 			std::unique_lock lock(m_qt_video_source->m_image_mutex);
@@ -371,7 +375,12 @@ void qt_video_source_wrapper::set_audio_path(const std::string& audio_path)
 {
 	Emu.CallFromMainThread([this, path = audio_path]()
 	{
-		// TODO
+		if (!m_qt_video_source)
+		{
+			m_qt_video_source = std::make_unique<qt_video_source>();
+		}
+
+		m_qt_video_source->set_audio_path(path);
 	});
 }
 
@@ -379,6 +388,7 @@ void qt_video_source_wrapper::set_active(bool active)
 {
 	Emu.CallFromMainThread([this, active]()
 	{
+		ensure(m_qt_video_source);
 		m_qt_video_source->set_active(true);
 	});
 }
