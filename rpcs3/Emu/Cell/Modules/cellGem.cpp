@@ -3619,7 +3619,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 				if (!pad->move_data.external_device_read_requested)
 				{
 					*ext_id = controller.ext_id = pad->move_data.external_device_id;
-					std::memcpy(pad->move_data.external_device_read.data(), ext_info.get_ptr(), CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE);
+					std::memcpy(ext_info.get_ptr(), pad->move_data.external_device_read.data(), CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE);
 					break;
 				}
 			}
