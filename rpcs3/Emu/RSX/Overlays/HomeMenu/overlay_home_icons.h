@@ -17,7 +17,9 @@ namespace rsx::overlays::home_menu
 		poweroff,
 		restart,
 		screenshot,
-		video_camera
+		video_camera,
+		trophy,
+		friends
 	};
 
 	const image_info* get_icon(fa_icon icon);
