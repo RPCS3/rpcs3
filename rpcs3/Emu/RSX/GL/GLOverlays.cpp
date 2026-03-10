@@ -220,7 +220,7 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::load_simple_image(const rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
 	{
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex->copy_from(desc->as_span(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
@@ -236,7 +236,7 @@ namespace gl
 		}
 		else
 		{
-			const u64 key = reinterpret_cast<u64>(desc);
+			const u64 key = reinterpret_cast<uintptr_t>(desc);
 			temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 			temp_view_cache[key] = std::move(view);
 		}
@@ -287,7 +287,7 @@ namespace gl
 		}
 	}
 
-	gl::texture_view* ui_overlay_renderer::find_font(rsx::overlays::font* font)
+	gl::texture_view* ui_overlay_renderer::find_font(const rsx::overlays::font* font)
 	{
 		const auto font_size = font->get_glyph_data_dimensions();
 
@@ -320,7 +320,7 @@ namespace gl
 		return result;
 	}
 
-	gl::texture_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::find_temp_image(const rsx::overlays::image_info_base* desc, u32 owner_uid)
 	{
 		const bool dirty = std::exchange(desc->dirty, false);
 		const u64 key = reinterpret_cast<u64>(desc);
@@ -431,7 +431,7 @@ namespace gl
 			}
 			case rsx::overlays::image_resource_id::raw_image:
 			{
-				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info_base*>(cmd.config.external_data_ref), ui.uid)->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<const rsx::overlays::image_info_base*>(cmd.config.external_data_ref), ui.uid)->id());
 				break;
 			}
 			case rsx::overlays::image_resource_id::font_file:

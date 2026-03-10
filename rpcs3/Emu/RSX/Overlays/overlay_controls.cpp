@@ -953,7 +953,7 @@ namespace rsx
 			external_ref = nullptr;
 		}
 
-		void image_view::set_raw_image(image_info_base* raw_image)
+		void image_view::set_raw_image(const image_info_base* raw_image)
 		{
 			image_resource_ref = image_resource_id::raw_image;
 			external_ref = raw_image;
