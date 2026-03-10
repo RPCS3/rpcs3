@@ -19,6 +19,54 @@ namespace gl
 		}
 	}
 
+	static const char* gl_type_to_str(texture::type type)
+	{
+		switch (type)
+		{
+		case texture::type::ubyte: return "GL_UNSIGNED_BYTE";
+		case texture::type::ushort: return "GL_UNSIGNED_SHORT";
+		case texture::type::uint: return "GL_UNSIGNED_INT";
+		case texture::type::ubyte_3_3_2: return "GL_UNSIGNED_BYTE_3_3_2";
+		case texture::type::ubyte_2_3_3_rev: return "GL_UNSIGNED_BYTE_2_3_3_REV";
+		case texture::type::ushort_5_6_5: return "GL_UNSIGNED_SHORT_5_6_5";
+		case texture::type::ushort_5_6_5_rev: return "GL_UNSIGNED_SHORT_5_6_5_REV";
+		case texture::type::ushort_4_4_4_4: return "GL_UNSIGNED_SHORT_4_4_4_4";
+		case texture::type::ushort_4_4_4_4_rev: return "GL_UNSIGNED_SHORT_4_4_4_4_REV";
+		case texture::type::ushort_5_5_5_1: return "GL_UNSIGNED_SHORT_5_5_5_1";
+		case texture::type::ushort_1_5_5_5_rev: return "GL_UNSIGNED_SHORT_1_5_5_5_REV";
+		case texture::type::uint_8_8_8_8: return "GL_UNSIGNED_INT_8_8_8_8";
+		case texture::type::uint_8_8_8_8_rev: return "GL_UNSIGNED_INT_8_8_8_8_REV";
+		case texture::type::uint_10_10_10_2: return "GL_UNSIGNED_INT_10_10_10_2";
+		case texture::type::uint_2_10_10_10_rev: return "GL_UNSIGNED_INT_2_10_10_10_REV";
+		case texture::type::uint_24_8: return "GL_UNSIGNED_INT_24_8";
+		case texture::type::float32_uint8: return "GL_FLOAT_32_UNSIGNED_INT_24_8_REV";
+		case texture::type::sbyte: return "GL_BYTE";
+		case texture::type::sshort: return "GL_SHORT";
+		case texture::type::sint: return "GL_INT";
+		case texture::type::f16: return "GL_HALF_FLOAT";
+		case texture::type::f32: return "GL_FLOAT";
+		case texture::type::f64: return "GL_DOUBLE";
+		default: return "UNKNOWN";
+		}
+	}
+
+	static const char* gl_format_to_str(texture::format format)
+	{
+		switch (format)
+		{
+		case texture::format::r: return "GL_RED";
+		case texture::format::rg: return "GL_RG";
+		case texture::format::rgb: return "GL_RGB";
+		case texture::format::rgba: return "GL_RGBA";
+		case texture::format::bgr: return "GL_BGR";
+		case texture::format::bgra: return "GL_BGRA";
+		case texture::format::stencil: return "GL_STENCIL_INDEX";
+		case texture::format::depth: return "GL_DEPTH_COMPONENT";
+		case texture::format::depth_stencil: return "GL_DEPTH_STENCIL";
+		default: return "UNKNOWN";
+		}
+	}
+
 	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLubyte samples, GLenum sized_format, rsx::format_class format_class)
 	{
 		// Upgrade targets for MSAA
@@ -248,9 +296,9 @@ namespace gl
 
 		if (caps.RENDERDOC_debug)
 		{
-			const auto msg = fmt::format("glGetTextureSubImage('[%u] %s', %u, %u, %u, %u, %u, %u, %u, %u, %u, %d, %p)",
+			const auto msg = fmt::format("glGetTextureSubImage('[%u] %s', %u, %u, %u, %u, %u, %u, %u, %s, %s, %d, %p)",
 				m_id, m_name.c_str(), level, region.x, region.y, region.z, region.width, region.height, region.depth,
-				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst.data());
+				gl_format_to_str(format), gl_type_to_str(type), s32{ smax }, dst.data());
 			push_debug_label(msg);
 		}
 
