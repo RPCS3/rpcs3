@@ -246,6 +246,14 @@ namespace gl
 		pixel_settings.apply();
 		const auto& caps = get_driver_caps();
 
+		if (caps.RENDERDOC_debug)
+		{
+			const auto msg = fmt::format("glGetTextureSubImage('[%u] %s', %u, %u, %u, %u, %u, %u, %u, %u, %u, %d, %p)",
+				m_id, m_name.c_str(), level, region.x, region.y, region.z, region.width, region.height, region.depth,
+				static_cast<GLenum>(format), static_cast<GLenum>(type), s32{ smax }, dst.data());
+			push_debug_label(msg);
+		}
+
 		if (!region.x && !region.y && !region.z &&
 			region.width == m_width && region.height == m_height && region.depth == m_depth)
 		{
