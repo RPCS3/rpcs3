@@ -132,6 +132,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
+	llvm::MDNode* m_md_spu_memory_domain;
+	llvm::MDNode* m_md_spu_context_domain;
 
 	struct block_info
 	{
@@ -555,6 +557,40 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return _ptr(m_thread, ::offset32(offset_args...));
 	}
 
+	template <typename T>
+	T* spu_mem_attr(T* inst)
+	{
+		if (auto load_inst = llvm::dyn_cast<llvm::LoadInst>(inst))
+		{
+			load_inst->setMetadata(llvm::LLVMContext::MD_noalias, m_md_spu_context_domain);
+			load_inst->setMetadata(llvm::LLVMContext::MD_alias_scope, m_md_spu_memory_domain);
+		}
+		else if (auto store_inst = llvm::dyn_cast<llvm::StoreInst>(inst))
+		{
+			store_inst->setMetadata(llvm::LLVMContext::MD_noalias, m_md_spu_context_domain);
+			store_inst->setMetadata(llvm::LLVMContext::MD_alias_scope, m_md_spu_memory_domain);
+		}
+
+		return inst;
+	}
+
+	template <typename T>
+	T* spu_context_attr(T* inst)
+	{
+		if (auto load_inst = llvm::dyn_cast<llvm::LoadInst>(inst))
+		{
+			load_inst->setMetadata(llvm::LLVMContext::MD_alias_scope, m_md_spu_context_domain);
+			load_inst->setMetadata(llvm::LLVMContext::MD_noalias, m_md_spu_memory_domain);
+		}
+		else if (auto store_inst = llvm::dyn_cast<llvm::StoreInst>(inst))
+		{
+			store_inst->setMetadata(llvm::LLVMContext::MD_alias_scope, m_md_spu_context_domain);
+			store_inst->setMetadata(llvm::LLVMContext::MD_noalias, m_md_spu_memory_domain);
+		}
+
+		return inst;
+	}
+
 	// Return default register type
 	llvm::Type* get_reg_type(u32 index)
 	{
@@ -722,6 +758,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 			// Load register value if necessary
 			reg = m_finfo && m_finfo->load[index] ? m_finfo->load[index] : m_ir->CreateLoad(get_reg_type(index), init_reg_fixed(index));
+			spu_context_attr(reg);
 		}
 
 		if (reg->getType() == get_type<f64[4]>())
@@ -955,6 +992,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Write register to the context
 		_store = m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, get_reg_type(index)), addr);
+
+		spu_context_attr(_store);
 	}
 
 	template <typename T, uint I>
@@ -1065,7 +1104,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Update PC for current or explicitly specified instruction address
 	void update_pc(u32 target = -1)
 	{
-		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr(&spu_thread::pc))->setVolatile(true);
+		spu_context_attr(m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr(&spu_thread::pc)))->setVolatile(true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -1074,7 +1113,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto pstate = spu_ptr(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(spu_context_attr(m_ir->CreateLoad(get_type<u32>(), pstate, true)), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
 
@@ -1085,14 +1124,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (may_be_unsafe_for_savestate)
 		{
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr(&spu_thread::unsavable))->setVolatile(true);
+			spu_context_attr(m_ir->CreateStore(m_ir->getInt8(1), spu_ptr(&spu_thread::unsavable)))->setVolatile(true);
 		}
 
 		m_ir->CreateCall(m_test_state, {m_thread});
 
 		if (may_be_unsafe_for_savestate)
 		{
-			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr(&spu_thread::unsavable))->setVolatile(true);
+			spu_context_attr(m_ir->CreateStore(m_ir->getInt8(0), spu_ptr(&spu_thread::unsavable)))->setVolatile(true);
 		}
 
 		m_ir->CreateBr(_body);
@@ -1527,6 +1566,16 @@ public:
 			// Metadata for branch weights
 			m_md_likely = llvm::MDTuple::get(m_context, {md_name, md_high, md_low});
 			m_md_unlikely = llvm::MDTuple::get(m_context, {md_name, md_low, md_high});
+
+			const auto domain = llvm::MDNode::getDistinct(m_context, {llvm::MDString::get(m_context, "SPU_mem")});
+			const auto scope = llvm::MDNode::get(m_context, {llvm::MDString::get(m_context, "SPU_mem_scope"), domain}); 
+
+			m_md_spu_memory_domain = llvm::MDNode::get(m_context, scope);
+
+			const auto domain2 = llvm::MDNode::getDistinct(m_context, {llvm::MDString::get(m_context, "SPU_ctx")});
+			const auto scope2 = llvm::MDNode::get(m_context, {llvm::MDString::get(m_context, "SPU_ctx_scope"), domain2}); 
+
+			m_md_spu_context_domain = llvm::MDNode::get(m_context, scope2);
 
 			// Initialize transform passes
 			clear_transforms();
@@ -3175,6 +3224,8 @@ public:
 
 									m_ir->SetInsertPoint(ins);
 									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
+									spu_context_attr(si);
+
 									if (b2->store[i] == nullptr)
 									{
 										// Protect against backwards ordering now
@@ -3240,7 +3291,7 @@ public:
 										continue;
 
 									m_ir->SetInsertPoint(ins);
-									m_ir->Insert(bs->clone());
+									m_ir->Insert(spu_context_attr(bs->clone()));
 								}
 
 								bs->eraseFromParent();
@@ -8336,13 +8387,13 @@ public:
 	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
 	{
 		const auto bswapped = byteswap(data);
-		m_ir->CreateStore(bswapped.eval(m_ir), _ptr(m_lsptr, addr.value));
+		spu_mem_attr(m_ir->CreateStore(bswapped.eval(m_ir), _ptr(m_lsptr, addr.value)));
 	}
 
 	auto make_load_ls(value_t<u64> addr)
 	{
 		value_t<u8[16]> data;
-		data.value = m_ir->CreateLoad(get_type<u8[16]>(), _ptr(m_lsptr, addr.value));
+		data.value = spu_mem_attr(m_ir->CreateLoad(get_type<u8[16]>(), _ptr(m_lsptr, addr.value)));
 		return byteswap(data);
 	}
 
