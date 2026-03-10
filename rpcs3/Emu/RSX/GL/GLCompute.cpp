@@ -341,6 +341,7 @@ namespace gl
 	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
 		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
+		ensure(row_pitch >= region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
@@ -391,6 +392,7 @@ namespace gl
 	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
 		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
+		ensure(row_pitch >= region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
@@ -441,6 +443,7 @@ namespace gl
 	{
 		const u32 bpp = dst->image()->pitch() / dst->image()->width();
 		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		ensure(row_length >= dst_region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["src_pitch"] = row_length;
