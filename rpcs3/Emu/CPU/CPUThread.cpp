@@ -1322,8 +1322,9 @@ extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<
 void cpu_thread::dump_all(std::string& ret) const
 {
 	std::any func_data;
+	std::any misc_data;
 
-	ret += dump_misc();
+	dump_misc(ret, misc_data);
 	ret += '\n';
 	dump_regs(ret, func_data);
 	ret += '\n';
@@ -1371,9 +1372,9 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 	return {};
 }
 
-std::string cpu_thread::dump_misc() const
+void cpu_thread::dump_misc(std::string& ret, std::any& /*custom_data*/) const
 {
-	return fmt::format("%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
+	fmt::append(ret, "%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

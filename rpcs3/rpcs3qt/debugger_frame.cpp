@@ -1469,8 +1469,11 @@ void debugger_frame::WritePanels(cpu_thread* cpu)
 
 	int loc = m_misc_state->verticalScrollBar()->value();
 	int hloc = m_misc_state->horizontalScrollBar()->value();
+
+	m_last_misc_state.clear();
+	cpu->dump_misc(m_last_misc_state, m_dump_misc_func_data);
 	m_misc_state->clear();
-	m_misc_state->setPlainText(QString::fromStdString(cpu->dump_misc()));
+	m_misc_state->setPlainText(QString::fromStdString(m_last_misc_state));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 

@@ -1139,11 +1139,62 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	return call_stack_list;
 }
 
-std::string spu_thread::dump_misc() const
+void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 {
-	std::string ret = cpu_thread::dump_misc();
+	cpu_thread::dump_misc(ret, custom_data);
 
-	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
+	struct dump_misc_data_t
+	{
+		u32 cpu_id = umax;
+		u64 last_read_time = umax;
+		u64 last_block_counter = umax;
+		u64 update_count = 0;
+
+		std::pair<u64, u64> update(u64 current_block_counter, u64 current_timestamp = get_system_time())
+		{
+			const u64 diff_time = current_timestamp <= last_read_time ? 0 : current_timestamp - last_read_time;
+			const u64 diff_block = current_block_counter <= last_block_counter ? 0 : current_block_counter - last_block_counter;
+
+			if (last_read_time == umax || update_count >= 1000)
+			{
+				last_read_time = current_timestamp;
+				last_block_counter = current_block_counter;
+				update_count = 0;
+			}
+			else if (diff_time >= 100000 && diff_block >= 100)
+			{
+				// Update values to measure rate (but not fully so rate can be measured later)
+				last_read_time += diff_time / 10 * 9;
+				last_block_counter += diff_block / 10 * 9;
+				update_count++;
+			}
+
+			return {diff_time, diff_block};
+		}
+	};
+
+	dump_misc_data_t* func_data = std::any_cast<dump_misc_data_t>(&custom_data);
+
+	if (!func_data)
+	{
+		custom_data.reset();
+		custom_data = std::make_any<dump_misc_data_t>();
+		func_data = ensure(std::any_cast<dump_misc_data_t>(&custom_data));
+	}
+
+	if (func_data->cpu_id != this->id)
+	{
+		*func_data = {};
+		func_data->cpu_id = this->id;
+	}
+
+	const u64 current_block_counter = atomic_storage<u64>::load(block_counter);
+
+	const auto [diff_time, diff_block] = func_data->update(current_block_counter);
+
+	const u64 rate_of_diff = diff_block ? std::max<u64>(1, utils::rational_mul<u64>(diff_block, 1'000'000, std::max<u64>(diff_time, 1))) : 0;
+
+	fmt::append(ret, "Block Weight: log10(%u/second): %.1f (Retreats: %u)", rate_of_diff, std::log10(std::max<u64>(rate_of_diff, 10)), block_failure);
 
 	if (u64 hash = atomic_storage<u64>::load(block_hash))
 	{
@@ -1194,8 +1245,6 @@ std::string spu_thread::dump_misc() const
 			break;
 		}
 	}
-
-	return ret;
 }
 
 void spu_thread::cpu_on_stop()
