@@ -176,7 +176,7 @@ public:
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const;
 
 	// Get CPU dump of misc information
-	virtual std::string dump_misc() const;
+	virtual void dump_misc(std::string& ret, std::any& /*custom_data*/) const;
 
 	// Thread entry point function
 	virtual void cpu_task() = 0;

@@ -1364,9 +1364,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 		u32 preferred_cr_field_index = 7;
 	};
 
-	dump_registers_data_t* func_data = nullptr;
-
-	func_data = std::any_cast<dump_registers_data_t>(&custom_data);
+	dump_registers_data_t* func_data = std::any_cast<dump_registers_data_t>(&custom_data);
 
 	if (!func_data)
 	{
@@ -2039,9 +2037,9 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 	return call_stack_list;
 }
 
-std::string ppu_thread::dump_misc() const
+void ppu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 {
-	std::string ret = cpu_thread::dump_misc();
+	cpu_thread::dump_misc(ret, custom_data);
 
 	if (ack_suspend)
 	{
@@ -2096,7 +2094,6 @@ std::string ppu_thread::dump_misc() const
 	{
 		ret += '\n';
 	}
-	return ret;
 }
 
 void ppu_thread::dump_all(std::string& ret) const
