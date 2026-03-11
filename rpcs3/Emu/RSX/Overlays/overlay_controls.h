@@ -89,6 +89,8 @@ namespace rsx
 
 			void load_files();
 			void free_resources();
+
+			static std::unique_ptr<image_info> load_icon(std::string_view relative_path);
 		};
 
 		struct compiled_resource

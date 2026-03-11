@@ -108,6 +108,89 @@ namespace rsx
 		{
 		}
 
+		std::unique_ptr<image_info> resource_config::load_icon(std::string_view relative_path)
+		{
+			const std::string res = relative_path.data();
+
+			// First check the global config dir
+			const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
+			auto info = std::make_unique<image_info>(image_path);
+
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
+			// Check the DATADIR if defined
+			if (info->get_data() == nullptr)
+			{
+				const std::string data_dir (DATADIR);
+				const std::string image_data = data_dir + "/Icons/ui/" + res;
+				info = std::make_unique<image_info>(image_data);
+			}
+#endif
+
+			if (info->get_data() == nullptr)
+			{
+				// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
+				std::string src = "Icons/ui/" + res;
+				info = std::make_unique<image_info>(src);
+#ifndef _WIN32
+				// Check for Icons in ../share/rpcs3 for AppImages,
+				// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
+				if (info->get_data() == nullptr)
+				{
+					char result[ PATH_MAX ];
+#if defined(__APPLE__)
+					u32 bufsize = PATH_MAX;
+					const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+#elif defined(KERN_PROC_PATHNAME)
+					usz bufsize = PATH_MAX;
+					int mib[] = {
+						CTL_KERN,
+#if defined(__NetBSD__)
+						KERN_PROC_ARGS,
+						-1,
+						KERN_PROC_PATHNAME,
+#else
+						KERN_PROC,
+						KERN_PROC_PATHNAME,
+						-1,
+#endif
+					};
+					const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
+#elif defined(__linux__)
+					const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
+#elif defined(__sun)
+					const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
+#else
+					const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
+#endif
+					if (success)
+					{
+						std::string executablePath = dirname(result);
+#ifdef __APPLE__
+						src = executablePath + "/../Resources/Icons/ui/" + res;
+#else
+						src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
+#endif
+						info = std::make_unique<image_info>(src);
+						// Check if the icons are in the same directory as the executable (local builds)
+						if (info->get_data() == nullptr)
+						{
+							src = executablePath + "/Icons/ui/" + res;
+							info = std::make_unique<image_info>(src);
+						}
+					}
+				}
+#endif
+				if (info->get_data())
+				{
+					// Install the image to config dir
+					fs::create_path(fs::get_parent_dir(image_path));
+					fs::copy_file(src, image_path, true);
+				}
+			}
+
+			return info;
+		}
+
 		void resource_config::load_files()
 		{
 			const std::array<std::string, 15> texture_resource_files
@@ -130,82 +213,7 @@ namespace rsx
 			};
 			for (const std::string& res : texture_resource_files)
 			{
-				// First check the global config dir
-				const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
-				auto info = std::make_unique<image_info>(image_path);
-
-#if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
-				// Check the DATADIR if defined
-				if (info->get_data() == nullptr)
-				{
-					const std::string data_dir (DATADIR);
-					const std::string image_data = data_dir + "/Icons/ui/" + res;
-					info = std::make_unique<image_info>(image_data);
-				}
-#endif
-
-				if (info->get_data() == nullptr)
-				{
-					// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
-					std::string src = "Icons/ui/" + res;
-					info = std::make_unique<image_info>(src);
-#ifndef _WIN32
-					// Check for Icons in ../share/rpcs3 for AppImages,
-					// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
-					if (info->get_data() == nullptr)
-					{
-						char result[ PATH_MAX ];
-#if defined(__APPLE__)
-						u32 bufsize = PATH_MAX;
-						const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
-#elif defined(KERN_PROC_PATHNAME)
-						usz bufsize = PATH_MAX;
-						int mib[] = {
-							CTL_KERN,
-#if defined(__NetBSD__)
-							KERN_PROC_ARGS,
-							-1,
-							KERN_PROC_PATHNAME,
-#else
-							KERN_PROC,
-							KERN_PROC_PATHNAME,
-							-1,
-#endif
-						};
-						const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
-#elif defined(__linux__)
-						const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
-#elif defined(__sun)
-						const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
-#else
-						const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
-#endif
-						if (success)
-						{
-							std::string executablePath = dirname(result);
-#ifdef __APPLE__
-							src = executablePath + "/../Resources/Icons/ui/" + res;
-#else
-							src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
-#endif
-							info = std::make_unique<image_info>(src);
-							// Check if the icons are in the same directory as the executable (local builds)
-							if (info->get_data() == nullptr)
-							{
-								src = executablePath + "/Icons/ui/" + res;
-								info = std::make_unique<image_info>(src);
-							}
-						}
-					}
-#endif
-					if (info->get_data())
-					{
-						// Install the image to config dir
-						fs::create_path(fs::get_parent_dir(image_path));
-						fs::copy_file(src, image_path, true);
-					}
-				}
-
+				auto info = load_icon(res);
 				texture_raw_data.push_back(std::move(info));
 			}
 		}

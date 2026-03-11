@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "overlay_home_icons.h"
 
+#include "Emu/RSX/Overlays/overlay_controls.h"
+
 #include <unordered_map>
 
 namespace rsx::overlays::home_menu
@@ -44,8 +46,8 @@ namespace rsx::overlays::home_menu
 
 	void load_icon(fa_icon icon)
 	{
-		const std::string image_path = fmt::format("%s/Icons/ui/home/32/%s", fs::get_config_dir(), fa_icon_to_filename(icon));
-		g_icons_cache[icon] = std::make_unique<image_info>(image_path);
+		const std::string image_path = fmt::format("home/32/%s", fa_icon_to_filename(icon));
+		g_icons_cache[icon] = rsx::overlays::resource_config::load_icon(image_path);
 	}
 
 	const image_info* get_icon(fa_icon icon)

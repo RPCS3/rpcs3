@@ -314,7 +314,6 @@ namespace rsx
 
 		void home_menu_page::set_size(u16 _w, u16 _h)
 		{
-			const auto prev_w = w;
 			list_view::set_size(_w, _h);
 
 			for (auto& entry : m_items)
