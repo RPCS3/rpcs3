@@ -2497,7 +2497,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
 
 	// Log levels
-	SubscribeTooltip(ui->gb_log_levels, tooltips.settings.vulkan_async_scheduler);
+	SubscribeTooltip(ui->gb_log_levels, tooltips.settings.log_levels);
 	connect(ui->pb_log_levels, &QAbstractButton::clicked, this, [this]()
 	{
 		log_level_dialog* dlg = new log_level_dialog(this, m_emu_settings);
