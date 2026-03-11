@@ -25,7 +25,7 @@ namespace rsx
 			m_tabs->set_selected_tab(0);
 		}
 
-		void home_menu_settings::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
+		void home_menu_settings::add_page(home_menu::fa_icon /*icon*/, std::shared_ptr<home_menu_page> page)
 		{
 			auto panel = std::static_pointer_cast<overlay_element>(page);
 			page->on_deactivate();

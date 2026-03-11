@@ -1,7 +1,6 @@
 #include "stdafx.h"
+#include "Emu/RSX/Overlays/overlay_controls.h"
 #include "overlay_animated_icon.h"
-
-#include "Utilities/File.h"
 
 #include "Emu/Cell/timers.hpp"
 
@@ -11,8 +10,7 @@ namespace rsx
 	{
 		animated_icon::animated_icon(const char* icon_name)
 		{
-			const std::string image_path = fmt::format("%s/Icons/ui/%s", fs::get_config_dir(), icon_name);
-			m_icon = std::make_unique<image_info>(image_path);
+			m_icon = overlays::resource_config::load_icon(icon_name);
 			set_raw_image(m_icon.get());
 		}
 
