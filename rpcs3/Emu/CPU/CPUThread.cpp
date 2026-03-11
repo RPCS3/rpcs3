@@ -1373,7 +1373,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", state.load());
+	return fmt::format("%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

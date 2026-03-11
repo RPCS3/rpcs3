@@ -398,6 +398,7 @@ void GLGSRender::on_init_thread()
 	m_ui_renderer.create();
 	m_video_output_pass.create();
 
+	gl::init_global_texture_resources();
 	m_gl_texture_cache.initialize();
 
 	m_prog_buffer.initialize

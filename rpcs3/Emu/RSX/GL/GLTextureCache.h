@@ -194,11 +194,12 @@ namespace gl
 
 						pack_info.format = static_cast<GLenum>(format);
 						pack_info.type = static_cast<GLenum>(type);
-						pack_info.size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
+						pack_info.block_size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
 						pack_info.swap_bytes = true;
+						pack_info.row_length = rsx_pitch / pack_info.block_size;
 
-						mem_info.image_size_in_texels = src->width() * src->height();
-						mem_info.image_size_in_bytes = src->pitch() * src->height();
+						mem_info.image_size_in_texels = pack_info.row_length * src_area.height();
+						mem_info.image_size_in_bytes = rsx_pitch * src_area.height();
 						mem_info.memory_required = 0;
 
 						if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
@@ -208,12 +209,14 @@ namespace gl
 						}
 
 						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, src_rgn, &mem_info);
+						real_pitch = rsx_pitch;
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-						real_pitch = pack_info.size * src->width();
-						const u64 data_length = pack_info.size * mem_info.image_size_in_texels;
+						const u64 data_length = mem_info.image_size_in_bytes - rsx_pitch + (src_area.width() * pack_info.block_size);
+						ensure(data_length + pbo_offset <= static_cast<u64>(pbo.size()), "Memory allocation cannot fit image contents. Report to developers.");
+
 						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), pbo_offset, data_length);
 					}
 					else
@@ -233,9 +236,14 @@ namespace gl
 					pack_unpack_swap_bytes = false;
 				}
 
+				const auto bpp = src->pitch() / src->width();
+				real_pitch = rsx_pitch;
+				ensure((real_pitch % bpp) == 0);
+
 				pixel_pack_settings pack_settings;
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
+				pack_settings.row_length(rsx_pitch / bpp);
 
 				src->copy_to(pbo, pbo_offset, format, type, 0, src_rgn, pack_settings);
 			}
@@ -278,6 +286,7 @@ namespace gl
 			gl::texture* target_texture = vram_texture;
 			u32 transfer_width = width;
 			u32 transfer_height = height;
+			u32 transfer_x = 0, transfer_y = 0;
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
@@ -323,7 +332,35 @@ namespace gl
 				}
 			}
 
-			dma_transfer(cmd, target_texture, {}, {}, rsx_pitch);
+			const auto valid_range = get_confirmed_range();
+			if (const auto section_range = get_section_range(); section_range != valid_range)
+			{
+				if (const auto offset = (valid_range.start - get_section_base()))
+				{
+					transfer_y = offset / rsx_pitch;
+					transfer_x = (offset % rsx_pitch) / rsx::get_format_block_size_in_bytes(gcm_format);
+
+					ensure(transfer_width >= transfer_x);
+					ensure(transfer_height >= transfer_y);
+					transfer_width -= transfer_x;
+					transfer_height -= transfer_y;
+				}
+
+				if (const auto tail = (section_range.end - valid_range.end))
+				{
+					const auto row_count = tail / rsx_pitch;
+
+					ensure(transfer_height >= row_count);
+					transfer_height -= row_count;
+				}
+			}
+
+			areai src_area;
+			src_area.x1 = static_cast<s32>(transfer_x);
+			src_area.y1 = static_cast<s32>(transfer_y);
+			src_area.x2 = s32(transfer_x + transfer_width);
+			src_area.y2 = s32(transfer_y + transfer_height);
+			dma_transfer(cmd, target_texture, src_area, valid_range, rsx_pitch);
 		}
 
 		/**
@@ -439,9 +476,7 @@ namespace gl
 			using gl::viewable_image::viewable_image;
 		};
 
-		blitter m_hw_blitter;
 		std::vector<std::unique_ptr<temporary_image_t>> m_temporary_surfaces;
-
 		const u32 max_cached_image_pool_size = 256;
 
 	private:
@@ -823,16 +858,11 @@ namespace gl
 		using baseclass::texture_cache;
 
 		void initialize()
-		{
-			m_hw_blitter.init();
-			g_hw_blitter = &m_hw_blitter;
-		}
+		{}
 
 		void destroy() override
 		{
 			clear();
-			g_hw_blitter = nullptr;
-			m_hw_blitter.destroy();
 		}
 
 		bool is_depth_texture(u32 rsx_address, u32 rsx_size) override
@@ -878,7 +908,7 @@ namespace gl
 
 		bool blit(gl::command_context& cmd, const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
-			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, m_hw_blitter);
+			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, *g_hw_blitter);
 
 			if (result.succeeded)
 			{

@@ -15,6 +15,18 @@ LOG_CHANNEL(sys_memory);
 //
 static shared_mutex s_memstats_mtx;
 
+// This struct is for reduced logging repetition
+struct last_reported_memory_stats
+{
+	struct inner_body
+	{
+		u32 prev_total = umax;
+		u32 prev_avail = umax;
+	};
+
+	atomic_t<inner_body> body{};
+};
+
 lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
 	: size(size)
 	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
@@ -313,8 +325,6 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 {
 	cpu.state += cpu_flag::wait;
 
-	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
-
 	// Get "default" memory container
 	auto& dct = g_fxo->get<lv2_memory_container>();
 
@@ -330,6 +340,22 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 		{
 			out.total_user_memory -= ct.size;
 		});
+	}
+
+	typename last_reported_memory_stats::inner_body now;
+	now.prev_total = out.total_user_memory;
+	now.prev_avail = out.available_user_memory;
+
+	now = g_fxo->get<last_reported_memory_stats>().body.exchange(now);
+
+	if (now.prev_total != out.total_user_memory || now.prev_avail != out.available_user_memory)
+	{
+		// Log on change
+		sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x): Avail=0x%x, Total=0x%x", mem_info, out.available_user_memory, out.total_user_memory);
+	}
+	else
+	{
+		sys_memory.trace("sys_memory_get_user_memory_size(mem_info=*0x%x): Avail=0x%x, Total=0x%x", mem_info, out.available_user_memory, out.total_user_memory);
 	}
 
 	cpu.check_state();

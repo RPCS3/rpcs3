@@ -23,6 +23,7 @@ namespace gl
 		bool initialized = false;
 		version_info glsl_version;
 
+		bool RENDERDOC_debug = false;
 		bool EXT_direct_state_access_supported = false;
 		bool EXT_depth_bounds_test_supported = false;
 		bool AMD_pinned_memory_supported = false;
