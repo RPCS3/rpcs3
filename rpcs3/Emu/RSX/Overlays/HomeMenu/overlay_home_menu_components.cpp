@@ -64,7 +64,7 @@ namespace rsx
 
 		void home_menu_checkbox::set_size(u16 w, u16 h)
 		{
-			set_reserved_width(w / 2 + menu_entry_margin);
+			set_reserved_width(menu_checkbox_size * 2 + menu_entry_margin);
 			home_menu_setting::set_size(w, h);
 
 			auto checkbox_ = std::make_unique<switchbox>();
