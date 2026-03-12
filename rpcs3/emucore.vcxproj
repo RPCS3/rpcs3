@@ -147,6 +147,7 @@
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_audio.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_checkbox.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp" />
@@ -154,6 +155,8 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_compile_notification.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_select.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_slider.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_tabs.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
@@ -709,6 +712,7 @@
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_checkbox.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
@@ -717,6 +721,8 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_select.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_slider.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_tabs.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h" />
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h" />
