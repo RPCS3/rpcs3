@@ -502,6 +502,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_audio.cpp
+    RSX/Overlays/overlay_checkbox.cpp
     RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
@@ -518,6 +519,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
+    RSX/Overlays/overlay_select.cpp
+    RSX/Overlays/overlay_slider.cpp
     RSX/Overlays/overlay_tabs.cpp
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/overlay_user_list_dialog.cpp
