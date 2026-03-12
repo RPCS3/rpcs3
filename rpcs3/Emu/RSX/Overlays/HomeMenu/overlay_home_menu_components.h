@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Emu/RSX/Overlays/overlays.h"
+#include "Emu/RSX/Overlays/overlay_checkbox.h"
+
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
@@ -109,8 +111,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			overlay_element* m_background = nullptr;
-			overlay_element* m_checkbox = nullptr;
+			checkbox* m_checkbox = nullptr;
 		};
 
 		template <typename T>

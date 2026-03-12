@@ -58,7 +58,8 @@ namespace rsx
 			add_element(text_stack);
 		}
 
-		home_menu_checkbox::home_menu_checkbox(cfg::_bool* setting, const std::string& text) : home_menu_setting(setting, text)
+		home_menu_checkbox::home_menu_checkbox(cfg::_bool* setting, const std::string& text)
+			: home_menu_setting(setting, text)
 		{}
 
 		void home_menu_checkbox::set_size(u16 w, u16 h)
@@ -66,35 +67,23 @@ namespace rsx
 			set_reserved_width(w / 2 + menu_entry_margin);
 			home_menu_setting::set_size(w, h);
 
-			auto box = std::make_unique<box_layout>();
-			m_background = box->add_element();
-			m_checkbox = box->add_element();
-
-			m_background->set_size(menu_checkbox_size, menu_checkbox_size);
-			m_checkbox->set_size(m_background->w - 2, m_background->h - 2);
-			m_checkbox->set_pos(1, 1);
-
-			box->set_pos(0, 16);
-			add_element(box);
+			auto checkbox_ = std::make_unique<switchbox>();
+			checkbox_->set_size(menu_checkbox_size, menu_checkbox_size);
+			checkbox_->set_pos(0, 16);
+			m_checkbox = add_element(checkbox_);
 		}
 
 		compiled_resource& home_menu_checkbox::get_compiled()
 		{
 			update_value();
 
-			if (!is_compiled())
+			if (is_compiled())
 			{
-				m_background->back_color = { 1.f };
-				m_checkbox->back_color = { 0.3f };
-				m_checkbox->back_color.a = 1.f;
-				m_checkbox->set_visible(!m_last_value);
-
-				compiled_resources = horizontal_layout::get_compiled();
-				compiled_resources.add(m_background->get_compiled());
-				compiled_resources.add(m_checkbox->get_compiled());
+				return compiled_resources;
 			}
 
-			return compiled_resources;
+			m_checkbox->set_checked(m_last_value);
+			return horizontal_layout::get_compiled();
 		}
 	}
 }
