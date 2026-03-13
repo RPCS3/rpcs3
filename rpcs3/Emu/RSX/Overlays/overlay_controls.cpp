@@ -730,9 +730,10 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void layout_container::add_spacer()
+		void layout_container::add_spacer(u16 size)
 		{
 			std::unique_ptr<overlay_element> spacer_element = std::make_unique<spacer>();
+			spacer_element->set_size(size, size);
 			add_element(spacer_element);
 		}
 
