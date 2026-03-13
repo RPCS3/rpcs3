@@ -2,6 +2,7 @@
 
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/overlay_checkbox.h"
+#include "Emu/RSX/Overlays/overlay_slider.h"
 
 #include "Emu/System.h"
 #include "Utilities/Config.h"
@@ -173,80 +174,58 @@ namespace rsx
 				home_menu_setting<T, C>::set_reserved_width(w / 2 + menu_entry_margin);
 				home_menu_setting<T, C>::set_size(w, h);
 
-				auto box = std::make_unique<box_layout>();
-				m_slider = box->add_element();
-				m_handle = box->add_element();
-
-				m_slider->set_size(w / 2, element_height);
-				m_slider->back_color = { 0.3f, 0.3f, 0.3f, 1.0f };
-
-				m_handle->set_size(element_height / 2, element_height);
-				m_handle->set_pos(m_slider->x, 0);
-				m_handle->back_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-				auto value_label = std::make_unique<label>();
-				value_label->back_color = m_slider->back_color;
-				value_label->set_font("Arial", 14);
-
-				m_value_label = box->add_element(value_label);
-				horizontal_layout::add_element(box);
+				auto slider_ = std::make_unique<slider>(static_cast<f64>(m_minimum), static_cast<f64>(m_maximum), static_cast<f64>(1));
+				slider_->set_size(w / 2, element_height);
+				m_slider_component = this->add_element(slider_);
 			}
 
 			compiled_resource& get_compiled() override
 			{
 				this->update_value();
 
-				if (!this->is_compiled())
+				if (this->is_compiled())
 				{
-					const f64 percentage = std::clamp((this->m_last_value - static_cast<T>(m_minimum)) / std::fabs(m_maximum - m_minimum), 0.0, 1.0);
-					m_slider->set_pos(m_slider->x, this->y + (this->h - m_slider->h) / 2);
-					m_handle->set_pos(m_slider->x + static_cast<s16>(percentage * (m_slider->w - m_handle->w)), this->y + (this->h - m_handle->h) / 2);
+					return this->compiled_resources;
+				}
 
-					const auto set_label_text = [this]() -> void
+				this->compiled_resources.clear();
+
+				if (!m_slider_component)
+				{
+					this->m_is_compiled = true;
+					return this->compiled_resources;
+				}
+
+				auto formatter = [this](f64 value) -> std::string
+				{
+					const auto typed_value = static_cast<T>(value);
+					if (const auto it = m_special_labels.find(typed_value); it != m_special_labels.cend())
 					{
-						if (const auto it = m_special_labels.find(this->m_last_value); it != m_special_labels.cend())
-						{
-							m_value_label->set_text(it->second);
-							return;
-						}
+						return it->second;
+					}
 
-						if constexpr (std::is_floating_point_v<T>)
-						{
-							m_value_label->set_text(fmt::format("%.2f%s", this->m_last_value, m_suffix));
-						}
-						else
-						{
-							m_value_label->set_text(fmt::format("%d%s", this->m_last_value, m_suffix));
-						}
-					};
-
-					set_label_text();
-					m_value_label->auto_resize();
-
-					constexpr u16 handle_margin = 10;
-
-					if ((m_handle->x - m_slider->x) > (m_slider->w - (m_handle->w + 2 * handle_margin + m_value_label->w)))
+					if constexpr (std::is_floating_point_v<T>)
 					{
-						m_value_label->set_pos(m_handle->x - (handle_margin + m_value_label->w), m_handle->y);
+						return fmt::format("%.2f%s", typed_value, m_suffix);
 					}
 					else
 					{
-						m_value_label->set_pos(m_handle->x + m_handle->w + handle_margin, m_handle->y);
+						return fmt::format("%d%s", typed_value, m_suffix);
 					}
+				};
 
-					this->compiled_resources = horizontal_layout::get_compiled();
-					this->compiled_resources.add(m_slider->get_compiled());
-					this->compiled_resources.add(m_handle->get_compiled());
-					this->compiled_resources.add(m_value_label->get_compiled());
-				}
+				m_slider_component->set_value_format(formatter);
+				m_slider_component->set_value(static_cast<f64>(this->m_last_value));
 
+				this->compiled_resources = horizontal_layout::get_compiled();
+				this->compiled_resources.add(m_slider_component->get_compiled());
+
+				this->m_is_compiled = true;
 				return this->compiled_resources;
 			}
 
 		private:
-			overlay_element* m_slider;
-			overlay_element* m_handle;
-			label* m_value_label;
+			slider* m_slider_component = nullptr;
 
 			std::string m_suffix;
 			std::map<T, std::string> m_special_labels;
