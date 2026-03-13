@@ -76,9 +76,6 @@ namespace rsx::overlays
 
 	void tabbed_container::set_current_tab(overlay_element* view)
 	{
-		compiled_resources.clear();
-		m_is_compiled = false;
-
 		m_current_view = view;
 		reflow_layout();
 	}
@@ -107,6 +104,8 @@ namespace rsx::overlays
 			m_current_view->set_pos(x + m_headers_width, y);
 			m_current_view->set_size(w - m_headers_width, h);
 		}
+
+		refresh();
 	}
 
 	overlay_element* tabbed_container::set_selected_tab(u32 index)
@@ -141,7 +140,8 @@ namespace rsx::overlays
 
 	compiled_resource& tabbed_container::get_compiled()
 	{
-		// TODO: Caching
+		// NOTE: Caching is difficult as the subviews are themselves dynamic.
+		// Doable but not worth the effort
 		compiled_resources.clear();
 
 		if (m_tab_headers)
