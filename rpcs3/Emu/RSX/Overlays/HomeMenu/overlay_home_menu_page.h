@@ -20,6 +20,8 @@ namespace rsx
 			void translate(s16 _x, s16 _y) override;
 			compiled_resource& get_compiled() override;
 
+			virtual bool show_reset_button() const { return false; }
+
 			bool is_current_page = false;
 			home_menu_page* parent = nullptr;
 			std::string title;
@@ -36,6 +38,7 @@ namespace rsx
 			std::vector<std::shared_ptr<home_menu_page>> m_pages;
 
 		private:
+			image_button m_reset_btn;
 			image_button m_save_btn;
 			image_button m_discard_btn;
 			std::vector<std::unique_ptr<overlay_element>> m_entries;
