@@ -5920,6 +5920,77 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
+#ifdef ARCH_ARM64
+
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			{
+				if (op.ra == op.rb)
+				{
+					if (perm_only)
+					{
+						const auto cm = eval(c & 0x0f);
+						set_vr(op.rt4, tbl(as, cm));
+						return;
+					}
+				
+					const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));                        
+					const auto cm = eval(c & 0x8f);                                                                                                               
+ 					set_vr(op.rt4, tbx(x, as, cm));
+					return;
+				}
+
+				if (perm_only)
+				{
+					const auto cm = eval(c & 0x1f);
+					set_vr(op.rt4, tbl2(as, bs, cm));
+					return;
+				}
+
+				const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+				const auto cm = eval(c & 0x9f);
+				set_vr(op.rt4, tbx2(x, as, bs, cm));
+				return;
+			}
+
+		}
+
+
+		if (op.ra == op.rb && !m_interp_magn)
+		{
+			if (perm_only)
+			{
+				const auto cm = eval(c & 0x0f);
+				const auto cr = eval(cm ^ 0x0f);
+				set_vr(op.rt4, tbl(a, cr));
+				return;
+			}
+
+			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+			const auto cm = eval(c & 0x8f);
+			const auto cr = eval(cm ^ 0x0f);
+			set_vr(op.rt4, tbx(x, a, cr));
+			return;
+		}
+
+		if (perm_only)
+		{
+			const auto cm = eval(c & 0x9f);
+			const auto cr = eval(cm ^ 0x0f);
+			set_vr(op.rt4, tbl2(a, b, cr));
+			return;
+		}
+
+		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4)); 
+		// AND should be before XOR so that llvm can combine them into BCAX
+		// Though for some reason it doesn't seem to be doing that.
+		const auto cm = eval(c & ~0x60);
+		const auto cr = eval(cm ^ 0x0f);
+		set_vr(op.rt4, tbx2(x, a, b, cr));
+	}                                                                                              
+#else
+
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
@@ -6064,6 +6135,7 @@ public:
 		else
 			set_vr(op.rt4, select_by_bit4(cr, ax, bx) | x);
 	}
+#endif
 
 	void MPYA(spu_opcode_t op)
 	{
