@@ -6,6 +6,7 @@
 #include "input_dialog.h"
 #include "qt_utils.h"
 #include "shortcut_utils.h"
+#include "steam_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
 #include "patch_manager_dialog.h"
@@ -273,6 +274,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	{
 		m_game_list_actions->CreateShortcuts({gameinfo}, {gui::utils::shortcut_location::desktop});
 	});
+
 #ifdef _WIN32
 	QAction* create_start_menu_shortcut = manage_game_menu->addAction(tr("&Create Start Menu Shortcut"));
 #elif defined(__APPLE__)
@@ -284,6 +286,13 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	{
 		m_game_list_actions->CreateShortcuts({gameinfo}, {gui::utils::shortcut_location::applications});
 	});
+
+	QAction* create_steam_shortcut = manage_game_menu->addAction(tr("&Create Steam Shortcut"));
+	connect(create_steam_shortcut, &QAction::triggered, this, [this, gameinfo]()
+	{
+		m_game_list_actions->CreateShortcuts({gameinfo}, {gui::utils::shortcut_location::steam});
+	});
+	create_steam_shortcut->setEnabled(gui::utils::steam_shortcut::steam_installed() && !gui::utils::steam_shortcut::is_steam_running());
 
 	manage_game_menu->addSeparator();
 
@@ -842,6 +851,13 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 		m_game_list_actions->CreateShortcuts(games, {gui::utils::shortcut_location::applications});
 	});
+
+	QAction* create_steam_shortcut = manage_game_menu->addAction(tr("&Create Steam Shortcut"));
+	connect(create_steam_shortcut, &QAction::triggered, this, [this, games]()
+	{
+		m_game_list_actions->CreateShortcuts(games, {gui::utils::shortcut_location::steam});
+	});
+	create_steam_shortcut->setEnabled(gui::utils::steam_shortcut::steam_installed() && !gui::utils::steam_shortcut::is_steam_running());
 
 	manage_game_menu->addSeparator();
 

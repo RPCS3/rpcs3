@@ -104,6 +104,7 @@ add_library(rpcs3_ui STATIC
     shortcut_settings.cpp
     skylander_dialog.cpp
     sound_effect_manager_dialog.cpp
+    steam_utils.cpp
     syntax_highlighter.cpp
     system_cmd_dialog.cpp
     table_item_delegate.cpp
