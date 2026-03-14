@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QThread>
 #include <QJsonObject>
+#include <QJsonDocument>
 
 #include "downloader.h"
 #include "curl_handle.h"
