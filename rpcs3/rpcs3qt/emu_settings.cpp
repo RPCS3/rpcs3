@@ -1054,9 +1054,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::ShaderMode:
 		switch (static_cast<shader_mode>(index))
 		{
-		case shader_mode::recompiler: return tr("Legacy (single threaded)", "Shader Mode");
-		case shader_mode::async_recompiler: return tr("Async (multi threaded)", "Shader Mode");
-		case shader_mode::async_with_interpreter: return tr("Async with Shader Interpreter", "Shader Mode");
+		case shader_mode::recompiler: return tr("Legacy Recompiler (single-threaded)", "Shader Mode");
+		case shader_mode::async_recompiler: return tr("Async Recompiler (multi-threaded)", "Shader Mode");
+		case shader_mode::async_with_interpreter: return tr("Async Recompiler with Shader Interpreter", "Shader Mode");
 		case shader_mode::interpreter_only: return tr("Shader Interpreter only", "Shader Mode");
 		}
 		break;
