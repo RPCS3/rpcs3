@@ -3,9 +3,15 @@
 #include "MouseHandler.h"
 #include "Emu/IdManager.h"
 #include "Emu/Io/guncon3_config.h"
+#include "Emu/Io/wiimote_config.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_cursor.h"
+#include "Input/wiimote_handler.h"
 #include "Input/pad_thread.h"
+#include <cmath>
+#include <climits>
+#include <algorithm>
 
 LOG_CHANNEL(guncon3_log);
 
@@ -127,6 +133,18 @@ usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8
 	: usb_device_emulated(location)
 	, m_controller_index(controller_index)
 {
+	{
+		std::lock_guard lock(s_instances_mutex);
+		s_instances.push_back(this);
+		// Sort instances by controller index (P1 < P2 < P3...)
+		// This ensures that the first available GunCon (e.g. at P3) takes the first Wiimote,
+		// and the second (e.g. at P4) takes the second Wiimote.
+		std::sort(s_instances.begin(), s_instances.end(), [](auto* a, auto* b)
+		{
+			return a->m_controller_index < b->m_controller_index;
+		});
+	}
+
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor {
 			.bcdUSB             = 0x0110,
@@ -174,6 +192,11 @@ usb_device_guncon3::usb_device_guncon3(u32 controller_index, const std::array<u8
 
 usb_device_guncon3::~usb_device_guncon3()
 {
+	std::lock_guard lock(s_instances_mutex);
+	if (auto it = std::find(s_instances.begin(), s_instances.end(), this); it != s_instances.end())
+	{
+		s_instances.erase(it);
+	}
 }
 
 void usb_device_guncon3::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
@@ -187,6 +210,81 @@ void usb_device_guncon3::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVa
 }
 
 extern bool is_input_allowed();
+
+bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
+{
+	if (!get_wiimote_config().use_for_guncon.get())
+		return false;
+
+	auto* wm = wiimote_handler::get_instance();
+	auto states = wm->get_states();
+
+	// Determine which Wiimote to use based on our ordinal position among all GunCons
+	s64 my_wiimote_index = -1;
+	{
+		std::lock_guard lock(s_instances_mutex);
+		auto found = std::find(s_instances.begin(), s_instances.end(), this);
+		if (found != s_instances.end())
+		{
+			my_wiimote_index = std::distance(s_instances.begin(), found);
+		}
+	}
+
+	if (my_wiimote_index < 0 || static_cast<usz>(my_wiimote_index) >= states.size())
+		return false;
+
+	const auto& ws = states[my_wiimote_index];
+	if (!ws.connected)
+		return false;
+
+	const auto& map = get_wiimote_config().guncon_mapping;
+	const auto is_pressed = [&](wiimote_button btn) { return (ws.buttons & static_cast<u16>(btn)) != 0; };
+
+	if (is_pressed(map.trigger.get())) gc.btn_trigger = 1;
+
+	// Wiimote to GunCon3 Button Mapping
+	if (is_pressed(map.a1.get())) gc.btn_a1 = 1;
+	if (is_pressed(map.a2.get())) gc.btn_a2 = 1;
+	if (is_pressed(map.a3.get())) gc.btn_a3 = 1;
+	if (is_pressed(map.b1.get())) gc.btn_b1 = 1;
+	if (is_pressed(map.b2.get())) gc.btn_b2 = 1;
+	if (is_pressed(map.b3.get())) gc.btn_b3 = 1;
+	if (is_pressed(map.c1.get())) gc.btn_c1 = 1;
+	if (is_pressed(map.c2.get())) gc.btn_c2 = 1;
+
+	// Secondary / Hardcoded Alts
+	if (is_pressed(map.b1_alt.get())) gc.btn_b1 = 1;
+	if (is_pressed(map.b2_alt.get())) gc.btn_b2 = 1;
+
+	if (ws.ir[0].x < 1023)
+	{
+		// Map Wiimote IR (0..1023) to GunCon3 range (-32768..32767)
+		const s32 raw_x = ws.ir[0].x;
+		const s32 raw_y = ws.ir[0].y;
+
+		const s32 x_res = SHRT_MAX - (raw_x * USHRT_MAX / 1023);
+		const s32 y_res = SHRT_MAX - (raw_y * USHRT_MAX / 767);
+
+		gc.gun_x = static_cast<s16>(std::clamp(x_res, SHRT_MIN, SHRT_MAX));
+		gc.gun_y = static_cast<s16>(std::clamp(y_res, SHRT_MIN, SHRT_MAX));
+
+		if (g_cfg.io.show_move_cursor)
+		{
+			const s16 ax = static_cast<s16>((gc.gun_x + SHRT_MAX + 1) * rsx::overlays::overlay::virtual_width / USHRT_MAX);
+			const s16 ay = static_cast<s16>((SHRT_MAX - gc.gun_y) * rsx::overlays::overlay::virtual_height / USHRT_MAX);
+			rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + my_wiimote_index, ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
+		}
+
+		if (ws.ir[1].x < 1023)
+		{
+			const s32 dx = static_cast<s32>(ws.ir[0].x) - ws.ir[1].x;
+			const s32 dy = static_cast<s32>(ws.ir[0].y) - ws.ir[1].y;
+			gc.gun_z = static_cast<s16>(std::sqrt(dx * dx + dy * dy));
+		}
+	}
+
+	return true;
+}
 
 void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
@@ -208,6 +306,12 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 	gc.stick_ax = gc.stick_ay = gc.stick_bx = gc.stick_by = 0x7f;
 
 	if (!is_input_allowed())
+	{
+		guncon3_encode(&gc, buf, m_key.data());
+		return;
+	}
+
+	if (handle_wiimote(gc))
 	{
 		guncon3_encode(&gc, buf, m_key.data());
 		return;
