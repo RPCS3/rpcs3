@@ -5,14 +5,6 @@
 #include <bitset>
 #include "cellPamf.h"
 
-const std::function<bool()> SQUEUE_ALWAYS_EXIT = []() { return true; };
-const std::function<bool()> SQUEUE_NEVER_EXIT = []() { return false; };
-
-bool squeue_test_exit()
-{
-	return Emu.IsStopped();
-}
-
 LOG_CHANNEL(cellPamf);
 
 template<>
