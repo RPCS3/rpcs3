@@ -10,6 +10,11 @@ set(USE_SANITIZERS FALSE CACHE BOOL "Dont't use sanitizers")
 
 add_subdirectory(cubeb EXCLUDE_FROM_ALL)
 add_library(3rdparty::cubeb ALIAS cubeb)
+target_compile_options(cubeb PRIVATE
+	-Wno-int-to-void-pointer-cast
+	-Wno-deprecated-declarations
+	-Wno-implicit-const-int-float-conversion
+	)
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|ARM|aarch64|AArch64|Aarch64)")
 	target_compile_definitions(speex PUBLIC
