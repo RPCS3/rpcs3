@@ -122,6 +122,7 @@ cmake .. \
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_SDL=ON \
     -DUSE_SYSTEM_OPENCV=ON \
+    -DUSE_SYSTEM_PROTOBUF=ON \
     -G Ninja
 fi
 
