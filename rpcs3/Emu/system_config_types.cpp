@@ -522,9 +522,9 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case shader_mode::recompiler: return "Shader Recompiler";
-		case shader_mode::async_recompiler: return "Async Shader Recompiler";
-		case shader_mode::async_with_interpreter: return "Async with Shader Interpreter";
+		case shader_mode::recompiler: return "Legacy Recompiler (single-threaded)";
+		case shader_mode::async_recompiler: return "Async Recompiler (multi-threaded)";
+		case shader_mode::async_with_interpreter: return "Async Recompiler with Shader Interpreter";
 		case shader_mode::interpreter_only: return "Shader Interpreter only";
 		}
 
