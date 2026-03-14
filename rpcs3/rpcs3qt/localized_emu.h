@@ -225,6 +225,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON: return tr("Save");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD: return tr("Discard the current settings' changes?");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON: return tr("Discard");
+		case localized_string_id::HOME_MENU_SETTINGS_RESET_BUTTON: return tr("To default");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO: return tr("Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_MASTER_VOLUME: return tr("Master Volume", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_BACKEND: return tr("Audio Backend", "Audio");
