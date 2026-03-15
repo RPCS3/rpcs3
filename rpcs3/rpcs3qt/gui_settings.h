@@ -315,7 +315,7 @@ namespace gui
 
 	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
 
-	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      false);
+	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      true);
 	const gui_save nav_global  = gui_save(navigation, "allow_global_pad_input", false);
 }
 

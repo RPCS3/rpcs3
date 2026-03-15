@@ -182,22 +182,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="checkboxes">
-              <property name="title">
-               <string>Additional Settings</string>
-              </property>
-              <layout class="QVBoxLayout" name="checkboxes_layout">
-               <item>
-                <widget class="QCheckBox" name="spuLoopDetection">
-                 <property name="text">
-                  <string>Enable SPU loop detection</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <widget class="QGroupBox" name="gb_max_preempt_count">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -473,7 +457,7 @@
                <item>
                 <widget class="QGroupBox" name="gb_antiAliasing">
                  <property name="title">
-                  <string>Anti-Aliasing</string>
+                  <string>Anti-Aliasing (MSAA)</string>
                  </property>
                  <layout class="QVBoxLayout" name="gb_antiAliasing_layout">
                   <item>
@@ -2415,23 +2399,9 @@
               </property>
               <layout class="QVBoxLayout" name="gb_advanced_core_layout">
                <item>
-                <widget class="QCheckBox" name="debugConsoleMode">
-                 <property name="text">
-                  <string>Debug Console Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accurateDFMA">
-                 <property name="text">
-                  <string>Accurate DFMA</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="accurateRSXAccess">
                  <property name="text">
-                  <string>Accurate RSX reservation access</string>
+                  <string>Accurate RSX Reservation Access</string>
                  </property>
                 </widget>
                </item>
@@ -2439,6 +2409,27 @@
                 <widget class="QCheckBox" name="accurateSpuDMA">
                  <property name="text">
                   <string>Accurate SPU DMA</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="antiCheatSavestates">
+                 <property name="text">
+                  <string>Anti-Cheat Savestates Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="debugConsoleMode">
+                 <property name="text">
+                  <string>Debug Console Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="mfcDelayCommand">
+                 <property name="text">
+                  <string>Delay each odd MFC Command</string>
                  </property>
                 </widget>
                </item>
@@ -2457,9 +2448,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="ppuNJFixup">
+                <widget class="QCheckBox" name="spuLoopDetection">
                  <property name="text">
-                  <string>PPU Non-Java Mode Fixup</string>
+                  <string>Enable SPU loop detection</string>
                  </property>
                 </widget>
                </item>
@@ -2471,30 +2462,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="mfcDelayCommand">
+                <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
-                  <string>Delay each odd MFC Command</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="antiCheatSavestates">
-                 <property name="text">
-                  <string>Anti-Cheat Savestates Mode</string>
+                  <string>Silence All Logs</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QCheckBox" name="compatibleSavestates">
                  <property name="text">
-                  <string>SPU-Compatible Savestates Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="silenceAllLogs">
-                 <property name="text">
-                  <string>Silence All Logs</string>
+                  <string>SPU Compatible Savestates Mode</string>
                  </property>
                 </widget>
                </item>
@@ -2672,30 +2649,16 @@
               </property>
               <layout class="QVBoxLayout" name="gb_advanced_gpu_layout">
                <item>
-                <widget class="QCheckBox" name="readDepth">
+                <widget class="QCheckBox" name="allowHostGPULabels">
                  <property name="text">
-                  <string>Read Depth Buffers</string>
+                  <string>Allow Host GPU Labels (Experimental)</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="dumpDepth">
+                <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
-                  <string>Write Depth Buffers</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="readColor">
-                 <property name="text">
-                  <string>Read Color Buffers</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="handleTiledMemory">
-                 <property name="text">
-                  <string>Handle RSX memory tiling</string>
+                  <string>Disable MSL Fast Math</string>
                  </property>
                 </widget>
                </item>
@@ -2707,16 +2670,30 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="allowHostGPULabels">
+                <widget class="QCheckBox" name="forceHwMSAAResolve">
                  <property name="text">
-                  <string>Allow Host GPU Labels (Experimental)</string>
+                  <string>Force Hardware MSAA Resolve</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="forceHwMSAAResolve">
+                <widget class="QCheckBox" name="handleTiledMemory">
                  <property name="text">
-                  <string>Force Hardware MSAA Resolve</string>
+                  <string>Handle RSX Memory Tiling</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="readDepth">
+                 <property name="text">
+                  <string>Read Depth Buffer</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="readColor">
+                 <property name="text">
+                  <string>Read Color Buffers</string>
                  </property>
                 </widget>
                </item>
@@ -2728,9 +2705,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="disableMslFastMath">
+                <widget class="QCheckBox" name="dumpDepth">
                  <property name="text">
-                  <string>Disable MSL Fast Math</string>
+                  <string>Write Depth Buffer</string>
                  </property>
                 </widget>
                </item>
@@ -2945,16 +2922,16 @@
               </property>
               <layout class="QVBoxLayout" name="gb_emu_settings_layout">
                <item>
-                <widget class="QCheckBox" name="exitOnStop">
+                <widget class="QCheckBox" name="enableGamemode">
                  <property name="text">
-                  <string>Exit RPCS3 when process finishes</string>
+                  <string>Enable GameMode</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="pauseOnFocusLoss">
+                <widget class="QCheckBox" name="exitOnStop">
                  <property name="text">
-                  <string>Pause emulation on RPCS3 focus loss</string>
+                  <string>Exit RPCS3 when process finishes</string>
                  </property>
                 </widget>
                </item>
@@ -2973,72 +2950,16 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="pauseOnFocusLoss">
+                 <property name="text">
+                  <string>Pause emulation on RPCS3 focus loss</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="preventDisplaySleep">
                  <property name="text">
                   <string>Prevent display sleep while running games</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showTrophyPopups">
-                 <property name="text">
-                  <string>Show trophy popups</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showRpcnPopups">
-                 <property name="text">
-                  <string>Show RPCN popups</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showShaderCompilationHint">
-                 <property name="text">
-                  <string>Show shader compilation hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showPPUCompilationHint">
-                 <property name="text">
-                  <string>Show PPU compilation hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
-                 <property name="text">
-                  <string>Show autosave/autoload hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
-                 <property name="text">
-                  <string>Show analog limiter toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
-                 <property name="text">
-                  <string>Show pressure intensity toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
-                 <property name="text">
-                  <string>Show mouse and keyboard toggle hint</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="showCaptureHints">
-                 <property name="text">
-                  <string>Show capture hints</string>
                  </property>
                 </widget>
                </item>
@@ -3056,17 +2977,82 @@
                  </property>
                 </widget>
                </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_overlay_settings">
+              <property name="title">
+               <string>Overlay Settings</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_overlay_settings_layout">
                <item>
                 <widget class="QCheckBox" name="recordWithOverlays">
                  <property name="text">
-                  <string>Record with overlays</string>
+                  <string>Record and screenshot with overlays</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="enableGamemode">
+                <widget class="QCheckBox" name="showAnalogLimiterToggleHint">
                  <property name="text">
-                  <string>Enable GameMode</string>
+                  <string>Show analog limiter toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showAutosaveAutoloadHint">
+                 <property name="text">
+                  <string>Show autosave/autoload hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showCaptureHints">
+                 <property name="text">
+                  <string>Show capture hints</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
+                 <property name="text">
+                  <string>Show mouse and keyboard toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showRpcnPopups">
+                 <property name="text">
+                  <string>Show netplay popups</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showPressureIntensityToggleHint">
+                 <property name="text">
+                  <string>Show pressure intensity toggle hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showPPUCompilationHint">
+                 <property name="text">
+                  <string>Show PPU compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showShaderCompilationHint">
+                 <property name="text">
+                  <string>Show shader compilation hint</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showTrophyPopups">
+                 <property name="text">
+                  <string>Show trophy popups</string>
                  </property>
                 </widget>
                </item>
@@ -4007,28 +3993,14 @@
                <item>
                 <widget class="QCheckBox" name="cb_show_exit_game">
                  <property name="text">
-                  <string>Show Exit Game Dialog</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="cb_show_boot_game">
-                 <property name="text">
-                  <string>Show Boot Game Dialog</string>
+                  <string>Show Exit Game Confirmation</string>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QCheckBox" name="cb_show_pkg_install">
                  <property name="text">
-                  <string>Show PKG Installation Dialog</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="cb_show_pup_install">
-                 <property name="text">
-                  <string>Show PUP Installation Dialog</string>
+                  <string>Show PKG/PUP Installation Result</string>
                  </property>
                 </widget>
                </item>
@@ -4349,6 +4321,13 @@
             </property>
             <layout class="QVBoxLayout" name="gb_debug_core_layout">
              <item>
+              <widget class="QCheckBox" name="accurateDFMA">
+               <property name="text">
+                <string>Accurate DFMA</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="alwaysStart">
                <property name="text">
                 <string>Automatically start games after boot</string>
@@ -4408,6 +4387,13 @@
               <widget class="QCheckBox" name="accuratePPUNJ">
                <property name="text">
                 <string>Accurate PPU Non-Java Mode</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="ppuNJFixup">
+               <property name="text">
+                <string>PPU Non-Java Mode Fixup</string>
                </property>
               </widget>
              </item>
