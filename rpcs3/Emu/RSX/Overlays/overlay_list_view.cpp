@@ -285,7 +285,6 @@ namespace rsx
 
 		void list_view::set_pos(s16 x, s16 y)
 		{
-			const auto prev_x = this->x, prev_y = this->y;
 			vertical_layout::set_pos(x, y);
 
 			update_selection();
