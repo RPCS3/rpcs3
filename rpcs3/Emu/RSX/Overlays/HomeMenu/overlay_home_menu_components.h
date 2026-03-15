@@ -140,7 +140,7 @@ namespace rsx
 
 				const auto current = fmt::format("%s", setting->get());
 				const auto list = setting->to_list();
-				for (s32 index = 0; index <= list.size(); ++index)
+				for (s32 index = 0; index <= static_cast<s32>(list.size()); ++index)
 				{
 					if (list[index] != current)
 					{
