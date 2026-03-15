@@ -11,7 +11,7 @@ namespace rsx::overlays
 		: list_view(w, h, false)
 	{
 		hide_prompt_buttons();
-		hide_scroll_indicators();
+		hide_scroll_indicator();
 		pack_padding = dropdown_pack_padding;
 	}
 
