@@ -102,8 +102,8 @@ bool sdl_instance::initialize_impl()
 	set_hint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
 #endif
 
-	// Disable LG4FF driver on windows (only needed for SDL 3.4.0)
-#if _WIN32 && SDL_VERSION_ATLEAST(3, 4, 0)
+	// Disable LG4FF driver on windows
+#if _WIN32
 	set_hint(SDL_HINT_JOYSTICK_HIDAPI_LG4FF, "0");
 #endif
 

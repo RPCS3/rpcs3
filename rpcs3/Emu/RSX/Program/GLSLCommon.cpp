@@ -408,6 +408,16 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_TEXTURE_ALPHA_KILL");
 			}
 
+			if (props.require_color_format_convert)
+			{
+				enabled_options.push_back("_ENABLE_FORMAT_CONVERSION");
+			}
+
+			if (props.require_depth_conversion)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_FORMAT_RECONSTRUCTION");
+			}
+
 			program_common::define_glsl_switches(OS, enabled_options);
 			enabled_options.clear();
 

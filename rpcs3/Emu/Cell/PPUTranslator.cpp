@@ -550,11 +550,12 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		else if (_target >= caddr && _target <= cend)
 		{
 			u32 target_last = static_cast<u32>(_target);
-
 			std::unordered_set<u32> passed_targets{target_last};
 
 			// Try to follow unconditional branches as long as there is no infinite loop
-			while (target_last != _target)
+			// !! Triggers compilation issues in Asura's Wrath in other parts of the code
+			// !! See https://github.com/RPCS3/rpcs3/issues/18287
+			while (false)
 			{
 				const ppu_opcode_t op{*ensure(m_info.get_ptr<u32>(target_last))};
 				const ppu_itype::type itype = g_ppu_itype.decode(op.opcode);
@@ -1304,7 +1305,7 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 		if (!m_use_fma && data == v128{})
 		{
 			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
-			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			ppu_log.notice("LLVM: VMADDFP with +0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
 	}
@@ -3680,9 +3681,7 @@ void PPUTranslator::STVLX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
-	const auto align = splat<u32>(16);
-	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
+	m_ir->CreateMaskedStore(data.eval(m_ir), GetMemory(m_ir->CreateAnd(addr, ~0xfull)), llvm::Align(16), mask.eval(m_ir));
 }
 
 void PPUTranslator::STDBRX(ppu_opcode_t op)
@@ -3710,9 +3709,7 @@ void PPUTranslator::STVRX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
-	const auto align = splat<u32>(16);
-	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
+	m_ir->CreateMaskedStore(data.eval(m_ir), GetMemory(m_ir->CreateAnd(addr, ~0xfull)), llvm::Align(16), mask.eval(m_ir));
 }
 
 void PPUTranslator::STFSUX(ppu_opcode_t op)

@@ -225,6 +225,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON: return tr("Save");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD: return tr("Discard the current settings' changes?");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON: return tr("Discard");
+		case localized_string_id::HOME_MENU_SETTINGS_RESET_BUTTON: return tr("To default");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO: return tr("Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_MASTER_VOLUME: return tr("Master Volume", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_BACKEND: return tr("Audio Backend", "Audio");
@@ -298,6 +299,7 @@ private:
 		case localized_string_id::HOME_MENU_RELOAD_SECOND_SAVESTATE: return tr("Reload Second-To-Last Emulation State");
 		case localized_string_id::HOME_MENU_RELOAD_THIRD_SAVESTATE: return tr("Reload Third-To-Last Emulation State");
 		case localized_string_id::HOME_MENU_RELOAD_FOURTH_SAVESTATE: return tr("Reload Fourth-To-Last Emulation State");
+		case localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN: return tr("Toggle Fullscreen");
 		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");
 		case localized_string_id::HOME_MENU_TROPHIES: return tr("Trophies");
 		case localized_string_id::HOME_MENU_TROPHY_LIST_TITLE: return tr("Trophy Progress: %0").arg(std::forward<Args>(args)...);

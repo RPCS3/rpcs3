@@ -1,6 +1,7 @@
 #pragma once
 
 #include "overlays.h"
+#include "overlay_audio.h"
 
 #include "Emu/IdManager.h"
 #include "Utilities/mutex.h"
@@ -24,6 +25,8 @@ namespace rsx
 			lf_queue<u32> m_uids_to_remove;
 			lf_queue<u32> m_type_ids_to_remove;
 			atomic_t<u32> m_pending_removals_count = 0;
+
+			std::unique_ptr<audio_player> m_audio_player;
 
 			bool remove_type(u32 type_id);
 
@@ -166,6 +169,9 @@ namespace rsx
 				std::function<void()> on_input_loop_enter = nullptr,     // [optional] What to do before running the input routine
 				std::function<void(s32)> on_input_loop_exit = nullptr,   // [optional] What to do with the result if any
 				std::function<s32()> input_loop_override = nullptr);     // [optional] What to do during the input loop. By default calls user_interface::run_input_loop
+
+			void start_audio(const std::string& audio_path);
+			void stop_audio();
 
 		private:
 			struct overlay_input_thread

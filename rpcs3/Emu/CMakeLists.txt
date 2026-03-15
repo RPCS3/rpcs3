@@ -501,6 +501,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlays.cpp
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
+    RSX/Overlays/overlay_audio.cpp
     RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp

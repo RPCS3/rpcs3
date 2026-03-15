@@ -26,7 +26,7 @@ namespace rpcs3
 
 	const utils::version& get_version()
 	{
-		static constexpr utils::version version{ 0, 0, 39, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+		static constexpr utils::version version{ 0, 0, 40, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
 		return version;
 	}
 

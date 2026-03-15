@@ -11,6 +11,7 @@ namespace rsx
 			: list_view(width, height, use_separators)
 			, parent(parent)
 			, title(title)
+			, m_reset_btn(120, 30)
 			, m_save_btn(120, 30)
 			, m_discard_btn(120, 30)
 		{
@@ -20,15 +21,19 @@ namespace rsx
 				m_config_changed = parent->m_config_changed;
 			}
 
+			m_reset_btn.set_image_resource(resource_config::standard_image_resource::select);
 			m_save_btn.set_image_resource(resource_config::standard_image_resource::square);
 			m_discard_btn.set_image_resource(resource_config::standard_image_resource::triangle);
 
+			m_reset_btn.set_pos((width - 120) / 2, height + 20);
 			m_save_btn.set_pos(width - 2 * (30 + 120), height + 20);
 			m_discard_btn.set_pos(width - (30 + 120), height + 20);
 
+			m_reset_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_RESET_BUTTON);
 			m_save_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
 			m_discard_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
 
+			m_reset_btn.set_font("Arial", 16);
 			m_save_btn.set_font("Arial", 16);
 			m_discard_btn.set_font("Arial", 16);
 
@@ -152,6 +157,7 @@ namespace rsx
 			case pad_button::ls_left:
 			case pad_button::ls_right:
 			case pad_button::cross:
+			case pad_button::select:
 			{
 				if (const usz index = static_cast<usz>(get_selected_index()); index < m_callbacks.size())
 				{
@@ -215,12 +221,24 @@ namespace rsx
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
 			{
+				if (!is_auto_repeat && get_selected_index() <= 0)
+				{
+					select_entry(get_elements_count() - 1);
+					break;
+				}
+
 				select_previous();
 				break;
 			}
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
 			{
+				if (!is_auto_repeat && get_selected_index() >= (get_elements_count() - 1))
+				{
+					select_entry(0);
+					break;
+				}
+
 				select_next();
 				break;
 			}
@@ -254,6 +272,7 @@ namespace rsx
 			list_view::translate(_x, _y);
 			m_save_btn.translate(_x, _y);
 			m_discard_btn.translate(_x, _y);
+			m_reset_btn.translate(_x, _y);
 		}
 
 		compiled_resource& home_menu_page::get_compiled()
@@ -274,10 +293,18 @@ namespace rsx
 					{
 						compiled_resources.add(m_message_box->get_compiled());
 					}
-					else if (m_config_changed && *m_config_changed)
+					else
 					{
-						compiled_resources.add(m_save_btn.get_compiled());
-						compiled_resources.add(m_discard_btn.get_compiled());
+						if (show_reset_button())
+						{
+							compiled_resources.add(m_reset_btn.get_compiled());
+						}
+
+						if (m_config_changed && *m_config_changed)
+						{
+							compiled_resources.add(m_save_btn.get_compiled());
+							compiled_resources.add(m_discard_btn.get_compiled());
+						}
 					}
 				}
 

@@ -7,12 +7,13 @@
 namespace np
 {
 	std::string ip_to_string(u32 addr);
-	std::string ether_to_string(std::array<u8, 6>& ether);
+	std::string ether_to_string(const std::array<u8, 6>& ether);
 	bool validate_communication_id(const SceNpCommunicationId& com_id);
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId);
 	std::optional<SceNpCommunicationId> string_to_communication_id(std::string_view str);
 
 	void string_to_npid(std::string_view str, SceNpId& npid);
+	std::string npid_to_string(const SceNpId& npid);
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name);
 	void string_to_avatar_url(std::string_view str, SceNpAvatarUrl& avatar_url);
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info);

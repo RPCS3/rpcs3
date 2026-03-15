@@ -21,6 +21,8 @@ namespace rsx
 		{
 			using home_menu_page::home_menu_page;
 
+			bool show_reset_button() const override { return true; }
+
 			void add_checkbox(cfg::_bool* setting, localized_string_id loc_id)
 			{
 				ensure(setting && setting->get_is_dynamic());
@@ -30,16 +32,30 @@ namespace rsx
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
 					if (setting)
 					{
-						const bool value = !setting->get();
-						rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
-						setting->set(value);
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
+						bool value = setting->get();
+
+						switch (btn)
+						{
+						case pad_button::cross:
+							value = !value;
+							break;
+						case pad_button::select:
+							value = setting->def;
+							break;
+						default:
+							return page_navigation::stay;
+						}
+
+						if (value != setting->get())
+						{
+							rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
+							setting->set(value);
+							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed) *m_config_changed = true;
+							refresh();
+						}
 					}
 
 					return page_navigation::stay;
@@ -56,12 +72,33 @@ namespace rsx
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
 					if (setting)
 					{
+						bool set_default = false;
+						switch (btn)
+						{
+						case pad_button::cross:
+							break;
+						case pad_button::select:
+							set_default = true;
+							break;
+						default:
+							return page_navigation::stay;
+						}
+
+						T value = setting->get();
+
+						if (set_default)
+						{
+							if (value == setting->def)
+							{
+								return page_navigation::stay;
+							}
+
+							value = setting->def;
+						}
+
 						usz new_index = 0;
-						const T value = setting->get();
 						const std::string val = fmt::format("%s", value);
 						const std::vector<std::string> list = setting->to_list();
 
@@ -70,10 +107,17 @@ namespace rsx
 							const std::string& entry = list[i];
 							if (entry == val)
 							{
+								if (set_default)
+								{
+									new_index = i;
+									break;
+								}
+
 								new_index = (i + 1) % list.size();
 								break;
 							}
 						}
+
 						if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
 						{
 							rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
@@ -113,6 +157,9 @@ namespace rsx
 						case pad_button::dpad_right:
 						case pad_button::ls_right:
 							value = std::min(value + step_size, maximum);
+							break;
+						case pad_button::select:
+							value = setting->def;
 							break;
 						default:
 							return page_navigation::stay;
@@ -164,6 +211,9 @@ namespace rsx
 							}
 							while (exceptions.contains(value));
 							break;
+						case pad_button::select:
+							value = setting->def;
+							break;
 						default:
 							return page_navigation::stay;
 						}
@@ -204,6 +254,9 @@ namespace rsx
 						case pad_button::dpad_right:
 						case pad_button::ls_right:
 							value = std::min(value + step_size, static_cast<f64>(maximum));
+							break;
+						case pad_button::select:
+							value = setting->def;
 							break;
 						default:
 							return page_navigation::stay;

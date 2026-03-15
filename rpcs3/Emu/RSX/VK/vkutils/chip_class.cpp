@@ -28,6 +28,7 @@ namespace vk
 		table.add(0x7420, 0x743F, chip_class::AMD_navi2x);  // Navi 24 (Beige Goby)
 		table.add(0x163F,         chip_class::AMD_navi2x);  // Navi 2X (Van Gogh)
 		table.add(0x164D, 0x1681, chip_class::AMD_navi2x);  // Navi 2X (Yellow Carp)
+		table.add(0x13C0,         chip_class::AMD_navi2x);  // Navi 2X (Raphael Mendocino)
 		table.add(0x7440, 0x745F, chip_class::AMD_navi3x);  // Navi 31 (Only 744c, NAVI31XTX is confirmed)
 		table.add(0x7460, 0x747F, chip_class::AMD_navi3x);  // Navi 32 (Unverified)
 		table.add(0x7480, 0x749F, chip_class::AMD_navi3x);  // Navi 33 (Unverified)

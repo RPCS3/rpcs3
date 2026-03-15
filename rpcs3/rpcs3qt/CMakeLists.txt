@@ -54,6 +54,7 @@ add_library(rpcs3_ui STATIC
     localized.cpp
     localized_emu.cpp
     log_frame.cpp
+    log_level_dialog.cpp
     log_viewer.cpp
     main_window.cpp
     memory_string_searcher.cpp

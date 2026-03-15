@@ -117,6 +117,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
 	case ERROR_DIRECTORY: return fs::error::inval;
 	case ERROR_INVALID_NAME: return fs::error::inval;
+	case ERROR_INVALID_FUNCTION: return fs::error::inval;
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
@@ -398,12 +399,11 @@ namespace fs
 	class windows_file final : public file_base
 	{
 		HANDLE m_handle;
-		atomic_t<u64> m_pos;
+		atomic_t<u64> m_pos {0};
 
 	public:
 		windows_file(HANDLE handle)
 			: m_handle(handle)
-			, m_pos(0)
 		{
 		}
 
@@ -417,10 +417,10 @@ namespace fs
 
 		stat_t get_stat() override
 		{
-			FILE_BASIC_INFO basic_info;
+			FILE_BASIC_INFO basic_info {};
 			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
 
-			stat_t info;
+			stat_t info {};
 			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
@@ -441,7 +441,7 @@ namespace fs
 
 		bool trunc(u64 length) override
 		{
-			FILE_END_OF_FILE_INFO _eof;
+			FILE_END_OF_FILE_INFO _eof {};
 			_eof.EndOfFile.QuadPart = length;
 
 			if (!SetFileInformationByHandle(m_handle, FileEndOfFileInfo, &_eof, sizeof(_eof)))
@@ -563,6 +563,7 @@ namespace fs
 
 		u64 size() override
 		{
+			// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
 			LARGE_INTEGER size;
 			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
 
@@ -579,12 +580,12 @@ namespace fs
 			file_id id{"windows_file"};
 			id.data.resize(sizeof(FILE_ID_INFO));
 
-			FILE_ID_INFO info;
+			FILE_ID_INFO info {};
 
 			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
 			{
 				// Try GetFileInformationByHandle as a fallback
-				BY_HANDLE_FILE_INFORMATION info2;
+				BY_HANDLE_FILE_INFORMATION info2{};
 				ensure(GetFileInformationByHandle(m_handle, &info2));
 
 				info = {};
@@ -625,7 +626,7 @@ namespace fs
 			struct ::stat file_info;
 			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
 
-			stat_t info;
+			stat_t info {};
 			info.is_directory = S_ISDIR(file_info.st_mode);
 			info.is_writable = file_info.st_mode & 0200; // HACK: approximation
 			info.size = file_info.st_size;
@@ -1656,6 +1657,45 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
+	// Check if the handle is actually valid.
+	// This can fail on empty mounted drives (e.g. with ERROR_NOT_READY or ERROR_INVALID_FUNCTION).
+	BY_HANDLE_FILE_INFORMATION info{};
+	if (!GetFileInformationByHandle(handle, &info))
+	{
+		const DWORD last_error = GetLastError();
+		CloseHandle(handle);
+
+		if (last_error == ERROR_INVALID_FUNCTION)
+		{
+			g_tls_error = fs::error::isdir;
+			return;
+		}
+	
+		g_tls_error = to_error(last_error);
+		return;
+	}
+
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::isdir;
+		return;
+	}
+
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::acces;
+		return;
+	}
+
+	if ((mode & fs::write) && (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::readonly;
+		return;
+	}
+
 	m_file = std::make_unique<windows_file>(handle);
 #else
 	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
@@ -2595,7 +2635,7 @@ bool fs::pending_file::commit(bool overwrite)
 	while (file_handle != INVALID_HANDLE_VALUE)
 	{
 		// Get file ID (used to check for hardlinks)
-		BY_HANDLE_FILE_INFORMATION file_info;
+		BY_HANDLE_FILE_INFORMATION file_info{};
 
 		if (!GetFileInformationByHandle(file_handle, &file_info) || file_info.nNumberOfLinks == 1)
 		{

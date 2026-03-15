@@ -36,7 +36,7 @@ void game_compatibility::handle_download_finished(const QByteArray& content)
 	compat_log.notice("Database download finished");
 
 	// Create new map from database and write database to file if database was valid
-	if (ReadJSON(QJsonDocument::fromJson(content).object(), true))
+	if (handle_json(content, true))
 	{
 		// Write database to file
 		QFile file(m_filepath);
@@ -67,9 +67,10 @@ void game_compatibility::handle_download_canceled()
 	Q_EMIT DownloadCanceled();
 }
 
-bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)
+bool game_compatibility::handle_json(const QByteArray& data, bool after_download)
 {
-	const int return_code = json_data["return_code"].toInt();
+	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	const int return_code = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)
 	{
@@ -78,15 +79,10 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 			std::string error_message;
 			switch (return_code)
 			{
-			case -1:
-				error_message = "Server Error - Internal Error";
-				break;
-			case -2:
-				error_message = "Server Error - Maintenance Mode";
-				break;
-			default:
-				error_message = "Server Error - Unknown Error";
-				break;
+			case -1: error_message = "Server Error - Internal Error"; break;
+			case -2: error_message = "Server Error - Maintenance Mode"; break;
+			case -255: error_message = "Server Error - Return code not found"; break;
+			default: error_message = "Server Error - Unknown Error"; break;
 			}
 			compat_log.error("%s: return code %d", error_message, return_code);
 			Q_EMIT DownloadError(QString::fromStdString(error_message) + " " + QString::number(return_code));
@@ -106,7 +102,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 
 	m_compat_database.clear();
 
-	QJsonObject json_results = json_data["results"].toObject();
+	const QJsonObject json_results = json_data["results"].toObject();
 
 	// Retrieve status data for every valid entry
 	for (const auto& key : json_results.keys())
@@ -117,7 +113,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 			continue;
 		}
 
-		QJsonObject json_result = json_results[key].toObject();
+		const QJsonObject json_result = json_results[key].toObject();
 
 		// Retrieve compatibility information from json
 		compat::status status = ::at32(Status_Data, json_result.value("status").toString("NoResult"));
@@ -215,15 +211,14 @@ void game_compatibility::RequestCompatibility(bool online)
 		compat_log.notice("Finished reading database from file: %s", m_filepath);
 
 		// Create new map from database
-		ReadJSON(QJsonDocument::fromJson(content).object(), online);
-
+		handle_json(content, online);
 		return;
 	}
 
 	const std::string url = "https://rpcs3.net/compatibility?api=v1&export";
 	compat_log.notice("Beginning compatibility database download from: %s", url);
 
-	m_downloader->start(url, true, true, tr("Downloading Database"));
+	m_downloader->start(url, true, true, true, tr("Downloading Database"));
 
 	// We want to retrieve a new database, therefore refresh gamelist and indicate that
 	Q_EMIT DownloadStarted();

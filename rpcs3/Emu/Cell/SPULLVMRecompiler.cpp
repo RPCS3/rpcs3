@@ -2160,6 +2160,14 @@ public:
 					}
 				}
 
+				if (bb.preds.size() >= 2)
+				{
+					if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
+					{
+						m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (baddr >> 2)), spu_ptr(&spu_thread::block_hash));
+					}
+				}
+
 				// State check at the beginning of the chunk
 				if (need_check || (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe))
 				{
@@ -2802,12 +2810,9 @@ public:
 		std::string& llvm_log = function_log;
 		raw_string_ostream out(llvm_log);
 
-		if (g_cfg.core.spu_debug)
-		{
-			fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
-			out << *_module; // print IR
-			out << "\n\n";
-		}
+		fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
+		out << *_module; // print IR
+		out << "\n\n";
 
 		if (verifyModule(*_module, &out))
 		{
@@ -3274,12 +3279,9 @@ public:
 		std::string llvm_log;
 		raw_string_ostream out(llvm_log);
 
-		if (g_cfg.core.spu_debug)
-		{
-			fmt::append(llvm_log, "LLVM IR (interpreter):\n");
-			out << *_module; // print IR
-			out << "\n\n";
-		}
+		fmt::append(llvm_log, "LLVM IR (interpreter):\n");
+		out << *_module; // print IR
+		out << "\n\n";
 
 		if (verifyModule(*_module, &out))
 		{
@@ -4757,6 +4759,50 @@ public:
 		}
 
 		const auto a = get_vr<s32[4]>(op.ra);
+
+#ifdef ARCH_ARM64
+		// Use dot product instructions with special values to shift then sum results into the preferred slot
+		if (m_use_dotprod)
+		{
+			if (match_vr<s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto es = zshuffle(bitcast<u8[16]>(a), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 0, 4, 8, 12);
+
+					set_vr(op.rt, sdot(zeroes, es, build<u8[16]>(
+						-0x01, -0x02, -0x04, -0x08,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x01, -0x02, -0x04, -0x08
+					)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto es = zshuffle(bitcast<u8[16]>(masked), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 0, 4, 8, 12);
+
+			set_vr(op.rt, udot(zeroes, es, build<u8[16]>(
+				0x01, 0x02, 0x04, 0x08,
+				0x01, 0x02, 0x04, 0x08,
+				0x01, 0x02, 0x04, 0x08,
+				0x01, 0x02, 0x04, 0x08 
+			)));
+			return;
+		}
+#endif
+
 		const auto m = zext<u32>(bitcast<i4>(trunc<bool[4]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
@@ -4772,6 +4818,54 @@ public:
 		}
 
 		const auto a = get_vr<s16[8]>(op.ra);
+
+#ifdef ARCH_ARM64
+		// Use dot product instructions with special values to shift then sum results into the preferred slot
+		if (m_use_dotprod)
+		{
+			if (match_vr<s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto es = zshuffle(bitcast<u8[16]>(a), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+					const auto extracted = sdot(zeroes, es, build<u8[16]>(
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					));
+
+					set_vr(op.rt, addp(zeroes, bitcast<u32[4]>(extracted)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto es = zshuffle(bitcast<u8[16]>(masked), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+			const auto extracted = udot(zeroes, es, build<u8[16]>(
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80 
+			));
+
+			set_vr(op.rt, addp(zeroes, bitcast<u32[4]>(extracted)));
+			return;
+		}
+#endif
+
 		const auto m = zext<u32>(bitcast<u8>(trunc<bool[8]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
@@ -4779,6 +4873,53 @@ public:
 	void GBB(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
+
+#ifdef ARCH_ARM64
+		// Use dot product instructions with special values to shift then sum results into the preferred slot
+		if (m_use_dotprod)
+		{
+			if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto extracted = sdot(zeroes, a, build<u8[16]>(
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					));
+
+					const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 0, 8, 4, 12, 16, 16, 16, 16);
+					const auto zeroes16 = splat<u16[8]>(0);
+					set_vr(op.rt, addp(zeroes16, bitcast<u16[8]>(es)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto extracted = udot(zeroes, masked, build<u8[16]>(
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			));
+
+			const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 0, 8, 4, 12, 16, 16, 16, 16);
+			const auto zeroes16 = splat<u16[8]>(0);
+			set_vr(op.rt, addp(zeroes16, bitcast<u16[8]>(es)));
+			return;
+		}
+#endif
 
 		if (m_use_gfni)
 		{
@@ -5311,13 +5452,24 @@ public:
 			return;
 		}
 
+#ifdef ARCH_ARM64
+		if (m_use_dotprod)
+#else
 		if (m_use_vnni)
+#endif
 		{
-			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 			const auto zeroes = splat<u32[4]>(0);
+#ifdef ARCH_ARM64
+			const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
+			const auto ones = splat<u8[16]>(0x01);
+			const auto ax = bitcast<u16[8]>(udot(zeroes, a, ones));
+			const auto bx = bitcast<u16[8]>(udot(zeroes, b, ones));
+#else
+			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 			const auto ones = splat<u32[4]>(0x01010101);
 			const auto ax = bitcast<u16[8]>(vpdpbusd(zeroes, a, ones));
 			const auto bx = bitcast<u16[8]>(vpdpbusd(zeroes, b, ones));
+#endif
 			set_vr(op.rt, shuffle2(ax, bx, 0, 8, 2, 10, 4, 12, 6, 14));
 			return;
 		}

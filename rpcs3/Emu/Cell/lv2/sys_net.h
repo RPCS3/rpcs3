@@ -107,7 +107,7 @@ enum lv2_ip_option : s32
 	SYS_NET_IP_MULTICAST_LOOP  = 11,
 	SYS_NET_IP_ADD_MEMBERSHIP  = 12,
 	SYS_NET_IP_DROP_MEMBERSHIP = 13,
-	SYS_NET_IP_TTLCHK          = 23,
+	SYS_NET_IP_TTLCHK          = 23, // This is probably the equivalent of IP_MINTTL on FreeBSD
 	SYS_NET_IP_MAXTTL          = 24,
 	SYS_NET_IP_DONTFRAG        = 26
 };

@@ -170,8 +170,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		{
 			if (auto cpu = get_current_cpu_thread())
 			{
-				cpu->state += cpu_flag::again;
-				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again + cpu_flag::exit;
 			}
 
 			sys_event.warning("Ignored event!");
@@ -309,6 +308,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
+		for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+		{
+			if (cpu->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return CELL_EAGAIN;
+			}
+		}
+
 		if (!queue.events.empty())
 		{
 			// Copy events for logging, does not empty
@@ -320,17 +328,6 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		if (!head)
 		{
 			qlock.unlock();
-		}
-		else
-		{
-			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
-			{
-				if (cpu->state & cpu_flag::again)
-				{
-					ppu.state += cpu_flag::again;
-					return CELL_EAGAIN;
-				}
-			}
 		}
 
 		return {};
@@ -621,7 +618,7 @@ error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 por
 
 	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
-	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != 3)
+	if (port_type != SYS_EVENT_PORT_LOCAL && port_type != SYS_EVENT_PORT_IPC)
 	{
 		sys_event.error("sys_event_port_create(): unknown port type (%d)", port_type);
 		return CELL_EINVAL;
@@ -675,8 +672,9 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 	std::lock_guard lock(id_manager::g_mutex);
 
 	const auto port = idm::check_unlocked<lv2_obj, lv2_event_port>(eport_id);
+	auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
 
-	if (!port || !idm::check_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
+	if (!port || !queue)
 	{
 		return CELL_ESRCH;
 	}
@@ -691,7 +689,7 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 		return CELL_EISCONN;
 	}
 
-	port->queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
+	port->queue = std::move(queue);
 
 	return CELL_OK;
 }

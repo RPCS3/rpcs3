@@ -711,6 +711,11 @@ namespace rsx
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
+
+			if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+			{
+				m_overlay_manager->start_audio(audio_path);
+			}
 		}
 
 		if (!_ar)
@@ -1099,6 +1104,11 @@ namespace rsx
 		if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 		{
 			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
+
+		if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+		{
+			manager->stop_audio();
 		}
 
 		while (!test_stopped())
@@ -2315,53 +2325,31 @@ namespace rsx
 				case CELL_GCM_TEXTURE_R5G6B5:
 				case CELL_GCM_TEXTURE_R6G5B5:
 					texture_control |= (1 << texture_control_bits::RENORMALIZE);
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 					break;
 				default:
 					break;
 				}
 			}
 
-			if (const auto format_features = rsx::get_format_features(format); format_features != 0)
+			if (const auto& format_ex = sampler_descriptors[i]->format_ex; format_ex.features != 0)
 			{
-				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
-				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
-				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP/BX2
-				// Games using mixed flags: (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
-				u32 argb8_signed = 0;
-				u32 unsigned_remap = 0;
-				u32 gamma = 0;
+				texture_control |= format_ex.texel_remap_control;
+				texture_control |= format_ex.features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 
-				if (format_features & RSX_FORMAT_FEATURE_SIGNED_COMPONENTS)
+				if (format_ex.texel_remap_control)
 				{
-					argb8_signed = tex.argb_signed();
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 				}
 
-				if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
+				if (current_fp_metadata.bx2_texture_reads_mask)
 				{
-					gamma = tex.gamma() & ~(argb8_signed);
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+
+					const u32 remap_hi = tex.decoded_remap().shuffle_mask_bits(0xFu);
+					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
+					current_fragment_program.texture_params[i].remap |= (remap_hi << 16u);
 				}
-
-				if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
-				{
-					// The renormalization flag applies to all channels
-					unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL) ? 0u : 0xF;
-					unsigned_remap &= ~(argb8_signed | gamma);
-				}
-
-				u32 argb8_convert = gamma;
-
-				// The options are mutually exclusive
-				ensure((argb8_signed & gamma) == 0);
-				ensure((argb8_signed & unsigned_remap) == 0);
-				ensure((gamma & unsigned_remap) == 0);
-
-				// NOTE: Hardware tests show that remapping bypasses the channel swizzles completely
-				argb8_convert |= (argb8_signed << texture_control_bits::SEXT_OFFSET);
-				argb8_convert |= (unsigned_remap << texture_control_bits::EXPAND_OFFSET);
-				texture_control |= argb8_convert;
-
-				texture_control |= format_features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 			}
 
 			current_fragment_program.texture_params[i].control = texture_control;

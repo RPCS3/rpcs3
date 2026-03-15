@@ -821,6 +821,14 @@ struct color4_base
 		a *= rhs;
 	}
 
+	void operator += (const color4_base<T>& rhs)
+	{
+		r += rhs.r;
+		g += rhs.g;
+		b += rhs.b;
+		a += rhs.a;
+	}
+
 	constexpr color4_base<T> operator * (const color4_base<T>& rhs) const
 	{
 		return { r * rhs.r, g * rhs.g, b * rhs.b, a * rhs.a };

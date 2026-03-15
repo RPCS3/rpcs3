@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include <string>
 #include <set>
+#include <vector>
 
 enum class game_content_type
 {

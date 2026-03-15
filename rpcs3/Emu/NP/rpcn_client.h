@@ -79,6 +79,14 @@ public:
 			res.push_back(vec[i]);
 			i++;
 		}
+
+		// Make sure we hit terminating 0
+		if (i >= vec.size())
+		{
+			error = true;
+			return {};
+		}
+
 		i++;
 
 		if (!empty && res.empty())

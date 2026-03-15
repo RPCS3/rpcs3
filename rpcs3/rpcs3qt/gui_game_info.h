@@ -21,6 +21,7 @@ struct gui_game_info
 	bool has_custom_icon = false;
 	bool has_hover_gif = false;
 	bool has_hover_pam = false;
+	bool has_audio_file = false;
 	bool icon_in_archive = false;
 	movie_item_base* item = nullptr;
 

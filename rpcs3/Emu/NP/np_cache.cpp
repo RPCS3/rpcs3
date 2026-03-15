@@ -377,7 +377,7 @@ namespace np
 
 		if (!rooms.contains(room_id))
 		{
-			np_cache.error("np_cache::get_memberid cache miss room_id: room_id(%d)/npid(%s)", room_id, static_cast<const char*>(npid.handle.data));
+			np_cache.error("np_cache::get_memberid cache miss room_id: room_id(%d)/npid(%s)", room_id, np::npid_to_string(npid));
 			return std::nullopt;
 		}
 
@@ -389,7 +389,7 @@ namespace np
 				return id;
 		}
 
-		np_cache.error("np_cache::get_memberid cache miss member_id: room_id(%d)/npid(%s)", room_id, static_cast<const char*>(npid.handle.data));
+		np_cache.error("np_cache::get_memberid cache miss member_id: room_id(%d)/npid(%s)", room_id, np::npid_to_string(npid));
 		return std::nullopt;
 	}
 

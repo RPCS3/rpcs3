@@ -274,7 +274,7 @@ protected:
 	// the input values must lie in 0+
 	u16 NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum) const;
 
-	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
+	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13% (default of anti deadzone)
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
 	// return is new x and y values in 0-255 range
 	std::tuple<u16, u16> NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone, u32 anti_deadzone) const;
@@ -284,10 +284,10 @@ public:
 	// Get new multiplied value based on the multiplier
 	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
 
-	// Get new scaled value between 0 and 255 based on its minimum and maximum
+	// Get new scaled value between 0 and range based on its minimum and maximum
 	static f32 ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
-	// Get new scaled value between -255 and 255 based on its minimum and maximum
+	// Get new scaled value between -range and range based on its minimum and maximum
 	static f32 ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range = 255.0f);
 
 	// get clamped value between 0 and 255
@@ -301,7 +301,7 @@ public:
 
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
-	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of 8000
+	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
 	// This function assumes inX and inY is already in 0-255
 	static void ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
 

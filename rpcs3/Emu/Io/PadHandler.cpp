@@ -24,13 +24,11 @@ std::set<u32> PadHandlerBase::narrow_set(const std::set<u64>& src)
 	return dst;
 }
 
-// Get new multiplied value based on the multiplier
 s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
 {
 	return (multiplier * raw_value) / 100;
 }
 
-// Get new scaled value between 0 and range based on its minimum and maximum
 f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
 	if (deadzone > 0 && deadzone > minimum)
@@ -46,7 +44,6 @@ f32 PadHandlerBase::ScaledInput(f32 raw_value, f32 minimum, f32 maximum, f32 dea
 	return range * val;
 }
 
-// Get new scaled value between -range and range based on its minimum and maximum
 f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32 deadzone, f32 range)
 {
 	// convert [min, max] to [0, 1]
@@ -79,7 +76,6 @@ f32 PadHandlerBase::ScaledAxisInput(f32 raw_value, f32 minimum, f32 maximum, f32
 	return (2.0f * range * val) - range;
 }
 
-// Get normalized trigger value based on the range defined by a threshold
 u16 PadHandlerBase::NormalizeTriggerInput(u16 value, u32 threshold) const
 {
 	if (value <= threshold || threshold >= trigger_max)
@@ -90,8 +86,6 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, u32 threshold) const
 	return static_cast<u16>(ScaledInput(static_cast<f32>(value), static_cast<f32>(trigger_min), static_cast<f32>(trigger_max), static_cast<f32>(threshold)));
 }
 
-// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
-// the input values must lie in 0+
 u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum) const
 {
 	if (threshold >= maximum || maximum <= 0 || raw_value < 0)
@@ -114,9 +108,6 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, s32 threshold, s32 multip
 	return static_cast<u16>(ScaledInput(static_cast<f32>(scaled_value), 0.0f, static_cast<f32>(thumb_max), static_cast<f32>(threshold)));
 }
 
-// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13% (default of anti deadzone)
-// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
-// return is new x and y values in 0-255 range
 std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone, u32 anti_deadzone) const
 {
 	f32 X = inX / 255.0f;
@@ -150,28 +141,21 @@ std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u3
 	return std::tuple<u16, u16>(ConvertAxis(X), ConvertAxis(Y));
 }
 
-// get clamped value between 0 and 255
 u16 PadHandlerBase::Clamp0To255(f32 input)
 {
 	return static_cast<u16>(std::clamp(input, 0.0f, 255.0f));
 }
 
-// get clamped value between 0 and 1023
 u16 PadHandlerBase::Clamp0To1023(f32 input)
 {
 	return static_cast<u16>(std::clamp(input, 0.0f, 1023.0f));
 }
 
-// input has to be [-1,1]. result will be [0,255]
 u16 PadHandlerBase::ConvertAxis(f32 value)
 {
 	return static_cast<u16>((value + 1.0) * (255.0 / 2.0));
 }
 
-// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
-// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
-// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
-// This function assumes inX and inY is already in 0-255
 void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
 {
 	if (!squircle_factor)

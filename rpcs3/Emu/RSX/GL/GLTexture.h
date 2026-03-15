@@ -16,9 +16,11 @@ namespace gl
 	{
 		GLenum format;
 		GLenum type;
-		u8     size;
+		u32    row_length;
+		u8     block_size;
 		bool   swap_bytes;
 		u8     alignment;
+		u8     reserved;
 	};
 
 	struct image_memory_requirements
@@ -62,6 +64,8 @@ namespace gl
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
 	pixel_buffer_layout get_format_type(texture::internal_format format);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);
+	GLenum get_compatible_snorm_format(GLenum base_format);
+	GLenum get_compatible_srgb_format(GLenum base_format);
 
 	viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 
@@ -84,5 +88,6 @@ namespace gl
 		extern std::unique_ptr<texture> g_vis_texture;
 	}
 
+	void init_global_texture_resources();
 	void destroy_global_texture_resources();
 }

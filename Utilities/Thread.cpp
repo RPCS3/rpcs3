@@ -8,11 +8,15 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
-#include <thread>
 #include <cfenv>
 
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64Signal.h"
+#endif
+
+#ifdef __cpp_lib_stacktrace
+#include "rpcs3_version.h"
+#include <stacktrace>
 #endif
 
 #ifdef _WIN32
@@ -2801,6 +2805,16 @@ void thread_base::exec()
 
 [[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)
 {
+	// Print stacktrace
+#ifdef __cpp_lib_stacktrace
+	if (rpcs3::is_local_build())
+	{
+		std::ostringstream oss;
+		oss << std::stacktrace::current();
+		sys_log.notice("StackTrace\n\n%s\n", oss.str());
+	}
+#endif
+
 	if (const std::string info = dump_useful_thread_info(); !info.empty())
 	{
 		sys_log.notice("\n%s", info);

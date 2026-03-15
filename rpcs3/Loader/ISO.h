@@ -13,16 +13,16 @@ void unload_iso();
 
 struct iso_extent_info
 {
-	u64 start;
-	u64 size;
+	u64 start = 0;
+	u64 size = 0;
 };
 
 struct iso_fs_metadata
 {
 	std::string name;
-	s64 time;
-	bool is_directory;
-	bool has_multiple_extents;
+	s64 time = 0;
+	bool is_directory = false;
+	bool has_multiple_extents = false;
 	std::vector<iso_extent_info> extents;
 
 	u64 size() const;
@@ -30,7 +30,7 @@ struct iso_fs_metadata
 
 struct iso_fs_node
 {
-	iso_fs_metadata metadata;
+	iso_fs_metadata metadata {};
 	std::vector<std::unique_ptr<iso_fs_node>> children;
 };
 
@@ -38,7 +38,7 @@ class iso_file : public fs::file_base
 {
 private:
 	fs::file m_file;
-	iso_fs_metadata m_meta;
+	iso_fs_metadata m_meta {};
 	u64 m_pos = 0;
 
 	std::pair<u64, iso_extent_info> get_extent_pos(u64 pos) const;
@@ -80,7 +80,7 @@ class iso_archive
 {
 private:
 	std::string m_path;
-	iso_fs_node m_root;
+	iso_fs_node m_root {};
 	fs::file m_file;
 
 public:

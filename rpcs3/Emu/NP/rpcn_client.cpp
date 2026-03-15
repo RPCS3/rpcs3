@@ -896,7 +896,7 @@ namespace rpcn
 					return error_and_disconnect("Failed to send all the bytes");
 				}
 
-				res = 0;
+				continue;
 			}
 			n_sent += res;
 		}
@@ -1055,6 +1055,8 @@ namespace rpcn
 				found = found->ai_next;
 			}
 
+			freeaddrinfo(addr_info);
+
 			if (!found_ipv4)
 			{
 				rpcn_log.error("connect: Failed to find IPv4 for %s", host);
@@ -1156,7 +1158,7 @@ namespace rpcn
 		if (!connected || terminate)
 		{
 			state = rpcn_state::failure_other;
-			return true;
+			return false;
 		}
 
 		if (received_version != RPCN_PROTOCOL_VERSION)
@@ -1487,7 +1489,7 @@ namespace rpcn
 		if (error == ErrorType::NoError)
 			rpcn_log.success("add_friend(\"%s\") succeeded", friend_username);
 		else
-			rpcn_log.error("add_friend(\"%s\") failed with error: %s", error);
+			rpcn_log.error("add_friend(\"%s\") failed with error: %s", friend_username, error);
 
 		return error;
 	}
@@ -1754,7 +1756,7 @@ namespace rpcn
 				{
 					continue;
 				}
-				pb_req.add_alloweduser(req->allowedUser[i].handle.data);
+				pb_req.add_alloweduser(np::npid_to_string(req->allowedUser[i]));
 			}
 		}
 
@@ -1766,7 +1768,7 @@ namespace rpcn
 				{
 					continue;
 				}
-				pb_req.add_blockeduser(req->blockedUser[i].handle.data);
+				pb_req.add_blockeduser(np::npid_to_string(req->blockedUser[i]));
 			}
 		}
 
@@ -2265,7 +2267,7 @@ namespace rpcn
 		for (usz i = 0; i < npids.size(); i++)
 		{
 			auto* npid_entry = pb_req.add_npids();
-			npid_entry->set_npid(static_cast<const char*>(npids[i].first.handle.data));
+			npid_entry->set_npid(np::npid_to_string(npids[i].first));
 			npid_entry->set_pcid(npids[i].second);
 		}
 
@@ -2316,7 +2318,7 @@ namespace rpcn
 	{
 		np2_structs::GetScoreGameDataRequest pb_req;
 		pb_req.set_boardid(board_id);
-		pb_req.set_npid(reinterpret_cast<const char*>(npid.handle.data));
+		pb_req.set_npid(np::npid_to_string(npid));
 		pb_req.set_pcid(pc_id);
 
 		std::string serialized;
@@ -2412,7 +2414,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 		}
 
@@ -2441,7 +2443,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 
 			if (option->compareValue)
@@ -2497,7 +2499,7 @@ namespace rpcn
 
 			if (option->isLastChangedAuthorId)
 			{
-				pb_req.set_islastchangedauthorid(option->isLastChangedAuthorId->handle.data);
+				pb_req.set_islastchangedauthorid(np::npid_to_string(*option->isLastChangedAuthorId));
 			}
 		}
 
@@ -3083,7 +3085,7 @@ namespace rpcn
 		}
 		case NotificationType::FriendPresenceChanged:
 		{
-			const std::string username = vdata.get_string(true);
+			const std::string username = vdata.get_string(false);
 			SceNpCommunicationId pr_com_id = vdata.get_com_id();
 			std::string pr_title = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX - 1);
 			std::string pr_status = fmt::truncate(vdata.get_string(true), SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX - 1);

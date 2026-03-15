@@ -24,33 +24,33 @@ void ps_move_data::reset_sensors()
 	angaccel_world = {};
 }
 
+ps_move_data::vect<3> ps_move_data::rotate_vector(const vect<4>& q, const vect<3>& v)
+{
+	const auto cross = [](const vect<3>& a, const vect<3>& b)
+	{
+		return vect<3>({
+			a.y() * b.z() - a.z() * b.y(),
+			a.z() * b.x() - a.x() * b.z(),
+			a.x() * b.y() - a.y() * b.x()
+		});
+	};
+
+	// q = (x, y, z, w)
+	const vect<3> q_vec({q.x(), q.y(), q.z()});
+
+	// t = 2 * cross(q_vec, v)
+	const vect<3> t = cross(q_vec, v) * 2.0f;
+
+	// v' = v + w * t + cross(q_vec, t)
+	const vect<3> v_prime = v + t * q.w() + cross(q_vec, t);
+
+	return v_prime;
+}
+
 void ps_move_data::update_orientation(f32 delta_time)
 {
 	if (!delta_time)
 		return;
-
-	// Rotate vector v by quaternion q
-	const auto rotate_vector = [](const vect<4>& q, const vect<3>& v)
-	{
-		const vect<4> qv({0.0f, v.x(), v.y(), v.z()});
-		const vect<4> q_inv({q.w(), -q.x(), -q.y(), -q.z()});
-
-		// t = q * v
-		vect<4> t;
-		t.w() = -q.x() * qv.x() - q.y() * qv.y() - q.z() * qv.z();
-		t.x() =  q.w() * qv.x() + q.y() * qv.z() - q.z() * qv.y();
-		t.y() =  q.w() * qv.y() - q.x() * qv.z() + q.z() * qv.x();
-		t.z() =  q.w() * qv.z() + q.x() * qv.y() - q.y() * qv.x();
-
-		// r = t * q_inv
-		vect<4> r;
-		r.w() = -t.x() * q_inv.x() - t.y() * q_inv.y() - t.z() * q_inv.z();
-		r.x() =  t.w() * q_inv.x() + t.y() * q_inv.z() - t.z() * q_inv.y();
-		r.y() =  t.w() * q_inv.y() - t.x() * q_inv.z() + t.z() * q_inv.x();
-		r.z() =  t.w() * q_inv.z() + t.x() * q_inv.y() - t.y() * q_inv.x();
-
-		return vect<3>({r.x(), r.y(), r.z()});
-	};
 
 	if constexpr (use_imu_for_velocity)
 	{

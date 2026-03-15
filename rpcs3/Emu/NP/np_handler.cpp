@@ -111,7 +111,7 @@ namespace np
 	}
 
 	ticket::ticket(std::vector<u8>&& raw_data)
-		: raw_data(raw_data)
+		: raw_data(std::move(raw_data))
 	{
 		parse();
 	}
@@ -254,7 +254,7 @@ namespace np
 
 		// Trim null characters
 		const auto& vec = node.data.data_vec;
-		auto it = std::find(vec.begin(), vec.end(), 0);
+		const auto it = std::find(vec.begin(), vec.end(), 0);
 		return std::string(vec.begin(), it);
 	}
 
@@ -387,7 +387,7 @@ namespace np
 			return;
 		}
 
-		if (nodes[0].id != 0x3000 && nodes[1].id != 0x3002)
+		if (nodes[0].id != 0x3000 || nodes[1].id != 0x3002)
 		{
 			ticket_log.error("The 2 blobs ids are incorrect");
 			return;
@@ -1024,7 +1024,7 @@ namespace np
 			}
 		}
 
-		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
+		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, np::npid_to_string(from->userId), static_cast<char*>(from->name.data), *size);
 
 		return CELL_OK;
 	}
@@ -1361,7 +1361,7 @@ namespace np
 
 	player_history& np_handler::get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp)
 	{
-		std::string npid_str = std::string(npid.handle.data);
+		std::string npid_str = np::npid_to_string(npid);
 
 		if (!players_history.contains(npid_str))
 		{
@@ -1375,12 +1375,12 @@ namespace np
 		return history;
 	}
 
-	u32 np_handler::get_clan_ticket_ready()
+	u32 np_handler::get_clan_ticket_ready() const
 	{
 		return clan_ticket_ready.load();
 	}
 
-	ticket np_handler::get_clan_ticket()
+	ticket np_handler::get_clan_ticket() const
 	{
 		clan_ticket_ready.wait(0, atomic_wait_timeout{60'000'000'000}); // 60 seconds
 
@@ -1467,14 +1467,13 @@ namespace np
 
 		if (all_history)
 		{
+			if (index >= players_history.size())
+				return false;
+
 			auto it = players_history.begin();
 			std::advance(it, index);
-
-			if (it != players_history.end())
-			{
-				string_to_npid(it->first, *npid);
-				return true;
-			}
+			string_to_npid(it->first, *npid);
+			return true;
 		}
 		else
 		{
@@ -1641,7 +1640,7 @@ namespace np
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
-		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(npid.handle.data));
+		auto friend_infos = rpcn->get_friend_presence_by_npid(np::npid_to_string(npid));
 		if (!friend_infos)
 		{
 			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;

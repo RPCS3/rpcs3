@@ -16,6 +16,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
@@ -804,12 +805,47 @@ cpu_thread* debugger_frame::get_cpu()
 		return nullptr;
 	}
 
+	if (u32 cur = m_choice_units->currentIndex(); cur >= m_hw_ppu_idx && cur < g_cfg.core.ppu_threads + m_hw_ppu_idx)
+	{
+		reader_lock lock(lv2_obj::g_mutex);
+
+		const auto ppu = lv2_obj::get_running_ppu(cur - m_hw_ppu_idx);
+
+		if (ppu == m_cpu.get())
+		{
+			// Nothing to do
+		}
+		else if (ppu)
+		{
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+		}
+		else
+		{
+			m_cpu.reset();
+		}
+	}
+
+	if (!!m_disasm != !!m_cpu)
+	{
+		// Fixup for HW PPU viewer
+		if (m_cpu)
+		{
+			m_disasm = make_disasm(m_cpu.get(), m_cpu);
+		}
+		else
+		{
+			m_disasm.reset();
+		}
+
+		m_debugger_list->UpdateCPUData(m_disasm);
+		m_breakpoint_list->UpdateCPUData(m_disasm);
+	}
+
 	// Wait flag is raised by the thread itself, acknowledging exit
 	if (m_cpu)
 	{
 		if (m_cpu->state.all_of(cpu_flag::wait + cpu_flag::exit))
 		{
-			m_cpu.reset();
 			return nullptr;
 		}
 
@@ -823,12 +859,13 @@ cpu_thread* debugger_frame::get_cpu()
 	{
 		if (g_fxo->try_get<rsx::thread>() != m_rsx || !m_rsx->ctrl || m_rsx->state.all_of(cpu_flag::wait + cpu_flag::exit))
 		{
-			m_rsx = nullptr;
 			return nullptr;
 		}
+
+		return m_rsx;
 	}
 
-	return m_rsx;
+	return nullptr;
 }
 
 std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, bool unlocked)
@@ -922,19 +959,20 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 
 void debugger_frame::UpdateUI()
 {
-	const auto cpu = get_cpu();
+	auto cpu = get_cpu();
 
 	// Refresh at a high rate during initialization (looks weird otherwise)
 	if (m_ui_update_ctr % (cpu || m_ui_update_ctr < 200 || m_debugger_list->m_dirty_flag ? 5 : 50) == 0)
 	{
 		// If no change to instruction position happened, update instruction list at 20hz
-		ShowPC();
+		ShowPC(false, cpu);
 	}
 
 	if (m_ui_update_ctr % 20 == 0 && !m_thread_list_pending_update)
 	{
 		// Update threads list at 5hz (low priority)
 		UpdateUnitList();
+		cpu = get_cpu();
 	}
 
 	if (!cpu)
@@ -945,12 +983,13 @@ void debugger_frame::UpdateUI()
 			{
 				// Update threads list (thread exited)
 				UpdateUnitList();
+				cpu = get_cpu();
 			}
 
-			ShowPC();
+			ShowPC(false, cpu);
 			m_last_query_state.clear();
 			m_last_pc = -1;
-			DoUpdate();
+			DoUpdate(cpu);
 		}
 	}
 	else if (m_ui_update_ctr % 5 == 0 || m_ui_update_ctr < m_ui_fast_update_permission_deadline)
@@ -966,7 +1005,7 @@ void debugger_frame::UpdateUI()
 			std::memcpy(m_last_query_state.data(), static_cast<void *>(cpu), size_context);
 
 			m_last_pc = cia;
-			DoUpdate();
+			DoUpdate(cpu);
 
 			const bool paused = !!(cpu->state & s_pause_flags);
 
@@ -982,7 +1021,7 @@ void debugger_frame::UpdateUI()
 			if (m_ui_update_ctr % 5)
 			{
 				// Call if it hasn't been called before
-				ShowPC();
+				ShowPC(false, cpu);
 			}
 
 			if (is_using_interpreter(cpu->get_class()))
@@ -1022,9 +1061,17 @@ void debugger_frame::UpdateUnitList()
 	}
 
 	std::vector<std::pair<QString, std::function<cpu_thread*()>>> cpu_list;
-	cpu_list.reserve(threads_created >= threads_deleted ? 0 : threads_created - threads_deleted);
+	cpu_list.reserve(threads_created >= threads_deleted ? threads_created - threads_deleted : 0);
 
 	usz reselected_index = umax;
+	usz hw_ppu_idx = umax;
+
+	if (u32 cur = m_choice_units->currentIndex(); cur >= m_hw_ppu_idx && cur < g_cfg.core.ppu_threads + m_hw_ppu_idx)
+	{
+		hw_ppu_idx = cur - m_hw_ppu_idx;
+	}
+
+	m_hw_ppu_idx = umax;
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
@@ -1033,7 +1080,7 @@ void debugger_frame::UpdateUnitList()
 		// Space at the end is to pad a gap on the right
 		cpu_list.emplace_back(QString::fromStdString((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
 
-		if (old_cpu_ptr == std::addressof(cpu))
+		if (old_cpu_ptr == std::addressof(cpu) && hw_ppu_idx == umax)
 		{
 			reselected_index = cpu_list.size() - 1;
 		}
@@ -1044,6 +1091,40 @@ void debugger_frame::UpdateUnitList()
 		if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>())
 		{
 			idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
+		}
+
+		m_hw_ppu_idx = cpu_list.size() + 1; // Account for NoThreadString thread
+
+		for (u32 i = 0; i < g_cfg.core.ppu_threads + 0u; i++)
+		{
+			std::function<cpu_thread*()> get_ppu_at = [index = i, cpu_storage = shared_ptr<named_thread<ppu_thread>>()]() mutable
+			{
+				reader_lock lock(lv2_obj::g_mutex);
+
+				const auto ppu = lv2_obj::get_running_ppu(index);
+
+				if (ppu == cpu_storage.get())
+				{
+					// Nothing to do
+				}
+				else if (ppu)
+				{
+					cpu_storage = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+				}
+				else
+				{
+					cpu_storage.reset();
+				}
+
+				return cpu_storage.get();
+			};
+
+			if (hw_ppu_idx == i)
+			{
+				reselected_index = cpu_list.size();
+			}
+
+			cpu_list.emplace_back(tr("HwPPU[%0]: Hardware PPU Thread #%1").arg(i + 1).arg(i + 1), std::move(get_ppu_at));
 		}
 
 		if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
@@ -1114,6 +1195,7 @@ void debugger_frame::OnSelectUnit()
 	}
 
 	cpu_thread* selected = nullptr;
+	usz hw_ppu_idx = umax;
 
 	if (m_emu_state != system_state::stopped)
 	{
@@ -1135,7 +1217,14 @@ void debugger_frame::OnSelectUnit()
 
 		if (!selected && !m_rsx && !m_cpu)
 		{
-			return;
+			if (u32 cur = m_choice_units->currentIndex(); cur >= m_hw_ppu_idx && cur < g_cfg.core.ppu_threads + m_hw_ppu_idx)
+			{
+				hw_ppu_idx = cur - m_hw_ppu_idx;
+			}
+			else
+			{
+				return;
+			}
 		}
 	}
 
@@ -1143,6 +1232,15 @@ void debugger_frame::OnSelectUnit()
 	m_cpu.reset();
 	m_rsx = nullptr;
 	m_spu_disasm_memory.reset();
+
+	if (hw_ppu_idx != umax)
+	{
+		if (hw_ppu_idx > 1)
+		{
+			// Sample PPU
+			selected = ::at32(m_threads_info, 1)();
+		}
+	}
 
 	if (selected)
 	{
@@ -1198,8 +1296,8 @@ void debugger_frame::OnSelectUnit()
 	m_debugger_list->UpdateCPUData(m_disasm);
 	m_breakpoint_list->UpdateCPUData(m_disasm);
 
-	ShowPC(true);
-	DoUpdate();
+	ShowPC(true, selected);
+	DoUpdate(selected);
 	UpdateUI();
 }
 
@@ -1339,30 +1437,28 @@ void debugger_frame::OnSelectSPUDisassembler()
 
 		m_debugger_list->UpdateCPUData(m_disasm);
 		m_breakpoint_list->UpdateCPUData(m_disasm);
-		ShowPC(true);
-		DoUpdate();
+		ShowPC(true, nullptr);
+		DoUpdate(nullptr);
 		UpdateUI();
 	});
 
 	m_spu_disasm_dialog->show();
 }
 
-void debugger_frame::DoUpdate()
+void debugger_frame::DoUpdate(cpu_thread* cpu0)
 {
 	// Check if we need to disable a step over bp
-	if (const auto cpu0 = get_cpu(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
+	if (cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
 		m_ppu_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
 	}
 
-	WritePanels();
+	WritePanels(cpu0);
 }
 
-void debugger_frame::WritePanels()
+void debugger_frame::WritePanels(cpu_thread* cpu)
 {
-	const auto cpu = get_cpu();
-
 	if (!cpu)
 	{
 		m_misc_state->clear();
@@ -1412,7 +1508,9 @@ void debugger_frame::ShowGotoAddressDialog()
 	QLineEdit* expression_input(new QLineEdit(m_goto_dialog));
 	expression_input->setFont(m_mono);
 
-	if (const auto thread = get_cpu(); !thread || thread->get_class() != thread_class::spu)
+	const auto thread = get_cpu();
+
+	if (!thread || thread->get_class() != thread_class::spu)
 	{
 		expression_input->setValidator(new HexValidator(expression_input));
 	}
@@ -1436,8 +1534,8 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	m_goto_dialog->setLayout(vbox_panel);
 
-	const auto cpu_check = make_check_cpu(get_cpu());
-	const auto cpu = cpu_check();
+	const auto cpu_check = make_check_cpu(thread);
+	const auto cpu = thread;
 	const QFont font = expression_input->font();
 
 	// -1 from get_pc() turns into 0
@@ -1544,9 +1642,12 @@ void debugger_frame::ClearCallStack()
 	Q_EMIT CallStackUpdateRequested({});
 }
 
-void debugger_frame::ShowPC(bool user_requested)
+void debugger_frame::ShowPC(bool user_requested, cpu_thread* cpu0)
 {
-	const auto cpu0 = get_cpu();
+	if (!cpu0)
+	{
+		cpu0 = get_cpu();
+	}
 
 	const u32 pc = (cpu0 ? cpu0->get_pc() : (m_is_spu_disasm_mode ? m_spu_disasm_pc : 0));
 

@@ -135,7 +135,47 @@ namespace rsx
 		RSX_FORMAT_FEATURE_16BIT_CHANNELS       = (1 << 3),  // Complements RSX_FORMAT_FEATURE_SIGNED_COMPONENTS
 	};
 
+	enum host_format_features : u8
+	{
+		RSX_HOST_FORMAT_FEATURE_SNORM = (1 << 0),
+		RSX_HOST_FORMAT_FEATURE_SRGB  = (1 << 1),
+	};
+
 	using enum format_features;
+
+	struct texture_format_ex
+	{
+		texture_format_ex() = default;
+		texture_format_ex(u32 bits)
+			: format_bits(bits)
+		{}
+
+		bool valid() const { return format_bits != 0; }
+		u32 format() const { return format_bits & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); }
+
+		bool hw_SNORM_possible() const;
+		bool hw_SRGB_possible() const;
+
+		bool host_snorm_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SNORM; }
+		bool host_srgb_format_active() const { return host_features & RSX_HOST_FORMAT_FEATURE_SRGB; }
+
+		operator bool() const { return valid(); }
+
+		bool operator == (const texture_format_ex& that) const
+		{
+			return this->format_bits == that.format_bits &&
+				this->features == that.features &&
+				this->host_features == that.host_features &&
+				this->encoded_remap == that.encoded_remap;
+		}
+
+	//private:
+		u32 format_bits = 0;
+		u32 features = 0;
+		u32 encoded_remap = 0;
+		u32 texel_remap_control = 0;
+		u32 host_features = 0;
+	};
 
 	// Sampled image descriptor
 	class sampled_image_descriptor_base
@@ -179,6 +219,7 @@ namespace rsx
 		u64 surface_cache_tag = 0;
 
 		texcoord_xform_t texcoord_xform;
+		texture_format_ex format_ex;
 	};
 
 	struct typeless_xfer
@@ -275,6 +316,12 @@ namespace rsx
 	* Returns a bitmask of supported features.
 	*/
 	rsx::flags32_t get_format_features(u32 texture_format);
+
+	/**
+	 * Returns a channel mask in ARGB that can be SNORM-converted
+	 * Some formats have a hardcoded constant in one lane which we cannot SNORM-interpret in hardware.
+	 */
+	u32 get_host_format_snorm_mask(u32 format);
 
 	/**
 	 * Returns number of texel rows encoded in one pitch-length line of bytes

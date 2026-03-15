@@ -8,7 +8,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 include(ConfigureCompiler)
 include(CheckFunctionExists)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     add_compile_definitions(DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
@@ -195,6 +195,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test_address_range.cpp
             tests/test_rsx_cfg.cpp
             tests/test_rsx_fp_asm.cpp
+            tests/test_dmux_pamf.cpp
     )
 
     target_link_libraries(rpcs3_test
@@ -202,6 +203,7 @@ if(BUILD_RPCS3_TESTS)
             rpcs3_lib
             rpcs3_emu
             GTest::gtest
+            GTest::gmock
     )
 
     target_include_directories(rpcs3_test

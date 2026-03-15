@@ -206,11 +206,7 @@ struct cpu_prof
 				// Print only 7 hash characters out of 11 (which covers roughly 48 bits)
 				if (type_id == 2)
 				{
-					fmt::append(results, "\n\t[%s", fmt::base57(be_t<u64>{name}));
-					results.resize(results.size() - 4);
-
-					// Print chunk address from lowest 16 bits
-					fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
+					fmt::append(results, "\n\t[%s]: %.4f%% (%u)", spu_block_hash{name}, _frac * 100., count);
 				}
 				else
 				{
@@ -1377,7 +1373,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", state.load());
+	return fmt::format("%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

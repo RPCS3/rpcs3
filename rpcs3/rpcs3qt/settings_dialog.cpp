@@ -23,13 +23,13 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
-#include "Emu/NP/rpcn_countries.h"
+#include "log_level_dialog.h"
 
+#include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-
 #include "Emu/Audio/audio_device_enumerator.h"
 
 #include "Loader/PSF.h"
@@ -1555,6 +1555,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enableSpuEventsBusyLoop, emu_settings_type::EnabledSPUEventsBusyLoop);
 	SubscribeTooltip(ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 
+	m_emu_settings->EnhanceCheckBox(ui->disableHardwareTexelRemapping, emu_settings_type::DisableHWTexelRemapping);
+	SubscribeTooltip(ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -2162,9 +2165,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_custom_colors, tooltips.settings.custom_colors);
 		SubscribeTooltip(ui->cb_show_welcome, tooltips.settings.show_welcome);
 		SubscribeTooltip(ui->cb_show_exit_game, tooltips.settings.show_exit_game);
-		SubscribeTooltip(ui->cb_show_boot_game, tooltips.settings.show_boot_game);
 		SubscribeTooltip(ui->cb_show_pkg_install, tooltips.settings.show_pkg_install);
-		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
 		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->cb_show_restart_hint, tooltips.settings.show_restart_hint);
@@ -2176,7 +2177,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_global_pad_navigation, tooltips.settings.global_navigation);
 		ui->cb_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_enabled).toBool());
 		ui->cb_global_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_global).toBool());
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 		connect(ui->cb_pad_navigation, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::nav_enabled, checked);
@@ -2185,9 +2185,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_gui_settings->SetValue(gui::nav_global, checked);
 		});
-#else
-		ui->gb_gui_pad_input->setEnabled(false);
-#endif
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
@@ -2270,9 +2267,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		ui->cb_show_welcome->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 		ui->cb_show_exit_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_exit).toBool());
-		ui->cb_show_boot_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_boot).toBool());
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
-		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
 		ui->cb_show_same_buttons_dialog->setChecked(m_gui_settings->GetValue(gui::ib_same_buttons).toBool());
 		ui->cb_show_restart_hint->setChecked(m_gui_settings->GetValue(gui::ib_restart_hint).toBool());
@@ -2302,17 +2297,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_exit_game, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_confirm_exit, checked);
-		});
-		connect(ui->cb_show_boot_game, &QCheckBox::toggled, [this](bool checked)
-		{
 			m_gui_settings->SetValue(gui::ib_confirm_boot, checked);
 		});
 		connect(ui->cb_show_pkg_install, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_pkg_success, checked);
-		});
-		connect(ui->cb_show_pup_install, &QCheckBox::toggled, [this](bool checked)
-		{
 			m_gui_settings->SetValue(gui::ib_pup_success, checked);
 		});
 		connect(ui->cb_show_obsolete_cfg_dialog, &QCheckBox::toggled, [this](bool checked)
@@ -2492,6 +2481,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Log levels
+	SubscribeTooltip(ui->gb_log_levels, tooltips.settings.log_levels);
+	connect(ui->pb_log_levels, &QAbstractButton::clicked, this, [this]()
+	{
+		log_level_dialog* dlg = new log_level_dialog(this, m_emu_settings);
+		dlg->open();
+	});
 
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::cfg_geometry).toByteArray()))
 	{

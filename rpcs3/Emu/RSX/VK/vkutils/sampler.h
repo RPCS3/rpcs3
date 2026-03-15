@@ -64,6 +64,22 @@ namespace vk
 	{
 		u64 base_key;
 		u64 border_color_key;
+
+		bool operator == (const sampler_pool_key_t& that) const
+		{
+			return this->base_key == that.base_key &&
+				this->border_color_key == that.border_color_key;
+		}
+	};
+
+	struct sampler_pool_key_hash
+	{
+		size_t operator()(const vk::sampler_pool_key_t& k) const noexcept
+		{
+			usz result = k.base_key;
+			result ^= k.border_color_key + 0x9e3779b97f4a7c15ULL + (result << 6) + (result >> 2);
+			return result;
+		}
 	};
 
 	struct cached_sampler_object_t : public vk::sampler, public rsx::ref_counted
@@ -75,7 +91,7 @@ namespace vk
 	class sampler_pool_t
 	{
 		std::unordered_map<u64, std::unique_ptr<cached_sampler_object_t>> m_generic_sampler_pool;
-		std::unordered_map<u64, std::unique_ptr<cached_sampler_object_t>> m_custom_color_sampler_pool;
+		std::unordered_map<sampler_pool_key_t, std::unique_ptr<cached_sampler_object_t>, sampler_pool_key_hash> m_custom_color_sampler_pool;
 
 	public:
 

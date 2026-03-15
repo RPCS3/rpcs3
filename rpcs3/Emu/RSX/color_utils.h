@@ -7,6 +7,52 @@
 
 namespace rsx
 {
+	enum texture_control_bits : u32
+	{
+		GAMMA_A = 0,
+		GAMMA_R,
+		GAMMA_G,
+		GAMMA_B,
+		ALPHAKILL,
+		RENORMALIZE,
+		EXPAND_A,
+		EXPAND_R,
+		EXPAND_G,
+		EXPAND_B,
+		SEXT_A,
+		SEXT_R,
+		SEXT_G,
+		SEXT_B,
+		DEPTH_FLOAT,
+		DEPTH_COMPARE_OP,
+		DEPTH_COMPARE_1,
+		DEPTH_COMPARE_2,
+		FILTERED_MAG,
+		FILTERED_MIN,
+		UNNORMALIZED_COORDS,
+		CLAMP_TEXCOORDS_BIT,
+		WRAP_S,
+		WRAP_T,
+		WRAP_R,
+		FF_SIGNED_BIT,
+		FF_BIASED_RENORM_BIT,
+		FF_GAMMA_BIT,
+		FF_16BIT_CHANNELS_BIT,
+
+		// Meta
+		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
+		GAMMA_RGB_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B),
+		GAMMA_OFFSET = GAMMA_A,
+
+		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),
+		EXPAND_OFFSET = EXPAND_A,
+
+		SEXT_MASK = (1 << SEXT_R) | (1 << SEXT_G) | (1 << SEXT_B) | (1 << SEXT_A),
+		SEXT_OFFSET = SEXT_A,
+
+		FORMAT_FEATURES_OFFSET = FF_SIGNED_BIT,
+	};
+
 	struct texture_channel_remap_t
 	{
 		u32 encoded = 0xDEAD;
@@ -37,6 +83,34 @@ namespace rsx
 				}
 			}
 			return remapped;
+		}
+
+
+		/**
+		 * Remap color channel bits based on a remap vector. The output is a normalized selector of each color channel with spread.
+		 * The input bits are an action selector. e.g a mask of channels that need to be interpreted as SNORM or BX2
+		 * The output is a final mask on which post-sampling channels the operation applies to.
+		 * Examples:
+		 * - If we have remap as [ 1 R R R ] and mask of R (0010) then we get 1110. Remapper spreads 'R' action to all channels where it should apply.
+		 */
+		u32 shuffle_mask_bits(u32 bits) const
+		{
+			if (!bits || encoded == RSX_TEXTURE_REMAP_IDENTITY) [[likely]]
+			{
+				return bits;
+			}
+
+			u32 result = 0;
+			for (u8 channel = 0; channel < 4; ++channel)
+			{
+				if (control_map[channel] != CELL_GCM_TEXTURE_REMAP_REMAP ||    // Channel not read from input
+					(bits & (1u << channel_map[channel])) == 0)                // Input channel is not enabled in the mask
+				{
+					continue;
+				}
+				result |= (1u << channel);
+			}
+			return result;
 		}
 
 		template <typename T>

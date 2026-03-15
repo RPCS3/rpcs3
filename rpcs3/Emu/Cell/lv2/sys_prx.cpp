@@ -64,7 +64,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libddpdec.sprx", 0 },
 	{ "libdivxdec.sprx", 0 },
 	{ "libdmux.sprx", 0 },
-	{ "libdmuxpamf.sprx", 0 },
+	{ "libdmuxpamf.sprx", 1 },
 	{ "libdtslbrdec.sprx", 0 },
 	{ "libfiber.sprx", 0 },
 	{ "libfont.sprx", 0 },
@@ -899,7 +899,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 			{
 				for (u32 lib_addr = prx.exports_start, index = 0; lib_addr < prx.exports_end; index++, lib_addr += vm::read8(lib_addr) ? vm::read8(lib_addr) : sizeof_lib)
 				{
-					if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
+					if (std::memcmp(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
 					{
 						atomic_storage<char>::release(prx.m_external_loaded_flags[index], true);
 						return true;
