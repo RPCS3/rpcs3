@@ -7,6 +7,7 @@
 #include "progress_dialog.h"
 
 #include "Utilities/File.h"
+#include "Loader/ISO.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -1460,7 +1461,11 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 
-		if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
+		if (is_file_iso(gameinfo->info.path))
+		{
+			gameid_token_value = gameinfo->info.serial;
+		}
+		else if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
 		{
 			const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
 			std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
