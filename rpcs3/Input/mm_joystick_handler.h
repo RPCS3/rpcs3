@@ -10,6 +10,7 @@
 #include <mmsystem.h>
 
 #include <string>
+#include <set>
 #include <vector>
 #include <memory>
 #include <unordered_map>
@@ -106,10 +107,10 @@ class mm_joystick_handler final : public PadHandlerBase
 		JOYCAPS device_caps{};
 		MMRESULT device_status = JOYERR_UNPLUGGED;
 		steady_clock::time_point last_update{};
-		std::set<u32> trigger_code_left{};
-		std::set<u32> trigger_code_right{};
-		std::array<std::set<u32>, 4> axis_code_left{};
-		std::array<std::set<u32>, 4> axis_code_right{};
+		std::vector<std::set<u32>> trigger_code_left{};
+		std::vector<std::set<u32>> trigger_code_right{};
+		std::array<std::vector<std::set<u32>>, 4> axis_code_left{};
+		std::array<std::vector<std::set<u32>>, 4> axis_code_right{};
 	};
 
 public:
@@ -134,10 +135,10 @@ private:
 	std::unordered_map<u32, u16> m_min_button_values;
 	std::map<std::string, std::shared_ptr<MMJOYDevice>> m_devices;
 
-	std::set<u32> find_keys(const std::vector<std::string>& names) const;
-	std::set<u32> find_keys(const cfg::string& cfg_string) const;
+	std::vector<std::set<u32>> find_combos(const std::vector<std::vector<std::string>>& combos) const;
+	std::vector<std::set<u32>> find_combos(const cfg::string& cfg_string) const;
 
-	std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
+	std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;

@@ -145,58 +145,68 @@ std::vector<pad_list_entry> mm_joystick_handler::list_devices()
 	return devices;
 }
 
-std::set<u32> mm_joystick_handler::find_keys(const cfg::string& cfg_string) const
+std::vector<std::set<u32>> mm_joystick_handler::find_combos(const cfg::string& cfg_string) const
 {
-	return find_keys(cfg_pad::get_buttons(cfg_string.to_string()));
+	return find_combos(cfg_pad::get_buttons(cfg_string.to_string()));
 }
 
-std::set<u32> mm_joystick_handler::find_keys(const std::vector<std::string>& names) const
+std::vector<std::set<u32>> mm_joystick_handler::find_combos(const std::vector<std::vector<std::string>>& combos) const
 {
-	std::set<u32> keys;
+	std::vector<std::set<u32>> res;
 
-	for (u32 k : FindKeyCodes(axis_list, names)) keys.insert(k);
-	for (u32 k : FindKeyCodes(pov_list, names)) keys.insert(k);
-	for (u32 k : FindKeyCodes(button_list, names)) keys.insert(k);
+	for (const std::vector<std::string>& combo : combos)
+	{
+		std::set<u32> keys;
 
-	return keys;
+		for (u32 k : find_key_codes(axis_list, combo)) keys.insert(k);
+		for (u32 k : find_key_codes(pov_list, combo)) keys.insert(k);
+		for (u32 k : find_key_codes(button_list, combo)) keys.insert(k);
+
+		if (!keys.empty())
+		{
+			res.push_back(std::move(keys));
+		}
+	}
+
+	return res;
 }
 
-std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
+std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
 {
-	std::array<std::set<u32>, button::button_count> mapping{};
+	std::array<std::vector<std::set<u32>>, button::button_count> mapping{};
 
 	MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
 	if (!dev || !cfg)
 		return mapping;
 
-	dev->trigger_code_left  = find_keys(cfg->l2);
-	dev->trigger_code_right = find_keys(cfg->r2);
-	dev->axis_code_left[0]  = find_keys(cfg->ls_left);
-	dev->axis_code_left[1]  = find_keys(cfg->ls_right);
-	dev->axis_code_left[2]  = find_keys(cfg->ls_down);
-	dev->axis_code_left[3]  = find_keys(cfg->ls_up);
-	dev->axis_code_right[0] = find_keys(cfg->rs_left);
-	dev->axis_code_right[1] = find_keys(cfg->rs_right);
-	dev->axis_code_right[2] = find_keys(cfg->rs_down);
-	dev->axis_code_right[3] = find_keys(cfg->rs_up);
+	dev->trigger_code_left  = find_combos(cfg->l2);
+	dev->trigger_code_right = find_combos(cfg->r2);
+	dev->axis_code_left[0]  = find_combos(cfg->ls_left);
+	dev->axis_code_left[1]  = find_combos(cfg->ls_right);
+	dev->axis_code_left[2]  = find_combos(cfg->ls_down);
+	dev->axis_code_left[3]  = find_combos(cfg->ls_up);
+	dev->axis_code_right[0] = find_combos(cfg->rs_left);
+	dev->axis_code_right[1] = find_combos(cfg->rs_right);
+	dev->axis_code_right[2] = find_combos(cfg->rs_down);
+	dev->axis_code_right[3] = find_combos(cfg->rs_up);
 
-	mapping[button::up]       = find_keys(cfg->up);
-	mapping[button::down]     = find_keys(cfg->down);
-	mapping[button::left]     = find_keys(cfg->left);
-	mapping[button::right]    = find_keys(cfg->right);
-	mapping[button::cross]    = find_keys(cfg->cross);
-	mapping[button::square]   = find_keys(cfg->square);
-	mapping[button::circle]   = find_keys(cfg->circle);
-	mapping[button::triangle] = find_keys(cfg->triangle);
-	mapping[button::l1]       = find_keys(cfg->l1);
+	mapping[button::up]       = find_combos(cfg->up);
+	mapping[button::down]     = find_combos(cfg->down);
+	mapping[button::left]     = find_combos(cfg->left);
+	mapping[button::right]    = find_combos(cfg->right);
+	mapping[button::cross]    = find_combos(cfg->cross);
+	mapping[button::square]   = find_combos(cfg->square);
+	mapping[button::circle]   = find_combos(cfg->circle);
+	mapping[button::triangle] = find_combos(cfg->triangle);
+	mapping[button::l1]       = find_combos(cfg->l1);
 	mapping[button::l2]       = dev->trigger_code_left;
-	mapping[button::l3]       = find_keys(cfg->l3);
-	mapping[button::r1]       = find_keys(cfg->r1);
+	mapping[button::l3]       = find_combos(cfg->l3);
+	mapping[button::r1]       = find_combos(cfg->r1);
 	mapping[button::r2]       = dev->trigger_code_right;
-	mapping[button::r3]       = find_keys(cfg->r3);
-	mapping[button::start]    = find_keys(cfg->start);
-	mapping[button::select]   = find_keys(cfg->select);
-	mapping[button::ps]       = find_keys(cfg->ps);
+	mapping[button::r3]       = find_combos(cfg->r3);
+	mapping[button::start]    = find_combos(cfg->start);
+	mapping[button::select]   = find_combos(cfg->select);
+	mapping[button::ps]       = find_combos(cfg->ps);
 	mapping[button::ls_left]  = dev->axis_code_left[0];
 	mapping[button::ls_right] = dev->axis_code_left[1];
 	mapping[button::ls_down]  = dev->axis_code_left[2];
@@ -206,21 +216,21 @@ std::array<std::set<u32>, PadHandlerBase::button::button_count> mm_joystick_hand
 	mapping[button::rs_down]  = dev->axis_code_right[2];
 	mapping[button::rs_up]    = dev->axis_code_right[3];
 
-	mapping[button::skateboard_ir_nose]    = find_keys(cfg->ir_nose);
-	mapping[button::skateboard_ir_tail]    = find_keys(cfg->ir_tail);
-	mapping[button::skateboard_ir_left]    = find_keys(cfg->ir_left);
-	mapping[button::skateboard_ir_right]   = find_keys(cfg->ir_right);
-	mapping[button::skateboard_tilt_left]  = find_keys(cfg->tilt_left);
-	mapping[button::skateboard_tilt_right] = find_keys(cfg->tilt_right);
+	mapping[button::skateboard_ir_nose]    = find_combos(cfg->ir_nose);
+	mapping[button::skateboard_ir_tail]    = find_combos(cfg->ir_tail);
+	mapping[button::skateboard_ir_left]    = find_combos(cfg->ir_left);
+	mapping[button::skateboard_ir_right]   = find_combos(cfg->ir_right);
+	mapping[button::skateboard_tilt_left]  = find_combos(cfg->tilt_left);
+	mapping[button::skateboard_tilt_right] = find_combos(cfg->tilt_right);
 
 	if (b_has_pressure_intensity_button)
 	{
-		mapping[button::pressure_intensity_button] = find_keys(cfg->pressure_intensity_button);
+		mapping[button::pressure_intensity_button] = find_combos(cfg->pressure_intensity_button);
 	}
 
 	if (b_has_analog_limiter_button)
 	{
-		mapping[button::analog_limiter_button] = find_keys(cfg->analog_limiter_button);
+		mapping[button::analog_limiter_button] = find_combos(cfg->analog_limiter_button);
 	}
 
 	return mapping;
@@ -362,14 +372,38 @@ PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std:
 			{
 				const auto get_key_value = [this, &data](const std::string& str) -> u16
 				{
+					bool pressed{};
 					u16 value{};
-					for (u32 key_code : find_keys(cfg_pad::get_buttons(str)))
+
+					// The DS3 Button is considered pressed if any configured button combination is pressed
+					for (const std::set<u32>& codes : find_combos(cfg_pad::get_buttons(str)))
 					{
-						if (const auto it = data.find(key_code); it != data.cend())
+						bool combo_pressed = !codes.empty();
+						u16 combo_val = 0;
+
+						// The button combination is only considered pressed if all the buttons are pressed
+						for (u32 code : codes)
 						{
-							value = std::max(value, it->second);
+							if (const auto it = data.find(code); it != data.cend())
+							{
+								if (it->second == 0)
+								{
+									combo_pressed = false;
+									break;
+								}
+
+								// Take minimum combo value. Otherwise we will always end up with the max value in case an actual button is part of the combo.
+								combo_val = (combo_val == 0) ? it->second : std::min(combo_val, it->second);
+							}
+						}
+
+						if (combo_pressed)
+						{
+							value = std::max(value, combo_val);
+							pressed = value > 0;
 						}
 					}
+
 					return value;
 				};
 				preview_values[0] = get_key_value(buttons[0]);
@@ -579,25 +613,25 @@ std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& de
 bool mm_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && dev->trigger_code_left.contains(keyCode);
+	return dev && std::any_of(dev->trigger_code_left.cbegin(), dev->trigger_code_left.cend(), [keyCode](const std::set<u32>& combo) { return combo.contains(keyCode); });
 }
 
 bool mm_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && dev->trigger_code_right.contains(keyCode);
+	return dev && std::any_of(dev->trigger_code_right.cbegin(), dev->trigger_code_right.cend(), [keyCode](const std::set<u32>& combo) { return combo.contains(keyCode); });
 }
 
 bool mm_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && std::any_of(dev->axis_code_left.cbegin(), dev->axis_code_left.cend(), [&keyCode](const std::set<u32>& s){ return s.contains(keyCode); });
+	return dev && std::any_of(dev->axis_code_left.cbegin(), dev->axis_code_left.cend(), [keyCode](const std::vector<std::set<u32>>& combos){ return std::any_of(combos.cbegin(), combos.cend(), [keyCode](const std::set<u32>& s){ return s.contains(keyCode); });});
 }
 
 bool mm_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode)
 {
 	const MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
-	return dev && std::any_of(dev->axis_code_right.cbegin(), dev->axis_code_right.cend(), [&keyCode](const std::set<u32>& s){ return s.contains(keyCode); });
+	return dev && std::any_of(dev->axis_code_right.cbegin(), dev->axis_code_right.cend(), [keyCode](const std::vector<std::set<u32>>& combos){ return std::any_of(combos.cbegin(), combos.cend(), [keyCode](const std::set<u32>& s){ return s.contains(keyCode); });});
 }
 
 PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)

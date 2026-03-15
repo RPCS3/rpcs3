@@ -192,11 +192,11 @@ protected:
 
 	std::shared_ptr<Pad> m_pad_for_pad_settings;
 
-	// Search an unordered map for a string value and return found keycode
-	static std::set<u32> FindKeyCodes(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback = true);
+	// Search an unordered map for a string value and return the found combo
+	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback = true);
 
-	// Search an unordered map for a string value and return found keycode
-	static std::set<u32> FindKeyCodes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names);
+	// Search an unordered map for string values and return the found key codes
+	static std::set<u32> find_key_codes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, u32 threshold) const;
@@ -320,7 +320,7 @@ private:
 	void get_orientation(const pad_ensemble& binding) const;
 
 protected:
-	virtual std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
+	virtual std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);
 	virtual void get_mapping(const pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u32 keyCode, bool& pressed, u16& val, bool use_stick_multipliers, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();

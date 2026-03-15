@@ -373,7 +373,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	const auto find_value = [&, this](const std::string& str)
 	{
-		const std::vector<std::string> names = cfg_pad::get_buttons(str);
+		const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(str);
 
 		u16 value{};
 
@@ -385,19 +385,22 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			}
 		};
 
-		for (const u32 code : FindKeyCodes(rev_axis_list, names))
+		for (const std::vector<std::string>& names : combos)
 		{
-			set_value(code, true);
-		}
+			for (const u32 code : find_key_codes(rev_axis_list, names))
+			{
+				set_value(code, true);
+			}
 
-		for (const u32 code : FindKeyCodes(axis_list, names))
-		{
-			set_value(code, false);
-		}
+			for (const u32 code : find_key_codes(axis_list, names))
+			{
+				set_value(code, false);
+			}
 
-		for (const u32 code : FindKeyCodes(button_list, names))
-		{
-			set_value(code, false);
+			for (const u32 code : find_key_codes(button_list, names))
+			{
+				set_value(code, false);
+			}
 		}
 
 		return value;
@@ -1235,19 +1238,51 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 		}
 	};
 
+	const auto process_mapped_combo = [&](const std::vector<std::set<u32>>& combos, bool is_stick_value)
+	{
+		bool pressed{};
+		u16 value = 0;
+
+		for (const std::set<u32>& combo : combos)
+		{
+			bool combo_pressed = !combo.empty();
+			u16 combo_val = 0;
+
+			// The button combination is only considered pressed if all the buttons are pressed
+			for (u32 index : combo)
+			{
+				bool btn_pressed{};
+				u16 btn_val = 0;
+
+				process_mapped_button(index, btn_pressed, btn_val, is_stick_value);
+
+				if (btn_pressed == false)
+				{
+					combo_pressed = false;
+					break;
+				}
+
+				// Take minimum combo value. Otherwise we will always end up with the max value in case an actual button is part of the combo.
+				combo_val = (combo_val == 0) ? btn_val : std::min(combo_val, btn_val);
+			}
+
+			if (combo_pressed)
+			{
+				value = std::max(value, combo_val);
+				pressed = value > 0;
+			}
+		}
+
+		return std::make_pair(pressed, value);
+	};
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (Button& button : pad->m_buttons)
 	{
-		bool pressed{};
-		u16 final_value{};
+		const std::pair<bool, u16> val = process_mapped_combo(button.m_key_combos, false);
 
-		for (u32 index : button.m_key_codes)
-		{
-			process_mapped_button(index, pressed, final_value, false);
-		}
-
-		button.m_value = final_value;
-		button.m_pressed = pressed;
+		button.m_pressed = val.first;
+		button.m_value = val.second;
 	}
 
 	// used to get the absolute value of an axis
@@ -1256,24 +1291,14 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (usz i = 0; i < pad->m_sticks.size(); i++)
 	{
-		bool pressed{}; // unused
-		u16 val_min{};
-		u16 val_max{};
-
 		// m_key_codes_min are the mapped keys for left or down
-		for (u32 index : pad->m_sticks[i].m_key_codes_min)
-		{
-			process_mapped_button(index, pressed, val_min, true);
-		}
+		const std::pair<bool, u16> val_min = process_mapped_combo(pad->m_sticks[i].m_key_combos_min, true);
 
 		// m_key_codes_max are the mapped keys for right or up
-		for (u32 index : pad->m_sticks[i].m_key_codes_max)
-		{
-			process_mapped_button(index, pressed, val_max, true);
-		}
+		const std::pair<bool, u16> val_max = process_mapped_combo(pad->m_sticks[i].m_key_combos_max, true);
 
 		// cancel out opposing values and get the resulting difference. if there was no change, use the old value.
-		stick_val[i] = val_max - val_min;
+		stick_val[i] = val_max.second - val_min.second;
 	}
 
 	u16 lx, ly, rx, ry;
@@ -1344,29 +1369,39 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		return index;
 	};
 
-	const auto find_buttons = [&](const cfg::string& name) -> std::set<u32>
+	const auto find_buttons = [&](const cfg::string& name) -> std::vector<std::set<u32>>
 	{
-		const std::vector<std::string> names = cfg_pad::get_buttons(name.to_string());
+		const std::vector<std::vector<std::string>> str_combos = cfg_pad::get_buttons(name.to_string());
 
 		// In evdev we store indices to an EvdevButton vector in our pad objects instead of the usual key codes.
-		std::set<u32> indices;
+		std::vector<std::set<u32>> combos;
 
-		for (const u32 code : FindKeyCodes(axis_list, names))
+		for (const std::vector<std::string>& names : str_combos)
 		{
-			indices.insert(register_evdevbutton(code, true, false));
+			std::set<u32> indices;
+
+			for (const u32 code : find_key_codes(axis_list, names))
+			{
+				indices.insert(register_evdevbutton(code, true, false));
+			}
+
+			for (const u32 code : find_key_codes(rev_axis_list, names))
+			{
+				indices.insert(register_evdevbutton(code, true, true));
+			}
+
+			for (const u32 code : find_key_codes(button_list, names))
+			{
+				indices.insert(register_evdevbutton(code, false, false));
+			}
+
+			if (!indices.empty())
+			{
+				combos.push_back(std::move(indices));
+			}
 		}
 
-		for (const u32 code : FindKeyCodes(rev_axis_list, names))
-		{
-			indices.insert(register_evdevbutton(code, true, true));
-		}
-
-		for (const u32 code : FindKeyCodes(button_list, names))
-		{
-			indices.insert(register_evdevbutton(code, false, false));
-		}
-
-		return indices;
+		return combos;
 	};
 
 	const auto find_motion_button = [&](const cfg_sensor& sensor) -> evdev_sensor
@@ -1376,8 +1411,8 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		e_sensor.mirrored = sensor.mirrored.get();
 		e_sensor.shift = sensor.shift.get();
 
-		const std::set<u32> keys = FindKeyCodes(motion_axis_list, sensor.axis);
-		if (!keys.empty()) e_sensor.code = *keys.begin(); // We should only have one key for each of our sensors
+		const std::vector<std::set<u32>> combos = find_key_combos(motion_axis_list, sensor.axis);
+		if (!combos.empty() && !combos.front().empty()) e_sensor.code = *combos.front().begin(); // We should only have one key for each of our sensors
 		return e_sensor;
 	};
 
@@ -1421,10 +1456,10 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		pad->m_orientation_reset_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2,find_buttons(cfg->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_buttons(cfg->square),   CELL_PAD_CTRL_SQUARE);
 
 	m_dev->trigger_left = find_buttons(cfg->l2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left,         CELL_PAD_CTRL_L2);
@@ -1528,29 +1563,34 @@ bool evdev_joystick_handler::check_button_set(const std::set<u32>& indices, cons
 	return false;
 }
 
-bool evdev_joystick_handler::check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code)
+bool evdev_joystick_handler::check_button_combos(const std::vector<std::set<u32>>& combos, const u32 code)
 {
-	return std::any_of(sets.begin(), sets.end(), [this, code](const std::set<u32>& indices) { return check_button_set(indices, code); });
-};
+	return std::any_of(combos.begin(), combos.end(), [this, code](const std::set<u32>& indices) { return check_button_set(indices, code); });
+}
+
+bool evdev_joystick_handler::check_button_combos(const std::array<std::vector<std::set<u32>>, 4>& combo_array, const u32 code)
+{
+	return std::any_of(combo_array.begin(), combo_array.end(), [this, code](const std::vector<std::set<u32>>& combos) { return check_button_combos(combos, code); });
+}
 
 bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_set(m_dev->trigger_left, keyCode);
+	return check_button_combos(m_dev->trigger_left, keyCode);
 }
 
 bool evdev_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_set(m_dev->trigger_right, keyCode);
+	return check_button_combos(m_dev->trigger_right, keyCode);
 }
 
 bool evdev_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_sets(m_dev->axis_left, keyCode);
+	return check_button_combos(m_dev->axis_left, keyCode);
 }
 
 bool evdev_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_sets(m_dev->axis_right, keyCode);
+	return check_button_combos(m_dev->axis_right, keyCode);
 }
 
 #endif

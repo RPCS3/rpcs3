@@ -93,7 +93,7 @@ public:
 	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
 	static std::string GetKeyName(const QKeyEvent* keyEvent, bool with_modifiers);
 	static std::string GetKeyName(const u32& keyCode);
-	static std::set<u32> GetKeyCodes(const cfg::string& cfg_string);
+	static std::vector<std::set<u32>> GetKeyCombos(const cfg::string& cfg_string);
 	static u32 GetKeyCode(const QString& keyName);
 
 	static int native_scan_code_from_string(const std::string& key);
