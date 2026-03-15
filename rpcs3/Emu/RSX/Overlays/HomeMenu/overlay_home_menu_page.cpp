@@ -48,13 +48,11 @@ namespace rsx
 
 		void home_menu_page::on_activate()
 		{
-			hide_scroll_indicators(false);
 			hide_row_highliter(false);
 		}
 
 		void home_menu_page::on_deactivate()
 		{
-			hide_scroll_indicators(true);
 			hide_row_highliter(true);
 		}
 

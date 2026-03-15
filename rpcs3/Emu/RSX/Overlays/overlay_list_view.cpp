@@ -12,19 +12,24 @@ namespace rsx
 			w = width;
 			h = height;
 
-			m_scroll_indicator_top    = std::make_unique<image_view>(width, 5);
-			m_scroll_indicator_bottom = std::make_unique<image_view>(width, 5);
-			m_accept_btn              = std::make_unique<image_button>(120, 20);
-			m_cancel_btn              = std::make_unique<image_button>(120, 20);
-			m_highlight_box           = std::make_unique<overlay_element>(width, 0);
+			auto scroll_indicator_track = std::make_unique<overlay_element>(5, height);
+			auto scroll_indicator_grip = std::make_unique<rounded_rect>(5, height);
 
-			m_scroll_indicator_top->set_size(width, 10);
-			m_scroll_indicator_bottom->set_size(width, 10);
+			scroll_indicator_grip->set_pos(1, 0);
+			scroll_indicator_grip->set_size(5, 5);
+			scroll_indicator_grip->radius = 2;
+			scroll_indicator_track->set_size(7, height);
+
+			m_scroll_indicator = std::make_unique<box_layout>();
+			m_scroll_indicator_track = m_scroll_indicator->add_element(scroll_indicator_track);
+			m_scroll_indicator_grip = m_scroll_indicator->add_element(scroll_indicator_grip);
+
+			m_accept_btn    = std::make_unique<image_button>(120, 20);
+			m_cancel_btn    = std::make_unique<image_button>(120, 20);
+			m_highlight_box = std::make_unique<overlay_element>(width, 0);
+
 			m_accept_btn->set_size(120, 30);
 			m_cancel_btn->set_size(120, 30);
-
-			m_scroll_indicator_top->set_image_resource(resource_config::standard_image_resource::fade_top);
-			m_scroll_indicator_bottom->set_image_resource(resource_config::standard_image_resource::fade_bottom);
 
 			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
 			{
@@ -37,7 +42,7 @@ namespace rsx
 				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			m_scroll_indicator_bottom->set_pos(0, height - 10);
+			m_scroll_indicator->set_pos(width - 7, 0);
 			m_accept_btn->set_pos(30, height + 20);
 
 			if (can_deny)
@@ -67,8 +72,6 @@ namespace rsx
 
 			m_highlight_box->back_color             = {.5f, .5f, .8f, 0.2f};
 			m_highlight_box->pulse_effect_enabled   = true;
-			m_scroll_indicator_top->fore_color.a    = 0.f;
-			m_scroll_indicator_bottom->fore_color.a = 0.f;
 		}
 
 		const overlay_element* list_view::get_selected_entry() const
@@ -118,23 +121,16 @@ namespace rsx
 				scroll_offset_value = max_y - h - 2;
 			}
 
-			if ((scroll_offset_value + h + 2) >= m_elements_height)
-				m_scroll_indicator_bottom->fore_color.a = 0.f;
-			else
-				m_scroll_indicator_bottom->fore_color.a = 0.5f;
-
-			if (scroll_offset_value == 0)
-				m_scroll_indicator_top->fore_color.a = 0.f;
-			else
-				m_scroll_indicator_top->fore_color.a = 0.5f;
+			if (m_elements_height > h)
+			{
+				update_scroll_indicator();
+			}
 
 			m_highlight_box->set_pos(current_element->x, current_element->y);
 			m_highlight_box->h = current_element->h + pack_padding;
 			m_highlight_box->y -= scroll_offset_value;
 
 			m_highlight_box->refresh();
-			m_scroll_indicator_top->refresh();
-			m_scroll_indicator_bottom->refresh();
 			refresh();
 		}
 
@@ -221,10 +217,10 @@ namespace rsx
 			refresh();
 		}
 
-		void list_view::hide_scroll_indicators(bool hidden)
+		void list_view::hide_scroll_indicator(bool hidden)
 		{
-			m_scroll_indicator_top->set_visible(!hidden);
-			m_scroll_indicator_bottom->set_visible(!hidden);
+			m_scroll_indicator_track->set_visible(!hidden);
+			m_scroll_indicator_grip->set_visible(!hidden);
 
 			refresh();
 		}
@@ -265,8 +261,7 @@ namespace rsx
 		void list_view::translate(s16 _x, s16 _y)
 		{
 			layout_container::translate(_x, _y);
-			m_scroll_indicator_top->translate(_x, _y);
-			m_scroll_indicator_bottom->translate(_x, _y);
+			m_scroll_indicator->translate(_x, _y);
 			m_accept_btn->translate(_x, _y);
 			m_cancel_btn->translate(_x, _y);
 
@@ -280,20 +275,47 @@ namespace rsx
 		{
 			vertical_layout::set_size(w, h);
 
-			m_scroll_indicator_top->w = w;
-			m_scroll_indicator_bottom->w = w;
 			m_highlight_box->w = w;
 
-			m_scroll_indicator_top->refresh();
-			m_scroll_indicator_bottom->refresh();
+			update_scroll_indicator();
+
+			m_scroll_indicator->refresh();
 			m_highlight_box->refresh();
 		}
 
 		void list_view::set_pos(s16 x, s16 y)
 		{
+			const auto prev_x = this->x, prev_y = this->y;
 			vertical_layout::set_pos(x, y);
 
 			update_selection();
+		}
+
+		void list_view::update_scroll_indicator()
+		{
+			// Always reposition
+			m_scroll_indicator->set_pos(x + w - 7, y);
+			m_scroll_indicator->set_size(7, h);
+
+			// Render grip and track
+			m_scroll_indicator_track->back_color = this->fore_color * 0.25f;
+			m_scroll_indicator_track->back_color.a = 1.f;
+			m_scroll_indicator_track->h = m_scroll_indicator->h;
+
+			m_scroll_indicator_grip->back_color = this->fore_color;
+			m_scroll_indicator_grip->back_color.a = 1.f;
+			m_scroll_indicator_grip->h = 0;
+
+			if (m_elements_height < h)
+			{
+				return;
+			}
+
+			const f32 viewable_ratio = static_cast<f32>(m_scroll_indicator->h) / m_elements_height;
+			const f32 scroll_ratio = static_cast<f32>(scroll_offset_value) / m_elements_height;
+
+			m_scroll_indicator_grip->h = static_cast<u16>(viewable_ratio * m_scroll_indicator->h);
+			m_scroll_indicator_grip->y = m_scroll_indicator->y + static_cast<s16>(scroll_ratio * m_scroll_indicator->h);
 		}
 
 		compiled_resource& list_view::get_compiled()
@@ -313,9 +335,13 @@ namespace rsx
 
 			auto& compiled = vertical_layout::get_compiled();
 			compiled.add(m_highlight_box->get_compiled());
-			compiled.add(m_scroll_indicator_top->get_compiled());
-			compiled.add(m_scroll_indicator_bottom->get_compiled());
 			compiled.add(m_cancel_btn->get_compiled());
+
+			if (m_elements_height > h)
+			{
+				// Auto overflow
+				compiled.add(m_scroll_indicator->get_compiled());
+			}
 
 			if (m_cancel_only)
 			{
