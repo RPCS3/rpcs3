@@ -50,11 +50,13 @@ namespace rsx
 
 			void hide_prompt_buttons(bool hidden = true);
 			void hide_scroll_indicators(bool hidden = true);
+			void hide_row_highliter(bool hidden = false);
 			void disable_selection_pulse(bool disabled = true);
 
 			void set_cancel_only(bool cancel_only);
 			void translate(s16 _x, s16 _y) override;
 			void set_size(u16 w, u16 h) override;
+			void set_pos(s16 x, s16 y) override;
 
 			compiled_resource& get_compiled() override;
 		};
