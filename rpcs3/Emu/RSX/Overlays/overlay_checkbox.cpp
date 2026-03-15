@@ -131,12 +131,14 @@ namespace rsx::overlays
 		if (m_is_checked)
 		{
 			m_back_ellipse->back_color = this->fore_color * 0.5f;
+			m_back_ellipse->back_color.a = 1.f;
 			m_front_circle->back_color = this->fore_color;
 			m_front_circle->set_pos(this->x + m_front_circle->w, this->y);
 		}
 		else
 		{
 			m_back_ellipse->back_color = this->back_color * 0.5f;
+			m_back_ellipse->back_color.a = 1.f;
 			m_front_circle->back_color = this->back_color;
 			m_front_circle->set_pos(this->x, this->y);
 		}
