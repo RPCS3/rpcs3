@@ -66,13 +66,29 @@ vec4 ndc_to_window(const in vec4 coord)
 	return fma(coord, viewport.xyxy, viewport.zwzw);
 }
 
+vec4 make_aabb(const in vec4 coords)
+{
+	// AABB requires the intersections to be concave
+	// i.e X1 < X2 and Y1 < Y2
+	vec4 result = coords;
+	if (coords.x > coords.z)
+	{
+		result.xz = coords.zx;
+	}
+	if (coords.y > coords.w)
+	{
+		result.yw = coords.wy;
+	}
+	return result;
+}
+
 void main()
 {
 	config_t config = unpack_vertex_options();
 
 	tc0.xy = in_pos.zw;
 	color = albedo;
-	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds, config.flip_vertically));
+	clip_rect = make_aabb(ndc_to_window(clip_to_ndc(clip_bounds, config.flip_vertically)));
 
 	vec4 pos = vec4(clip_to_ndc(in_pos, config.flip_vertically).xy, 0.5, 1.);
 
