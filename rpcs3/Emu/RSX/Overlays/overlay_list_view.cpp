@@ -216,8 +216,13 @@ namespace rsx
 		{
 			m_scroll_indicator_top->set_visible(!hidden);
 			m_scroll_indicator_bottom->set_visible(!hidden);
-			m_highlight_box->set_visible(!hidden);
 
+			refresh();
+		}
+
+		void list_view::hide_row_highliter(bool hidden)
+		{
+			m_highlight_box->set_visible(!hidden);
 			refresh();
 		}
 
@@ -273,6 +278,13 @@ namespace rsx
 			m_scroll_indicator_top->refresh();
 			m_scroll_indicator_bottom->refresh();
 			m_highlight_box->refresh();
+		}
+
+		void list_view::set_pos(s16 x, s16 y)
+		{
+			vertical_layout::set_pos(x, y);
+
+			update_selection();
 		}
 
 		compiled_resource& list_view::get_compiled()

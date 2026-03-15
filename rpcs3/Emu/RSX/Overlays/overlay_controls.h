@@ -191,6 +191,7 @@ namespace rsx
 			u16 margin_left = 0;
 			u16 margin_top = 0;
 
+			// NOTE: These two only apply for text. Containers maintain their own scroll values.
 			f32 horizontal_scroll_offset = 0.0f;
 			f32 vertical_scroll_offset = 0.0f;
 
