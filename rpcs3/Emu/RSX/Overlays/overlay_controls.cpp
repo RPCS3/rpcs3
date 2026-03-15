@@ -684,6 +684,20 @@ namespace rsx
 			width = static_cast<u16>(ceilf(max_w));
 		}
 
+		u16 overlay_element::compute_vertically_centered(u16 element_height)
+		{
+			const u16 half_height = h / 2;
+			const u16 element_half_height = element_height / 2;
+			return std::max(half_height, element_half_height) - element_half_height;
+		}
+
+		u16 overlay_element::compute_horizontally_centered(u16 element_width)
+		{
+			const u16 half_width = h / 2;
+			const u16 element_half_width = element_width / 2;
+			return std::max(half_width, element_half_width) - element_half_width;
+		}
+
 		layout_container::layout_container()
 		{
 			// Transparent by default

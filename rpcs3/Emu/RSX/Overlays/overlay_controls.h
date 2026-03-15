@@ -224,6 +224,16 @@ namespace rsx
 			virtual void set_visible(bool visible) { this->visible = visible; m_is_compiled = false; }
 			virtual bool is_visible() const { return visible; }
 
+			// Calculate the vertical offset for an element of height Y if it were to be placed as a child of this element
+			u16 compute_vertically_centered(u16 element_height);
+
+			// Calculate the horizontal offset for an element of width X if it were to be placed as a child of this element
+			u16 compute_horizontally_centered(u16 element_width);
+
+			// Wrappers for the placement functions
+			u16 compute_vertically_centered(const overlay_element* other) { return compute_vertically_centered(other->h); }
+			u16 compute_horizontally_centered(const overlay_element* other) { return compute_horizontally_centered(other->w); }
+
 		protected:
 			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
 		};
