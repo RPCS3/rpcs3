@@ -9,6 +9,20 @@ namespace rsx
 {
 	namespace overlays
 	{
+		struct home_menu_popup
+		{
+			std::function<compiled_resource&()> get_compiled;
+			std::function<page_navigation(pad_button)> input_hook;
+
+			void dismiss()
+			{
+				get_compiled = {};
+				input_hook = {};
+			}
+
+			operator bool() const { return !!get_compiled; }
+		};
+
 		struct home_menu_page : public list_view
 		{
 		public:
@@ -34,6 +48,8 @@ namespace rsx
 
 			std::shared_ptr<home_menu_message_box> m_message_box;
 			std::shared_ptr<bool> m_config_changed;
+
+			home_menu_popup m_popup;
 
 		protected:
 			virtual void add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page);
