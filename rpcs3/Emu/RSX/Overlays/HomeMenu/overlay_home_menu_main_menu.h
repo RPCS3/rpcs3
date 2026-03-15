@@ -21,8 +21,9 @@ namespace rsx
 		private:
 			void apply_layout(bool center_vertically = false) override;
 
-			void add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page) override;
+			using home_menu_page::add_item;
 			void add_item(home_menu::fa_icon icon, std::string_view title, std::function<page_navigation(pad_button)> callback) override;
+			void add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page) override;
 
 			void add_sidebar_entry(home_menu::fa_icon icon, std::string_view title);
 
