@@ -386,18 +386,18 @@ struct Button
 	u16 m_value    = 0;
 	bool m_pressed = false;
 
-	std::set<u32> m_key_codes{};
+	std::vector<std::set<u32>> m_key_combos;
 
-	u16 m_actual_value = 0;              // only used in keyboard_pad_handler
-	bool m_analog      = false;          // only used in keyboard_pad_handler
-	bool m_trigger     = false;          // only used in keyboard_pad_handler
-	std::map<u32, u16> m_pressed_keys{}; // only used in keyboard_pad_handler
+	u16 m_actual_value = 0;            // only used in keyboard_pad_handler
+	bool m_analog      = false;        // only used in keyboard_pad_handler
+	bool m_trigger     = false;        // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys; // only used in keyboard_pad_handler
 
 	Button(){}
-	Button(u32 offset, std::set<u32> key_codes, u32 outKeyCode)
+	Button(u32 offset, std::vector<std::set<u32>> key_combos, u32 outKeyCode)
 		: m_offset(offset)
 		, m_outKeyCode(outKeyCode)
-		, m_key_codes(std::move(key_codes))
+		, m_key_combos(std::move(key_combos))
 	{
 		if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
@@ -426,17 +426,19 @@ struct AnalogStick
 	u32 m_offset = 0;
 	u16 m_value = 128;
 
-	std::set<u32> m_key_codes_min{};
-	std::set<u32> m_key_codes_max{};
+	std::vector<std::set<u32>> m_key_combos_min;
+	std::vector<std::set<u32>> m_key_combos_max;
 
-	std::map<u32, u16> m_pressed_keys_min{}; // only used in keyboard_pad_handler
-	std::map<u32, u16> m_pressed_keys_max{}; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys_min; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys_max; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_combos_min; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_combos_max; // only used in keyboard_pad_handler
 
 	AnalogStick() {}
-	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
+	AnalogStick(u32 offset, std::vector<std::set<u32>> key_combos_min, std::vector<std::set<u32>> key_combos_max)
 		: m_offset(offset)
-		, m_key_codes_min(std::move(key_codes_min))
-		, m_key_codes_max(std::move(key_codes_max))
+		, m_key_combos_min(std::move(key_combos_min))
+		, m_key_combos_max(std::move(key_combos_max))
 	{}
 };
 

@@ -203,7 +203,7 @@ bool Pad::get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id)
 
 	const Button& analog_limiter_button = m_buttons[m_analog_limiter_button_index];
 
-	if (analog_limiter_button.m_key_codes.empty())
+	if (analog_limiter_button.m_key_combos.empty())
 	{
 		// Active by default if no button was assigned
 		return true;

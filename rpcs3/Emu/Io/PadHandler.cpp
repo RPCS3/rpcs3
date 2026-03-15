@@ -11,25 +11,35 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
-std::set<u32> PadHandlerBase::FindKeyCodes(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback)
+std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback)
 {
-	std::set<u32> key_codes;
+	std::vector<std::set<u32>> key_codes;
 
 	const std::string& def = cfg_string.def;
-	const std::vector<std::string> names = cfg_pad::get_buttons(cfg_string.to_string());
+	const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(cfg_string.to_string());
 	u32 def_code = umax;
 
-	for (const std::string& nam : names)
+	for (const std::vector<std::string>& names : combos)
 	{
-		for (const auto& [code, name] : map)
-		{
-			if (name == nam)
-			{
-				key_codes.insert(code);
-			}
+		std::set<u32> keys;
 
-			if (fallback && name == def)
-				def_code = code;
+		for (const std::string& nam : names)
+		{
+			for (const auto& [code, name] : map)
+			{
+				if (name == nam)
+				{
+					keys.insert(code);
+				}
+
+				if (fallback && name == def)
+					def_code = code;
+			}
+		}
+
+		if (!keys.empty())
+		{
+			key_codes.push_back(std::move(keys));
 		}
 	}
 
@@ -40,19 +50,19 @@ std::set<u32> PadHandlerBase::FindKeyCodes(const std::unordered_map<u32, std::st
 
 	if (fallback)
 	{
-		if (!names.empty())
+		if (!combos.empty())
 			input_log.error("FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", cfg_string.to_string(), def_code, def);
 
 		if (def_code != umax)
 		{
-			return { def_code };
+			return {{ def_code }};
 		}
 	}
 
 	return {};
 }
 
-std::set<u32> PadHandlerBase::FindKeyCodes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names)
+std::set<u32> PadHandlerBase::find_key_codes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names)
 {
 	std::set<u32> key_codes;
 
@@ -512,7 +522,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		return false;
 	}
 
-	std::array<std::set<u32>, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
+	std::array<std::vector<std::set<u32>>, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
 
 	u32 pclass_profile = 0x0;
 	u32 capabilities = CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE;
@@ -602,58 +612,58 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 	return true;
 }
 
-std::array<std::set<u32>, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
+std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
 {
-	std::array<std::set<u32>, button::button_count> mapping{};
+	std::array<std::vector<std::set<u32>>, button::button_count> mapping{};
 	if (!device || !cfg)
 		return mapping;
 
-	mapping[button::up]       = FindKeyCodes(button_list, cfg->up);
-	mapping[button::down]     = FindKeyCodes(button_list, cfg->down);
-	mapping[button::left]     = FindKeyCodes(button_list, cfg->left);
-	mapping[button::right]    = FindKeyCodes(button_list, cfg->right);
-	mapping[button::cross]    = FindKeyCodes(button_list, cfg->cross);
-	mapping[button::square]   = FindKeyCodes(button_list, cfg->square);
-	mapping[button::circle]   = FindKeyCodes(button_list, cfg->circle);
-	mapping[button::triangle] = FindKeyCodes(button_list, cfg->triangle);
-	mapping[button::start]    = FindKeyCodes(button_list, cfg->start);
-	mapping[button::select]   = FindKeyCodes(button_list, cfg->select);
-	mapping[button::l1]       = FindKeyCodes(button_list, cfg->l1);
-	mapping[button::l2]       = FindKeyCodes(button_list, cfg->l2);
-	mapping[button::l3]       = FindKeyCodes(button_list, cfg->l3);
-	mapping[button::r1]       = FindKeyCodes(button_list, cfg->r1);
-	mapping[button::r2]       = FindKeyCodes(button_list, cfg->r2);
-	mapping[button::r3]       = FindKeyCodes(button_list, cfg->r3);
-	mapping[button::ls_left]  = FindKeyCodes(button_list, cfg->ls_left);
-	mapping[button::ls_right] = FindKeyCodes(button_list, cfg->ls_right);
-	mapping[button::ls_down]  = FindKeyCodes(button_list, cfg->ls_down);
-	mapping[button::ls_up]    = FindKeyCodes(button_list, cfg->ls_up);
-	mapping[button::rs_left]  = FindKeyCodes(button_list, cfg->rs_left);
-	mapping[button::rs_right] = FindKeyCodes(button_list, cfg->rs_right);
-	mapping[button::rs_down]  = FindKeyCodes(button_list, cfg->rs_down);
-	mapping[button::rs_up]    = FindKeyCodes(button_list, cfg->rs_up);
-	mapping[button::ps]       = FindKeyCodes(button_list, cfg->ps);
+	mapping[button::up]       = find_key_combos(button_list, cfg->up);
+	mapping[button::down]     = find_key_combos(button_list, cfg->down);
+	mapping[button::left]     = find_key_combos(button_list, cfg->left);
+	mapping[button::right]    = find_key_combos(button_list, cfg->right);
+	mapping[button::cross]    = find_key_combos(button_list, cfg->cross);
+	mapping[button::square]   = find_key_combos(button_list, cfg->square);
+	mapping[button::circle]   = find_key_combos(button_list, cfg->circle);
+	mapping[button::triangle] = find_key_combos(button_list, cfg->triangle);
+	mapping[button::start]    = find_key_combos(button_list, cfg->start);
+	mapping[button::select]   = find_key_combos(button_list, cfg->select);
+	mapping[button::l1]       = find_key_combos(button_list, cfg->l1);
+	mapping[button::l2]       = find_key_combos(button_list, cfg->l2);
+	mapping[button::l3]       = find_key_combos(button_list, cfg->l3);
+	mapping[button::r1]       = find_key_combos(button_list, cfg->r1);
+	mapping[button::r2]       = find_key_combos(button_list, cfg->r2);
+	mapping[button::r3]       = find_key_combos(button_list, cfg->r3);
+	mapping[button::ls_left]  = find_key_combos(button_list, cfg->ls_left);
+	mapping[button::ls_right] = find_key_combos(button_list, cfg->ls_right);
+	mapping[button::ls_down]  = find_key_combos(button_list, cfg->ls_down);
+	mapping[button::ls_up]    = find_key_combos(button_list, cfg->ls_up);
+	mapping[button::rs_left]  = find_key_combos(button_list, cfg->rs_left);
+	mapping[button::rs_right] = find_key_combos(button_list, cfg->rs_right);
+	mapping[button::rs_down]  = find_key_combos(button_list, cfg->rs_down);
+	mapping[button::rs_up]    = find_key_combos(button_list, cfg->rs_up);
+	mapping[button::ps]       = find_key_combos(button_list, cfg->ps);
 
-	mapping[button::skateboard_ir_nose]    = FindKeyCodes(button_list, cfg->ir_nose);
-	mapping[button::skateboard_ir_tail]    = FindKeyCodes(button_list, cfg->ir_tail);
-	mapping[button::skateboard_ir_left]    = FindKeyCodes(button_list, cfg->ir_left);
-	mapping[button::skateboard_ir_right]   = FindKeyCodes(button_list, cfg->ir_right);
-	mapping[button::skateboard_tilt_left]  = FindKeyCodes(button_list, cfg->tilt_left);
-	mapping[button::skateboard_tilt_right] = FindKeyCodes(button_list, cfg->tilt_right);
+	mapping[button::skateboard_ir_nose]    = find_key_combos(button_list, cfg->ir_nose);
+	mapping[button::skateboard_ir_tail]    = find_key_combos(button_list, cfg->ir_tail);
+	mapping[button::skateboard_ir_left]    = find_key_combos(button_list, cfg->ir_left);
+	mapping[button::skateboard_ir_right]   = find_key_combos(button_list, cfg->ir_right);
+	mapping[button::skateboard_tilt_left]  = find_key_combos(button_list, cfg->tilt_left);
+	mapping[button::skateboard_tilt_right] = find_key_combos(button_list, cfg->tilt_right);
 
 	if (b_has_pressure_intensity_button)
 	{
-		mapping[button::pressure_intensity_button] = FindKeyCodes(button_list, cfg->pressure_intensity_button);
+		mapping[button::pressure_intensity_button] = find_key_combos(button_list, cfg->pressure_intensity_button);
 	}
 
 	if (b_has_analog_limiter_button)
 	{
-		mapping[button::analog_limiter_button] = FindKeyCodes(button_list, cfg->analog_limiter_button);
+		mapping[button::analog_limiter_button] = find_key_combos(button_list, cfg->analog_limiter_button);
 	}
 
 	if (b_has_orientation)
 	{
-		mapping[button::orientation_reset_button] = FindKeyCodes(button_list, cfg->orientation_reset_button);
+		mapping[button::orientation_reset_button] = find_key_combos(button_list, cfg->orientation_reset_button);
 	}
 
 	return mapping;
@@ -685,30 +695,46 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		bool pressed{};
 		u16 value{};
 
-		for (u32 code : button.m_key_codes)
+		// The DS3 Button is considered pressed if any configured button combination is pressed
+		for (const std::set<u32>& combo : button.m_key_combos)
 		{
-			bool press{};
-			u16 val = button_values[code];
+			bool combo_pressed = !combo.empty();
+			u16 combo_val = 0;
 
-			TranslateButtonPress(device, code, press, val, analog_limiter_enabled);
-
-			if (press)
+			// The button combination is only considered pressed if all the buttons are pressed
+			for (u32 code : combo)
 			{
+				bool btn_pressed{};
+				u16 btn_val = button_values[code];
+				TranslateButtonPress(device, code, btn_pressed, btn_val, analog_limiter_enabled);
+
+				if (btn_pressed == false)
+				{
+					combo_pressed = false;
+					break;
+				}
+
 				// Modify pressure if necessary if the button was pressed
 				if (adjust_pressure)
 				{
-					val = pad->m_pressure_intensity;
+					btn_val = pad->m_pressure_intensity;
 				}
 				else if (pressure_intensity_deadzone > 0)
 				{
 					// Ignore triggers, since they have their own deadzones
 					if (!get_is_left_trigger(device, code) && !get_is_right_trigger(device, code))
 					{
-						val = NormalizeDirectedInput(val, pressure_intensity_deadzone, 255);
+						btn_val = NormalizeDirectedInput(btn_val, pressure_intensity_deadzone, 255);
 					}
 				}
 
-				value = std::max(value, val);
+				// Take minimum combo value. Otherwise we will always end up with the max value in case an actual button is part of the combo.
+				combo_val = (combo_val == 0) ? btn_val : std::min(combo_val, btn_val);
+			}
+
+			if (combo_pressed)
+			{
+				value = std::max(value, combo_val);
 				pressed = value > 0;
 			}
 		}
@@ -727,31 +753,44 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		u16 val_min{};
 		u16 val_max{};
 
-		// m_key_codes_min are the mapped keys for left or down
-		for (u32 key_min : pad->m_sticks[i].m_key_codes_min)
+		// The DS3 Stick direction is considered pressed if any configured button combination is pressed
+		const auto get_stick_val = [this, &device, &button_values, &pressed, analog_limiter_enabled](const std::vector<std::set<u32>>& combos, u16& value)
 		{
-			u16 val = button_values[key_min];
-
-			TranslateButtonPress(device, key_min, pressed, val, analog_limiter_enabled, true);
-
-			if (pressed)
+			for (const std::set<u32>& combo : combos)
 			{
-				val_min = std::max(val_min, val);
+				bool combo_pressed = !combo.empty();
+				u16 combo_val = 0;
+
+				for (u32 key_min : combo)
+				{
+					bool btn_pressed{};
+					u16 btn_val = button_values[key_min];
+
+					TranslateButtonPress(device, key_min, btn_pressed, btn_val, analog_limiter_enabled, true);
+
+					if (btn_pressed == false)
+					{
+						combo_pressed = false;
+						break;
+					}
+
+					// Take minimum combo value. Otherwise we will always end up with the max value in case an actual button is part of the combo.
+					combo_val = (combo_val == 0) ? btn_val : std::min(combo_val, btn_val);
+				}
+
+				if (combo_pressed)
+				{
+					value = std::max(value, combo_val);
+					pressed = value > 0;
+				}
 			}
-		}
+		};
 
-		// m_key_codes_max are the mapped keys for right or up
-		for (u32 key_max : pad->m_sticks[i].m_key_codes_max)
-		{
-			u16 val = button_values[key_max];
+		// m_key_combos_min are the mapped keys for left or down
+		get_stick_val(pad->m_sticks[i].m_key_combos_min, val_min);
 
-			TranslateButtonPress(device, key_max, pressed, val, analog_limiter_enabled, true);
-
-			if (pressed)
-			{
-				val_max = std::max(val_max, val);
-			}
-		}
+		// m_key_combos_max are the mapped keys for right or up
+		get_stick_val(pad->m_sticks[i].m_key_combos_max, val_max);
 
 		// cancel out opposing values and get the resulting difference
 		stick_val[i] = val_max - val_min;

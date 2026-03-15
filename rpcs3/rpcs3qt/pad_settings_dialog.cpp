@@ -50,17 +50,31 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 }
 
-void pad_settings_dialog::pad_button::insert_key(const std::string& key, bool append_key)
+void pad_settings_dialog::pad_button::insert_key(const std::string& key, binding_mode mode)
 {
-	std::vector<std::string> buttons;
-	if (append_key)
+	std::vector<std::vector<std::string>> combos;
+	if (mode != binding_mode::single)
 	{
-		buttons = cfg_pad::get_buttons(keys);
+		combos = cfg_pad::get_buttons(m_keys);
 	}
-	buttons.push_back(key);
 
-	keys = cfg_pad::get_buttons(std::move(buttons));
-	text = QString::fromStdString(keys).replace(",", ", ");
+	if (combos.empty() || mode != binding_mode::combo)
+	{
+		combos.push_back({key});
+	}
+	else if (mode == binding_mode::combo)
+	{
+		combos.back().push_back(key);
+	}
+
+	update(cfg_pad::get_buttons(combos));
+}
+
+void pad_settings_dialog::pad_button::update(const std::string& keys)
+{
+	m_keys = keys;
+	QString new_text = QString::fromStdString(keys);
+	m_text = new_text.replace(",", ", ").replace("&", " + ");
 }
 
 pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent, const GameInfo* game)
@@ -546,7 +560,7 @@ void pad_settings_dialog::InitButtons()
 
 			if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end && m_button_id == values.button_id)
 			{
-				m_cfg_entries[m_button_id].insert_key(values.button_name, m_enable_multi_binding);
+				m_cfg_entries[m_button_id].insert_key(values.button_name, m_binding_mode);
 				ReactivateButtons();
 			}
 		}
@@ -580,16 +594,16 @@ void pad_settings_dialog::InitButtons()
 
 			const std::vector<std::string> buttons =
 			{
-				m_cfg_entries[button_ids::id_pad_l2].keys,
-				m_cfg_entries[button_ids::id_pad_r2].keys,
-				m_cfg_entries[button_ids::id_pad_lstick_left].keys,
-				m_cfg_entries[button_ids::id_pad_lstick_right].keys,
-				m_cfg_entries[button_ids::id_pad_lstick_down].keys,
-				m_cfg_entries[button_ids::id_pad_lstick_up].keys,
-				m_cfg_entries[button_ids::id_pad_rstick_left].keys,
-				m_cfg_entries[button_ids::id_pad_rstick_right].keys,
-				m_cfg_entries[button_ids::id_pad_rstick_down].keys,
-				m_cfg_entries[button_ids::id_pad_rstick_up].keys
+				m_cfg_entries[button_ids::id_pad_l2].keys(),
+				m_cfg_entries[button_ids::id_pad_r2].keys(),
+				m_cfg_entries[button_ids::id_pad_lstick_left].keys(),
+				m_cfg_entries[button_ids::id_pad_lstick_right].keys(),
+				m_cfg_entries[button_ids::id_pad_lstick_down].keys(),
+				m_cfg_entries[button_ids::id_pad_lstick_up].keys(),
+				m_cfg_entries[button_ids::id_pad_rstick_left].keys(),
+				m_cfg_entries[button_ids::id_pad_rstick_right].keys(),
+				m_cfg_entries[button_ids::id_pad_rstick_down].keys(),
+				m_cfg_entries[button_ids::id_pad_rstick_up].keys()
 			};
 
 			// Check if this is the first call during a remap
@@ -723,10 +737,10 @@ void pad_settings_dialog::ReloadButtons()
 {
 	m_cfg_entries.clear();
 
-	auto updateButton = [this](int id, QPushButton* button, cfg::string* cfg_text)
+	const auto updateButton = [this](int id, QPushButton* button, cfg::string* cfg_text)
 	{
 		const QString text = QString::fromStdString(*cfg_text);
-		m_cfg_entries.insert(std::make_pair(id, pad_button{cfg_text, *cfg_text, text}));
+		m_cfg_entries.insert(std::make_pair(id, pad_button(cfg_text)));
 		button->setText(text);
 	};
 
@@ -775,7 +789,7 @@ void pad_settings_dialog::ReactivateButtons()
 {
 	m_remap_timer.stop();
 	m_seconds = MAX_SECONDS;
-	m_enable_multi_binding = false;
+	m_binding_mode = binding_mode::single;
 
 	if (m_button_id == button_ids::id_pad_begin)
 	{
@@ -929,7 +943,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent, false), m_enable_multi_binding);
+		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent, false), m_binding_mode);
 	}
 
 	ReactivateButtons();
@@ -956,7 +970,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event), m_enable_multi_binding);
+		m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event), m_binding_mode);
 	}
 
 	ReactivateButtons();
@@ -1018,7 +1032,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent *event)
 		}
 	}
 
-	m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_enable_multi_binding);
+	m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
 	ReactivateButtons();
 }
 
@@ -1069,7 +1083,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 
 		if (key != 0)
 		{
-			m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_enable_multi_binding);
+			m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
 			ReactivateButtons();
 		}
 	}
@@ -1090,8 +1104,7 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 				if (const int button_id = m_pad_buttons->id(button); m_cfg_entries.contains(button_id))
 				{
 					pad_button& button = m_cfg_entries[button_id];
-					button.keys.clear();
-					button.text.clear();
+					button.update("");
 					UpdateLabels();
 
 					return true;
@@ -1279,14 +1292,13 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 	{
 		if (is_reset)
 		{
-			button.keys = *button.cfg_text;
-			button.text = QString::fromStdString(button.keys);
+			button.update(*button.cfg_text());
 		}
 
 		// The button has to contain at least one character, because it would be square'ish otherwise
 		if (auto btn = m_pad_buttons->button(id))
 		{
-			btn->setText(button.text.isEmpty() ? QStringLiteral("-") : button.text);
+			btn->setText(button.text().isEmpty() ? QStringLiteral("-") : button.text());
 		}
 	}
 }
@@ -1358,7 +1370,11 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	// On shift+click or shift+space enable multi key binding
 	if (QApplication::keyboardModifiers() & Qt::KeyboardModifier::ShiftModifier)
 	{
-		m_enable_multi_binding = true;
+		m_binding_mode = binding_mode::multi;
+	}
+	else if (QApplication::keyboardModifiers() & Qt::KeyboardModifier::ControlModifier)
+	{
+		m_binding_mode = binding_mode::combo;
 	}
 
 	// On alt+click or alt+space allow to handle triggers as the entire stick axis
@@ -2024,12 +2040,15 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 				continue;
 			}
 
-			for (const std::string& key : cfg_pad::get_buttons(button.keys))
+			for (const std::vector<std::string>& combo : cfg_pad::get_buttons(button.keys()))
 			{
-				if (const auto& [it, ok] = unique_keys.insert(key); !ok)
+				for (const std::string& key : combo)
 				{
-					m_duplicate_buttons[m_last_player_id] = key;
-					break;
+					if (const auto& [it, ok] = unique_keys.insert(key); !ok)
+					{
+						m_duplicate_buttons[m_last_player_id] = key;
+						break;
+					}
 				}
 			}
 		}
@@ -2038,7 +2057,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Apply buttons
 	for (const auto& entry : m_cfg_entries)
 	{
-		entry.second.cfg_text->from_string(entry.second.keys);
+		entry.second.cfg_text()->from_string(entry.second.keys());
 	}
 
 	// Apply rest of config

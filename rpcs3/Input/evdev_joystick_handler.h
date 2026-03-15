@@ -162,7 +162,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TOOL_AIRBRUSH   , "Airbrush"    },
 		{ BTN_TOOL_FINGER     , "Finger"      },
 		{ BTN_TOOL_MOUSE      , "Mouse"       },
-		{ BTN_TOOL_LENS       , "Lense"       },
+		{ BTN_TOOL_LENS       , "Lens"        },
 		{ BTN_TOOL_QUINTTAP   , "Quinttap"    },
 		{ 0x149               , "0x149"       },
 		{ BTN_TOUCH           , "Touch"       },
@@ -172,8 +172,8 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TOOL_TRIPLETAP  , "Tripletap"   },
 		{ BTN_TOOL_QUADTAP    , "Quadtap"     },
 		//{ BTN_WHEEL           , "Wheel"       }, same as BTN_GEAR_DOWN
-		{ BTN_GEAR_DOWN       , "Gear Up"     },
-		{ BTN_GEAR_UP         , "Gear Down"   },
+		{ BTN_GEAR_DOWN       , "Gear Down"   },
+		{ BTN_GEAR_UP         , "Gear Up"     },
 		{ BTN_DPAD_UP         , "D-Pad Up"    },
 		{ BTN_DPAD_DOWN       , "D-Pad Down"  },
 		{ BTN_DPAD_LEFT       , "D-Pad Left"  },
@@ -364,10 +364,10 @@ class evdev_joystick_handler final : public PadHandlerBase
 		libevdev* device{ nullptr };
 		std::string path;
 		std::vector<EvdevButton> all_buttons;
-		std::set<u32> trigger_left{};
-		std::set<u32> trigger_right{};
-		std::array<std::set<u32>, 4> axis_left{};
-		std::array<std::set<u32>, 4> axis_right{};
+		std::vector<std::set<u32>> trigger_left{};
+		std::vector<std::set<u32>> trigger_right{};
+		std::array<std::vector<std::set<u32>>, 4> axis_left{};
+		std::array<std::vector<std::set<u32>>, 4> axis_right{};
 		std::array<evdev_sensor, 4> axis_motion{};
 		std::map<u32, std::shared_ptr<input_event_wrapper>> events_by_code;
 		int cur_dir = 0;
@@ -409,7 +409,8 @@ private:
 	std::shared_ptr<EvdevDevice> m_dev;
 
 	bool check_button_set(const std::set<u32>& indices, const u32 code);
-	bool check_button_sets(const std::array<std::set<u32>, 4>& sets, const u32 code);
+	bool check_button_combos(const std::vector<std::set<u32>>& combos, const u32 code);
+	bool check_button_combos(const std::array<std::vector<std::set<u32>>, 4>& combo_array, const u32 code);
 
 	void apply_input_events(const std::shared_ptr<Pad>& pad);
 
