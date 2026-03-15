@@ -272,9 +272,9 @@ PadHandlerBase::connection skateboard_pad_handler::update_connection(const std::
 	return connection::connected;
 }
 
-std::unordered_map<u64, u16> skateboard_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> skateboard_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> key_buf;
+	std::unordered_map<u32, u16> key_buf;
 	skateboard_device* dev = static_cast<skateboard_device*>(device.get());
 	if (!dev)
 		return key_buf;
@@ -328,7 +328,7 @@ void skateboard_pad_handler::get_extended_info(const pad_ensemble& binding)
 	set_raw_orientation(*pad);
 }
 
-pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& /*data*/)
+pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& /*data*/)
 {
 	// There is no proper user interface for skateboard values yet
 	return {};
