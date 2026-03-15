@@ -16,6 +16,37 @@
 #define compare_exchange_strong compare_exchange
 #define compare_exchange_weak compare_exchange
 
+// VMA 3.x added an internal transactional increment helper that assumes std::atomic.
+// Keep using RPCS3's atomic_t to match the existing allocator integration.
+#define _VMA_ATOMIC_TRANSACTIONAL_INCREMENT
+template <typename T>
+struct AtomicTransactionalIncrement
+{
+	using AtomicT = atomic_t<T>;
+
+	~AtomicTransactionalIncrement()
+	{
+		if (m_atomic)
+		{
+			--(*m_atomic);
+		}
+	}
+
+	void Commit()
+	{
+		m_atomic = nullptr;
+	}
+
+	T Increment(AtomicT* atomic)
+	{
+		m_atomic = atomic;
+		return m_atomic->fetch_add(1);
+	}
+
+private:
+	AtomicT* m_atomic = nullptr;
+};
+
 // Replace VMA mutex with shared_mutex
 class VmaRWMutex
 {
