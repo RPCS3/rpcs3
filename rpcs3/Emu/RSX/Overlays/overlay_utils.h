@@ -95,6 +95,52 @@ struct vertex
 		values[2] -= other.values[2];
 		values[3] -= other.values[3];
 	}
+
+	void operator /= (const vertex& other)
+	{
+		values[0] /= other.values[0];
+		values[1] /= other.values[1];
+		values[2] /= other.values[2];
+		values[3] /= other.values[3];
+	}
+
+	void operator /= (float rhs)
+	{
+		values[0] /= rhs;
+		values[1] /= rhs;
+		values[2] /= rhs;
+		values[3] /= rhs;
+	}
+
+	void operator *= (const vertex& other)
+	{
+		values[0] *= other.values[0];
+		values[1] *= other.values[1];
+		values[2] *= other.values[2];
+		values[3] *= other.values[3];
+	}
+
+	void operator *= (float rhs)
+	{
+		values[0] *= rhs;
+		values[1] *= rhs;
+		values[2] *= rhs;
+		values[3] *= rhs;
+	}
+
+	vertex operator + (const vertex& other) const
+	{
+		vertex result = *this;
+		result += other;
+		return result;
+	}
+
+	vertex operator - (const vertex& other) const
+	{
+		vertex result = *this;
+		result -= other;
+		return result;
+	}
 };
 
 
