@@ -82,6 +82,8 @@ namespace rsx::overlays
 
 	void tabbed_container::reflow_layout()
 	{
+		std::lock_guard lock(m_mutex);
+
 		if (m_headers_width > w)
 		{
 			// Invalid config
@@ -140,6 +142,8 @@ namespace rsx::overlays
 
 	compiled_resource& tabbed_container::get_compiled()
 	{
+		std::lock_guard lock(m_mutex);
+
 		// NOTE: Caching is difficult as the subviews are themselves dynamic.
 		// Doable but not worth the effort
 		compiled_resources.clear();
