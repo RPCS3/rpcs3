@@ -30,6 +30,9 @@ namespace cfg
 	// Internal hack
 	std::vector<std::string> try_to_enum_list(decltype(&fmt_class_string<int>::format) func);
 
+	// Internal hack
+	size_t try_to_enum_size(decltype(&fmt_class_string<int>::format) func);
+
 	// Config tree entry type.
 	enum class type : unsigned
 	{
@@ -311,6 +314,11 @@ namespace cfg
 		std::vector<std::string> to_list() const override
 		{
 			return try_to_enum_list(&fmt_class_string<T>::format);
+		}
+
+		size_t size() const
+		{
+			return try_to_enum_size(&fmt_class_string<T>::format);
 		}
 	};
 
