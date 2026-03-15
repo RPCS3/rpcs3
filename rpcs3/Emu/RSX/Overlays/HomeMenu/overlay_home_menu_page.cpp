@@ -322,7 +322,7 @@ namespace rsx
 		{
 			list_view::translate(_x, _y);
 
-			m_reset_btn.set_pos(x + w - 3 * (30 + 120), y + h + 20);
+			m_reset_btn.set_pos(x + w - 3 * (50 + 120), y + h + 20);
 			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
 			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
 		}
@@ -336,7 +336,7 @@ namespace rsx
 				entry->set_size(_w, entry->h);
 			}
 
-			m_reset_btn.set_pos(x + w - 3 * (30 + 120), y + h + 20);
+			m_reset_btn.set_pos(x + w - 3 * (50 + 120), y + h + 20);
 			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
 			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
 
