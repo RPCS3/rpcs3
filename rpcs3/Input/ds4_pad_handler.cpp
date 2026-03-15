@@ -250,9 +250,9 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 	}
 }
 
-std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> ds4_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> keyBuffer;
+	std::unordered_map<u32, u16> keyBuffer;
 	DS4Device* dev = static_cast<DS4Device*>(device.get());
 	if (!dev)
 		return keyBuffer;
@@ -405,7 +405,7 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	return keyBuffer;
 }
 
-pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& data)
 {
 	return {
 		::at32(data, L2),
@@ -774,17 +774,17 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 	return DataStatus::NewData;
 }
 
-bool ds4_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ds4_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == DS4KeyCodes::L2;
 }
 
-bool ds4_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ds4_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == DS4KeyCodes::R2;
 }
 
-bool ds4_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ds4_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -798,7 +798,7 @@ bool ds4_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*devi
 	}
 }
 
-bool ds4_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ds4_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -812,7 +812,7 @@ bool ds4_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*dev
 	}
 }
 
-bool ds4_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ds4_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{

@@ -881,17 +881,17 @@ void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 	}
 }
 
-bool sdl_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == SDLKeyCodes::LT;
 }
 
-bool sdl_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == SDLKeyCodes::RT;
 }
 
-bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -905,7 +905,7 @@ bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*devi
 	}
 }
 
-bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -919,7 +919,7 @@ bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*dev
 	}
 }
 
-bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -933,9 +933,9 @@ bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& 
 	}
 }
 
-std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> sdl_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> values;
+	std::unordered_map<u32, u16> values;
 	SDLDevice* dev = static_cast<SDLDevice*>(device.get());
 	if (!dev || !dev->sdl.gamepad)
 		return values;
@@ -1086,7 +1086,7 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 	return values;
 }
 
-pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& data)
 {
 	return {
 		::at32(data, LT),
