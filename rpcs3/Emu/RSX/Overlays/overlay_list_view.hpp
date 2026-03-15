@@ -42,6 +42,7 @@ namespace rsx
 			}
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
+			void clear_items() override;
 
 			u16 get_elements_count() const;
 			s32 get_selected_index() const;

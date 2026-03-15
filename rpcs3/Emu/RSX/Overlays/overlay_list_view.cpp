@@ -189,6 +189,15 @@ namespace rsx
 			update_selection();
 		}
 
+		void list_view::clear_items()
+		{
+			layout_container::clear_items();
+
+			m_elements_height = 0;
+			m_selected_entry = -1;
+			m_elements_count = 0;
+		}
+
 		u16 list_view::get_elements_count() const
 		{
 			return m_elements_count;
