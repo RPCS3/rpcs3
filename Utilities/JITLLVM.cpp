@@ -885,7 +885,7 @@ const char * fallback_cpu_detection()
 			// Models 0-Fh are zen3 as are 20h-60h. The rest we can assume are zen4
 			return ((model >= 0x20 && model <= 0x60) || model < 0x10) ? "znver3" : "znver4";
 		case 0x1a:
-			// LLVM 19 can identify Zen 5 directly, but keep the fallback aligned for older probe failures.
+			// Keep the generic fallback aligned with Zen 5 hosts when host probing returns "generic".
 			return "znver5";
 		default:
 			// Safest guesses

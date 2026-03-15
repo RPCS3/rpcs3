@@ -8,6 +8,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
+#include <bit>
 #include <cfenv>
 
 #ifdef ARCH_ARM64
@@ -2979,19 +2980,6 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			const auto system_id = utils::get_cpu_brand();
 			const auto family_id = utils::get_cpu_family();
 			const auto model_id = utils::get_cpu_model();
-			const auto count_set_bits = [](u64 mask)
-			{
-				u32 count = 0;
-
-				while (mask)
-				{
-					count += static_cast<u32>(mask & 1);
-					mask >>= 1;
-				}
-
-				return count;
-			};
-
 			const auto slice_mask_bits = [](u64 mask, u32 skip, u32 take)
 			{
 				u64 out = 0;
@@ -3164,23 +3152,20 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 
 						ppu_mask = spu_mask = rsx_mask = physical_mask;
 
-						if (family_id == 0x1A && g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
+						if (const u32 physical_count = std::popcount(physical_mask);
+							g_cfg.core.thread_scheduler == thread_scheduler_mode::old &&
+							family_id == 0x1A &&
+							physical_count >= 12)
 						{
-							const u32 physical_count = count_set_bits(physical_mask);
+							// Wide Zen 4/5 desktop parts tend to do better when the main PPU-heavy
+							// path and RSX thread stop competing for the same preferred physical cores.
+							const u32 lower_count = physical_count / 2;
+							const u32 upper_count = physical_count - lower_count;
+							const u64 lower_half = slice_mask_bits(physical_mask, 0, lower_count);
+							const u64 upper_half = slice_mask_bits(physical_mask, lower_count, upper_count);
 
-							if (physical_count >= 12)
-							{
-								// Wide Zen 4/5 desktop parts tend to do better when the main PPU-heavy
-								// path and RSX thread stop competing for the same preferred physical cores.
-								const u32 lower_count = physical_count / 2;
-								const u32 upper_count = physical_count - lower_count;
-								const u64 lower_half = slice_mask_bits(physical_mask, 0, lower_count);
-								const u64 upper_half = slice_mask_bits(physical_mask, lower_count, upper_count);
-
-								ppu_mask = upper_half ? upper_half : physical_mask;
-								rsx_mask = lower_half ? lower_half : physical_mask;
-								spu_mask = physical_mask;
-							}
+							ppu_mask = upper_half ? upper_half : physical_mask;
+							rsx_mask = lower_half ? lower_half : physical_mask;
 						}
 					}
 					break;
