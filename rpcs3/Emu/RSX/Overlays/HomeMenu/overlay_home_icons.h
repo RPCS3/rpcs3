@@ -19,7 +19,13 @@ namespace rsx::overlays::home_menu
 		screenshot,
 		video_camera,
 		trophy,
-		friends
+		friends,
+		audio,
+		video,
+		gamepad,
+		settings_sliders,
+		settings_gauge,
+		bug,
 	};
 
 	const image_info* get_icon(fa_icon icon);

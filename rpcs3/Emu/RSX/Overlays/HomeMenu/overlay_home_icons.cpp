@@ -41,6 +41,18 @@ namespace rsx::overlays::home_menu
 			return "user-group-solid.png";
 		case fa_icon::trophy:
 			return "trophy-solid.png";
+		case fa_icon::audio:
+			return "headphones-solid.png";
+		case fa_icon::video:
+			return "display-solid.png";
+		case fa_icon::gamepad:
+			return "gamepad-solid.png";
+		case fa_icon::settings_sliders:
+			return "sliders-solid.png";
+		case fa_icon::settings_gauge:
+			return "gauge-solid.png";
+		case fa_icon::bug:
+			return "bug-solid.png";
 		}
 	}
 
