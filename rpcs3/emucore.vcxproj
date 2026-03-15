@@ -711,6 +711,7 @@
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_arrow.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_checkbox.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
