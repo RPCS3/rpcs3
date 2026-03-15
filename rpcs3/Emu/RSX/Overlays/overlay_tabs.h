@@ -9,6 +9,14 @@ namespace rsx::overlays
 	{
 		tabbed_container(u16 w, u16 h, u16 header_width = 0);
 
+		template <typename T>
+			requires std::is_base_of_v<overlay_element, T>
+		void add_tab(std::unique_ptr<T>& header, std::shared_ptr<overlay_element>& panel)
+		{
+			std::unique_ptr<overlay_element> elem{ header.release() };
+			add_tab(elem, panel);
+		}
+
 		void add_tab(std::string_view title, std::shared_ptr<overlay_element>& panel);
 		void add_tab(std::unique_ptr<overlay_element>& header, std::shared_ptr<overlay_element>& panel);
 		u32 tab_count() const { return m_tab_headers ? m_tab_headers->get_elements_count() : 0u; }
