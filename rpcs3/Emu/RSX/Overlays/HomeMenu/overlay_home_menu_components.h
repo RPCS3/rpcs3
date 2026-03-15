@@ -2,6 +2,7 @@
 
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/overlay_checkbox.h"
+#include "Emu/RSX/Overlays/overlay_select.h"
 #include "Emu/RSX/Overlays/overlay_slider.h"
 
 #include "Emu/System.h"
@@ -121,19 +122,147 @@ namespace rsx
 		public:
 			home_menu_dropdown(cfg::_enum<T>* setting, const std::string& text)
 				: home_menu_setting<T, cfg::_enum<T>>(setting, text)
-			{}
+			{
+				for (size_t index = 0; index < setting->size(); index++)
+				{
+					auto translated = Emu.GetCallbacks().get_localized_setting(home_menu_setting<T, cfg::_enum<T>>::m_setting, static_cast<u32>(index));
+					m_options.emplace_back(std::move(translated));
+				}
+			}
+
+			void sync_selection()
+			{
+				auto setting = home_menu_setting<T, cfg::_enum<T>>::m_setting;
+				if (!setting || !m_dropdown)
+				{
+					return;
+				}
+
+				const auto current = fmt::format("%s", setting->get());
+				const auto list = setting->to_list();
+				for (s32 index = 0; index <= list.size(); ++index)
+				{
+					if (list[index] != current)
+					{
+						continue;
+					}
+
+					if (index != m_dropdown->get_selected_index())
+					{
+						m_dropdown->select_item(index);
+					}
+					break;
+				}
+			}
 
 			void set_size(u16 w, u16 h = element_height) override
 			{
-				home_menu_setting<T, cfg::_enum<T>>::set_reserved_width(w / 2 + menu_entry_margin);
+				auto dropdown = std::make_unique<overlays::select>(w / 2, element_height, m_options);
+				dropdown->auto_resize();
+
+				home_menu_setting<T, cfg::_enum<T>>::set_reserved_width(dropdown->w + menu_entry_margin);
 				home_menu_setting<T, cfg::_enum<T>>::set_size(w, h);
 
-				auto dropdown = std::make_unique<overlays::label>();
+				// Center horizontally
+				dropdown->set_pos(0, this->compute_vertically_centered(dropdown.get()));
 				m_dropdown = horizontal_layout::add_element(dropdown);
-				m_dropdown->set_size(w / 2, element_height);
-				m_dropdown->set_font("Arial", 14);
-				m_dropdown->align_text(home_menu_dropdown<T>::text_align::center);
-				m_dropdown->back_color = { 0.3f, 0.3f, 0.3f, 1.0f };
+
+				// Select the correct item
+				sync_selection();
+			}
+
+			bool is_popup_visible() const
+			{
+				return m_popup_visible;
+			}
+
+			s32 get_selected_index() const
+			{
+				return m_dropdown->get_selected_index();
+			}
+
+			void open_popup(const overlay_element* parent = nullptr)
+			{
+				m_previous_selection = m_dropdown->get_selected_index();
+				m_popup_visible = true;
+
+				if (!parent)
+				{
+					m_dropdown->get_popup()->set_pos(m_dropdown->x, m_dropdown->y + m_dropdown->h);
+					return;
+				}
+
+				u16 dropdown_y = m_dropdown->y;
+
+				// Check if the parent is a layout that can scroll
+				if (auto container = dynamic_cast<const vertical_layout*>(parent))
+				{
+					// Apply the scroll (convert coordinate to view space from container space)
+					dropdown_y = std::max<u16>(dropdown_y, container->scroll_offset_value) - container->scroll_offset_value;
+				}
+
+				const int space_above = static_cast<int>(dropdown_y) - std::min<int>(parent->y, dropdown_y);
+				const int space_below = std::max<int>(parent->y + parent->h, dropdown_y) - dropdown_y;
+
+				const int popup_height = m_dropdown->get_popup()->h;
+				u16 popup_x = m_dropdown->x, popup_y = parent->y;
+				if (space_below >= popup_height)
+				{
+					popup_y = dropdown_y + m_dropdown->h + 4;
+				}
+				else if (space_above >= popup_height)
+				{
+					popup_y = dropdown_y - popup_height - 4;
+				}
+
+				m_dropdown->get_popup()->set_pos(popup_x, popup_y);
+			}
+
+			void close_popup()
+			{
+				m_popup_visible = false;
+			}
+
+			page_navigation handle_input(pad_button button)
+			{
+				switch (button)
+				{
+				case pad_button::circle:
+					m_dropdown->select_item(m_previous_selection);
+					close_popup();
+					return page_navigation::exit;
+
+				case pad_button::cross:
+					m_dropdown->select_item(m_dropdown->get_selected_index());
+					close_popup();
+					return page_navigation::exit;
+
+				case pad_button::dpad_up:
+				case pad_button::ls_up:
+					m_dropdown->select_previous();
+					break;
+
+				case pad_button::dpad_down:
+				case pad_button::ls_down:
+					m_dropdown->select_next();
+					break;
+
+				default:
+					break;
+				}
+
+				return page_navigation::stay;
+			}
+
+			compiled_resource& render_popup()
+			{
+				if (this->m_popup_visible)
+				{
+					return m_dropdown->get_popup()->get_compiled();
+				}
+
+				m_popup_compiled_resources.clear();
+				return m_popup_compiled_resources;
 			}
 
 			compiled_resource& get_compiled() override
@@ -142,11 +271,8 @@ namespace rsx
 
 				if (!this->is_compiled())
 				{
-					const std::string value_text = Emu.GetCallbacks().get_localized_setting(home_menu_setting<T, cfg::_enum<T>>::m_setting, static_cast<u32>(this->m_last_value));
-					m_dropdown->set_text(value_text);
-					m_dropdown->set_pos(m_dropdown->x, this->y + (this->h - m_dropdown->h) / 2);
-
-					this->compiled_resources = horizontal_layout::get_compiled();
+					sync_selection();
+					horizontal_layout::get_compiled();
 					this->compiled_resources.add(m_dropdown->get_compiled());
 				}
 
@@ -154,7 +280,12 @@ namespace rsx
 			}
 
 		private:
-			label* m_dropdown;
+			std::vector<std::string> m_options;
+			select* m_dropdown = nullptr;
+
+			int m_previous_selection = -1;
+			bool m_popup_visible = false;
+			compiled_resource m_popup_compiled_resources;
 		};
 
 		template <typename T, typename C>

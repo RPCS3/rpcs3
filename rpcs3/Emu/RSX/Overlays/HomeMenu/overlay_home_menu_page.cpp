@@ -49,11 +49,13 @@ namespace rsx
 		void home_menu_page::on_activate()
 		{
 			hide_scroll_indicators(false);
+			hide_row_highliter(false);
 		}
 
 		void home_menu_page::on_deactivate()
 		{
 			hide_scroll_indicators(true);
+			hide_row_highliter(true);
 		}
 
 		void home_menu_page::set_current_page(home_menu_page* page)
@@ -186,6 +188,16 @@ namespace rsx
 				return page->handle_button_press(button_press, is_auto_repeat, auto_repeat_interval_ms);
 			}
 
+			if (m_popup && m_popup.input_hook)
+			{
+				auto popup_action = m_popup.input_hook(button_press);
+				if (popup_action == page_navigation::exit)
+				{
+					m_popup.dismiss();
+				}
+				return page_navigation::stay;
+			}
+
 			switch (button_press)
 			{
 			case pad_button::dpad_left:
@@ -232,6 +244,7 @@ namespace rsx
 							g_cfg.from_string(g_backup_cfg.to_string());
 							Emu.GetCallbacks().update_emu_settings();
 							*m_config_changed = false;
+							refresh();
 						}
 					});
 				}
@@ -249,6 +262,7 @@ namespace rsx
 						if (m_config_changed)
 						{
 							*m_config_changed = false;
+							refresh();
 						}
 					});
 				}
@@ -330,6 +344,11 @@ namespace rsx
 
 		compiled_resource& home_menu_page::get_compiled()
 		{
+			if (m_popup)
+			{
+				m_is_compiled = false;
+			}
+
 			if (m_message_box && !m_message_box->is_compiled())
 			{
 				m_is_compiled = false;
@@ -362,6 +381,11 @@ namespace rsx
 					compiled_resources.add(m_save_btn.get_compiled());
 					compiled_resources.add(m_discard_btn.get_compiled());
 				}
+			}
+
+			if (m_popup)
+			{
+				compiled_resources.add(m_popup.get_compiled());
 			}
 
 			m_is_compiled = true;

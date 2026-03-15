@@ -79,66 +79,64 @@ namespace rsx
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_dropdown<T>>(setting, localized_text);
 				elem->set_size(this->w, menu_entry_height);
 
-				add_item(elem, [this, setting](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, elem = elem.get()](pad_button btn) -> page_navigation
 				{
-					if (setting)
+					if (btn != pad_button::cross)
 					{
-						bool set_default = false;
-						switch (btn)
+						return page_navigation::stay;
+					}
+
+					if (!setting)
+					{
+						return page_navigation::stay;
+					}
+
+					// If we're receiving this, we need to open the popup and install the input hook
+					auto dropdown = ensure(dynamic_cast<home_menu_dropdown<T>*>(elem));
+					dropdown->open_popup(static_cast<const list_view*>(this));
+
+					auto render_fn = [dropdown]() -> compiled_resource&
+					{
+						return dropdown->render_popup();
+					};
+
+					auto input_fn = [this, dropdown, setting](pad_button button) -> page_navigation
+					{
+						const auto result = dropdown->handle_input(button);
+
+						if (!setting || result != page_navigation::exit)
 						{
-						case pad_button::cross:
-							break;
-						case pad_button::select:
-							set_default = true;
-							break;
-						default:
-							return page_navigation::stay;
+							return result;
 						}
 
-						T value = setting->get();
-
-						if (set_default)
-						{
-							if (value == setting->def)
-							{
-								return page_navigation::stay;
-							}
-
-							value = setting->def;
-						}
-
-						usz new_index = 0;
-						const std::string val = fmt::format("%s", value);
+						const auto previous = fmt::format("%s", setting->get());
 						const std::vector<std::string> list = setting->to_list();
+						const int selected_idx = dropdown->get_selected_index();
 
-						for (usz i = 0; i < list.size(); i++)
-						{
-							const std::string& entry = list[i];
-							if (entry == val)
-							{
-								if (set_default)
-								{
-									new_index = i;
-									break;
-								}
-
-								new_index = (i + 1) % list.size();
-								break;
-							}
-						}
-
-						if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
+						if (const std::string& next_value = ::at32(list, selected_idx); setting->from_string(next_value))
 						{
 							rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
+
+							if (next_value != previous)
+							{
+								Emu.GetCallbacks().update_emu_settings();
+								if (m_config_changed)
+								{
+									*m_config_changed = true;
+								}
+								refresh();
+							}
 						}
 						else
 						{
 							rsx_log.error("Can't toggle dropdown in '%s'. Setting '%s' to '%s' failed", title, setting->get_name(), next_value);
 						}
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
-					}
+
+						return result;
+					};
+
+					m_popup.get_compiled = render_fn;
+					m_popup.input_hook = input_fn;
 
 					return page_navigation::stay;
 				});
