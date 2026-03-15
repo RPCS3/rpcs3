@@ -49,6 +49,8 @@ namespace rsx::overlays
 		u16 m_headers_width = 0;
 		u32 m_selected_idx = umax;
 		bool m_is_in_tab_selection_mode = true;
+
+		std::mutex m_mutex;
 	};
 }
 
