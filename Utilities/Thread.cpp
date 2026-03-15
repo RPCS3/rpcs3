@@ -2979,6 +2979,44 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			const auto system_id = utils::get_cpu_brand();
 			const auto family_id = utils::get_cpu_family();
 			const auto model_id = utils::get_cpu_model();
+			const auto count_set_bits = [](u64 mask)
+			{
+				u32 count = 0;
+
+				while (mask)
+				{
+					count += static_cast<u32>(mask & 1);
+					mask >>= 1;
+				}
+
+				return count;
+			};
+
+			const auto slice_mask_bits = [](u64 mask, u32 skip, u32 take)
+			{
+				u64 out = 0;
+				u32 seen = 0;
+
+				for (u32 bit = 0; bit < 64 && take; bit++)
+				{
+					const u64 value = 1ull << bit;
+
+					if (!(mask & value))
+					{
+						continue;
+					}
+
+					if (seen++ < skip)
+					{
+						continue;
+					}
+
+					out |= value;
+					take--;
+				}
+
+				return out;
+			};
 
 			switch (family_id)
 			{
@@ -3079,10 +3117,10 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 				break;
 			}
 			case 0x19: // Zen3
+			case 0x1A: // Zen4 / Zen5
 			{
-				// Single-CCX architecture, just disable SMT if wide enough
-				// CCX now holds upto 16 threads
-				// Lack of hw availability makes testing difficult
+				// Zen3+ desktop parts benefit from the same wide-CPU SMT thinning heuristic:
+				// prefer spreading heavy emulation threads across physical cores first.
 				switch (thread_count)
 				{
 				case 24:
@@ -3122,7 +3160,28 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 				default:
 					if (thread_count > 24)
 					{
-						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
+						const u64 physical_mask = (0b10101010101010101010101010101010 & all_cores_mask);
+
+						ppu_mask = spu_mask = rsx_mask = physical_mask;
+
+						if (family_id == 0x1A && g_cfg.core.thread_scheduler == thread_scheduler_mode::old)
+						{
+							const u32 physical_count = count_set_bits(physical_mask);
+
+							if (physical_count >= 12)
+							{
+								// Wide Zen 4/5 desktop parts tend to do better when the main PPU-heavy
+								// path and RSX thread stop competing for the same preferred physical cores.
+								const u32 lower_count = physical_count / 2;
+								const u32 upper_count = physical_count - lower_count;
+								const u64 lower_half = slice_mask_bits(physical_mask, 0, lower_count);
+								const u64 upper_half = slice_mask_bits(physical_mask, lower_count, upper_count);
+
+								ppu_mask = upper_half ? upper_half : physical_mask;
+								rsx_mask = lower_half ? lower_half : physical_mask;
+								spu_mask = physical_mask;
+							}
+						}
 					}
 					break;
 				}
