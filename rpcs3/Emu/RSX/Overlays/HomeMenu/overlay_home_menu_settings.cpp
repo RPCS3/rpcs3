@@ -13,24 +13,50 @@ namespace rsx
 			m_tabs->set_pos(x, y);
 			m_tabs->set_headers_background_color({ 0.25f, 0.25f, 0.25f, 0.95f });
 
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::none, std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::audio, std::make_shared<home_menu_settings_audio>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::video, std::make_shared<home_menu_settings_video>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::gamepad, std::make_shared<home_menu_settings_input>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::settings, std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::settings_sliders, std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::settings_gauge, std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
+			add_page(home_menu::fa_icon::bug, std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
 
 			// Select the first item
 			m_tabs->set_selected_tab(0);
 		}
 
-		void home_menu_settings::add_page(home_menu::fa_icon /*icon*/, std::shared_ptr<home_menu_page> page)
+		void home_menu_settings::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
 		{
 			auto panel = std::static_pointer_cast<overlay_element>(page);
 			page->on_deactivate();
 			page->hide_prompt_buttons();
-			m_tabs->add_tab(page->title, panel);
+
+			if (icon == home_menu::fa_icon::none)
+			{
+				m_tabs->add_tab(page->title, panel);
+				return;
+			}
+
+			// Custom tab header. Matches the main menu style
+			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(page->title);
+			label_widget->set_size(300, 60);
+			label_widget->set_font("Arial", 16);
+			label_widget->back_color.a = 0.f;
+			label_widget->set_padding(16, 4, 16, 4);
+
+			auto icon_info = ensure(home_menu::get_icon(icon));
+			auto icon_view = std::make_unique<image_view>();
+			icon_view->set_raw_image(icon_info);
+			icon_view->set_size(42, 60);
+			icon_view->set_padding(18, 0, 18, 18);
+
+			auto box = std::make_unique<horizontal_layout>();
+			box->set_size(0, 16);
+			box->set_padding(1);
+			box->add_element(icon_view);
+			box->add_element(label_widget);
+
+			m_tabs->add_tab(box, panel);
 		}
 
 		page_navigation home_menu_settings::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
