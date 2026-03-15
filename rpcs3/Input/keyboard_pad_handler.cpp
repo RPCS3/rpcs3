@@ -980,7 +980,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_keys = [this](const cfg::string& name)
 	{
-		std::set<u32> keys = FindKeyCodes<u32, u32>(mouse_list, name, false);
+		std::set<u32> keys = FindKeyCodes(mouse_list, name, false);
 		for (const u32& key : GetKeyCodes(name)) keys.insert(key);
 
 		if (!keys.empty())

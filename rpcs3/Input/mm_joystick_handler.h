@@ -16,10 +16,10 @@
 
 class mm_joystick_handler final : public PadHandlerBase
 {
-	static constexpr u64 NO_BUTTON = u64{umax};
+	static constexpr u32 NO_BUTTON = u32{umax};
 
 	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u64, std::string> button_list =
+	const std::unordered_map<u32, std::string> button_list =
 	{
 		{ NO_BUTTON   , ""          },
 		{ JOY_BUTTON1 , "Button 1"  },
@@ -57,7 +57,7 @@ class mm_joystick_handler final : public PadHandlerBase
 	};
 
 	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u64, std::string> pov_list =
+	const std::unordered_map<u32, std::string> pov_list =
 	{
 		{ JOY_POVFORWARD,  "POV Up"    },
 		{ JOY_POVRIGHT,    "POV Right" },
@@ -65,7 +65,7 @@ class mm_joystick_handler final : public PadHandlerBase
 		{ JOY_POVLEFT,     "POV Left"  }
 	};
 
-	enum mmjoy_axis
+	enum mmjoy_axis : u32
 	{
 		joy_x_pos = 9700,
 		joy_x_neg,
@@ -82,7 +82,7 @@ class mm_joystick_handler final : public PadHandlerBase
 	};
 
 	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u64, std::string> axis_list =
+	const std::unordered_map<u32, std::string> axis_list =
 	{
 		{ joy_x_pos, "X+" },
 		{ joy_x_neg, "X-" },
@@ -106,6 +106,10 @@ class mm_joystick_handler final : public PadHandlerBase
 		JOYCAPS device_caps{};
 		MMRESULT device_status = JOYERR_UNPLUGGED;
 		steady_clock::time_point last_update{};
+		std::set<u32> trigger_code_left{};
+		std::set<u32> trigger_code_right{};
+		std::array<std::set<u32>, 4> axis_code_left{};
+		std::array<std::set<u32>, 4> axis_code_right{};
 	};
 
 public:
@@ -118,31 +122,28 @@ public:
 	void init_config(cfg_pad* cfg) override;
 
 private:
-	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
+	std::unordered_map<u32, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
 	std::shared_ptr<MMJOYDevice> get_device_by_name(const std::string& name);
 	std::shared_ptr<MMJOYDevice> create_device_by_name(const std::string& name);
-	bool GetMMJOYDevice(int index, MMJOYDevice* dev) const;
+	bool get_device(int index, MMJOYDevice* dev) const;
 	void enumerate_devices();
 
 	bool m_is_init = false;
 
-	std::set<u64> m_blacklist;
-	std::unordered_map<u64, u16> m_min_button_values;
+	std::set<u32> m_blacklist;
+	std::unordered_map<u32, u16> m_min_button_values;
 	std::map<std::string, std::shared_ptr<MMJOYDevice>> m_devices;
 
-	template <typename T>
-	std::set<T> find_keys(const std::vector<std::string>& names) const;
-
-	template <typename T>
-	std::set<T> find_keys(const cfg::string& cfg_string) const;
+	std::set<u32> find_keys(const std::vector<std::string>& names) const;
+	std::set<u32> find_keys(const cfg::string& cfg_string) const;
 
 	std::array<std::set<u32>, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
-	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
-	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
+	std::unordered_map<u32, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 };
 #endif

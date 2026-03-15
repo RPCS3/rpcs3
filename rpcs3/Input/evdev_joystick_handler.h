@@ -397,7 +397,7 @@ private:
 	bool update_device(const std::shared_ptr<PadDevice>& device);
 	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_device(const std::string& device, bool in_settings = false);
 	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_motion_device(const std::string& device, bool in_settings);
-	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
+	std::unordered_map<u32, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
 	void SetRumble(EvdevDevice* device, u8 large, u8 small);
 
 	positive_axis m_pos_axis_config;
@@ -420,10 +420,10 @@ protected:
 	void get_mapping(const pad_ensemble& binding) override;
 	void get_extended_info(const pad_ensemble& binding) override;
 	void apply_pad_data(const pad_ensemble& binding) override;
-	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 };
 
 #endif

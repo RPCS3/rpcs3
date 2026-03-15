@@ -259,9 +259,9 @@ void evdev_joystick_handler::close_devices()
 	}
 }
 
-std::unordered_map<u64, std::pair<u16, bool>> evdev_joystick_handler::GetButtonValues(const std::shared_ptr<EvdevDevice>& device)
+std::unordered_map<u32, std::pair<u16, bool>> evdev_joystick_handler::GetButtonValues(const std::shared_ptr<EvdevDevice>& device)
 {
-	std::unordered_map<u64, std::pair<u16, bool>> button_values;
+	std::unordered_map<u32, std::pair<u16, bool>> button_values;
 	if (!device)
 		return button_values;
 
@@ -379,23 +379,23 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 		const auto set_value = [&value, &data](u32 code, bool dir)
 		{
-			if (const auto it = data.find(static_cast<u64>(code)); it != data.cend() && dir == it->second.second)
+			if (const auto it = data.find(code); it != data.cend() && dir == it->second.second)
 			{
 				value = std::max(value, it->second.first);
 			}
 		};
 
-		for (const u32 code : FindKeyCodes<u32, u32>(rev_axis_list, names))
+		for (const u32 code : FindKeyCodes(rev_axis_list, names))
 		{
 			set_value(code, true);
 		}
 
-		for (const u32 code : FindKeyCodes<u32, u32>(axis_list, names))
+		for (const u32 code : FindKeyCodes(axis_list, names))
 		{
 			set_value(code, false);
 		}
 
-		for (const u32 code : FindKeyCodes<u32, u32>(button_list, names))
+		for (const u32 code : FindKeyCodes(button_list, names))
 		{
 			set_value(code, false);
 		}
@@ -435,7 +435,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			return;
 
 		// Ignore codes that aren't part of the latest events. Otherwise we will get value 0 which will reset our min_value.
-		const auto it = data.find(static_cast<u64>(code));
+		const auto it = data.find(code);
 		if (it == data.cend())
 		{
 			if (call_type == gui_call_type::reset_input)
@@ -1351,17 +1351,17 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		// In evdev we store indices to an EvdevButton vector in our pad objects instead of the usual key codes.
 		std::set<u32> indices;
 
-		for (const u32 code : FindKeyCodes<u32, u32>(axis_list, names))
+		for (const u32 code : FindKeyCodes(axis_list, names))
 		{
 			indices.insert(register_evdevbutton(code, true, false));
 		}
 
-		for (const u32 code : FindKeyCodes<u32, u32>(rev_axis_list, names))
+		for (const u32 code : FindKeyCodes(rev_axis_list, names))
 		{
 			indices.insert(register_evdevbutton(code, true, true));
 		}
 
-		for (const u32 code : FindKeyCodes<u32, u32>(button_list, names))
+		for (const u32 code : FindKeyCodes(button_list, names))
 		{
 			indices.insert(register_evdevbutton(code, false, false));
 		}
@@ -1376,7 +1376,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		e_sensor.mirrored = sensor.mirrored.get();
 		e_sensor.shift = sensor.shift.get();
 
-		const std::set<u32> keys = FindKeyCodes<u32, u32>(motion_axis_list, sensor.axis);
+		const std::set<u32> keys = FindKeyCodes(motion_axis_list, sensor.axis);
 		if (!keys.empty()) e_sensor.code = *keys.begin(); // We should only have one key for each of our sensors
 		return e_sensor;
 	};
@@ -1533,24 +1533,24 @@ bool evdev_joystick_handler::check_button_sets(const std::array<std::set<u32>, 4
 	return std::any_of(sets.begin(), sets.end(), [this, code](const std::set<u32>& indices) { return check_button_set(indices, code); });
 };
 
-bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_set(m_dev->trigger_left, static_cast<u32>(keyCode));
+	return check_button_set(m_dev->trigger_left, keyCode);
 }
 
-bool evdev_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool evdev_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_set(m_dev->trigger_right, static_cast<u32>(keyCode));
+	return check_button_set(m_dev->trigger_right, keyCode);
 }
 
-bool evdev_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool evdev_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_sets(m_dev->axis_left, static_cast<u32>(keyCode));
+	return check_button_sets(m_dev->axis_left, keyCode);
 }
 
-bool evdev_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool evdev_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
-	return check_button_sets(m_dev->axis_right, static_cast<u32>(keyCode));
+	return check_button_sets(m_dev->axis_right, keyCode);
 }
 
 #endif
