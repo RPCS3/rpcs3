@@ -139,16 +139,13 @@ namespace rsx
 			}
 
 			// Center vertically if necessary
-			if (total_height < h)
+			if (total_height < h && center_vertically)
 			{
-				if (center_vertically)
-				{
-					advance_pos = (h - ::narrow<u16>(total_height)) / 2;
-				}
-				else
-				{
-					advance_pos = menu_entry_margin;
-				}
+				advance_pos = (h - ::narrow<u16>(total_height)) / 2;
+			}
+			else
+			{
+				advance_pos = menu_entry_margin;
 			}
 
 			for (auto& entry : m_entries)
@@ -271,9 +268,12 @@ namespace rsx
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
 			{
-				if (!is_auto_repeat && get_selected_index() <= 0)
+				if (get_selected_index() <= 0)
 				{
-					select_entry(get_elements_count() - 1);
+					if (!is_auto_repeat)
+					{
+						select_entry(get_elements_count() - 1);
+					}
 					break;
 				}
 
@@ -283,9 +283,12 @@ namespace rsx
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
 			{
-				if (!is_auto_repeat && get_selected_index() >= (get_elements_count() - 1))
+				if (get_selected_index() >= (get_elements_count() - 1))
 				{
-					select_entry(0);
+					if (!is_auto_repeat)
+					{
+						select_entry(0);
+					}
 					break;
 				}
 

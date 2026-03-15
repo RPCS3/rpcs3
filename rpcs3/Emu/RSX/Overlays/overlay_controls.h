@@ -264,7 +264,7 @@ namespace rsx
 				return add_element(ptr);
 			}
 
-			void clear_items();
+			virtual void clear_items();
 
 			layout_container();
 
