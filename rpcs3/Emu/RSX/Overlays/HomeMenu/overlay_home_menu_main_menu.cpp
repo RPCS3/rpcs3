@@ -190,14 +190,21 @@ namespace rsx
 
 		void home_menu_main_menu::add_sidebar_entry(home_menu::fa_icon icon, std::string_view title)
 		{
-			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(title.data());
+			auto label_widget = std::make_unique<label>(title.data());
 			label_widget->set_size(m_sidebar->w, 60);
 			label_widget->set_font("Arial", 16);
 			label_widget->back_color.a = 0.f;
 			label_widget->set_padding(16, 4, 16, 4);
+			label_widget->auto_resize();
+			label_widget->set_size(label_widget->w, 60);
 
 			if (icon == home_menu::fa_icon::none)
 			{
+				const u16 packed_width = label_widget->w + 18; // rpad
+				if (packed_width > m_sidebar->w)
+				{
+					m_sidebar->set_size(std::min(packed_width, this->w), m_sidebar->h);
+				}
 				m_sidebar->add_entry(label_widget);
 				return;
 			}
@@ -208,11 +215,18 @@ namespace rsx
 			icon_view->set_size(42, 60);
 			icon_view->set_padding(18, 0, 18, 18);
 
+			const u16 packed_width = icon_view->padding_left + icon_view->w + label_widget->w + 18; // rpad
+			if (packed_width > m_sidebar->w)
+			{
+				m_sidebar->set_size(std::min(packed_width, this->w), m_sidebar->h);
+			}
+
 			auto box = std::make_unique<horizontal_layout>();
 			box->set_size(0, 16);
 			box->set_padding(1);
 			box->add_element(icon_view);
 			box->add_element(label_widget);
+
 			m_sidebar->add_entry(box);
 		}
 
