@@ -31,7 +31,7 @@ namespace rsx
 		struct home_menu_entry : horizontal_layout
 		{
 		public:
-			home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width);
+			home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width, text_align alignment = text_align::center);
 		};
 
 		template <typename T, typename C>
